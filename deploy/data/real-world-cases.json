@@ -1,0 +1,860 @@
+[
+  {
+    "id": "case-sample-p0171-intake-leak",
+    "case_type": "sample",
+    "created_at": "2026-05-18T00:00:00+09:00",
+    "updated_at": "2026-05-18T00:00:00+09:00",
+    "vehicle": {
+      "maker": "サンプル",
+      "model": "小型ガソリン車",
+      "year": 2016,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "アイドリング不調",
+      "チェックランプ点灯"
+    ],
+    "dtc_codes": [
+      "P0171"
+    ],
+    "confirmed_facts": [
+      "短期燃料トリムと長期燃料トリムがプラス側に大きい",
+      "スモークテストで吸気ダクト周辺に漏れを確認"
+    ],
+    "measurements": [
+      {
+        "name": "燃料トリム",
+        "value": "プラス側大",
+        "unit": null,
+        "condition": "暖気後アイドル"
+      }
+    ],
+    "final_cause": "吸気漏れが確認された事例",
+    "repair_result": "直った",
+    "ai_inference": "吸気漏れの可能性があります",
+    "actual_result_separated": true,
+    "privacy_note": "個人情報、ナンバー、車台番号は保存しない",
+    "reusable_as_pattern": true,
+    "source": "登録サンプル: 実整備事例データ構造例",
+    "source_date": "2026-05-18",
+    "confidence": "中",
+    "service_manual_required": true
+  },
+  {
+    "id": "case-sample-u0100-low-voltage",
+    "case_type": "sample",
+    "created_at": "2026-05-18T00:00:00+09:00",
+    "updated_at": "2026-05-18T00:00:00+09:00",
+    "vehicle": {
+      "maker": "サンプル",
+      "model": "ハイブリッド車",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "hybrid"
+    },
+    "symptoms": [
+      "警告灯複数点灯",
+      "始動不可"
+    ],
+    "dtc_codes": [
+      "U0100"
+    ],
+    "confirmed_facts": [
+      "補機バッテリー電圧が低い",
+      "充電後に通信DTCの再発有無を確認中"
+    ],
+    "measurements": [
+      {
+        "name": "補機バッテリー電圧",
+        "value": "低電圧",
+        "unit": "V",
+        "condition": "入庫時"
+      }
+    ],
+    "final_cause": "経過観察。低電圧影響の可能性があるが断定しない",
+    "repair_result": "経過観察",
+    "ai_inference": "12V電源低下または通信系統確認の必要があります",
+    "actual_result_separated": true,
+    "privacy_note": "個人情報、ナンバー、車台番号は保存しない",
+    "reusable_as_pattern": true,
+    "source": "登録サンプル: 実整備事例データ構造例",
+    "source_date": "2026-05-18",
+    "confidence": "低",
+    "service_manual_required": true
+  },
+  {
+    "id": "sample-case-p0299-boost-leak",
+    "case_type": "sample",
+    "created_at": "2026-05-18T00:00:00+09:00",
+    "updated_at": "2026-05-18T00:00:00+09:00",
+    "vehicle": {
+      "maker": "サンプル",
+      "model": "domestic diesel turbo sample",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": null
+    },
+    "symptoms": [
+      "poor acceleration"
+    ],
+    "dtc_codes": [
+      "P0299"
+    ],
+    "confirmed_facts": [
+      "Sample confirmed fact for UI testing.",
+      "Actual measurement must be recorded separately from AI inference."
+    ],
+    "measurements": [
+      {
+        "name": "sample measurement",
+        "value": "sample value",
+        "unit": null,
+        "condition": "sample condition"
+      }
+    ],
+    "final_cause": "サンプル: boost leak was confirmed in this sample case. Do not apply directly to another vehicle.",
+    "repair_result": "sample",
+    "ai_inference": "Sample AI inference kept separate from actual result.",
+    "actual_result_separated": true,
+    "privacy_note": "Do not store personal information, plate number, full VIN, phone number, or address.",
+    "reusable_as_pattern": true,
+    "source": "サンプル: real-world case format sample",
+    "source_date": "2026-05-18",
+    "confidence": "sample",
+    "service_manual_required": true
+  },
+  {
+    "id": "sample-case-p0401-egr-clog",
+    "case_type": "sample",
+    "created_at": "2026-05-18T00:00:00+09:00",
+    "updated_at": "2026-05-18T00:00:00+09:00",
+    "vehicle": {
+      "maker": "サンプル",
+      "model": "domestic gasoline sample",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": null
+    },
+    "symptoms": [
+      "rough running"
+    ],
+    "dtc_codes": [
+      "P0401"
+    ],
+    "confirmed_facts": [
+      "Sample confirmed fact for UI testing.",
+      "Actual measurement must be recorded separately from AI inference."
+    ],
+    "measurements": [
+      {
+        "name": "sample measurement",
+        "value": "sample value",
+        "unit": null,
+        "condition": "sample condition"
+      }
+    ],
+    "final_cause": "サンプル: EGR passage restriction was confirmed in this sample case. Do not apply directly to another vehicle.",
+    "repair_result": "sample",
+    "ai_inference": "Sample AI inference kept separate from actual result.",
+    "actual_result_separated": true,
+    "privacy_note": "Do not store personal information, plate number, full VIN, phone number, or address.",
+    "reusable_as_pattern": true,
+    "source": "サンプル: real-world case format sample",
+    "source_date": "2026-05-18",
+    "confidence": "sample",
+    "service_manual_required": true
+  },
+  {
+    "id": "sample-case-p0456-fuel-cap",
+    "case_type": "sample",
+    "created_at": "2026-05-18T00:00:00+09:00",
+    "updated_at": "2026-05-18T00:00:00+09:00",
+    "vehicle": {
+      "maker": "サンプル",
+      "model": "domestic compact sample",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": null
+    },
+    "symptoms": [
+      "MIL only"
+    ],
+    "dtc_codes": [
+      "P0456"
+    ],
+    "confirmed_facts": [
+      "Sample confirmed fact for UI testing.",
+      "Actual measurement must be recorded separately from AI inference."
+    ],
+    "measurements": [
+      {
+        "name": "sample measurement",
+        "value": "sample value",
+        "unit": null,
+        "condition": "sample condition"
+      }
+    ],
+    "final_cause": "サンプル: EVAP cap sealing issue was confirmed in this sample case. Do not apply directly to another vehicle.",
+    "repair_result": "sample",
+    "ai_inference": "Sample AI inference kept separate from actual result.",
+    "actual_result_separated": true,
+    "privacy_note": "Do not store personal information, plate number, full VIN, phone number, or address.",
+    "reusable_as_pattern": true,
+    "source": "サンプル: real-world case format sample",
+    "source_date": "2026-05-18",
+    "confidence": "sample",
+    "service_manual_required": true
+  },
+  {
+    "id": "sample-case-p0a93-inverter-pump",
+    "case_type": "sample",
+    "created_at": "2026-05-18T00:00:00+09:00",
+    "updated_at": "2026-05-18T00:00:00+09:00",
+    "vehicle": {
+      "maker": "サンプル",
+      "model": "domestic hybrid sample",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": null
+    },
+    "symptoms": [
+      "hybrid warning"
+    ],
+    "dtc_codes": [
+      "P0A93"
+    ],
+    "confirmed_facts": [
+      "Sample confirmed fact for UI testing.",
+      "Actual measurement must be recorded separately from AI inference."
+    ],
+    "measurements": [
+      {
+        "name": "sample measurement",
+        "value": "sample value",
+        "unit": null,
+        "condition": "sample condition"
+      }
+    ],
+    "final_cause": "サンプル: inverter cooling flow issue was checked in this sample case. Do not apply directly to another vehicle.",
+    "repair_result": "sample",
+    "ai_inference": "Sample AI inference kept separate from actual result.",
+    "actual_result_separated": true,
+    "privacy_note": "Do not store personal information, plate number, full VIN, phone number, or address.",
+    "reusable_as_pattern": true,
+    "source": "サンプル: real-world case format sample",
+    "source_date": "2026-05-18",
+    "confidence": "sample",
+    "service_manual_required": true
+  },
+  {
+    "id": "sample-case-u0155-aftermarket-wiring",
+    "case_type": "sample",
+    "created_at": "2026-05-18T00:00:00+09:00",
+    "updated_at": "2026-05-18T00:00:00+09:00",
+    "vehicle": {
+      "maker": "サンプル",
+      "model": "domestic passenger car sample",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": null
+    },
+    "symptoms": [
+      "meter warning"
+    ],
+    "dtc_codes": [
+      "U0155"
+    ],
+    "confirmed_facts": [
+      "Sample confirmed fact for UI testing.",
+      "Actual measurement must be recorded separately from AI inference."
+    ],
+    "measurements": [
+      {
+        "name": "sample measurement",
+        "value": "sample value",
+        "unit": null,
+        "condition": "sample condition"
+      }
+    ],
+    "final_cause": "サンプル: aftermarket wiring influence was checked in this sample case. Do not apply directly to another vehicle.",
+    "repair_result": "sample",
+    "ai_inference": "Sample AI inference kept separate from actual result.",
+    "actual_result_separated": true,
+    "privacy_note": "Do not store personal information, plate number, full VIN, phone number, or address.",
+    "reusable_as_pattern": true,
+    "source": "サンプル: real-world case format sample",
+    "source_date": "2026-05-18",
+    "confidence": "sample",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0101-intake-duct-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "???????",
+      "year": 2017,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "????",
+      "????????"
+    ],
+    "dtc_codes": [
+      "P0101",
+      "P0171"
+    ],
+    "confirmed_facts": [
+      "???????????????",
+      "?????????????"
+    ],
+    "measurements": [
+      {
+        "name": "MAF",
+        "value": "??????",
+        "unit": null,
+        "condition": "????"
+      }
+    ],
+    "final_cause": "????: ????????????????????",
+    "repair_result": "???",
+    "ai_inference": "MAF???????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0128-thermostat-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "???????",
+      "year": 2016,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "????",
+      "?????????"
+    ],
+    "dtc_codes": [
+      "P0128"
+    ],
+    "confirmed_facts": [
+      "???????",
+      "?????????"
+    ],
+    "measurements": [
+      {
+        "name": "ECT",
+        "value": "????",
+        "unit": "degC",
+        "condition": "???"
+      }
+    ],
+    "final_cause": "????: ????????????????????????",
+    "repair_result": "???",
+    "ai_inference": "?????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0201-injector-power-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "?????",
+      "year": 2015,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "??",
+      "??"
+    ],
+    "dtc_codes": [
+      "P0201",
+      "P0301"
+    ],
+    "confirmed_facts": [
+      "1?????????????",
+      "??????????????"
+    ],
+    "measurements": [
+      {
+        "name": "????????",
+        "value": "0",
+        "unit": "V",
+        "condition": "IG ON"
+      }
+    ],
+    "final_cause": "????: ?????????????????????",
+    "repair_result": "???",
+    "ai_inference": "????????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0234-overboost-vacuum-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "????",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "turbo"
+    },
+    "symptoms": [
+      "?????",
+      "????"
+    ],
+    "dtc_codes": [
+      "P0234"
+    ],
+    "confirmed_facts": [
+      "???????????????",
+      "??????????"
+    ],
+    "measurements": [
+      {
+        "name": "????",
+        "value": "????",
+        "unit": null,
+        "condition": "???"
+      }
+    ],
+    "final_cause": "????: ????????????????????????",
+    "repair_result": "???",
+    "ai_inference": "???????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0340-low-crank-voltage-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "?????",
+      "year": 2014,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "????"
+    ],
+    "dtc_codes": [
+      "P0340"
+    ],
+    "confirmed_facts": [
+      "??????????",
+      "?????????"
+    ],
+    "measurements": [
+      {
+        "name": "????????",
+        "value": "??",
+        "unit": "V",
+        "condition": "???"
+      }
+    ],
+    "final_cause": "????: ?????????????????????",
+    "repair_result": "????",
+    "ai_inference": "????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0507-throttle-learning-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "????",
+      "year": 2019,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "??????"
+    ],
+    "dtc_codes": [
+      "P0507"
+    ],
+    "confirmed_facts": [
+      "??????????",
+      "?????"
+    ],
+    "measurements": [
+      {
+        "name": "??????",
+        "value": "??",
+        "unit": "rpm",
+        "condition": "???"
+      }
+    ],
+    "final_cause": "????: ????????????????????",
+    "repair_result": "???",
+    "ai_inference": "???????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0562-ground-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "????",
+      "year": 2015,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "???????",
+      "????"
+    ],
+    "dtc_codes": [
+      "P0562",
+      "U0100"
+    ],
+    "confirmed_facts": [
+      "?????????",
+      "????????"
+    ],
+    "measurements": [
+      {
+        "name": "???????",
+        "value": "???",
+        "unit": "V",
+        "condition": "???"
+      }
+    ],
+    "final_cause": "????: ????????????ECU???????",
+    "repair_result": "???",
+    "ai_inference": "??????DTC?????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0715-harness-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "CVT?",
+      "year": 2016,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "cvt"
+    },
+    "symptoms": [
+      "?????",
+      "???????"
+    ],
+    "dtc_codes": [
+      "P0700",
+      "P0715"
+    ],
+    "confirmed_facts": [
+      "??????????",
+      "??????????"
+    ],
+    "measurements": [
+      {
+        "name": "?????",
+        "value": "??",
+        "unit": "rpm",
+        "condition": "???"
+      }
+    ],
+    "final_cause": "????: ????????????CVT???????",
+    "repair_result": "???",
+    "ai_inference": "?????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-p0741-fluid-temperature-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "AT?",
+      "year": 2013,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "automatic"
+    },
+    "symptoms": [
+      "????",
+      "????????"
+    ],
+    "dtc_codes": [
+      "P0741"
+    ],
+    "confirmed_facts": [
+      "??????????",
+      "ATF???????"
+    ],
+    "measurements": [
+      {
+        "name": "TCC slip",
+        "value": "???",
+        "unit": "rpm",
+        "condition": "?????"
+      }
+    ],
+    "final_cause": "????: ATF???TCC??????????????",
+    "repair_result": "????",
+    "ai_inference": "??????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-u0001-aftermarket-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "???",
+      "year": 2020,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "??DTC??",
+      "??????"
+    ],
+    "dtc_codes": [
+      "U0001",
+      "U0155"
+    ],
+    "confirmed_facts": [
+      "??????????",
+      "CAN???????"
+    ],
+    "measurements": [
+      {
+        "name": "CAN??",
+        "value": "??",
+        "unit": null,
+        "condition": "IG ON"
+      }
+    ],
+    "final_cause": "????: ???????????ECU???????",
+    "repair_result": "???",
+    "ai_inference": "CAN????????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-u0121-abs-power-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "ABS???",
+      "year": 2018,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "ABS??",
+      "??DTC"
+    ],
+    "dtc_codes": [
+      "U0121"
+    ],
+    "confirmed_facts": [
+      "ABS ECU??????????",
+      "????????"
+    ],
+    "measurements": [
+      {
+        "name": "ABS??",
+        "value": "???",
+        "unit": "V",
+        "condition": "IG ON"
+      }
+    ],
+    "final_cause": "????: ABS?????????ABS ECU?????",
+    "repair_result": "???",
+    "ai_inference": "??????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-u0140-water-intrusion-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "???",
+      "year": 2019,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "???????",
+      "??????"
+    ],
+    "dtc_codes": [
+      "U0140"
+    ],
+    "confirmed_facts": [
+      "?????????????",
+      "BCM?????"
+    ],
+    "measurements": [
+      {
+        "name": "BCM??",
+        "value": "???",
+        "unit": "V",
+        "condition": "???"
+      }
+    ],
+    "final_cause": "????: ?????????BCM???????",
+    "repair_result": "????",
+    "ai_inference": "????????????????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  },
+  {
+    "id": "expanded-case-u0415-wheel-speed-sample",
+    "case_type": "sample",
+    "created_at": "2026-05-27T00:00:00+09:00",
+    "updated_at": "2026-05-27T00:00:00+09:00",
+    "vehicle": {
+      "maker": "????",
+      "model": "ABS/VSC?",
+      "year": 2020,
+      "engine_code": null,
+      "mileage_km": null,
+      "powertrain": "gasoline"
+    },
+    "symptoms": [
+      "ABS??",
+      "?????"
+    ],
+    "dtc_codes": [
+      "U0415"
+    ],
+    "confirmed_facts": [
+      "????????????",
+      "???????????"
+    ],
+    "measurements": [
+      {
+        "name": "???",
+        "value": "??????",
+        "unit": null,
+        "condition": "????"
+      }
+    ],
+    "final_cause": "????: ??????????????ECU?????",
+    "repair_result": "???",
+    "ai_inference": "ABS??????????",
+    "actual_result_separated": true,
+    "privacy_note": "????????????VIN???????????????",
+    "reusable_as_pattern": true,
+    "source": "??????: ?????????????????????????????",
+    "source_date": "2026-05-27",
+    "confidence": "????",
+    "service_manual_required": true
+  }
+]

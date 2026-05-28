@@ -1,0 +1,54 @@
+[
+  {
+    "id": "air-intake-basic",
+    "title": "吸気漏れ基本点検",
+    "procedure": [
+      "エアクリーナーからスロットルまでのダクト割れを目視確認する。",
+      "PCVホース、バキュームホースの抜けや亀裂を確認する。",
+      "可能ならスモークテストで漏れ箇所を確認する。"
+    ],
+    "tools": ["OBD2スキャンツール", "ライト", "スモークテスター"],
+    "cautions": ["回転部や高温部に手や工具を近づけない。"],
+    "manualRequired": true,
+    "sources": ["登録データ: service-notes.json"]
+  },
+  {
+    "id": "fuel-pressure-basic",
+    "title": "燃圧基本点検",
+    "procedure": [
+      "燃料漏れや燃料臭がないか確認する。",
+      "指定手順で燃圧を測定する。",
+      "測定値をメーカー基準値と比較する。"
+    ],
+    "tools": ["燃圧計", "保護メガネ", "整備書"],
+    "cautions": ["燃料系作業は火気厳禁。燃圧を抜く手順を整備書で確認する。"],
+    "manualRequired": true,
+    "sources": ["登録データ: service-notes.json"]
+  },
+  {
+    "id": "misfire-basic",
+    "title": "失火基本点検",
+    "procedure": [
+      "DTCとフリーズフレームを保存する。",
+      "プラグ、コイル、インジェクターを気筒間で入れ替え、失火気筒が移動するか確認する。",
+      "必要に応じて圧縮を確認する。"
+    ],
+    "tools": ["OBD2スキャンツール", "プラグレンチ", "圧縮計"],
+    "cautions": ["点火系は高電圧になる場合があるため、通電中に触れない。"],
+    "manualRequired": true,
+    "sources": ["登録データ: service-notes.json"]
+  },
+  {
+    "id": "exhaust-leak-basic",
+    "title": "排気漏れ基本点検",
+    "procedure": [
+      "排気管、ガスケット、センサー取付部の漏れ跡を確認する。",
+      "冷間時の異音やすす跡を確認する。",
+      "O2センサー波形と合わせて判断する。"
+    ],
+    "tools": ["ライト", "OBD2スキャンツール", "聴診棒"],
+    "cautions": ["排気系は高温になるため、冷えてから点検する。"],
+    "manualRequired": true,
+    "sources": ["登録データ: service-notes.json"]
+  }
+]

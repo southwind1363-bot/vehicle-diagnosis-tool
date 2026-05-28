@@ -1,0 +1,72 @@
+[
+  {
+    "id": "japan-obd-inspection-scope-2024",
+    "topic": "OBD検査対象車の確認",
+    "country": "Japan",
+    "applies_to": {
+      "domestic_new_model_type_approval_from": "2021-10-01",
+      "imported_new_model_type_approval_from": "2022-10-01",
+      "vehicle_certificate_note": "OBD検査対象"
+    },
+    "summary": "OBD検査対象車は、車検証備考欄の記載や対象型式情報で確認する。登録データだけで対象可否を断定しない。",
+    "inspection_notes": [
+      "国産車は令和3年10月1日以降、輸入車は令和4年10月1日以降に型式指定を受けた新型車が対象条件に含まれる",
+      "実際の対象可否は車検証備考欄の「OBD検査対象」等で確認する",
+      "二輪車、大型特殊自動車、被牽引自動車など対象外となる区分があるため公式情報を確認する"
+    ],
+    "check_order": [
+      "車検証の備考欄を確認する",
+      "OBD検査ポータルまたは国土交通省の情報を確認する",
+      "検査対象の場合は検査用スキャンツール、事業場ID、通信環境を確認する",
+      "診断補助と車検時のOBD検査判定を混同しない"
+    ],
+    "common_mistakes": [
+      "OBD2対応車なら全てOBD検査対象と判断する",
+      "DTCがあることとOBD検査不合格条件を混同する",
+      "車検証備考欄を確認しない"
+    ],
+    "source": "国土交通省『OBD検査を実施するにあたって（整備事業者向け）』およびOBD検査ポータル『OBD検査について』",
+    "source_url": [
+      "https://www.mlit.go.jp/jidosha/jidosha_OBD_company.html",
+      "https://www.obd.naltec.go.jp/about"
+    ],
+    "source_date": "2026-05-18",
+    "service_manual_required": false,
+    "official_lookup_required": true
+  },
+  {
+    "id": "japan-obd-inspection-diagnosis-separation",
+    "topic": "診断補助とOBD検査の分離",
+    "country": "Japan",
+    "applies_to": {
+      "maker": null,
+      "model": null,
+      "year_from": null,
+      "year_to": null,
+      "engine_code": null
+    },
+    "summary": "このアプリの診断補助は整備判断の整理であり、OBD検査システムの合否判定そのものではない。",
+    "inspection_notes": [
+      "車検時のOBD検査は指定されたシステム、検査用スキャンツール、対象車情報に基づいて実施される",
+      "整備診断ではDTC、フリーズフレーム、実測値、メーカー整備書を優先する",
+      "検査制度の詳細は公式情報の更新を確認する"
+    ],
+    "check_order": [
+      "診断目的なのか車検時OBD検査なのかを分ける",
+      "OBD検査対象車かどうかを車検証と公式情報で確認する",
+      "整備作業ではメーカー整備書を確認する"
+    ],
+    "common_mistakes": [
+      "アプリの診断結果をOBD検査の合否と扱う",
+      "汎用スキャン結果だけで検査制度上の判断をする"
+    ],
+    "source": "国土交通省 OBD検査関係法令・通達 / OBD検査ポータル",
+    "source_url": [
+      "https://www.mlit.go.jp/jidosha/jidosha_OBD_regulation.html",
+      "https://www.obd.naltec.go.jp/about"
+    ],
+    "source_date": "2026-05-18",
+    "service_manual_required": false,
+    "official_lookup_required": true
+  }
+]

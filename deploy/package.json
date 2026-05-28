@@ -1,0 +1,13 @@
+{
+  "name": "vehicle-diagnosis-tool",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "C:\\Progra~1\\nodejs\\node.exe server.js",
+    "dev": "C:\\Progra~1\\nodejs\\node.exe server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
