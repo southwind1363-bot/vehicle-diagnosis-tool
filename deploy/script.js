@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 const APP_LAST_UPDATED = "2026-05-31";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -211,34 +211,44 @@ async function loadData() {
       symptomFlows,
       genericObdCodesModern,
       genericObdCodesModern2026,
+      genericObdCodesModern2026Part2,
       vehiclePatterns,
+      vehiclePatternsDomestic2026,
       recallsTsbNotes,
+      officialReferenceNotes2026,
       japanObdInspectionNotes,
+      japanObdInspectionNotes2026,
       realWorldCases,
-      diagnosticWorkflows
+      diagnosticWorkflows,
+      componentInspectionFlows
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
       fetchJson("data/service-notes.json"),
       fetchJson("data/symptom-flows.json"),
       fetchJson("data/generic-obd-codes-modern.json"),
       fetchJson("data/generic-obd-codes-modern-2026.json"),
+      fetchJson("data/generic-obd-codes-modern-2026-part2.json"),
       fetchJson("data/vehicle-patterns.json"),
+      fetchJson("data/vehicle-patterns-domestic-2026.json"),
       fetchJson("data/recalls-tsb-notes.json"),
+      fetchJson("data/official-reference-notes-2026.json"),
       fetchJson("data/japan-obd-inspection-notes.json"),
+      fetchJson("data/japan-obd-inspection-notes-2026.json"),
       fetchJson("data/real-world-cases.json"),
-      fetchJson("data/diagnostic-workflows.json")
+      fetchJson("data/diagnostic-workflows.json"),
+      fetchJson("data/component-inspection-flows.json")
     ]);
 
     dataStore = {
       obdCodes,
       serviceNotes,
       symptomFlows,
-      genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026],
-      vehiclePatterns,
-      recallsTsbNotes,
-      japanObdInspectionNotes,
+      genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2],
+      vehiclePatterns: [...vehiclePatterns, ...vehiclePatternsDomestic2026],
+      recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
+      japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
-      diagnosticWorkflows
+      diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows]
     };
     dataStatus.textContent = "登録済み整備データを読み込みました。";
     dataStatus.classList.remove("error");

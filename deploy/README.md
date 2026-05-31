@@ -18,10 +18,15 @@ deploy/
     obd-codes.json
     generic-obd-codes-modern.json
     generic-obd-codes-modern-2026.json
+    generic-obd-codes-modern-2026-part2.json
     diagnostic-workflows.json
+    component-inspection-flows.json
     vehicle-patterns.json
+    vehicle-patterns-domestic-2026.json
     recalls-tsb-notes.json
+    official-reference-notes-2026.json
     japan-obd-inspection-notes.json
+    japan-obd-inspection-notes-2026.json
     real-world-cases.json
     service-notes.json
     symptom-flows.json
@@ -87,6 +92,12 @@ data/generic-obd-codes-modern.json
 
 data/vehicle-patterns.json
   メーカー、車種、年式、エンジン型式、パワートレインで絞り込む車種別傾向
+
+data/vehicle-patterns-domestic-2026.json
+  国産車の入力条件から絞り込む参考フロー。車種固有の故障断定には使用しない
+
+data/component-inspection-flows.json
+  公開試験資料の基礎点検を参考に、単体点検と比較測定を実務向けに整理
 
 data/recalls-tsb-notes.json
   リコール、改善対策、サービスキャンペーン、TSB確認用メモ

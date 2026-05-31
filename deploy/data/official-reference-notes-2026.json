@@ -1,0 +1,26 @@
+[
+  {
+    "id": "official-mlit-recall-search-2026-05",
+    "note_type": "lookup_rule",
+    "title": "国土交通省 リコール情報検索",
+    "summary": "車名、型式、届出日で公開リコール等を検索し、対象可否は車台番号と公式情報で照合する。",
+    "check_order": ["車名と型式で公開情報を検索する", "該当届出があれば車台番号範囲を照合する", "個別対象可否はメーカーまたは販売会社へ確認する"],
+    "source": "国土交通省 自動車不具合情報ホットライン リコール情報検索",
+    "source_url": "https://www.mlit.go.jp/jidosha/carinf/rcl/recall_searchinfo.html",
+    "source_date": "2026-05-31",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  },
+  {
+    "id": "official-jaspa-recall-search-2026-05",
+    "note_type": "lookup_rule",
+    "title": "日整連 車両リコール状況確認",
+    "summary": "国産車はメーカーと車台番号を入力して対象可否を確認できる。アプリ内へ車台番号は保存しない。",
+    "check_order": ["車検証を手元で確認する", "日整連の公式検索画面でメーカーと車台番号を入力する", "検索結果を確認し、必要ならメーカーへ照会する"],
+    "source": "一般社団法人 日本自動車整備振興会連合会 車両リコール状況確認",
+    "source_url": "https://www.jaspa.or.jp/portals/recallsearch/index.html",
+    "source_date": "2026-05-31",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  }
+]

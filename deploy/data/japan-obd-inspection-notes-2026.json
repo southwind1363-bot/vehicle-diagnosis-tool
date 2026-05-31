@@ -1,0 +1,22 @@
+[
+  {
+    "id": "japan-obd-inspection-model-list-2026-04-30",
+    "topic": "OBD検査対象車型式一覧は令和8年4月30日時点の公開一覧を確認",
+    "check_order": ["車検証備考欄のOBD検査対象表示を確認する", "NALTEC公開の最新型式一覧を確認する", "対象車は特定DTC照会アプリの手順に従う"],
+    "source": "OBD検査ポータル OBD検査に関連する情報等",
+    "source_url": "https://www.obd.naltec.go.jp/details/",
+    "source_date": "2026-04-30",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  },
+  {
+    "id": "japan-obd-inspection-procedure-2026-05",
+    "topic": "OBD検査は診断補助と分けて、検査要否確認から実施する",
+    "check_order": ["車両受付を行う", "検査要否を確認する", "特定DTC照会アプリでDTCを読み取り合否判定を行う", "詳細はOBD検査結果参照システムで確認する"],
+    "source": "OBD検査ポータル 検査の実施方法",
+    "source_url": "https://www.obd.naltec.go.jp/procedure/",
+    "source_date": "2026-05-31",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  }
+]
