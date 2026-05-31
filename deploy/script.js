@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.2.2";
+const APP_VERSION = "1.3.0";
 const APP_LAST_UPDATED = "2026-05-31";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -51,6 +51,7 @@ const fallbackData = {
   recallsTsbNotes: [],
   japanObdInspectionNotes: [],
   realWorldCases: [],
+  diagnosticWorkflows: [],
   symptomFlows: [
     makeFlow("engine-no-start", "エンジン始動不良", "始動系、電源系、燃料系、点火系、吸気系", ["バッテリー電圧", "クランキング回転数", "燃圧", "点火信号", "DTCとフリーズフレーム"], ["battery", "starter", "fuel", "ignition"]),
     makeFlow("idle-unstable", "アイドリング不調", "吸気系、燃料補正、点火系、EGR、機械圧縮", ["燃料トリム", "MAF値", "失火カウンター", "吸気漏れ", "アイドル学習値"], ["intake", "fuel", "ignition"]),
@@ -209,30 +210,35 @@ async function loadData() {
       serviceNotes,
       symptomFlows,
       genericObdCodesModern,
+      genericObdCodesModern2026,
       vehiclePatterns,
       recallsTsbNotes,
       japanObdInspectionNotes,
-      realWorldCases
+      realWorldCases,
+      diagnosticWorkflows
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
       fetchJson("data/service-notes.json"),
       fetchJson("data/symptom-flows.json"),
       fetchJson("data/generic-obd-codes-modern.json"),
+      fetchJson("data/generic-obd-codes-modern-2026.json"),
       fetchJson("data/vehicle-patterns.json"),
       fetchJson("data/recalls-tsb-notes.json"),
       fetchJson("data/japan-obd-inspection-notes.json"),
-      fetchJson("data/real-world-cases.json")
+      fetchJson("data/real-world-cases.json"),
+      fetchJson("data/diagnostic-workflows.json")
     ]);
 
     dataStore = {
       obdCodes,
       serviceNotes,
       symptomFlows,
-      genericObdCodesModern,
+      genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026],
       vehiclePatterns,
       recallsTsbNotes,
       japanObdInspectionNotes,
-      realWorldCases
+      realWorldCases,
+      diagnosticWorkflows
     };
     dataStatus.textContent = "登録済み整備データを読み込みました。";
     dataStatus.classList.remove("error");
@@ -300,16 +306,19 @@ function buildDiagnosis(input) {
   const flow = findById(dataStore.symptomFlows, input.symptomId);
   const interview = buildInterviewAnalysis(input.interview);
   const modernGenericMatches = getModernGenericMatches(input.obdCode);
-  const modernReferences = buildModernReferences(input, obd, flow);
+  const workflowMatches = getDiagnosticWorkflowMatches(input, flow);
+  const modernReferences = buildModernReferences(input, obd, flow, workflowMatches);
   const safetyTags = collectUnique([
     ...(obd?.safetyTags || []),
     ...(flow?.safetyTags || []),
     ...interview.safetyTags,
-    ...modernGenericMatches.flatMap(inferSafetyTagsFromModernItem)
+    ...modernGenericMatches.flatMap(inferSafetyTagsFromModernItem),
+    ...workflowMatches.flatMap((item) => item.safety_tags || [])
   ]);
   const confirmationBeforeParts = collectUnique([
     ...(flow?.beforeParts || []),
     ...interview.partsChecks,
+    ...workflowMatches.flatMap((item) => item.before_replacement_checks || []),
     obd ? `DTC ${obd.code} のメーカー別診断手順、端子番号、基準値を確認してください。` : ""
   ]);
 
@@ -320,16 +329,16 @@ function buildDiagnosis(input) {
     interview: interview.insights.length ? interview.insights : [NO_DATA],
     guesses: buildGuesses(obd, flow, interview),
     modernReferences,
-    quickView: buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMatches),
+    quickView: buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMatches, workflowMatches),
     summary: buildDiagnosisSummary(input, obd, flow, interview, modernReferences, safetyTags),
-    checkOrder: buildCheckOrder(obd, flow, interview),
-    measurements: buildMeasurements(flow, interview),
-    branches: buildBranches(flow, interview),
-    cautions: buildCautions(obd, flow, confirmationBeforeParts),
+    checkOrder: buildCheckOrder(obd, flow, interview, workflowMatches),
+    measurements: buildMeasurements(flow, interview, workflowMatches),
+    branches: buildBranches(flow, interview, workflowMatches),
+    cautions: buildCautions(obd, flow, confirmationBeforeParts, workflowMatches),
     partsChecks: confirmationBeforeParts.length ? confirmationBeforeParts : [NO_DATA],
     safetyItems: buildSafetyItems(safetyTags),
     customer: buildCustomerExplanation(flow, interview),
-    sources: buildSources(obd, flow),
+    sources: buildSources(obd, flow, workflowMatches),
     confidenceItems: buildConfidenceItems(obd, flow, interview)
   };
 }
@@ -560,8 +569,11 @@ function buildGuesses(obd, flow, interview) {
   return guesses.length ? guesses : [NO_DATA];
 }
 
-function buildCheckOrder(obd, flow, interview) {
-  const checks = [...interview.checks];
+function buildCheckOrder(obd, flow, interview, workflowMatches = []) {
+  const checks = [
+    ...workflowMatches.flatMap((item) => item.trial_steps || []),
+    ...interview.checks
+  ];
 
   if (flow?.priorityChecks?.length) checks.push(...flow.priorityChecks.map((item) => `優先確認順位: ${item}`));
   if (flow?.firstLook?.length) checks.push(...flow.firstLook.map((item) => `まず見る場所: ${item}`));
@@ -571,8 +583,9 @@ function buildCheckOrder(obd, flow, interview) {
   return collectUnique(checks).length ? collectUnique(checks) : [NO_DATA];
 }
 
-function buildMeasurements(flow, interview) {
+function buildMeasurements(flow, interview, workflowMatches = []) {
   const measurements = [
+    ...workflowMatches.flatMap((item) => item.measurement_points || []),
     ...interview.measurements,
     ...(flow?.measurements || []),
     ...(flow?.measurementPoints || [])
@@ -581,8 +594,14 @@ function buildMeasurements(flow, interview) {
   return measurements.length ? collectUnique(measurements) : [NO_DATA];
 }
 
-function buildBranches(flow, interview) {
+function buildBranches(flow, interview, workflowMatches = []) {
   const branches = [];
+  if (workflowMatches.length) {
+    branches.push(...workflowMatches.flatMap((workflow) => [
+      ...(workflow.if_normal_next || []).map((item) => `正常なら次に確認: ${item}`),
+      ...(workflow.if_abnormal_suspect || []).map((item) => `異常なら疑う場所: ${item}`)
+    ]));
+  }
   if (flow?.ifNormalNext?.length) {
     branches.push(...flow.ifNormalNext.map((item) => `正常なら次に見る場所: ${item}`));
   }
@@ -599,9 +618,10 @@ function buildBranches(flow, interview) {
   return branches.length ? branches : [NO_DATA];
 }
 
-function buildCautions(obd, flow, beforeParts) {
+function buildCautions(obd, flow, beforeParts, workflowMatches = []) {
   const cautions = [];
 
+  cautions.push(...workflowMatches.flatMap((item) => item.common_mistakes || []));
   if (obd?.prematureConclusionWarning) cautions.push(`よくある早とちり: ${obd.prematureConclusionWarning}`);
   if (flow?.commonMistakes?.length) cautions.push(...flow.commonMistakes.map((item) => `よくある早とちり: ${item}`));
   if (beforeParts.length) cautions.push(...beforeParts.map((item) => `部品交換前に必ず確認: ${item}`));
@@ -615,11 +635,15 @@ function buildCautions(obd, flow, beforeParts) {
   return collectUnique(cautions);
 }
 
-function buildSources(obd, flow) {
+function buildSources(obd, flow, workflowMatches = []) {
   const sources = [];
 
   if (obd?.sources?.length) sources.push(...obd.sources);
   if (flow?.sources?.length) sources.push(...flow.sources);
+  sources.push(...workflowMatches.flatMap((item) => [
+    item.source,
+    ...(item.source_url || [])
+  ].filter(Boolean)));
 
   return collectUnique(sources).length ? collectUnique(sources) : [NO_DATA];
 }
@@ -662,9 +686,12 @@ function getConfidence(obd, flow, interview = { insights: [] }) {
   return "低";
 }
 
-function buildModernReferences(input, obd, flow) {
+function buildModernReferences(input, obd, flow, workflowMatches = []) {
   const context = buildReferenceContext(input, flow);
-  const generic = buildGenericObdReference(input, obd);
+  const generic = [
+    ...buildGenericObdReference(input, obd),
+    ...workflowMatches.map(formatDiagnosticWorkflow)
+  ];
   const vehiclePatterns = filterReferenceItems(dataStore.vehiclePatterns, context).map(formatVehiclePattern);
   const recallTsb = filterRecallTsbNotes(dataStore.recallsTsbNotes, context).map(formatRecallTsbNote);
   const japanInspection = filterJapanInspectionNotes(dataStore.japanObdInspectionNotes, context).map(formatJapanInspectionNote);
@@ -716,8 +743,9 @@ function buildGenericObdReference(input, obd) {
   return items;
 }
 
-function buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMatches = []) {
+function buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMatches = [], workflowMatches = []) {
   const checks = collectUnique([
+    ...workflowMatches.flatMap((item) => item.trial_steps || []),
     ...modernGenericMatches.flatMap((item) => item.check_order || []),
     ...(obd?.firstChecks || []),
     ...(flow?.priorityChecks || []),
@@ -725,6 +753,7 @@ function buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMa
     ...interview.checks
   ].filter(Boolean));
   const nextLook = collectUnique([
+    ...workflowMatches.flatMap((item) => item.if_normal_next || []),
     ...modernGenericMatches.flatMap((item) => item.possible_causes || []),
     ...(flow?.firstLook || []),
     ...(flow?.possibleSystems || []),
@@ -732,12 +761,14 @@ function buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMa
     ...(obd?.commonCauses || [])
   ].filter(Boolean));
   const measurements = collectUnique([
+    ...workflowMatches.flatMap((item) => item.measurement_points || []),
     ...modernGenericMatches.flatMap((item) => item.measurement_points || []),
     ...(flow?.measurements || []),
     ...(obd?.measurement_points || []),
     ...interview.measurements
   ].filter(Boolean));
   const mistakes = collectUnique([
+    ...workflowMatches.flatMap((item) => item.common_mistakes || []),
     ...modernGenericMatches.flatMap((item) => item.common_mistakes || []),
     obd?.prematureConclusionWarning,
     ...(obd?.common_mistakes || []),
@@ -837,6 +868,19 @@ function scoreModernGenericCode(item, code) {
 function getModernGenericMatches(code) {
   return (dataStore.genericObdCodesModern || [])
     .map((item) => ({ ...item, _matchInfo: scoreModernGenericCode(item, code) }))
+    .filter((item) => item._matchInfo.score > 0)
+    .sort((a, b) => b._matchInfo.score - a._matchInfo.score);
+}
+
+function getDiagnosticWorkflowMatches(input, flow) {
+  const context = buildReferenceContext(input, flow);
+  return (dataStore.diagnosticWorkflows || [])
+    .map((item) => {
+      if (item.id === "workflow-obd-readout-baseline" && (input.obdCode || input.symptomId)) {
+        return { ...item, _matchInfo: { score: 1, reasons: ["OBD2読取時の基本手順"] } };
+      }
+      return { ...item, _matchInfo: scoreReferenceItem(item, context) };
+    })
     .filter((item) => item._matchInfo.score > 0)
     .sort((a, b) => b._matchInfo.score - a._matchInfo.score);
 }
@@ -985,6 +1029,17 @@ function formatModernGenericCode(item) {
     `まず確認: ${firstInline(item.check_order)}`,
     `早とちり注意: ${firstInline(item.common_mistakes)}`,
     "参考情報あり。詳細な参照元は出典欄を確認してください。"
+  ].join(" / ");
+}
+
+function formatDiagnosticWorkflow(item) {
+  return [
+    `診断フロー: ${item.title || NO_DATA}`,
+    matchReason(item),
+    `まず試す: ${firstInline(item.trial_steps)}`,
+    `正常なら次へ: ${firstInline(item.if_normal_next)}`,
+    `交換前に確認: ${firstInline(item.before_replacement_checks)}`,
+    "部品交換の指示ではありません。実測値とメーカー整備書で確認してください。"
   ].join(" / ");
 }
 

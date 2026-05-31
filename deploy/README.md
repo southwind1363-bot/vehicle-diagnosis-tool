@@ -17,6 +17,8 @@ deploy/
   data/
     obd-codes.json
     generic-obd-codes-modern.json
+    generic-obd-codes-modern-2026.json
+    diagnostic-workflows.json
     vehicle-patterns.json
     recalls-tsb-notes.json
     japan-obd-inspection-notes.json
