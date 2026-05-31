@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.7.0";
+const APP_VERSION = "1.8.0";
 const APP_LAST_UPDATED = "2026-05-31";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -224,6 +224,7 @@ async function loadData() {
       diagnosticWorkflows,
       componentInspectionFlows,
       componentInspectionFlowsExam2026,
+      componentInspectionFlowsExam2026Part2,
       dtcFamilyWorkflows2026,
       dtcScopeRules
     ] = await Promise.all([
@@ -244,6 +245,7 @@ async function loadData() {
       fetchJson("data/diagnostic-workflows.json"),
       fetchJson("data/component-inspection-flows.json"),
       fetchJson("data/component-inspection-flows-exam-2026.json"),
+      fetchJson("data/component-inspection-flows-exam-2026-part2.json"),
       fetchJson("data/dtc-family-workflows-2026.json"),
       fetchJson("data/dtc-scope-rules.json")
     ]);
@@ -257,7 +259,7 @@ async function loadData() {
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
-      diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...dtcFamilyWorkflows2026],
+      diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
       dtcScopeRules
     };
     dataStatus.textContent = "登録済み整備データを読み込みました。";

@@ -18,5 +18,49 @@
     "source_date": "2026-05-31",
     "last_verified_date": "2026-05-31",
     "service_manual_required": true
+  },
+  {
+    "id": "japan-obd-inspection-target-scope-2026-05",
+    "topic": "OBD検査対象表示と検査要否を分けて確認する",
+    "check_order": ["車検証備考欄のOBD検査対象表示を確認する", "NALTEC公開の対象車型式一覧を確認する", "型式指定年月日と初度登録年月を確認する", "検査要否は特定DTC照会アプリで確認する"],
+    "notes": ["NALTEC公開情報では、対象表示がある車両でも型式指定年月日から2年を経過していないもの、または初度登録年月の前月から起算して10か月を経過していないものはOBD検査不要となる場合がある。最終判定は特定DTC照会アプリで確認する。"],
+    "source": "OBD検査ポータル OBD検査について",
+    "source_url": "https://www.obd.naltec.go.jp/about/",
+    "source_date": "2026-05-31",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  },
+  {
+    "id": "japan-obd-inspection-preparation-2026-05",
+    "topic": "OBD検査は認定スキャンツールと対応端末を準備する",
+    "check_order": ["インターネット接続を確認する", "対応端末を確認する", "認定された検査用スキャンツールを確認する", "特定DTC照会アプリをインストールして設定する"],
+    "notes": ["NALTEC公開情報では、端末はPCまたはタブレット、スマートフォンを利用できる。スマートフォンはAndroid環境のみ。Windows版とAndroid版では対応スキャンツールが異なる。"],
+    "source": "OBD検査ポータル 検査の実施準備",
+    "source_url": "https://www.obd.naltec.go.jp/preparation/",
+    "source_date": "2026-05-31",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  },
+  {
+    "id": "japan-obd-inspection-vci-info-2026-05",
+    "topic": "検査用スキャンツールのVCI情報を確認する",
+    "check_order": ["特定DTC照会アプリで接続中の検査用スキャンツールを確認する", "VCIのメーカー名、型式、ファームウェアバージョンを記録する", "Windows版ではドライババージョンも確認する", "認定状況は公開情報と照合する"],
+    "notes": ["特定DTC照会アプリではVCI情報を取得して表示できる。認定製品、ファームウェア、接続方法は最新の公開情報と取扱説明書で確認する。"],
+    "source": "OBD検査ポータル OBD検査で使用する機器",
+    "source_url": "https://www.obd.naltec.go.jp/preparation/device/",
+    "source_date": "2026-05-31",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  },
+  {
+    "id": "japan-obd-inspection-vci-connection-error-2026-05",
+    "topic": "特定DTC照会アプリでスキャンツール接続エラーが出た時の確認順",
+    "check_order": ["VCIとファームウェアが認定された状態か確認する", "Windows版ではドライババージョンも確認する", "認定された有線または無線の接続方法か確認する", "OBD検査に不要な他アプリを終了する", "VCI本体がOBD検査モードか確認する", "端末、VCI、車両の接続を確認する", "VCIを再起動して最初から操作する"],
+    "notes": ["解決しない場合は、車両情報を用意してOBD検査コールセンターへ問い合わせる。車台番号などの個人情報に準ずる情報は本アプリへ保存しない。"],
+    "source": "OBD検査ポータル よくある質問 エラー0000 0002 / 1000 0001",
+    "source_url": "https://www.obd.naltec.go.jp/faq/list/qa7616/",
+    "source_date": "2026-05-31",
+    "last_verified_date": "2026-05-31",
+    "service_manual_required": true
   }
 ]

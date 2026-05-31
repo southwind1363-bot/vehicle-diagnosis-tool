@@ -8,6 +8,14 @@ const jsonFiles = fs.readdirSync(dataDir).filter((name) => name.endsWith(".json"
 const errors = [];
 const warnings = [];
 const codeRows = [];
+const legacySourceOptionalFiles = new Set([
+  "dtc-scope-rules.json",
+  "exam-reference-catalog.json",
+  "exam-review-queue-2026.json",
+  "obd-codes.json",
+  "service-notes.json",
+  "symptom-flows.json"
+]);
 
 function reportError(message) {
   errors.push(message);
@@ -61,6 +69,11 @@ for (const file of jsonFiles) {
 
     if (row.service_manual_required === false) {
       warnings.push(`${label}: service_manual_required が false です`);
+    }
+
+    if (!legacySourceOptionalFiles.has(file)) {
+      if (!row.source) reportError(`${label}: source がありません`);
+      if (!row.source_date) reportError(`${label}: source_date がありません`);
     }
   }
 }

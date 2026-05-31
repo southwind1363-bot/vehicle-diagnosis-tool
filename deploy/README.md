@@ -22,6 +22,7 @@ deploy/
     diagnostic-workflows.json
     component-inspection-flows.json
     component-inspection-flows-exam-2026.json
+    component-inspection-flows-exam-2026-part2.json
     dtc-family-workflows-2026.json
     dtc-scope-rules.json
     dtc-standards-reference-2026.json
@@ -108,6 +109,9 @@ data/component-inspection-flows.json
 
 data/component-inspection-flows-exam-2026.json
   問題用紙と正答表を対で確認し、転載せず実務向けに整理した単体点検フロー
+
+data/component-inspection-flows-exam-2026-part2.json
+  国土交通省の公開試験資料を根拠に追加した、点火、燃料、吸気、冷媒、ワイパー、配線の確認フロー
 
 data/dtc-scope-rules.json
   個別登録がないDTCでも、P/B/C/U領域と最初の確認方針を安全に表示
