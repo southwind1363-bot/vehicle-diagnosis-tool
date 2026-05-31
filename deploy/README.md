@@ -21,6 +21,9 @@ deploy/
     generic-obd-codes-modern-2026-part2.json
     diagnostic-workflows.json
     component-inspection-flows.json
+    component-inspection-flows-exam-2026.json
+    dtc-scope-rules.json
+    exam-reference-catalog.json
     vehicle-patterns.json
     vehicle-patterns-domestic-2026.json
     recalls-tsb-notes.json
@@ -99,6 +102,15 @@ data/vehicle-patterns-domestic-2026.json
 data/component-inspection-flows.json
   公開試験資料の基礎点検を参考に、単体点検と比較測定を実務向けに整理
 
+data/component-inspection-flows-exam-2026.json
+  問題用紙と正答表を対で確認し、転載せず実務向けに整理した単体点検フロー
+
+data/dtc-scope-rules.json
+  個別登録がないDTCでも、P/B/C/U領域と最初の確認方針を安全に表示
+
+data/exam-reference-catalog.json
+  参照した公開試験資料、確認日、除外ルール
+
 data/recalls-tsb-notes.json
   リコール、改善対策、サービスキャンペーン、TSB確認用メモ
 
@@ -122,6 +134,18 @@ data/symptom-flows.json
 - メーカー独自コードは断定しない
 - 登録データにない情報は「登録データなし」と扱う
 - リコール、TSB、OBD検査対象可否は公式情報で最終確認する
+- 試験問題は問題用紙と正答表を対で確認し、不適切出題や訂正対象を診断根拠へ使わない
+- 未登録DTCは名称や原因を推測せず、メーカー整備書で定義を確認する
+
+## データ検査
+
+公開前に次を実行してください。
+
+```powershell
+npm run validate:data
+```
+
+JSON構文、文字崩れ、DTC形式、ID重複、整備書確認フラグを検査します。
 
 ## 外部GPT相談
 

@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 const APP_LAST_UPDATED = "2026-05-31";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -52,6 +52,7 @@ const fallbackData = {
   japanObdInspectionNotes: [],
   realWorldCases: [],
   diagnosticWorkflows: [],
+  dtcScopeRules: [],
   symptomFlows: [
     makeFlow("engine-no-start", "エンジン始動不良", "始動系、電源系、燃料系、点火系、吸気系", ["バッテリー電圧", "クランキング回転数", "燃圧", "点火信号", "DTCとフリーズフレーム"], ["battery", "starter", "fuel", "ignition"]),
     makeFlow("idle-unstable", "アイドリング不調", "吸気系、燃料補正、点火系、EGR、機械圧縮", ["燃料トリム", "MAF値", "失火カウンター", "吸気漏れ", "アイドル学習値"], ["intake", "fuel", "ignition"]),
@@ -220,7 +221,9 @@ async function loadData() {
       japanObdInspectionNotes2026,
       realWorldCases,
       diagnosticWorkflows,
-      componentInspectionFlows
+      componentInspectionFlows,
+      componentInspectionFlowsExam2026,
+      dtcScopeRules
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
       fetchJson("data/service-notes.json"),
@@ -236,7 +239,9 @@ async function loadData() {
       fetchJson("data/japan-obd-inspection-notes-2026.json"),
       fetchJson("data/real-world-cases.json"),
       fetchJson("data/diagnostic-workflows.json"),
-      fetchJson("data/component-inspection-flows.json")
+      fetchJson("data/component-inspection-flows.json"),
+      fetchJson("data/component-inspection-flows-exam-2026.json"),
+      fetchJson("data/dtc-scope-rules.json")
     ]);
 
     dataStore = {
@@ -248,7 +253,8 @@ async function loadData() {
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
-      diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows]
+      diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026],
+      dtcScopeRules
     };
     dataStatus.textContent = "登録済み整備データを読み込みました。";
     dataStatus.classList.remove("error");
@@ -545,6 +551,7 @@ function buildFacts(input, obd, flow, interview) {
     facts.push(`OBD2コード上の故障系統: ${obd.faultSystem}`);
   } else if (input.obdCode) {
     facts.push(`OBD2コード ${input.obdCode}: ${NO_DATA}`);
+    facts.push(describeUnregisteredDtc(input.obdCode));
   } else {
     facts.push(`OBD2コード: ${NO_DATA}`);
   }
@@ -743,6 +750,7 @@ function buildGenericObdReference(input, obd) {
     items.push(`従来汎用OBD: ${obd.code} ${obd.title || ""} / 系統: ${obd.faultSystem || obd.system || NO_DATA} / 参考情報です。原因断定ではありません。`);
   } else if (input.obdCode) {
     items.push(`従来汎用OBD: ${input.obdCode} は登録データなし。メーカー独自コードの可能性もあるため断定しないでください。`);
+    items.push(describeUnregisteredDtc(input.obdCode));
   }
 
   const modernMatches = getModernGenericMatches(input.obdCode);
@@ -1128,6 +1136,29 @@ function firstInline(items) {
 
 function normalizeLoose(value) {
   return String(value || "").toLowerCase().replace(/\s+/g, "");
+}
+
+function describeUnregisteredDtc(code) {
+  if (!/^[PBCU][0-9A-F]{4}$/.test(code)) {
+    return `DTC形式注意: ${code || NO_DATA} は標準的な5文字形式として確認できません。入力を確認してください。`;
+  }
+
+  const rule = (dataStore.dtcScopeRules || []).find((item) => item.prefix === code[0]);
+  const allocationNote = code[1] === "1" || code[1] === "3"
+    ? "メーカー独自定義を含む領域です。"
+    : "汎用定義または標準割当を含む領域です。";
+
+  if (!rule) {
+    return `DTC領域メモ: ${code} は登録済み個別定義なし。メーカー整備書と対応スキャンツールで確認してください。`;
+  }
+
+  return [
+    `DTC領域メモ: ${code} は${rule.system}領域です。`,
+    allocationNote,
+    rule.description,
+    `まず確認: ${(rule.first_checks || [])[0] || "メーカー整備書で定義を確認する"}`,
+    "個別故障は断定しません。"
+  ].join(" ");
 }
 
 function buildSafetyMessage(tags) {

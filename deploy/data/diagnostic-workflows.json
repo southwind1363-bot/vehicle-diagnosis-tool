@@ -237,6 +237,6 @@
     "source_url": ["https://www.obd.naltec.go.jp/faq/list/qa7616/"],
     "source_date": "2026-05-31",
     "last_verified_date": "2026-05-31",
-    "service_manual_required": false
+    "service_manual_required": true
   }
 ]

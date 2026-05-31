@@ -1,0 +1,23 @@
+[
+  {
+    "id": "mlit-electric-equipment-2025-academic",
+    "title": "令和7年度 自動車整備士技能検定 学科試験 自動車電気装置整備士",
+    "source": "国土交通省",
+    "source_url": "https://www.mlit.go.jp/jidosha/content/001996250.pdf",
+    "answer_url": "https://www.mlit.go.jp/jidosha/content/001996251.pdf",
+    "exam_date": "2025-10-22",
+    "last_verified_date": "2026-05-31",
+    "usage_rule": "問題文の転載ではなく、正答と整合する基礎点検原則だけを実務向けに要約する。車種別の数値、端子、印加条件はメーカー整備書を優先する。"
+  },
+  {
+    "id": "jaspa-registered-exam-2025-round2",
+    "title": "令和7年度 第2回 自動車整備技能登録試験",
+    "source": "一般社団法人 日本自動車整備振興会連合会",
+    "source_url": "https://www.jaspa.or.jp/mechanic/past/2025/2nd.html",
+    "exam_date": "2026-03-22",
+    "published_date": "2026-05-26",
+    "last_verified_date": "2026-05-31",
+    "usage_rule": "問題用紙と正答表を対にして確認する。不適切出題、訂正対象、正答根拠を確定できない設問は診断データへ使用しない。",
+    "excluded_items": ["二級ガソリン自動車 学科 No.13: 正答表で不適切出題として全員正解扱いのため診断根拠から除外"]
+  }
+]

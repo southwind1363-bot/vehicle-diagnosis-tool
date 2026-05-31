@@ -1,0 +1,30 @@
+[
+  {
+    "prefix": "P",
+    "system": "パワートレイン",
+    "description": "エンジン、燃料、排気、変速機などの領域です。",
+    "first_checks": ["コード消去前にDTC、状態、フリーズフレーム、同時コードを保存する", "登録データがなければメーカー整備書でコード定義を確認する"],
+    "service_manual_required": true
+  },
+  {
+    "prefix": "B",
+    "system": "ボディ",
+    "description": "ボディ電装、空調、乗員保護装置などを含む領域です。車種依存性が高いため定義確認が必要です。",
+    "first_checks": ["対応スキャンツールで関連ECUのDTCを保存する", "SRS関連の可能性がある場合は指定手順なしに測定や分解を行わない"],
+    "service_manual_required": true
+  },
+  {
+    "prefix": "C",
+    "system": "シャシ",
+    "description": "ブレーキ、ABS、操舵、足回りなどを含む領域です。走行安全へ直結するため定義確認が必要です。",
+    "first_checks": ["走行安全に関わる兆候があれば走行を中止する", "対応スキャンツールで関連ECUのDTCと実測値を保存する"],
+    "service_manual_required": true
+  },
+  {
+    "prefix": "U",
+    "system": "ネットワーク通信",
+    "description": "ECU間通信やネットワーク状態の領域です。受信側コードだけで原因ECUを断定できません。",
+    "first_checks": ["全システムスキャンで応答ECU、非応答ECU、発生順を保存する", "12V電源、アース、ヒューズ、後付用品を先に確認する"],
+    "service_manual_required": true
+  }
+]

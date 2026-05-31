@@ -31,7 +31,7 @@
       "https://www.obd.naltec.go.jp/about"
     ],
     "source_date": "2026-05-18",
-    "service_manual_required": false,
+    "service_manual_required": true,
     "official_lookup_required": true,
     "last_verified_date": "2026-05-31"
   },
@@ -67,7 +67,7 @@
       "https://www.obd.naltec.go.jp/about"
     ],
     "source_date": "2026-05-18",
-    "service_manual_required": false,
+    "service_manual_required": true,
     "official_lookup_required": true,
     "last_verified_date": "2026-05-31"
   }
