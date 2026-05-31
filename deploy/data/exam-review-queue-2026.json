@@ -1,0 +1,41 @@
+[
+  {
+    "id": "jaspa-2025-round2-grade2-gasoline-review",
+    "title": "令和7年度第2回 二級ガソリン自動車 学科試験",
+    "review_status": "manual_review_required",
+    "source": "一般社団法人 日本自動車整備振興会連合会",
+    "source_url": "https://www.jaspa.or.jp/Portals/0/resources/jaspahp/user/mechanic/past/2025/20260322_2g.pdf",
+    "answer_url": "https://www.jaspa.or.jp/Portals/0/resources/jaspahp/user/mechanic/past/2025/20260322_kai.pdf",
+    "exam_date": "2026-03-22",
+    "published_date": "2026-05-26",
+    "last_verified_date": "2026-05-31",
+    "review_rule": "スキャンPDFのため、問題文と正答を目視で対照してから実務フロー化する。OCRのみで数値、端子、基準値を登録しない。",
+    "excluded_items": ["No.13: 正答表で不適切出題として全員正解扱いのため診断根拠から除外"]
+  },
+  {
+    "id": "jaspa-2025-round2-grade2-diesel-review",
+    "title": "令和7年度第2回 二級ジーゼル自動車 学科試験",
+    "review_status": "manual_review_required",
+    "source": "一般社団法人 日本自動車整備振興会連合会",
+    "source_url": "https://www.jaspa.or.jp/Portals/0/resources/jaspahp/user/mechanic/past/2025/20260322_2d.pdf",
+    "answer_url": "https://www.jaspa.or.jp/Portals/0/resources/jaspahp/user/mechanic/past/2025/20260322_kai.pdf",
+    "exam_date": "2026-03-22",
+    "published_date": "2026-05-26",
+    "last_verified_date": "2026-05-31",
+    "review_rule": "スキャンPDFのため、問題文と正答を目視で対照してから実務フロー化する。OCRのみで数値、端子、基準値を登録しない。",
+    "excluded_items": []
+  },
+  {
+    "id": "jaspa-2025-round2-grade2-chassis-review",
+    "title": "令和7年度第2回 二級自動車シャシ 学科試験",
+    "review_status": "manual_review_required",
+    "source": "一般社団法人 日本自動車整備振興会連合会",
+    "source_url": "https://www.jaspa.or.jp/Portals/0/resources/jaspahp/user/mechanic/past/2025/20260322_2c.pdf",
+    "answer_url": "https://www.jaspa.or.jp/Portals/0/resources/jaspahp/user/mechanic/past/2025/20260322_kai.pdf",
+    "exam_date": "2026-03-22",
+    "published_date": "2026-05-26",
+    "last_verified_date": "2026-05-31",
+    "review_rule": "スキャンPDFのため、問題文と正答を目視で対照してから実務フロー化する。OCRのみで数値、端子、基準値を登録しない。",
+    "excluded_items": []
+  }
+]

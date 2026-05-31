@@ -9,7 +9,8 @@ const dtcFiles = [
   "obd-codes.json",
   "generic-obd-codes-modern.json",
   "generic-obd-codes-modern-2026.json",
-  "generic-obd-codes-modern-2026-part2.json"
+  "generic-obd-codes-modern-2026-part2.json",
+  "imported-verified-dtc.json"
 ];
 const workflowFiles = [
   "diagnostic-workflows.json",

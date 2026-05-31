@@ -7,7 +7,8 @@
     "start": "C:\\Progra~1\\nodejs\\node.exe server.js",
     "dev": "C:\\Progra~1\\nodejs\\node.exe server.js",
     "validate:data": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-data.js",
-    "report:coverage": "C:\\Progra~1\\nodejs\\node.exe scripts/report-dtc-coverage.js"
+    "report:coverage": "C:\\Progra~1\\nodejs\\node.exe scripts/report-dtc-coverage.js",
+    "import:dtc:sample": "C:\\Progra~1\\nodejs\\node.exe scripts/import-verified-dtc-csv.js --input scripts/fixtures/verified-dtc-sample.csv --source \"検証用サンプル\" --source-url \"https://example.invalid/verified-dtc-sample\" --source-date \"2026-05-31\""
   },
   "dependencies": {
     "express": "^4.21.2"
