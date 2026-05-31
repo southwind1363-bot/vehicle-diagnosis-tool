@@ -1,8 +1,8 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.2.1";
-const APP_LAST_UPDATED = "2026-05-27";
+const APP_VERSION = "1.2.2";
+const APP_LAST_UPDATED = "2026-05-31";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
 
@@ -933,19 +933,19 @@ function scoreReferenceItem(item, context) {
 }
 
 function scoreVehicleFilter(item, context) {
-  const maker = normalizeLoose(item.maker || "");
-  const model = normalizeLoose(item.model || "");
-  const engine = normalizeLoose(item.engine_code || "");
-  const powertrain = normalizeLoose(item.powertrain || "");
+  const makers = [item.maker, ...(item.maker_aliases || [])].map(normalizeLoose).filter(Boolean);
+  const models = [item.model, ...(item.model_aliases || [])].map(normalizeLoose).filter(Boolean);
+  const engines = [item.engine_code, ...(item.engine_aliases || [])].map(normalizeLoose).filter(Boolean);
+  const powertrains = [item.powertrain, ...(item.powertrain_aliases || [])].map(normalizeLoose).filter(Boolean);
   const yearFrom = Number(item.year_from || item.year || 0) || null;
   const yearTo = Number(item.year_to || item.year || 0) || null;
   const reasons = [];
   let score = 0;
 
-  const makerHit = maker && context.vehicleText.includes(maker);
-  const modelHit = model && context.vehicleText.includes(model);
-  const engineHit = engine && context.engineText.includes(engine);
-  const powertrainHit = powertrain && context.vehicleText.includes(powertrain);
+  const makerHit = makers.some((maker) => context.vehicleText.includes(maker));
+  const modelHit = models.some((model) => context.vehicleText.includes(model));
+  const engineHit = engines.some((engine) => context.engineText.includes(engine));
+  const powertrainHit = powertrains.some((powertrain) => context.vehicleText.includes(powertrain));
   const yearHit = context.year && (!yearFrom || context.year >= yearFrom) && (!yearTo || context.year <= yearTo);
 
   if (makerHit) {
