@@ -1144,9 +1144,7 @@ function describeUnregisteredDtc(code) {
   }
 
   const rule = (dataStore.dtcScopeRules || []).find((item) => item.prefix === code[0]);
-  const allocationNote = code[1] === "1" || code[1] === "3"
-    ? "メーカー独自定義を含む領域です。"
-    : "汎用定義または標準割当を含む領域です。";
+  const allocationNote = "汎用定義、標準割当、メーカー独自定義の区別はコード領域により異なるため、メーカー整備書で確認してください。";
 
   if (!rule) {
     return `DTC領域メモ: ${code} は登録済み個別定義なし。メーカー整備書と対応スキャンツールで確認してください。`;
