@@ -6,7 +6,8 @@
   "scripts": {
     "start": "C:\\Progra~1\\nodejs\\node.exe server.js",
     "dev": "C:\\Progra~1\\nodejs\\node.exe server.js",
-    "validate:data": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-data.js"
+    "validate:data": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-data.js",
+    "report:coverage": "C:\\Progra~1\\nodejs\\node.exe scripts/report-dtc-coverage.js"
   },
   "dependencies": {
     "express": "^4.21.2"

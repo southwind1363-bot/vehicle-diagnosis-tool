@@ -17,6 +17,10 @@ function isDtc(code) {
   return /^[PBCU][0-9A-F]{4}$/.test(code);
 }
 
+function isDtcPattern(code) {
+  return /^[PBCU][0-9A-FX]{4}$/.test(code) && code.includes("X");
+}
+
 for (const file of jsonFiles) {
   const raw = fs.readFileSync(path.join(dataDir, file), "utf8");
   let rows;
@@ -52,7 +56,7 @@ for (const file of jsonFiles) {
     }
 
     for (const code of row.dtc_codes || []) {
-      if (!isDtc(code)) reportError(`${label}: 参照DTC形式が不正です: ${code}`);
+      if (!isDtc(code) && !isDtcPattern(code)) reportError(`${label}: 参照DTC形式が不正です: ${code}`);
     }
 
     if (row.service_manual_required === false) {

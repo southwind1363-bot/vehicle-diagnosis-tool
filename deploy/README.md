@@ -22,7 +22,9 @@ deploy/
     diagnostic-workflows.json
     component-inspection-flows.json
     component-inspection-flows-exam-2026.json
+    dtc-family-workflows-2026.json
     dtc-scope-rules.json
+    dtc-standards-reference-2026.json
     exam-reference-catalog.json
     vehicle-patterns.json
     vehicle-patterns-domestic-2026.json
@@ -108,6 +110,12 @@ data/component-inspection-flows-exam-2026.json
 data/dtc-scope-rules.json
   個別登録がないDTCでも、P/B/C/U領域と最初の確認方針を安全に表示
 
+data/dtc-family-workflows-2026.json
+  個別定義が未登録でも診断開始点を示す、P/B/C/U領域と主要系列の初期整理
+
+data/dtc-standards-reference-2026.json
+  SAE J2012、J2012DA、NALTECなど標準・公式資料の参照台帳
+
 data/exam-reference-catalog.json
   参照した公開試験資料、確認日、除外ルール
 
@@ -146,6 +154,12 @@ npm run validate:data
 ```
 
 JSON構文、文字崩れ、DTC形式、ID重複、整備書確認フラグを検査します。
+
+登録済み個別DTCと系統別フローの状況は次で確認できます。
+
+```powershell
+npm.cmd run report:coverage
+```
 
 ## 外部GPT相談
 

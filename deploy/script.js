@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.6.0";
 const APP_LAST_UPDATED = "2026-05-31";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -223,6 +223,7 @@ async function loadData() {
       diagnosticWorkflows,
       componentInspectionFlows,
       componentInspectionFlowsExam2026,
+      dtcFamilyWorkflows2026,
       dtcScopeRules
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
@@ -241,6 +242,7 @@ async function loadData() {
       fetchJson("data/diagnostic-workflows.json"),
       fetchJson("data/component-inspection-flows.json"),
       fetchJson("data/component-inspection-flows-exam-2026.json"),
+      fetchJson("data/dtc-family-workflows-2026.json"),
       fetchJson("data/dtc-scope-rules.json")
     ]);
 
@@ -253,7 +255,7 @@ async function loadData() {
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
-      diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026],
+      diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...dtcFamilyWorkflows2026],
       dtcScopeRules
     };
     dataStatus.textContent = "登録済み整備データを読み込みました。";
@@ -871,9 +873,10 @@ function buildPrecisionHint(input, modernReferences) {
 
 function codeMatchesModern(pattern, code) {
   if (!pattern || !code) return false;
-  if (pattern === code) return true;
-  if (pattern.endsWith("xxx")) return code.startsWith(pattern.slice(0, 2));
-  return false;
+  if (pattern.toUpperCase() === code.toUpperCase()) return true;
+  if (!pattern.toUpperCase().includes("X")) return false;
+  const expression = pattern.toUpperCase().replace(/X/g, "[0-9A-F]");
+  return new RegExp(`^${expression}$`).test(code.toUpperCase());
 }
 
 function scoreModernGenericCode(item, code) {
@@ -958,7 +961,7 @@ function filterRealWorldCases(items = [], context) {
 }
 
 function hasCodeHit(codes = [], code) {
-  return Boolean(code && Array.isArray(codes) && codes.includes(code));
+  return Boolean(code && Array.isArray(codes) && codes.some((pattern) => codeMatchesModern(pattern, code)));
 }
 
 function hasWordHit(words = [], targetText) {
@@ -978,8 +981,9 @@ function scoreReferenceItem(item, context) {
   let score = 0;
 
   if (hasCodeHit(item.dtc_codes, context.code)) {
-    score += 5;
-    reasons.push(`DTC ${context.code} 一致`);
+    const exactMatch = item.dtc_codes.includes(context.code);
+    score += exactMatch ? 5 : 1;
+    reasons.push(exactMatch ? `DTC ${context.code} 一致` : `DTC ${context.code} の系統フロー`);
   }
 
   if (hasWordHit(item.symptoms, context.symptomText)) {
