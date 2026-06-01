@@ -648,6 +648,118 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "トヨタ",
+    "model": "クラウン クロスオーバー",
+    "model_codes": ["AZSH35", "TZSH35"],
+    "engine_codes": ["A25A-FXS", "T24A-FTS"],
+    "source": "トヨタ公式メンテナンスデータと認定中古車情報を基にした入力候補。ハイブリッド車のため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "クラウン スポーツ",
+    "model_codes": ["AZSH36W", "AZSH37W"],
+    "engine_codes": ["A25A-FXS"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。ハイブリッド車とプラグインハイブリッド車があるため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "クラウン セダン",
+    "model_codes": ["AZSH32", "KZSM30"],
+    "engine_codes": ["A25A-FXS", "3KM"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。KZSM30はFCEVのため、燃料電池、高圧水素、高電圧系統の作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "クラウン エステート",
+    "model_codes": ["AZSH38W", "AZSH39W"],
+    "engine_codes": ["A25A-FXS"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。ハイブリッド車とプラグインハイブリッド車があるため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "GR86",
+    "model_codes": ["ZN8"],
+    "engine_codes": ["FA24"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。年式、変速機、仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "GRカローラ",
+    "model_codes": ["GZEA14H"],
+    "engine_codes": ["G16E-GTS"],
+    "source": "トヨタ公式カタログと認定中古車情報を基にした入力候補。仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "GRヤリス",
+    "model_codes": ["GXPA16", "MXPA12"],
+    "engine_codes": ["G16E-GTS", "M15A-FKS"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。旧RSを含むため、年式、グレード、車検証、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "bZ4X",
+    "model_codes": ["XEAM10", "YEAM15", "XEAM15"],
+    "engine_codes": ["1XM", "1YM", "2XM"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。電気自動車のため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ランドクルーザー 70",
+    "model_codes": ["GDJ76W"],
+    "engine_codes": ["1GD-FTV"],
+    "source": "トヨタ公式走行性能ページと認定中古車情報を基にした入力候補。仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ランドクルーザー 300",
+    "model_codes": ["VJA300W", "FJA300W"],
+    "engine_codes": ["V35A-FTS", "F33A-FTV"],
+    "source": "トヨタ公式メンテナンスデータと主要諸元を基にした入力候補。ガソリン車とディーゼル車があるため、車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "タウンエース バン",
+    "model_codes": ["S403M", "S413M"],
+    "engine_codes": ["2NR-VE"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。OEM供給車のため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "タウンエース トラック",
+    "model_codes": ["S403U", "S413U"],
+    "engine_codes": ["2NR-VE"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。OEM供給車のため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "オデッセイ",
+    "model_codes": ["RC5"],
+    "engine_codes": ["LFB11"],
+    "source": "Honda公式主要諸元を基にした入力候補。原動機型式はLFB11-H4。e:HEV車のため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "シビック TYPE R",
+    "model_codes": ["FL5"],
+    "engine_codes": ["K20C"],
+    "source": "Honda公式主要諸元を基にした入力候補。仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
     "maker": "レクサス",
     "model": "LBX",
     "model_codes": ["MAYH10", "MAYH15"],
