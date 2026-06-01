@@ -98,40 +98,40 @@
   {
     "maker": "ホンダ",
     "model": "フィット",
-    "model_codes": ["GE6", "GE8", "GP1", "GK3", "GK4", "GK5", "GK6", "GP5", "GP6", "GR1", "GR3", "GR6", "GR8"],
-    "engine_codes": ["L13A", "L13B", "LEB", "L15A", "L15B"],
+    "model_codes": ["GD1", "GD2", "GD3", "GD4", "GE6", "GE7", "GE8", "GE9", "GP1", "GP4", "GK3", "GK4", "GK5", "GK6", "GP5", "GP6", "GR1", "GR3", "GR6", "GR8"],
+    "engine_codes": ["L13A", "L15A", "LDA", "LEA", "L13B", "LEB", "L15B"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
   {
     "maker": "ホンダ",
     "model": "N-WGN",
-    "model_codes": ["JH3", "JH4"],
-    "engine_codes": ["S07B"],
+    "model_codes": ["JH1", "JH2", "JH3", "JH4"],
+    "engine_codes": ["S07A", "S07B"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
   {
     "maker": "ホンダ",
     "model": "フリード",
-    "model_codes": ["GT1", "GT2", "GT3", "GT4", "GT5", "GT6", "GT7", "GT8"],
-    "engine_codes": ["L15D", "LEB"],
+    "model_codes": ["GB3", "GB4", "GP3", "GB5", "GB6", "GB7", "GB8", "GT1", "GT2", "GT3", "GT4", "GT5", "GT6", "GT7", "GT8"],
+    "engine_codes": ["L15A", "LEA", "L15B", "LEB", "L15D"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
   {
     "maker": "ホンダ",
     "model": "ステップ ワゴン",
-    "model_codes": ["RP6", "RP7", "RP8"],
-    "engine_codes": ["L15C", "LFA"],
+    "model_codes": ["RG1", "RG2", "RG3", "RG4", "RK1", "RK2", "RK3", "RK4", "RK5", "RK6", "RK7", "RP1", "RP2", "RP3", "RP4", "RP5", "RP6", "RP7", "RP8"],
+    "engine_codes": ["K20A", "K24A", "R20A", "L15B", "LFA", "L15C"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
   {
     "maker": "ホンダ",
     "model": "ヴェゼル",
-    "model_codes": ["RV3", "RV4", "RV5", "RV6"],
-    "engine_codes": ["L15Z", "LEC"],
+    "model_codes": ["RU1", "RU2", "RU3", "RU4", "RV3", "RV4", "RV5", "RV6"],
+    "engine_codes": ["L15B", "LEB", "L15Z", "LEC"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
@@ -746,8 +746,8 @@
   {
     "maker": "ホンダ",
     "model": "オデッセイ",
-    "model_codes": ["RC5"],
-    "engine_codes": ["LFB11"],
+    "model_codes": ["RB1", "RB2", "RB3", "RB4", "RC1", "RC2", "RC4", "RC5"],
+    "engine_codes": ["K24A", "K24W", "LFA", "LFB11"],
     "source": "Honda公式主要諸元を基にした入力候補。原動機型式はLFB11-H4。e:HEV車のため、高電圧作業はメーカー整備書と資格要件を確認する。",
     "source_date": "2026-06-01"
   },
