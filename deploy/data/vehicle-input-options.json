@@ -281,6 +281,14 @@
   },
   {
     "maker": "日産",
+    "model": "デュアリス",
+    "model_codes": ["J10", "NJ10", "KJ10", "KNJ10"],
+    "engine_codes": ["MR20DE"],
+    "source": "日産公式FAQ、公式WEBカタログバックナンバー、公式リコール情報を基にした旧型入力補助候補。駆動方式、月単位の適用境界、リコール実施状況は車検証とメーカー資料で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "日産",
     "model": "サクラ",
     "model_codes": ["B6AW"],
     "engine_codes": ["MM48"],
@@ -370,10 +378,18 @@
   {
     "maker": "トヨタ",
     "model": "ハリアー",
-    "model_codes": ["MXUA80", "MXUA85", "AXUH80", "AXUH85", "AXUP85"],
-    "engine_codes": ["M20A-FKS", "A25A-FXS"],
-    "source": "トヨタ公式主要諸元を基にした入力補助候補。ハイブリッド車とPHEV車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
-    "source_date": "2026-06-01"
+    "model_codes": ["ACU30W", "ACU35W", "MCU30W", "MCU31W", "MCU35W", "MCU36W", "GSU30W", "GSU31W", "GSU35W", "GSU36W", "ZSU60W", "ZSU65W", "AVU65W", "ASU60W", "ASU65W", "MXUA80", "MXUA85", "AXUH80", "AXUH85", "AXUP85"],
+    "engine_codes": ["2AZ-FE", "1MZ-FE", "2GR-FE", "3ZR-FAE", "2AR-FXE", "8AR-FTS", "M20A-FKS", "A25A-FXS"],
+    "source": "トヨタ公式認定中古車情報と主要諸元を基にした入力補助候補。旧型、ターボ車、ハイブリッド車、PHEV車を含むため、車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "RAV4",
+    "model_codes": ["ACA31W", "ACA36W"],
+    "engine_codes": ["2AZ-FE"],
+    "source": "トヨタ公式認定中古車情報と主要諸元を基にした旧型入力補助候補。駆動方式、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
   },
   {
     "maker": "トヨタ",
@@ -477,6 +493,14 @@
     "model_codes": ["MF21S", "MF22S", "MF33S"],
     "engine_codes": ["K6A", "R06A"],
     "source": "スズキ公式 DIGITAL LIBRARYを基にした旧型入力補助候補。過給機有無、駆動方式、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "スズキ",
+    "model": "パレット",
+    "model_codes": ["MK21S"],
+    "engine_codes": ["K6A"],
+    "source": "スズキ公式 DIGITAL LIBRARYを基にした旧型入力補助候補。標準車とパレットSW、過給機有無、駆動方式、月単位の適用境界は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-02"
   },
   {
