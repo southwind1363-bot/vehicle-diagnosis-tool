@@ -274,9 +274,9 @@
   {
     "maker": "日産",
     "model": "エクストレイル",
-    "model_codes": ["T31", "NT31", "TNT31", "DNT31", "T32", "NT32", "HT32", "HNT32", "T33", "SNT33"],
-    "engine_codes": ["MR20DE", "QR25DE", "M9R", "MR20DD", "KR15DDT"],
-    "source": "日産公式環境仕様書を基にした入力補助候補。e-POWER車のため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "model_codes": ["T30", "NT30", "PNT30", "T31", "NT31", "TNT31", "DNT31", "T32", "NT32", "HT32", "HNT32", "T33", "SNT33"],
+    "engine_codes": ["QR20DE", "SR20VET", "MR20DE", "QR25DE", "M9R", "MR20DD", "KR15DDT"],
+    "source": "日産公式FAQ、公式リコール情報、主要諸元を基にした入力補助候補。初期型のターボ有無、ハイブリッド車、e-POWER車を含むため、車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
   {
@@ -410,10 +410,34 @@
   {
     "maker": "トヨタ",
     "model": "プロボックス",
-    "model_codes": ["NCP160V", "NCP165V", "NSP160V", "NHP160V"],
-    "engine_codes": ["1NZ-FE", "1NR-FE", "1NZ-FXE"],
+    "model_codes": ["NCP50V", "NCP51V", "NCP55V", "NCP160V", "NCP165V", "NSP160V", "NHP160V"],
+    "engine_codes": ["2NZ-FE", "1NZ-FE", "1NR-FE", "1NZ-FXE"],
     "source": "トヨタ公式主要諸元を基にした入力補助候補。ハイブリッド車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
     "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "プロボックス ワゴン",
+    "model_codes": ["NCP58G", "NCP59G"],
+    "engine_codes": ["1NZ-FE"],
+    "source": "トヨタ公式認定中古車情報を基にした旧型入力補助候補。駆動方式、変速機、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "サクシード",
+    "model_codes": ["NCP51V", "NCP55V", "NCP160V", "NCP165V"],
+    "engine_codes": ["1NZ-FE"],
+    "source": "トヨタ公式環境仕様とアフターサービス資料を基にした旧型入力補助候補。駆動方式、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "サクシード ワゴン",
+    "model_codes": ["NCP58G", "NCP59G"],
+    "engine_codes": ["1NZ-FE"],
+    "source": "トヨタ公式認定中古車情報を基にした旧型入力補助候補。駆動方式、変速機、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
   },
   {
     "maker": "ホンダ",
@@ -446,6 +470,14 @@
     "engine_codes": ["K6A", "R06A"],
     "source": "スズキ公式資料を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
     "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "MRワゴン",
+    "model_codes": ["MF21S", "MF22S", "MF33S"],
+    "engine_codes": ["K6A", "R06A"],
+    "source": "スズキ公式 DIGITAL LIBRARYを基にした旧型入力補助候補。過給機有無、駆動方式、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
   },
   {
     "maker": "スズキ",
