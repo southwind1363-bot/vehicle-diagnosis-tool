@@ -1217,6 +1217,62 @@
   },
   {
     "maker": "レクサス",
+    "model": "RZ",
+    "model_codes": ["XEBM10", "XEBM15"],
+    "engine_codes": ["1XM", "1YM"],
+    "source": "LEXUS公式メンテナンスデータを基にした入力候補。BEVのため、表示する原動機候補はモーター型式。高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
+    "model": "GX",
+    "model_codes": ["VJA252W"],
+    "engine_codes": ["V35A-FTS"],
+    "source": "LEXUS公式主要諸元を基にした入力候補。悪路走行装備、駆動系、仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
+    "model": "LX",
+    "model_codes": ["VJA310W", "VJH310W"],
+    "engine_codes": ["V35A-FTS"],
+    "source": "LEXUS公式メンテナンスデータを基にした入力候補。LX600とLX700hを含むため、ハイブリッド有無、駆動系、仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
+    "model": "LM",
+    "model_codes": ["TAWH15W"],
+    "engine_codes": ["T24A-FTS"],
+    "source": "LEXUS公式メンテナンスデータを基にした入力候補。ハイブリッド車のため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
+    "model": "IS",
+    "model_codes": ["GSE31", "AVE30", "AVE35", "ASE30", "USE30"],
+    "engine_codes": ["2GR-FKS", "2AR-FSE", "8AR-FTS", "2UR-GSE"],
+    "source": "LEXUS公式主要諸元と取扱説明書を基にした入力候補。ハイブリッド有無、駆動方式、年式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
+    "model": "LS",
+    "model_codes": ["GVF50", "GVF55", "VXFA50", "VXFA55"],
+    "engine_codes": ["8GR-FXS", "V35A-FTS"],
+    "source": "LEXUS公式主要諸元とメンテナンスデータを基にした入力候補。ハイブリッド有無と駆動方式は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
+    "model": "LC",
+    "model_codes": ["GWZ100", "URZ100"],
+    "engine_codes": ["8GR-FXS", "2UR-GSE"],
+    "source": "LEXUS公式メンテナンスデータを基にした入力候補。販売終了表示あり。ハイブリッド有無、ボディ形状、詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
     "model": null,
     "model_codes": [],
     "engine_codes": [],
