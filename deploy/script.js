@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.11.0";
+const APP_VERSION = "1.12.0";
 const APP_LAST_UPDATED = "2026-06-01";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -183,15 +183,15 @@ vehicleModelCodeSelect.addEventListener("change", () => {
 });
 vehicleYearSelect.addEventListener("change", () => {
   updateVehicleYearManualVisibility();
-  syncVehicleInput();
+  renderVehicleEngineOptions();
 });
-[vehicleEngineCodeSelect, vehicleYearManualInput, vehicleManualInput].forEach((element) => {
+[vehicleEngineCodeSelect, vehicleManualInput].forEach((element) => {
   element.addEventListener("input", syncVehicleInput);
   element.addEventListener("change", syncVehicleInput);
 });
 vehicleYearManualInput.addEventListener("input", () => {
   vehicleYearManualInput.value = vehicleYearManualInput.value.replace(/\D/g, "").slice(0, 4);
-  syncVehicleInput();
+  renderVehicleEngineOptions();
 });
 
 caseForm.addEventListener("submit", (event) => {
@@ -421,17 +421,13 @@ function renderVehicleDetailOptions() {
   const row = getSelectedVehicleOption();
   const hasSelectedModel = Boolean(vehicleModelSelect.value);
   const modelCodes = row?.model_codes || [];
-  const engineCodes = row?.engine_codes || [];
   vehicleYearManualInput.value = "";
 
   replaceSelectOptions(vehicleModelCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", modelCodes);
-  replaceSelectOptions(vehicleEngineCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", engineCodes);
   if (hasSelectedModel) {
     appendSelectOption(vehicleModelCodeSelect, MANUAL_VEHICLE_VALUE, "一覧にない型式 / 手入力");
-    appendSelectOption(vehicleEngineCodeSelect, MANUAL_VEHICLE_VALUE, "一覧にないエンジン型式 / 手入力");
   }
   vehicleModelCodeSelect.disabled = !hasSelectedModel;
-  vehicleEngineCodeSelect.disabled = !hasSelectedModel;
   renderVehicleYearOptions();
 }
 
@@ -448,7 +444,7 @@ function renderVehicleYearOptions() {
   if (years.length) appendSelectOption(vehicleYearSelect, MANUAL_VEHICLE_VALUE, "一覧にない年式 / 手入力");
   vehicleYearSelect.disabled = !hasSelectedModel || !years.length;
   updateVehicleYearManualVisibility();
-  syncVehicleInput();
+  renderVehicleEngineOptions();
 }
 
 function getSelectedVehicleYearRanges() {
@@ -457,6 +453,29 @@ function getSelectedVehicleYearRanges() {
     if (item.maker !== vehicleMakerSelect.value || item.model !== vehicleModelSelect.value) return false;
     return !selectedCode || item.model_codes.includes(selectedCode);
   });
+}
+
+function getApplicableVehicleYearRanges() {
+  const selectedYear = Number(selectedVehicleValue(vehicleYearSelect) || vehicleYearManualInput.value);
+  return getSelectedVehicleYearRanges().filter((item) => {
+    if (!selectedYear) return true;
+    const yearTo = item.year_to || item.verified_through_year;
+    return item.year_from <= selectedYear && selectedYear <= yearTo;
+  });
+}
+
+function renderVehicleEngineOptions() {
+  const row = getSelectedVehicleOption();
+  const hasSelectedModel = Boolean(vehicleModelSelect.value);
+  const narrowedEngineCodes = collectUnique(getApplicableVehicleYearRanges().flatMap((item) => item.engine_codes || []));
+  const engineCodes = narrowedEngineCodes.length ? narrowedEngineCodes : (row?.engine_codes || []);
+
+  replaceSelectOptions(vehicleEngineCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", engineCodes);
+  if (hasSelectedModel) {
+    appendSelectOption(vehicleEngineCodeSelect, MANUAL_VEHICLE_VALUE, "一覧にないエンジン型式 / 手入力");
+  }
+  vehicleEngineCodeSelect.disabled = !hasSelectedModel;
+  syncVehicleInput();
 }
 
 function toYearOptions(range) {

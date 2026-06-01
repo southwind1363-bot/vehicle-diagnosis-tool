@@ -34,8 +34,8 @@
   {
     "maker": "日産",
     "model": "セレナ",
-    "model_codes": ["C26", "FC26", "FNC26", "HC26", "HFC26", "C27", "GC27", "GFC27", "HC27", "HFC27", "C28", "GC28", "GFC28"],
-    "engine_codes": ["MR20DD", "HR12DE"],
+    "model_codes": ["C26", "FC26", "FNC26", "HC26", "HFC26", "C27", "NC27", "GC27", "GNC27", "FC27", "FNC27", "GFC27", "GFNC27", "HC27", "HFC27", "C28", "NC28", "FC28", "FNC28", "GC28", "GFC28", "SNC28", "SFNC28"],
+    "engine_codes": ["MR20DD", "HR12DE", "HR14DDe"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
@@ -51,7 +51,7 @@
     "maker": "ホンダ",
     "model": "フィット",
     "model_codes": ["GE6", "GE8", "GP1", "GK3", "GK4", "GK5", "GK6", "GP5", "GP6", "GR1", "GR3", "GR6", "GR8"],
-    "engine_codes": ["L13A", "L13B", "LEB", "L15A"],
+    "engine_codes": ["L13A", "L13B", "LEB", "L15A", "L15B"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
