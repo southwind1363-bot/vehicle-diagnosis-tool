@@ -992,6 +992,70 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "スバル",
+    "model": "XV",
+    "model_codes": ["GP7", "GT3", "GT7", "GTE"],
+    "engine_codes": ["FB16", "FB20"],
+    "source": "SUBARU公式WEBカタログを基にした旧型入力候補。e-BOXER車を含むため、年式、駆動方式、高電圧作業の遮断手順と資格要件は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "スバル",
+    "model": "XV ハイブリッド",
+    "model_codes": ["GPE"],
+    "engine_codes": ["FB20"],
+    "source": "SUBARU公式WEBカタログを基にした旧型入力候補。ハイブリッド車のため、高電圧作業の遮断手順と資格要件はメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "スバル",
+    "model": "エクシーガ",
+    "model_codes": ["YA5", "YAM"],
+    "engine_codes": ["EJ20", "FB25"],
+    "source": "SUBARU公式WEBカタログを基にした旧型入力候補。年式、過給機有無、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "スバル",
+    "model": "エクシーガ クロスオーバー7",
+    "model_codes": ["YAM"],
+    "engine_codes": ["FB25"],
+    "source": "SUBARU公式WEBカタログを基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "三菱",
+    "model": "RVR",
+    "model_codes": ["GA3W", "GA4W"],
+    "engine_codes": ["4B10", "4J10"],
+    "source": "三菱自動車公式リコール情報とFAQを基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "三菱",
+    "model": "コルト",
+    "model_codes": ["Z21A", "Z22A", "Z23A", "Z24A", "Z27A", "Z27AG"],
+    "engine_codes": ["4A90", "4A91", "4G15"],
+    "source": "三菱自動車公式リコール情報とFAQを基にした旧型入力候補。年式、過給機有無、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "マツダ",
+    "model": "MPV",
+    "model_codes": ["LY3P"],
+    "engine_codes": ["L3-VE", "L3-VDT"],
+    "source": "マツダ公式オーナーマニュアルを基にした旧型入力候補。過給機有無、年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "マツダ",
+    "model": "プレマシー",
+    "model_codes": ["CREW", "CR3W", "CWEFW", "CWEAW", "CWFFW"],
+    "engine_codes": ["LF-VE", "L3-VE", "LF-VD", "PE-VPS"],
+    "source": "マツダ公式オーナーマニュアルとアクセサリー情報ライブラリーを基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
     "maker": "レクサス",
     "model": "LBX",
     "model_codes": ["MAYH10", "MAYH15"],
