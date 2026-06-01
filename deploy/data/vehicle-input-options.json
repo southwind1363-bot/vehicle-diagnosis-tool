@@ -442,8 +442,8 @@
   {
     "maker": "スズキ",
     "model": "アルト ラパン",
-    "model_codes": ["HE33S"],
-    "engine_codes": ["R06A"],
+    "model_codes": ["HE21S", "HE22S", "HE33S"],
+    "engine_codes": ["K6A", "R06A"],
     "source": "スズキ公式資料を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
     "source_date": "2026-06-01"
   },
@@ -866,16 +866,16 @@
   {
     "maker": "トヨタ",
     "model": "カローラ アクシオ",
-    "model_codes": ["NKE165", "NRE161", "NZE161", "NZE164"],
-    "engine_codes": ["1NZ-FXE", "2NR-FKE", "1NZ-FE"],
+    "model_codes": ["NZE141", "NZE144", "ZRE142", "ZRE144", "NKE165", "NRE161", "NZE161", "NZE164"],
+    "engine_codes": ["1NZ-FE", "2ZR-FE", "1NZ-FXE", "2NR-FKE"],
     "source": "トヨタ公式認定中古車情報と主要諸元を基にした入力候補。2025年11月生産終了。ハイブリッド有無、駆動方式、詳細仕様は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
   {
     "maker": "トヨタ",
     "model": "カローラ フィールダー",
-    "model_codes": ["NKE165G", "NRE161G", "NZE161G", "NZE164G"],
-    "engine_codes": ["1NZ-FXE", "2NR-FKE", "1NZ-FE"],
+    "model_codes": ["NZE141G", "NZE144G", "ZRE142G", "ZRE144G", "NKE165G", "NRE161G", "NZE161G", "NZE164G"],
+    "engine_codes": ["1NZ-FE", "2ZR-FE", "1NZ-FXE", "2NR-FKE"],
     "source": "トヨタ公式認定中古車情報と主要諸元を基にした入力候補。2025年11月生産終了。ハイブリッド有無、駆動方式、詳細仕様は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
@@ -1154,8 +1154,8 @@
   {
     "maker": "日産",
     "model": "キャラバン",
-    "model_codes": ["VR2E26", "VW2E26", "VN2E26"],
-    "engine_codes": ["QR20DE", "4N16"],
+    "model_codes": ["VRE25", "VWE25", "VWME25", "CSGE25", "CWGE25", "CWMGE25", "VR2E26", "VW2E26", "VN2E26"],
+    "engine_codes": ["QR20DE", "QR25DE", "ZD30DDTi", "4N16"],
     "source": "日産公式環境仕様書を基にした頻出型式の入力補助候補。ボディ、架装、駆動方式、月単位の適用境界は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
@@ -1558,6 +1558,22 @@
     "engine_codes": ["8GR-FXS", "V35A-FTS"],
     "source": "LEXUS公式主要諸元とメンテナンスデータを基にした入力候補。ハイブリッド有無と駆動方式は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ヴィッツ",
+    "model_codes": ["SCP10", "NCP15", "KSP90", "SCP90", "NCP91", "NCP95", "KSP130", "NSP130", "NSP135", "NCP131", "NHP130"],
+    "engine_codes": ["1SZ-FE", "2NZ-FE", "1KR-FE", "2SZ-FE", "1NZ-FE", "1NR-FE", "1NR-FKE", "1NZ-FXE"],
+    "source": "トヨタ公式認定中古車情報とヴィッツ主要諸元を基にした入力補助候補。世代、駆動方式、改良時期、ハイブリッド有無は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "日産",
+    "model": "AD",
+    "model_codes": ["VY12", "VZNY12", "VJY12"],
+    "engine_codes": ["HR15DE", "HR16DE", "MR18DE"],
+    "source": "日産公式旧車カタログとAD主要諸元を基にした入力補助候補。販売名称、駆動方式、仕様向上時期、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
   },
   {
     "maker": "レクサス",
