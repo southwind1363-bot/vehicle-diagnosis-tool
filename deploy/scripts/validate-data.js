@@ -119,6 +119,30 @@ for (const file of jsonFiles) {
   }
 }
 
+const vehicleInputRows = JSON.parse(fs.readFileSync(path.join(dataDir, "vehicle-input-options.json"), "utf8"));
+const vehicleYearRows = JSON.parse(fs.readFileSync(path.join(dataDir, "vehicle-year-ranges-domestic-2026.json"), "utf8"));
+const vehicleInputByKey = new Map(
+  vehicleInputRows
+    .filter((row) => row.model)
+    .map((row) => [`${row.maker}::${row.model}`, row])
+);
+
+for (const [index, row] of vehicleYearRows.entries()) {
+  const label = `vehicle-year-ranges-domestic-2026.json[${index}]`;
+  const vehicleKey = `${row.maker}::${row.model}`;
+  const inputOption = vehicleInputByKey.get(vehicleKey);
+  if (!inputOption) {
+    reportError(`${label}: vehicle-input-options.json に ${vehicleKey} がありません`);
+    continue;
+  }
+  for (const modelCode of row.model_codes || []) {
+    if (!inputOption.model_codes.includes(modelCode)) reportError(`${label}: ${vehicleKey} の型式 ${modelCode} が入力候補にありません`);
+  }
+  for (const engineCode of row.engine_codes || []) {
+    if (!inputOption.engine_codes.includes(engineCode)) reportError(`${label}: ${vehicleKey} のエンジン型式 ${engineCode} が入力候補にありません`);
+  }
+}
+
 const codeLocations = new Map();
 for (const row of codeRows) {
   const locations = codeLocations.get(row.code) || [];

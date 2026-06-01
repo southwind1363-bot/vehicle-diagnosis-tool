@@ -506,16 +506,16 @@
   {
     "maker": "ダイハツ",
     "model": "ハイゼットカーゴ",
-    "model_codes": ["S700V", "S710V"],
-    "engine_codes": ["KF"],
+    "model_codes": ["S321V", "S331V", "S700V", "S710V"],
+    "engine_codes": ["KF-VE", "KF-DET", "KF"],
     "source": "ダイハツ公式主要諸元を基にした入力補助候補。ターボ有無、変速機、駆動方式は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
   {
     "maker": "ダイハツ",
     "model": "ハイゼットトラック",
-    "model_codes": ["S500P", "S510P"],
-    "engine_codes": ["KF"],
+    "model_codes": ["S201P", "S211P", "S500P", "S510P"],
+    "engine_codes": ["KF-VE", "KF"],
     "source": "ダイハツ公式主要諸元を基にした入力補助候補。架装と駆動方式は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
@@ -645,6 +645,150 @@
     "model_codes": ["ZD8"],
     "engine_codes": ["FA24"],
     "source": "SUBARU公式諸元表を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "eKクロス",
+    "model_codes": ["B34W", "B35W", "B37W", "B38W"],
+    "engine_codes": ["BR06"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。ターボ有無、駆動方式は車検証、コーションプレート、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "eKクロス EV",
+    "model_codes": ["B5AW"],
+    "engine_codes": ["MM48"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。電気自動車のため、高電圧系統はメーカー整備書、遮断手順、資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "eKスペース",
+    "model_codes": ["B34A", "B37A"],
+    "engine_codes": ["BR06"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。駆動方式は車検証、コーションプレート、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "ミニキャブ バン",
+    "model_codes": ["DS17V"],
+    "engine_codes": ["R06A"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。OEM供給車のため、ターボ有無、変速機、駆動方式は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "ミニキャブEV",
+    "model_codes": ["U69V"],
+    "engine_codes": ["YA1"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。電気自動車のため、高電圧系統はメーカー整備書、遮断手順、資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "タウンボックス",
+    "model_codes": ["DS17W"],
+    "engine_codes": ["R06A"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。OEM供給車のため、駆動方式は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "デリカD:2",
+    "model_codes": ["MBD7S"],
+    "engine_codes": ["Z12E"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。マイルドハイブリッド車のため、電動系作業はメーカー整備書を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "クロスビー",
+    "model_codes": ["MN71S", "MND1S"],
+    "engine_codes": ["K10C", "Z12E"],
+    "source": "スズキ公式資料を基にした入力補助候補。改良前後で型式とエンジンが異なるため、車検証、コーションプレート、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ジムニー シエラ",
+    "model_codes": ["JB74W"],
+    "engine_codes": ["K15B"],
+    "source": "スズキ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ジムニー ノマド",
+    "model_codes": ["JC74W"],
+    "engine_codes": ["K15B"],
+    "source": "スズキ公式広報資料を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "スイフト",
+    "model_codes": ["ZCDDS", "ZCEDS", "ZDDDS", "ZDEDS"],
+    "engine_codes": ["Z12E"],
+    "source": "スズキ公式DIGITAL LIBRARYを基にした現行型入力補助候補。駆動方式とハイブリッド有無は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ワゴンR スマイル",
+    "model_codes": ["MX81S", "MX91S"],
+    "engine_codes": ["R06D"],
+    "source": "スズキ公式主要諸元を基にした入力補助候補。駆動方式とハイブリッド有無は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "スペーシア ベース",
+    "model_codes": ["MK33V"],
+    "engine_codes": ["R06A"],
+    "source": "スズキ公式環境情報を基にした入力補助候補。商用車のため、車体仕様と駆動方式は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ムーヴ",
+    "model_codes": ["LA150S", "LA160S", "LA850S", "LA860S"],
+    "engine_codes": ["KF"],
+    "source": "ダイハツ公式U-CATCHを基にした入力補助候補。旧型と現行型を含むため、車検証、コーションプレート、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "カローラ クロス",
+    "model_codes": ["ZSG10", "ZVG11", "ZVG15", "MXGA10", "MXGH10", "MXGH15"],
+    "engine_codes": ["2ZR-FAE", "2ZR-FXE", "M20A-FKS", "M20A-FXS"],
+    "source": "トヨタ公式認定中古車情報と仕様ページを基にした入力補助候補。ハイブリッド車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ハイラックス",
+    "model_codes": ["GUN125"],
+    "engine_codes": ["2GD-FTV", "1GD-FTV"],
+    "source": "トヨタ公式走行性能ページと取扱説明書を基にした入力補助候補。改良前後でエンジンが異なるため、年式、車検証、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ランドクルーザー 250",
+    "model_codes": ["TRJ250W", "GDJ250W"],
+    "engine_codes": ["2TR-FE", "1GD-FTV"],
+    "source": "トヨタ公式主要諸元と取扱説明書を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ピクシス バン",
+    "model_codes": ["S321M", "S331M", "S700M", "S710M"],
+    "engine_codes": ["KF"],
+    "source": "トヨタ公式主要諸元を基にした入力補助候補。OEM供給車のため、ターボ有無、変速機、駆動方式は車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
   {
