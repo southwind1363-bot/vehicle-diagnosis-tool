@@ -192,6 +192,48 @@ h1 {
   grid-template-columns: 1fr 1fr;
 }
 
+.vehicle-selector {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.vehicle-selector legend {
+  padding: 0 8px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.vehicle-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.vehicle-note,
+.vehicle-summary {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.vehicle-note {
+  margin-bottom: 12px;
+}
+
+.vehicle-summary {
+  margin: 12px 0 0;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
 .questionnaire {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -667,6 +709,10 @@ button {
   }
 
   .diagnosis-form {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicle-selector-grid {
     grid-template-columns: 1fr;
   }
 

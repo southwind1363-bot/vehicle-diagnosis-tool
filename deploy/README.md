@@ -31,6 +31,7 @@ deploy/
     exam-reference-catalog.json
     vehicle-patterns.json
     vehicle-patterns-domestic-2026.json
+    vehicle-input-options.json
     recalls-tsb-notes.json
     official-reference-notes-2026.json
     japan-obd-inspection-notes.json
@@ -103,6 +104,9 @@ data/vehicle-patterns.json
 
 data/vehicle-patterns-domestic-2026.json
   国産車の入力条件から絞り込む参考フロー。車種固有の故障断定には使用しない
+
+data/vehicle-input-options.json
+  メーカー、車種、型式、エンジン型式の段階選択に使う入力補助候補。車検証とメーカー資料の確認を優先する
 
 data/component-inspection-flows.json
   公開試験資料の基礎点検を参考に、単体点検と比較測定を実務向けに整理

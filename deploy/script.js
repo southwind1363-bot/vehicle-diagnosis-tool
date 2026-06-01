@@ -1,10 +1,11 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.8.0";
-const APP_LAST_UPDATED = "2026-05-31";
+const APP_VERSION = "1.9.0";
+const APP_LAST_UPDATED = "2026-06-01";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
+const MANUAL_VEHICLE_VALUE = "__manual__";
 
 const fallbackData = {
   obdCodes: [
@@ -48,6 +49,7 @@ const fallbackData = {
   serviceNotes: [],
   genericObdCodesModern: [],
   vehiclePatterns: [],
+  vehicleInputOptions: [],
   recallsTsbNotes: [],
   japanObdInspectionNotes: [],
   realWorldCases: [],
@@ -70,6 +72,14 @@ const resetButton = document.querySelector("#resetButton");
 const themeButton = document.querySelector("#themeButton");
 const dataStatus = document.querySelector("#dataStatus");
 const symptomSelect = document.querySelector("#symptomSelect");
+const vehicleInput = document.querySelector("#vehicle");
+const vehicleMakerSelect = document.querySelector("#vehicleMaker");
+const vehicleModelSelect = document.querySelector("#vehicleModel");
+const vehicleModelCodeSelect = document.querySelector("#vehicleModelCode");
+const vehicleEngineCodeSelect = document.querySelector("#vehicleEngineCode");
+const vehicleYearInput = document.querySelector("#vehicleYear");
+const vehicleManualInput = document.querySelector("#vehicleManual");
+const vehicleSelectionSummary = document.querySelector("#vehicleSelectionSummary");
 const emptyState = document.querySelector("#emptyState");
 const resultContent = document.querySelector("#resultContent");
 const safetyPanel = document.querySelector("#safetyPanel");
@@ -158,7 +168,19 @@ window.addEventListener("resize", () => {
 
 resetButton.addEventListener("click", () => {
   form.reset();
+  resetVehicleSelector();
   hideResult();
+});
+
+vehicleMakerSelect.addEventListener("change", renderVehicleModelOptions);
+vehicleModelSelect.addEventListener("change", renderVehicleDetailOptions);
+[vehicleModelCodeSelect, vehicleEngineCodeSelect, vehicleYearInput, vehicleManualInput].forEach((element) => {
+  element.addEventListener("input", syncVehicleInput);
+  element.addEventListener("change", syncVehicleInput);
+});
+vehicleYearInput.addEventListener("input", () => {
+  vehicleYearInput.value = vehicleYearInput.value.replace(/\D/g, "").slice(0, 4);
+  syncVehicleInput();
 });
 
 caseForm.addEventListener("submit", (event) => {
@@ -216,6 +238,7 @@ async function loadData() {
       importedVerifiedDtc,
       vehiclePatterns,
       vehiclePatternsDomestic2026,
+      vehicleInputOptions,
       recallsTsbNotes,
       officialReferenceNotes2026,
       japanObdInspectionNotes,
@@ -237,6 +260,7 @@ async function loadData() {
       fetchJson("data/imported-verified-dtc.json"),
       fetchJson("data/vehicle-patterns.json"),
       fetchJson("data/vehicle-patterns-domestic-2026.json"),
+      fetchJson("data/vehicle-input-options.json"),
       fetchJson("data/recalls-tsb-notes.json"),
       fetchJson("data/official-reference-notes-2026.json"),
       fetchJson("data/japan-obd-inspection-notes.json"),
@@ -256,6 +280,7 @@ async function loadData() {
       symptomFlows,
       genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2, ...importedVerifiedDtc],
       vehiclePatterns: [...vehiclePatterns, ...vehiclePatternsDomestic2026],
+      vehicleInputOptions,
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
@@ -271,6 +296,7 @@ async function loadData() {
   }
 
   renderSymptomOptions();
+  renderVehicleMakerOptions();
 }
 
 async function fetchJson(path) {
@@ -313,9 +339,91 @@ function renderSymptomOptions() {
   symptomSelect.value = currentValue;
 }
 
+function renderVehicleMakerOptions() {
+  const currentValue = vehicleMakerSelect.value;
+  const makers = collectUnique(dataStore.vehicleInputOptions.map((item) => item.maker)).sort((a, b) => a.localeCompare(b, "ja"));
+
+  replaceSelectOptions(vehicleMakerSelect, "選択してください", makers);
+  appendSelectOption(vehicleMakerSelect, MANUAL_VEHICLE_VALUE, "その他 / 手入力");
+  vehicleMakerSelect.value = makers.includes(currentValue) || currentValue === MANUAL_VEHICLE_VALUE ? currentValue : "";
+  renderVehicleModelOptions();
+}
+
+function renderVehicleModelOptions() {
+  const maker = vehicleMakerSelect.value;
+  const rows = dataStore.vehicleInputOptions.filter((item) => item.maker === maker && item.model);
+  const models = collectUnique(rows.map((item) => item.model)).sort((a, b) => a.localeCompare(b, "ja"));
+
+  replaceSelectOptions(vehicleModelSelect, maker ? "選択してください" : "先にメーカーを選択", models);
+  if (maker) appendSelectOption(vehicleModelSelect, MANUAL_VEHICLE_VALUE, "一覧にない車種 / 手入力");
+  vehicleModelSelect.disabled = !maker || maker === MANUAL_VEHICLE_VALUE;
+  renderVehicleDetailOptions();
+}
+
+function renderVehicleDetailOptions() {
+  const row = getSelectedVehicleOption();
+  const hasSelectedModel = Boolean(vehicleModelSelect.value);
+  const modelCodes = row?.model_codes || [];
+  const engineCodes = row?.engine_codes || [];
+
+  replaceSelectOptions(vehicleModelCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", modelCodes);
+  replaceSelectOptions(vehicleEngineCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", engineCodes);
+  if (hasSelectedModel) {
+    appendSelectOption(vehicleModelCodeSelect, MANUAL_VEHICLE_VALUE, "一覧にない型式 / 手入力");
+    appendSelectOption(vehicleEngineCodeSelect, MANUAL_VEHICLE_VALUE, "一覧にないエンジン型式 / 手入力");
+  }
+  vehicleModelCodeSelect.disabled = !hasSelectedModel;
+  vehicleEngineCodeSelect.disabled = !hasSelectedModel;
+  syncVehicleInput();
+}
+
+function getSelectedVehicleOption() {
+  return dataStore.vehicleInputOptions.find((item) => item.maker === vehicleMakerSelect.value && item.model === vehicleModelSelect.value) || null;
+}
+
+function replaceSelectOptions(select, placeholder, values) {
+  select.innerHTML = "";
+  appendSelectOption(select, "", placeholder);
+  values.forEach((value) => appendSelectOption(select, value, value));
+}
+
+function appendSelectOption(select, value, label) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  select.appendChild(option);
+}
+
+function syncVehicleInput() {
+  const values = [
+    selectedVehicleValue(vehicleMakerSelect),
+    selectedVehicleValue(vehicleModelSelect),
+    selectedVehicleValue(vehicleModelCodeSelect),
+    selectedVehicleValue(vehicleEngineCodeSelect),
+    vehicleYearInput.value ? `${vehicleYearInput.value}年式` : "",
+    vehicleManualInput.value.trim()
+  ];
+  vehicleInput.value = collectUnique(values).join(" ");
+  vehicleSelectionSummary.textContent = vehicleInput.value ? `車種情報: ${vehicleInput.value}` : "車種情報: 未選択";
+}
+
+function selectedVehicleValue(select) {
+  return select.value && select.value !== MANUAL_VEHICLE_VALUE ? select.value : "";
+}
+
+function resetVehicleSelector() {
+  vehicleModelSelect.disabled = true;
+  vehicleModelCodeSelect.disabled = true;
+  vehicleEngineCodeSelect.disabled = true;
+  replaceSelectOptions(vehicleModelSelect, "先にメーカーを選択", []);
+  replaceSelectOptions(vehicleModelCodeSelect, "先に車種を選択", []);
+  replaceSelectOptions(vehicleEngineCodeSelect, "先に車種を選択", []);
+  syncVehicleInput();
+}
+
 function getInput() {
   return {
-    vehicle: document.querySelector("#vehicle").value.trim(),
+    vehicle: vehicleInput.value.trim(),
     obdCode: normalizeCode(document.querySelector("#obdCode").value),
     symptomId: symptomSelect.value,
     facts: document.querySelector("#facts").value.trim(),

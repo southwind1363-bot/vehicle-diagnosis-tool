@@ -1,0 +1,146 @@
+[
+  {
+    "maker": "トヨタ",
+    "model": "プリウス",
+    "model_codes": ["ZVW30", "ZVW50", "ZVW51", "ZVW55", "ZVW60", "ZVW65", "MXWH60", "MXWH65"],
+    "engine_codes": ["2ZR-FXE", "M20A-FXS"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "アクア",
+    "model_codes": ["NHP10", "MXPK10", "MXPK11", "MXPK15", "MXPK16"],
+    "engine_codes": ["1NZ-FXE", "M15A-FXE"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "シエンタ",
+    "model_codes": ["NCP81G", "NCP85G", "NSP170G", "NCP175G", "NHP170G", "MXPC10G", "MXPL10G", "MXPL15G"],
+    "engine_codes": ["1NZ-FE", "1NZ-FXE", "2NR-FKE", "M15A-FKS", "M15A-FXE"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "ノート",
+    "model_codes": ["E12", "NE12", "HE12", "SNE12", "E13", "SNE13"],
+    "engine_codes": ["HR12DE", "HR12DDR"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "セレナ",
+    "model_codes": ["C26", "FC26", "FNC26", "HC26", "HFC26", "C27", "GC27", "GFC27", "HC27", "HFC27", "C28", "GC28", "GFC28"],
+    "engine_codes": ["MR20DD", "HR12DE"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "N-BOX",
+    "model_codes": ["JF1", "JF2", "JF3", "JF4", "JF5", "JF6"],
+    "engine_codes": ["S07A", "S07B"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "フィット",
+    "model_codes": ["GE6", "GE8", "GP1", "GK3", "GK5", "GP5", "GR1", "GR3", "GR6", "GR8"],
+    "engine_codes": ["L13A", "L13B", "LEB", "L15A"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "CX-5",
+    "model_codes": ["KE2AW", "KE2FW", "KF2P"],
+    "engine_codes": ["SH-VPTS", "PY-VPS"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "フォレスター",
+    "model_codes": ["SJ5", "SJG", "SK5", "SKE"],
+    "engine_codes": ["FB20", "FA20", "CB18"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ワゴンR",
+    "model_codes": ["MH34S", "MH44S", "MH55S", "MH95S"],
+    "engine_codes": ["R06A", "R06D"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "スペーシア",
+    "model_codes": ["MK42S", "MK53S", "MK54S", "MK94S"],
+    "engine_codes": ["R06A", "R06D"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "タント",
+    "model_codes": ["LA600S", "LA610S", "LA650S", "LA660S"],
+    "engine_codes": ["KF"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "アウトランダーPHEV",
+    "model_codes": ["GG2W", "GG3W", "GN0W"],
+    "engine_codes": ["4B11", "4B12", "4B40"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "レクサス",
+    "model": null,
+    "model_codes": [],
+    "engine_codes": [],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "いすゞ",
+    "model": null,
+    "model_codes": [],
+    "engine_codes": [],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日野",
+    "model": null,
+    "model_codes": [],
+    "engine_codes": [],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱ふそう",
+    "model": null,
+    "model_codes": [],
+    "engine_codes": [],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "UDトラックス",
+    "model": null,
+    "model_codes": [],
+    "engine_codes": [],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  }
+]

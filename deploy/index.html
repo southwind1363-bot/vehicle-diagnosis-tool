@@ -40,10 +40,46 @@
           <p id="dataStatus" class="data-status">整備データを読み込み中です。</p>
 
           <form id="diagnosisForm" class="diagnosis-form">
-            <label>
-              車種情報入力
-              <input id="vehicle" type="text" placeholder="例: 2018年式 プリウス 2ZR-FXE">
-            </label>
+            <fieldset class="vehicle-selector full-width">
+              <legend>車種情報入力</legend>
+              <p class="vehicle-note">候補は入力補助です。型式とエンジン型式は、車検証・コーションプレート・メーカー整備書で確認してください。</p>
+              <div class="vehicle-selector-grid">
+                <label>
+                  メーカー
+                  <select id="vehicleMaker">
+                    <option value="">選択してください</option>
+                  </select>
+                </label>
+                <label>
+                  車種
+                  <select id="vehicleModel" disabled>
+                    <option value="">先にメーカーを選択</option>
+                  </select>
+                </label>
+                <label>
+                  型式
+                  <select id="vehicleModelCode" disabled>
+                    <option value="">先に車種を選択</option>
+                  </select>
+                </label>
+                <label>
+                  エンジン型式
+                  <select id="vehicleEngineCode" disabled>
+                    <option value="">先に車種を選択</option>
+                  </select>
+                </label>
+                <label>
+                  年式
+                  <input id="vehicleYear" type="text" inputmode="numeric" maxlength="4" placeholder="例: 2018">
+                </label>
+                <label>
+                  候補にない項目・補足
+                  <input id="vehicleManual" type="text" placeholder="例: 6AA-MXPL10G、M15A-FXE">
+                </label>
+              </div>
+              <p id="vehicleSelectionSummary" class="vehicle-summary">車種情報: 未選択</p>
+              <input id="vehicle" type="hidden">
+            </fieldset>
 
             <label>
               OBD2コード入力
