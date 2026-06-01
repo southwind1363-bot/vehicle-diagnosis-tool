@@ -45,8 +45,8 @@ for (const file of jsonFiles) {
     continue;
   }
 
-  if (raw.includes("?")) {
-    reportError(`${file}: 文字崩れの可能性がある ? を含みます`);
+  if (raw.includes("\uFFFD")) {
+    reportError(`${file}: 文字崩れの可能性がある置換文字を含みます`);
   }
 
   const ids = new Set();

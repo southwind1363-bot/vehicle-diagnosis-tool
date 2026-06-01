@@ -138,16 +138,16 @@
   {
     "maker": "マツダ",
     "model": "CX-5",
-    "model_codes": ["KE2AW", "KE2FW", "KF2P"],
-    "engine_codes": ["SH-VPTS", "PY-VPS"],
+    "model_codes": ["KEEFW", "KEEAW", "KE2FW", "KE2AW", "KE5FW", "KE5AW", "KFEP", "KF2P"],
+    "engine_codes": ["PE-VPS", "SH-VPTS", "PY-VPS"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
   {
     "maker": "スバル",
     "model": "フォレスター",
-    "model_codes": ["SJ5", "SJG", "SK5", "SKE", "SL5", "SLG"],
-    "engine_codes": ["FB20", "FA20", "CB18", "FB25"],
+    "model_codes": ["SG5", "SH5", "SH9", "SHJ", "SJ5", "SJG", "SKE", "SK5", "SL5", "SLG"],
+    "engine_codes": ["EJ20", "EJ25", "FB20", "FA20", "CB18", "FB25"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
@@ -338,8 +338,8 @@
   {
     "maker": "三菱",
     "model": "eKワゴン",
-    "model_codes": ["B33W", "B36W"],
-    "engine_codes": ["BR06"],
+    "model_codes": ["H81W", "H82W", "B11W", "B33W", "B36W"],
+    "engine_codes": ["3G83", "3B20", "BR06"],
     "source": "三菱自動車公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
     "source_date": "2026-06-01"
   },
@@ -354,8 +354,8 @@
   {
     "maker": "三菱",
     "model": "デリカD:5",
-    "model_codes": ["CV1W"],
-    "engine_codes": ["4N14"],
+    "model_codes": ["CV5W", "CV4W", "CV2W", "CV1W"],
+    "engine_codes": ["4B12", "4B11", "4J11", "4N14"],
     "source": "三菱自動車公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
     "source_date": "2026-06-01"
   },
@@ -1090,8 +1090,8 @@
   {
     "maker": "スバル",
     "model": "インプレッサ",
-    "model_codes": ["GU6", "GU7", "GUD", "GUE"],
-    "engine_codes": ["FB20"],
+    "model_codes": ["GH2", "GH3", "GH7", "GH8", "GU6", "GU7", "GUD", "GUE"],
+    "engine_codes": ["EL15", "EJ20", "FB20"],
     "source": "SUBARU公式諸元表を基にした入力補助候補。e-BOXER車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
     "source_date": "2026-06-01"
   },
@@ -1261,6 +1261,30 @@
     "model_codes": ["S321M", "S331M", "S700M", "S710M"],
     "engine_codes": ["KF"],
     "source": "トヨタ公式主要諸元を基にした入力補助候補。OEM供給車のため、ターボ有無、変速機、駆動方式は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "デミオ",
+    "model_codes": ["DJ3FS", "DJ3AS", "DJ5FS", "DJ5AS", "DJLFS"],
+    "engine_codes": ["P3-VPS", "S5-DPTS", "P5-VPS"],
+    "source": "マツダ公式取扱説明書と主要諸元を基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "アクセラ",
+    "model_codes": ["BM5FS", "BM5AS"],
+    "engine_codes": ["P5-VPS"],
+    "source": "マツダ公式取扱説明書と主要諸元を基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "インプレッサ スポーツ",
+    "model_codes": ["GP2", "GP3", "GP6", "GP7"],
+    "engine_codes": ["FB16", "FB20"],
+    "source": "SUBARU公式中古車カタログを基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
   {
