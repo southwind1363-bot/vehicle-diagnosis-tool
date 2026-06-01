@@ -33,6 +33,7 @@ deploy/
     vehicle-patterns-domestic-2026.json
     vehicle-input-options.json
     vehicle-model-catalog-domestic-2026.json
+    vehicle-year-ranges-domestic-2026.json
     recalls-tsb-notes.json
     official-reference-notes-2026.json
     japan-obd-inspection-notes.json
@@ -111,6 +112,9 @@ data/vehicle-input-options.json
 
 data/vehicle-model-catalog-domestic-2026.json
   国産13メーカーの車名候補カタログ。型式やエンジン型式は推測で補わず、詳細候補JSONと手入力で補完する
+
+data/vehicle-year-ranges-domestic-2026.json
+  公式カタログ等で確認できた型式の年式候補。月単位の境界を断定せず、車検証とメーカー資料の照合を優先する
 
 data/component-inspection-flows.json
   公開試験資料の基礎点検を参考に、単体点検と比較測定を実務向けに整理

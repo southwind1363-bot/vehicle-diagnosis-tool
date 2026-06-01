@@ -50,7 +50,7 @@
   {
     "maker": "ホンダ",
     "model": "フィット",
-    "model_codes": ["GE6", "GE8", "GP1", "GK3", "GK5", "GP5", "GR1", "GR3", "GR6", "GR8"],
+    "model_codes": ["GE6", "GE8", "GP1", "GK3", "GK4", "GK5", "GK6", "GP5", "GP6", "GR1", "GR3", "GR6", "GR8"],
     "engine_codes": ["L13A", "L13B", "LEB", "L15A"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"

@@ -1,0 +1,89 @@
+[
+  {
+    "maker": "トヨタ",
+    "model": "プリウス",
+    "model_codes": ["ZVW50", "ZVW51", "ZVW55"],
+    "year_from": 2015,
+    "year_to": 2023,
+    "period_note": "50系の発売期間を年単位に丸めた入力補助候補。月単位の境界は車検証とメーカー資料で確認する。",
+    "source": "トヨタ認定中古車 プリウス車両情報",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-PRIUS/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "プリウス",
+    "model_codes": ["ZVW60", "ZVW65", "MXWH60", "MXWH65"],
+    "year_from": 2023,
+    "year_to": null,
+    "verified_through_year": 2026,
+    "period_note": "60系の発売期間を年単位に丸めた入力補助候補。継続販売状況と月単位の境界はメーカー資料で確認する。",
+    "source": "トヨタ認定中古車 プリウス車両情報 / トヨタ プリウスWEBカタログ",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-PRIUS/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "アクア",
+    "model_codes": ["NHP10"],
+    "year_from": 2011,
+    "year_to": 2021,
+    "period_note": "初代アクアの発売期間を年単位に丸めた入力補助候補。月単位の境界は車検証とメーカー資料で確認する。",
+    "source": "トヨタ認定中古車 アクア車両情報",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-AQUA/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "アクア",
+    "model_codes": ["MXPK10", "MXPK11", "MXPK15", "MXPK16"],
+    "year_from": 2021,
+    "year_to": null,
+    "verified_through_year": 2026,
+    "period_note": "2代目アクアの発売期間を年単位に丸めた入力補助候補。継続販売状況と月単位の境界はメーカー資料で確認する。",
+    "source": "トヨタ認定中古車 アクア車両情報",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-AQUA/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "N-BOX",
+    "model_codes": ["JF3", "JF4"],
+    "year_from": 2017,
+    "year_to": 2023,
+    "period_note": "2017.08から2023.09までの期間を年単位に丸めた入力補助候補。月単位の境界は車検証とメーカー資料で確認する。",
+    "source": "Honda公式 生産終了モデル N-BOX（2017.08〜2023.09）",
+    "source_url": "https://www.honda.co.jp/customer/auto-archive/n-box/2017/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "N-BOX",
+    "model_codes": ["JF5", "JF6"],
+    "year_from": 2023,
+    "year_to": null,
+    "verified_through_year": 2026,
+    "period_note": "2023年10月発表モデル以降の入力補助候補。継続販売状況と月単位の境界はメーカー資料で確認する。",
+    "source": "Honda公式 N-BOX 2023.10 Press Information",
+    "source_url": "https://www.honda.co.jp/factbook/auto/nbox/202310/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "フィット",
+    "model_codes": ["GK3", "GK4", "GK5", "GK6", "GP5", "GP6"],
+    "year_from": 2013,
+    "year_to": 2020,
+    "period_note": "2013.09から2020.01までの期間を年単位に丸めた入力補助候補。月単位の境界は車検証とメーカー資料で確認する。",
+    "source": "Honda公式 生産終了モデル FIT（2013.09〜2020.01）",
+    "source_url": "https://www.honda.co.jp/customer/auto-archive/fit/2013/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  }
+]

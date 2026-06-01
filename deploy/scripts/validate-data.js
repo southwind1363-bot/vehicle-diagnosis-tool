@@ -86,6 +86,18 @@ for (const file of jsonFiles) {
       if (!row.source_url) reportError(`${label}: source_url がありません`);
       if (row.detail_confirmation_required !== true) reportError(`${label}: detail_confirmation_required が true ではありません`);
     }
+
+    if (file === "vehicle-year-ranges-domestic-2026.json") {
+      if (!row.maker) reportError(`${label}: maker がありません`);
+      if (!row.model) reportError(`${label}: model がありません`);
+      if (!Array.isArray(row.model_codes) || !row.model_codes.length) reportError(`${label}: model_codes がありません`);
+      if (!Number.isInteger(row.year_from)) reportError(`${label}: year_from が整数ではありません`);
+      if (row.year_to !== null && !Number.isInteger(row.year_to)) reportError(`${label}: year_to が整数または null ではありません`);
+      if (row.year_to === null && !Number.isInteger(row.verified_through_year)) reportError(`${label}: 継続中の候補に verified_through_year がありません`);
+      if (Number.isInteger(row.year_to) && row.year_from > row.year_to) reportError(`${label}: 年式範囲が逆転しています`);
+      if (!row.source_url) reportError(`${label}: source_url がありません`);
+      if (row.detail_confirmation_required !== true) reportError(`${label}: detail_confirmation_required が true ではありません`);
+    }
   }
 }
 

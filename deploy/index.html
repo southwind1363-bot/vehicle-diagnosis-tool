@@ -63,14 +63,20 @@
                   </select>
                 </label>
                 <label>
-                  エンジン型式
-                  <select id="vehicleEngineCode" disabled>
+                  年式
+                  <select id="vehicleYear" disabled>
                     <option value="">先に車種を選択</option>
                   </select>
                 </label>
                 <label>
-                  年式
-                  <input id="vehicleYear" type="text" inputmode="numeric" maxlength="4" placeholder="例: 2018">
+                  年式（候補にない場合）
+                  <input id="vehicleYearManual" type="text" inputmode="numeric" maxlength="4" placeholder="例: 2018" hidden>
+                </label>
+                <label>
+                  エンジン型式
+                  <select id="vehicleEngineCode" disabled>
+                    <option value="">先に車種を選択</option>
+                  </select>
                 </label>
                 <label>
                   候補にない項目・補足

@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.10.0";
+const APP_VERSION = "1.11.0";
 const APP_LAST_UPDATED = "2026-06-01";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -51,6 +51,7 @@ const fallbackData = {
   vehiclePatterns: [],
   vehicleInputOptions: [],
   vehicleModelCatalogDomestic2026: [],
+  vehicleYearRangesDomestic2026: [],
   recallsTsbNotes: [],
   japanObdInspectionNotes: [],
   realWorldCases: [],
@@ -78,7 +79,8 @@ const vehicleMakerSelect = document.querySelector("#vehicleMaker");
 const vehicleModelSelect = document.querySelector("#vehicleModel");
 const vehicleModelCodeSelect = document.querySelector("#vehicleModelCode");
 const vehicleEngineCodeSelect = document.querySelector("#vehicleEngineCode");
-const vehicleYearInput = document.querySelector("#vehicleYear");
+const vehicleYearSelect = document.querySelector("#vehicleYear");
+const vehicleYearManualInput = document.querySelector("#vehicleYearManual");
 const vehicleManualInput = document.querySelector("#vehicleManual");
 const vehicleSelectionSummary = document.querySelector("#vehicleSelectionSummary");
 const emptyState = document.querySelector("#emptyState");
@@ -175,12 +177,20 @@ resetButton.addEventListener("click", () => {
 
 vehicleMakerSelect.addEventListener("change", renderVehicleModelOptions);
 vehicleModelSelect.addEventListener("change", renderVehicleDetailOptions);
-[vehicleModelCodeSelect, vehicleEngineCodeSelect, vehicleYearInput, vehicleManualInput].forEach((element) => {
+vehicleModelCodeSelect.addEventListener("change", () => {
+  vehicleYearManualInput.value = "";
+  renderVehicleYearOptions();
+});
+vehicleYearSelect.addEventListener("change", () => {
+  updateVehicleYearManualVisibility();
+  syncVehicleInput();
+});
+[vehicleEngineCodeSelect, vehicleYearManualInput, vehicleManualInput].forEach((element) => {
   element.addEventListener("input", syncVehicleInput);
   element.addEventListener("change", syncVehicleInput);
 });
-vehicleYearInput.addEventListener("input", () => {
-  vehicleYearInput.value = vehicleYearInput.value.replace(/\D/g, "").slice(0, 4);
+vehicleYearManualInput.addEventListener("input", () => {
+  vehicleYearManualInput.value = vehicleYearManualInput.value.replace(/\D/g, "").slice(0, 4);
   syncVehicleInput();
 });
 
@@ -241,6 +251,7 @@ async function loadData() {
       vehiclePatternsDomestic2026,
       vehicleInputOptions,
       vehicleModelCatalogDomestic2026,
+      vehicleYearRangesDomestic2026,
       recallsTsbNotes,
       officialReferenceNotes2026,
       japanObdInspectionNotes,
@@ -264,6 +275,7 @@ async function loadData() {
       fetchJson("data/vehicle-patterns-domestic-2026.json"),
       fetchJson("data/vehicle-input-options.json"),
       fetchJson("data/vehicle-model-catalog-domestic-2026.json"),
+      fetchJson("data/vehicle-year-ranges-domestic-2026.json"),
       fetchJson("data/recalls-tsb-notes.json"),
       fetchJson("data/official-reference-notes-2026.json"),
       fetchJson("data/japan-obd-inspection-notes.json"),
@@ -285,13 +297,14 @@ async function loadData() {
       vehiclePatterns: [...vehiclePatterns, ...vehiclePatternsDomestic2026],
       vehicleInputOptions: mergeVehicleInputOptions(vehicleInputOptions, expandVehicleModelCatalog(vehicleModelCatalogDomestic2026)),
       vehicleModelCatalogDomestic2026,
+      vehicleYearRangesDomestic2026,
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
       diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
       dtcScopeRules
     };
-    dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件。`;
+    dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件 / 年式範囲 ${dataStore.vehicleYearRangesDomestic2026.length}件。`;
     dataStatus.classList.remove("error");
   } catch (error) {
     dataStore = fallbackData;
@@ -409,6 +422,7 @@ function renderVehicleDetailOptions() {
   const hasSelectedModel = Boolean(vehicleModelSelect.value);
   const modelCodes = row?.model_codes || [];
   const engineCodes = row?.engine_codes || [];
+  vehicleYearManualInput.value = "";
 
   replaceSelectOptions(vehicleModelCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", modelCodes);
   replaceSelectOptions(vehicleEngineCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", engineCodes);
@@ -418,11 +432,44 @@ function renderVehicleDetailOptions() {
   }
   vehicleModelCodeSelect.disabled = !hasSelectedModel;
   vehicleEngineCodeSelect.disabled = !hasSelectedModel;
-  syncVehicleInput();
+  renderVehicleYearOptions();
 }
 
 function getSelectedVehicleOption() {
   return dataStore.vehicleInputOptions.find((item) => item.maker === vehicleMakerSelect.value && item.model === vehicleModelSelect.value) || null;
+}
+
+function renderVehicleYearOptions() {
+  const hasSelectedModel = Boolean(vehicleModelSelect.value);
+  const matches = getSelectedVehicleYearRanges();
+  const years = collectUnique(matches.flatMap(toYearOptions)).sort((a, b) => Number(b) - Number(a));
+
+  replaceSelectOptions(vehicleYearSelect, years.length ? "選択してください" : "登録期間なし / 手入力してください", years);
+  if (years.length) appendSelectOption(vehicleYearSelect, MANUAL_VEHICLE_VALUE, "一覧にない年式 / 手入力");
+  vehicleYearSelect.disabled = !hasSelectedModel || !years.length;
+  updateVehicleYearManualVisibility();
+  syncVehicleInput();
+}
+
+function getSelectedVehicleYearRanges() {
+  const selectedCode = selectedVehicleValue(vehicleModelCodeSelect);
+  return dataStore.vehicleYearRangesDomestic2026.filter((item) => {
+    if (item.maker !== vehicleMakerSelect.value || item.model !== vehicleModelSelect.value) return false;
+    return !selectedCode || item.model_codes.includes(selectedCode);
+  });
+}
+
+function toYearOptions(range) {
+  const yearTo = range.year_to || range.verified_through_year;
+  const years = [];
+  for (let year = range.year_from; year <= yearTo; year += 1) years.push(String(year));
+  return years;
+}
+
+function updateVehicleYearManualVisibility() {
+  const needsManualYear = !vehicleYearSelect.disabled && vehicleYearSelect.value === MANUAL_VEHICLE_VALUE;
+  const hasNoRegisteredYears = Boolean(vehicleModelSelect.value) && vehicleYearSelect.disabled;
+  vehicleYearManualInput.hidden = !(needsManualYear || hasNoRegisteredYears);
 }
 
 function replaceSelectOptions(select, placeholder, values) {
@@ -443,12 +490,17 @@ function syncVehicleInput() {
     selectedVehicleValue(vehicleMakerSelect),
     selectedVehicleValue(vehicleModelSelect),
     selectedVehicleValue(vehicleModelCodeSelect),
+    selectedVehicleYear(),
     selectedVehicleValue(vehicleEngineCodeSelect),
-    vehicleYearInput.value ? `${vehicleYearInput.value}年式` : "",
     vehicleManualInput.value.trim()
   ];
   vehicleInput.value = collectUnique(values).join(" ");
   vehicleSelectionSummary.textContent = vehicleInput.value ? `車種情報: ${vehicleInput.value}` : "車種情報: 未選択";
+}
+
+function selectedVehicleYear() {
+  const year = selectedVehicleValue(vehicleYearSelect) || vehicleYearManualInput.value.trim();
+  return year ? `${year}年式` : "";
 }
 
 function selectedVehicleValue(select) {
@@ -458,10 +510,13 @@ function selectedVehicleValue(select) {
 function resetVehicleSelector() {
   vehicleModelSelect.disabled = true;
   vehicleModelCodeSelect.disabled = true;
+  vehicleYearSelect.disabled = true;
   vehicleEngineCodeSelect.disabled = true;
   replaceSelectOptions(vehicleModelSelect, "先にメーカーを選択", []);
   replaceSelectOptions(vehicleModelCodeSelect, "先に車種を選択", []);
+  replaceSelectOptions(vehicleYearSelect, "先に車種を選択", []);
   replaceSelectOptions(vehicleEngineCodeSelect, "先に車種を選択", []);
+  vehicleYearManualInput.hidden = true;
   syncVehicleInput();
 }
 
