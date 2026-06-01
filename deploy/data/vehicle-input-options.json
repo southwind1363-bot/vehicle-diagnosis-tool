@@ -1056,6 +1056,46 @@
     "source_date": "2026-06-02"
   },
   {
+    "maker": "ホンダ",
+    "model": "ライフ",
+    "model_codes": ["JB5", "JB6", "JB7", "JB8", "JC1", "JC2"],
+    "engine_codes": ["P07A"],
+    "source": "Honda公式FACT BOOKを基にした旧型入力候補。年式、過給機有無、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ゼスト",
+    "model_codes": ["JE1", "JE2"],
+    "engine_codes": ["P07A"],
+    "source": "Honda公式FACT BOOKと取扱説明書を基にした旧型入力候補。年式、過給機有無、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "日産",
+    "model": "モコ",
+    "model_codes": ["MG22S", "MG33S"],
+    "engine_codes": ["K6A", "R06A"],
+    "source": "日産公式WEBカタログバックナンバーを基にしたOEM車の旧型入力候補。過給機有無、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "日産",
+    "model": "ティーダ",
+    "model_codes": ["C11", "NC11", "JC11"],
+    "engine_codes": ["HR15DE", "MR18DE"],
+    "source": "日産公式WEBカタログバックナンバーを基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
+    "maker": "日産",
+    "model": "ウイングロード",
+    "model_codes": ["Y12"],
+    "engine_codes": ["HR15DE"],
+    "source": "日産公式WEBカタログバックナンバーを基にした旧型入力候補。登録範囲外の型式、駆動方式、グレードは推測せず、車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-02"
+  },
+  {
     "maker": "レクサス",
     "model": "LBX",
     "model_codes": ["MAYH10", "MAYH15"],
