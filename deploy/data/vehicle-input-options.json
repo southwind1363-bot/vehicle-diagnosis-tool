@@ -235,7 +235,7 @@
     "maker": "三菱",
     "model": "アウトランダーPHEV",
     "model_codes": ["GG2W", "GG3W", "GN0W"],
-    "engine_codes": ["4B11", "4B12", "4B40"],
+    "engine_codes": ["4B11", "4B12"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
