@@ -146,8 +146,8 @@
   {
     "maker": "スバル",
     "model": "フォレスター",
-    "model_codes": ["SJ5", "SJG", "SK5", "SKE"],
-    "engine_codes": ["FB20", "FA20", "CB18"],
+    "model_codes": ["SJ5", "SJG", "SK5", "SKE", "SL5", "SLG"],
+    "engine_codes": ["FB20", "FA20", "CB18", "FB25"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
@@ -237,6 +237,134 @@
     "model_codes": ["GG2W", "GG3W", "GN0W"],
     "engine_codes": ["4B11", "4B12", "4B40"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "デイズ",
+    "model_codes": ["B43W", "B44W", "B45W", "B46W", "B47W", "B48W"],
+    "engine_codes": ["BR06"],
+    "source": "日産公式環境仕様書を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "ルークス",
+    "model_codes": ["B44A", "B45A", "B47A", "B48A", "BB1A", "BB2A", "BB5A", "BB6A"],
+    "engine_codes": ["BR06"],
+    "source": "日産公式諸元表を基にした入力補助候補。BA1型とBA2型を含むため、車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "オーラ",
+    "model_codes": ["FE13", "FSNE13"],
+    "engine_codes": ["HR12DE"],
+    "source": "日産公式環境仕様書を基にした入力補助候補。e-POWER車のため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "キックス",
+    "model_codes": ["RP15", "SNP15"],
+    "engine_codes": ["HR12DE"],
+    "source": "日産公式環境仕様書を基にした入力補助候補。e-POWER車のため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "エクストレイル",
+    "model_codes": ["T33", "SNT33"],
+    "engine_codes": ["KR15DDT"],
+    "source": "日産公式環境仕様書を基にした入力補助候補。e-POWER車のため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "サクラ",
+    "model_codes": ["B6AW"],
+    "engine_codes": ["MM48"],
+    "source": "日産公式環境仕様書を基にした入力補助候補。電気自動車のため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "MAZDA2",
+    "model_codes": ["DJLFS", "DJLAS"],
+    "engine_codes": ["P5-VPS"],
+    "source": "マツダ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "MAZDA3 FASTBACK",
+    "model_codes": ["BP5R", "BPFJ3R", "BP8R", "BPEK3R"],
+    "engine_codes": ["P5-VPS", "PE-VPH", "S8-DPTS", "HF-VPH"],
+    "source": "マツダ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "MAZDA3 SEDAN",
+    "model_codes": ["BPFJ3R", "BP8R"],
+    "engine_codes": ["PE-VPH", "S8-DPTS"],
+    "source": "マツダ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "CX-30",
+    "model_codes": ["DMEJ3R", "DM8R"],
+    "engine_codes": ["PE-VPS", "S8-DPTS"],
+    "source": "マツダ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "クロストレック",
+    "model_codes": ["GUD", "GUE", "GUF"],
+    "engine_codes": ["FB20", "FB25"],
+    "source": "SUBARU公式諸元表を基にした入力補助候補。e-BOXER車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "レヴォーグ",
+    "model_codes": ["VN5", "VNH"],
+    "engine_codes": ["CB18", "FA24"],
+    "source": "SUBARU公式諸元表を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "eKワゴン",
+    "model_codes": ["B33W", "B36W"],
+    "engine_codes": ["BR06"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "デリカミニ",
+    "model_codes": ["BA1A", "BA2A", "BA5A", "BA6A"],
+    "engine_codes": ["BR06"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "デリカD:5",
+    "model_codes": ["CV1W"],
+    "engine_codes": ["4N14"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "エクリプス クロス",
+    "model_codes": ["GK1W", "GL3W"],
+    "engine_codes": ["4B40", "4B12"],
+    "source": "三菱自動車公式主要諸元を基にした入力補助候補。PHEV車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
     "source_date": "2026-06-01"
   },
   {
