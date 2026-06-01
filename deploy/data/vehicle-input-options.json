@@ -24,6 +24,54 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "トヨタ",
+    "model": "ヤリス",
+    "model_codes": ["KSP210", "MXPA10", "MXPA15", "MXPH10", "MXPH15"],
+    "engine_codes": ["1KR-FE", "M15A-FKS", "M15A-FXE"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ノア",
+    "model_codes": ["MZRA90W", "MZRA95W", "ZWR90W", "ZWR95W"],
+    "engine_codes": ["M20A-FKS", "2ZR-FXE"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ヴォクシー",
+    "model_codes": ["MZRA90W", "MZRA95W", "ZWR90W", "ZWR95W"],
+    "engine_codes": ["M20A-FKS", "2ZR-FXE"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "アルファード",
+    "model_codes": ["AGH40W", "AGH45W", "AAHH40W", "AAHH45W", "AAHP45W"],
+    "engine_codes": ["2AR-FE", "A25A-FXS"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ヴェルファイア",
+    "model_codes": ["TAHA40W", "TAHA45W", "AAHH40W", "AAHH45W", "AAHP45W"],
+    "engine_codes": ["T24A-FTS", "A25A-FXS"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "カローラ ツーリング",
+    "model_codes": ["MZEA17W", "ZWE219W"],
+    "engine_codes": ["M15A-FKS", "2ZR-FXE"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
     "maker": "日産",
     "model": "ノート",
     "model_codes": ["E12", "NE12", "HE12", "SNE12", "E13", "SNE13"],
@@ -52,6 +100,38 @@
     "model": "フィット",
     "model_codes": ["GE6", "GE8", "GP1", "GK3", "GK4", "GK5", "GK6", "GP5", "GP6", "GR1", "GR3", "GR6", "GR8"],
     "engine_codes": ["L13A", "L13B", "LEB", "L15A", "L15B"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "N-WGN",
+    "model_codes": ["JH3", "JH4"],
+    "engine_codes": ["S07B"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "フリード",
+    "model_codes": ["GT1", "GT2", "GT3", "GT4", "GT5", "GT6", "GT7", "GT8"],
+    "engine_codes": ["L15D", "LEB"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ステップ ワゴン",
+    "model_codes": ["RP6", "RP7", "RP8"],
+    "engine_codes": ["L15C", "LFA"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ヴェゼル",
+    "model_codes": ["RV3", "RV4", "RV5", "RV6"],
+    "engine_codes": ["L15Z", "LEC"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
@@ -88,10 +168,66 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "スズキ",
+    "model": "アルト",
+    "model_codes": ["HA37S", "HA97S"],
+    "engine_codes": ["R06A", "R06D"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ハスラー",
+    "model_codes": ["MR52S", "MR92S"],
+    "engine_codes": ["R06A", "R06D"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ジムニー",
+    "model_codes": ["JB64W"],
+    "engine_codes": ["R06A"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ソリオ",
+    "model_codes": ["MA27S", "MA37S", "MA47S", "MAD7S"],
+    "engine_codes": ["K12C", "Z12E"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
     "maker": "ダイハツ",
     "model": "タント",
     "model_codes": ["LA600S", "LA610S", "LA650S", "LA660S"],
     "engine_codes": ["KF"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ミラ イース",
+    "model_codes": ["LA350S", "LA360S"],
+    "engine_codes": ["KF"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ムーヴ キャンバス",
+    "model_codes": ["LA850S", "LA860S"],
+    "engine_codes": ["KF"],
+    "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ロッキー",
+    "model_codes": ["A200S", "A210S", "A201S", "A202S"],
+    "engine_codes": ["1KR-VET", "WA-VE", "WA-VEX"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },

@@ -51,6 +51,7 @@ for (const file of jsonFiles) {
 
   const ids = new Set();
   const makers = new Set();
+  const vehicleDetails = new Set();
   for (const [index, row] of rows.entries()) {
     const label = `${file}[${index}]`;
 
@@ -85,6 +86,19 @@ for (const file of jsonFiles) {
       if (new Set(row.models || []).size !== (row.models || []).length) reportError(`${label}: models に重複があります`);
       if (!row.source_url) reportError(`${label}: source_url がありません`);
       if (row.detail_confirmation_required !== true) reportError(`${label}: detail_confirmation_required が true ではありません`);
+    }
+
+    if (file === "vehicle-input-options.json") {
+      if (!row.maker) reportError(`${label}: maker がありません`);
+      if (row.model) {
+        const vehicleKey = `${row.maker}::${row.model}`;
+        if (vehicleDetails.has(vehicleKey)) reportError(`${label}: ${vehicleKey} が重複しています`);
+        vehicleDetails.add(vehicleKey);
+        if (!Array.isArray(row.model_codes) || !row.model_codes.length) reportError(`${label}: model_codes がありません`);
+        if (new Set(row.model_codes || []).size !== (row.model_codes || []).length) reportError(`${label}: model_codes に重複があります`);
+        if (!Array.isArray(row.engine_codes) || !row.engine_codes.length) reportError(`${label}: engine_codes がありません`);
+        if (new Set(row.engine_codes || []).size !== (row.engine_codes || []).length) reportError(`${label}: engine_codes に重複があります`);
+      }
     }
 
     if (file === "vehicle-year-ranges-domestic-2026.json") {

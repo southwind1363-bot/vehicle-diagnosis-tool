@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.12.0";
+const APP_VERSION = "1.13.0";
 const APP_LAST_UPDATED = "2026-06-01";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -304,7 +304,7 @@ async function loadData() {
       diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
       dtcScopeRules
     };
-    dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件 / 年式範囲 ${dataStore.vehicleYearRangesDomestic2026.length}件。`;
+    dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件 / 詳細候補 ${countVehicleDetailOptions(dataStore.vehicleInputOptions)}件 / 年式範囲 ${dataStore.vehicleYearRangesDomestic2026.length}件。`;
     dataStatus.classList.remove("error");
   } catch (error) {
     dataStore = fallbackData;
@@ -404,6 +404,10 @@ function mergeVehicleInputOptions(...groups) {
 
 function countVehicleModels(options) {
   return collectUnique(options.filter((item) => item.model).map((item) => `${item.maker}::${item.model}`)).length;
+}
+
+function countVehicleDetailOptions(options) {
+  return options.filter((item) => item.model && item.model_codes.length).length;
 }
 
 function renderVehicleModelOptions() {
