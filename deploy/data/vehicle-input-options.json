@@ -2,8 +2,8 @@
   {
     "maker": "トヨタ",
     "model": "プリウス",
-    "model_codes": ["ZVW30", "ZVW50", "ZVW51", "ZVW55", "ZVW60", "ZVW65", "MXWH60", "MXWH65"],
-    "engine_codes": ["2ZR-FXE", "M20A-FXS"],
+    "model_codes": ["NHW20", "ZVW30", "ZVW50", "ZVW51", "ZVW55", "ZVW60", "ZVW65", "MXWH60", "MXWH65"],
+    "engine_codes": ["1NZ-FXE", "2ZR-FXE", "M20A-FXS"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
@@ -34,24 +34,24 @@
   {
     "maker": "トヨタ",
     "model": "ノア",
-    "model_codes": ["MZRA90W", "MZRA95W", "ZWR90W", "ZWR95W"],
-    "engine_codes": ["M20A-FKS", "2ZR-FXE"],
+    "model_codes": ["AZR60G", "AZR65G", "ZRR70G", "ZRR70W", "ZRR75G", "ZRR75W", "ZRR80G", "ZRR80W", "ZRR85G", "ZRR85W", "ZWR80G", "ZWR80W", "MZRA90W", "MZRA95W", "ZWR90W", "ZWR95W"],
+    "engine_codes": ["1AZ-FSE", "3ZR-FE", "3ZR-FAE", "2ZR-FXE", "M20A-FKS"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
   {
     "maker": "トヨタ",
     "model": "ヴォクシー",
-    "model_codes": ["MZRA90W", "MZRA95W", "ZWR90W", "ZWR95W"],
-    "engine_codes": ["M20A-FKS", "2ZR-FXE"],
+    "model_codes": ["AZR60G", "AZR65G", "ZRR70G", "ZRR70W", "ZRR75G", "ZRR75W", "ZRR80G", "ZRR80W", "ZRR85G", "ZRR85W", "ZWR80G", "ZWR80W", "MZRA90W", "MZRA95W", "ZWR90W", "ZWR95W"],
+    "engine_codes": ["1AZ-FSE", "3ZR-FE", "3ZR-FAE", "2ZR-FXE", "M20A-FKS"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
   {
     "maker": "トヨタ",
     "model": "アルファード",
-    "model_codes": ["AGH40W", "AGH45W", "AAHH40W", "AAHH45W", "AAHP45W"],
-    "engine_codes": ["2AR-FE", "A25A-FXS"],
+    "model_codes": ["ANH10W", "ANH15W", "MNH10W", "MNH15W", "ATH10W", "ANH20W", "ANH25W", "GGH20W", "GGH25W", "ATH20W", "AGH30W", "AGH35W", "GGH30W", "GGH35W", "AYH30W", "AGH40W", "AGH45W", "AAHH40W", "AAHH45W", "AAHP45W"],
+    "engine_codes": ["2AZ-FE", "1MZ-FE", "2AZ-FXE", "2GR-FE", "2AR-FE", "2GR-FKS", "2AR-FXE", "A25A-FXS"],
     "source": "登録済み入力補助候補: 車検証、コーションプレート、メーカー整備書との照合が必要",
     "source_date": "2026-06-01"
   },
@@ -941,6 +941,14 @@
     "model_codes": ["NTP10"],
     "engine_codes": ["1NZ-FXP"],
     "source": "トヨタ公式主要諸元と走行性能ページを基にした入力候補。LPGハイブリッド車のため、燃料系統、高電圧系統、営業車固有の点検要件はメーカー整備書を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "クラウン",
+    "model_codes": ["GRS180", "GRS181", "GRS182", "GRS183", "GRS184", "GRS200", "GRS201", "GRS202", "GRS203", "GRS204", "GRS206", "GWS204", "GRS210", "GRS211", "GRS214", "AWS210", "AWS211", "GWS214", "ARS210", "ARS220", "AZSH20", "AZSH21", "GWS224"],
+    "engine_codes": ["4GR-FSE", "3GR-FSE", "2GR-FSE", "2AR-FSE", "8AR-FTS", "A25A-FXS", "8GR-FXS"],
+    "source": "トヨタ公式認定中古車情報を基にした旧型入力候補。ハイブリッド有無、駆動方式、年式、グレードは車検証とメーカー整備書で確認する。",
     "source_date": "2026-06-01"
   },
   {
