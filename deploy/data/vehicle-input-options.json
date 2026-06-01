@@ -520,6 +520,134 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "トヨタ",
+    "model": "カローラ",
+    "model_codes": ["MZEA17", "ZWE215", "ZWE219"],
+    "engine_codes": ["M15A-FKS", "2ZR-FXE"],
+    "source": "トヨタ公式認定中古車情報と主要諸元を基にした入力候補。ハイブリッド車を含むため、車検証、コーションプレート、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "カローラ スポーツ",
+    "model_codes": ["NRE210H", "NRE214H", "ZWE211H", "ZWE213H", "MZEA12H", "ZWE219H"],
+    "engine_codes": ["8NR-FTS", "2ZR-FXE", "M20A-FKS"],
+    "source": "トヨタ公式認定中古車情報を基にした入力候補。年式、駆動方式、ハイブリッド有無は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ピクシス エポック",
+    "model_codes": ["LA350A", "LA360A"],
+    "engine_codes": ["KF"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。OEM供給車のため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ピクシス トラック",
+    "model_codes": ["S500U", "S510U"],
+    "engine_codes": ["KF"],
+    "source": "トヨタ公式主要諸元を基にした入力候補。OEM供給車のため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "WR-V",
+    "model_codes": ["DG5"],
+    "engine_codes": ["L15D"],
+    "source": "Honda公式環境仕様書とニュースリリースを基にした入力候補。車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ZR-V",
+    "model_codes": ["RZ3", "RZ4", "RZ5", "RZ6"],
+    "engine_codes": ["L15C", "LFC"],
+    "source": "Honda公式ニュースリリースと主要諸元を基にした入力候補。e:HEVを含むため、車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "シビック",
+    "model_codes": ["FL1", "FL4"],
+    "engine_codes": ["L15C", "LFC"],
+    "source": "Honda公式主要諸元を基にした入力候補。e:HEVを含むため、車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "アコード",
+    "model_codes": ["CY2"],
+    "engine_codes": ["LFC"],
+    "source": "Honda公式主要諸元を基にした入力候補。e:HEV車のため、高電圧作業はメーカー整備書と有資格者の手順を優先する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "CX-3",
+    "model_codes": ["DKLFW", "DK8FW"],
+    "engine_codes": ["P5-VPS", "S8-DPTS"],
+    "source": "マツダ公式主要諸元を基にした入力候補。ガソリン車とディーゼル車があるため、車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "MX-30",
+    "model_codes": ["DREJ3R", "DR8V3P"],
+    "engine_codes": ["PE-VPH", "MV"],
+    "source": "マツダ公式主要諸元とRotary-EV仕様一覧を基にした入力候補。電動化車両のため、高電圧作業はメーカー整備書と有資格者の手順を優先する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "ソルテラ",
+    "model_codes": ["YXAM15X"],
+    "engine_codes": ["1YM"],
+    "source": "SUBARU公式主要諸元を基にした入力候補。電気自動車のため、高電圧作業はメーカー整備書と有資格者の手順を優先する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "シフォン",
+    "model_codes": ["LA650F", "LA660F"],
+    "engine_codes": ["KF"],
+    "source": "SUBARU公式主要諸元を基にした入力候補。OEM供給車のため、ターボ有無、駆動方式、詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "プレオ プラス",
+    "model_codes": ["LA350F", "LA360F"],
+    "engine_codes": ["KF"],
+    "source": "SUBARU公式主要諸元を基にした入力候補。OEM供給車のため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "サンバー バン",
+    "model_codes": ["S700B", "S710B"],
+    "engine_codes": ["KF-VE", "KF-VET"],
+    "source": "SUBARU公式主要諸元を基にした入力候補。型式だけではターボ有無を確定できないため、コーションプレートとメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "サンバー トラック",
+    "model_codes": ["S500J", "S510J"],
+    "engine_codes": ["KF-VE"],
+    "source": "SUBARU公式主要諸元を基にした入力候補。OEM供給車のため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "レックス",
+    "model_codes": ["A201F"],
+    "engine_codes": ["WA-VE"],
+    "source": "SUBARU公式主要諸元を基にした入力候補。OEM供給車のため、詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
     "maker": "レクサス",
     "model": "LBX",
     "model_codes": ["MAYH10", "MAYH15"],
