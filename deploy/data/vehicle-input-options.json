@@ -760,6 +760,110 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "日産",
+    "model": "アリア",
+    "model_codes": ["FE0", "SNFE0"],
+    "engine_codes": ["AM67"],
+    "source": "日産公式環境仕様書を基にした入力候補。電気自動車のため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "フェアレディZ",
+    "model_codes": ["RZ34"],
+    "engine_codes": ["VR30DDTT"],
+    "source": "日産公式主要諸元を基にした入力候補。変速機、年式、仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "NV200バネット",
+    "model_codes": ["M20", "VM20", "VNM20"],
+    "engine_codes": ["HR16DE"],
+    "source": "日産公式主要諸元と走行性能ページを基にした入力候補。バン、ワゴン、駆動方式、詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "日産",
+    "model": "アトラス",
+    "model_codes": ["F26"],
+    "engine_codes": ["4JZ1-TCS"],
+    "source": "日産公式FAQとBiz NISSANを基にしたF26シリーズの入力補助候補。積載量、架装、駆動方式で個別型式が異なるため、必ず車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "フロンクス",
+    "model_codes": ["WDB3S", "WEB3S"],
+    "engine_codes": ["K15C"],
+    "source": "スズキ公式主要諸元を基にした入力候補。マイルドハイブリッド車のため、駆動方式、モーター型式、詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "ランディ",
+    "model_codes": ["ZWR90C", "ZWR95C", "MZRA90C", "MZRA95C"],
+    "engine_codes": ["2ZR-FXE", "M20A-FKS"],
+    "source": "スズキ公式環境情報を基にした入力候補。OEM供給車でハイブリッド車を含むため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "e ビターラ",
+    "model_codes": ["PA2AS", "PB3AS"],
+    "engine_codes": ["1CG", "2CG"],
+    "source": "スズキ公式主要諸元を基にした入力候補。電気自動車のため、高電圧作業はメーカー整備書と資格要件を確認する。PB3ASは前後モーターを搭載する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "コペン",
+    "model_codes": ["LA400K"],
+    "engine_codes": ["KF"],
+    "source": "ダイハツ公式主要諸元を基にした入力候補。ターボ車のため、詳細仕様は車検証、コーションプレート、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "グランマックス カーゴ",
+    "model_codes": ["S403V", "S413V"],
+    "engine_codes": ["2NR-VE"],
+    "source": "ダイハツ公式主要諸元を基にした入力候補。駆動方式、変速機、積載条件は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "グランマックス トラック",
+    "model_codes": ["S403P", "S413P"],
+    "engine_codes": ["2NR-VE"],
+    "source": "ダイハツ公式U-CATCHとリコール情報を基にした入力候補。駆動方式、変速機、架装、積載条件は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "三菱",
+    "model": "トライトン",
+    "model_codes": ["LC2T"],
+    "engine_codes": ["4N16"],
+    "source": "三菱自動車公式主要諸元を基にした入力候補。ディーゼル燃料系統と過給系統はメーカー整備書を確認し、安全手順を優先する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "マツダ",
+    "model": "ファミリアバン",
+    "model_codes": ["NHP160M", "NCP160M", "NCP165M"],
+    "engine_codes": ["1NZ-FXE", "1NZ-FE"],
+    "source": "マツダ公式主要諸元を基にした入力候補。OEM供給車でハイブリッド車を含むため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スバル",
+    "model": "ジャスティ",
+    "model_codes": ["M900F", "M910F"],
+    "engine_codes": ["1KR-FE"],
+    "source": "SUBARU公式主要諸元を基にした入力候補。OEM供給車のため、駆動方式と詳細仕様は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
     "maker": "レクサス",
     "model": "LBX",
     "model_codes": ["MAYH10", "MAYH15"],
