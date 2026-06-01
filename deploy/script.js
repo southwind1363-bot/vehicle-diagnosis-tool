@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.10.0";
 const APP_LAST_UPDATED = "2026-06-01";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -50,6 +50,7 @@ const fallbackData = {
   genericObdCodesModern: [],
   vehiclePatterns: [],
   vehicleInputOptions: [],
+  vehicleModelCatalogDomestic2026: [],
   recallsTsbNotes: [],
   japanObdInspectionNotes: [],
   realWorldCases: [],
@@ -239,6 +240,7 @@ async function loadData() {
       vehiclePatterns,
       vehiclePatternsDomestic2026,
       vehicleInputOptions,
+      vehicleModelCatalogDomestic2026,
       recallsTsbNotes,
       officialReferenceNotes2026,
       japanObdInspectionNotes,
@@ -261,6 +263,7 @@ async function loadData() {
       fetchJson("data/vehicle-patterns.json"),
       fetchJson("data/vehicle-patterns-domestic-2026.json"),
       fetchJson("data/vehicle-input-options.json"),
+      fetchJson("data/vehicle-model-catalog-domestic-2026.json"),
       fetchJson("data/recalls-tsb-notes.json"),
       fetchJson("data/official-reference-notes-2026.json"),
       fetchJson("data/japan-obd-inspection-notes.json"),
@@ -280,14 +283,15 @@ async function loadData() {
       symptomFlows,
       genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2, ...importedVerifiedDtc],
       vehiclePatterns: [...vehiclePatterns, ...vehiclePatternsDomestic2026],
-      vehicleInputOptions,
+      vehicleInputOptions: mergeVehicleInputOptions(vehicleInputOptions, expandVehicleModelCatalog(vehicleModelCatalogDomestic2026)),
+      vehicleModelCatalogDomestic2026,
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
       diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
       dtcScopeRules
     };
-    dataStatus.textContent = "登録済み整備データを読み込みました。";
+    dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件。`;
     dataStatus.classList.remove("error");
   } catch (error) {
     dataStore = fallbackData;
@@ -347,6 +351,46 @@ function renderVehicleMakerOptions() {
   appendSelectOption(vehicleMakerSelect, MANUAL_VEHICLE_VALUE, "その他 / 手入力");
   vehicleMakerSelect.value = makers.includes(currentValue) || currentValue === MANUAL_VEHICLE_VALUE ? currentValue : "";
   renderVehicleModelOptions();
+}
+
+function expandVehicleModelCatalog(catalog) {
+  return catalog.flatMap((group) => (group.models || []).map((model) => ({
+    maker: group.maker,
+    model,
+    model_codes: [],
+    engine_codes: [],
+    source: group.source,
+    source_url: group.source_url,
+    source_date: group.source_date,
+    detail_confirmation_required: true
+  })));
+}
+
+function mergeVehicleInputOptions(...groups) {
+  const merged = new Map();
+
+  groups.flat().forEach((row) => {
+    const key = `${row.maker}::${row.model || ""}`;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, row);
+      return;
+    }
+
+    merged.set(key, {
+      ...row,
+      ...existing,
+      source_url: existing.source_url || row.source_url,
+      model_codes: collectUnique([...(existing.model_codes || []), ...(row.model_codes || [])]),
+      engine_codes: collectUnique([...(existing.engine_codes || []), ...(row.engine_codes || [])])
+    });
+  });
+
+  return [...merged.values()];
+}
+
+function countVehicleModels(options) {
+  return collectUnique(options.filter((item) => item.model).map((item) => `${item.maker}::${item.model}`)).length;
 }
 
 function renderVehicleModelOptions() {

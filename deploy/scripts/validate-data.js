@@ -50,6 +50,7 @@ for (const file of jsonFiles) {
   }
 
   const ids = new Set();
+  const makers = new Set();
   for (const [index, row] of rows.entries()) {
     const label = `${file}[${index}]`;
 
@@ -74,6 +75,16 @@ for (const file of jsonFiles) {
     if (!legacySourceOptionalFiles.has(file)) {
       if (!row.source) reportError(`${label}: source がありません`);
       if (!row.source_date) reportError(`${label}: source_date がありません`);
+    }
+
+    if (file === "vehicle-model-catalog-domestic-2026.json") {
+      if (!row.maker) reportError(`${label}: maker がありません`);
+      if (makers.has(row.maker)) reportError(`${label}: maker ${row.maker} が重複しています`);
+      makers.add(row.maker);
+      if (!Array.isArray(row.models) || !row.models.length) reportError(`${label}: models がありません`);
+      if (new Set(row.models || []).size !== (row.models || []).length) reportError(`${label}: models に重複があります`);
+      if (!row.source_url) reportError(`${label}: source_url がありません`);
+      if (row.detail_confirmation_required !== true) reportError(`${label}: detail_confirmation_required が true ではありません`);
     }
   }
 }
