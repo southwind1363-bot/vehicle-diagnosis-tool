@@ -368,6 +368,158 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "トヨタ",
+    "model": "ハリアー",
+    "model_codes": ["MXUA80", "MXUA85", "AXUH80", "AXUH85", "AXUP85"],
+    "engine_codes": ["M20A-FKS", "A25A-FXS"],
+    "source": "トヨタ公式主要諸元を基にした入力補助候補。ハイブリッド車とPHEV車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ヤリス クロス",
+    "model_codes": ["MXPB10", "MXPB15", "MXPJ10", "MXPJ15"],
+    "engine_codes": ["M15A-FKS", "M15A-FXE"],
+    "source": "トヨタ公式主要諸元を基にした入力補助候補。ハイブリッド車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ライズ",
+    "model_codes": ["A200A", "A210A", "A201A", "A202A"],
+    "engine_codes": ["1KR-VET", "WA-VE", "WA-VEX"],
+    "source": "トヨタ公式認定中古車情報とFAQを基にした入力補助候補。ハイブリッド車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ルーミー",
+    "model_codes": ["M900A", "M910A"],
+    "engine_codes": ["1KR-FE", "1KR-VET"],
+    "source": "トヨタ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ハイエース バン",
+    "model_codes": ["TRH200V", "GDH201V", "GDH206V"],
+    "engine_codes": ["1TR-FE", "1GD-FTV"],
+    "source": "トヨタ公式取扱説明書を基にした頻出型式の入力補助候補。架装、ボディ、駆動方式、月単位の適用境界は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "プロボックス",
+    "model_codes": ["NCP160V", "NCP165V", "NSP160V", "NHP160V"],
+    "engine_codes": ["1NZ-FE", "1NR-FE", "1NZ-FXE"],
+    "source": "トヨタ公式主要諸元を基にした入力補助候補。ハイブリッド車を含むため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "N-ONE",
+    "model_codes": ["JG3", "JG4"],
+    "engine_codes": ["S07B"],
+    "source": "Honda公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "N-VAN",
+    "model_codes": ["JJ1", "JJ2"],
+    "engine_codes": ["S07B"],
+    "source": "Honda公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ホンダ",
+    "model": "N-VAN e:",
+    "model_codes": ["JJ3"],
+    "engine_codes": ["MCF7"],
+    "source": "Honda公式主要諸元を基にした入力補助候補。電気自動車のため、高電圧系統はメーカー整備書と資格要件の確認が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "アルト ラパン",
+    "model_codes": ["HE33S"],
+    "engine_codes": ["R06A"],
+    "source": "スズキ公式資料を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "エブリイ",
+    "model_codes": ["DA17V", "DA18V"],
+    "engine_codes": ["R06A"],
+    "source": "スズキ公式諸元を基にした入力補助候補。2026年改良前後を含むため、車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "エブリイワゴン",
+    "model_codes": ["DA17W", "DA18W"],
+    "engine_codes": ["R06A"],
+    "source": "スズキ公式諸元を基にした入力補助候補。2026年改良前後を含むため、車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "キャリイ",
+    "model_codes": ["DA16T"],
+    "engine_codes": ["R06A"],
+    "source": "スズキ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "スズキ",
+    "model": "スーパーキャリイ",
+    "model_codes": ["DA16T"],
+    "engine_codes": ["R06A"],
+    "source": "スズキ公式主要諸元を基にした入力補助候補。キャリイと共通型式のため、車検証と車体仕様、メーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "アトレー",
+    "model_codes": ["S700V", "S710V"],
+    "engine_codes": ["KF"],
+    "source": "ダイハツ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "タフト",
+    "model_codes": ["LA900S", "LA910S"],
+    "engine_codes": ["KF"],
+    "source": "ダイハツ公式主要諸元を基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "トール",
+    "model_codes": ["M900S", "M910S"],
+    "engine_codes": ["1KR-FE", "1KR-VET"],
+    "source": "ダイハツ公式WEBカタログを基にした入力補助候補。車検証、コーションプレート、メーカー整備書との照合が必要。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ハイゼットカーゴ",
+    "model_codes": ["S700V", "S710V"],
+    "engine_codes": ["KF"],
+    "source": "ダイハツ公式主要諸元を基にした入力補助候補。ターボ有無、変速機、駆動方式は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ハイゼットトラック",
+    "model_codes": ["S500P", "S510P"],
+    "engine_codes": ["KF"],
+    "source": "ダイハツ公式主要諸元を基にした入力補助候補。架装と駆動方式は車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
     "maker": "レクサス",
     "model": null,
     "model_codes": [],
