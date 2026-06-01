@@ -32,6 +32,7 @@ deploy/
     vehicle-patterns.json
     vehicle-patterns-domestic-2026.json
     vehicle-input-options.json
+    vehicle-model-catalog-domestic-2004-2026.json
     vehicle-model-catalog-domestic-2026.json
     vehicle-year-ranges-domestic-2026.json
     recalls-tsb-notes.json
@@ -110,13 +111,16 @@ data/vehicle-patterns-domestic-2026.json
 data/vehicle-input-options.json
   メーカー、車種、型式、エンジン型式の段階選択に使う入力補助候補。車検証とメーカー資料の確認を優先する
 
+data/vehicle-model-catalog-domestic-2004-2026.json
+  平成16年（2004年）以降の旧型・生産終了車を含む履歴車名候補。車名選択を補助する層であり、全型式の登録完了を意味しない
+
 data/vehicle-model-catalog-domestic-2026.json
   国産13メーカーの車名候補カタログ。型式やエンジン型式は推測で補わず、詳細候補JSONと手入力で補完する
 
 data/vehicle-year-ranges-domestic-2026.json
   公式カタログ等で確認できた型式の年式候補。型式と年式からエンジン型式候補を絞る。月単位の境界を断定せず、車検証とメーカー資料の照合を優先する
 
-2026-06-01時点で、車名候補185件、型式・エンジン型式まで持つ詳細候補159車種、年式範囲278件を登録しています。未登録の組み合わせは推測で補わず、手入力とメーカー資料確認へ戻します。
+2026-06-01時点で、現行・履歴を合わせた車名候補335件、型式・エンジン型式まで持つ詳細候補164車種、年式範囲290件を登録しています。未登録の組み合わせは推測で補わず、手入力とメーカー資料確認へ戻します。
 
 data/component-inspection-flows.json
   公開試験資料の基礎点検を参考に、単体点検と比較測定を実務向けに整理

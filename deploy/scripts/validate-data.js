@@ -78,7 +78,7 @@ for (const file of jsonFiles) {
       if (!row.source_date) reportError(`${label}: source_date がありません`);
     }
 
-    if (file === "vehicle-model-catalog-domestic-2026.json") {
+    if (file === "vehicle-model-catalog-domestic-2026.json" || file === "vehicle-model-catalog-domestic-2004-2026.json") {
       if (!row.maker) reportError(`${label}: maker がありません`);
       if (makers.has(row.maker)) reportError(`${label}: maker ${row.maker} が重複しています`);
       makers.add(row.maker);

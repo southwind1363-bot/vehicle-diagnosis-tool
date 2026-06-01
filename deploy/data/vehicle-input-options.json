@@ -1272,6 +1272,46 @@
     "source_date": "2026-06-01"
   },
   {
+    "maker": "トヨタ",
+    "model": "エスティマ",
+    "model_codes": ["ACR50W", "ACR55W", "GSR50W", "GSR55W"],
+    "engine_codes": ["2AZ-FE", "2GR-FE"],
+    "source": "トヨタ公式認定中古車情報と主要諸元を基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "エスティマ ハイブリッド",
+    "model_codes": ["AHR20W"],
+    "engine_codes": ["2AZ-FXE"],
+    "source": "トヨタ公式認定中古車情報を基にした旧型入力候補。ハイブリッド車のため、高電圧作業はメーカー整備書と資格要件を確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "ウィッシュ",
+    "model_codes": ["ZGE20G", "ZGE20W", "ZGE21G", "ZGE22W", "ZGE25G", "ZGE25W"],
+    "engine_codes": ["2ZR-FAE", "3ZR-FAE"],
+    "source": "トヨタ公式認定中古車情報と環境仕様を基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "アイシス",
+    "model_codes": ["ZGM10G", "ZGM10W", "ZGM11G", "ZGM11W", "ZGM15G", "ZGM15W"],
+    "engine_codes": ["2ZR-FAE", "3ZR-FAE"],
+    "source": "トヨタ公式主要諸元と環境仕様を基にした旧型入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
+    "maker": "トヨタ",
+    "model": "パッソ",
+    "model_codes": ["KGC10", "KGC15", "QNC10", "KGC30", "KGC35", "NGC30", "M700A", "M710A"],
+    "engine_codes": ["1KR-FE", "K3-VE", "1NR-FE"],
+    "source": "トヨタ公式認定中古車情報を基にした旧型・生産終了車の入力候補。年式、駆動方式、グレードは車検証とメーカー整備書で確認する。",
+    "source_date": "2026-06-01"
+  },
+  {
     "maker": "レクサス",
     "model": null,
     "model_codes": [],

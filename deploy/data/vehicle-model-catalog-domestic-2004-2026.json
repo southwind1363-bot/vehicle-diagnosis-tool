@@ -1,0 +1,83 @@
+[
+  {
+    "maker": "トヨタ",
+    "models": ["86", "bB", "FJクルーザー", "iQ", "RAV4", "SAI", "アイシス", "アベンシス", "アリオン", "イスト", "ウィッシュ", "ヴァンガード", "エスティマ", "エスティマ ハイブリッド", "オーリス", "カムリ", "クラウン", "サクシード", "スペイド", "パッソ", "パッソ セッテ", "ピクシス スペース", "プレミオ", "ブレイド", "ベルタ", "ポルテ", "マークX", "ラクティス", "ラッシュ", "ランドクルーザー プラド"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "トヨタ認定中古車 車両情報カタログ",
+    "source_url": "https://toyota.jp/ucar/catalog/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "models": ["AD", "e-NV200", "GT-R", "NV350キャラバン", "ウイングロード", "エルグランド", "キューブ", "ジューク", "シーマ", "シルフィ", "スカイライン", "ティアナ", "ティーダ", "デュアリス", "フーガ", "プレサージュ", "マーチ", "ムラーノ", "モコ", "ラフェスタ", "リーフ"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "日産公式 歴代のクルマ",
+    "source_url": "https://history.nissan.co.jp/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "models": ["CR-V", "CR-Z", "S660", "アクティ バン", "アクティ トラック", "インサイト", "ヴェゼル", "エアウェイブ", "エディックス", "エリシオン", "グレイス", "クロスロード", "ジェイド", "シャトル", "ストリーム", "ゼスト", "バモス", "ライフ", "レジェンド"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "Honda公式 オートアーカイブ",
+    "source_url": "https://www.honda.co.jp/auto-archive/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "models": ["AZ-ワゴン", "CX-7", "CX-8", "MPV", "RX-8", "アクセラ", "アテンザ", "キャロル", "スクラム バン", "スクラム ワゴン", "スクラム トラック", "デミオ", "ビアンテ", "フレア", "フレア クロスオーバー", "フレアワゴン", "プレマシー", "ベリーサ", "ロードスター"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "マツダ公式 商品情報とリコール情報",
+    "source_url": "https://www.mazda.co.jp/cars/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スバル",
+    "models": ["BRZ", "R1", "R2", "WRX S4", "XV", "インプレッサ G4", "エクシーガ", "サンバー ディアス", "ステラ", "デックス", "トレジア", "フォレスター", "レガシィ B4", "レガシィ アウトバック", "レガシィ ツーリングワゴン"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "SUBARU公式 中古車カタログと車種情報",
+    "source_url": "https://ucar.subaru.jp/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "三菱",
+    "models": ["i", "i-MiEV", "RVR", "アウトランダー", "エクリプス クロス", "ギャラン フォルティス", "グランディス", "コルト", "パジェロ", "パジェロミニ", "ミニカ", "ミラージュ", "ランサーエボリューション", "ekワゴン", "ekスペース"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "三菱自動車公式 カーラインアップとリコール情報",
+    "source_url": "https://www.mitsubishi-motors.co.jp/lineup/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "models": ["Kei", "MRワゴン", "SX4", "SX4 S-CROSS", "アルト バン", "イグニス", "エスクード", "エブリイ ランディ", "キザシ", "スイフトスポーツ", "セルボ", "ソリオ", "パレット", "バレーノ", "ワゴンRソリオ"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "スズキ公式 デジタルライブラリーと環境情報",
+    "source_url": "https://www.suzuki.co.jp/suzuki_digital_library/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "models": ["YRV", "アトレー ワゴン", "ウェイク", "エッセ", "キャスト", "クー", "ソニカ", "タント エグゼ", "テリオスキッド", "ビーゴ", "ブーン", "ミラ", "ミラ ココア", "ムーヴ コンテ", "ムーヴ ラテ", "メビウス"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "ダイハツ公式 U-CATCH中古車カタログ",
+    "source_url": "https://u-catch.daihatsu.co.jp/catalog/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "レクサス",
+    "models": ["CT", "GS", "GS F", "HS", "RC", "RC F", "SC"],
+    "catalog_scope": "2004年以降に国内向けとして確認した履歴車名の入力補助候補。全型式の登録完了を意味しない。",
+    "source": "LEXUS認定中古車 車種カタログ",
+    "source_url": "https://cpo.lexus.jp/catalog/",
+    "source_date": "2026-06-01",
+    "detail_confirmation_required": true
+  }
+]

@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.22.0";
+const APP_VERSION = "1.23.0";
 const APP_LAST_UPDATED = "2026-06-01";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -50,6 +50,7 @@ const fallbackData = {
   genericObdCodesModern: [],
   vehiclePatterns: [],
   vehicleInputOptions: [],
+  vehicleModelCatalogDomestic2004To2026: [],
   vehicleModelCatalogDomestic2026: [],
   vehicleYearRangesDomestic2026: [],
   recallsTsbNotes: [],
@@ -250,6 +251,7 @@ async function loadData() {
       vehiclePatterns,
       vehiclePatternsDomestic2026,
       vehicleInputOptions,
+      vehicleModelCatalogDomestic2004To2026,
       vehicleModelCatalogDomestic2026,
       vehicleYearRangesDomestic2026,
       recallsTsbNotes,
@@ -274,6 +276,7 @@ async function loadData() {
       fetchJson("data/vehicle-patterns.json"),
       fetchJson("data/vehicle-patterns-domestic-2026.json"),
       fetchJson("data/vehicle-input-options.json"),
+      fetchJson("data/vehicle-model-catalog-domestic-2004-2026.json"),
       fetchJson("data/vehicle-model-catalog-domestic-2026.json"),
       fetchJson("data/vehicle-year-ranges-domestic-2026.json"),
       fetchJson("data/recalls-tsb-notes.json"),
@@ -295,7 +298,12 @@ async function loadData() {
       symptomFlows,
       genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2, ...importedVerifiedDtc],
       vehiclePatterns: [...vehiclePatterns, ...vehiclePatternsDomestic2026],
-      vehicleInputOptions: mergeVehicleInputOptions(vehicleInputOptions, expandVehicleModelCatalog(vehicleModelCatalogDomestic2026)),
+      vehicleInputOptions: mergeVehicleInputOptions(
+        vehicleInputOptions,
+        expandVehicleModelCatalog(vehicleModelCatalogDomestic2004To2026),
+        expandVehicleModelCatalog(vehicleModelCatalogDomestic2026)
+      ),
+      vehicleModelCatalogDomestic2004To2026,
       vehicleModelCatalogDomestic2026,
       vehicleYearRangesDomestic2026,
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
