@@ -29,6 +29,18 @@ function isDtcPattern(code) {
   return /^[PBCU][0-9A-FX]{4}$/.test(code) && code.includes("X");
 }
 
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isNonEmptyStringArray(value) {
+  return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString);
+}
+
+function isSourceUrl(value) {
+  return isNonEmptyString(value) || isNonEmptyStringArray(value);
+}
+
 for (const file of jsonFiles) {
   const raw = fs.readFileSync(path.join(dataDir, file), "utf8");
   let rows;
@@ -52,8 +64,22 @@ for (const file of jsonFiles) {
   const ids = new Set();
   const makers = new Set();
   const vehicleDetails = new Set();
+  const vehicleYearRanges = new Set();
   for (const [index, row] of rows.entries()) {
     const label = `${file}[${index}]`;
+
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      reportError(`${label}: 行がJSONオブジェクトではありません`);
+      continue;
+    }
+
+    if ("source_url" in row && !isSourceUrl(row.source_url)) {
+      reportError(`${label}: source_url は空でない文字列または文字列配列にしてください`);
+    }
+
+    if ("dtc_codes" in row && !Array.isArray(row.dtc_codes)) {
+      reportError(`${label}: dtc_codes は配列にしてください`);
+    }
 
     if (row.id) {
       if (ids.has(row.id)) reportError(`${label}: id ${row.id} が重複しています`);
@@ -85,6 +111,7 @@ for (const file of jsonFiles) {
       if (!Array.isArray(row.models) || !row.models.length) reportError(`${label}: models がありません`);
       if (new Set(row.models || []).size !== (row.models || []).length) reportError(`${label}: models に重複があります`);
       if (!row.source_url) reportError(`${label}: source_url がありません`);
+      if (!isNonEmptyStringArray(row.models)) reportError(`${label}: models に空または文字列以外の値があります`);
       if (row.detail_confirmation_required !== true) reportError(`${label}: detail_confirmation_required が true ではありません`);
     }
 
@@ -98,6 +125,8 @@ for (const file of jsonFiles) {
         if (new Set(row.model_codes || []).size !== (row.model_codes || []).length) reportError(`${label}: model_codes に重複があります`);
         if (!Array.isArray(row.engine_codes) || !row.engine_codes.length) reportError(`${label}: engine_codes がありません`);
         if (new Set(row.engine_codes || []).size !== (row.engine_codes || []).length) reportError(`${label}: engine_codes に重複があります`);
+        if (!isNonEmptyStringArray(row.model_codes)) reportError(`${label}: model_codes に空または文字列以外の値があります`);
+        if (!isNonEmptyStringArray(row.engine_codes)) reportError(`${label}: engine_codes に空または文字列以外の値があります`);
       }
     }
 
@@ -108,6 +137,8 @@ for (const file of jsonFiles) {
       if (new Set(row.model_codes || []).size !== (row.model_codes || []).length) reportError(`${label}: model_codes に重複があります`);
       if (!Array.isArray(row.engine_codes) || !row.engine_codes.length) reportError(`${label}: engine_codes がありません`);
       if (new Set(row.engine_codes || []).size !== (row.engine_codes || []).length) reportError(`${label}: engine_codes に重複があります`);
+      if (!isNonEmptyStringArray(row.model_codes)) reportError(`${label}: model_codes に空または文字列以外の値があります`);
+      if (!isNonEmptyStringArray(row.engine_codes)) reportError(`${label}: engine_codes に空または文字列以外の値があります`);
       if (!Number.isInteger(row.year_from)) reportError(`${label}: year_from が整数ではありません`);
       if (row.year_to !== null && !Number.isInteger(row.year_to)) reportError(`${label}: year_to が整数または null ではありません`);
       if (row.year_to === null && !Number.isInteger(row.verified_through_year)) reportError(`${label}: 継続中の候補に verified_through_year がありません`);
@@ -115,6 +146,9 @@ for (const file of jsonFiles) {
       if (Number.isInteger(row.verified_through_year) && row.year_from > row.verified_through_year) reportError(`${label}: 検証済み年式範囲が逆転しています`);
       if (!row.source_url) reportError(`${label}: source_url がありません`);
       if (row.detail_confirmation_required !== true) reportError(`${label}: detail_confirmation_required が true ではありません`);
+      const rangeKey = JSON.stringify([row.maker, row.model, row.model_codes, row.engine_codes, row.year_from, row.year_to]);
+      if (vehicleYearRanges.has(rangeKey)) reportError(`${label}: 同一の年式範囲が重複しています`);
+      vehicleYearRanges.add(rangeKey);
     }
   }
 }

@@ -183,7 +183,7 @@ data/symptom-flows.json
 npm.cmd run validate:data
 ```
 
-JSON構文、文字崩れ、DTC形式、ID重複、整備書確認フラグを検査します。
+JSON構文、文字崩れ、DTC形式、ID重複、整備書確認フラグ、出典URLの型、車両候補の文字列配列、年式範囲の重複を検査します。
 
 登録済み個別DTCと系統別フローの状況は次で確認できます。
 
