@@ -7561,5 +7561,70 @@
     "source_url": "https://www.suzuki.co.jp/suzuki_digital_library/1_auto/cervo.html",
     "source_date": "2026-06-02",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "86",
+    "model_codes": ["ZN6"],
+    "engine_codes": ["FA20"],
+    "year_from": 2012,
+    "year_to": 2021,
+    "period_note": "初代86の入力補助候補。月単位の境界、グレードは車検証とメーカー整備書で確認する。直噴燃料系統の作業は火気厳禁とし、燃圧抜き手順をメーカー整備書で確認する。",
+    "source": "トヨタ公式認定中古車 86車両情報",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-86/",
+    "source_date": "2026-06-02",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "FJクルーザー",
+    "model_codes": ["GSJ15W"],
+    "engine_codes": ["1GR-FE"],
+    "year_from": 2010,
+    "year_to": 2018,
+    "period_note": "国内販売FJクルーザーの入力補助候補。月単位の境界、グレード、パートタイム4WDの取扱いは車検証とメーカー整備書で確認する。",
+    "source": "トヨタ公式認定中古車 FJクルーザー車両情報と主要諸元表",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-FJ_CRUISER/",
+    "source_date": "2026-06-02",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "iQ",
+    "model_codes": ["KGJ10"],
+    "engine_codes": ["1KR-FE"],
+    "year_from": 2008,
+    "year_to": 2016,
+    "period_note": "iQ 1.0L車の入力補助候補。月単位の境界、乗車定員、グレードは車検証とメーカー整備書で確認する。",
+    "source": "トヨタ公式認定中古車 iQ車両情報と環境仕様",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-IQ/",
+    "source_date": "2026-06-02",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "iQ",
+    "model_codes": ["NGJ10"],
+    "engine_codes": ["1NR-FE"],
+    "year_from": 2009,
+    "year_to": 2016,
+    "period_note": "iQ 1.3L車の入力補助候補。月単位の境界、グレード、限定車の過給機有無は車検証とメーカー整備書で確認する。",
+    "source": "トヨタ公式認定中古車 iQ車両情報と環境仕様",
+    "source_url": "https://toyota.jp/ucar/catalog/brand-TOYOTA/car-IQ/",
+    "source_date": "2026-06-02",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "トヨタ",
+    "model": "SAI",
+    "model_codes": ["AZK10"],
+    "engine_codes": ["2AZ-FXE"],
+    "year_from": 2009,
+    "year_to": 2017,
+    "period_note": "SAIハイブリッド車の入力補助候補。月単位の境界、グレード、高電圧系統は車検証とメーカー整備書、遮断手順、資格要件を確認する。",
+    "source": "トヨタ公式認定中古車 SAI車両情報と主要諸元表",
+    "source_url": "https://toyota.jp/pages/contents/carlineup/archive/sai/2015-05/pdf/sai_main_s_201505.pdf",
+    "source_date": "2026-06-02",
+    "detail_confirmation_required": true
   }
 ]
