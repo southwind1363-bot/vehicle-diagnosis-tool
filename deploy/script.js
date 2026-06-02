@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.39.0";
+const APP_VERSION = "1.39.1";
 const APP_LAST_UPDATED = "2026-06-02";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -903,7 +903,7 @@ function buildSources(obd, flow, workflowMatches = []) {
   if (flow?.sources?.length) sources.push(...flow.sources);
   sources.push(...workflowMatches.flatMap((item) => [
     item.source,
-    ...(item.source_url || [])
+    ...(Array.isArray(item.source_url) ? item.source_url : [item.source_url])
   ].filter(Boolean)));
 
   return collectUnique(sources).length ? collectUnique(sources) : [NO_DATA];
@@ -976,7 +976,7 @@ function buildModernReferences(input, obd, flow, workflowMatches = []) {
 
 function buildReferenceContext(input, flow) {
   const vehicleText = normalizeLoose([input.vehicle, input.facts].join(" "));
-  const symptomText = normalizeLoose([flow?.symptomName, flow?.symptomSummary, input.facts].join(" "));
+  const symptomText = normalizeLoose([flow?.symptomName, input.facts].join(" "));
   const yearMatch = input.vehicle.match(/(19|20)\d{2}/);
 
   return {
@@ -1141,6 +1141,9 @@ function getDiagnosticWorkflowMatches(input, flow) {
     .map((item) => {
       if (item.id === "workflow-obd-readout-baseline" && (input.obdCode || input.symptomId)) {
         return { ...item, _matchInfo: { score: 1, reasons: ["OBD2読取時の基本手順"] } };
+      }
+      if (item.id?.startsWith("family-flow-") && !hasCodeHit(item.dtc_codes, context.code)) {
+        return { ...item, _matchInfo: { score: 0, reasons: [] } };
       }
       return { ...item, _matchInfo: scoreReferenceItem(item, context) };
     })
