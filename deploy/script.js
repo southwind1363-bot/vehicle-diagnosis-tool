@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.39.2";
+const APP_VERSION = "1.39.3";
 const APP_LAST_UPDATED = "2026-06-02";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -1494,7 +1494,7 @@ async function sendToExternalGpt() {
       if (!gptWindow) renderGptOpenLink();
     }, 1300);
   } catch (error) {
-    const errorMessage = `相談内容をコピーできませんでした。ブラウザの権限を確認してください。${error.message}`;
+    const errorMessage = "相談内容をコピーできませんでした。ブラウザのクリップボード権限を確認してください。";
     showCopyToast(errorMessage, "error");
     aiStatus.textContent = errorMessage;
     if (!isMobileDevice()) {
@@ -1702,34 +1702,42 @@ function collectCaseForm() {
 }
 
 function normalizeCase(item) {
+  const source = isCaseRecord(item) ? item : {};
   const now = new Date().toISOString();
   return {
-    schemaVersion: Number(item.schemaVersion || 1) >= 2 ? item.schemaVersion : 2,
-    id: item.id || createCaseId(),
-    createdAt: item.createdAt || now,
-    updatedAt: item.updatedAt || item.createdAt || now,
-    creatorName: item.creatorName || item.technician || "",
-    registrationDate: item.registrationDate || item.date || "",
-    technician: item.technician || "",
-    maker: item.maker || "",
-    model: item.model || "",
-    year: item.year || "",
-    engine: item.engine || "",
-    mileage: item.mileage || "",
-    symptom: item.symptom || "",
-    obdCode: normalizeCode(item.obdCode || ""),
-    aiGuess: item.aiGuess || "",
-    confirmedFacts: item.confirmedFacts || "",
-    measurements: item.measurements || "",
-    finalCause: item.finalCause || "",
-    work: item.work || "",
-    replacedParts: item.replacedParts || "",
-    repairResult: item.repairResult || "経過観察",
-    recurrence: item.recurrence || "不明",
-    memo: item.memo || "",
-    confidence: item.confidence || "低",
-    sources: item.sources || ""
+    schemaVersion: Number(source.schemaVersion || 1) >= 2 ? source.schemaVersion : 2,
+    id: source.id || createCaseId(),
+    createdAt: source.createdAt || now,
+    updatedAt: source.updatedAt || source.createdAt || now,
+    creatorName: source.creatorName || source.technician || "",
+    registrationDate: source.registrationDate || source.date || "",
+    technician: source.technician || "",
+    maker: source.maker || "",
+    model: source.model || "",
+    year: source.year || "",
+    engine: source.engine || "",
+    mileage: source.mileage || "",
+    symptom: source.symptom || "",
+    obdCode: normalizeCode(source.obdCode || ""),
+    aiGuess: source.aiGuess || "",
+    confirmedFacts: source.confirmedFacts || "",
+    measurements: source.measurements || "",
+    finalCause: source.finalCause || "",
+    work: source.work || "",
+    replacedParts: source.replacedParts || "",
+    repairResult: source.repairResult || "経過観察",
+    recurrence: source.recurrence || "不明",
+    memo: source.memo || "",
+    confidence: source.confidence || "低",
+    sources: source.sources || ""
   };
+}
+
+function isCaseRecord(item) {
+  return Boolean(item)
+    && typeof item === "object"
+    && !Array.isArray(item)
+    && ["id", "maker", "model", "symptom", "confirmedFacts", "finalCause", "work"].some((key) => key in item);
 }
 
 function findDuplicateCase(record) {
@@ -2072,8 +2080,9 @@ function runSelfCheck() {
   const backup = buildCasesBackup();
   results.push(backup.records.some((item) => item.id === testRecord.id) ? "JSONバックアップチェック: OK" : "JSONバックアップチェック: NG");
 
-  const importCheck = backup.records.map(normalizeCase).some((item) => item.id === testRecord.id);
-  results.push(importCheck ? "JSONインポート形式チェック: OK" : "JSONインポート形式チェック: NG");
+  const importPreview = [...backup.records, null].filter(isCaseRecord).map(normalizeCase);
+  const importCheck = importPreview.some((item) => item.id === testRecord.id) && importPreview.length === backup.records.length;
+  results.push(importCheck ? "JSONインポート形式・不正行除外チェック: OK" : "JSONインポート形式・不正行除外チェック: NG");
 
   savedCases = savedCases.filter((item) => item.id !== testRecord.id);
   persistCases();
@@ -2084,17 +2093,18 @@ function runSelfCheck() {
 }
 
 function clearAllLocalStorage() {
-  if (!confirm("localStorage内の整備事例、テーマ設定、注意事項確認状態をすべて削除しますか？")) return;
+  if (!confirm("このアプリの整備事例、テーマ設定、注意事項確認状態をすべて削除しますか？")) return;
   if (!confirm("本当に削除しますか？この操作は元に戻せません。")) return;
 
   localStorage.removeItem(CASES_KEY);
   localStorage.removeItem(THEME_KEY);
   localStorage.removeItem(NOTICE_KEY);
   savedCases = [];
+  applyTheme("light");
   renderCases();
   renderSimilarCases();
   updateCaseQualityPreview();
-  renderOpsResults(["localStorage全削除: OK"]);
+  renderOpsResults(["アプリ保存データ全削除: OK"]);
 }
 
 function buildCasesBackup() {
@@ -2142,7 +2152,13 @@ function importCasesJson(event) {
 
       let added = 0;
       let skipped = 0;
-      records.map(normalizeCase).forEach((record) => {
+      let invalid = 0;
+      records.forEach((item) => {
+        if (!isCaseRecord(item)) {
+          invalid += 1;
+          return;
+        }
+        const record = normalizeCase(item);
         if (findDuplicateCase(record) || savedCases.some((item) => item.id === record.id)) {
           skipped += 1;
           return;
@@ -2154,7 +2170,7 @@ function importCasesJson(event) {
       persistCases();
       renderCases();
       renderSimilarCases();
-      caseStatus.textContent = `JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件`;
+      caseStatus.textContent = `JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`;
       setNextCaseId();
     } catch (error) {
       caseStatus.textContent = `JSONインポート失敗: ${error.message}`;
@@ -2188,7 +2204,7 @@ function loadCases() {
 
   try {
     const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed.map(normalizeCase) : [];
+    return Array.isArray(parsed) ? parsed.filter(isCaseRecord).map(normalizeCase) : [];
   } catch (error) {
     return [];
   }
