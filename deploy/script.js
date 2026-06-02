@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "1.39.3";
+const APP_VERSION = "1.39.5";
 const APP_LAST_UPDATED = "2026-06-02";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -1599,8 +1599,12 @@ function listForPrompt(items) {
 
 async function copyTextToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return;
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (error) {
+      // Some mobile and embedded browsers expose Clipboard API but reject writeText.
+    }
   }
 
   const textarea = document.createElement("textarea");
@@ -1609,9 +1613,15 @@ async function copyTextToClipboard(text) {
   textarea.style.position = "fixed";
   textarea.style.top = "-9999px";
   document.body.appendChild(textarea);
+  textarea.focus();
   textarea.select();
-  const copied = document.execCommand("copy");
-  textarea.remove();
+  textarea.setSelectionRange(0, textarea.value.length);
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
 
   if (!copied) {
     throw new Error("クリップボードへコピーできませんでした。ブラウザの権限を確認してください。");
@@ -1662,9 +1672,9 @@ function saveCase() {
   setDefaultCaseDate();
   setNextCaseId();
   updateCaseQualityPreview();
-  caseStatus.textContent = `保存しました。現在の保存件数: ${savedCases.length}件`;
   renderCases();
   renderSimilarCases();
+  caseStatus.textContent = `保存しました。現在の保存件数: ${savedCases.length}件`;
 }
 
 function collectCaseForm() {
