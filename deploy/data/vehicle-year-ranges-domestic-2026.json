@@ -8734,5 +8734,70 @@
     "source_url": ["https://history.nissan.co.jp/SYLPHY/B17/1212/index.html", "https://history.nissan.co.jp/SYLPHY/B17/1212/performance.html", "https://www.nissan.co.jp/INFO/E_NOTE/SYLPHY/B17/1212/index.html"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "GT-R",
+    "model_codes": ["R35"],
+    "engine_codes": ["VR38DETT"],
+    "year_from": 2007,
+    "year_to": 2025,
+    "period_note": "R35型GT-Rの入力補助候補。年式、月単位の境界、グレード、NISMO専用仕様は車検証とメーカー整備書で確認する。ツインターボ車の燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。高性能ブレーキは指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 GT-R旧車カタログ・主要諸元",
+    "source_url": ["https://faq2.nissan.co.jp/faq/show/7562?category_id=625&site_domain=default", "https://history.nissan.co.jp/ARCHIVES/index.html", "https://history.nissan.co.jp/GT-R/R35/1411/ARTICLE/PDF/gt-r_2015_specification.pdf", "https://history.nissan.co.jp/ARCHIVES/PDF/GT-R/R35/20240314/gt-r_2403_specsheet.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "e-NV200",
+    "model_codes": ["VME0", "ME0"],
+    "engine_codes": ["EM57"],
+    "year_from": 2014,
+    "year_to": 2019,
+    "period_note": "e-NV200のバン・ワゴン入力補助候補。車両区分、月単位の境界、グレードは車検証とメーカー整備書で確認する。高電圧系統の作業は感電・火災の危険があるため、資格要件、充電器切離し、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。回生協調ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 e-NV200環境仕様書・WEBカタログ",
+    "source_url": ["https://www.nissan.co.jp/INFO/E_NOTE/ENV200/ME0/1406/index.html", "https://history.nissan.co.jp/ENV200/ME0/1406/index.html", "https://history.nissan.co.jp/ENV200/ME0/1406/specifications.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "リーフ",
+    "model_codes": ["ZE0"],
+    "engine_codes": ["EM61"],
+    "year_from": 2010,
+    "year_to": 2012,
+    "period_note": "初代リーフ前期の入力補助候補。月単位の境界、グレード、バッテリー容量は車検証とメーカー整備書で確認する。高電圧系統の作業は感電・火災の危険があるため、資格要件、充電器切離し、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。回生協調ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 リーフWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/LEAF/ZE0/1012/", "https://history.nissan.co.jp/LEAF/ZE0/1012/PDF/leaf_specification.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "リーフ",
+    "model_codes": ["AZE0"],
+    "engine_codes": ["EM57"],
+    "year_from": 2012,
+    "year_to": 2017,
+    "period_note": "初代リーフ後期の入力補助候補。月単位の境界、グレード、バッテリー容量は車検証とメーカー整備書で確認する。高電圧系統の作業は感電・火災の危険があるため、資格要件、充電器切離し、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。回生協調ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 リーフWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/LEAF/ZE0/1211/index.html", "https://history.nissan.co.jp/LEAF/ZE0/1211/pdf/leaf_specification.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "リーフ",
+    "model_codes": ["ZE1"],
+    "engine_codes": ["EM57"],
+    "year_from": 2017,
+    "year_to": 2025,
+    "period_note": "2代目リーフの入力補助候補。現行新世代、月単位の境界、グレード、バッテリー容量は車検証とメーカー整備書で確認する。高電圧系統の作業は感電・火災の危険があるため、資格要件、充電器切離し、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。回生協調ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 リーフWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/LEAF/ZE1/1709/index.html", "https://www3.nissan.co.jp/content/dam/Nissan/jp/vehicles/leaf/1907/pdf/leaf_specsheet.pdf", "https://www3.nissan.co.jp/vehicles/old/leaf_ze1_1912/performance_safety.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
