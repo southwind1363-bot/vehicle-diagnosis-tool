@@ -9008,5 +9008,83 @@
     "source_url": ["https://www.honda.co.jp/auto-archive/insight/", "https://www.honda.co.jp/auto-archive/insight/2022/common/pdf/insight_environment_list.pdf", "https://www.honda.co.jp/auto-archive/insight/2022/webcatalog/performance/ecology/"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "グレイス",
+    "model_codes": ["GM4", "GM5"],
+    "engine_codes": ["LEB"],
+    "year_from": 2014,
+    "year_to": 2020,
+    "period_note": "グレイス ハイブリッド車の入力補助候補。駆動方式、原動機欄のモーター型式併記、月単位の境界、グレードは車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 グレイス中古車カタログ・主要諸元・環境仕様書",
+    "source_url": ["https://www.honda.co.jp/auto-archive/grace/", "https://www.honda.co.jp/auto-archive/grace/2020/common/pdf/grace_spec_list.pdf", "https://www.honda.co.jp/auto-archive/grace/2020/common/pdf/grace_environment_list.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "グレイス",
+    "model_codes": ["GM6", "GM9"],
+    "engine_codes": ["L15B"],
+    "year_from": 2015,
+    "year_to": 2020,
+    "period_note": "グレイス ガソリン車の入力補助候補。駆動方式、月単位の境界、グレードは車検証とメーカー整備書で確認する。直噴燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 グレイス中古車カタログ・主要諸元・環境仕様書",
+    "source_url": ["https://www.honda.co.jp/auto-archive/grace/", "https://www.honda.co.jp/auto-archive/grace/2020/common/pdf/grace_spec_list.pdf", "https://www.honda.co.jp/auto-archive/grace/2020/common/pdf/grace_environment_list.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ジェイド",
+    "model_codes": ["FR4"],
+    "engine_codes": ["LEB"],
+    "year_from": 2015,
+    "year_to": 2020,
+    "period_note": "ジェイド ハイブリッド車の入力補助候補。原動機欄のモーター型式併記、月単位の境界、グレード、乗車定員は車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 ジェイド中古車カタログ・主要諸元・プレスインフォメーション",
+    "source_url": ["https://www.honda.co.jp/auto-archive/jade/", "https://www.honda.co.jp/auto-archive/jade/2020/common/pdf/jade_spec_list.pdf", "https://www.honda.co.jp/factbook/auto/JADE/201502/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ジェイド",
+    "model_codes": ["FR5"],
+    "engine_codes": ["L15B"],
+    "year_from": 2015,
+    "year_to": 2020,
+    "period_note": "ジェイド 1.5L直噴ターボ車の入力補助候補。月単位の境界、グレード、乗車定員は車検証とメーカー整備書で確認する。直噴ターボ車の燃料系統作業は火気厳禁とし、燃圧抜き、過給機の冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 ジェイド中古車カタログ・主要諸元",
+    "source_url": ["https://www.honda.co.jp/auto-archive/jade/", "https://www.honda.co.jp/auto-archive/jade/2020/common/pdf/jade_spec_list.pdf", "https://www.honda.co.jp/auto-archive/jade/2020/webcatalog/performance/ecology/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "シャトル",
+    "model_codes": ["GP7", "GP8"],
+    "engine_codes": ["LEB"],
+    "year_from": 2015,
+    "year_to": 2022,
+    "period_note": "シャトル ハイブリッド車の入力補助候補。駆動方式、原動機欄のモーター型式併記、月単位の境界、グレードは車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 シャトル中古車カタログ・主要諸元・FAQ",
+    "source_url": ["https://www.honda.co.jp/auto-archive/shuttle/", "https://www.honda.co.jp/auto-archive/shuttle/2022/common/pdf/shuttle_spec_list.pdf", "https://www.honda.co.jp/customer/auto-archive/shuttle/2015/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "シャトル",
+    "model_codes": ["GK8", "GK9"],
+    "engine_codes": ["L15B"],
+    "year_from": 2015,
+    "year_to": 2022,
+    "period_note": "シャトル ガソリン車の入力補助候補。駆動方式、月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 シャトル中古車カタログ・主要諸元・FAQ",
+    "source_url": ["https://www.honda.co.jp/auto-archive/shuttle/", "https://www.honda.co.jp/auto-archive/shuttle/2022/common/pdf/shuttle_spec_list.pdf", "https://www.honda.co.jp/customer/auto-archive/shuttle/2015/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
