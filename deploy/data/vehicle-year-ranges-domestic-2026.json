@@ -9659,5 +9659,31 @@
     "source_url": ["https://www.mitsubishi-motors.com/jp/newsroom/important/detailg420_jp/pdf/entity_list_01.pdf", "https://www.mitsubishi-motors.com/jp/newsroom/important/detailg420_jp/pdf/entity_list_02.pdf"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "三菱",
+    "model": "i-MiEV",
+    "model_codes": ["HA4W"],
+    "engine_codes": ["Y51"],
+    "year_from": 2013,
+    "year_to": 2016,
+    "period_note": "HA4W i-MiEV Xグレードの入力補助候補。17型以降に含まれるHD4W、17型より以前のHA3W、月単位の境界、グレード、駆動用バッテリー仕様は車検証とメーカー整備書で確認する。高電圧系統の作業は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。駆動用バッテリー損傷車はメーカー指定の隔離・火災対応を確認し、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "三菱自動車公式 対象年式・型式一覧・駆動用バッテリー保証情報",
+    "source_url": ["https://www.mitsubishi-motors.com/jp/newsroom/important/detailg420_jp/pdf/entity_list_01.pdf", "https://www.mitsubishi-motors.co.jp/afterservice/service/warranty/i-miev/index.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "三菱",
+    "model": "ミラージュ",
+    "model_codes": ["A03A"],
+    "engine_codes": ["3A92"],
+    "year_from": 2016,
+    "year_to": 2022,
+    "period_note": "A03A 1.2L車の入力補助候補。A05A、型式とエンジン型式の組み合わせ、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。エアバッグ関連作業は電源遮断と待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "三菱自動車公式 対象年式・型式一覧・ニュースリリース・アクセサリー適応車種情報",
+    "source_url": ["https://www.mitsubishi-motors.com/jp/newsroom/important/detailg420_jp/pdf/entity_list_01.pdf", "https://www.mitsubishi-motors.com/jp/newsroom/newsrelease/2022/20220609_1.html", "https://www.mitsubishi-motors.co.jp/purchase/accessory/assist/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
