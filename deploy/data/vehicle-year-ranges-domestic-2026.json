@@ -9724,5 +9724,83 @@
     "source_url": ["https://recall.mitsubishi-motors.co.jp/Recall/displayselect.do?orderno=13263", "https://recall.mitsubishi-motors.co.jp/Recall/displayselect.do?orderno=14144", "https://www.mitsubishi-motors.co.jp/support/recall/others/tenken/detail_012.html", "https://www.mitsubishi-motors.com/content/dam/com/ir_jp/pdf/irnews/2016/20160802-02.pdf"],
     "source_date": "2026-06-05",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "イグニス",
+    "model_codes": ["FF21S"],
+    "engine_codes": ["K12C"],
+    "year_from": 2016,
+    "year_to": 2020,
+    "period_note": "2016年発売から2020年一部仕様変更までのイグニス入力補助候補。2021年以降、月単位の境界、駆動方式、グレード、マイルドハイブリッド仕様、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、マイルドハイブリッド関連作業は電源遮断と指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY・発売ニュースリリース・一部仕様変更ニュースリリース",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/ignis.html", "https://www.suzuki.co.jp/release/a/2015/0121/index.html", "https://www.suzuki.co.jp/release/a/2020/0204/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "バレーノ",
+    "model_codes": ["WB42S"],
+    "engine_codes": ["K10C"],
+    "year_from": 2016,
+    "year_to": 2016,
+    "period_note": "2016年発売時バレーノXTの入力補助候補。2017年以降、月単位の境界、グレード、輸入仕様、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。直噴ターボ燃料系統と過給機関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY・発売ニュースリリース",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/baleno.html", "https://www.suzuki.co.jp/release/a/2015/0309/pdf/0309.pdf"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "バレーノ",
+    "model_codes": ["WB32S"],
+    "engine_codes": ["K12C"],
+    "year_from": 2016,
+    "year_to": 2016,
+    "period_note": "2016年発売時バレーノXGの入力補助候補。2017年以降、月単位の境界、グレード、輸入仕様、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY・発売ニュースリリース",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/baleno.html", "https://www.suzuki.co.jp/release/a/2015/0309/pdf/0309.pdf"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "スイフトスポーツ",
+    "model_codes": ["ZC31S"],
+    "engine_codes": ["M16A"],
+    "year_from": 2005,
+    "year_to": 2010,
+    "period_note": "2005年発売世代スイフトスポーツの入力補助候補。月単位の境界、グレード、変速機、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/swiftsports.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "スイフトスポーツ",
+    "model_codes": ["ZC32S"],
+    "engine_codes": ["M16A"],
+    "year_from": 2011,
+    "year_to": 2016,
+    "period_note": "2011年発売世代スイフトスポーツの入力補助候補。月単位の境界、グレード、6MT・CVT、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/swiftsports.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "スイフトスポーツ",
+    "model_codes": ["ZC33S"],
+    "engine_codes": ["K14C"],
+    "year_from": 2017,
+    "year_to": 2025,
+    "period_note": "2017年発売世代からZC33S Final Edition期間限定生産までのスイフトスポーツ入力補助候補。月単位の境界、グレード、6MT・6AT、指定燃料、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。直噴ターボ燃料系統と過給機関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY・発売ニュースリリース・ZC33S Final Editionニュースリリース",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/swiftsports.html", "https://www.suzuki.co.jp/release/a/2017/0913/", "https://www.suzuki.co.jp/release/a/2024/1217/index.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
   }
 ]
