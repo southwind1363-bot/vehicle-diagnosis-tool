@@ -10023,5 +10023,57 @@
     "source_url": ["https://u-catch.daihatsu.co.jp/catalog/MOVE_CONTE/GRADE__10069997/", "https://u-catch.daihatsu.co.jp/catalog/MOVE_CONTE/GRADE__10096642/"],
     "source_date": "2026-06-05",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "エッセ",
+    "model_codes": ["L235S", "L245S"],
+    "engine_codes": ["KF-VE"],
+    "year_from": 2005,
+    "year_to": 2011,
+    "period_note": "エッセの入力補助候補。月単位の境界、駆動方式、5MT・3AT・4AT、グレード、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHモデルヒストリー・U-CATCHカタログ",
+    "source_url": ["https://u-catch.daihatsu.co.jp/history/esse/esse/", "https://u-catch.daihatsu.co.jp/catalog/ESSE/MODEL__200512/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ソニカ",
+    "model_codes": ["L405S", "L415S"],
+    "engine_codes": ["KF-DET"],
+    "year_from": 2006,
+    "year_to": 2009,
+    "period_note": "ソニカの入力補助候補。月単位の境界、駆動方式、グレード、CVT、アクティブシフト、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHモデルヒストリー・U-CATCHカタログ",
+    "source_url": ["https://u-catch.daihatsu.co.jp/history/sonica/sonica/", "https://u-catch.daihatsu.co.jp/catalog/SONICA/MODEL__200606/", "https://u-catch.daihatsu.co.jp/catalog/SONICA/GRADE__10034647/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "タント エグゼ",
+    "model_codes": ["L455S", "L465S"],
+    "engine_codes": ["KF-VE", "KF-DET"],
+    "year_from": 2009,
+    "year_to": 2014,
+    "period_note": "タント エグゼの入力補助候補。月単位の境界、駆動方式、カスタム、ターボ有無、グレード、CVT、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHモデルヒストリー・U-CATCHカタログ",
+    "source_url": ["https://u-catch.daihatsu.co.jp/history/tanto/tanto_exe/", "https://u-catch.daihatsu.co.jp/catalog/TANTO_EXE/MODEL__200912/", "https://u-catch.daihatsu.co.jp/catalog/TANTO_EXE/GRADE__10065758/", "https://u-catch.daihatsu.co.jp/catalog/TANTO_EXE/GRADE__10065754/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ムーヴ ラテ",
+    "model_codes": ["L550S", "L560S"],
+    "engine_codes": ["EF-VE", "EF-DET"],
+    "year_from": 2004,
+    "year_to": 2009,
+    "period_note": "ムーヴ ラテの入力補助候補。月単位の境界、駆動方式、クール、ターボ有無、グレード、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHモデルヒストリー・U-CATCHカタログ",
+    "source_url": ["https://u-catch.daihatsu.co.jp/history/move/move_latte/", "https://u-catch.daihatsu.co.jp/catalog/MOVE_LATTE/MODEL__200408/", "https://u-catch.daihatsu.co.jp/catalog/MOVE_LATTE/GRADE__10028064/", "https://u-catch.daihatsu.co.jp/catalog/MOVE_LATTE/GRADE__10028069/", "https://u-catch.daihatsu.co.jp/catalog/MOVE_LATTE/GRADE__10041222/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
   }
 ]
