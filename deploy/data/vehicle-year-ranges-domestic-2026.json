@@ -9086,5 +9086,83 @@
     "source_url": ["https://www.honda.co.jp/auto-archive/shuttle/", "https://www.honda.co.jp/auto-archive/shuttle/2022/common/pdf/shuttle_spec_list.pdf", "https://www.honda.co.jp/customer/auto-archive/shuttle/2015/"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "エアウェイブ",
+    "model_codes": ["GJ1", "GJ2"],
+    "engine_codes": ["L15A"],
+    "year_from": 2005,
+    "year_to": 2010,
+    "period_note": "エアウェイブの入力補助候補。駆動方式、月単位の境界、グレード、スカイルーフ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 エアウェイブ中古車カタログ・主要諸元・プレスインフォメーション",
+    "source_url": ["https://www.honda.co.jp/auto-archive/airwave/", "https://www.honda.co.jp/auto-archive/airwave/2006/grade-data/", "https://www.honda.co.jp/factbook/auto/AIRWAVE/200504/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "エディックス",
+    "model_codes": ["BE1", "BE2"],
+    "engine_codes": ["D17A"],
+    "year_from": 2004,
+    "year_to": 2006,
+    "period_note": "エディックス1.7L車の入力補助候補。駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。エアバッグ関連作業は電源遮断と待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 エディックス中古車カタログ・主要諸元",
+    "source_url": ["https://www.honda.co.jp/auto-archive/edix/", "https://www.honda.co.jp/factbook/auto/Edix/200407/14.html", "https://www.honda.co.jp/factbook/auto/Edix/200407/Edix.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "エディックス",
+    "model_codes": ["BE3", "BE4"],
+    "engine_codes": ["K20A"],
+    "year_from": 2004,
+    "year_to": 2009,
+    "period_note": "エディックス2.0L車の入力補助候補。駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。エアバッグ関連作業は電源遮断と待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 エディックス中古車カタログ・主要諸元・環境仕様",
+    "source_url": ["https://www.honda.co.jp/auto-archive/edix/", "https://www.honda.co.jp/factbook/auto/Edix/200407/14.html", "https://www.honda.co.jp/auto-archive/edix/2009/webcatalogue/environment/data.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "エディックス",
+    "model_codes": ["BE8"],
+    "engine_codes": ["K24A"],
+    "year_from": 2006,
+    "year_to": 2009,
+    "period_note": "エディックス2.4L車の入力補助候補。月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。エアバッグ関連作業は電源遮断と待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 エディックス中古車カタログ・主要諸元・環境仕様",
+    "source_url": ["https://www.honda.co.jp/auto-archive/edix/", "https://www.honda.co.jp/auto-archive/edix/2009/webcatalogue/spec/", "https://www.honda.co.jp/auto-archive/edix/2009/webcatalogue/environment/data.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ストリーム",
+    "model_codes": ["RN6", "RN7"],
+    "engine_codes": ["R18A"],
+    "year_from": 2006,
+    "year_to": 2014,
+    "period_note": "2代目ストリーム1.8L車の入力補助候補。初代ストリーム、駆動方式、月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 ストリーム中古車カタログ・主要諸元・プレスインフォメーション",
+    "source_url": ["https://www.honda.co.jp/auto-archive/stream/", "https://www.honda.co.jp/auto-archive/stream/2014/webcatalog/spec/pdf/spec_list.pdf", "https://www.honda.co.jp/factbook/auto/stream/200607/18.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "ストリーム",
+    "model_codes": ["RN8", "RN9"],
+    "engine_codes": ["R20A"],
+    "year_from": 2006,
+    "year_to": 2014,
+    "period_note": "2代目ストリーム2.0L車の入力補助候補。初代ストリーム、駆動方式、月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 ストリーム中古車カタログ・主要諸元・プレスインフォメーション",
+    "source_url": ["https://www.honda.co.jp/auto-archive/stream/", "https://www.honda.co.jp/auto-archive/stream/2014/webcatalog/spec/pdf/spec_list.pdf", "https://www.honda.co.jp/factbook/auto/stream/200607/18.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
