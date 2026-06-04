@@ -8891,5 +8891,44 @@
     "source_url": ["https://www2.nissan.co.jp/SP/SKYLINE/VLP/PDF/skyline_specsheet.pdf", "https://faq2.nissan.co.jp/faq/show/10446?category_id=65&site_domain=default", "https://www3.nissan.co.jp/vehicles/new/skyline/performance_safety/performance.html"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "NV350キャラバン",
+    "model_codes": ["VR2E26"],
+    "engine_codes": ["QR20DE"],
+    "year_from": 2012,
+    "year_to": 2021,
+    "period_note": "NV350キャラバンの2.0Lガソリン・バン入力補助候補。現行キャラバンとの車名区分、ボディ、架装、月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "日産公式 NV350キャラバン旧車カタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/CARAVAN/E26/1206/spec.html", "https://history.nissan.co.jp/CARAVAN/E26/1206/PDF/nv350_caravan_specsheet.pdf", "https://history.nissan.co.jp/ARCHIVES/PDF/NV350CARAVAN/E26/20190724/nv350_caravan_specsheet.pdf", "https://history.nissan.co.jp/CARAVAN/E26/1707/specifications.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "NV350キャラバン",
+    "model_codes": ["CS4E26", "KS2E26", "KS4E26", "DS4E26", "DS8E26"],
+    "engine_codes": ["QR25DE"],
+    "year_from": 2017,
+    "year_to": 2021,
+    "period_note": "NV350キャラバンの2.5Lガソリン車入力補助候補。ボディ、架装、駆動方式、月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "日産公式 NV350キャラバン旧車カタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/CARAVAN/E26/1707/specifications.html", "https://history.nissan.co.jp/ARCHIVES/PDF/NV350CARAVAN/E26/20190724/nv350_caravan_specsheet.pdf", "https://history.nissan.co.jp/CARAVAN/E26/1707/performance.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "NV350キャラバン",
+    "model_codes": ["VW2E26", "VW6E26", "CW4E26", "CW8E26", "DW4E26"],
+    "engine_codes": ["YD25DDTi"],
+    "year_from": 2017,
+    "year_to": 2022,
+    "period_note": "NV350キャラバンの2.5Lディーゼルターボ車入力補助候補。ボディ、架装、駆動方式、月単位の境界、グレードは車検証とメーカー整備書で確認する。ディーゼル燃料系統と過給機の作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "日産公式 NV350キャラバン旧車カタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/CARAVAN/E26/1707/specifications.html", "https://history.nissan.co.jp/ARCHIVES/PDF/NV350CARAVAN/E26/20190724/nv350_caravan_specsheet.pdf", "https://history.nissan.co.jp/CARAVAN/E26/1707/performance.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
