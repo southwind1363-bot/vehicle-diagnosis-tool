@@ -9893,5 +9893,83 @@
     "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/escudo.html"],
     "source_date": "2026-06-05",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "アルト バン",
+    "model_codes": ["HA24V"],
+    "engine_codes": ["K6A"],
+    "year_from": 2005,
+    "year_to": 2005,
+    "period_note": "2005年発売アルトバン5ドアの入力補助候補。旧世代、月単位の境界、駆動方式、最大積載量、商用車安全装備、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/alto.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "アルト バン",
+    "model_codes": ["HA36V"],
+    "engine_codes": ["R06A"],
+    "year_from": 2014,
+    "year_to": 2014,
+    "period_note": "2014年発売アルトバンVPの入力補助候補。2015年以降、月単位の境界、駆動方式、5MT・AGS、最大積載量、商用車安全装備、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、AGS・ブレーキ作業後は作動と制動確認前に公道走行しない。",
+    "source": "スズキ公式 発売ニュースリリース・DIGITAL LIBRARY主要諸元PDF",
+    "source_url": ["https://www.suzuki.co.jp/release/a/2014/1222/index.html", "https://www.suzuki.co.jp/suzuki_digital_library/pdf/1_auto/alto/28.pdf"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "キザシ",
+    "model_codes": ["RE91S", "RF91S"],
+    "engine_codes": ["J24B"],
+    "year_from": 2009,
+    "year_to": 2009,
+    "period_note": "2009年発売キザシの入力補助候補。月単位の境界、駆動方式、i-AWD、グレード、受注生産仕様、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、4WD・ブレーキ作業後は制動と車両挙動を安全な環境で確認する。",
+    "source": "スズキ公式 DIGITAL LIBRARY",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/kizashi.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "ワゴンRソリオ",
+    "model_codes": ["MA34S"],
+    "engine_codes": ["M13A"],
+    "year_from": 2000,
+    "year_to": 2000,
+    "period_note": "2000年マイナーチェンジ時ワゴンRソリオ1.3L車の入力補助候補。ソリオ改名後、月単位の境界、グレード、駆動方式、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY・エンジン紹介",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/wagonrsolio.html", "https://www.suzuki.co.jp/suzuki_digital_library/7_engine/engin_index.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "ワゴンRソリオ",
+    "model_codes": ["MA64S"],
+    "engine_codes": ["K10A"],
+    "year_from": 2000,
+    "year_to": 2000,
+    "period_note": "2000年マイナーチェンジ時ワゴンRソリオ1.0L車の入力補助候補。ソリオ改名後、月単位の境界、グレード、駆動方式、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY・エンジン紹介",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/wagonrsolio.html", "https://www.suzuki.co.jp/suzuki_digital_library/7_engine/engin_index.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "スズキ",
+    "model": "エブリイ ランディ",
+    "model_codes": ["DA32W"],
+    "engine_codes": ["G13B"],
+    "year_from": 2001,
+    "year_to": 2001,
+    "period_note": "2001年改名時エブリイランディの入力補助候補。エブリイ+、月単位の境界、グレード、乗車定員、電動オートステップ、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "スズキ公式 DIGITAL LIBRARY",
+    "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/everylandy.html"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
   }
 ]
