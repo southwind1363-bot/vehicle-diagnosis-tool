@@ -9373,5 +9373,44 @@
     "source_url": ["https://www.honda.co.jp/CR-V/common/pdf/cr-v_spec_list.pdf", "https://www.honda.co.jp/CR-V/catalog/", "https://www.honda.co.jp/factbook/auto/CR-V/202602/4260226-cr-v.pdf"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "RX-8",
+    "model_codes": ["SE3P"],
+    "engine_codes": ["13B-MSP"],
+    "year_from": 2004,
+    "year_to": 2012,
+    "period_note": "RX-8の平成16年以降分を対象にした入力補助候補。水素ロータリー改造車、月単位の境界、グレード、トランスミッション、エアバッグ装備は車検証とメーカー整備書で確認する。ロータリーエンジンの点火・燃料・潤滑系統作業は火気厳禁とし、燃圧抜きと専用手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 RX-8ニュースリリース・主要諸元",
+    "source_url": ["https://newsroom.mazda.com/ja/publicity/release/2008/200803/080310.html", "https://newsroom.mazda.com/ja/publicity/release/2008/200803/0310.pdf", "https://newsroom.mazda.com/ja/publicity/release/2011/201110/111007a.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "CX-7",
+    "model_codes": ["ER3P"],
+    "engine_codes": ["L3-VDT"],
+    "year_from": 2006,
+    "year_to": 2012,
+    "period_note": "国内向けCX-7の入力補助候補。欧州ディーゼル仕様、駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。直噴ターボ車の燃料系統作業は火気厳禁とし、燃圧抜き、過給機の冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 CX-7国内発売ニュースリリース・主要諸元",
+    "source_url": ["https://newsroom.mazda.com/ja/publicity/release/2006/200612/061219b.html", "https://newsroom.mazda.com/en/publicity/release/2006/200612/061219.html", "https://newsroom.mazda.com/ja/publicity/release/2009/200909/090908a.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "CX-8",
+    "model_codes": ["KG2P"],
+    "engine_codes": ["SH-VPTS"],
+    "year_from": 2017,
+    "year_to": 2023,
+    "period_note": "CX-8クリーンディーゼル車の入力補助候補。ガソリン車、型式とエンジン型式の組み合わせ、駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。ディーゼル高圧燃料系統と過給機の作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 CX-8ニュースリリース・主要諸元・生産終了情報",
+    "source_url": ["https://newsroom.mazda.com/ja/publicity/release/2017/201707/170725a.html", "https://newsroom.mazda.com/ja/publicity/release/2017/201712/171214a.pdf", "https://newsroom.mazda.com/ja/publicity/release/2023/202310/231031a.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
