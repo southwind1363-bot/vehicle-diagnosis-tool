@@ -9685,5 +9685,18 @@
     "source_url": ["https://www.mitsubishi-motors.com/jp/newsroom/important/detailg420_jp/pdf/entity_list_01.pdf", "https://www.mitsubishi-motors.com/jp/newsroom/newsrelease/2022/20220609_1.html", "https://www.mitsubishi-motors.co.jp/purchase/accessory/assist/"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "三菱",
+    "model": "ランサーエボリューション",
+    "model_codes": ["CZ4A"],
+    "engine_codes": ["4B11"],
+    "year_from": 2007,
+    "year_to": 2015,
+    "period_note": "ランサーエボリューションXの入力補助候補。旧世代、月単位の境界、グレード、5MT・ツインクラッチSST、過給機、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ・S-AWC関連作業後は制動力と車両挙動を安全な環境で確認し、公道走行前に異常がないことを確認する。エアバッグ関連作業は電源遮断と待機時間を整備書で確認する。",
+    "source": "三菱自動車公式 リコール情報・認定中古車情報・車の歴史",
+    "source_url": ["https://recall.mitsubishi-motors.co.jp/Recall/displayselect.do?orderno=12365", "https://ucar.mitsubishi-motors.co.jp/ucar/detail/U00049834469/", "https://www.mitsubishi-motors.com/jp/company/history/car/index.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
