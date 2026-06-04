@@ -9971,5 +9971,57 @@
     "source_url": ["https://www.suzuki.co.jp/suzuki_digital_library/1_auto/everylandy.html"],
     "source_date": "2026-06-05",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ウェイク",
+    "model_codes": ["LA700S"],
+    "engine_codes": ["KF"],
+    "year_from": 2014,
+    "year_to": 2022,
+    "period_note": "ウェイク2WD車の入力補助候補。LA710S、月単位の境界、駆動方式、ターボ有無、グレード、スマートアシスト、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHモデルヒストリー・U-CATCHカタログ",
+    "source_url": ["https://u-catch.daihatsu.co.jp/history/wake/", "https://u-catch.daihatsu.co.jp/catalog/WAKE/GRADE__10128823/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "キャスト",
+    "model_codes": ["LA250S", "LA260S"],
+    "engine_codes": ["KF"],
+    "year_from": 2015,
+    "year_to": 2023,
+    "period_note": "キャストの入力補助候補。スタイル・アクティバ・スポーツ、月単位の境界、駆動方式、ターボ有無、グレード、スマートアシスト、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHモデルヒストリー・U-CATCHカタログ・環境仕様",
+    "source_url": ["https://u-catch.daihatsu.co.jp/history/cast/", "https://u-catch.daihatsu.co.jp/catalog/CAST/GRADE__10112078/", "https://www.daihatsu.co.jp/lineup/cast/pdf/env.pdf"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ミラ ココア",
+    "model_codes": ["L675S"],
+    "engine_codes": ["KF"],
+    "year_from": 2009,
+    "year_to": 2015,
+    "period_note": "ミラ ココア2WD車の入力補助候補。4WD車、月単位の境界、グレード、スマートキー装備、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHモデルヒストリー・U-CATCHカタログ",
+    "source_url": ["https://u-catch.daihatsu.co.jp/history/mira/mira_cocoa/", "https://u-catch.daihatsu.co.jp/catalog/MIRA_COCOA/GRADE__10056982/", "https://u-catch.daihatsu.co.jp/catalog/MIRA_COCOA/GRADE__10096606/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ダイハツ",
+    "model": "ムーヴ コンテ",
+    "model_codes": ["L575S"],
+    "engine_codes": ["KF"],
+    "year_from": 2011,
+    "year_to": 2015,
+    "period_note": "ムーヴ コンテ2WD車の入力補助候補。4WD車、2011年より前、月単位の境界、カスタム、ターボ有無、グレード、エアバッグ装備、型式とエンジン型式の組み合わせは車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、燃圧抜き、冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "ダイハツ公式 U-CATCHカタログ",
+    "source_url": ["https://u-catch.daihatsu.co.jp/catalog/MOVE_CONTE/GRADE__10069997/", "https://u-catch.daihatsu.co.jp/catalog/MOVE_CONTE/GRADE__10096642/"],
+    "source_date": "2026-06-05",
+    "detail_confirmation_required": true
   }
 ]
