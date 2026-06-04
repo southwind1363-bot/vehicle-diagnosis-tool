@@ -8930,5 +8930,83 @@
     "source_url": ["https://history.nissan.co.jp/CARAVAN/E26/1707/specifications.html", "https://history.nissan.co.jp/ARCHIVES/PDF/NV350CARAVAN/E26/20190724/nv350_caravan_specsheet.pdf", "https://history.nissan.co.jp/CARAVAN/E26/1707/performance.html"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "CR-Z",
+    "model_codes": ["ZF1"],
+    "engine_codes": ["LEA"],
+    "year_from": 2010,
+    "year_to": 2012,
+    "period_note": "CR-Z前期ZF1型の入力補助候補。原動機欄のモーター型式併記、月単位の境界、グレードは車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 CR-Zプレスインフォメーション・中古車カタログ・レスキュー資料",
+    "source_url": ["https://www.honda.co.jp/factbook/auto/CR-Z/201002/CR-Z.pdf", "https://www.honda.co.jp/auto-archive/cr-z/", "https://www.honda.co.jp/rescue-auto/cr-z/crz201610.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "CR-Z",
+    "model_codes": ["ZF2"],
+    "engine_codes": ["LEA"],
+    "year_from": 2012,
+    "year_to": 2017,
+    "period_note": "CR-Z後期ZF2型の入力補助候補。原動機欄のモーター型式併記、月単位の境界、グレードは車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 CR-Z中古車カタログ・主要諸元・レスキュー資料",
+    "source_url": ["https://www.honda.co.jp/auto-archive/cr-z/", "https://www.honda.co.jp/auto-archive/cr-z/2017/webcatalog/performance/spec/", "https://www.honda.co.jp/rescue-auto/cr-z/crz201610.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "S660",
+    "model_codes": ["JW5"],
+    "engine_codes": ["S07A"],
+    "year_from": 2015,
+    "year_to": 2022,
+    "period_note": "S660の入力補助候補。月単位の境界、グレード、トランスミッションは車検証とメーカー整備書で確認する。ターボ車の燃料系統作業は火気厳禁とし、燃圧抜き、過給機の冷却・潤滑、指定手順をメーカー整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 S660歴代モデル紹介・主要諸元・環境仕様書",
+    "source_url": ["https://www.honda.co.jp/sportscar/sportscar/s660/", "https://www.honda.co.jp/auto-archive/s660/2018/common/pdf/s660_spec_list_201804.pdf", "https://www.honda.co.jp/auto-archive/s660/2018/common/pdf/s660_environment_list.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "インサイト",
+    "model_codes": ["ZE2"],
+    "engine_codes": ["LDA"],
+    "year_from": 2009,
+    "year_to": 2014,
+    "period_note": "2代目インサイト1.3L車の入力補助候補。初代インサイト、原動機欄のモーター型式併記、月単位の境界、グレードは車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 インサイト中古車カタログ・主要諸元",
+    "source_url": ["https://www.honda.co.jp/auto-archive/insight/", "https://www.honda.co.jp/factbook/auto/INSIGHT/200902/19.html", "https://www.honda.co.jp/auto-archive/insight/2013/webcatalog/spec/pdf/insight-spec-list.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "インサイト",
+    "model_codes": ["ZE3"],
+    "engine_codes": ["LEA"],
+    "year_from": 2011,
+    "year_to": 2014,
+    "period_note": "2代目インサイト エクスクルーシブ1.5L車の入力補助候補。原動機欄のモーター型式併記、月単位の境界、グレードは車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 インサイト中古車カタログ・主要諸元",
+    "source_url": ["https://www.honda.co.jp/auto-archive/insight/", "https://www.honda.co.jp/auto-archive/insight/2013/webcatalog/spec/pdf/insight-spec-list.pdf", "https://www.honda.co.jp/auto-archive/insight/2014/webcatalog/driving/eco/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "ホンダ",
+    "model": "インサイト",
+    "model_codes": ["ZE4"],
+    "engine_codes": ["LEB"],
+    "year_from": 2018,
+    "year_to": 2022,
+    "period_note": "3代目インサイトe:HEV車の入力補助候補。原動機欄のモーター型式併記、月単位の境界、グレードは車検証とメーカー整備書で確認する。ハイブリッド車の高電圧系統は感電・火災の危険があるため、資格要件、サービスプラグ遮断、待機時間、無電圧・絶縁確認、保護具をメーカー整備書で確認する。燃料系統作業は火気厳禁とし、回生協調ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "Honda公式 インサイト中古車カタログ・環境仕様書",
+    "source_url": ["https://www.honda.co.jp/auto-archive/insight/", "https://www.honda.co.jp/auto-archive/insight/2022/common/pdf/insight_environment_list.pdf", "https://www.honda.co.jp/auto-archive/insight/2022/webcatalog/performance/ecology/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
