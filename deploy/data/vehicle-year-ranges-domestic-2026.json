@@ -9490,5 +9490,83 @@
     "source_url": ["https://newsroom.mazda.com/ja/publicity/release/2004/200406/0628.html", "https://www.mazda.co.jp/carlife/manual/verisa/", "https://newsroom.mazda.com/ja/publicity/release/2015/"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "キャロル",
+    "model_codes": ["HB37S"],
+    "engine_codes": ["R06A"],
+    "year_from": 2021,
+    "year_to": 2026,
+    "period_note": "2021年12月以降キャロルの非ハイブリッド車入力補助候補。駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、エアバッグ関連作業は電源遮断と待機時間を整備書で確認する。ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 キャロル主要諸元",
+    "source_url": ["https://www.mazda.co.jp/globalassets/assets/cars/carol/common/pdf/carol_specification_202112.pdf", "https://www.mazda.co.jp/content/dam/mazda/official/mazda-co-jp/cars/carol/common/pdf/carol_specification_202507.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "キャロル",
+    "model_codes": ["HB97S"],
+    "engine_codes": ["R06D"],
+    "year_from": 2021,
+    "year_to": 2026,
+    "period_note": "2021年12月以降キャロルのマイルドハイブリッド車入力補助候補。駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ハイブリッド関連作業は電源遮断と指定手順をメーカー整備書で確認する。エアバッグ関連作業は待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 キャロル主要諸元",
+    "source_url": ["https://www.mazda.co.jp/globalassets/assets/cars/carol/common/pdf/carol_specification_202112.pdf", "https://www.mazda.co.jp/content/dam/mazda/official/mazda-co-jp/cars/carol/common/pdf/carol_specification_202507.pdf"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "フレア",
+    "model_codes": ["MJ55S"],
+    "engine_codes": ["R06A"],
+    "year_from": 2017,
+    "year_to": 2019,
+    "period_note": "MJ55Sフレアの入力補助候補。旧型・後継型、駆動方式、月単位の境界、グレード、マイルドハイブリッド仕様、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ハイブリッド関連作業は電源遮断と指定手順をメーカー整備書で確認する。エアバッグ関連作業は待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 フレア主要諸元・取扱説明書・保証期間延長情報",
+    "source_url": ["https://www.mazda.co.jp/globalassets/assets/cars/flair/common/pdf/flair_specification_201909.pdf", "https://www.mazda.co.jp/owner_support/manual/flair/", "https://www2.mazda.co.jp/service/recall/oa/20240325004/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "フレア クロスオーバー",
+    "model_codes": ["MS92S"],
+    "engine_codes": ["R06D"],
+    "year_from": 2020,
+    "year_to": 2024,
+    "period_note": "2020年全面改良後フレア クロスオーバーの自然吸気マイルドハイブリッド車入力補助候補。旧型、駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、ハイブリッド関連作業は電源遮断と指定手順をメーカー整備書で確認する。エアバッグ関連作業は待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 フレアクロスオーバーニュースリリース・主要諸元・サービスキャンペーン情報",
+    "source_url": ["https://newsroom.mazda.com/ja/publicity/release/2020/202001/200129a.html", "https://www.mazda.co.jp/globalassets/assets/cars/flair-crossover/common/pdf/flair-crossover_specification_202205.pdf", "https://www2.mazda.co.jp/service/recall/sca/20200421002/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "フレア クロスオーバー",
+    "model_codes": ["MS52S"],
+    "engine_codes": ["R06A"],
+    "year_from": 2020,
+    "year_to": 2024,
+    "period_note": "2020年全面改良後フレア クロスオーバーのターボマイルドハイブリッド車入力補助候補。旧型、駆動方式、月単位の境界、グレード、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、冷却・潤滑、ハイブリッド関連の電源遮断、指定手順をメーカー整備書で確認する。エアバッグ関連作業は待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 フレアクロスオーバーニュースリリース・主要諸元・サービスキャンペーン情報",
+    "source_url": ["https://newsroom.mazda.com/ja/publicity/release/2020/202001/200129a.html", "https://www.mazda.co.jp/globalassets/assets/cars/flair-crossover/common/pdf/flair-crossover_specification_202205.pdf", "https://www2.mazda.co.jp/service/recall/sca/20210823001/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "マツダ",
+    "model": "フレアワゴン",
+    "model_codes": ["MM53S"],
+    "engine_codes": ["R06A"],
+    "year_from": 2018,
+    "year_to": 2023,
+    "period_note": "2018年2月以降MM53Sフレアワゴンの入力補助候補。旧型・2023年全面改良後、駆動方式、月単位の境界、グレード、自然吸気・ターボ、マイルドハイブリッド仕様、福祉車両、エアバッグ装備は車検証とメーカー整備書で確認する。燃料系統とターボ関連作業は火気厳禁とし、ハイブリッド関連作業は電源遮断と指定手順をメーカー整備書で確認する。エアバッグ関連作業は待機時間を整備書で確認し、ブレーキ作業後は制動確認前に公道走行しない。",
+    "source": "マツダ公式 フレアワゴン主要諸元・仕様一覧・取扱説明書",
+    "source_url": ["https://www.mazda.co.jp/globalassets/assets/cars/flair-wagon/common/pdf/flair-wagon_specification_202103.pdf", "https://www.mazda.co.jp/globalassets/assets/cars/flair-wagon/common/pdf/flair-wagon_speclist.pdf", "https://www.mazda.co.jp/owner_support/manual/flair-wagon/"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
