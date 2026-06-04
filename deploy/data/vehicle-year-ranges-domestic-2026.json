@@ -8656,5 +8656,83 @@
     "source_url": ["https://history.nissan.co.jp/TEANA/L33/1401/index.html", "https://history.nissan.co.jp/TEANA/L33/1401/performance.html"],
     "source_date": "2026-06-04",
     "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "ティアナ",
+    "model_codes": ["J32"],
+    "engine_codes": ["VQ25DE"],
+    "year_from": 2008,
+    "year_to": 2014,
+    "period_note": "J32型ティアナの2.5L・2WD車入力補助候補。月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 ティアナWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/TEANA/J32/0806/index.html", "https://history.nissan.co.jp/TEANA/J32/0806/PDF/teana_specification.pdf", "https://history.nissan.co.jp/TEANA/J32/1206/index.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "ティアナ",
+    "model_codes": ["TNJ32"],
+    "engine_codes": ["QR25DE"],
+    "year_from": 2008,
+    "year_to": 2014,
+    "period_note": "TNJ32型ティアナの2.5L・4WD車入力補助候補。月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 ティアナWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/TEANA/J32/0806/index.html", "https://history.nissan.co.jp/TEANA/J32/0806/PDF/teana_specification.pdf", "https://history.nissan.co.jp/TEANA/J32/1206/index.html", "https://history.nissan.co.jp/TEANA/J32/1206/performance.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "ティアナ",
+    "model_codes": ["PJ32"],
+    "engine_codes": ["VQ35DE"],
+    "year_from": 2008,
+    "year_to": 2012,
+    "period_note": "PJ32型ティアナの3.5L・2WD車入力補助候補。月単位の境界、グレードは車検証とメーカー整備書で確認する。プレミアムガソリン指定の燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 ティアナWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/TEANA/J32/0806/index.html", "https://history.nissan.co.jp/TEANA/J32/0806/PDF/teana_specification.pdf", "https://history.nissan.co.jp/TEANA/J32/1206/index.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "プレサージュ",
+    "model_codes": ["PU31"],
+    "engine_codes": ["VQ35DE"],
+    "year_from": 2006,
+    "year_to": 2009,
+    "period_note": "U31型プレサージュの3.5L・2WD車入力補助候補。月単位の境界、グレードは車検証とメーカー整備書で確認する。プレミアムガソリン指定の燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 プレサージュWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/PRESAGE/U31/0605/GRADE/main3.html", "https://history.nissan.co.jp/PRESAGE/U31/0605/MECHANISM/main1.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "プレサージュ",
+    "model_codes": ["TU31", "TNU31"],
+    "engine_codes": ["QR25DE"],
+    "year_from": 2006,
+    "year_to": 2009,
+    "period_note": "U31型プレサージュの2.5L車入力補助候補。駆動方式、月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 プレサージュWEBカタログ・主要諸元",
+    "source_url": ["https://history.nissan.co.jp/PRESAGE/U31/0605/GRADE/main3.html", "https://history.nissan.co.jp/PRESAGE/U31/0605/MECHANISM/main1.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
+  },
+  {
+    "maker": "日産",
+    "model": "シルフィ",
+    "model_codes": ["TB17"],
+    "engine_codes": ["MRA8DE"],
+    "year_from": 2012,
+    "year_to": 2021,
+    "period_note": "B17型シルフィの入力補助候補。月単位の境界、グレードは車検証とメーカー整備書で確認する。燃料系統作業は火気厳禁とし、燃圧抜きと指定手順をメーカー整備書で確認する。ブレーキ作業後は指定手順で点検し、制動確認前に公道走行しない。",
+    "source": "日産公式 シルフィWEBカタログ・環境仕様書",
+    "source_url": ["https://history.nissan.co.jp/SYLPHY/B17/1212/index.html", "https://history.nissan.co.jp/SYLPHY/B17/1212/performance.html", "https://www.nissan.co.jp/INFO/E_NOTE/SYLPHY/B17/1212/index.html"],
+    "source_date": "2026-06-04",
+    "detail_confirmation_required": true
   }
 ]
