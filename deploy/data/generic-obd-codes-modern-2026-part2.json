@@ -216,6 +216,24 @@
     "service_manual_required": true
   },
   {
+    "id": "modern-2026-p0329-knock-sensor1-intermittent",
+    "code": "P0329",
+    "title": "Knock Sensor 1 Circuit Intermittent (Bank 1 or Single Sensor)",
+    "system": "ノックセンサー / Bank 1断続異常",
+    "possible_causes": ["ノックセンサー1信号の断続的な欠落または乱れ", "コネクタ接触不良、配線揺れ、シールド線異常", "センサー締付不良、取付面不良、熱影響"],
+    "check_order": ["Bank 1または単一センサーの位置と端子番号を整備書で確認する", "フリーズフレーム、点火時期補正、同時DTCを保存する", "ハーネス揺すり、温度変化、振動条件で信号波形を確認する", "センサー締付トルク、取付面、配線導通、シールド状態を確認する"],
+    "measurement_points": ["ノックセンサー1信号", "点火時期補正", "配線導通", "シールド状態", "締付トルク"],
+    "common_mistakes": ["断続異常を静止状態の抵抗測定だけで判断する"],
+    "required_tools": ["対応スキャンツール", "オシロスコープ", "デジタルマルチメーター", "トルクレンチ", "整備書"],
+    "safety_notes": ["異常燃焼や過度なノックはエンジン損傷につながる。高温部、回転部、高負荷再現に注意する"],
+    "confidence": "中",
+    "source": "SAE J2012 May 2026 / SAE J2012DA系の汎用DTC定義を参照した登録済み診断ガイダンス",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_201303-diagnostic-trouble-code-definitions", "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions"],
+    "source_date": "2026-05-21",
+    "last_verified_date": "2026-06-07",
+    "service_manual_required": true
+  },
+  {
     "id": "modern-2026-p0332-knock-sensor2-low",
     "code": "P0332",
     "title": "Knock Sensor 2 Circuit Low Input (Bank 2)",
@@ -234,6 +252,24 @@
     "service_manual_required": true
   },
   {
+    "id": "modern-2026-p0331-knock-sensor2-performance",
+    "code": "P0331",
+    "title": "Knock Sensor 2 Circuit Range/Performance (Bank 2)",
+    "system": "ノックセンサー / Bank 2範囲性能",
+    "possible_causes": ["Bank 2ノックセンサー信号特性ずれ", "センサー締付不良または取付面不良", "配線、シールド、ECM入力、実ノックまたは機械異音の影響"],
+    "check_order": ["Bank 2位置、締付トルク、端子番号を整備書で確認する", "フリーズフレーム、燃料品質、点火時期補正、同時DTCを保存する", "センサー信号波形、配線導通、シールド、取付状態を確認する", "実ノック、エンジン異音、過熱、燃料品質を切り分ける"],
+    "measurement_points": ["Bank 2ノック信号", "点火時期補正", "締付トルク", "燃料品質", "エンジン異音"],
+    "common_mistakes": ["範囲性能異常をセンサー単体不良と断定し、燃料品質や締付、機械異音を確認しない"],
+    "required_tools": ["対応スキャンツール", "オシロスコープ", "デジタルマルチメーター", "トルクレンチ", "整備書"],
+    "safety_notes": ["異常燃焼や過度なノックはエンジン損傷につながる。高負荷走行での再現は避ける"],
+    "confidence": "中",
+    "source": "SAE J2012 May 2026 / SAE J2012DA系の汎用DTC定義を参照した登録済み診断ガイダンス",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_201303-diagnostic-trouble-code-definitions", "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions"],
+    "source_date": "2026-05-21",
+    "last_verified_date": "2026-06-07",
+    "service_manual_required": true
+  },
+  {
     "id": "modern-2026-p0333-knock-sensor2-high",
     "code": "P0333",
     "title": "Knock Sensor 2 Circuit High Input (Bank 2)",
@@ -249,6 +285,24 @@
     "source_url": ["https://saemobilus.sae.org/standards/j2012_201612-diagnostic-trouble-code-definitions", "https://webstore.ansi.org/standards/sae/sae20122025"],
     "source_date": "2026-05-21",
     "last_verified_date": "2026-06-05",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p0334-knock-sensor2-intermittent",
+    "code": "P0334",
+    "title": "Knock Sensor 2 Circuit Intermittent (Bank 2)",
+    "system": "ノックセンサー / Bank 2断続異常",
+    "possible_causes": ["Bank 2ノックセンサー信号の断続的な欠落または乱れ", "コネクタ接触不良、配線揺れ、シールド線異常", "センサー締付不良、取付面不良、熱影響"],
+    "check_order": ["Bank 2ノックセンサーの位置と端子番号を整備書で確認する", "フリーズフレーム、点火時期補正、同時DTCを保存する", "ハーネス揺すり、温度変化、振動条件で信号波形を確認する", "センサー締付トルク、取付面、配線導通、シールド状態を確認する"],
+    "measurement_points": ["Bank 2ノック信号", "点火時期補正", "配線導通", "シールド状態", "締付トルク"],
+    "common_mistakes": ["Bank 1/Bank 2を取り違え、発生条件を再現せずに部品交換する"],
+    "required_tools": ["対応スキャンツール", "オシロスコープ", "デジタルマルチメーター", "トルクレンチ", "整備書"],
+    "safety_notes": ["異常燃焼や過度なノックはエンジン損傷につながる。高温部、回転部、高負荷再現に注意する"],
+    "confidence": "中",
+    "source": "SAE J2012 May 2026 / SAE J2012DA系の汎用DTC定義を参照した登録済み診断ガイダンス",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_201303-diagnostic-trouble-code-definitions", "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions"],
+    "source_date": "2026-05-21",
+    "last_verified_date": "2026-06-07",
     "service_manual_required": true
   },
   {
