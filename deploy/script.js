@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.38.1";
+const APP_VERSION = "2.39.0";
 const APP_LAST_UPDATED = "2026-06-12";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -141,9 +141,13 @@ const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
+const obdSampleButton = document.querySelector("#obdSampleButton");
 const obdImportClearButton = document.querySelector("#obdImportClearButton");
 const obdImportStatus = document.querySelector("#obdImportStatus");
 const obdDetectedCodes = document.querySelector("#obdDetectedCodes");
+const obdMonitorStatus = document.querySelector("#obdMonitorStatus");
+const obdMonitorCount = document.querySelector("#obdMonitorCount");
+const obdMonitorGrid = document.querySelector("#obdMonitorGrid");
 const noticeModal = document.querySelector("#noticeModal");
 const noticeCloseButton = document.querySelector("#noticeCloseButton");
 const mobileGptModal = document.querySelector("#mobileGptModal");
@@ -232,6 +236,7 @@ seedDummyButton.addEventListener("click", seedDummyCases);
 runSelfTestButton.addEventListener("click", runSelfCheck);
 clearStorageButton.addEventListener("click", clearAllLocalStorage);
 obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
+obdSampleButton.addEventListener("click", loadObdMonitorSample);
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
 noticeCloseButton.addEventListener("click", () => {
@@ -1502,9 +1507,12 @@ function initializeObdReadOnlyPanel() {
 function analyzeObdScannerImport() {
   const analysis = window.ObdReadOnly.analyzeScannerText(obdScannerText.value);
   obdDetectedCodes.innerHTML = "";
+  obdMonitorGrid.innerHTML = "";
 
   if (!obdScannerText.value.trim()) {
     obdImportStatus.textContent = "読取結果を貼り付けてください。";
+    obdMonitorStatus.textContent = "計測値はまだ解析していません。";
+    obdMonitorCount.textContent = "0項目";
     return;
   }
 
@@ -1512,24 +1520,115 @@ function analyzeObdScannerImport() {
     obdImportStatus.textContent = analysis.hadSensitiveIdentifier
       ? "識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。"
       : "標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。";
+  } else {
+    obdImportStatus.textContent = `${analysis.codes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。`;
+    analysis.codes.forEach((code) => {
+      obdDetectedCodes.appendChild(createObdDtcCard(code));
+    });
+  }
+
+  renderObdMonitorValues(analysis.monitorValues);
+}
+
+function createObdDtcCard(code) {
+  const registered = findByCode(code);
+  const modern = getModernGenericMatches(code)[0];
+  const system = registered?.faultSystem || registered?.system || modern?.system;
+  const firstCheck = registered?.firstChecks?.[0] || registered?.check_order?.[0] || modern?.check_order?.[0];
+  const wrapper = document.createElement("article");
+  wrapper.className = "obd-dtc-card";
+
+  const head = document.createElement("div");
+  head.className = "obd-dtc-head";
+
+  const codeText = document.createElement("strong");
+  codeText.textContent = code;
+  head.appendChild(codeText);
+
+  const badge = document.createElement("span");
+  badge.className = "obd-dtc-status";
+  badge.textContent = registered || modern ? "登録データあり" : "個別定義未登録";
+  head.appendChild(badge);
+  wrapper.appendChild(head);
+
+  const description = document.createElement("p");
+  description.className = "obd-dtc-description";
+  description.textContent = system
+    ? `${system}に関するDTCです。コードだけで故障部品は確定しません。`
+    : describeUnregisteredDtc(code);
+  wrapper.appendChild(description);
+
+  if (firstCheck) {
+    const check = document.createElement("p");
+    check.className = "obd-dtc-check";
+    check.textContent = `最初に確認: ${firstCheck}`;
+    wrapper.appendChild(check);
+  }
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "obd-code-button";
+  button.dataset.dtcCode = code;
+  button.textContent = "詳しい診断手順を見る";
+  wrapper.appendChild(button);
+  return wrapper;
+}
+
+function renderObdMonitorValues(values) {
+  obdMonitorGrid.innerHTML = "";
+  obdMonitorCount.textContent = `${values.length}項目`;
+
+  if (!values.length) {
+    obdMonitorStatus.textContent = "対応する計測値を検出できませんでした。「項目名: 数値 単位」の形式を確認してください。";
     return;
   }
 
-  obdImportStatus.textContent = `${analysis.codes.length}件のDTCを検出しました。原文は保存していません。`;
-  analysis.codes.forEach((code) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "obd-code-button";
-    button.dataset.dtcCode = code;
-    button.textContent = `${code} を診断`;
-    obdDetectedCodes.appendChild(button);
+  obdMonitorStatus.textContent = `${values.length}項目を読取りました。スナップショット表示のみで、原文は保存していません。`;
+  values.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "obd-monitor-card";
+
+    const category = document.createElement("span");
+    category.className = "obd-monitor-category";
+    category.textContent = item.category;
+
+    const label = document.createElement("strong");
+    label.textContent = item.label;
+
+    const reading = document.createElement("p");
+    reading.className = "obd-monitor-reading";
+    reading.textContent = `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
+
+    card.append(category, label, reading);
+    obdMonitorGrid.appendChild(card);
   });
+}
+
+function loadObdMonitorSample() {
+  obdScannerText.value = [
+    "P0171 P0300",
+    "Engine RPM: 780 rpm",
+    "Vehicle Speed: 0 km/h",
+    "Coolant Temp: 88 C",
+    "Intake Air Temp: 32 C",
+    "Calculated Load: 21.6 %",
+    "Throttle Position: 14.1 %",
+    "MAF: 3.4 g/s",
+    "MAP: 31 kPa",
+    "STFT B1: 3.1 %",
+    "LTFT B1: 8.6 %",
+    "Control Module Voltage: 14.2 V"
+  ].join("\n");
+  analyzeObdScannerImport();
 }
 
 function clearObdScannerImport() {
   obdScannerText.value = "";
   obdDetectedCodes.innerHTML = "";
+  obdMonitorGrid.innerHTML = "";
   obdImportStatus.textContent = "まだ解析していません。";
+  obdMonitorStatus.textContent = "計測値はまだ解析していません。";
+  obdMonitorCount.textContent = "0項目";
 }
 
 function handleDetectedDtcClick(event) {

@@ -894,9 +894,50 @@ body.dark .flow-node-measure .flow-step {
 }
 
 .obd-code-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.obd-dtc-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 14px;
+}
+
+.obd-dtc-head,
+.obd-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.obd-dtc-head strong {
+  font-size: 1.1rem;
+}
+
+.obd-dtc-status,
+.obd-monitor-category {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.obd-dtc-description,
+.obd-dtc-check {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.obd-dtc-check {
+  font-size: 0.88rem;
 }
 
 .obd-code-button {
@@ -911,6 +952,47 @@ body.dark .flow-node-measure .flow-step {
 .obd-code-button:hover {
   background: var(--accent);
   color: #fff;
+}
+
+.obd-monitor-result {
+  margin-top: 18px;
+}
+
+.obd-result-heading h3 {
+  margin: 2px 0 0;
+}
+
+.obd-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.obd-monitor-card {
+  display: grid;
+  gap: 7px;
+  min-height: 116px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 14px;
+}
+
+.obd-monitor-reading {
+  margin: auto 0 0;
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+
+.obd-monitor-caution {
+  margin: 14px 0 0;
+  border-left: 4px solid var(--manual);
+  background: var(--manual-bg);
+  color: var(--ink);
+  padding: 11px 13px;
+  line-height: 1.6;
 }
 
 .obd-policy-list {
@@ -1084,6 +1166,10 @@ body.dark .flow-node-measure .flow-step {
   .obd-safety-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .obd-monitor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -1155,6 +1241,11 @@ body.dark .flow-node-measure .flow-step {
   }
 
   .obd-safety-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .obd-code-list,
+  .obd-monitor-grid {
     grid-template-columns: 1fr;
   }
 
