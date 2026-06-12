@@ -5,13 +5,13 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataDir = path.join(projectRoot, "data");
 const read = (file) => JSON.parse(fs.readFileSync(path.join(dataDir, file), "utf8"));
-const dtcFiles = [
-  "obd-codes.json",
-  "generic-obd-codes-modern.json",
-  "generic-obd-codes-modern-2026.json",
-  "generic-obd-codes-modern-2026-part2.json",
-  "imported-verified-dtc.json"
-];
+const dtcFiles = fs.readdirSync(dataDir)
+  .filter((file) =>
+    file === "obd-codes.json" ||
+    file === "imported-verified-dtc.json" ||
+    /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(file)
+  )
+  .sort();
 const workflowFiles = [
   "diagnostic-workflows.json",
   "component-inspection-flows.json",
