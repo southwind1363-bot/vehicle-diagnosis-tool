@@ -34,6 +34,7 @@
     <button class="tab-button" type="button" data-tab-target="case-search-panel">4. 事例検索</button>
     <button class="tab-button" type="button" data-tab-target="data-panel">5. データ管理</button>
     <button class="tab-button" type="button" data-tab-target="ops-panel">6. 実運用前チェック</button>
+    <button class="tab-button" type="button" data-tab-target="obd-panel">7. OBD2読取</button>
   </nav>
 
   <main class="tab-shell">
@@ -372,6 +373,68 @@
         </div>
       </section>
     </section>
+
+    <section id="obd-panel" class="tab-panel" data-tab-panel hidden>
+      <section class="panel case-panel" aria-labelledby="obdReadTitle">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow obd-eyebrow">READ-ONLY FOUNDATION</p>
+            <h2 id="obdReadTitle">OBD2読取データ</h2>
+            <p class="case-note">実機接続に備えた安全優先の受け口です。現段階では車両へコマンドを送信しません。</p>
+          </div>
+          <span id="obdCapabilityBadge" class="confidence-badge">対応状況を確認中</span>
+        </div>
+
+        <div class="obd-safety-grid">
+          <article>
+            <strong>読取専用</strong>
+            <span>DTCと計測データの取得だけを対象にします。</span>
+          </article>
+          <article>
+            <strong>消去禁止</strong>
+            <span>DTC消去や学習値初期化は実装しません。</span>
+          </article>
+          <article>
+            <strong>作動禁止</strong>
+            <span>アクティブテストやECU書換えを許可しません。</span>
+          </article>
+          <article>
+            <strong>端末内処理</strong>
+            <span>貼付データは保存・外部送信しません。</span>
+          </article>
+        </div>
+
+        <p id="obdCapabilityText" class="data-status">ブラウザとHTTPSの対応状況を確認しています。</p>
+
+        <label class="obd-import-label">
+          スキャンツールの読取結果を貼り付け
+          <textarea id="obdScannerText" rows="7" placeholder="例: P0171 P0300&#10;現在故障、ペンディングDTCなどの読取結果"></textarea>
+        </label>
+        <p class="case-note">車台番号など17文字の識別情報が含まれる場合は解析前にマスクします。入力原文は保存しません。</p>
+
+        <div class="button-row">
+          <button id="obdAnalyzeButton" class="primary-button" type="button">DTCを安全解析</button>
+          <button id="obdImportClearButton" class="secondary-button" type="button">入力をクリア</button>
+        </div>
+
+        <section class="result-block obd-import-result">
+          <h3>検出結果</h3>
+          <p id="obdImportStatus" class="empty-state">まだ解析していません。</p>
+          <div id="obdDetectedCodes" class="obd-code-list"></div>
+        </section>
+
+        <details class="result-block">
+          <summary>将来の実機接続方針</summary>
+          <ul class="obd-policy-list">
+            <li>接続はHTTPS上で、利用者がボタン操作して選んだ機器だけを対象にする</li>
+            <li>対応アダプターと通信速度を確認してから有効化する</li>
+            <li>読取コマンドを許可リスト方式にし、それ以外は送信前に拒否する</li>
+            <li>切断、通信停止、タイムアウト時は自動的に安全終了する</li>
+            <li>車台番号や位置情報など、診断に不要な識別情報は保存しない</li>
+          </ul>
+        </details>
+      </section>
+    </section>
   </main>
 
   <dialog id="noticeModal" class="notice-modal">
@@ -391,6 +454,7 @@
     </div>
   </div>
 
+  <script src="obd-readonly.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

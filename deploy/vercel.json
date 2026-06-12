@@ -14,6 +14,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "obd-readonly.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "google9fd0215a9842e2d1.html",
       "use": "@vercel/static"
     },
@@ -38,6 +42,33 @@
     {
       "src": "^/(.*)$",
       "dest": "/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "serial=(self), usb=(), bluetooth=(), camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
     }
   ]
 }

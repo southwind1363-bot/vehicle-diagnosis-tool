@@ -123,6 +123,14 @@ data/vehicle-year-ranges-domestic-2026.json
 
 2026-06-12時点で、現行・履歴を合わせた車名候補341件、型式・エンジン型式まで持つ詳細候補313車種、年式範囲769件、DTC records 807件を登録しています。未登録の組み合わせは推測で補わず、手入力とメーカー資料確認へ戻します。
 汎用DTCはP0800まで段階的に拡張し、基準電圧、警告表示、アクチュエータ電源、吸気マニホールド可変機構、グロープラグ、ECM電源リレー、冷却ファン、トランスミッション油圧・シフトソレノイドA-E・圧力制御ソレノイドA-C・回転センサー・トランスファ制御の診断手順を収録しています。
+
+OBD2読取タブは、将来のUSBシリアル接続に備えた読取専用基盤です。現段階では車両へコマンドを送信せず、スキャンツール出力から標準形式DTCを端末内で抽出します。入力原文は保存・アップロードせず、車台番号候補は解析前にマスクします。実機接続を有効化する際も、DTC消去、アクティブテスト、ECU書換え、学習値初期化、セキュリティアクセスは許可しません。
+
+接続基盤の参考仕様:
+
+- SAE J1979_202505: https://saemobilus.sae.org/standards/j1979_202505-e-e-diagnostic-test-modes
+- Web Serial API: https://wicg.github.io/serial/
+- Chrome Web Serial guide: https://developer.chrome.com/docs/capabilities/serial
 冷却ファンの作動確認では、キーOFF後の自動作動を想定し、ファン周辺へ手や工具を入れないでください。
 
 data/component-inspection-flows.json

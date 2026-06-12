@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.37.0";
+const APP_VERSION = "2.38.0";
 const APP_LAST_UPDATED = "2026-06-12";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -137,6 +137,13 @@ const seedDummyButton = document.querySelector("#seedDummyButton");
 const runSelfTestButton = document.querySelector("#runSelfTestButton");
 const clearStorageButton = document.querySelector("#clearStorageButton");
 const opsResultList = document.querySelector("#opsResultList");
+const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
+const obdCapabilityText = document.querySelector("#obdCapabilityText");
+const obdScannerText = document.querySelector("#obdScannerText");
+const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
+const obdImportClearButton = document.querySelector("#obdImportClearButton");
+const obdImportStatus = document.querySelector("#obdImportStatus");
+const obdDetectedCodes = document.querySelector("#obdDetectedCodes");
 const noticeModal = document.querySelector("#noticeModal");
 const noticeCloseButton = document.querySelector("#noticeCloseButton");
 const mobileGptModal = document.querySelector("#mobileGptModal");
@@ -160,6 +167,7 @@ renderSimilarCases();
 updateCaseQualityPreview();
 showInitialNotice();
 updateAiButtonLabel();
+initializeObdReadOnlyPanel();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -223,6 +231,9 @@ caseForm.addEventListener("input", updateCaseQualityPreview);
 seedDummyButton.addEventListener("click", seedDummyCases);
 runSelfTestButton.addEventListener("click", runSelfCheck);
 clearStorageButton.addEventListener("click", clearAllLocalStorage);
+obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
+obdImportClearButton.addEventListener("click", clearObdScannerImport);
+obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
 noticeCloseButton.addEventListener("click", () => {
   localStorage.setItem(NOTICE_KEY, "accepted");
   noticeModal.close();
@@ -1464,6 +1475,71 @@ function renderDiagnosis(result) {
 
   safetyPanel.hidden = !result.safety;
   safetyText.textContent = result.safety;
+}
+
+function initializeObdReadOnlyPanel() {
+  const capability = window.ObdReadOnly?.getCapability();
+  if (!capability) {
+    obdCapabilityBadge.textContent = "準備機能を読込できません";
+    obdCapabilityText.textContent = "OBD2読取準備モジュールを読み込めませんでした。";
+    obdCapabilityText.classList.add("error");
+    return;
+  }
+
+  const serialStatus = capability.webSerialSupported
+    ? "このブラウザは将来のUSBシリアル接続に対応しています。"
+    : "このブラウザはWeb Serial非対応です。将来の実機接続にはデスクトップ版Chrome系ブラウザが必要です。";
+  const secureStatus = capability.secureContext
+    ? "HTTPS接続は正常です。"
+    : "HTTPSではないため実機接続機能は使用できません。";
+
+  obdCapabilityBadge.textContent = capability.webSerialSupported && capability.secureContext
+    ? "接続基盤対応"
+    : "貼付解析のみ";
+  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} 現在は安全確認のため実機接続を無効にしています。`;
+}
+
+function analyzeObdScannerImport() {
+  const analysis = window.ObdReadOnly.analyzeScannerText(obdScannerText.value);
+  obdDetectedCodes.innerHTML = "";
+
+  if (!obdScannerText.value.trim()) {
+    obdImportStatus.textContent = "読取結果を貼り付けてください。";
+    return;
+  }
+
+  if (!analysis.codes.length) {
+    obdImportStatus.textContent = analysis.hadSensitiveIdentifier
+      ? "識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。"
+      : "標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。";
+    return;
+  }
+
+  obdImportStatus.textContent = `${analysis.codes.length}件のDTCを検出しました。原文は保存していません。`;
+  analysis.codes.forEach((code) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "obd-code-button";
+    button.dataset.dtcCode = code;
+    button.textContent = `${code} を診断`;
+    obdDetectedCodes.appendChild(button);
+  });
+}
+
+function clearObdScannerImport() {
+  obdScannerText.value = "";
+  obdDetectedCodes.innerHTML = "";
+  obdImportStatus.textContent = "まだ解析していません。";
+}
+
+function handleDetectedDtcClick(event) {
+  const button = event.target.closest("[data-dtc-code]");
+  if (!button) return;
+
+  document.querySelector("#obdCode").value = button.dataset.dtcCode;
+  activateTab("diagnosis-panel");
+  renderDiagnosis(buildDiagnosis(getInput()));
+  document.querySelector("#resultTitle").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function setResultView(view) {

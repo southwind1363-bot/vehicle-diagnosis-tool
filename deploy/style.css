@@ -854,6 +854,69 @@ body.dark .flow-node-measure .flow-step {
   grid-column: 1 / -1;
 }
 
+.obd-eyebrow {
+  color: var(--accent-strong);
+}
+
+.obd-safety-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.obd-safety-grid article {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--accent);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 14px;
+}
+
+.obd-safety-grid strong {
+  color: var(--ink);
+}
+
+.obd-safety-grid span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.obd-import-label {
+  margin-top: 18px;
+}
+
+.obd-import-result {
+  margin-top: 18px;
+}
+
+.obd-code-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.obd-code-button {
+  min-height: 44px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  padding: 0 15px;
+}
+
+.obd-code-button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.obd-policy-list {
+  line-height: 1.8;
+}
+
 .case-note {
   margin-bottom: 0;
   color: var(--muted);
@@ -1017,6 +1080,10 @@ body.dark .flow-node-measure .flow-step {
   .case-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .obd-safety-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -1084,6 +1151,10 @@ body.dark .flow-node-measure .flow-step {
   }
 
   .case-form {
+    grid-template-columns: 1fr;
+  }
+
+  .obd-safety-grid {
     grid-template-columns: 1fr;
   }
 
