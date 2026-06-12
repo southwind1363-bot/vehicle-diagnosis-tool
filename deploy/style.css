@@ -1,33 +1,49 @@
 :root {
-  --bg: #f4f7f6;
+  color-scheme: light;
+  --bg: #f3f5f7;
   --panel: #ffffff;
-  --ink: #182127;
-  --muted: #5e6d76;
-  --line: #d8e2e5;
-  --accent: #0f766e;
-  --accent-strong: #0b5f58;
+  --panel-subtle: #f8fafb;
+  --ink: #172126;
+  --muted: #5f6f78;
+  --line: #d8e0e4;
+  --line-strong: #bdc9ce;
+  --accent: #087f78;
+  --accent-strong: #05645f;
+  --accent-fill: #087f78;
+  --accent-soft: #e8f6f4;
   --danger: #b42318;
-  --danger-bg: #fff1f0;
-  --manual: #8a5a00;
+  --danger-bg: #fff0ee;
+  --manual: #8a5800;
   --manual-bg: #fff7df;
-  --info-bg: #eef8f7;
-  --shadow: 0 16px 42px rgba(24, 33, 39, 0.08);
+  --info-bg: #eaf6f5;
+  --header: #17262c;
+  --header-muted: #c9d8dc;
+  --shadow: 0 8px 24px rgba(23, 33, 38, 0.07);
+  --shadow-raised: 0 14px 36px rgba(23, 33, 38, 0.11);
 }
 
 body.dark {
-  --bg: #10181d;
-  --panel: #172229;
-  --ink: #eef5f4;
-  --muted: #a9b8bf;
-  --line: #2a3a42;
-  --accent: #4db6ac;
-  --accent-strong: #75d4cc;
+  color-scheme: dark;
+  --bg: #101619;
+  --panel: #182126;
+  --panel-subtle: #141c20;
+  --ink: #edf3f4;
+  --muted: #a7b5bb;
+  --line: #314046;
+  --line-strong: #45565d;
+  --accent: #55c3ba;
+  --accent-strong: #83d9d1;
+  --accent-fill: #147f79;
+  --accent-soft: #15312f;
   --danger: #ffb4ab;
-  --danger-bg: #3a1715;
+  --danger-bg: #381a18;
   --manual: #f5c968;
-  --manual-bg: #302511;
-  --info-bg: #122a2a;
-  --shadow: none;
+  --manual-bg: #33280f;
+  --info-bg: #15312f;
+  --header: #0b1114;
+  --header-muted: #b7c7cc;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --shadow-raised: 0 16px 40px rgba(0, 0, 0, 0.32);
 }
 
 * {
@@ -39,7 +55,10 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+  font-family: Inter, "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
 }
 
 .copy-toast {
@@ -75,15 +94,18 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 24px min(5vw, 56px);
-  background: #14242b;
+  gap: 28px;
+  min-height: 148px;
+  padding: 24px max(24px, calc((100vw - 1200px) / 2));
+  background: var(--header);
   color: #fff;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -91,12 +113,19 @@ textarea {
   display: inline-flex;
   align-items: center;
   min-height: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 6px;
   color: #fff;
   padding: 0 18px;
   text-decoration: none;
-  font-weight: 900;
+  font-weight: 800;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.ghost-link:hover,
+.ghost-button:hover {
+  border-color: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .eyebrow,
@@ -109,21 +138,25 @@ p {
 }
 
 .eyebrow {
-  margin-bottom: 6px;
-  color: #8edbd2;
-  font-size: 0.8rem;
+  margin-bottom: 8px;
+  color: #72d1c8;
+  font-size: 0.76rem;
   font-weight: 800;
+  text-transform: uppercase;
 }
 
 h1 {
-  margin-bottom: 8px;
-  font-size: clamp(1.55rem, 4vw, 2.4rem);
+  margin-bottom: 10px;
+  font-size: clamp(1.6rem, 3vw, 2.15rem);
+  line-height: 1.25;
 }
 
 .header-note {
   margin-bottom: 0;
-  color: #d4e6e4;
-  line-height: 1.6;
+  max-width: 760px;
+  color: var(--header-muted);
+  line-height: 1.65;
+  font-size: 0.9rem;
 }
 
 .app-shell {
@@ -135,34 +168,47 @@ h1 {
 }
 
 .tab-nav {
+  position: sticky;
+  z-index: 50;
+  top: 0;
   display: flex;
-  gap: 8px;
+  gap: 4px;
   overflow-x: auto;
-  width: min(1200px, calc(100% - 28px));
-  margin: 18px auto 0;
-  padding-bottom: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 10px max(14px, calc((100vw - 1200px) / 2));
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: 0 4px 14px rgba(23, 33, 38, 0.05);
+  backdrop-filter: blur(14px);
 }
 
 .tab-button {
   flex: 0 0 auto;
-  min-height: 52px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--ink);
-  padding: 0 16px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 15px;
   white-space: nowrap;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.tab-button:hover {
+  background: var(--panel-subtle);
+  color: var(--ink);
 }
 
 .tab-button.is-active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .tab-shell {
   width: min(1200px, calc(100% - 28px));
-  margin: 16px auto 28px;
+  margin: 22px auto 40px;
 }
 
 .tab-panel[hidden] {
@@ -178,7 +224,7 @@ h1 {
 }
 
 .panel {
-  padding: 22px;
+  padding: 24px;
 }
 
 .diagnosis-form,
@@ -195,9 +241,10 @@ h1 {
 .vehicle-selector {
   min-width: 0;
   margin: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  padding: 14px;
+  background: var(--panel-subtle);
+  padding: 16px;
 }
 
 .vehicle-selector legend {
@@ -242,7 +289,7 @@ select:disabled {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 94%, var(--bg));
+  background: var(--panel-subtle);
 }
 
 .questionnaire legend {
@@ -264,12 +311,19 @@ select,
 textarea {
   width: 100%;
   min-height: 50px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: var(--panel);
   color: var(--ink);
   padding: 12px 13px;
   outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
 }
 
 textarea {
@@ -281,7 +335,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .full-width {
@@ -312,7 +366,19 @@ button {
   min-height: 50px;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 800;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 120ms ease;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+.ghost-link:focus-visible,
+.import-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 2px;
 }
 
 .primary-button,
@@ -323,8 +389,9 @@ button {
 
 .primary-button {
   border: 0;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .primary-button:hover {
@@ -332,28 +399,37 @@ button {
 }
 
 .secondary-button {
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: var(--panel);
   color: var(--ink);
 }
 
+.secondary-button:hover,
+.import-button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
 .ghost-button {
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   background: transparent;
   color: #fff;
 }
 
 .data-status,
 .final-note {
-  border-radius: 8px;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
   background: var(--info-bg);
   color: var(--accent-strong);
-  padding: 10px 12px;
+  padding: 11px 13px;
   line-height: 1.6;
   font-weight: 800;
 }
 
 .data-status.error {
+  border-left-color: var(--danger);
   background: var(--danger-bg);
   color: var(--danger);
 }
@@ -376,8 +452,9 @@ button {
 }
 
 .confidence-badge {
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.12);
+  background: var(--accent-soft);
   color: var(--accent-strong);
   padding: 7px 12px;
   font-size: 0.9rem;
@@ -393,15 +470,16 @@ button {
 .result-block {
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 16px;
-  background: color-mix(in srgb, var(--panel) 92%, var(--bg));
+  padding: 17px;
+  background: var(--panel-subtle);
 }
 
 .priority-summary-block {
   order: 1;
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
   background: var(--info-bg);
-  padding: 14px;
+  box-shadow: inset 4px 0 0 var(--accent);
+  padding: 16px 16px 16px 20px;
 }
 
 .priority-summary-block h3 {
@@ -416,7 +494,8 @@ button {
 }
 
 .priority-check-list li {
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+  border-radius: 6px;
   background: var(--panel);
   padding: 10px 12px;
   font-size: 1.02rem;
@@ -431,8 +510,8 @@ button {
 
 .quick-next-grid div {
   border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 86%, var(--info-bg));
+  border-radius: 6px;
+  background: var(--panel);
   padding: 10px;
 }
 
@@ -572,8 +651,9 @@ button {
 .case-card {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 94%, var(--bg));
-  padding: 14px;
+  background: var(--panel);
+  padding: 16px;
+  box-shadow: 0 3px 12px rgba(23, 33, 38, 0.04);
 }
 
 .case-card h4 {
@@ -610,13 +690,14 @@ button {
   align-items: center;
   justify-content: center;
   min-height: 50px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: var(--panel);
   color: var(--ink);
   padding: 0 18px;
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 800;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
 .import-button input {
@@ -629,12 +710,13 @@ button {
   border-radius: 8px;
   background: var(--panel);
   color: var(--ink);
-  padding: 22px;
-  box-shadow: var(--shadow);
+  padding: 24px;
+  box-shadow: var(--shadow-raised);
 }
 
 .notice-modal::backdrop {
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(5, 12, 15, 0.64);
+  backdrop-filter: blur(3px);
 }
 
 .notice-modal p {
@@ -662,7 +744,7 @@ button {
   color: var(--ink);
   padding: 22px;
   text-align: center;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-raised);
 }
 
 .mobile-gpt-popup h2 {
@@ -691,8 +773,22 @@ button {
 }
 
 @media (max-width: 900px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
+  }
+
+  .case-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -706,6 +802,19 @@ button {
   .header-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .app-header {
+    gap: 20px;
+    padding: 20px 16px;
+  }
+
+  .header-note {
+    font-size: 0.84rem;
+  }
+
+  .panel {
+    padding: 16px;
   }
 
   .diagnosis-form {
@@ -729,10 +838,36 @@ button {
   }
 
   .tab-nav {
-    width: calc(100% - 16px);
+    width: 100%;
+    padding: 8px;
   }
 
   .tab-button {
-    min-width: 150px;
+    min-width: 136px;
+    min-height: 46px;
+    padding: 0 12px;
+  }
+
+  .tab-shell {
+    width: calc(100% - 16px);
+    margin-top: 12px;
+  }
+
+  input,
+  select,
+  textarea,
+  button,
+  .ghost-link,
+  .import-button {
+    min-height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
   }
 }
