@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.43.0";
+const APP_VERSION = "2.44.0";
 const APP_LAST_UPDATED = "2026-06-12";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -274,6 +274,7 @@ async function loadData() {
       genericObdCodesModern2026Part3,
       genericObdCodesModern2026Part4,
       genericObdCodesModern2026Part5,
+      genericObdCodesModern2026Part6,
       importedVerifiedDtc,
       vehiclePatterns,
       vehiclePatternsDomestic2026,
@@ -303,6 +304,7 @@ async function loadData() {
       fetchJson("data/generic-obd-codes-modern-2026-part3.json"),
       fetchJson("data/generic-obd-codes-modern-2026-part4.json"),
       fetchJson("data/generic-obd-codes-modern-2026-part5.json"),
+      fetchJson("data/generic-obd-codes-modern-2026-part6.json"),
       fetchJson("data/imported-verified-dtc.json"),
       fetchJson("data/vehicle-patterns.json"),
       fetchJson("data/vehicle-patterns-domestic-2026.json"),
@@ -332,7 +334,7 @@ async function loadData() {
       obdCodes,
       serviceNotes,
       symptomFlows,
-      genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2, ...genericObdCodesModern2026Part3, ...genericObdCodesModern2026Part4, ...genericObdCodesModern2026Part5, ...importedVerifiedDtc],
+      genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2, ...genericObdCodesModern2026Part3, ...genericObdCodesModern2026Part4, ...genericObdCodesModern2026Part5, ...genericObdCodesModern2026Part6, ...importedVerifiedDtc],
       vehiclePatterns: [...vehiclePatterns, ...vehiclePatternsDomestic2026],
       vehicleInputOptions: mergeVehicleInputOptions(
         vehicleInputOptions,
