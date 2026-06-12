@@ -5,7 +5,7 @@
   const VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
   const NUMBER_PATTERN = /[-+]?\d+(?:\.\d+)?/;
 
-  const monitorDefinitions = Object.freeze([
+  const fallbackMonitorDefinitions = Object.freeze([
     { id: "engine_speed", label: "エンジン回転数", unit: "rpm", category: "エンジン", aliases: ["engine rpm", "engine speed", "rpm", "エンジン回転数", "回転数"] },
     { id: "vehicle_speed", label: "車速", unit: "km/h", category: "走行", aliases: ["vehicle speed", "speed", "車速"] },
     { id: "coolant_temp", label: "冷却水温", unit: "°C", category: "温度", aliases: ["engine coolant temperature", "coolant temperature", "coolant temp", "ect", "冷却水温", "水温"] },
@@ -28,6 +28,7 @@
     { id: "equivalence_ratio", label: "当量比", unit: "", category: "燃料補正", aliases: ["commanded equivalence ratio", "equivalence ratio", "lambda", "当量比", "ラムダ"] },
     { id: "engine_runtime", label: "エンジン始動後時間", unit: "s", category: "状態", aliases: ["time since engine start", "engine runtime", "run time", "エンジン始動後時間", "始動後時間"] }
   ].map((item) => Object.freeze({ ...item, aliases: Object.freeze(item.aliases) })));
+  let monitorDefinitions = fallbackMonitorDefinitions;
 
   const policy = Object.freeze({
     mode: "read-only-import",
@@ -47,8 +48,46 @@
     return {
       secureContext: window.isSecureContext,
       webSerialSupported: "serial" in navigator,
-      hardwareConnectionEnabled: false
+      hardwareConnectionEnabled: false,
+      monitorDefinitionCount: monitorDefinitions.length
     };
+  }
+
+  function configureMonitorDefinitions(rows) {
+    if (!Array.isArray(rows) || !rows.length) return false;
+
+    const normalized = rows
+      .filter((item) =>
+        item &&
+        typeof item.id === "string" &&
+        typeof item.label === "string" &&
+        typeof item.category === "string" &&
+        Array.isArray(item.aliases) &&
+        item.aliases.length
+      )
+      .map((item) => Object.freeze({
+        id: item.id,
+        label: item.label,
+        unit: typeof item.unit === "string" ? item.unit : "",
+        category: item.category,
+        valueType: item.value_type === "text" ? "text" : "number",
+        service: item.service || null,
+        pid: item.pid || null,
+        scope: item.scope || "unknown",
+        supportNote: item.support_note || "",
+        aliases: Object.freeze([...item.aliases])
+      }));
+
+    if (!normalized.length || new Set(normalized.map((item) => item.id)).size !== normalized.length) {
+      return false;
+    }
+
+    monitorDefinitions = Object.freeze(normalized);
+    return true;
+  }
+
+  function getMonitorDefinitions() {
+    return monitorDefinitions;
   }
 
   function extractDtcCodes(value) {
@@ -78,24 +117,35 @@
       if (separator < 1) return;
 
       const labelPart = normalizeMonitorLabel(line.slice(0, separator));
-      const valuePart = line.slice(separator + 1);
-      const numberMatch = valuePart.match(NUMBER_PATTERN);
-      if (!numberMatch) return;
+      const valuePart = line.slice(separator + 1).trim();
 
       const definition = monitorDefinitions.find((item) =>
         item.aliases.some((alias) => labelPart === normalizeMonitorLabel(alias))
       );
       if (!definition) return;
 
-      const numericValue = Number(numberMatch[0]);
-      if (!Number.isFinite(numericValue)) return;
+      let parsedValue;
+      if (definition.valueType === "text") {
+        parsedValue = valuePart.slice(0, 160);
+        if (!parsedValue) return;
+      } else {
+        const numberMatch = valuePart.replace(/(\d),(?=\d{3}\b)/g, "$1").match(NUMBER_PATTERN);
+        if (!numberMatch) return;
+        parsedValue = Number(numberMatch[0]);
+        if (!Number.isFinite(parsedValue)) return;
+      }
 
       values.set(definition.id, {
         id: definition.id,
         label: definition.label,
-        value: numericValue,
+        value: parsedValue,
         unit: definition.unit,
         category: definition.category,
+        valueType: definition.valueType,
+        service: definition.service,
+        pid: definition.pid,
+        scope: definition.scope,
+        supportNote: definition.supportNote,
         sourceLine: lineIndex + 1
       });
     });
@@ -118,7 +168,8 @@
 
   window.ObdReadOnly = Object.freeze({
     policy,
-    monitorDefinitions,
+    configureMonitorDefinitions,
+    getMonitorDefinitions,
     getCapability,
     extractDtcCodes,
     extractMonitorValues,

@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.39.0";
+const APP_VERSION = "2.40.0";
 const APP_LAST_UPDATED = "2026-06-12";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -288,7 +288,8 @@ async function loadData() {
       componentInspectionFlowsExam2026,
       componentInspectionFlowsExam2026Part2,
       dtcFamilyWorkflows2026,
-      dtcScopeRules
+      dtcScopeRules,
+      obdMonitorDefinitions
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
       fetchJson("data/service-notes.json"),
@@ -313,8 +314,13 @@ async function loadData() {
       fetchJson("data/component-inspection-flows-exam-2026.json"),
       fetchJson("data/component-inspection-flows-exam-2026-part2.json"),
       fetchJson("data/dtc-family-workflows-2026.json"),
-      fetchJson("data/dtc-scope-rules.json")
+      fetchJson("data/dtc-scope-rules.json"),
+      fetchJson("data/obd-monitor-definitions.json")
     ]);
+
+    if (!window.ObdReadOnly?.configureMonitorDefinitions(obdMonitorDefinitions)) {
+      throw new Error("OBDデータモニター辞書を読み込めません");
+    }
 
     dataStore = {
       obdCodes,
@@ -334,7 +340,8 @@ async function loadData() {
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
       diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
-      dtcScopeRules
+      dtcScopeRules,
+      obdMonitorDefinitions
     };
     dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件 / 詳細候補 ${countVehicleDetailOptions(dataStore.vehicleInputOptions)}件 / 年式範囲 ${dataStore.vehicleYearRangesDomestic2026.length}件。`;
     dataStatus.classList.remove("error");
@@ -344,6 +351,7 @@ async function loadData() {
     dataStatus.classList.add("error");
   }
 
+  initializeObdReadOnlyPanel();
   renderSymptomOptions();
   renderVehicleMakerOptions();
 }
@@ -1497,11 +1505,12 @@ function initializeObdReadOnlyPanel() {
   const secureStatus = capability.secureContext
     ? "HTTPS接続は正常です。"
     : "HTTPSではないため実機接続機能は使用できません。";
+  const catalogStatus = `読取辞書 ${capability.monitorDefinitionCount}項目を準備しています。`;
 
   obdCapabilityBadge.textContent = capability.webSerialSupported && capability.secureContext
     ? "接続基盤対応"
     : "貼付解析のみ";
-  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} 現在は安全確認のため実機接続を無効にしています。`;
+  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 現在は安全確認のため実機接続を無効にしています。`;
 }
 
 function analyzeObdScannerImport() {
@@ -1599,7 +1608,11 @@ function renderObdMonitorValues(values) {
     reading.className = "obd-monitor-reading";
     reading.textContent = `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
 
-    card.append(category, label, reading);
+    const note = document.createElement("span");
+    note.className = "obd-monitor-note";
+    note.textContent = item.supportNote || "メーカー整備書の基準値と比較してください。";
+
+    card.append(category, label, reading, note);
     obdMonitorGrid.appendChild(card);
   });
 }

@@ -984,6 +984,13 @@ body.dark .flow-node-measure .flow-step {
   color: var(--ink);
   font-size: 1.35rem;
   font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.obd-monitor-note {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 .obd-monitor-caution {

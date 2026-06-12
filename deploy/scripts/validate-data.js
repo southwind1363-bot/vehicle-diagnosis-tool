@@ -12,6 +12,7 @@ const legacySourceOptionalFiles = new Set([
   "dtc-scope-rules.json",
   "exam-reference-catalog.json",
   "exam-review-queue-2026.json",
+  "obd-monitor-definitions.json",
   "obd-codes.json",
   "service-notes.json",
   "symptom-flows.json"
@@ -65,6 +66,7 @@ for (const file of jsonFiles) {
   const makers = new Set();
   const vehicleDetails = new Set();
   const vehicleYearRanges = new Set();
+  const monitorAliases = new Map();
   for (const [index, row] of rows.entries()) {
     const label = `${file}[${index}]`;
 
@@ -149,6 +151,35 @@ for (const file of jsonFiles) {
       const rangeKey = JSON.stringify([row.maker, row.model, row.model_codes, row.engine_codes, row.year_from, row.year_to]);
       if (vehicleYearRanges.has(rangeKey)) reportError(`${label}: 同一の年式範囲が重複しています`);
       vehicleYearRanges.add(rangeKey);
+    }
+
+    if (file === "obd-monitor-definitions.json") {
+      if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
+      if (!isNonEmptyString(row.category)) reportError(`${label}: category がありません`);
+      if (!["number", "text"].includes(row.value_type)) reportError(`${label}: value_type が number/text ではありません`);
+      if (!isNonEmptyStringArray(row.aliases)) reportError(`${label}: aliases がありません`);
+      if (!["standard-generic", "extended-readonly-candidate"].includes(row.scope)) reportError(`${label}: scope が不正です`);
+      if (!isNonEmptyString(row.support_note)) reportError(`${label}: support_note がありません`);
+      if (!isNonEmptyString(row.source_ref)) reportError(`${label}: source_ref がありません`);
+      if (row.scope === "standard-generic") {
+        if (!/^[0-9A-F]{2}$/.test(row.service || "")) reportError(`${label}: standard-generic の service が不正です`);
+        if (!/^[0-9A-F]{2}$/.test(row.pid || "")) reportError(`${label}: standard-generic の pid が不正です`);
+      }
+      if (row.scope === "extended-readonly-candidate" && (row.service !== null || row.pid !== null)) {
+        reportError(`${label}: 拡張候補の service/pid は確定前のため null にしてください`);
+      }
+      for (const alias of row.aliases || []) {
+        const normalizedAlias = alias.toLowerCase()
+          .replace(/[（(].*?[）)]/g, "")
+          .replace(/[_-]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const existingId = monitorAliases.get(normalizedAlias);
+        if (existingId && existingId !== row.id) {
+          reportError(`${label}: alias ${alias} が ${existingId} と重複しています`);
+        }
+        monitorAliases.set(normalizedAlias, row.id);
+      }
     }
   }
 }
