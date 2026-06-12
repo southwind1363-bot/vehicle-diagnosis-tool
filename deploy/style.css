@@ -889,6 +889,49 @@ body.dark .flow-node-measure .flow-step {
   margin-top: 18px;
 }
 
+.diagnosis-import {
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 14px;
+}
+
+.diagnosis-import > summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.obd-connection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 16px;
+}
+
+.obd-connection-bar > div {
+  display: grid;
+  gap: 5px;
+}
+
+.obd-connection-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.obd-connection-bar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .obd-import-result {
   margin-top: 18px;
 }
@@ -1249,6 +1292,11 @@ body.dark .flow-node-measure .flow-step {
 
   .obd-safety-grid {
     grid-template-columns: 1fr;
+  }
+
+  .obd-connection-bar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .obd-code-list,

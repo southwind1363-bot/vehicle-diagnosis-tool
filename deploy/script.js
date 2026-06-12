@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.54.0";
+const APP_VERSION = "2.55.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -1528,17 +1528,15 @@ function initializeObdReadOnlyPanel() {
   }
 
   const serialStatus = capability.webSerialSupported
-    ? "このブラウザは将来のUSBシリアル接続に対応しています。"
-    : "このブラウザはWeb Serial非対応です。将来の実機接続にはデスクトップ版Chrome系ブラウザが必要です。";
+    ? "このブラウザはUSBシリアル接続基盤に対応しています。"
+    : "このブラウザはWeb Serial非対応です。実機接続にはデスクトップ版Chrome系ブラウザが必要です。";
   const secureStatus = capability.secureContext
     ? "HTTPS接続は正常です。"
     : "HTTPSではないため実機接続機能は使用できません。";
   const catalogStatus = `読取辞書 ${capability.monitorDefinitionCount}項目を準備しています。`;
 
-  obdCapabilityBadge.textContent = capability.webSerialSupported && capability.secureContext
-    ? "接続基盤対応"
-    : "貼付解析のみ";
-  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 現在は安全確認のため実機接続を無効にしています。`;
+  obdCapabilityBadge.textContent = "実機接続準備中";
+  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 現在は安全検証中のため車両接続を無効にしています。`;
 }
 
 function analyzeObdScannerImport() {
@@ -1547,7 +1545,7 @@ function analyzeObdScannerImport() {
   obdMonitorGrid.innerHTML = "";
 
   if (!obdScannerText.value.trim()) {
-    obdImportStatus.textContent = "読取結果を貼り付けてください。";
+    obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
     obdMonitorStatus.textContent = "計測値はまだ解析していません。";
     obdMonitorCount.textContent = "0項目";
     return;

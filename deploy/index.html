@@ -34,7 +34,7 @@
     <button class="tab-button" type="button" data-tab-target="case-search-panel">4. 事例検索</button>
     <button class="tab-button" type="button" data-tab-target="data-panel">5. データ管理</button>
     <button class="tab-button" type="button" data-tab-target="ops-panel">6. 実運用前チェック</button>
-    <button class="tab-button" type="button" data-tab-target="obd-panel">7. OBD2読取</button>
+    <button class="tab-button" type="button" data-tab-target="obd-panel">7. OBD2車両読取</button>
   </nav>
 
   <main class="tab-shell">
@@ -115,6 +115,40 @@
               <button id="resetButton" class="secondary-button" type="button">診断入力をクリア（問診は保持）</button>
             </div>
           </form>
+
+          <details class="diagnosis-import">
+            <summary>外部診断機データを取り込む</summary>
+            <label class="obd-import-label">
+              診断機の読取結果
+              <textarea id="obdScannerText" rows="8" placeholder="例:&#10;P0171 P0300&#10;Engine RPM: 780 rpm&#10;Coolant Temp: 88 C&#10;STFT B1: 3.1 %&#10;Control Module Voltage: 14.2 V"></textarea>
+            </label>
+            <p class="case-note">DTCと「項目名: 数値 単位」のログを解析します。入力原文は保存・外部送信しません。</p>
+
+            <div class="button-row">
+              <button id="obdAnalyzeButton" class="primary-button" type="button">診断機データを解析</button>
+              <button id="obdSampleButton" class="secondary-button" type="button">入力例を表示</button>
+              <button id="obdImportClearButton" class="secondary-button" type="button">入力をクリア</button>
+            </div>
+
+            <section class="result-block obd-import-result">
+              <h3>DTC取込結果</h3>
+              <p id="obdImportStatus" class="empty-state">まだ解析していません。</p>
+              <div id="obdDetectedCodes" class="obd-code-list"></div>
+            </section>
+
+            <section class="result-block obd-monitor-result">
+              <div class="obd-result-heading">
+                <div>
+                  <p class="eyebrow obd-eyebrow">IMPORTED DATA SNAPSHOT</p>
+                  <h3>取込データモニター</h3>
+                </div>
+                <span id="obdMonitorCount" class="confidence-badge">0項目</span>
+              </div>
+              <p id="obdMonitorStatus" class="empty-state">計測値はまだ解析していません。</p>
+              <div id="obdMonitorGrid" class="obd-monitor-grid"></div>
+              <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件とメーカー整備書の基準値を確認してください。</p>
+            </section>
+          </details>
         </section>
 
         <section class="result-area" aria-live="polite">
@@ -379,8 +413,8 @@
         <div class="section-head">
           <div>
             <p class="eyebrow obd-eyebrow">READ-ONLY DIAGNOSTICS</p>
-            <h2 id="obdReadTitle">OBD2読取・データモニター</h2>
-            <p class="case-note">DTCと計測値を安全に読み解くための画面です。現段階では車両へコマンドを送信しません。</p>
+            <h2 id="obdReadTitle">OBD2車両読取・リアルタイムモニター</h2>
+            <p class="case-note">車両接続後のDTC・フリーズフレーム・ライブデータを表示する専用画面です。</p>
           </div>
           <span id="obdCapabilityBadge" class="confidence-badge">対応状況を確認中</span>
         </div>
@@ -404,41 +438,42 @@
           </article>
         </div>
 
-        <p id="obdCapabilityText" class="data-status">ブラウザとHTTPSの対応状況を確認しています。</p>
+        <p id="obdCapabilityText" class="data-status">車両接続機能の対応状況を確認しています。</p>
 
-        <label class="obd-import-label">
-          スキャンツールの読取結果を貼り付け
-          <textarea id="obdScannerText" rows="9" placeholder="例:&#10;P0171 P0300&#10;Engine RPM: 780 rpm&#10;Coolant Temp: 88 C&#10;STFT B1: 3.1 %&#10;Control Module Voltage: 14.2 V"></textarea>
-        </label>
-        <p class="case-note">「項目名: 数値 単位」のログを解析します。車台番号など17文字の識別情報はマスクし、入力原文は保存しません。</p>
-
-        <div class="button-row">
-          <button id="obdAnalyzeButton" class="primary-button" type="button">読取データを安全解析</button>
-          <button id="obdSampleButton" class="secondary-button" type="button">表示例を読み込む</button>
-          <button id="obdImportClearButton" class="secondary-button" type="button">入力をクリア</button>
+        <div class="obd-connection-bar">
+          <div>
+            <span class="obd-connection-label">接続状態</span>
+            <strong>車両未接続</strong>
+          </div>
+          <button class="primary-button" type="button" disabled>車両へ接続（準備中）</button>
         </div>
 
         <section class="result-block obd-import-result">
-          <h3>DTC検出結果</h3>
-          <p id="obdImportStatus" class="empty-state">まだ解析していません。</p>
-          <div id="obdDetectedCodes" class="obd-code-list"></div>
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">VEHICLE DTC</p>
+              <h3>車両DTC・フリーズフレーム</h3>
+            </div>
+            <span class="confidence-badge">0件</span>
+          </div>
+          <p class="empty-state">車両へ接続すると、取得したDTCを日本語の内容とともに表示します。</p>
         </section>
 
         <section class="result-block obd-monitor-result">
           <div class="obd-result-heading">
             <div>
-              <p class="eyebrow obd-eyebrow">LIVE DATA SNAPSHOT</p>
-              <h3>データモニター</h3>
+              <p class="eyebrow obd-eyebrow">REAL-TIME LIVE DATA</p>
+              <h3>リアルタイムデータモニター</h3>
             </div>
-            <span id="obdMonitorCount" class="confidence-badge">0項目</span>
+            <span class="confidence-badge">0項目</span>
           </div>
-          <p id="obdMonitorStatus" class="empty-state">計測値はまだ解析していません。</p>
-          <div id="obdMonitorGrid" class="obd-monitor-grid"></div>
+          <p class="empty-state">車両未接続です。接続後は対応PIDの値をリアルタイムで更新します。</p>
+          <div class="obd-monitor-grid"></div>
           <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件、車種、年式、エンジン、メーカー整備書の基準値と比較してください。</p>
         </section>
 
         <details class="result-block">
-          <summary>将来の実機接続方針</summary>
+          <summary>実機接続の安全方針</summary>
           <ul class="obd-policy-list">
             <li>接続はHTTPS上で、利用者がボタン操作して選んだ機器だけを対象にする</li>
             <li>対応アダプターと通信速度を確認してから有効化する</li>
