@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.52.0";
+const APP_VERSION = "2.53.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -283,6 +283,7 @@ async function loadData() {
       genericObdCodesModern2026Part12,
       genericObdCodesModern2026Part13,
       genericObdCodesModern2026Part14,
+      genericObdCodesModern2026Part15,
       importedVerifiedDtc,
       vehiclePatterns,
       vehiclePatternsDomestic2026,
@@ -321,6 +322,7 @@ async function loadData() {
       fetchJson("data/generic-obd-codes-modern-2026-part12.json"),
       fetchJson("data/generic-obd-codes-modern-2026-part13.json"),
       fetchJson("data/generic-obd-codes-modern-2026-part14.json"),
+      fetchJson("data/generic-obd-codes-modern-2026-part15.json"),
       fetchJson("data/imported-verified-dtc.json"),
       fetchJson("data/vehicle-patterns.json"),
       fetchJson("data/vehicle-patterns-domestic-2026.json"),
@@ -350,7 +352,7 @@ async function loadData() {
       obdCodes,
       serviceNotes,
       symptomFlows,
-      genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2, ...genericObdCodesModern2026Part3, ...genericObdCodesModern2026Part4, ...genericObdCodesModern2026Part5, ...genericObdCodesModern2026Part6, ...genericObdCodesModern2026Part7, ...genericObdCodesModern2026Part8, ...genericObdCodesModern2026Part9, ...genericObdCodesModern2026Part10, ...genericObdCodesModern2026Part11, ...genericObdCodesModern2026Part12, ...genericObdCodesModern2026Part13, ...genericObdCodesModern2026Part14, ...importedVerifiedDtc],
+      genericObdCodesModern: [...genericObdCodesModern, ...genericObdCodesModern2026, ...genericObdCodesModern2026Part2, ...genericObdCodesModern2026Part3, ...genericObdCodesModern2026Part4, ...genericObdCodesModern2026Part5, ...genericObdCodesModern2026Part6, ...genericObdCodesModern2026Part7, ...genericObdCodesModern2026Part8, ...genericObdCodesModern2026Part9, ...genericObdCodesModern2026Part10, ...genericObdCodesModern2026Part11, ...genericObdCodesModern2026Part12, ...genericObdCodesModern2026Part13, ...genericObdCodesModern2026Part14, ...genericObdCodesModern2026Part15, ...importedVerifiedDtc],
       vehiclePatterns: [...vehiclePatterns, ...vehiclePatternsDomestic2026],
       vehicleInputOptions: mergeVehicleInputOptions(
         vehicleInputOptions,
