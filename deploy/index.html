@@ -125,7 +125,13 @@
           <section class="panel" aria-labelledby="resultTitle">
             <div class="section-head">
               <h2 id="resultTitle">診断結果</h2>
-              <span id="confidenceBadge" class="confidence-badge">確信度: 未作成</span>
+              <div class="result-head-actions">
+                <div class="view-switcher" role="group" aria-label="診断結果の表示方法">
+                  <button id="flowViewButton" class="view-switch-button is-active" type="button" data-result-view="flow" aria-pressed="true">フロー</button>
+                  <button id="detailViewButton" class="view-switch-button" type="button" data-result-view="detail" aria-pressed="false">詳細</button>
+                </div>
+                <span id="confidenceBadge" class="confidence-badge">確信度: 未作成</span>
+              </div>
             </div>
 
             <p class="final-note">最終判断は実車確認とメーカー整備書を優先してください。</p>
@@ -133,6 +139,15 @@
 
             <div id="emptyState" class="empty-state">
               OBD2コードまたは症状を入力すると、登録済みデータから根拠付きで診断補助を表示します。
+            </div>
+
+            <div id="flowView" class="diagnosis-flow" hidden>
+              <div class="flow-intro">
+                <p class="flow-kicker">DIAGNOSTIC FLOW</p>
+                <h3>上から順に確認してください</h3>
+                <p>異常が見つかった時点で、その系統を整備書の基準値と照合します。部品交換の指示ではありません。</p>
+              </div>
+              <div id="flowChart" class="flow-chart"></div>
             </div>
 
             <div id="resultContent" class="result-content" hidden>

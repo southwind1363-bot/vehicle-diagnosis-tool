@@ -1,8 +1,8 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.35.0";
-const APP_LAST_UPDATED = "2026-06-04";
+const APP_VERSION = "2.36.0";
+const APP_LAST_UPDATED = "2026-06-12";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
 const MANUAL_VEHICLE_VALUE = "__manual__";
@@ -86,6 +86,9 @@ const vehicleManualInput = document.querySelector("#vehicleManual");
 const vehicleSelectionSummary = document.querySelector("#vehicleSelectionSummary");
 const emptyState = document.querySelector("#emptyState");
 const resultContent = document.querySelector("#resultContent");
+const flowView = document.querySelector("#flowView");
+const flowChart = document.querySelector("#flowChart");
+const resultViewButtons = document.querySelectorAll("[data-result-view]");
 const safetyPanel = document.querySelector("#safetyPanel");
 const safetyText = document.querySelector("#safetyText");
 const confidenceBadge = document.querySelector("#confidenceBadge");
@@ -145,6 +148,7 @@ const tabPanels = document.querySelectorAll("[data-tab-panel]");
 let dataStore = fallbackData;
 let savedCases = loadCases();
 let copyToastTimer = null;
+let activeResultView = "flow";
 
 appVersion.textContent = APP_VERSION;
 lastUpdated.textContent = APP_LAST_UPDATED;
@@ -160,6 +164,10 @@ updateAiButtonLabel();
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   renderDiagnosis(buildDiagnosis(getInput()));
+});
+
+resultViewButtons.forEach((button) => {
+  button.addEventListener("click", () => setResultView(button.dataset.resultView));
 });
 
 aiButton.addEventListener("click", sendToExternalGpt);
@@ -1421,9 +1429,10 @@ function buildSafetyMessage(tags) {
 
 function renderDiagnosis(result) {
   emptyState.hidden = true;
-  resultContent.hidden = false;
   confidenceBadge.textContent = `確信度: ${result.confidence}`;
   renderSimilarCases();
+  renderDiagnosisFlow(result);
+  setResultView(activeResultView);
 
   renderItems(priorityCheckList, result.quickView.priorityChecks);
   nextLookText.textContent = result.quickView.nextLook;
@@ -1455,6 +1464,158 @@ function renderDiagnosis(result) {
 
   safetyPanel.hidden = !result.safety;
   safetyText.textContent = result.safety;
+}
+
+function setResultView(view) {
+  activeResultView = view === "detail" ? "detail" : "flow";
+  const showFlow = activeResultView === "flow";
+
+  flowView.hidden = !showFlow || emptyState.hidden === false;
+  resultContent.hidden = showFlow || emptyState.hidden === false;
+
+  resultViewButtons.forEach((button) => {
+    const active = button.dataset.resultView === activeResultView;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function renderDiagnosisFlow(result) {
+  flowChart.innerHTML = "";
+  const checks = usableFlowItems(result.checkOrder, result.quickView.priorityChecks, 4);
+  const measurements = usableFlowItems(result.measurements, [result.quickView.measurements], 4);
+  const normalBranches = result.branches.filter((item) => item.includes("正常なら")).slice(0, 3);
+  const abnormalBranches = result.branches.filter((item) => item.includes("異常なら")).slice(0, 3);
+  const partsChecks = usableFlowItems(result.partsChecks, [], 3);
+
+  flowChart.appendChild(createFlowNode({
+    step: "START",
+    title: "情報を保存",
+    text: result.summary[0] || "入力情報と発生条件を保存します。",
+    tone: "start"
+  }));
+
+  checks.forEach((item, index) => {
+    flowChart.appendChild(createFlowConnector());
+    flowChart.appendChild(createFlowNode({
+      step: String(index + 1).padStart(2, "0"),
+      title: index === 0 ? "最初に確認" : "確認を続ける",
+      text: item,
+      tone: "check",
+      checkable: true
+    }));
+  });
+
+  flowChart.appendChild(createFlowConnector());
+  flowChart.appendChild(createFlowNode({
+    step: "MEASURE",
+    title: "実測して基準値と比較",
+    text: measurements.join(" / "),
+    tone: "measure",
+    checkable: true
+  }));
+
+  flowChart.appendChild(createFlowConnector());
+  flowChart.appendChild(createBranchNode(normalBranches, abnormalBranches));
+
+  flowChart.appendChild(createFlowConnector());
+  flowChart.appendChild(createFlowNode({
+    step: "VERIFY",
+    title: "部品交換前に再確認",
+    text: partsChecks.join(" / "),
+    tone: "verify",
+    checkable: true
+  }));
+
+  flowChart.appendChild(createFlowConnector());
+  flowChart.appendChild(createFlowNode({
+    step: "SAFETY",
+    title: "作業可否を判断",
+    text: result.quickView.safety,
+    tone: "safety"
+  }));
+}
+
+function usableFlowItems(primary, fallback, limit) {
+  const items = [...(primary || []), ...(fallback || [])]
+    .filter((item) => item && item !== NO_DATA);
+  return collectUnique(items).slice(0, limit);
+}
+
+function createFlowNode({ step, title, text, tone, checkable = false }) {
+  const node = document.createElement("article");
+  node.className = `flow-node flow-node-${tone}`;
+
+  const marker = document.createElement("span");
+  marker.className = "flow-step";
+  marker.textContent = step;
+
+  const content = document.createElement("div");
+  content.className = "flow-node-content";
+
+  const heading = document.createElement("h4");
+  heading.textContent = title;
+  const description = document.createElement("p");
+  description.textContent = text || NO_DATA;
+  content.append(heading, description);
+
+  if (checkable) {
+    const label = document.createElement("label");
+    label.className = "flow-check";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.addEventListener("change", () => {
+      node.classList.toggle("is-complete", checkbox.checked);
+    });
+    const labelText = document.createElement("span");
+    labelText.textContent = "確認済み";
+    label.append(checkbox, labelText);
+    content.appendChild(label);
+  }
+
+  node.append(marker, content);
+  return node;
+}
+
+function createFlowConnector() {
+  const connector = document.createElement("div");
+  connector.className = "flow-connector";
+  connector.setAttribute("aria-hidden", "true");
+  return connector;
+}
+
+function createBranchNode(normalItems, abnormalItems) {
+  const wrapper = document.createElement("section");
+  wrapper.className = "flow-branch";
+
+  const title = document.createElement("h4");
+  title.textContent = "測定結果で分岐";
+  wrapper.appendChild(title);
+
+  const grid = document.createElement("div");
+  grid.className = "flow-branch-grid";
+  grid.append(
+    createBranchPath("正常・基準内", normalItems, "normal", "次の系統へ進む"),
+    createBranchPath("異常・基準外", abnormalItems, "abnormal", "該当系統を深掘り")
+  );
+  wrapper.appendChild(grid);
+  return wrapper;
+}
+
+function createBranchPath(title, items, tone, fallback) {
+  const path = document.createElement("article");
+  path.className = `flow-branch-path flow-branch-${tone}`;
+  const heading = document.createElement("h5");
+  heading.textContent = title;
+  const list = document.createElement("ul");
+  const values = items.length ? items : [fallback];
+  values.forEach((item) => {
+    const li = document.createElement("li");
+    li.textContent = item.replace(/^(正常なら次に確認|正常なら次に見る場所|異常なら疑う場所):\s*/, "");
+    list.appendChild(li);
+  });
+  path.append(heading, list);
+  return path;
 }
 
 async function sendToExternalGpt() {
@@ -2297,6 +2458,8 @@ function renderItems(container, items) {
 function hideResult() {
   emptyState.hidden = false;
   resultContent.hidden = true;
+  flowView.hidden = true;
+  flowChart.innerHTML = "";
   safetyPanel.hidden = true;
   confidenceBadge.textContent = "確信度: 未作成";
   aiStatus.textContent = "AI相談は未送信です。";
