@@ -1,0 +1,38 @@
+[
+  {
+    "id": "modern-2026-p0a08-dc-dc-converter-status-circuit",
+    "code": "P0A08",
+    "title": "DC/DC Converter Status Circuit",
+    "system": "DC/DCコンバーター状態回路",
+    "possible_causes": ["DC/DCコンバーター状態信号回路の断線または短絡", "コンバーター電源、低電圧バッテリー、ヒューズまたはアース異常", "ハイブリッド制御モジュールまたはコンバーター内部異常"],
+    "check_order": ["全DTC、コンバーター状態、低電圧系電圧、充電指令、負荷状態を保存する", "コンバーター構成、端子、状態信号方式、判定条件をメーカー整備書で確認する", "有資格者が高電圧遮断、待機時間、無電圧確認を含む指定安全手順を実施する", "安全確保後に低電圧バッテリー、ヒューズ、配線、コネクタ、電源、アースを確認する"],
+    "measurement_points": ["DC/DCコンバーター状態", "低電圧系電圧", "充電指令", "状態信号電圧", "電源・アース"],
+    "common_mistakes": ["コンバーター端子や信号方式を推測する", "低電圧バッテリーや共通アースを確認せずコンバーターを交換する"],
+    "required_tools": ["ハイブリッド対応スキャンツール", "適切なカテゴリのデジタルマルチメーター", "メーカー指定保護具", "メーカー整備書"],
+    "safety_notes": ["DC/DCコンバーターは高電圧系に接続される。感電・アーク・重傷・死亡の危険があるため、有資格者が指定遮断、待機、無電圧確認、保護具を厳守し、未確認状態では端子へ触れない"],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義を参照した登録済み診断ガイダンス",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions"],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-13",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p0a09-dc-dc-converter-status-circuit-low",
+    "code": "P0A09",
+    "title": "DC/DC Converter Status Circuit Low",
+    "system": "DC/DCコンバーター状態回路 / 低入力",
+    "possible_causes": ["状態信号線のアース短絡または低電圧系電圧低下", "コンバーター状態出力、コネクタまたは共通アース異常", "ハイブリッド制御モジュール入力回路異常"],
+    "check_order": ["全DTC、状態信号、低電圧系電圧、充電指令、負荷状態を保存する", "低入力判定値と状態信号方式をメーカー整備書で確認する", "有資格者が指定の高電圧安全手順を実施する", "安全確保後に対アース短絡、低電圧バッテリー、電源、アース、コネクタを確認する"],
+    "measurement_points": ["状態信号電圧", "対アース抵抗", "低電圧系電圧", "コンバーター充電電流", "電源・アース"],
+    "common_mistakes": ["低入力をコンバーター出力電圧低下だけと決めつける", "信号線へ外部電圧を加えて制御モジュールを損傷する"],
+    "required_tools": ["ハイブリッド対応スキャンツール", "適切なカテゴリのデジタルマルチメーター", "クランプ電流計", "メーカー指定保護具", "メーカー整備書"],
+    "safety_notes": ["高電圧系の遮断・無電圧確認前にコンバーターや高電圧配線へ触れない。低電圧側でも大電流によるアークと発熱に注意する"],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義を参照した登録済み診断ガイダンス",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions"],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-13",
+    "service_manual_required": true
+  }
+]
