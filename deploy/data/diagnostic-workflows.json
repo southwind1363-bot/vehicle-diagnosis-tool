@@ -11,6 +11,9 @@
       "再現しない場合は消去せず、発生条件と整備履歴を聞き取る。"
     ],
     "measurement_points": ["現在故障DTC", "ペンディングDTC", "永久DTC", "フリーズフレーム", "レディネス状態", "12V電圧"],
+    "monitor_ids": ["monitor_status", "freeze_dtc", "control_module_voltage", "engine_runtime", "coolant_temp", "engine_speed", "vehicle_speed", "calculated_load"],
+    "monitor_observation_conditions": ["DTC消去前にキーON状態とエンジン運転状態を区別して保存する。", "冷間始動、暖機後、症状再現時の3場面を同じ項目構成で比較する。"],
+    "monitor_interpretation_note": "単一値では断定せず、フリーズフレームと現在値の条件差を確認する。",
     "if_normal_next": ["電源と通信が正常なら、個別DTCの診断フローへ進む。"],
     "if_abnormal_suspect": ["低電圧や通信DTCが複数ある場合は、個別部品より先に電源、アース、端子、後付け用品を確認する。"],
     "before_replacement_checks": ["DTC消去前保存", "12V電圧", "同時DTC", "フリーズフレーム", "再現条件"],
@@ -35,6 +38,9 @@
       "MAF値、燃圧、A/FまたはO2センサー値は整備書基準と比較する。"
     ],
     "measurement_points": ["短期燃料トリム", "長期燃料トリム", "MAF値", "燃圧", "A/FまたはO2センサー値"],
+    "monitor_ids": ["stft_b1", "ltft_b1", "stft_b2", "ltft_b2", "maf", "map", "fuel_pressure", "fuel_rail_pressure", "wide_o2_b1s1_ratio", "wide_o2_b2s1_ratio", "engine_speed", "calculated_load"],
+    "monitor_observation_conditions": ["暖機後のアイドルと約2500rpm無負荷を比較し、測定条件を記録する。", "症状が走行時だけの場合は安全な条件で負荷時データを記録する。"],
+    "monitor_interpretation_note": "燃料補正の絶対値だけで原因を断定せず、回転数による変化、左右バンク差、MAF・MAP・燃圧との相関を見る。",
     "if_normal_next": ["吸気漏れがなければ、MAF値、燃圧、インジェクター、排気漏れを順に確認する。"],
     "if_abnormal_suspect": ["回転数で燃料トリムが変化する場合は、吸気漏れまたは計測系の影響を疑う。"],
     "before_replacement_checks": ["吸気漏れ試験", "燃料トリム比較", "燃圧測定", "MAF電源・アース"],
@@ -59,6 +65,9 @@
       "複数気筒失火では、低電圧、燃圧、MAF、吸気漏れ、EGR、機械タイミングを先に確認する。"
     ],
     "measurement_points": ["失火カウンタ", "クランキング電圧", "燃圧", "圧縮", "リークダウン", "燃料トリム"],
+    "monitor_ids": ["engine_speed", "calculated_load", "control_module_voltage", "stft_b1", "ltft_b1", "stft_b2", "ltft_b2", "fuel_pressure", "fuel_rail_pressure", "coolant_temp", "maf"],
+    "monitor_observation_conditions": ["冷間始動直後、暖機後アイドル、症状再現時の回転数・負荷・電圧を保存する。", "気筒別失火カウンタはメーカー拡張データの対応有無を確認する。"],
+    "monitor_interpretation_note": "標準PIDだけでは気筒別失火を確定できない。燃料・吸気・電源値とメーカー拡張失火カウンタを合わせて判断する。",
     "if_normal_next": ["点火入替で失火が移動しなければ、燃料、吸気、圧縮へ進む。"],
     "if_abnormal_suspect": ["入替後に失火気筒が移動した場合は、移動した部品または接続状態を疑う。"],
     "before_replacement_checks": ["コイル・プラグ入替", "燃圧", "圧縮", "吸気漏れ", "インジェクター作動"],
@@ -83,6 +92,9 @@
       "触媒判定条件と基準値はメーカー整備書で確認する。"
     ],
     "measurement_points": ["前後O2/A/Fセンサー波形", "燃料トリム", "失火カウンタ", "排気漏れ", "オイル消費"],
+    "monitor_ids": ["o2_b1s1_voltage", "o2_b1s2_voltage", "o2_b2s1_voltage", "o2_b2s2_voltage", "wide_o2_b1s1_ratio", "wide_o2_b2s1_ratio", "stft_b1", "ltft_b1", "stft_b2", "ltft_b2", "catalyst_temp_b1s1", "catalyst_temp_b1s2", "catalyst_temp_b2s1", "catalyst_temp_b2s2", "engine_speed", "calculated_load"],
+    "monitor_observation_conditions": ["十分な暖機後、メーカー指定の触媒モニター成立条件で前後センサーを同時記録する。", "失火や燃料補正異常がある場合は触媒判定より先にその原因を確認する。"],
+    "monitor_interpretation_note": "センサー方式と制御条件で波形は異なる。前後波形の見た目だけで触媒を断定せず、メーカー判定条件を優先する。",
     "if_normal_next": ["失火、混合気、排気漏れが正常なら、整備書の触媒判定手順へ進む。"],
     "if_abnormal_suspect": ["混合気異常や失火がある場合は、触媒より先に上流側原因を疑う。"],
     "before_replacement_checks": ["失火履歴", "燃料トリム", "排気漏れ", "センサー波形", "オイル・冷却水消費"],
@@ -107,6 +119,9 @@
       "高圧系作業は整備書の燃圧抜き手順に従う。"
     ],
     "measurement_points": ["低圧燃圧", "高圧燃圧", "目標燃圧", "実燃圧", "ポンプ電源電圧"],
+    "monitor_ids": ["fuel_pressure", "fuel_rail_pressure", "fuel_rail_pressure_vacuum", "fuel_pressure_control", "injection_pressure_control", "engine_speed", "calculated_load", "control_module_voltage", "fuel_level"],
+    "monitor_observation_conditions": ["キーON、クランキング、アイドル、負荷時で目標値と実値を区別して記録する。", "燃料漏れや異臭がある場合はエンジンを停止し、ライブデータ確認を続行しない。"],
+    "monitor_interpretation_note": "低圧系と高圧系、指令値と実値、単位を区別する。基準値は車検証とメーカー整備書で確認する。",
     "if_normal_next": ["供給側が正常なら、燃圧センサー、制御弁、高圧ポンプ制御を確認する。"],
     "if_abnormal_suspect": ["電源正常で燃圧が追従しない場合は、供給制限、ポンプ、制御弁、漏れを疑う。"],
     "before_replacement_checks": ["漏れ確認", "低圧・高圧の切り分け", "目標値と実測値比較", "電源・アース"],
@@ -131,6 +146,9 @@
       "再生可否と実施条件はメーカー整備書に従う。条件不成立なら強制再生を実施しない。"
     ],
     "measurement_points": ["DPF差圧", "排気温", "すす堆積推定値", "再生履歴", "オイル量"],
+    "monitor_ids": ["dpf_differential_pressure", "dpf_status", "dpf_temp", "egt_bank1", "egt_bank2", "exhaust_pressure", "engine_speed", "calculated_load", "vehicle_speed", "diesel_aftertreatment_status"],
+    "monitor_observation_conditions": ["冷間キーON、暖機後アイドル、回転上昇時で差圧と排気温の変化を比較する。", "再生中は周囲の可燃物を避け、排気温上昇を監視する。"],
+    "monitor_interpretation_note": "差圧の単一値だけでDPF詰まりを断定せず、回転数・排気流量・ホース状態・再生状態との相関を見る。",
     "if_normal_next": ["ホース、センサー、排気漏れが正常なら、再生条件と走行履歴を確認する。"],
     "if_abnormal_suspect": ["差圧値が不自然な場合は、DPF本体より先にホース、センサー、配線を疑う。"],
     "before_replacement_checks": ["差圧ホース", "差圧値", "排気温", "再生履歴", "関連DTC", "整備書の再生可否条件"],
@@ -155,6 +173,9 @@
       "センサーや触媒交換前に、メーカー整備書の学習・リセット・再判定条件を確認する。"
     ],
     "measurement_points": ["NOxセンサー値", "排気温", "尿素水残量", "関連DTC", "センサー電源・アース"],
+    "monitor_ids": ["nox_sensor", "nox_sensor_corrected", "nox_reagent_system", "commanded_diesel_exhaust_fluid", "def_tank_level", "def_quality", "def_temperature", "scr_catalyst_temp", "egt_bank1", "egt_bank2", "scr_inducement_status", "diesel_aftertreatment_status"],
+    "monitor_observation_conditions": ["十分な暖機とメーカー指定のSCR作動条件で上流・下流位置を区別して記録する。", "尿素水の凍結、補充直後、警告・走行制限状態を分けて確認する。"],
+    "monitor_interpretation_note": "拡張候補項目は車両ごとにサービスと識別子が異なる。取得できない値を推測で補完しない。",
     "if_normal_next": ["尿素水、配線、排気漏れが正常なら、整備書のSCR効率診断へ進む。"],
     "if_abnormal_suspect": ["センサー値が固定または不自然なら、センサー本体だけでなく配線と電源を疑う。"],
     "before_replacement_checks": ["尿素水品質", "排気漏れ", "センサー電源・アース", "学習・再判定条件"],
@@ -179,6 +200,9 @@
       "CAN抵抗・電圧・波形測定は整備書配線図に従い、短絡を防止して行う。"
     ],
     "measurement_points": ["12V静止電圧", "クランキング電圧", "充電電圧", "ECU電源", "ECUアース電圧降下", "CAN終端抵抗"],
+    "monitor_ids": ["control_module_voltage", "engine_speed", "vehicle_speed", "monitor_status"],
+    "monitor_observation_conditions": ["キーOFF静止時、キーON、クランキング中、始動後を区別して電圧変化を記録する。", "通信途絶時刻と電圧低下、後付け用品の作動を同じ時系列で確認する。"],
+    "monitor_interpretation_note": "標準PIDはCAN配線診断の代替ではない。抵抗・電圧・波形測定はメーカー配線図と指定手順に従う。",
     "if_normal_next": ["電源とアースが正常なら、CAN配線、分岐、終端抵抗、後付け用品を確認する。"],
     "if_abnormal_suspect": ["複数ECUで同時発生した場合は、個別ECUより先に共通電源、アース、通信線を疑う。"],
     "before_replacement_checks": ["低電圧履歴", "全システムスキャン", "ヒューズ", "ECU電源・アース", "水入り", "後付け用品"],
@@ -203,6 +227,9 @@
       "絶縁測定と切り分けはメーカー整備書の順序に従う。無資格で分解しない。"
     ],
     "measurement_points": ["DTC詳細コード", "絶縁抵抗", "HVバッテリー電圧", "浸水・漏れ痕跡"],
+    "monitor_ids": ["hybrid_battery_remaining", "control_module_voltage", "coolant_temp"],
+    "monitor_observation_conditions": ["車両を停止し、高電圧作業を行わずに取得可能な読取値とDTC詳細だけを保存する。"],
+    "monitor_interpretation_note": "標準PIDから絶縁低下箇所は特定できない。高電圧測定や分解は有資格者がメーカー指定手順で行う。",
     "if_normal_next": ["外観異常がなくても、整備書の区分ごとの絶縁切り分けへ進む。"],
     "if_abnormal_suspect": ["漏れや浸水がある場合は、通電・走行を避けて安全隔離を優先する。"],
     "before_replacement_checks": ["資格確認", "保護具", "サービスプラグ手順", "待機時間", "ゼロ電圧確認", "絶縁切り分け"],

@@ -1122,6 +1122,20 @@ body.dark .flow-node-measure .flow-step {
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
+.live-data-guide-block {
+  border-left: 4px solid var(--accent);
+}
+
+.live-data-guide-note {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.live-data-guide-block li::marker {
+  color: var(--accent);
+}
+
 .import-button input {
   display: none;
 }

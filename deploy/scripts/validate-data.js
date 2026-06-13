@@ -17,6 +17,8 @@ const legacySourceOptionalFiles = new Set([
   "service-notes.json",
   "symptom-flows.json"
 ]);
+const monitorDefinitionRows = JSON.parse(fs.readFileSync(path.join(dataDir, "obd-monitor-definitions.json"), "utf8"));
+const monitorDefinitionIds = new Set(monitorDefinitionRows.map((row) => row.id));
 
 function reportError(message) {
   errors.push(message);
@@ -179,6 +181,20 @@ for (const file of jsonFiles) {
           reportError(`${label}: alias ${alias} が ${existingId} と重複しています`);
         }
         monitorAliases.set(normalizedAlias, row.id);
+      }
+    }
+
+    if (file === "diagnostic-workflows.json" && "monitor_ids" in row) {
+      if (!isNonEmptyStringArray(row.monitor_ids)) reportError(`${label}: monitor_ids がありません`);
+      if (new Set(row.monitor_ids || []).size !== (row.monitor_ids || []).length) reportError(`${label}: monitor_ids に重複があります`);
+      for (const monitorId of row.monitor_ids || []) {
+        if (!monitorDefinitionIds.has(monitorId)) reportError(`${label}: 未登録の monitor_id ${monitorId} があります`);
+      }
+      if (!isNonEmptyStringArray(row.monitor_observation_conditions)) {
+        reportError(`${label}: monitor_observation_conditions がありません`);
+      }
+      if (!isNonEmptyString(row.monitor_interpretation_note)) {
+        reportError(`${label}: monitor_interpretation_note がありません`);
       }
     }
   }

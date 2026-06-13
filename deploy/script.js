@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.55.0";
+const APP_VERSION = "2.56.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -113,6 +113,7 @@ const realWorldCaseList = document.querySelector("#realWorldCaseList");
 const dataGapList = document.querySelector("#dataGapList");
 const checkOrderList = document.querySelector("#checkOrderList");
 const measurementList = document.querySelector("#measurementList");
+const liveDataGuideList = document.querySelector("#liveDataGuideList");
 const branchList = document.querySelector("#branchList");
 const cautionList = document.querySelector("#cautionList");
 const partsCheckList = document.querySelector("#partsCheckList");
@@ -653,6 +654,7 @@ function buildDiagnosis(input) {
     summary: buildDiagnosisSummary(input, obd, flow, interview, modernReferences, safetyTags),
     checkOrder: buildCheckOrder(obd, flow, interview, workflowMatches),
     measurements: buildMeasurements(flow, interview, workflowMatches),
+    liveDataGuidance: buildLiveDataGuidance(workflowMatches),
     branches: buildBranches(flow, interview, workflowMatches),
     cautions: buildCautions(obd, flow, confirmationBeforeParts, workflowMatches),
     partsChecks: confirmationBeforeParts.length ? confirmationBeforeParts : [NO_DATA],
@@ -913,6 +915,38 @@ function buildMeasurements(flow, interview, workflowMatches = []) {
   ];
 
   return measurements.length ? collectUnique(measurements) : [NO_DATA];
+}
+
+function buildLiveDataGuidance(workflowMatches = []) {
+  const monitorById = new Map((dataStore.obdMonitorDefinitions || []).map((item) => [item.id, item]));
+  const guidance = [];
+
+  workflowMatches.forEach((workflow) => {
+    const definitions = (workflow.monitor_ids || [])
+      .map((id) => monitorById.get(id))
+      .filter(Boolean);
+
+    if (!definitions.length) return;
+
+    const monitorLabels = definitions.map((item) => {
+      const address = item.scope === "standard-generic"
+        ? `Mode ${item.service} PID ${item.pid}`
+        : "メーカー拡張・識別子要確認";
+      return `${item.label}（${address}）`;
+    });
+
+    guidance.push(`${workflow.title}: ${monitorLabels.join("、")}`);
+    (workflow.monitor_observation_conditions || []).forEach((condition) => {
+      guidance.push(`観察条件: ${condition}`);
+    });
+    if (workflow.monitor_interpretation_note) {
+      guidance.push(`解析上の注意: ${workflow.monitor_interpretation_note}`);
+    }
+  });
+
+  return collectUnique(guidance).length
+    ? collectUnique(guidance)
+    : ["該当する登録済みライブデータ手順はありません。測定条件とメーカー整備書を確認してください。"];
 }
 
 function buildBranches(flow, interview, workflowMatches = []) {
@@ -1506,6 +1540,7 @@ function renderDiagnosis(result) {
   }
   renderItems(checkOrderList, result.checkOrder);
   renderItems(measurementList, result.measurements);
+  renderItems(liveDataGuideList, result.liveDataGuidance);
   renderItems(branchList, result.branches);
   renderItems(cautionList, result.cautions);
   renderItems(partsCheckList, result.partsChecks);
@@ -1697,7 +1732,7 @@ function setResultView(view) {
 function renderDiagnosisFlow(result) {
   flowChart.innerHTML = "";
   const checks = usableFlowItems(result.checkOrder, result.quickView.priorityChecks, 4);
-  const measurements = usableFlowItems(result.measurements, [result.quickView.measurements], 4);
+  const measurements = usableFlowItems(result.liveDataGuidance, result.measurements, 4);
   const normalBranches = result.branches.filter((item) => item.includes("正常なら")).slice(0, 3);
   const abnormalBranches = result.branches.filter((item) => item.includes("異常なら")).slice(0, 3);
   const partsChecks = usableFlowItems(result.partsChecks, [], 3);
@@ -1723,7 +1758,7 @@ function renderDiagnosisFlow(result) {
   flowChart.appendChild(createFlowConnector());
   flowChart.appendChild(createFlowNode({
     step: "MEASURE",
-    title: "実測して基準値と比較",
+    title: "指定ライブデータを観察",
     text: measurements.join(" / "),
     tone: "measure",
     checkable: true
