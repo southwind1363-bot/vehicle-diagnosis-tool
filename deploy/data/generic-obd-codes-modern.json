@@ -548,11 +548,11 @@
     "notes": "サンプル. Reference only. Do not determine the cause without inspection. Service manual confirmation is required."
   },
   {
-    "id": "sample-modern-p0a93-inverter-cooling",
+    "id": "generic-modern-p0a93-inverter-a-cooling-system-performance",
     "code": "P0A93",
-    "title": "Inverter Cooling System Performance",
-    "code_family": "modern_sample",
-    "system": "Hybrid inverter cooling",
+    "title": "Inverter \"A\" Cooling System Performance",
+    "code_family": "generic_obd2_hybrid",
+    "system": "インバーターA冷却システム性能",
     "manufacturer_specific": false,
     "vehicle_filter": {
       "maker": null,
@@ -563,37 +563,45 @@
       "powertrain": "hybrid"
     },
     "possible_causes": [
-      "Possible wiring, sensor, actuator, voltage, or mechanical condition. Do not decide from DTC name alone."
+      "冷却液量、ポンプ、ファン、ラジエーター、流路または接続部の異常",
+      "インバーター温度センサー、冷却液温センサーまたは制御回路の異常",
+      "インバーター内部発熱、過大負荷または冷却性能不足"
     ],
     "check_order": [
-      "Save DTC and freeze frame.",
-      "Check power supply, ground, connector, and related live data.",
-      "Compare measured values with service manual specifications.",
-      "Confirm actual vehicle condition before replacing parts."
+      "全DTC、インバーター温度、冷却液温、ポンプ・ファン指令と実状態を保存する",
+      "インバーターAの割当、冷却方式、性能判定条件をメーカー整備書で確認する",
+      "冷間時に液量、漏れ、ポンプ、ファン、ラジエーター、ホース、流路を確認する",
+      "高電圧部品の点検は有資格者が指定遮断、待機、無電圧確認後に行う"
     ],
     "measurement_points": [
-      "DTC and freeze frame",
-      "Power and ground",
-      "Related sensor values",
-      "Commanded value and actual value"
+      "インバーターA温度",
+      "冷却液温度",
+      "ポンプ・ファン指令と実状態",
+      "冷却系電源・アース",
+      "DCリンク電圧・負荷"
     ],
     "common_mistakes": [
-      "Replacing parts from the code name only.",
-      "Skipping voltage, ground, connector, and freeze-frame checks."
+      "性能コードだけでインバーター交換と断定する",
+      "インバーターAの割当や車両固有の冷却方式を確認しない",
+      "高温時に冷却系を開放する"
     ],
     "required_tools": [
-      "OBD2 scan tool",
-      "Digital multimeter",
-      "Service manual"
+      "ハイブリッド・EV対応スキャンツール",
+      "冷却系点検工具",
+      "デジタルマルチメーター",
+      "メーカー指定保護具",
+      "メーカー整備書"
     ],
     "safety_notes": [
-      "Follow service manual safety procedures. Fuel, brake, SRS, and high-voltage work require extra caution."
+      "高温冷却液の噴出、回転ファン、致死的高電圧の危険がある。十分に冷却し、ファン自動作動に注意し、高電圧部は有資格者のみ作業する"
     ],
-    "confidence": "sample",
-    "source": "サンプル: modern generic OBD sample data for UI testing",
-    "source_date": "2026-05-18",
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions", "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-14",
     "service_manual_required": true,
-    "notes": "サンプル. Reference only. Do not determine the cause without inspection. Service manual confirmation is required."
+    "notes": "車両固有のインバーターAの割当、冷却方式、温度閾値、エア抜き手順はメーカー整備書で確認する。"
   },
   {
     "id": "sample-modern-u0155-cluster-communication",
