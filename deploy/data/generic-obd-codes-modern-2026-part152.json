@@ -1,0 +1,2060 @@
+[
+  {
+    "id": "modern-2026-p2700-transmission-friction-element-a-apply-time-range-performance",
+    "code": "P2700",
+    "title": "Transmission Friction Element “A” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素A適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “A” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2701-transmission-friction-element-b-apply-time-range-performance",
+    "code": "P2701",
+    "title": "Transmission Friction Element “B” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素B適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “B” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2702-transmission-friction-element-c-apply-time-range-performance",
+    "code": "P2702",
+    "title": "Transmission Friction Element “C” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素C適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “C” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2703-transmission-friction-element-d-apply-time-range-performance",
+    "code": "P2703",
+    "title": "Transmission Friction Element “D” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素D適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “D” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2704-transmission-friction-element-e-apply-time-range-performance",
+    "code": "P2704",
+    "title": "Transmission Friction Element “E” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素E適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “E” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2705-transmission-friction-element-f-apply-time-range-performance",
+    "code": "P2705",
+    "title": "Transmission Friction Element “F” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素F適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “F” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2706-shift-solenoid-f",
+    "code": "P2706",
+    "title": "Shift Solenoid “F”",
+    "system": "シフトソレノイドF",
+    "possible_causes": [
+      "Shift Solenoid “F”の制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2707-shift-solenoid-f-performance-stuck-off",
+    "code": "P2707",
+    "title": "Shift Solenoid “F” Performance/Stuck Off",
+    "system": "シフトソレノイドF性能/オフ固着",
+    "possible_causes": [
+      "Shift Solenoid “F” Performance/Stuck Offの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2708-shift-solenoid-f-stuck-on",
+    "code": "P2708",
+    "title": "Shift Solenoid “F” Stuck On",
+    "system": "シフトソレノイドFオン固着",
+    "possible_causes": [
+      "Shift Solenoid “F” Stuck Onの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2709-shift-solenoid-f-electrical",
+    "code": "P2709",
+    "title": "Shift Solenoid “F” Electrical",
+    "system": "シフトソレノイドF電気系",
+    "possible_causes": [
+      "Shift Solenoid “F” Electricalの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2710-shift-solenoid-f-intermittent",
+    "code": "P2710",
+    "title": "Shift Solenoid “F” Intermittent",
+    "system": "シフトソレノイドF断続",
+    "possible_causes": [
+      "Shift Solenoid “F” Intermittentの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2711-unexpected-mechanical-gear-disengagement",
+    "code": "P2711",
+    "title": "Unexpected Mechanical Gear Disengagement",
+    "system": "予期しない機械式ギヤ脱落",
+    "possible_causes": [
+      "Unexpected Mechanical Gear Disengagementの機械/油圧系異常",
+      "ATF漏れ、油圧不足、バルブボディ、内部機械要素異常",
+      "TCM/PCM、回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ATF漏れ/油量",
+      "ATF温度",
+      "油圧",
+      "ギヤ比/スリップ量",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2712-hydraulic-power-unit-leakage",
+    "code": "P2712",
+    "title": "Hydraulic Power Unit Leakage",
+    "system": "油圧パワーユニット漏れ",
+    "possible_causes": [
+      "Hydraulic Power Unit Leakageの機械/油圧系異常",
+      "ATF漏れ、油圧不足、バルブボディ、内部機械要素異常",
+      "TCM/PCM、回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ATF漏れ/油量",
+      "ATF温度",
+      "油圧",
+      "ギヤ比/スリップ量",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2713-pressure-control-solenoid-d",
+    "code": "P2713",
+    "title": "Pressure Control Solenoid “D”",
+    "system": "圧力制御ソレノイドD",
+    "possible_causes": [
+      "Pressure Control Solenoid “D”の制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2714-pressure-control-solenoid-d-performance-stuck-off",
+    "code": "P2714",
+    "title": "Pressure Control Solenoid “D” Performance/Stuck Off",
+    "system": "圧力制御ソレノイドD性能/オフ固着",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Performance/Stuck Offの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2715-pressure-control-solenoid-d-stuck-on",
+    "code": "P2715",
+    "title": "Pressure Control Solenoid “D” Stuck On",
+    "system": "圧力制御ソレノイドDオン固着",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Stuck Onの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2716-pressure-control-solenoid-d-electrical",
+    "code": "P2716",
+    "title": "Pressure Control Solenoid “D” Electrical",
+    "system": "圧力制御ソレノイドD電気系",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Electricalの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2717-pressure-control-solenoid-d-intermittent",
+    "code": "P2717",
+    "title": "Pressure Control Solenoid “D” Intermittent",
+    "system": "圧力制御ソレノイドD断続",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Intermittentの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2718-pressure-control-solenoid-d-control-circuit-open",
+    "code": "P2718",
+    "title": "Pressure Control Solenoid “D” Control Circuit/Open",
+    "system": "圧力制御ソレノイドD制御回路/断線",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Control Circuit/Openの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2719-pressure-control-solenoid-d-control-circuit-range-performance",
+    "code": "P2719",
+    "title": "Pressure Control Solenoid “D” Control Circuit Range/Performance",
+    "system": "圧力制御ソレノイドD制御回路範囲/性能",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Control Circuit Range/Performanceの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2720-pressure-control-solenoid-d-control-circuit-low",
+    "code": "P2720",
+    "title": "Pressure Control Solenoid “D” Control Circuit Low",
+    "system": "圧力制御ソレノイドD制御回路低入力",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Control Circuit Lowの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2721-pressure-control-solenoid-d-control-circuit-high",
+    "code": "P2721",
+    "title": "Pressure Control Solenoid “D” Control Circuit High",
+    "system": "圧力制御ソレノイドD制御回路高入力",
+    "possible_causes": [
+      "Pressure Control Solenoid “D” Control Circuit Highの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2722-pressure-control-solenoid-e",
+    "code": "P2722",
+    "title": "Pressure Control Solenoid “E”",
+    "system": "圧力制御ソレノイドE",
+    "possible_causes": [
+      "Pressure Control Solenoid “E”の制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2723-pressure-control-solenoid-e-performance-stuck-off",
+    "code": "P2723",
+    "title": "Pressure Control Solenoid “E” Performance/Stuck Off",
+    "system": "圧力制御ソレノイドE性能/オフ固着",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Performance/Stuck Offの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2724-pressure-control-solenoid-e-stuck-on",
+    "code": "P2724",
+    "title": "Pressure Control Solenoid “E” Stuck On",
+    "system": "圧力制御ソレノイドEオン固着",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Stuck Onの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2725-pressure-control-solenoid-e-electrical",
+    "code": "P2725",
+    "title": "Pressure Control Solenoid “E” Electrical",
+    "system": "圧力制御ソレノイドE電気系",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Electricalの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2726-pressure-control-solenoid-e-intermittent",
+    "code": "P2726",
+    "title": "Pressure Control Solenoid “E” Intermittent",
+    "system": "圧力制御ソレノイドE断続",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Intermittentの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2727-pressure-control-solenoid-e-control-circuit-open",
+    "code": "P2727",
+    "title": "Pressure Control Solenoid “E” Control Circuit/Open",
+    "system": "圧力制御ソレノイドE制御回路/断線",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Control Circuit/Openの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2728-pressure-control-solenoid-e-control-circuit-range-performance",
+    "code": "P2728",
+    "title": "Pressure Control Solenoid “E” Control Circuit Range/Performance",
+    "system": "圧力制御ソレノイドE制御回路範囲/性能",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Control Circuit Range/Performanceの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2729-pressure-control-solenoid-e-control-circuit-low",
+    "code": "P2729",
+    "title": "Pressure Control Solenoid “E” Control Circuit Low",
+    "system": "圧力制御ソレノイドE制御回路低入力",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Control Circuit Lowの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2730-pressure-control-solenoid-e-control-circuit-high",
+    "code": "P2730",
+    "title": "Pressure Control Solenoid “E” Control Circuit High",
+    "system": "圧力制御ソレノイドE制御回路高入力",
+    "possible_causes": [
+      "Pressure Control Solenoid “E” Control Circuit Highの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2731-pressure-control-solenoid-f",
+    "code": "P2731",
+    "title": "Pressure Control Solenoid “F”",
+    "system": "圧力制御ソレノイドF",
+    "possible_causes": [
+      "Pressure Control Solenoid “F”の制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2732-pressure-control-solenoid-f-performance-stuck-off",
+    "code": "P2732",
+    "title": "Pressure Control Solenoid “F” Performance/Stuck Off",
+    "system": "圧力制御ソレノイドF性能/オフ固着",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Performance/Stuck Offの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2733-pressure-control-solenoid-f-stuck-on",
+    "code": "P2733",
+    "title": "Pressure Control Solenoid “F” Stuck On",
+    "system": "圧力制御ソレノイドFオン固着",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Stuck Onの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2734-pressure-control-solenoid-f-electrical",
+    "code": "P2734",
+    "title": "Pressure Control Solenoid “F” Electrical",
+    "system": "圧力制御ソレノイドF電気系",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Electricalの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2735-pressure-control-solenoid-f-intermittent",
+    "code": "P2735",
+    "title": "Pressure Control Solenoid “F” Intermittent",
+    "system": "圧力制御ソレノイドF断続",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Intermittentの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2736-pressure-control-solenoid-f-control-circuit-open",
+    "code": "P2736",
+    "title": "Pressure Control Solenoid “F” Control Circuit/Open",
+    "system": "圧力制御ソレノイドF制御回路/断線",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Control Circuit/Openの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2737-pressure-control-solenoid-f-control-circuit-range-performance",
+    "code": "P2737",
+    "title": "Pressure Control Solenoid “F” Control Circuit Range/Performance",
+    "system": "圧力制御ソレノイドF制御回路範囲/性能",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Control Circuit Range/Performanceの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2738-pressure-control-solenoid-f-control-circuit-low",
+    "code": "P2738",
+    "title": "Pressure Control Solenoid “F” Control Circuit Low",
+    "system": "圧力制御ソレノイドF制御回路低入力",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Control Circuit Lowの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2739-pressure-control-solenoid-f-control-circuit-high",
+    "code": "P2739",
+    "title": "Pressure Control Solenoid “F” Control Circuit High",
+    "system": "圧力制御ソレノイドF制御回路高入力",
+    "possible_causes": [
+      "Pressure Control Solenoid “F” Control Circuit Highの制御回路または作動異常",
+      "ソレノイド、配線、コネクター、電源/アース異常",
+      "ATF量/油質、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ソレノイド指令/電流",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p273a-transmission-friction-element-g-apply-time-range-performance",
+    "code": "P273A",
+    "title": "Transmission Friction Element “G” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素G適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “G” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p273b-transmission-friction-element-h-apply-time-range-performance",
+    "code": "P273B",
+    "title": "Transmission Friction Element “H” Apply Time Range/Performance",
+    "system": "トランスミッション摩擦要素H適用時間範囲/性能",
+    "possible_causes": [
+      "Transmission Friction Element “H” Apply Time Range/Performanceの適用時間または性能異常",
+      "ATF量/油質、油圧不足、バルブボディ、ソレノイド、摩擦要素異常",
+      "TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、油圧指令/実値、関連DTCを保存する",
+      "車両固有のソレノイド/摩擦要素配置、端子、基準値、油圧測定条件はメーカー整備書で確認する",
+      "電源/アース、制御信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、バルブボディ、油圧系、機械要素をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "適用時間",
+      "ギヤ比/スリップ量",
+      "ATF温度",
+      "油圧指令/実値",
+      "入出力回転数",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "ソレノイド記号や摩擦要素名を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "電気系だけを見て油圧/機械要素を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  }
+]
