@@ -1,0 +1,2648 @@
+[
+  {
+    "id": "modern-2026-p2758-torque-converter-clutch-pressure-control-solenoid-control-circuit-stuck-on",
+    "code": "P2758",
+    "title": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Stuck On",
+    "system": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Stuck On",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoid Control Circuit Stuck On circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2759-torque-converter-clutch-pressure-control-solenoid-control-circuit-electrical",
+    "code": "P2759",
+    "title": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Electrical",
+    "system": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Electrical",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoid Control Circuit Electrical circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2760-torque-converter-clutch-pressure-control-solenoid-control-circuit-intermittent",
+    "code": "P2760",
+    "title": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Intermittent",
+    "system": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Intermittent",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoid Control Circuit Intermittent circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2761-torque-converter-clutch-pressure-control-solenoid-control-circuit-open",
+    "code": "P2761",
+    "title": "Torque Converter Clutch Pressure Control Solenoid Control Circuit/Open",
+    "system": "Torque Converter Clutch Pressure Control Solenoid Control Circuit/Open",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoid Control Circuit/Open circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2762-torque-converter-clutch-pressure-control-solenoid-control-circuit",
+    "code": "P2762",
+    "title": "Torque Converter Clutch Pressure Control Solenoid Control Circuit",
+    "system": "Torque Converter Clutch Pressure Control Solenoid Control Circuit",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoid Control Circuit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2763-torque-converter-clutch-pressure-control-solenoid-control-circuit-high",
+    "code": "P2763",
+    "title": "Torque Converter Clutch Pressure Control Solenoid Control Circuit High",
+    "system": "Torque Converter Clutch Pressure Control Solenoid Control Circuit High",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoid Control Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2764-torque-converter-clutch-pressure-control-solenoid-control-circuit-low",
+    "code": "P2764",
+    "title": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Low",
+    "system": "Torque Converter Clutch Pressure Control Solenoid Control Circuit Low",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoid Control Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2765-input-turbine-speed-sensor-b-circuit",
+    "code": "P2765",
+    "title": "Input/Turbine Speed Sensor “B” Circuit",
+    "system": "Input/Turbine Speed Sensor “B” Circuit",
+    "possible_causes": [
+      "Input/Turbine Speed Sensor “B” Circuit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Input/turbine speed sensor signal",
+      "Input/output speed",
+      "Gear ratio",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2766-input-turbine-speed-sensor-b-circuit-range-performance",
+    "code": "P2766",
+    "title": "Input/Turbine Speed Sensor “B” Circuit Range/Performance",
+    "system": "Input/Turbine Speed Sensor “B” Circuit Range/Performance",
+    "possible_causes": [
+      "Input/Turbine Speed Sensor “B” Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Input/turbine speed sensor signal",
+      "Input/output speed",
+      "Gear ratio",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2767-input-turbine-speed-sensor-b-circuit-no-signal",
+    "code": "P2767",
+    "title": "Input/Turbine Speed Sensor “B” Circuit No Signal",
+    "system": "Input/Turbine Speed Sensor “B” Circuit No Signal",
+    "possible_causes": [
+      "Input/Turbine Speed Sensor “B” Circuit No Signal circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Input/turbine speed sensor signal",
+      "Input/output speed",
+      "Gear ratio",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2768-input-turbine-speed-sensor-b-circuit-intermittent",
+    "code": "P2768",
+    "title": "Input/Turbine Speed Sensor “B” Circuit Intermittent",
+    "system": "Input/Turbine Speed Sensor “B” Circuit Intermittent",
+    "possible_causes": [
+      "Input/Turbine Speed Sensor “B” Circuit Intermittent circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Input/turbine speed sensor signal",
+      "Input/output speed",
+      "Gear ratio",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2769-torque-converter-clutch-circuit-low",
+    "code": "P2769",
+    "title": "Torque Converter Clutch Circuit Low",
+    "system": "Torque Converter Clutch Circuit Low",
+    "possible_causes": [
+      "Torque Converter Clutch Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2770-torque-converter-clutch-circuit-high",
+    "code": "P2770",
+    "title": "Torque Converter Clutch Circuit High",
+    "system": "Torque Converter Clutch Circuit High",
+    "possible_causes": [
+      "Torque Converter Clutch Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2771-four-wheel-drive-4wd-low-switch-circuit",
+    "code": "P2771",
+    "title": "Four Wheel Drive (4WD) Low Switch Circuit",
+    "system": "Four Wheel Drive (4WD) Low Switch Circuit",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Low Switch Circuit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2772-four-wheel-drive-4wd-low-switch-circuit-range-performance",
+    "code": "P2772",
+    "title": "Four Wheel Drive (4WD) Low Switch Circuit Range/Performance",
+    "system": "Four Wheel Drive (4WD) Low Switch Circuit Range/Performance",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Low Switch Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2773-four-wheel-drive-4wd-low-switch-circuit-low",
+    "code": "P2773",
+    "title": "Four Wheel Drive (4WD) Low Switch Circuit Low",
+    "system": "Four Wheel Drive (4WD) Low Switch Circuit Low",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Low Switch Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2774-four-wheel-drive-4wd-low-switch-circuit-high",
+    "code": "P2774",
+    "title": "Four Wheel Drive (4WD) Low Switch Circuit High",
+    "system": "Four Wheel Drive (4WD) Low Switch Circuit High",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Low Switch Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2775-upshift-switch-circuit-range-performance",
+    "code": "P2775",
+    "title": "Upshift Switch Circuit Range/Performance",
+    "system": "Upshift Switch Circuit Range/Performance",
+    "possible_causes": [
+      "Upshift Switch Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2776-upshift-switch-circuit-low",
+    "code": "P2776",
+    "title": "Upshift Switch Circuit Low",
+    "system": "Upshift Switch Circuit Low",
+    "possible_causes": [
+      "Upshift Switch Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2777-upshift-switch-circuit-high",
+    "code": "P2777",
+    "title": "Upshift Switch Circuit High",
+    "system": "Upshift Switch Circuit High",
+    "possible_causes": [
+      "Upshift Switch Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2778-upshift-switch-circuit-intermittent-erratic",
+    "code": "P2778",
+    "title": "Upshift Switch Circuit Intermittent/Erratic",
+    "system": "Upshift Switch Circuit Intermittent/Erratic",
+    "possible_causes": [
+      "Upshift Switch Circuit Intermittent/Erratic circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2779-downshift-switch-circuit-range-performance",
+    "code": "P2779",
+    "title": "Downshift Switch Circuit Range/Performance",
+    "system": "Downshift Switch Circuit Range/Performance",
+    "possible_causes": [
+      "Downshift Switch Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2780-downshift-switch-circuit-low",
+    "code": "P2780",
+    "title": "Downshift Switch Circuit Low",
+    "system": "Downshift Switch Circuit Low",
+    "possible_causes": [
+      "Downshift Switch Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2781-downshift-switch-circuit-high",
+    "code": "P2781",
+    "title": "Downshift Switch Circuit High",
+    "system": "Downshift Switch Circuit High",
+    "possible_causes": [
+      "Downshift Switch Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2782-downshift-switch-circuit-intermittent-erratic",
+    "code": "P2782",
+    "title": "Downshift Switch Circuit Intermittent/Erratic",
+    "system": "Downshift Switch Circuit Intermittent/Erratic",
+    "possible_causes": [
+      "Downshift Switch Circuit Intermittent/Erratic circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2783-torque-converter-temperature-too-high",
+    "code": "P2783",
+    "title": "Torque Converter Temperature Too High",
+    "system": "Torque Converter Temperature Too High",
+    "possible_causes": [
+      "Torque Converter Temperature Too High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ATF, clutch, or actuator temperature",
+      "Adaptive learning state",
+      "Commanded/actual operation",
+      "Pressure command/actual data",
+      "Enable conditions",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2784-input-turbine-speed-sensor-a-b-correlation",
+    "code": "P2784",
+    "title": "Input/Turbine Speed Sensor “A”/“B” Correlation",
+    "system": "Input/Turbine Speed Sensor “A”/“B” Correlation",
+    "possible_causes": [
+      "Input/Turbine Speed Sensor “A”/“B” Correlation circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Input/turbine speed sensor signal",
+      "Input/output speed",
+      "Gear ratio",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2785-clutch-actuator-temperature-too-high",
+    "code": "P2785",
+    "title": "Clutch Actuator Temperature Too High",
+    "system": "Clutch Actuator Temperature Too High",
+    "possible_causes": [
+      "Clutch Actuator Temperature Too High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ATF, clutch, or actuator temperature",
+      "Adaptive learning state",
+      "Commanded/actual operation",
+      "Pressure command/actual data",
+      "Enable conditions",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2786-gear-shift-actuator-temperature-too-high",
+    "code": "P2786",
+    "title": "Gear Shift Actuator Temperature Too High",
+    "system": "Gear Shift Actuator Temperature Too High",
+    "possible_causes": [
+      "Gear Shift Actuator Temperature Too High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ATF, clutch, or actuator temperature",
+      "Adaptive learning state",
+      "Commanded/actual operation",
+      "Pressure command/actual data",
+      "Enable conditions",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2787-clutch-temperature-too-high",
+    "code": "P2787",
+    "title": "Clutch Temperature Too High",
+    "system": "Clutch Temperature Too High",
+    "possible_causes": [
+      "Clutch Temperature Too High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ATF, clutch, or actuator temperature",
+      "Adaptive learning state",
+      "Commanded/actual operation",
+      "Pressure command/actual data",
+      "Enable conditions",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2788-auto-shift-manual-adaptive-learning-at-limit",
+    "code": "P2788",
+    "title": "Auto Shift Manual Adaptive Learning at Limit",
+    "system": "Auto Shift Manual Adaptive Learning at Limit",
+    "possible_causes": [
+      "Auto Shift Manual Adaptive Learning at Limit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ATF, clutch, or actuator temperature",
+      "Adaptive learning state",
+      "Commanded/actual operation",
+      "Pressure command/actual data",
+      "Enable conditions",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2789-clutch-a-adaptive-learning-at-limit",
+    "code": "P2789",
+    "title": "Clutch “A” Adaptive Learning at Limit",
+    "system": "Clutch “A” Adaptive Learning at Limit",
+    "possible_causes": [
+      "Clutch “A” Adaptive Learning at Limit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ATF, clutch, or actuator temperature",
+      "Adaptive learning state",
+      "Commanded/actual operation",
+      "Pressure command/actual data",
+      "Enable conditions",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p278a-kick-down-switch-circuit",
+    "code": "P278A",
+    "title": "Kick Down Switch Circuit",
+    "system": "Kick Down Switch Circuit",
+    "possible_causes": [
+      "Kick Down Switch Circuit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p278b-kick-down-switch-circuit-range-performance",
+    "code": "P278B",
+    "title": "Kick Down Switch Circuit Range/Performance",
+    "system": "Kick Down Switch Circuit Range/Performance",
+    "possible_causes": [
+      "Kick Down Switch Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p278c-kick-down-switch-circuit-low",
+    "code": "P278C",
+    "title": "Kick Down Switch Circuit Low",
+    "system": "Kick Down Switch Circuit Low",
+    "possible_causes": [
+      "Kick Down Switch Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p278d-kick-down-switch-circuit-high",
+    "code": "P278D",
+    "title": "Kick Down Switch Circuit High",
+    "system": "Kick Down Switch Circuit High",
+    "possible_causes": [
+      "Kick Down Switch Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p278e-kick-down-switch-circuit-intermittent-erratic",
+    "code": "P278E",
+    "title": "Kick Down Switch Circuit Intermittent/Erratic",
+    "system": "Kick Down Switch Circuit Intermittent/Erratic",
+    "possible_causes": [
+      "Kick Down Switch Circuit Intermittent/Erratic circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p278f-clutch-b-adaptive-learning-at-limit",
+    "code": "P278F",
+    "title": "Clutch “B” Adaptive Learning at Limit",
+    "system": "Clutch “B” Adaptive Learning at Limit",
+    "possible_causes": [
+      "Clutch “B” Adaptive Learning at Limit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ATF, clutch, or actuator temperature",
+      "Adaptive learning state",
+      "Commanded/actual operation",
+      "Pressure command/actual data",
+      "Enable conditions",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2790-gate-select-direction-circuit",
+    "code": "P2790",
+    "title": "Gate Select Direction Circuit",
+    "system": "Gate Select Direction Circuit",
+    "possible_causes": [
+      "Gate Select Direction Circuit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2791-gate-select-direction-circuit-low",
+    "code": "P2791",
+    "title": "Gate Select Direction Circuit Low",
+    "system": "Gate Select Direction Circuit Low",
+    "possible_causes": [
+      "Gate Select Direction Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2792-gate-select-direction-circuit-high",
+    "code": "P2792",
+    "title": "Gate Select Direction Circuit High",
+    "system": "Gate Select Direction Circuit High",
+    "possible_causes": [
+      "Gate Select Direction Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2793-gear-shift-direction-circuit",
+    "code": "P2793",
+    "title": "Gear Shift Direction Circuit",
+    "system": "Gear Shift Direction Circuit",
+    "possible_causes": [
+      "Gear Shift Direction Circuit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2794-gear-shift-direction-circuit-low",
+    "code": "P2794",
+    "title": "Gear Shift Direction Circuit Low",
+    "system": "Gear Shift Direction Circuit Low",
+    "possible_causes": [
+      "Gear Shift Direction Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2795-gear-shift-direction-circuit-high",
+    "code": "P2795",
+    "title": "Gear Shift Direction Circuit High",
+    "system": "Gear Shift Direction Circuit High",
+    "possible_causes": [
+      "Gear Shift Direction Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control signal/command",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Pressure command/actual data",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2796-auxiliary-transmission-fluid-pump-control-circuit-open",
+    "code": "P2796",
+    "title": "Auxiliary Transmission Fluid Pump Control Circuit/Open",
+    "system": "Auxiliary Transmission Fluid Pump Control Circuit/Open",
+    "possible_causes": [
+      "Auxiliary Transmission Fluid Pump Control Circuit/Open circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Auxiliary fluid pump command/current",
+      "Power/ground",
+      "ATF temperature",
+      "Pressure/flow",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2797-auxiliary-transmission-fluid-pump-performance",
+    "code": "P2797",
+    "title": "Auxiliary Transmission Fluid Pump Performance",
+    "system": "Auxiliary Transmission Fluid Pump Performance",
+    "possible_causes": [
+      "Auxiliary Transmission Fluid Pump Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Auxiliary fluid pump command/current",
+      "Power/ground",
+      "ATF temperature",
+      "Pressure/flow",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2798-auxiliary-transmission-fluid-pump-control-circuit-low",
+    "code": "P2798",
+    "title": "Auxiliary Transmission Fluid Pump Control Circuit Low",
+    "system": "Auxiliary Transmission Fluid Pump Control Circuit Low",
+    "possible_causes": [
+      "Auxiliary Transmission Fluid Pump Control Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Auxiliary fluid pump command/current",
+      "Power/ground",
+      "ATF temperature",
+      "Pressure/flow",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2799-auxiliary-transmission-fluid-pump-control-circuit-high",
+    "code": "P2799",
+    "title": "Auxiliary Transmission Fluid Pump Control Circuit High",
+    "system": "Auxiliary Transmission Fluid Pump Control Circuit High",
+    "possible_causes": [
+      "Auxiliary Transmission Fluid Pump Control Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Auxiliary fluid pump command/current",
+      "Power/ground",
+      "ATF temperature",
+      "Pressure/flow",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p279a-transfer-case-gear-high-incorrect-ratio",
+    "code": "P279A",
+    "title": "Transfer Case Gear High Incorrect Ratio",
+    "system": "Transfer Case Gear High Incorrect Ratio",
+    "possible_causes": [
+      "Transfer Case Gear High Incorrect Ratio circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p279b-transfer-case-gear-low-incorrect-ratio",
+    "code": "P279B",
+    "title": "Transfer Case Gear Low Incorrect Ratio",
+    "system": "Transfer Case Gear Low Incorrect Ratio",
+    "possible_causes": [
+      "Transfer Case Gear Low Incorrect Ratio circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p279c-transfer-case-gear-neutral-incorrect-ratio",
+    "code": "P279C",
+    "title": "Transfer Case Gear Neutral Incorrect Ratio",
+    "system": "Transfer Case Gear Neutral Incorrect Ratio",
+    "possible_causes": [
+      "Transfer Case Gear Neutral Incorrect Ratio circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p279d-four-wheel-drive-4wd-range-signal-circuit",
+    "code": "P279D",
+    "title": "Four Wheel Drive (4WD) Range Signal Circuit",
+    "system": "Four Wheel Drive (4WD) Range Signal Circuit",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Range Signal Circuit circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p279e-four-wheel-drive-4wd-range-signal-circuit-range-performance",
+    "code": "P279E",
+    "title": "Four Wheel Drive (4WD) Range Signal Circuit Range/Performance",
+    "system": "Four Wheel Drive (4WD) Range Signal Circuit Range/Performance",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Range Signal Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p279f-four-wheel-drive-4wd-range-signal-circuit-low",
+    "code": "P279F",
+    "title": "Four Wheel Drive (4WD) Range Signal Circuit Low",
+    "system": "Four Wheel Drive (4WD) Range Signal Circuit Low",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Range Signal Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, pump, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, speed data, pressure command/actual data, shift or range state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, and sensor/solenoid/switch locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, sensor/solenoid/pump/actuator, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Range or switch signal",
+      "4WD state",
+      "Power/ground",
+      "Shift/gate state",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating component letters, range names, or switch names as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  }
+]
