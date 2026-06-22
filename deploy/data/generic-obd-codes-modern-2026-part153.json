@@ -1,0 +1,835 @@
+[
+  {
+    "id": "modern-2026-p2740-transmission-fluid-temperature-sensor-b-circuit",
+    "code": "P2740",
+    "title": "Transmission Fluid Temperature Sensor “B” Circuit",
+    "system": "トランスミッションフルード温度センサーB回路",
+    "possible_causes": [
+      "Transmission Fluid Temperature Sensor “B” Circuitの回路または性能異常",
+      "温度センサー、配線、コネクター、基準電圧/アース異常",
+      "ATF量/油質、冷却系、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ATF温度センサーB",
+      "基準電圧",
+      "電源/アース",
+      "ATF温度",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2741-transmission-fluid-temperature-sensor-b-circuit-range-performance",
+    "code": "P2741",
+    "title": "Transmission Fluid Temperature Sensor “B” Circuit Range/Performance",
+    "system": "トランスミッションフルード温度センサーB回路範囲/性能",
+    "possible_causes": [
+      "Transmission Fluid Temperature Sensor “B” Circuit Range/Performanceの回路または性能異常",
+      "温度センサー、配線、コネクター、基準電圧/アース異常",
+      "ATF量/油質、冷却系、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ATF温度センサーB",
+      "基準電圧",
+      "電源/アース",
+      "ATF温度",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2742-transmission-fluid-temperature-sensor-b-circuit-low",
+    "code": "P2742",
+    "title": "Transmission Fluid Temperature Sensor “B” Circuit Low",
+    "system": "トランスミッションフルード温度センサーB回路低入力",
+    "possible_causes": [
+      "Transmission Fluid Temperature Sensor “B” Circuit Lowの回路または性能異常",
+      "温度センサー、配線、コネクター、基準電圧/アース異常",
+      "ATF量/油質、冷却系、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ATF温度センサーB",
+      "基準電圧",
+      "電源/アース",
+      "ATF温度",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2743-transmission-fluid-temperature-sensor-b-circuit-high",
+    "code": "P2743",
+    "title": "Transmission Fluid Temperature Sensor “B” Circuit High",
+    "system": "トランスミッションフルード温度センサーB回路高入力",
+    "possible_causes": [
+      "Transmission Fluid Temperature Sensor “B” Circuit Highの回路または性能異常",
+      "温度センサー、配線、コネクター、基準電圧/アース異常",
+      "ATF量/油質、冷却系、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ATF温度センサーB",
+      "基準電圧",
+      "電源/アース",
+      "ATF温度",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2744-transmission-fluid-temperature-sensor-b-circuit-intermittent",
+    "code": "P2744",
+    "title": "Transmission Fluid Temperature Sensor “B” Circuit Intermittent",
+    "system": "トランスミッションフルード温度センサーB回路断続",
+    "possible_causes": [
+      "Transmission Fluid Temperature Sensor “B” Circuit Intermittentの回路または性能異常",
+      "温度センサー、配線、コネクター、基準電圧/アース異常",
+      "ATF量/油質、冷却系、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "ATF温度センサーB",
+      "基準電圧",
+      "電源/アース",
+      "ATF温度",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2745-intermediate-shaft-speed-sensor-b-circuit",
+    "code": "P2745",
+    "title": "Intermediate Shaft Speed Sensor “B” Circuit",
+    "system": "中間軸速度センサーB回路",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “B” Circuitの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2746-intermediate-shaft-speed-sensor-b-circuit-range-performance",
+    "code": "P2746",
+    "title": "Intermediate Shaft Speed Sensor “B” Circuit Range/Performance",
+    "system": "中間軸速度センサーB回路範囲/性能",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “B” Circuit Range/Performanceの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2747-intermediate-shaft-speed-sensor-b-circuit-no-signal",
+    "code": "P2747",
+    "title": "Intermediate Shaft Speed Sensor “B” Circuit No Signal",
+    "system": "中間軸速度センサーB回路信号なし",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “B” Circuit No Signalの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2748-intermediate-shaft-speed-sensor-b-circuit-intermittent",
+    "code": "P2748",
+    "title": "Intermediate Shaft Speed Sensor “B” Circuit Intermittent",
+    "system": "中間軸速度センサーB回路断続",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “B” Circuit Intermittentの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2749-intermediate-shaft-speed-sensor-c-circuit",
+    "code": "P2749",
+    "title": "Intermediate Shaft Speed Sensor “C” Circuit",
+    "system": "中間軸速度センサーC回路",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “C” Circuitの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2750-intermediate-shaft-speed-sensor-c-circuit-range-performance",
+    "code": "P2750",
+    "title": "Intermediate Shaft Speed Sensor “C” Circuit Range/Performance",
+    "system": "中間軸速度センサーC回路範囲/性能",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “C” Circuit Range/Performanceの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2751-intermediate-shaft-speed-sensor-c-circuit-no-signal",
+    "code": "P2751",
+    "title": "Intermediate Shaft Speed Sensor “C” Circuit No Signal",
+    "system": "中間軸速度センサーC回路信号なし",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “C” Circuit No Signalの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2752-intermediate-shaft-speed-sensor-c-circuit-intermittent",
+    "code": "P2752",
+    "title": "Intermediate Shaft Speed Sensor “C” Circuit Intermittent",
+    "system": "中間軸速度センサーC回路断続",
+    "possible_causes": [
+      "Intermediate Shaft Speed Sensor “C” Circuit Intermittentの信号または回路異常",
+      "速度センサー、センサーリング、配線、コネクター異常",
+      "ATF状態、TCM/PCM、入出力回転センサー、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "中間軸速度センサー信号",
+      "入出力回転数",
+      "ギヤ比",
+      "電源/アース",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2753-transmission-fluid-cooler-control-circuit-open",
+    "code": "P2753",
+    "title": "Transmission Fluid Cooler Control Circuit/Open",
+    "system": "トランスミッションフルードクーラー制御回路/断線",
+    "possible_causes": [
+      "Transmission Fluid Cooler Control Circuit/Openの制御回路または作動異常",
+      "ソレノイド/バルブ、配線、コネクター、電源/アース異常",
+      "ATF量/油質、冷却系、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号/指令",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2754-transmission-fluid-cooler-control-circuit-low",
+    "code": "P2754",
+    "title": "Transmission Fluid Cooler Control Circuit Low",
+    "system": "トランスミッションフルードクーラー制御回路低入力",
+    "possible_causes": [
+      "Transmission Fluid Cooler Control Circuit Lowの制御回路または作動異常",
+      "ソレノイド/バルブ、配線、コネクター、電源/アース異常",
+      "ATF量/油質、冷却系、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号/指令",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2755-transmission-fluid-cooler-control-circuit-high",
+    "code": "P2755",
+    "title": "Transmission Fluid Cooler Control Circuit High",
+    "system": "トランスミッションフルードクーラー制御回路高入力",
+    "possible_causes": [
+      "Transmission Fluid Cooler Control Circuit Highの制御回路または作動異常",
+      "ソレノイド/バルブ、配線、コネクター、電源/アース異常",
+      "ATF量/油質、冷却系、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号/指令",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2756-torque-converter-clutch-pressure-control-solenoid",
+    "code": "P2756",
+    "title": "Torque Converter Clutch Pressure Control Solenoid",
+    "system": "トルクコンバータークラッチ圧力制御ソレノイド",
+    "possible_causes": [
+      "Torque Converter Clutch Pressure Control Solenoidの制御回路または作動異常",
+      "ソレノイド/バルブ、配線、コネクター、電源/アース異常",
+      "ATF量/油質、冷却系、バルブボディ、TCM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、ATF温度、回転数、油圧指令/実値、関連DTCを保存する",
+      "車両固有の端子、基準値、測定条件、センサー/ソレノイド配置はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、ATF量/油質を点検する",
+      "回路、センサー/ソレノイド、油圧系、冷却系をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号/指令",
+      "電源/アース",
+      "導通/抵抗",
+      "ATF温度",
+      "油圧指令/実値",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "センサー記号やソレノイド配置を車両共通と断定する",
+      "ATF温度や油圧測定条件を確認しない",
+      "関連DTCや機械/油圧要因を切り分けない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "トランスミッション高温部、高圧油圧、回転部に強く注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  }
+]
