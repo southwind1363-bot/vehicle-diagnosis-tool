@@ -1,0 +1,1424 @@
+[
+  {
+    "id": "modern-2026-p27a0-four-wheel-drive-4wd-range-signal-circuit-high",
+    "code": "P27A0",
+    "title": "Four Wheel Drive (4WD) Range Signal Circuit High",
+    "system": "Four Wheel Drive (4WD) Range Signal Circuit High",
+    "possible_causes": [
+      "Four Wheel Drive (4WD) Range Signal Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "4WD range signal",
+      "Transfer case range state",
+      "Power/ground",
+      "Switch/sensor signal",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating 4WD range naming or transfer case state as vehicle-universal.",
+      "Skipping actuator, switch, and mechanical range checks.",
+      "Checking only electrical circuits without separating transfer case causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2800-transmission-range-sensor-b-circuit-prndl-input",
+    "code": "P2800",
+    "title": "Transmission Range Sensor “B” Circuit (PRNDL Input)",
+    "system": "Transmission Range Sensor “B” Circuit (PRNDL Input)",
+    "possible_causes": [
+      "Transmission Range Sensor “B” Circuit (PRNDL Input) circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2801-transmission-range-sensor-b-circuit-range-performance",
+    "code": "P2801",
+    "title": "Transmission Range Sensor “B” Circuit Range/Performance",
+    "system": "Transmission Range Sensor “B” Circuit Range/Performance",
+    "possible_causes": [
+      "Transmission Range Sensor “B” Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2802-transmission-range-sensor-b-circuit-low",
+    "code": "P2802",
+    "title": "Transmission Range Sensor “B” Circuit Low",
+    "system": "Transmission Range Sensor “B” Circuit Low",
+    "possible_causes": [
+      "Transmission Range Sensor “B” Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2803-transmission-range-sensor-b-circuit-high",
+    "code": "P2803",
+    "title": "Transmission Range Sensor “B” Circuit High",
+    "system": "Transmission Range Sensor “B” Circuit High",
+    "possible_causes": [
+      "Transmission Range Sensor “B” Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2804-transmission-range-sensor-b-circuit-intermittent",
+    "code": "P2804",
+    "title": "Transmission Range Sensor “B” Circuit Intermittent",
+    "system": "Transmission Range Sensor “B” Circuit Intermittent",
+    "possible_causes": [
+      "Transmission Range Sensor “B” Circuit Intermittent circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2805-transmission-range-sensor-a-b-correlation",
+    "code": "P2805",
+    "title": "Transmission Range Sensor “A”/“B” Correlation",
+    "system": "Transmission Range Sensor “A”/“B” Correlation",
+    "possible_causes": [
+      "Transmission Range Sensor “A”/“B” Correlation circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2806-transmission-range-sensor-alignment",
+    "code": "P2806",
+    "title": "Transmission Range Sensor Alignment",
+    "system": "Transmission Range Sensor Alignment",
+    "possible_causes": [
+      "Transmission Range Sensor Alignment circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2807-pressure-control-solenoid-g",
+    "code": "P2807",
+    "title": "Pressure Control Solenoid “G”",
+    "system": "Pressure Control Solenoid “G”",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2808-pressure-control-solenoid-g-performance-stuck-off",
+    "code": "P2808",
+    "title": "Pressure Control Solenoid “G” Performance/Stuck Off",
+    "system": "Pressure Control Solenoid “G” Performance/Stuck Off",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Performance/Stuck Off circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2809-pressure-control-solenoid-g-stuck-on",
+    "code": "P2809",
+    "title": "Pressure Control Solenoid “G” Stuck On",
+    "system": "Pressure Control Solenoid “G” Stuck On",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Stuck On circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p280a-transmission-range-sensor-a-circuit-not-learned",
+    "code": "P280A",
+    "title": "Transmission Range Sensor “A” Circuit Not Learned",
+    "system": "Transmission Range Sensor “A” Circuit Not Learned",
+    "possible_causes": [
+      "Transmission Range Sensor “A” Circuit Not Learned circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p280b-transmission-range-sensor-b-circuit-not-learned",
+    "code": "P280B",
+    "title": "Transmission Range Sensor “B” Circuit Not Learned",
+    "system": "Transmission Range Sensor “B” Circuit Not Learned",
+    "possible_causes": [
+      "Transmission Range Sensor “B” Circuit Not Learned circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission range sensor signal",
+      "PRNDL/range state",
+      "Range sensor alignment",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating range sensor alignment or PRNDL values as vehicle-universal.",
+      "Skipping manufacturer service manual alignment and learn-state checks.",
+      "Checking only electrical circuits without separating adjustment or mechanical causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2810-pressure-control-solenoid-g-electrical",
+    "code": "P2810",
+    "title": "Pressure Control Solenoid “G” Electrical",
+    "system": "Pressure Control Solenoid “G” Electrical",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Electrical circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2811-pressure-control-solenoid-g-intermittent",
+    "code": "P2811",
+    "title": "Pressure Control Solenoid “G” Intermittent",
+    "system": "Pressure Control Solenoid “G” Intermittent",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Intermittent circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2812-pressure-control-solenoid-g-control-circuit-open",
+    "code": "P2812",
+    "title": "Pressure Control Solenoid “G” Control Circuit/Open",
+    "system": "Pressure Control Solenoid “G” Control Circuit/Open",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Control Circuit/Open circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2813-pressure-control-solenoid-g-control-circuit-range-performance",
+    "code": "P2813",
+    "title": "Pressure Control Solenoid “G” Control Circuit Range/Performance",
+    "system": "Pressure Control Solenoid “G” Control Circuit Range/Performance",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Control Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2814-pressure-control-solenoid-g-control-circuit-low",
+    "code": "P2814",
+    "title": "Pressure Control Solenoid “G” Control Circuit Low",
+    "system": "Pressure Control Solenoid “G” Control Circuit Low",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Control Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2815-pressure-control-solenoid-g-control-circuit-high",
+    "code": "P2815",
+    "title": "Pressure Control Solenoid “G” Control Circuit High",
+    "system": "Pressure Control Solenoid “G” Control Circuit High",
+    "possible_causes": [
+      "Pressure Control Solenoid “G” Control Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2816-pressure-control-solenoid-h",
+    "code": "P2816",
+    "title": "Pressure Control Solenoid “H”",
+    "system": "Pressure Control Solenoid “H”",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2817-pressure-control-solenoid-h-performance-stuck-off",
+    "code": "P2817",
+    "title": "Pressure Control Solenoid “H” Performance/Stuck Off",
+    "system": "Pressure Control Solenoid “H” Performance/Stuck Off",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Performance/Stuck Off circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2818-pressure-control-solenoid-h-stuck-on",
+    "code": "P2818",
+    "title": "Pressure Control Solenoid “H” Stuck On",
+    "system": "Pressure Control Solenoid “H” Stuck On",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Stuck On circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2819-pressure-control-solenoid-h-electrical",
+    "code": "P2819",
+    "title": "Pressure Control Solenoid “H” Electrical",
+    "system": "Pressure Control Solenoid “H” Electrical",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Electrical circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p281a-pressure-control-solenoid-h-intermittent",
+    "code": "P281A",
+    "title": "Pressure Control Solenoid “H” Intermittent",
+    "system": "Pressure Control Solenoid “H” Intermittent",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Intermittent circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p281b-pressure-control-solenoid-h-control-circuit-open",
+    "code": "P281B",
+    "title": "Pressure Control Solenoid “H” Control Circuit/Open",
+    "system": "Pressure Control Solenoid “H” Control Circuit/Open",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Control Circuit/Open circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p281c-pressure-control-solenoid-h-control-circuit-range-performance",
+    "code": "P281C",
+    "title": "Pressure Control Solenoid “H” Control Circuit Range/Performance",
+    "system": "Pressure Control Solenoid “H” Control Circuit Range/Performance",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Control Circuit Range/Performance circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p281d-pressure-control-solenoid-h-control-circuit-low",
+    "code": "P281D",
+    "title": "Pressure Control Solenoid “H” Control Circuit Low",
+    "system": "Pressure Control Solenoid “H” Control Circuit Low",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Control Circuit Low circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p281e-pressure-control-solenoid-h-control-circuit-high",
+    "code": "P281E",
+    "title": "Pressure Control Solenoid “H” Control Circuit High",
+    "system": "Pressure Control Solenoid “H” Control Circuit High",
+    "possible_causes": [
+      "Pressure Control Solenoid “H” Control Circuit High circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p281f-pressure-control-solenoid-j",
+    "code": "P281F",
+    "title": "Pressure Control Solenoid “J”",
+    "system": "Pressure Control Solenoid “J”",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” circuit or operation fault.",
+      "Wiring, connector, power/ground, related sensor, solenoid, actuator, or switch fault.",
+      "ATF level/condition, hydraulic system, mechanical component, TCM/PCM, or related DTC influence."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, range state, pressure command/actual data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, range sensor alignment, and solenoid locations in the manufacturer service manual.",
+      "Inspect power/ground, signal circuits, wiring, connectors, ATF level/condition, and commanded operation.",
+      "Separate circuit, range sensor, pressure solenoid, hydraulic, and mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Pressure solenoid command/current",
+      "Pressure command/actual data",
+      "Power/ground",
+      "Continuity/resistance",
+      "ATF temperature",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letters or pressure circuits as vehicle-universal.",
+      "Skipping ATF temperature, pressure measurement, or enable-condition checks.",
+      "Checking only electrical circuits without separating hydraulic causes."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, and 4WD driveline components; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  }
+]
+
