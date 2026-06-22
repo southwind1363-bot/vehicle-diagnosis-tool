@@ -1,0 +1,1695 @@
+[
+  {
+    "id": "modern-2026-p2680-coolant-degassing-valve-control-circuit-high",
+    "code": "P2680",
+    "title": "Coolant Degassing Valve Control Circuit High",
+    "system": "冷却水脱気バルブ制御回路高入力",
+    "possible_causes": [
+      "Coolant Degassing Valve Control Circuit Highの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "冷却水高温、加圧状態、ファン作動に強く注意し、冷却後に残圧処理して点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2681-engine-coolant-bypass-valve-control-circuit-open",
+    "code": "P2681",
+    "title": "Engine Coolant Bypass Valve Control Circuit/Open",
+    "system": "エンジン冷却水バイパスバルブ制御回路/断線",
+    "possible_causes": [
+      "Engine Coolant Bypass Valve Control Circuit/Openの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "冷却水高温、加圧状態、ファン作動に強く注意し、冷却後に残圧処理して点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2682-engine-coolant-bypass-valve-control-circuit-low",
+    "code": "P2682",
+    "title": "Engine Coolant Bypass Valve Control Circuit Low",
+    "system": "エンジン冷却水バイパスバルブ制御回路低入力",
+    "possible_causes": [
+      "Engine Coolant Bypass Valve Control Circuit Lowの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "冷却水高温、加圧状態、ファン作動に強く注意し、冷却後に残圧処理して点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2683-engine-coolant-bypass-valve-control-circuit-high",
+    "code": "P2683",
+    "title": "Engine Coolant Bypass Valve Control Circuit High",
+    "system": "エンジン冷却水バイパスバルブ制御回路高入力",
+    "possible_causes": [
+      "Engine Coolant Bypass Valve Control Circuit Highの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "冷却水高温、加圧状態、ファン作動に強く注意し、冷却後に残圧処理して点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2684-actuator-supply-voltage-c-circuit-open",
+    "code": "P2684",
+    "title": "Actuator Supply Voltage “C” Circuit/Open",
+    "system": "アクチュエーター供給電圧C回路/断線",
+    "possible_causes": [
+      "Actuator Supply Voltage “C” Circuit/Openの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "アクチュエーター電源系は複数系統に影響するため、短絡拡大を避けメーカー指定手順で点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2685-actuator-supply-voltage-c-circuit-low",
+    "code": "P2685",
+    "title": "Actuator Supply Voltage “C” Circuit Low",
+    "system": "アクチュエーター供給電圧C回路低入力",
+    "possible_causes": [
+      "Actuator Supply Voltage “C” Circuit Lowの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "アクチュエーター電源系は複数系統に影響するため、短絡拡大を避けメーカー指定手順で点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2686-actuator-supply-voltage-c-circuit-high",
+    "code": "P2686",
+    "title": "Actuator Supply Voltage “C” Circuit High",
+    "system": "アクチュエーター供給電圧C回路高入力",
+    "possible_causes": [
+      "Actuator Supply Voltage “C” Circuit Highの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "アクチュエーター電源系は複数系統に影響するため、短絡拡大を避けメーカー指定手順で点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2687-fuel-supply-heater-control-circuit-open",
+    "code": "P2687",
+    "title": "Fuel Supply Heater Control Circuit/Open",
+    "system": "燃料供給ヒーター制御回路/断線",
+    "possible_causes": [
+      "Fuel Supply Heater Control Circuit/Openの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料漏れ、火気、燃料圧、ヒーター高温部に強く注意し、換気と残圧処理を行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2688-fuel-supply-heater-control-circuit-low",
+    "code": "P2688",
+    "title": "Fuel Supply Heater Control Circuit Low",
+    "system": "燃料供給ヒーター制御回路低入力",
+    "possible_causes": [
+      "Fuel Supply Heater Control Circuit Lowの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料漏れ、火気、燃料圧、ヒーター高温部に強く注意し、換気と残圧処理を行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2689-fuel-supply-heater-control-circuit-high",
+    "code": "P2689",
+    "title": "Fuel Supply Heater Control Circuit High",
+    "system": "燃料供給ヒーター制御回路高入力",
+    "possible_causes": [
+      "Fuel Supply Heater Control Circuit Highの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料漏れ、火気、燃料圧、ヒーター高温部に強く注意し、換気と残圧処理を行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p268a-fuel-injector-calibration-not-learned-programmed",
+    "code": "P268A",
+    "title": "Fuel Injector Calibration Not Learned/Programmed",
+    "system": "燃料インジェクター校正未学習/未プログラム",
+    "possible_causes": [
+      "Fuel Injector Calibration Not Learned/Programmedの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、校正/学習はメーカー指定条件を満たす場合のみ行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p268b-high-pressure-fuel-pump-calibration-not-learned-programmed",
+    "code": "P268B",
+    "title": "High Pressure Fuel Pump Calibration Not Learned/Programmed",
+    "system": "高圧燃料ポンプ校正未学習/未プログラム",
+    "possible_causes": [
+      "High Pressure Fuel Pump Calibration Not Learned/Programmedの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、校正/学習はメーカー指定条件を満たす場合のみ行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p268c-cylinder-1-injector-data-incompatible",
+    "code": "P268C",
+    "title": "Cylinder 1 Injector Data Incompatible",
+    "system": "シリンダー1インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 1 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p268d-cylinder-2-injector-data-incompatible",
+    "code": "P268D",
+    "title": "Cylinder 2 Injector Data Incompatible",
+    "system": "シリンダー2インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 2 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p268e-cylinder-3-injector-data-incompatible",
+    "code": "P268E",
+    "title": "Cylinder 3 Injector Data Incompatible",
+    "system": "シリンダー3インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 3 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p268f-cylinder-4-injector-data-incompatible",
+    "code": "P268F",
+    "title": "Cylinder 4 Injector Data Incompatible",
+    "system": "シリンダー4インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 4 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2690-cylinder-5-injector-data-incompatible",
+    "code": "P2690",
+    "title": "Cylinder 5 Injector Data Incompatible",
+    "system": "シリンダー5インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 5 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2691-cylinder-6-injector-data-incompatible",
+    "code": "P2691",
+    "title": "Cylinder 6 Injector Data Incompatible",
+    "system": "シリンダー6インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 6 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2692-cylinder-7-injector-data-incompatible",
+    "code": "P2692",
+    "title": "Cylinder 7 Injector Data Incompatible",
+    "system": "シリンダー7インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 7 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2693-cylinder-8-injector-data-incompatible",
+    "code": "P2693",
+    "title": "Cylinder 8 Injector Data Incompatible",
+    "system": "シリンダー8インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 8 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2694-cylinder-9-injector-data-incompatible",
+    "code": "P2694",
+    "title": "Cylinder 9 Injector Data Incompatible",
+    "system": "シリンダー9インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 9 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2695-cylinder-10-injector-data-incompatible",
+    "code": "P2695",
+    "title": "Cylinder 10 Injector Data Incompatible",
+    "system": "シリンダー10インジェクターデータ不適合",
+    "possible_causes": [
+      "Cylinder 10 Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2696-injector-data-incompatible",
+    "code": "P2696",
+    "title": "Injector Data Incompatible",
+    "system": "インジェクターデータ不適合",
+    "possible_causes": [
+      "Injector Data Incompatibleの校正/登録データ不整合",
+      "部品交換後の登録未実施、車両適合不一致、学習条件未成立",
+      "燃料系、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/登録状態",
+      "インジェクター識別データ",
+      "燃料圧",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習/登録を行う",
+      "インジェクター番号や気筒を取り違える",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、インジェクターデータ登録は適合と復旧手順を確認する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2697-exhaust-aftertreatment-fuel-injector-a-circuit-open",
+    "code": "P2697",
+    "title": "Exhaust Aftertreatment Fuel Injector “A” Circuit/Open",
+    "system": "排気後処理燃料インジェクターA回路/断線",
+    "possible_causes": [
+      "Exhaust Aftertreatment Fuel Injector “A” Circuit/Openの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、燃料漏れ、火気、後処理再生条件に強く注意する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2698-exhaust-aftertreatment-fuel-injector-a-performance",
+    "code": "P2698",
+    "title": "Exhaust Aftertreatment Fuel Injector “A” Performance",
+    "system": "排気後処理燃料インジェクターA性能",
+    "possible_causes": [
+      "Exhaust Aftertreatment Fuel Injector “A” Performanceの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、燃料漏れ、火気、後処理再生条件に強く注意する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2699-exhaust-aftertreatment-fuel-injector-a-circuit-low",
+    "code": "P2699",
+    "title": "Exhaust Aftertreatment Fuel Injector “A” Circuit Low",
+    "system": "排気後処理燃料インジェクターA回路低入力",
+    "possible_causes": [
+      "Exhaust Aftertreatment Fuel Injector “A” Circuit Lowの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、燃料漏れ、火気、後処理再生条件に強く注意する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p269a-exhaust-aftertreatment-fuel-injector-a-circuit-high",
+    "code": "P269A",
+    "title": "Exhaust Aftertreatment Fuel Injector “A” Circuit High",
+    "system": "排気後処理燃料インジェクターA回路高入力",
+    "possible_causes": [
+      "Exhaust Aftertreatment Fuel Injector “A” Circuit Highの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、燃料漏れ、火気、後処理再生条件に強く注意する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p269b-exhaust-aftertreatment-glow-plug-control-circuit-open",
+    "code": "P269B",
+    "title": "Exhaust Aftertreatment Glow Plug Control Circuit/Open",
+    "system": "排気後処理グロープラグ制御回路/断線",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Control Circuit/Openの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p269c-exhaust-aftertreatment-glow-plug-control-performance",
+    "code": "P269C",
+    "title": "Exhaust Aftertreatment Glow Plug Control Performance",
+    "system": "排気後処理グロープラグ制御性能",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Control Performanceの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p269d-exhaust-aftertreatment-glow-plug-control-circuit-low",
+    "code": "P269D",
+    "title": "Exhaust Aftertreatment Glow Plug Control Circuit Low",
+    "system": "排気後処理グロープラグ制御回路低入力",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Control Circuit Lowの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p269e-exhaust-aftertreatment-glow-plug-control-circuit-high",
+    "code": "P269E",
+    "title": "Exhaust Aftertreatment Glow Plug Control Circuit High",
+    "system": "排気後処理グロープラグ制御回路高入力",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Control Circuit Highの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p269f-exhaust-aftertreatment-glow-plug-circuit-open",
+    "code": "P269F",
+    "title": "Exhaust Aftertreatment Glow Plug Circuit/Open",
+    "system": "排気後処理グロープラグ回路/断線",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Circuit/Openの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p26a0-exhaust-aftertreatment-glow-plug-performance",
+    "code": "P26A0",
+    "title": "Exhaust Aftertreatment Glow Plug Performance",
+    "system": "排気後処理グロープラグ性能",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Performanceの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p26a1-exhaust-aftertreatment-glow-plug-circuit-low",
+    "code": "P26A1",
+    "title": "Exhaust Aftertreatment Glow Plug Circuit Low",
+    "system": "排気後処理グロープラグ回路低入力",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Circuit Lowの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p26a2-exhaust-aftertreatment-glow-plug-circuit-high",
+    "code": "P26A2",
+    "title": "Exhaust Aftertreatment Glow Plug Circuit High",
+    "system": "排気後処理グロープラグ回路高入力",
+    "possible_causes": [
+      "Exhaust Aftertreatment Glow Plug Circuit Highの回路または作動異常",
+      "配線、コネクター、電源/アース、関連部品異常",
+      "制御モジュール、作動条件、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習/校正条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない",
+      "性能異常を瞬時値だけで判断する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "排気高温部、グロープラグ高温部、電源回路に強く注意し、冷却後に点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  }
+]
