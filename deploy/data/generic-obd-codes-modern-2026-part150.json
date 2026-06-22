@@ -1,0 +1,1454 @@
+[
+  {
+    "id": "modern-2026-p2660-b-rocker-arm-actuator-control-circuit-open-bank-2",
+    "code": "P2660",
+    "title": "“B” Rocker Arm Actuator Control Circuit/Open Bank 2",
+    "system": "ロッカーアームアクチュエーターB制御回路/断線 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Control Circuit/Open Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2661-b-rocker-arm-actuator-system-performance-stuck-off-bank-2",
+    "code": "P2661",
+    "title": "“B” Rocker Arm Actuator System Performance/Stuck Off Bank 2",
+    "system": "ロッカーアームアクチュエーターBシステム性能/オフ固着 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator System Performance/Stuck Off Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2662-b-rocker-arm-actuator-system-stuck-on-bank-2",
+    "code": "P2662",
+    "title": "“B” Rocker Arm Actuator System Stuck On Bank 2",
+    "system": "ロッカーアームアクチュエーターBシステムオン固着 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator System Stuck On Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2663-b-rocker-arm-actuator-control-circuit-low-bank-2",
+    "code": "P2663",
+    "title": "“B” Rocker Arm Actuator Control Circuit Low Bank 2",
+    "system": "ロッカーアームアクチュエーターB制御回路低入力 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Control Circuit Low Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2664-b-rocker-arm-actuator-control-circuit-high-bank-2",
+    "code": "P2664",
+    "title": "“B” Rocker Arm Actuator Control Circuit High Bank 2",
+    "system": "ロッカーアームアクチュエーターB制御回路高入力 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Control Circuit High Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2665-fuel-shutoff-valve-b-control-circuit-open",
+    "code": "P2665",
+    "title": "Fuel Shutoff Valve “B” Control Circuit/Open",
+    "system": "燃料遮断バルブB制御回路/断線",
+    "possible_causes": [
+      "Fuel Shutoff Valve “B” Control Circuit/Openの制御回路異常",
+      "燃料遮断バルブ、配線、コネクター、電源/アース異常",
+      "燃料供給系、ECM/PCM、始動許可、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "燃料遮断バルブ制御信号",
+      "燃料圧",
+      "電源/アース",
+      "配線/コネクター",
+      "始動許可状態",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "燃料圧を抜かずに作業する",
+      "始動許可条件を確認しない",
+      "端子や基準値を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料漏れ、火気、燃料圧に強く注意し、換気、消火準備、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2666-fuel-shutoff-valve-b-control-circuit-low",
+    "code": "P2666",
+    "title": "Fuel Shutoff Valve “B” Control Circuit Low",
+    "system": "燃料遮断バルブB制御回路低入力",
+    "possible_causes": [
+      "Fuel Shutoff Valve “B” Control Circuit Lowの制御回路異常",
+      "燃料遮断バルブ、配線、コネクター、電源/アース異常",
+      "燃料供給系、ECM/PCM、始動許可、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "燃料遮断バルブ制御信号",
+      "燃料圧",
+      "電源/アース",
+      "配線/コネクター",
+      "始動許可状態",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "燃料圧を抜かずに作業する",
+      "始動許可条件を確認しない",
+      "端子や基準値を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料漏れ、火気、燃料圧に強く注意し、換気、消火準備、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2667-fuel-shutoff-valve-b-control-circuit-high",
+    "code": "P2667",
+    "title": "Fuel Shutoff Valve “B” Control Circuit High",
+    "system": "燃料遮断バルブB制御回路高入力",
+    "possible_causes": [
+      "Fuel Shutoff Valve “B” Control Circuit Highの制御回路異常",
+      "燃料遮断バルブ、配線、コネクター、電源/アース異常",
+      "燃料供給系、ECM/PCM、始動許可、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "燃料遮断バルブ制御信号",
+      "燃料圧",
+      "電源/アース",
+      "配線/コネクター",
+      "始動許可状態",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "燃料圧を抜かずに作業する",
+      "始動許可条件を確認しない",
+      "端子や基準値を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料漏れ、火気、燃料圧に強く注意し、換気、消火準備、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2668-fuel-mode-indicator-lamp-control-circuit",
+    "code": "P2668",
+    "title": "Fuel Mode Indicator Lamp Control Circuit",
+    "system": "燃料モード表示灯制御回路",
+    "possible_causes": [
+      "Fuel Mode Indicator Lamp Control Circuitの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2669-actuator-supply-voltage-b-circuit-open",
+    "code": "P2669",
+    "title": "Actuator Supply Voltage “B” Circuit /Open",
+    "system": "アクチュエーター供給電圧B回路/断線",
+    "possible_causes": [
+      "Actuator Supply Voltage “B” Circuit /Openの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p266a-a-rocker-arm-actuator-position-sensor-circuit-bank-2",
+    "code": "P266A",
+    "title": "“A” Rocker Arm Actuator Position Sensor Circuit Bank 2",
+    "system": "ロッカーアームアクチュエーターA位置センサー回路 バンク2",
+    "possible_causes": [
+      "“A” Rocker Arm Actuator Position Sensor Circuit Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p266b-a-rocker-arm-actuator-position-sensor-circuit-range-performance-bank-2",
+    "code": "P266B",
+    "title": "“A” Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 2",
+    "system": "ロッカーアームアクチュエーターA位置センサー回路範囲/性能 バンク2",
+    "possible_causes": [
+      "“A” Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p266c-a-rocker-arm-actuator-position-sensor-circuit-low-bank-2",
+    "code": "P266C",
+    "title": "“A” Rocker Arm Actuator Position Sensor Circuit Low Bank 2",
+    "system": "ロッカーアームアクチュエーターA位置センサー回路低入力 バンク2",
+    "possible_causes": [
+      "“A” Rocker Arm Actuator Position Sensor Circuit Low Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p266d-a-rocker-arm-actuator-position-sensor-circuit-high-bank-2",
+    "code": "P266D",
+    "title": "“A” Rocker Arm Actuator Position Sensor Circuit High Bank 2",
+    "system": "ロッカーアームアクチュエーターA位置センサー回路高入力 バンク2",
+    "possible_causes": [
+      "“A” Rocker Arm Actuator Position Sensor Circuit High Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p266e-a-rocker-arm-actuator-position-sensor-circuit-intermittent-erratic-bank-2",
+    "code": "P266E",
+    "title": "“A” Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 2",
+    "system": "ロッカーアームアクチュエーターA位置センサー回路断続/不規則 バンク2",
+    "possible_causes": [
+      "“A” Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2670-actuator-supply-voltage-b-circuit-low",
+    "code": "P2670",
+    "title": "Actuator Supply Voltage “B” Circuit Low",
+    "system": "アクチュエーター供給電圧B回路低入力",
+    "possible_causes": [
+      "Actuator Supply Voltage “B” Circuit Lowの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2671-actuator-supply-voltage-b-circuit-high",
+    "code": "P2671",
+    "title": "Actuator Supply Voltage “B” Circuit High",
+    "system": "アクチュエーター供給電圧B回路高入力",
+    "possible_causes": [
+      "Actuator Supply Voltage “B” Circuit Highの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2672-injection-pump-timing-offset",
+    "code": "P2672",
+    "title": "Injection Pump Timing Offset",
+    "system": "インジェクションポンプタイミングオフセット",
+    "possible_causes": [
+      "Injection Pump Timing Offsetの学習/校正未完了",
+      "部品交換後の登録未実施、学習条件未成立",
+      "燃料系、タイミング制御、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/学習状態",
+      "燃料圧",
+      "エンジン回転信号",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習を繰り返す",
+      "未対応スキャンツールで手順を代用する",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、校正/学習はメーカー指定条件を満たす場合のみ行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2673-injection-pump-timing-calibration-not-learned",
+    "code": "P2673",
+    "title": "Injection Pump Timing Calibration Not Learned",
+    "system": "インジェクションポンプタイミング校正未学習",
+    "possible_causes": [
+      "Injection Pump Timing Calibration Not Learnedの学習/校正未完了",
+      "部品交換後の登録未実施、学習条件未成立",
+      "燃料系、タイミング制御、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/学習状態",
+      "燃料圧",
+      "エンジン回転信号",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習を繰り返す",
+      "未対応スキャンツールで手順を代用する",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、校正/学習はメーカー指定条件を満たす場合のみ行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2674-injection-pump-fuel-calibration-not-learned",
+    "code": "P2674",
+    "title": "Injection Pump Fuel Calibration Not Learned",
+    "system": "インジェクションポンプ燃料校正未学習",
+    "possible_causes": [
+      "Injection Pump Fuel Calibration Not Learnedの学習/校正未完了",
+      "部品交換後の登録未実施、学習条件未成立",
+      "燃料系、タイミング制御、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "校正/学習状態",
+      "燃料圧",
+      "エンジン回転信号",
+      "電源電圧",
+      "温度条件",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "前提条件を満たさず学習を繰り返す",
+      "未対応スキャンツールで手順を代用する",
+      "失敗時復旧手順を確認しない"
+    ],
+    "required_tools": [
+      "メーカー対応スキャンツール",
+      "デジタルマルチメーター",
+      "燃料圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "燃料圧、高温部、エンジン可動部に強く注意し、校正/学習はメーカー指定条件を満たす場合のみ行う。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2675-air-cleaner-inlet-control-circuit-open",
+    "code": "P2675",
+    "title": "Air Cleaner Inlet Control Circuit/Open",
+    "system": "エアクリーナー入口制御回路/断線",
+    "possible_causes": [
+      "Air Cleaner Inlet Control Circuit/Openの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2676-air-cleaner-inlet-control-circuit-low",
+    "code": "P2676",
+    "title": "Air Cleaner Inlet Control Circuit Low",
+    "system": "エアクリーナー入口制御回路低入力",
+    "possible_causes": [
+      "Air Cleaner Inlet Control Circuit Lowの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2677-air-cleaner-inlet-control-circuit-high",
+    "code": "P2677",
+    "title": "Air Cleaner Inlet Control Circuit High",
+    "system": "エアクリーナー入口制御回路高入力",
+    "possible_causes": [
+      "Air Cleaner Inlet Control Circuit Highの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、残圧処理、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2678-coolant-degassing-valve-control-circuit-open",
+    "code": "P2678",
+    "title": "Coolant Degassing Valve Control Circuit/Open",
+    "system": "冷却水脱気バルブ制御回路/断線",
+    "possible_causes": [
+      "Coolant Degassing Valve Control Circuit/Openの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "冷却水高温、加圧状態、ファン作動に強く注意し、冷却後に残圧処理して点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2679-coolant-degassing-valve-control-circuit-low",
+    "code": "P2679",
+    "title": "Coolant Degassing Valve Control Circuit Low",
+    "system": "冷却水脱気バルブ制御回路低入力",
+    "possible_causes": [
+      "Coolant Degassing Valve Control Circuit Lowの制御回路異常",
+      "配線、コネクター、電源/アース、制御モジュール出力異常",
+      "関連アクチュエーター/バルブ/ランプ、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "制御信号",
+      "電源/アース",
+      "導通/抵抗",
+      "作動指令/状態",
+      "配線/コネクター",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "作動条件や端子配列を車両共通と断定する",
+      "関連DTCや電源系DTCを確認しない"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "冷却水高温、加圧状態、ファン作動に強く注意し、冷却後に残圧処理して点検する。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p267a-b-rocker-arm-actuator-position-sensor-circuit-bank-2",
+    "code": "P267A",
+    "title": "“B” Rocker Arm Actuator Position Sensor Circuit Bank 2",
+    "system": "ロッカーアームアクチュエーターB位置センサー回路 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Position Sensor Circuit Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p267b-b-rocker-arm-actuator-position-sensor-circuit-range-performance-bank-2",
+    "code": "P267B",
+    "title": "“B” Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 2",
+    "system": "ロッカーアームアクチュエーターB位置センサー回路範囲/性能 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p267c-b-rocker-arm-actuator-position-sensor-circuit-low-bank-2",
+    "code": "P267C",
+    "title": "“B” Rocker Arm Actuator Position Sensor Circuit Low Bank 2",
+    "system": "ロッカーアームアクチュエーターB位置センサー回路低入力 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Position Sensor Circuit Low Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p267d-b-rocker-arm-actuator-position-sensor-circuit-high-bank-2",
+    "code": "P267D",
+    "title": "“B” Rocker Arm Actuator Position Sensor Circuit High Bank 2",
+    "system": "ロッカーアームアクチュエーターB位置センサー回路高入力 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Position Sensor Circuit High Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p267e-b-rocker-arm-actuator-position-sensor-circuit-intermittent-erratic-bank-2",
+    "code": "P267E",
+    "title": "“B” Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 2",
+    "system": "ロッカーアームアクチュエーターB位置センサー回路断続/不規則 バンク2",
+    "possible_causes": [
+      "“B” Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 2の回路または作動異常",
+      "配線、コネクター、電源/アース、センサー/アクチュエーター異常",
+      "エンジンオイル、油圧/油路、可変バルブ機構、ECM/PCM、関連DTCの影響"
+    ],
+    "check_order": [
+      "DTC、フリーズフレーム、関連DTCを保存する",
+      "車両固有の端子、基準値、作動条件、学習条件はメーカー整備書で確認する",
+      "電源/アース、信号、配線、コネクター、関連部品を点検する",
+      "回路、部品、制御モジュール側をメーカー指定手順で切り分ける"
+    ],
+    "measurement_points": [
+      "作動指令/状態",
+      "センサー信号",
+      "電源/アース",
+      "導通/抵抗",
+      "エンジンオイル圧/温度",
+      "関連DTC"
+    ],
+    "common_mistakes": [
+      "バンクやアクチュエーターA/Bを取り違える",
+      "油量、油質、油路詰まりを確認しない",
+      "判定条件を車両共通と断定する"
+    ],
+    "required_tools": [
+      "対応スキャンツール",
+      "デジタルマルチメーター",
+      "油圧点検工具",
+      "メーカー整備書"
+    ],
+    "safety_notes": [
+      "エンジン可動部、高温部、油圧部に注意し、車両固定、冷却、メーカー指定手順を守る。"
+    ],
+    "confidence": "中",
+    "source": "SAE J2012 / SAE J2012DA系の汎用DTC定義およびAutel公式DTC表を参照した診断ガイダンス",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-22",
+    "service_manual_required": true
+  }
+]
