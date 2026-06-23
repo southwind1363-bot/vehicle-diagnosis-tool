@@ -1,0 +1,2893 @@
+[
+  {
+    "id": "modern-2026-p2820-pressure-control-solenoid-j-performance-stuck-off",
+    "code": "P2820",
+    "title": "Pressure Control Solenoid “J” Performance/Stuck Off",
+    "system": "Pressure Control Solenoid “J” Performance/Stuck Off",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Performance/Stuck Off circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2821-pressure-control-solenoid-j-stuck-on",
+    "code": "P2821",
+    "title": "Pressure Control Solenoid “J” Stuck On",
+    "system": "Pressure Control Solenoid “J” Stuck On",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Stuck On circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2822-pressure-control-solenoid-j-electrical",
+    "code": "P2822",
+    "title": "Pressure Control Solenoid “J” Electrical",
+    "system": "Pressure Control Solenoid “J” Electrical",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Electrical circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2823-pressure-control-solenoid-j-intermittent",
+    "code": "P2823",
+    "title": "Pressure Control Solenoid “J” Intermittent",
+    "system": "Pressure Control Solenoid “J” Intermittent",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Intermittent circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2824-pressure-control-solenoid-j-control-circuit-open",
+    "code": "P2824",
+    "title": "Pressure Control Solenoid “J” Control Circuit/Open",
+    "system": "Pressure Control Solenoid “J” Control Circuit/Open",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Control Circuit/Open circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2825-pressure-control-solenoid-j-control-circuit-range-performance",
+    "code": "P2825",
+    "title": "Pressure Control Solenoid “J” Control Circuit Range/Performance",
+    "system": "Pressure Control Solenoid “J” Control Circuit Range/Performance",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Control Circuit Range/Performance circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2826-pressure-control-solenoid-j-control-circuit-low",
+    "code": "P2826",
+    "title": "Pressure Control Solenoid “J” Control Circuit Low",
+    "system": "Pressure Control Solenoid “J” Control Circuit Low",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Control Circuit Low circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2827-pressure-control-solenoid-j-control-circuit-high",
+    "code": "P2827",
+    "title": "Pressure Control Solenoid “J” Control Circuit High",
+    "system": "Pressure Control Solenoid “J” Control Circuit High",
+    "possible_causes": [
+      "Pressure Control Solenoid “J” Control Circuit High circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2828-pressure-control-solenoid-k",
+    "code": "P2828",
+    "title": "Pressure Control Solenoid “K”",
+    "system": "Pressure Control Solenoid “K”",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2829-pressure-control-solenoid-k-performance-stuck-off",
+    "code": "P2829",
+    "title": "Pressure Control Solenoid “K” Performance/Stuck Off",
+    "system": "Pressure Control Solenoid “K” Performance/Stuck Off",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Performance/Stuck Off circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p282a-pressure-control-solenoid-k-stuck-on",
+    "code": "P282A",
+    "title": "Pressure Control Solenoid “K” Stuck On",
+    "system": "Pressure Control Solenoid “K” Stuck On",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Stuck On circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p282b-pressure-control-solenoid-k-electrical",
+    "code": "P282B",
+    "title": "Pressure Control Solenoid “K” Electrical",
+    "system": "Pressure Control Solenoid “K” Electrical",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Electrical circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p282c-pressure-control-solenoid-k-intermittent",
+    "code": "P282C",
+    "title": "Pressure Control Solenoid “K” Intermittent",
+    "system": "Pressure Control Solenoid “K” Intermittent",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Intermittent circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p282d-pressure-control-solenoid-k-control-circuit-open",
+    "code": "P282D",
+    "title": "Pressure Control Solenoid “K” Control Circuit/Open",
+    "system": "Pressure Control Solenoid “K” Control Circuit/Open",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Control Circuit/Open circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p282e-pressure-control-solenoid-k-control-circuit-range-performance",
+    "code": "P282E",
+    "title": "Pressure Control Solenoid “K” Control Circuit Range/Performance",
+    "system": "Pressure Control Solenoid “K” Control Circuit Range/Performance",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Control Circuit Range/Performance circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p282f-pressure-control-solenoid-k-control-circuit-low",
+    "code": "P282F",
+    "title": "Pressure Control Solenoid “K” Control Circuit Low",
+    "system": "Pressure Control Solenoid “K” Control Circuit Low",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Control Circuit Low circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2830-pressure-control-solenoid-k-control-circuit-high",
+    "code": "P2830",
+    "title": "Pressure Control Solenoid “K” Control Circuit High",
+    "system": "Pressure Control Solenoid “K” Control Circuit High",
+    "possible_causes": [
+      "Pressure Control Solenoid “K” Control Circuit High circuit, commanded operation, or hydraulic pressure control fault.",
+      "Wiring, connector, power/ground, solenoid, TCM/PCM driver, valve body, ATF level/condition, or related DTC influence.",
+      "Hydraulic restriction, leakage, contamination, mechanical wear, or pressure regulation fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, gear/range state, pressure command/actual data, solenoid command state, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, solenoid identification, hydraulic port locations, and relearn requirements in the manufacturer service manual.",
+      "Inspect power/ground, control circuits, wiring, connectors, ATF level/condition, and commanded solenoid operation.",
+      "Separate circuit, solenoid, valve body, hydraulic, and mechanical causes using the manufacturer pressure and scan-tool procedure."
+    ],
+    "measurement_points": [
+      "Pressure control solenoid command",
+      "Line/element pressure data",
+      "ATF temperature",
+      "Power/ground",
+      "Wiring/connectors",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating solenoid letter naming or pressure values as vehicle-universal.",
+      "Replacing a solenoid before checking ATF condition, valve body, and hydraulic leakage.",
+      "Running bidirectional or relearn procedures without the manufacturer prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2831-shift-fork-a-position-circuit",
+    "code": "P2831",
+    "title": "Shift Fork “A” Position Circuit",
+    "system": "Shift Fork “A” Position Circuit",
+    "possible_causes": [
+      "Shift Fork “A” Position Circuit signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2832-shift-fork-a-position-circuit-range-performance",
+    "code": "P2832",
+    "title": "Shift Fork “A” Position Circuit Range/Performance",
+    "system": "Shift Fork “A” Position Circuit Range/Performance",
+    "possible_causes": [
+      "Shift Fork “A” Position Circuit Range/Performance signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2833-shift-fork-a-position-circuit-low",
+    "code": "P2833",
+    "title": "Shift Fork “A” Position Circuit Low",
+    "system": "Shift Fork “A” Position Circuit Low",
+    "possible_causes": [
+      "Shift Fork “A” Position Circuit Low signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2834-shift-fork-a-position-circuit-high",
+    "code": "P2834",
+    "title": "Shift Fork “A” Position Circuit High",
+    "system": "Shift Fork “A” Position Circuit High",
+    "possible_causes": [
+      "Shift Fork “A” Position Circuit High signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2835-shift-fork-a-position-circuit-intermittent",
+    "code": "P2835",
+    "title": "Shift Fork “A” Position Circuit Intermittent",
+    "system": "Shift Fork “A” Position Circuit Intermittent",
+    "possible_causes": [
+      "Shift Fork “A” Position Circuit Intermittent signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2836-shift-fork-b-position-circuit",
+    "code": "P2836",
+    "title": "Shift Fork “B” Position Circuit",
+    "system": "Shift Fork “B” Position Circuit",
+    "possible_causes": [
+      "Shift Fork “B” Position Circuit signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2837-shift-fork-b-position-circuit-range-performance",
+    "code": "P2837",
+    "title": "Shift Fork “B” Position Circuit Range/Performance",
+    "system": "Shift Fork “B” Position Circuit Range/Performance",
+    "possible_causes": [
+      "Shift Fork “B” Position Circuit Range/Performance signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2838-shift-fork-b-position-circuit-low",
+    "code": "P2838",
+    "title": "Shift Fork “B” Position Circuit Low",
+    "system": "Shift Fork “B” Position Circuit Low",
+    "possible_causes": [
+      "Shift Fork “B” Position Circuit Low signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2839-shift-fork-b-position-circuit-high",
+    "code": "P2839",
+    "title": "Shift Fork “B” Position Circuit High",
+    "system": "Shift Fork “B” Position Circuit High",
+    "possible_causes": [
+      "Shift Fork “B” Position Circuit High signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p283a-shift-fork-b-position-circuit-intermittent",
+    "code": "P283A",
+    "title": "Shift Fork “B” Position Circuit Intermittent",
+    "system": "Shift Fork “B” Position Circuit Intermittent",
+    "possible_causes": [
+      "Shift Fork “B” Position Circuit Intermittent signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p283b-shift-fork-c-position-circuit",
+    "code": "P283B",
+    "title": "Shift Fork “C” Position Circuit",
+    "system": "Shift Fork “C” Position Circuit",
+    "possible_causes": [
+      "Shift Fork “C” Position Circuit signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p283c-shift-fork-c-position-circuit-range-performance",
+    "code": "P283C",
+    "title": "Shift Fork “C” Position Circuit Range/Performance",
+    "system": "Shift Fork “C” Position Circuit Range/Performance",
+    "possible_causes": [
+      "Shift Fork “C” Position Circuit Range/Performance signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p283d-shift-fork-c-position-circuit-low",
+    "code": "P283D",
+    "title": "Shift Fork “C” Position Circuit Low",
+    "system": "Shift Fork “C” Position Circuit Low",
+    "possible_causes": [
+      "Shift Fork “C” Position Circuit Low signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p283e-shift-fork-c-position-circuit-high",
+    "code": "P283E",
+    "title": "Shift Fork “C” Position Circuit High",
+    "system": "Shift Fork “C” Position Circuit High",
+    "possible_causes": [
+      "Shift Fork “C” Position Circuit High signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p283f-shift-fork-c-position-circuit-intermittent",
+    "code": "P283F",
+    "title": "Shift Fork “C” Position Circuit Intermittent",
+    "system": "Shift Fork “C” Position Circuit Intermittent",
+    "possible_causes": [
+      "Shift Fork “C” Position Circuit Intermittent signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2840-shift-fork-d-position-circuit",
+    "code": "P2840",
+    "title": "Shift Fork “D” Position Circuit",
+    "system": "Shift Fork “D” Position Circuit",
+    "possible_causes": [
+      "Shift Fork “D” Position Circuit signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2841-shift-fork-d-position-circuit-range-performance",
+    "code": "P2841",
+    "title": "Shift Fork “D” Position Circuit Range/Performance",
+    "system": "Shift Fork “D” Position Circuit Range/Performance",
+    "possible_causes": [
+      "Shift Fork “D” Position Circuit Range/Performance signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2842-shift-fork-d-position-circuit-low",
+    "code": "P2842",
+    "title": "Shift Fork “D” Position Circuit Low",
+    "system": "Shift Fork “D” Position Circuit Low",
+    "possible_causes": [
+      "Shift Fork “D” Position Circuit Low signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2843-shift-fork-d-position-circuit-high",
+    "code": "P2843",
+    "title": "Shift Fork “D” Position Circuit High",
+    "system": "Shift Fork “D” Position Circuit High",
+    "possible_causes": [
+      "Shift Fork “D” Position Circuit High signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2844-shift-fork-d-position-circuit-intermittent",
+    "code": "P2844",
+    "title": "Shift Fork “D” Position Circuit Intermittent",
+    "system": "Shift Fork “D” Position Circuit Intermittent",
+    "possible_causes": [
+      "Shift Fork “D” Position Circuit Intermittent signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2845-shift-fork-a-position-sensor-incorrect-neutral-position-indicated",
+    "code": "P2845",
+    "title": "Shift Fork “A” Position Sensor Incorrect Neutral Position Indicated",
+    "system": "Shift Fork “A” Position Sensor Incorrect Neutral Position Indicated",
+    "possible_causes": [
+      "Shift Fork “A” Position Sensor Incorrect Neutral Position Indicated signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2846-shift-fork-b-position-sensor-incorrect-neutral-position-indicated",
+    "code": "P2846",
+    "title": "Shift Fork “B” Position Sensor Incorrect Neutral Position Indicated",
+    "system": "Shift Fork “B” Position Sensor Incorrect Neutral Position Indicated",
+    "possible_causes": [
+      "Shift Fork “B” Position Sensor Incorrect Neutral Position Indicated signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2847-shift-fork-c-position-sensor-incorrect-neutral-position-indicated",
+    "code": "P2847",
+    "title": "Shift Fork “C” Position Sensor Incorrect Neutral Position Indicated",
+    "system": "Shift Fork “C” Position Sensor Incorrect Neutral Position Indicated",
+    "possible_causes": [
+      "Shift Fork “C” Position Sensor Incorrect Neutral Position Indicated signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2848-shift-fork-d-position-sensor-incorrect-neutral-position-indicated",
+    "code": "P2848",
+    "title": "Shift Fork “D” Position Sensor Incorrect Neutral Position Indicated",
+    "system": "Shift Fork “D” Position Sensor Incorrect Neutral Position Indicated",
+    "possible_causes": [
+      "Shift Fork “D” Position Sensor Incorrect Neutral Position Indicated signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2849-shift-fork-a-stuck",
+    "code": "P2849",
+    "title": "Shift Fork “A” Stuck",
+    "system": "Shift Fork “A” Stuck",
+    "possible_causes": [
+      "Shift Fork “A” Stuck signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p284a-shift-fork-b-stuck",
+    "code": "P284A",
+    "title": "Shift Fork “B” Stuck",
+    "system": "Shift Fork “B” Stuck",
+    "possible_causes": [
+      "Shift Fork “B” Stuck signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p284b-shift-fork-c-stuck",
+    "code": "P284B",
+    "title": "Shift Fork “C” Stuck",
+    "system": "Shift Fork “C” Stuck",
+    "possible_causes": [
+      "Shift Fork “C” Stuck signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p284c-shift-fork-d-stuck",
+    "code": "P284C",
+    "title": "Shift Fork “D” Stuck",
+    "system": "Shift Fork “D” Stuck",
+    "possible_causes": [
+      "Shift Fork “D” Stuck signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p284d-shift-fork-a-unrequested-movement",
+    "code": "P284D",
+    "title": "Shift Fork “A” Unrequested Movement",
+    "system": "Shift Fork “A” Unrequested Movement",
+    "possible_causes": [
+      "Shift Fork “A” Unrequested Movement signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p284e-shift-fork-b-unrequested-movement",
+    "code": "P284E",
+    "title": "Shift Fork “B” Unrequested Movement",
+    "system": "Shift Fork “B” Unrequested Movement",
+    "possible_causes": [
+      "Shift Fork “B” Unrequested Movement signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p284f-shift-fork-c-unrequested-movement",
+    "code": "P284F",
+    "title": "Shift Fork “C” Unrequested Movement",
+    "system": "Shift Fork “C” Unrequested Movement",
+    "possible_causes": [
+      "Shift Fork “C” Unrequested Movement signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2850-shift-fork-d-unrequested-movement",
+    "code": "P2850",
+    "title": "Shift Fork “D” Unrequested Movement",
+    "system": "Shift Fork “D” Unrequested Movement",
+    "possible_causes": [
+      "Shift Fork “D” Unrequested Movement signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2851-shift-fork-position-sensor-a-b-correlation",
+    "code": "P2851",
+    "title": "Shift Fork Position Sensor “A”/”B” Correlation",
+    "system": "Shift Fork Position Sensor “A”/”B” Correlation",
+    "possible_causes": [
+      "Shift Fork Position Sensor “A”/”B” Correlation signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2852-shift-fork-position-sensor-c-d-correlation",
+    "code": "P2852",
+    "title": "Shift Fork Position Sensor “C”/”D” Correlation",
+    "system": "Shift Fork Position Sensor “C”/”D” Correlation",
+    "possible_causes": [
+      "Shift Fork Position Sensor “C”/”D” Correlation signal, actuator movement, learned position, or mechanical shift mechanism fault.",
+      "Wiring, connector, power/ground, position sensor, actuator, TCM/PCM, clutch/gear engagement, or related DTC influence.",
+      "Shift rail/fork binding, incorrect neutral indication, unrequested movement, or learn-state fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, gear command/actual state, shift fork position data, clutch pressure data, and related DTCs.",
+      "Confirm vehicle-specific terminals, reference values, measurement conditions, neutral learn procedure, actuator location, and mechanical inspection steps in the manufacturer service manual.",
+      "Inspect power/ground, sensor signal circuits, actuator wiring, connectors, learned position state, and commanded movement.",
+      "Separate circuit, sensor, actuator, learned-position, clutch, and internal transmission mechanical causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Shift fork position data",
+      "Commanded/actual gear state",
+      "Neutral position state",
+      "Power/ground",
+      "Actuator command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating shift fork position voltage or neutral state as vehicle-universal.",
+      "Skipping learn-state and actuator movement checks before internal transmission diagnosis.",
+      "Commanding actuator movement without securing the vehicle and following prerequisites."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2853-clutch-a-pressure-discharge-performance",
+    "code": "P2853",
+    "title": "Clutch “A” Pressure Discharge Performance",
+    "system": "Clutch “A” Pressure Discharge Performance",
+    "possible_causes": [
+      "Clutch “A” Pressure Discharge Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2854-clutch-b-pressure-discharge-performance",
+    "code": "P2854",
+    "title": "Clutch “B” Pressure Discharge Performance",
+    "system": "Clutch “B” Pressure Discharge Performance",
+    "possible_causes": [
+      "Clutch “B” Pressure Discharge Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2855-clutch-a-pressure-charge-performance",
+    "code": "P2855",
+    "title": "Clutch “A” Pressure Charge Performance",
+    "system": "Clutch “A” Pressure Charge Performance",
+    "possible_causes": [
+      "Clutch “A” Pressure Charge Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2856-clutch-b-pressure-charge-performance",
+    "code": "P2856",
+    "title": "Clutch “B” Pressure Charge Performance",
+    "system": "Clutch “B” Pressure Charge Performance",
+    "possible_causes": [
+      "Clutch “B” Pressure Charge Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2857-clutch-a-pressure-engagement-performance",
+    "code": "P2857",
+    "title": "Clutch “A” Pressure Engagement Performance",
+    "system": "Clutch “A” Pressure Engagement Performance",
+    "possible_causes": [
+      "Clutch “A” Pressure Engagement Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2858-clutch-b-pressure-engagement-performance",
+    "code": "P2858",
+    "title": "Clutch “B” Pressure Engagement Performance",
+    "system": "Clutch “B” Pressure Engagement Performance",
+    "possible_causes": [
+      "Clutch “B” Pressure Engagement Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p2859-clutch-a-pressure-disengagement-performance",
+    "code": "P2859",
+    "title": "Clutch “A” Pressure Disengagement Performance",
+    "system": "Clutch “A” Pressure Disengagement Performance",
+    "possible_causes": [
+      "Clutch “A” Pressure Disengagement Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-p285a-clutch-b-pressure-disengagement-performance",
+    "code": "P285A",
+    "title": "Clutch “B” Pressure Disengagement Performance",
+    "system": "Clutch “B” Pressure Disengagement Performance",
+    "possible_causes": [
+      "Clutch “B” Pressure Disengagement Performance pressure charge, discharge, engagement, or disengagement performance fault.",
+      "ATF level/condition, hydraulic leakage, clutch control solenoid, pressure sensor data, valve body, clutch pack, TCM/PCM, or related DTC influence.",
+      "Clutch fill time, pressure control, learned values, or internal mechanical fault confirmed by manufacturer procedure."
+    ],
+    "check_order": [
+      "Save DTCs, freeze-frame data, ATF temperature, clutch pressure command/actual data, gear state, adaptation values, and related DTCs.",
+      "Confirm vehicle-specific pressure ports, reference values, measurement conditions, clutch naming, adaptation limits, and relearn prerequisites in the manufacturer service manual.",
+      "Inspect ATF level/condition, pressure control data, related solenoids, wiring, connectors, and learned/adaptation status.",
+      "Separate pressure control, hydraulic leakage, clutch mechanical, valve body, and TCM/PCM causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Clutch pressure command/actual",
+      "ATF temperature",
+      "Gear command/actual state",
+      "Adaptation values",
+      "Solenoid command",
+      "Related DTCs"
+    ],
+    "common_mistakes": [
+      "Treating clutch A/B naming, pressure targets, or adaptation values as vehicle-universal.",
+      "Skipping ATF condition and hydraulic leakage checks before condemning clutch components.",
+      "Performing clutch relearn without confirming prerequisites and service manual conditions."
+    ],
+    "required_tools": [
+      "Compatible scan tool",
+      "Digital multimeter",
+      "Hydraulic pressure test tools",
+      "Manufacturer service manual"
+    ],
+    "safety_notes": [
+      "Use strong caution around hot transmission components, high hydraulic pressure, rotating parts, clutch/shift actuator movement, and driveline movement; secure the vehicle, allow cooling, relieve pressure, and follow the manufacturer procedure."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-23",
+    "service_manual_required": true
+  }
+]
