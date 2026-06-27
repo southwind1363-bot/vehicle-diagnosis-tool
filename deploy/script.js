@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.214.0";
+const APP_VERSION = "2.215.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -145,6 +145,7 @@ const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
 const obdInterfaceRoadmapGrid = document.querySelector("#obdInterfaceRoadmapGrid");
+const obdBridgeContractGrid = document.querySelector("#obdBridgeContractGrid");
 const obdInterlockSummary = document.querySelector("#obdInterlockSummary");
 const obdInterlockChecklist = document.querySelector("#obdInterlockChecklist");
 const obdScannerText = document.querySelector("#obdScannerText");
@@ -1915,6 +1916,7 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getPreparedVehicleRequests?.() || []
   );
   renderObdInterfaceRoadmap(window.ObdReadOnly.getAdvancedInterfaceRoadmap?.() || []);
+  renderObdBridgeContract(window.ObdReadOnly.getLocalBridgeContract?.());
   renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
 }
 
@@ -2058,6 +2060,33 @@ function renderObdInterfaceRoadmap(items) {
 
     card.append(head, role, scope, button);
     obdInterfaceRoadmapGrid.appendChild(card);
+  });
+}
+
+function renderObdBridgeContract(contract) {
+  obdBridgeContractGrid.innerHTML = "";
+
+  if (!contract) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "ローカルブリッジ契約を取得できませんでした。";
+    obdBridgeContractGrid.appendChild(empty);
+    return;
+  }
+
+  [
+    ["状態", contract.connectionEnabled ? "利用可" : "準備中"],
+    ["API", `${contract.apiVersion} / ${contract.transport}`],
+    ["候補ポート", contract.endpointPortCandidates.join(" / ")],
+    ["読取Intent", `${contract.allowedReadIntents.length}件`],
+    ["変更系Intent", "未開放"],
+    ["ログ方針", contract.logPolicy.storeRawFrames ? "原文保存あり" : "原文保存なし"]
+  ].forEach(([label, value]) => {
+    const item = document.createElement("span");
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    item.append(strong, document.createTextNode(value));
+    obdBridgeContractGrid.appendChild(item);
   });
 }
 

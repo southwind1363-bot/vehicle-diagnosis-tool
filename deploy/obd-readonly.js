@@ -322,6 +322,47 @@
     })
   ]);
 
+  const localBridgeContract = Object.freeze({
+    id: "local_bridge_contract_v1",
+    status: "draft-disabled",
+    endpointOrigin: "http://127.0.0.1",
+    endpointPortCandidates: Object.freeze([8765, 17653]),
+    apiVersion: "v1",
+    transport: "local-http-or-websocket",
+    connectionEnabled: false,
+    vehicleCommandEnabled: false,
+    requiresUserLaunch: true,
+    requiresPairingToken: true,
+    allowedDirections: Object.freeze(["browser-to-local-bridge", "local-bridge-to-browser-status"]),
+    allowedReadIntents: Object.freeze([
+      "bridge_status",
+      "list_vci",
+      "adapter_identity",
+      "read_stored_dtc",
+      "read_pending_dtc",
+      "read_freeze_frame",
+      "read_supported_pids",
+      "read_live_pid_snapshot"
+    ]),
+    blockedWriteIntents: Object.freeze([
+      "clear_dtc",
+      "routine_control",
+      "input_output_control",
+      "security_access",
+      "write_data_by_identifier",
+      "request_download",
+      "ecu_reset"
+    ]),
+    requiredRequestFields: Object.freeze(["request_id", "api_version", "intent", "timestamp", "pairing_token"]),
+    requiredResponseFields: Object.freeze(["request_id", "ok", "blocked", "would_transmit", "errors", "data"]),
+    logPolicy: Object.freeze({
+      storeRawFrames: false,
+      redactIdentifiers: true,
+      keepSessionSummary: true,
+      userExportRequired: true
+    })
+  });
+
   function getCapability() {
     return {
       secureContext: window.isSecureContext,
@@ -378,6 +419,41 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false,
       reason: "高度な通信インターフェースは設計準備中です。実車への通信は有効化していません。"
+    };
+  }
+
+  function getLocalBridgeContract() {
+    return {
+      ...localBridgeContract,
+      endpointPortCandidates: [...localBridgeContract.endpointPortCandidates],
+      allowedDirections: [...localBridgeContract.allowedDirections],
+      allowedReadIntents: [...localBridgeContract.allowedReadIntents],
+      blockedWriteIntents: [...localBridgeContract.blockedWriteIntents],
+      requiredRequestFields: [...localBridgeContract.requiredRequestFields],
+      requiredResponseFields: [...localBridgeContract.requiredResponseFields],
+      logPolicy: { ...localBridgeContract.logPolicy }
+    };
+  }
+
+  function evaluateLocalBridgeRequest(request = {}) {
+    const intent = String(request.intent || "").trim();
+    const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);
+    const isBlockedWrite = localBridgeContract.blockedWriteIntents.includes(intent);
+    const missingFields = localBridgeContract.requiredRequestFields.filter((field) => !request[field]);
+
+    return {
+      ok: false,
+      blocked: true,
+      wouldTransmit: false,
+      bridgeConnectionEnabled: localBridgeContract.connectionEnabled,
+      vehicleCommandEnabled: false,
+      intent,
+      missingFields,
+      knownReadIntent: isAllowedRead,
+      blockedWriteIntent: isBlockedWrite,
+      reason: localBridgeContract.connectionEnabled
+        ? "ローカルブリッジ契約は定義済みですが、この画面ではまだ送信しません。"
+        : "ローカルブリッジは準備中です。PC側ブリッジや車両へ送信しません。"
     };
   }
 
@@ -682,9 +758,11 @@
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
     getAdvancedInterfaceRoadmap,
+    getLocalBridgeContract,
     requestVehicleOperation,
     requestPreparedVehicleRequest,
     requestAdvancedInterface,
+    evaluateLocalBridgeRequest,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,
