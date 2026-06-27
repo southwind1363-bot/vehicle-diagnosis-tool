@@ -363,6 +363,66 @@
     })
   });
 
+  const localBridgeResponseSchemas = Object.freeze([
+    Object.freeze({
+      intent: "bridge_status",
+      label: "Bridge status",
+      dataShape: Object.freeze(["bridge_version", "api_version", "status", "paired", "vci_connected", "vehicle_connected"]),
+      safeDefault: Object.freeze({
+        bridge_version: null,
+        api_version: localBridgeContract.apiVersion,
+        status: "not_connected",
+        paired: false,
+        vci_connected: false,
+        vehicle_connected: false
+      })
+    }),
+    Object.freeze({
+      intent: "list_vci",
+      label: "VCI list",
+      dataShape: Object.freeze(["devices", "selected_device_id", "driver_status"]),
+      safeDefault: Object.freeze({
+        devices: Object.freeze([]),
+        selected_device_id: null,
+        driver_status: "not_checked"
+      })
+    }),
+    Object.freeze({
+      intent: "read_stored_dtc",
+      label: "Stored DTC snapshot",
+      dataShape: Object.freeze(["protocol", "ecu_responses", "dtcs", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        ecu_responses: Object.freeze([]),
+        dtcs: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "read_live_pid_snapshot",
+      label: "Live PID snapshot",
+      dataShape: Object.freeze(["protocol", "supported_pids", "values", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        supported_pids: Object.freeze([]),
+        values: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "session_summary",
+      label: "Session summary",
+      dataShape: Object.freeze(["started_at", "ended_at", "vehicle_profile", "warnings", "export_required"]),
+      safeDefault: Object.freeze({
+        started_at: null,
+        ended_at: null,
+        vehicle_profile: null,
+        warnings: Object.freeze([]),
+        export_required: true
+      })
+    })
+  ]);
+
   function getCapability() {
     return {
       secureContext: window.isSecureContext,
@@ -435,6 +495,34 @@
     };
   }
 
+  function getLocalBridgeResponseSchemas() {
+    return localBridgeResponseSchemas.map((item) => ({
+      ...item,
+      dataShape: [...item.dataShape],
+      safeDefault: cloneBridgeValue(item.safeDefault)
+    }));
+  }
+
+  function cloneBridgeValue(value) {
+    if (Array.isArray(value)) return value.map((item) => cloneBridgeValue(item));
+    if (value && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneBridgeValue(item)]));
+    }
+    return value;
+  }
+
+  function createLocalBridgeBlockedResponse(intent = "unknown", errors = []) {
+    const schema = localBridgeResponseSchemas.find((item) => item.intent === intent);
+    return {
+      request_id: null,
+      ok: false,
+      blocked: true,
+      would_transmit: false,
+      errors: errors.length ? [...errors] : ["local_bridge_disabled"],
+      data: schema ? cloneBridgeValue(schema.safeDefault) : null
+    };
+  }
+
   function evaluateLocalBridgeRequest(request = {}) {
     const intent = String(request.intent || "").trim();
     const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);
@@ -451,6 +539,7 @@
       missingFields,
       knownReadIntent: isAllowedRead,
       blockedWriteIntent: isBlockedWrite,
+      response: createLocalBridgeBlockedResponse(intent, missingFields.length ? ["missing_required_fields"] : []),
       reason: localBridgeContract.connectionEnabled
         ? "ローカルブリッジ契約は定義済みですが、この画面ではまだ送信しません。"
         : "ローカルブリッジは準備中です。PC側ブリッジや車両へ送信しません。"
@@ -759,10 +848,12 @@
     getPreparedVehicleRequests,
     getAdvancedInterfaceRoadmap,
     getLocalBridgeContract,
+    getLocalBridgeResponseSchemas,
     requestVehicleOperation,
     requestPreparedVehicleRequest,
     requestAdvancedInterface,
     evaluateLocalBridgeRequest,
+    createLocalBridgeBlockedResponse,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,

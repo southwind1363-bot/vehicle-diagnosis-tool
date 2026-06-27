@@ -1122,6 +1122,34 @@ body.dark .flow-node-measure .flow-step {
   font-size: 0.75rem;
 }
 
+.obd-bridge-schema-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.obd-bridge-schema-card {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 10px;
+}
+
+.obd-bridge-schema-card strong {
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
+.obd-bridge-schema-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
 .obd-interlock-panel {
   border-top: 1px solid var(--line);
   padding-top: 16px;
@@ -1526,6 +1554,7 @@ body.dark .flow-node-measure .flow-step {
   .obd-request-grid,
   .obd-interface-grid,
   .obd-bridge-grid,
+  .obd-bridge-schema-grid,
   .obd-interlock-summary,
   .obd-interlock-checklist {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1613,6 +1642,7 @@ body.dark .flow-node-measure .flow-step {
   .obd-request-grid,
   .obd-interface-grid,
   .obd-bridge-grid,
+  .obd-bridge-schema-grid,
   .obd-interlock-summary,
   .obd-interlock-checklist {
     grid-template-columns: 1fr;

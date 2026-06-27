@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.215.0";
+const APP_VERSION = "2.216.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -146,6 +146,7 @@ const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
 const obdInterfaceRoadmapGrid = document.querySelector("#obdInterfaceRoadmapGrid");
 const obdBridgeContractGrid = document.querySelector("#obdBridgeContractGrid");
+const obdBridgeSchemaGrid = document.querySelector("#obdBridgeSchemaGrid");
 const obdInterlockSummary = document.querySelector("#obdInterlockSummary");
 const obdInterlockChecklist = document.querySelector("#obdInterlockChecklist");
 const obdScannerText = document.querySelector("#obdScannerText");
@@ -1916,7 +1917,10 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getPreparedVehicleRequests?.() || []
   );
   renderObdInterfaceRoadmap(window.ObdReadOnly.getAdvancedInterfaceRoadmap?.() || []);
-  renderObdBridgeContract(window.ObdReadOnly.getLocalBridgeContract?.());
+  renderObdBridgeContract(
+    window.ObdReadOnly.getLocalBridgeContract?.(),
+    window.ObdReadOnly.getLocalBridgeResponseSchemas?.() || []
+  );
   renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
 }
 
@@ -2063,8 +2067,9 @@ function renderObdInterfaceRoadmap(items) {
   });
 }
 
-function renderObdBridgeContract(contract) {
+function renderObdBridgeContract(contract, schemas) {
   obdBridgeContractGrid.innerHTML = "";
+  obdBridgeSchemaGrid.innerHTML = "";
 
   if (!contract) {
     const empty = document.createElement("p");
@@ -2087,6 +2092,20 @@ function renderObdBridgeContract(contract) {
     strong.textContent = label;
     item.append(strong, document.createTextNode(value));
     obdBridgeContractGrid.appendChild(item);
+  });
+
+  schemas.slice(0, 6).forEach((schema) => {
+    const card = document.createElement("article");
+    card.className = "obd-bridge-schema-card";
+
+    const title = document.createElement("strong");
+    title.textContent = schema.label;
+
+    const fields = document.createElement("p");
+    fields.textContent = schema.dataShape.join(" / ");
+
+    card.append(title, fields);
+    obdBridgeSchemaGrid.appendChild(card);
   });
 }
 

@@ -84,6 +84,13 @@ const blockedBridgeRead = obd.evaluateLocalBridgeRequest({ request_id: "test", a
 check(blockedBridgeRead.blocked === true && blockedBridgeRead.wouldTransmit === false && blockedBridgeRead.knownReadIntent === true, "ローカルブリッジ読取Intentが安全に停止していません");
 const blockedBridgeClear = obd.evaluateLocalBridgeRequest({ request_id: "test", api_version: "v1", intent: "clear_dtc", timestamp: "2026-06-28T00:00:00Z", pairing_token: "dummy" });
 check(blockedBridgeClear.blocked === true && blockedBridgeClear.wouldTransmit === false && blockedBridgeClear.blockedWriteIntent === true, "ローカルブリッジ変更系Intentが安全に停止していません");
+const bridgeSchemas = obd.getLocalBridgeResponseSchemas();
+check(bridgeSchemas.length >= 5, "ローカルブリッジ応答型が不足しています");
+check(bridgeSchemas.some((item) => item.intent === "bridge_status" && item.safeDefault.status === "not_connected"), "ブリッジ状態の安全な既定値がありません");
+check(bridgeSchemas.some((item) => item.intent === "read_live_pid_snapshot" && Array.isArray(item.safeDefault.values)), "ライブPID応答型がありません");
+const blockedBridgeResponse = obd.createLocalBridgeBlockedResponse("read_stored_dtc");
+check(blockedBridgeResponse.ok === false && blockedBridgeResponse.blocked === true && blockedBridgeResponse.would_transmit === false, "ブリッジ遮断レスポンスが安全側ではありません");
+check(Array.isArray(blockedBridgeResponse.data.dtcs) && blockedBridgeResponse.data.dtcs.length === 0, "遮断時DTCレスポンスが空データになっていません");
 const outboundRead = obd.evaluateOutboundSafety({ service: "03", stateChanging: false });
 check(outboundRead.blocked === true && outboundRead.wouldTransmit === false && outboundRead.failClosed === true, "読取系アウトバウンドが安全ゲートで停止していません");
 const outboundClear = obd.evaluateOutboundSafety({ service: "04", stateChanging: true });
@@ -111,6 +118,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 65");
+  console.log("OBD read-only safety checks: 70");
   console.log("Errors: 0");
 }
