@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.217.0";
+const APP_VERSION = "2.218.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2085,7 +2085,9 @@ function renderObdBridgeContract(contract, schemas) {
     ["候補ポート", contract.endpointPortCandidates.join(" / ")],
     ["読取Intent", `${contract.allowedReadIntents.length}件`],
     ["変更系Intent", "未開放"],
-    ["ログ方針", contract.logPolicy.storeRawFrames ? "原文保存あり" : "原文保存なし"]
+    ["ログ方針", contract.logPolicy.storeRawFrames ? "原文保存あり" : "原文保存なし"],
+    ["表示モデル", window.ObdReadOnly?.normalizeBridgeConnectionStatus ? "準備済み" : "未読込"],
+    ["エクスポート", window.ObdReadOnly?.buildBridgeSessionExportPayload ? "準備済み" : "未読込"]
   ].forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");

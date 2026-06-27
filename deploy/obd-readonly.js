@@ -552,6 +552,86 @@
     };
   }
 
+  function normalizeBridgeConnectionStatus(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    const status = String(data.status || "not_connected");
+    const paired = data.paired === true;
+    const vciConnected = data.vci_connected === true;
+    const vehicleConnected = data.vehicle_connected === true;
+    let displayStatus = "準備中";
+    let nextAction = "ローカルブリッジを起動しても、この画面からはまだ車両へ送信しません。";
+
+    if (status === "not_connected") {
+      displayStatus = "未接続";
+      nextAction = "PC側ブリッジの起動とペアリング準備を確認します。";
+    } else if (!paired) {
+      displayStatus = "ペアリング待ち";
+      nextAction = "ペアリングトークン確認後に読取系だけを評価します。";
+    } else if (!vciConnected) {
+      displayStatus = "VCI確認待ち";
+      nextAction = "VCI一覧とドライバー状態を確認します。";
+    } else if (!vehicleConnected) {
+      displayStatus = "車両接続確認待ち";
+      nextAction = "車両応答を取得する前に対応プロトコルと停止条件を確認します。";
+    } else {
+      displayStatus = "読取準備モデル";
+      nextAction = "DTCとライブPIDを既存診断フローへ整形する準備だけを行います。";
+    }
+
+    return {
+      source: "local_bridge",
+      intent: "bridge_status",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true,
+      bridgeVersion: data.bridge_version || null,
+      apiVersion: data.api_version || localBridgeContract.apiVersion,
+      status,
+      displayStatus,
+      paired,
+      vciConnected,
+      vehicleConnected,
+      connectionEnabled: localBridgeContract.connectionEnabled,
+      vehicleCommandEnabled: false,
+      errors: Array.isArray(response.errors) ? [...response.errors] : [],
+      nextAction,
+      retainedRawText: false
+    };
+  }
+
+  function normalizeBridgeVciList(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    const devices = Array.isArray(data.devices) ? data.devices : [];
+    const selectedDeviceId = data.selected_device_id || null;
+    const normalizedDevices = devices.map((device, index) => {
+      const id = String(device?.id || device?.device_id || `vci_${index + 1}`).slice(0, 80);
+      return {
+        id,
+        label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
+        vendor: device?.vendor ? String(device.vendor).slice(0, 80) : null,
+        driverStatus: device?.driver_status || data.driver_status || "unknown",
+        connected: device?.connected === true,
+        selected: selectedDeviceId ? id === selectedDeviceId : index === 0 && devices.length === 1,
+        supportNote: "VCI識別情報は表示用に最小化し、シリアル番号などの生識別子は保持しません。"
+      };
+    });
+
+    return {
+      source: "local_bridge",
+      intent: "list_vci",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true,
+      driverStatus: data.driver_status || "not_checked",
+      selectedDeviceId,
+      devices: normalizedDevices,
+      deviceCount: normalizedDevices.length,
+      connectionEnabled: localBridgeContract.connectionEnabled,
+      vehicleCommandEnabled: false,
+      retainedRawText: false
+    };
+  }
+
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const values = Array.isArray(data.values) ? data.values : [];
@@ -603,8 +683,10 @@
   function buildBridgeSessionSummary(parts = {}) {
     const dtcSnapshot = parts.dtcSnapshot?.codes ? parts.dtcSnapshot : normalizeBridgeDtcSnapshot(parts.dtcSnapshot);
     const livePidSnapshot = parts.livePidSnapshot?.monitorValues ? parts.livePidSnapshot : normalizeBridgeLivePidSnapshot(parts.livePidSnapshot);
+    const connectionStatus = parts.connectionStatus?.displayStatus ? parts.connectionStatus : normalizeBridgeConnectionStatus(parts.connectionStatus);
+    const vciList = parts.vciList?.devices ? parts.vciList : normalizeBridgeVciList(parts.vciList);
     const warnings = [];
-    if (dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
+    if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
 
@@ -613,6 +695,8 @@
       startedAt: parts.startedAt || null,
       endedAt: parts.endedAt || null,
       vehicleProfile: parts.vehicleProfile || null,
+      connectionStatus,
+      vciDevices: vciList.devices,
       codes: dtcSnapshot.codes,
       monitorValues: livePidSnapshot.monitorValues,
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -620,6 +704,36 @@
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
+    };
+  }
+
+  function buildBridgeSessionExportPayload(parts = {}) {
+    const summary = parts.codes && parts.monitorValues ? parts : buildBridgeSessionSummary(parts);
+    return {
+      schema_version: "bridge_session_export_v1",
+      exported_at: parts.exportedAt || new Date().toISOString(),
+      source: "local_bridge",
+      connection_enabled: false,
+      vehicle_command_enabled: false,
+      retained_raw_frames: false,
+      retained_raw_text: false,
+      export_required: true,
+      session: {
+        started_at: summary.startedAt || null,
+        ended_at: summary.endedAt || null,
+        vehicle_profile: summary.vehicleProfile || null,
+        connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
+        vci_devices: summary.vciDevices || [],
+        dtc_codes: summary.codes || [],
+        monitor_values: summary.monitorValues || [],
+        monitor_insights: summary.monitorInsights || [],
+        warnings: [...new Set(summary.warnings || [])]
+      },
+      safety: {
+        read_only_phase: true,
+        blocked_write_intents: [...localBridgeContract.blockedWriteIntents],
+        store_raw_frames: false
+      }
     };
   }
 
@@ -954,9 +1068,12 @@
     requestAdvancedInterface,
     evaluateLocalBridgeRequest,
     createLocalBridgeBlockedResponse,
+    normalizeBridgeConnectionStatus,
+    normalizeBridgeVciList,
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
     buildBridgeSessionSummary,
+    buildBridgeSessionExportPayload,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,
