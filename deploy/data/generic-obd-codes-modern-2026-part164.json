@@ -1,0 +1,2852 @@
+[
+  {
+    "id": "modern-2026-u0451-invalid-data-received-from-gateway-e",
+    "code": "U0451",
+    "title": "Invalid Data Received From Gateway \"E\"",
+    "system": "Invalid Data Received From Gateway \"E\"",
+    "possible_causes": [
+      "Invalid Data Received From Gateway \"E\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Gateway \"E\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0452-invalid-data-received-from-restraints-control-module",
+    "code": "U0452",
+    "title": "Invalid Data Received From Restraints Control Module",
+    "system": "Invalid Data Received From Restraints Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Restraints Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Restraints Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0453-invalid-data-received-from-side-restraints-control-module-left",
+    "code": "U0453",
+    "title": "Invalid Data Received From Side Restraints Control Module Left",
+    "system": "Invalid Data Received From Side Restraints Control Module Left",
+    "possible_causes": [
+      "Invalid Data Received From Side Restraints Control Module Left fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Side Restraints Control Module Left",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0454-invalid-data-received-from-side-restraints-control-module-right",
+    "code": "U0454",
+    "title": "Invalid Data Received From Side Restraints Control Module Right",
+    "system": "Invalid Data Received From Side Restraints Control Module Right",
+    "possible_causes": [
+      "Invalid Data Received From Side Restraints Control Module Right fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Side Restraints Control Module Right",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0455-invalid-data-received-from-restraints-occupant-classification-system-module",
+    "code": "U0455",
+    "title": "Invalid Data Received From Restraints Occupant Classification System Module",
+    "system": "Invalid Data Received From Restraints Occupant Classification System Module",
+    "possible_causes": [
+      "Invalid Data Received From Restraints Occupant Classification System Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Restraints Occupant Classification System Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0456-invalid-data-received-from-coolant-temperature-control-module",
+    "code": "U0456",
+    "title": "Invalid Data Received From Coolant Temperature Control Module",
+    "system": "Invalid Data Received From Coolant Temperature Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Coolant Temperature Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Coolant Temperature Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0457-invalid-data-received-from-information-center-a",
+    "code": "U0457",
+    "title": "Invalid Data Received From Information Center \"A\"",
+    "system": "Invalid Data Received From Information Center \"A\"",
+    "possible_causes": [
+      "Invalid Data Received From Information Center \"A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Information Center \"A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0458-invalid-data-received-from-information-center-b",
+    "code": "U0458",
+    "title": "Invalid Data Received From Information Center \"B\"",
+    "system": "Invalid Data Received From Information Center \"B\"",
+    "possible_causes": [
+      "Invalid Data Received From Information Center \"B\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Information Center \"B\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0459-invalid-data-received-from-head-up-display",
+    "code": "U0459",
+    "title": "Invalid Data Received From Head Up Display",
+    "system": "Invalid Data Received From Head Up Display",
+    "possible_causes": [
+      "Invalid Data Received From Head Up Display fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Head Up Display",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u045a-invalid-data-received-from-parking-assist-control-module-a",
+    "code": "U045A",
+    "title": "Invalid Data Received From Parking Assist Control Module \"A\"",
+    "system": "Invalid Data Received From Parking Assist Control Module \"A\"",
+    "possible_causes": [
+      "Invalid Data Received From Parking Assist Control Module \"A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Parking Assist Control Module \"A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0461-invalid-data-received-from-audible-alert-control-module",
+    "code": "U0461",
+    "title": "Invalid Data Received From Audible Alert Control Module",
+    "system": "Invalid Data Received From Audible Alert Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Audible Alert Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Audible Alert Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0462-invalid-data-received-from-compass-module",
+    "code": "U0462",
+    "title": "Invalid Data Received From Compass Module",
+    "system": "Invalid Data Received From Compass Module",
+    "possible_causes": [
+      "Invalid Data Received From Compass Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Compass Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0463-invalid-data-received-from-navigation-display-module",
+    "code": "U0463",
+    "title": "Invalid Data Received From Navigation Display Module",
+    "system": "Invalid Data Received From Navigation Display Module",
+    "possible_causes": [
+      "Invalid Data Received From Navigation Display Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Navigation Display Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0464-invalid-data-received-from-navigation-control-module",
+    "code": "U0464",
+    "title": "Invalid Data Received From Navigation Control Module",
+    "system": "Invalid Data Received From Navigation Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Navigation Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Navigation Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0465-invalid-data-received-from-pto-control-module",
+    "code": "U0465",
+    "title": "Invalid Data Received From PTO Control Module",
+    "system": "Invalid Data Received From PTO Control Module",
+    "possible_causes": [
+      "Invalid Data Received From PTO Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "PTO Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0466-invalid-data-received-from-hvac-control-module-rear",
+    "code": "U0466",
+    "title": "Invalid Data Received From HVAC Control Module Rear",
+    "system": "Invalid Data Received From HVAC Control Module Rear",
+    "possible_causes": [
+      "Invalid Data Received From HVAC Control Module Rear fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "HVAC Control Module Rear",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0467-invalid-data-received-from-fuel-additive-control-module",
+    "code": "U0467",
+    "title": "Invalid Data Received From Fuel Additive Control Module",
+    "system": "Invalid Data Received From Fuel Additive Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Fuel Additive Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Fuel Additive Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0468-invalid-data-received-from-fuel-cell-control-module",
+    "code": "U0468",
+    "title": "Invalid Data Received From Fuel Cell Control Module",
+    "system": "Invalid Data Received From Fuel Cell Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Fuel Cell Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Fuel Cell Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0469-invalid-data-received-from-starter-generator-control-module",
+    "code": "U0469",
+    "title": "Invalid Data Received From Starter / Generator Control Module",
+    "system": "Invalid Data Received From Starter / Generator Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Starter / Generator Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Starter / Generator Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u046a-invalid-data-received-from-sunroof-control-module",
+    "code": "U046A",
+    "title": "Invalid Data Received From Sunroof Control Module",
+    "system": "Invalid Data Received From Sunroof Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Sunroof Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Sunroof Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u046b-invalid-data-received-from-global-positioning-system-module",
+    "code": "U046B",
+    "title": "Invalid Data Received From Global Positioning System Module",
+    "system": "Invalid Data Received From Global Positioning System Module",
+    "possible_causes": [
+      "Invalid Data Received From Global Positioning System Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Global Positioning System Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0471-invalid-data-received-from-restraints-system-sensor-a",
+    "code": "U0471",
+    "title": "Invalid Data Received From \"Restraints System Sensor A\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor A\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0472-invalid-data-received-from-restraints-system-sensor-b",
+    "code": "U0472",
+    "title": "Invalid Data Received From \"Restraints System Sensor B\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor B\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor B\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor B\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0473-invalid-data-received-from-restraints-system-sensor-c",
+    "code": "U0473",
+    "title": "Invalid Data Received From \"Restraints System Sensor C\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor C\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor C\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor C\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0474-invalid-data-received-from-restraints-system-sensor-d",
+    "code": "U0474",
+    "title": "Invalid Data Received From \"Restraints System Sensor D\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor D\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor D\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor D\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0475-invalid-data-received-from-restraints-system-sensor-e",
+    "code": "U0475",
+    "title": "Invalid Data Received From \"Restraints System Sensor E\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor E\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor E\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor E\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0476-invalid-data-received-from-restraints-system-sensor-f",
+    "code": "U0476",
+    "title": "Invalid Data Received From \"Restraints System Sensor F\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor F\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor F\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor F\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0477-invalid-data-received-from-restraints-system-sensor-g",
+    "code": "U0477",
+    "title": "Invalid Data Received From \"Restraints System Sensor G\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor G\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor G\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor G\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0478-invalid-data-received-from-restraints-system-sensor-h",
+    "code": "U0478",
+    "title": "Invalid Data Received From \"Restraints System Sensor H\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor H\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor H\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor H\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0479-invalid-data-received-from-restraints-system-sensor-i",
+    "code": "U0479",
+    "title": "Invalid Data Received From \"Restraints System Sensor I\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor I\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor I\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor I\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u047a-invalid-data-received-from-restraints-system-sensor-j",
+    "code": "U047A",
+    "title": "Invalid Data Received From \"Restraints System Sensor J\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor J\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor J\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor J\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u047b-invalid-data-received-from-restraints-system-sensor-k",
+    "code": "U047B",
+    "title": "Invalid Data Received From \"Restraints System Sensor K\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor K\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor K\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor K\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u047c-invalid-data-received-from-restraints-system-sensor-l",
+    "code": "U047C",
+    "title": "Invalid Data Received From \"Restraints System Sensor L\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor L\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor L\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor L\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u047d-invalid-data-received-from-restraints-system-sensor-m",
+    "code": "U047D",
+    "title": "Invalid Data Received From \"Restraints System Sensor M\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor M\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor M\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor M\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u047e-invalid-data-received-from-restraints-system-sensor-n",
+    "code": "U047E",
+    "title": "Invalid Data Received From \"Restraints System Sensor N\"",
+    "system": "Invalid Data Received From \"Restraints System Sensor N\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Restraints System Sensor N\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Restraints System Sensor N\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u047f-invalid-data-received-from-seatbelt-pretensioner-module-a",
+    "code": "U047F",
+    "title": "Invalid Data Received From Seatbelt Pretensioner Module \"A\"",
+    "system": "Invalid Data Received From Seatbelt Pretensioner Module \"A\"",
+    "possible_causes": [
+      "Invalid Data Received From Seatbelt Pretensioner Module \"A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Seatbelt Pretensioner Module \"A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0480-invalid-data-received-from-seatbelt-pretensioner-module-b",
+    "code": "U0480",
+    "title": "Invalid Data Received From Seatbelt Pretensioner Module \"B\"",
+    "system": "Invalid Data Received From Seatbelt Pretensioner Module \"B\"",
+    "possible_causes": [
+      "Invalid Data Received From Seatbelt Pretensioner Module \"B\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Seatbelt Pretensioner Module \"B\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0481-invalid-data-received-from-automatic-lighting-control-module",
+    "code": "U0481",
+    "title": "Invalid Data Received From Automatic Lighting Control Module",
+    "system": "Invalid Data Received From Automatic Lighting Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Automatic Lighting Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Automatic Lighting Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0482-invalid-data-received-from-headlamp-leveling-control-module",
+    "code": "U0482",
+    "title": "Invalid Data Received From Headlamp Leveling Control Module",
+    "system": "Invalid Data Received From Headlamp Leveling Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Headlamp Leveling Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Headlamp Leveling Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0483-invalid-data-received-from-lighting-control-module-front",
+    "code": "U0483",
+    "title": "Invalid Data Received From Lighting Control Module Front",
+    "system": "Invalid Data Received From Lighting Control Module Front",
+    "possible_causes": [
+      "Invalid Data Received From Lighting Control Module Front fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Lighting Control Module Front",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0484-invalid-data-received-from-lighting-control-module-rear-a",
+    "code": "U0484",
+    "title": "Invalid Data Received From Lighting Control Module Rear \"A\"",
+    "system": "Invalid Data Received From Lighting Control Module Rear \"A\"",
+    "possible_causes": [
+      "Invalid Data Received From Lighting Control Module Rear \"A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Lighting Control Module Rear \"A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0485-invalid-data-received-from-radio",
+    "code": "U0485",
+    "title": "Invalid Data Received From Radio",
+    "system": "Invalid Data Received From Radio",
+    "possible_causes": [
+      "Invalid Data Received From Radio fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Radio",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0486-invalid-data-received-from-antenna-control-module",
+    "code": "U0486",
+    "title": "Invalid Data Received From Antenna Control Module",
+    "system": "Invalid Data Received From Antenna Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Antenna Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Antenna Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0487-invalid-data-received-from-audio-amplifier-a",
+    "code": "U0487",
+    "title": "Invalid Data Received From Audio Amplifier \"A\"",
+    "system": "Invalid Data Received From Audio Amplifier \"A\"",
+    "possible_causes": [
+      "Invalid Data Received From Audio Amplifier \"A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Audio Amplifier \"A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0488-invalid-data-received-from-digital-disc-player-changer-module-a",
+    "code": "U0488",
+    "title": "Invalid Data Received From Digital Disc Player/Changer Module \"A\"",
+    "system": "Invalid Data Received From Digital Disc Player/Changer Module \"A\"",
+    "possible_causes": [
+      "Invalid Data Received From Digital Disc Player/Changer Module \"A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Digital Disc Player/Changer Module \"A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0489-invalid-data-received-from-digital-disc-player-changer-module-b",
+    "code": "U0489",
+    "title": "Invalid Data Received From Digital Disc Player/Changer Module \"B\"",
+    "system": "Invalid Data Received From Digital Disc Player/Changer Module \"B\"",
+    "possible_causes": [
+      "Invalid Data Received From Digital Disc Player/Changer Module \"B\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Digital Disc Player/Changer Module \"B\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u048a-invalid-data-received-from-digital-disc-player-changer-module-c",
+    "code": "U048A",
+    "title": "Invalid Data Received From Digital Disc Player/Changer Module \"C\"",
+    "system": "Invalid Data Received From Digital Disc Player/Changer Module \"C\"",
+    "possible_causes": [
+      "Invalid Data Received From Digital Disc Player/Changer Module \"C\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Digital Disc Player/Changer Module \"C\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0491-invalid-data-received-from-digital-disc-player-changer-module-d",
+    "code": "U0491",
+    "title": "Invalid Data Received From Digital Disc Player/Changer Module \"D\"",
+    "system": "Invalid Data Received From Digital Disc Player/Changer Module \"D\"",
+    "possible_causes": [
+      "Invalid Data Received From Digital Disc Player/Changer Module \"D\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Digital Disc Player/Changer Module \"D\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0492-invalid-data-received-from-television",
+    "code": "U0492",
+    "title": "Invalid Data Received From Television",
+    "system": "Invalid Data Received From Television",
+    "possible_causes": [
+      "Invalid Data Received From Television fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Television",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0493-invalid-data-received-from-personal-computer",
+    "code": "U0493",
+    "title": "Invalid Data Received From Personal Computer",
+    "system": "Invalid Data Received From Personal Computer",
+    "possible_causes": [
+      "Invalid Data Received From Personal Computer fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Personal Computer",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0494-invalid-data-received-from-digital-audio-control-module-a",
+    "code": "U0494",
+    "title": "Invalid Data Received From \"Digital Audio Control Module A\"",
+    "system": "Invalid Data Received From \"Digital Audio Control Module A\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Digital Audio Control Module A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Digital Audio Control Module A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0495-invalid-data-received-from-digital-audio-control-module-b",
+    "code": "U0495",
+    "title": "Invalid Data Received From \"Digital Audio Control Module B\"",
+    "system": "Invalid Data Received From \"Digital Audio Control Module B\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Digital Audio Control Module B\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Digital Audio Control Module B\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0496-invalid-data-received-from-subscription-entertainment-receiver-module",
+    "code": "U0496",
+    "title": "Invalid Data Received From Subscription Entertainment Receiver Module",
+    "system": "Invalid Data Received From Subscription Entertainment Receiver Module",
+    "possible_causes": [
+      "Invalid Data Received From Subscription Entertainment Receiver Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Subscription Entertainment Receiver Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0497-invalid-data-received-from-entertainment-control-module-rear-a",
+    "code": "U0497",
+    "title": "Invalid Data Received From Entertainment Control Module Rear \"A\"",
+    "system": "Invalid Data Received From Entertainment Control Module Rear \"A\"",
+    "possible_causes": [
+      "Invalid Data Received From Entertainment Control Module Rear \"A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Entertainment Control Module Rear \"A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0498-invalid-data-received-from-telephone-control-module",
+    "code": "U0498",
+    "title": "Invalid Data Received From Telephone Control Module",
+    "system": "Invalid Data Received From Telephone Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Telephone Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Telephone Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0499-invalid-data-received-from-telematic-control-module",
+    "code": "U0499",
+    "title": "Invalid Data Received From Telematic Control Module",
+    "system": "Invalid Data Received From Telematic Control Module",
+    "possible_causes": [
+      "Invalid Data Received From Telematic Control Module fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Telematic Control Module",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u049a-invalid-data-received-from-door-control-module-a",
+    "code": "U049A",
+    "title": "Invalid Data Received From \"Door Control Module A\"",
+    "system": "Invalid Data Received From \"Door Control Module A\"",
+    "possible_causes": [
+      "Invalid Data Received From \"Door Control Module A\" fault.",
+      "Invalid, missing, implausible, incompatible, or incorrectly formatted network data received from the named control module or message source.",
+      "Module software, coding/configuration, calibration level, network integrity, power/ground, and related module DTC influence are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, network topology, module part numbers, calibration IDs, coding/configuration data, battery voltage, and related communication or power supply DTCs.",
+      "Confirm vehicle-specific network architecture, module identity, signal ownership, gateway routing, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect module power/ground, network wiring, termination, connector condition, installed module part numbers, calibration levels, and configuration/coding consistency before replacing modules.",
+      "Separate invalid source data, wrong module/configuration, incomplete programming, gateway/network routing, power supply, sensor input, and receiving-module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "\"Door Control Module A\"",
+      "All-module DTC and freeze-frame data",
+      "Network message/data validity",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Module power/ground and network circuits"
+    ],
+    "common_mistakes": [
+      "Replacing the receiving module before checking the source module, network data validity, coding, and calibration.",
+      "Assuming signal names, message IDs, wiring pins, or normal values are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools",
+      "Stable battery support unit"
+    ],
+    "safety_notes": [
+      "Use strong caution around brake, steering, SRS/restraints, high-voltage, ADAS, fuel, exhaust aftertreatment, lighting, infotainment, telematics, and programming/coding related modules; invalid network data can affect safety-critical systems, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  }
+]
