@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.207.0";
+const APP_VERSION = "2.208.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -149,6 +149,7 @@ const obdDetectedCodes = document.querySelector("#obdDetectedCodes");
 const obdMonitorStatus = document.querySelector("#obdMonitorStatus");
 const obdMonitorCount = document.querySelector("#obdMonitorCount");
 const obdMonitorGrid = document.querySelector("#obdMonitorGrid");
+const obdMonitorInsightList = document.querySelector("#obdMonitorInsightList");
 const noticeModal = document.querySelector("#noticeModal");
 const noticeCloseButton = document.querySelector("#noticeCloseButton");
 const mobileGptModal = document.querySelector("#mobileGptModal");
@@ -1880,6 +1881,8 @@ function analyzeObdScannerImport() {
   const analysis = window.ObdReadOnly.analyzeScannerText(obdScannerText.value);
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
+  obdMonitorInsightList.innerHTML = "";
+  obdMonitorInsightList.hidden = true;
 
   if (!obdScannerText.value.trim()) {
     obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
@@ -1899,7 +1902,7 @@ function analyzeObdScannerImport() {
     });
   }
 
-  renderObdMonitorValues(analysis.monitorValues);
+  renderObdMonitorValues(analysis.monitorValues, analysis.monitorInsights);
 }
 
 function createObdDtcCard(code) {
@@ -1946,8 +1949,10 @@ function createObdDtcCard(code) {
   return wrapper;
 }
 
-function renderObdMonitorValues(values) {
+function renderObdMonitorValues(values, insights = []) {
   obdMonitorGrid.innerHTML = "";
+  obdMonitorInsightList.innerHTML = "";
+  obdMonitorInsightList.hidden = true;
   obdMonitorCount.textContent = `${values.length}項目`;
 
   if (!values.length) {
@@ -1978,6 +1983,35 @@ function renderObdMonitorValues(values) {
     card.append(category, label, reading, note);
     obdMonitorGrid.appendChild(card);
   });
+
+  renderObdMonitorInsights(insights);
+}
+
+function renderObdMonitorInsights(insights = []) {
+  const values = insights.filter(Boolean).slice(0, 6);
+  if (!values.length) return;
+
+  const heading = document.createElement("h4");
+  heading.textContent = "値・相関の見方";
+  const list = document.createElement("ul");
+
+  values.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = item.level === "caution" ? "is-caution" : "is-info";
+
+    const title = document.createElement("strong");
+    title.textContent = item.title || "確認ポイント";
+    const detail = document.createElement("span");
+    detail.textContent = item.detail || "測定条件とメーカー整備書の基準値を確認してください。";
+    const next = document.createElement("em");
+    next.textContent = `次の確認: ${item.nextStep || "同じ条件で再測定し、DTCとフリーズフレームと照合する"}`;
+
+    li.append(title, detail, next);
+    list.appendChild(li);
+  });
+
+  obdMonitorInsightList.append(heading, list);
+  obdMonitorInsightList.hidden = false;
 }
 
 function loadObdMonitorSample() {
@@ -2002,6 +2036,8 @@ function clearObdScannerImport() {
   obdScannerText.value = "";
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
+  obdMonitorInsightList.innerHTML = "";
+  obdMonitorInsightList.hidden = true;
   obdImportStatus.textContent = "まだ解析していません。";
   obdMonitorStatus.textContent = "計測値はまだ解析していません。";
   obdMonitorCount.textContent = "0項目";

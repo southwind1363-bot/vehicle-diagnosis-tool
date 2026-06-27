@@ -156,14 +156,139 @@
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
+    const monitorValues = extractMonitorValues(redacted);
 
     return {
       codes: extractDtcCodes(redacted),
-      monitorValues: extractMonitorValues(redacted),
+      monitorValues,
+      monitorInsights: analyzeMonitorValues(monitorValues),
       hadSensitiveIdentifier: raw !== redacted,
       sourceLength: raw.length,
       retainedRawText: false
     };
+  }
+
+  function analyzeMonitorValues(values = []) {
+    const byId = new Map(values.map((item) => [item.id, item]));
+    const insights = [];
+    const numeric = (id) => {
+      const item = byId.get(id);
+      return item && item.valueType !== "text" && Number.isFinite(item.value) ? item.value : null;
+    };
+    const add = (level, title, detail, nextStep) => {
+      insights.push({ level, title, detail, nextStep });
+    };
+
+    const rpm = numeric("engine_speed");
+    const speed = numeric("vehicle_speed");
+    const voltage = numeric("control_module_voltage");
+    const coolant = numeric("coolant_temp");
+    const intakeTemp = numeric("intake_air_temp");
+    const stftB1 = numeric("stft_b1");
+    const ltftB1 = numeric("ltft_b1");
+    const stftB2 = numeric("stft_b2");
+    const ltftB2 = numeric("ltft_b2");
+    const map = numeric("map");
+    const baro = numeric("barometric_pressure");
+
+    if (values.length >= 2) {
+      add(
+        "info",
+        "単独値ではなく相関で見る",
+        "貼り付け値を複数項目として読めました。正常/異常の断定ではなく、同じ測定条件で再取得した値と比較してください。",
+        "冷間時、暖機後、症状再現時を同じ項目構成で保存する"
+      );
+    }
+
+    if (rpm !== null && speed !== null && rpm === 0 && speed === 0) {
+      add(
+        "info",
+        "キーON停止中の可能性",
+        "エンジン回転数と車速がどちらも0です。運転中データとキーON停止中データは分けて扱います。",
+        "エンジン運転中、アイドル、負荷時の値を別スナップショットで確認する"
+      );
+    }
+
+    if (voltage !== null && voltage < 11.5) {
+      add(
+        "caution",
+        "電源電圧を優先確認",
+        "制御モジュール電圧が低めです。通信DTCやセンサーDTCが電源影響で出る場合があります。",
+        "バッテリー状態、充電電圧、電源/アース電圧降下をメーカー整備書の条件で確認する"
+      );
+    } else if (voltage !== null && rpm !== null && rpm > 500 && voltage < 12.5) {
+      add(
+        "caution",
+        "運転中電圧の確認が必要",
+        "エンジン運転中と思われる条件で制御モジュール電圧が低めです。充電系や電源経路を先に確認します。",
+        "オルタネーター出力、ベルト、電源配線、アースを実測する"
+      );
+    } else if (voltage !== null && voltage > 15.2) {
+      add(
+        "caution",
+        "過電圧側の確認が必要",
+        "制御モジュール電圧が高めです。過電圧は制御モジュールやセンサー値に影響します。",
+        "充電制御、バッテリー端子、電圧検出線をメーカー整備書で確認する"
+      );
+    }
+
+    addFuelTrimInsight("バンク1", stftB1, ltftB1, add);
+    addFuelTrimInsight("バンク2", stftB2, ltftB2, add);
+
+    if (coolant !== null && intakeTemp !== null && Math.abs(coolant - intakeTemp) >= 35) {
+      add(
+        "info",
+        "温度条件を分けて比較",
+        "冷却水温と吸気温の差が大きいスナップショットです。冷間時か暖機後かで判断が変わります。",
+        "冷間始動直後と完全暖機後を分け、温度センサー値の立ち上がりを比較する"
+      );
+    }
+
+    if (rpm !== null && rpm > 500 && speed !== null && speed === 0 && map !== null && map >= 60) {
+      add(
+        "info",
+        "吸気圧は負荷条件と比較",
+        "停止アイドルと思われる条件でMAPが高めに見えます。断定せず、回転数、負荷、スロットル、標高/大気圧と合わせます。",
+        baro !== null
+          ? "大気圧、MAP、MAF、スロットル開度を同時に記録して吸気漏れ、EGR、バルブタイミング、圧縮を切り分ける"
+          : "大気圧または同条件の基準値を追加で取得して比較する"
+      );
+    }
+
+    if (!insights.length && values.length) {
+      add(
+        "info",
+        "追加条件で比較",
+        "読めた値だけでは相関ヒントは限定的です。値を正常/異常と断定せず、症状再現条件で同じ項目を再取得してください。",
+        "DTC、フリーズフレーム、冷間/暖機後/再現時のライブデータを並べて確認する"
+      );
+    }
+
+    return insights.slice(0, 6);
+  }
+
+  function addFuelTrimInsight(bankLabel, shortTrim, longTrim, add) {
+    if (shortTrim === null || longTrim === null) return;
+    const total = shortTrim + longTrim;
+    const absoluteTotal = Math.abs(total);
+
+    if (absoluteTotal >= 15) {
+      add(
+        "caution",
+        `${bankLabel}の燃料補正合計が大きい`,
+        `短期補正と長期補正の合計が約${total.toFixed(1)}%です。リーン/リッチの原因を断定せず、条件をそろえて確認します。`,
+        total > 0
+          ? "吸気漏れ、燃圧不足、MAF/MAP、排気漏れ、O2/A/Fセンサー、燃料品質を順に確認する"
+          : "燃圧過多、インジェクター漏れ、EVAPパージ、MAF/MAP、O2/A/Fセンサーを順に確認する"
+      );
+    } else if (absoluteTotal >= 8) {
+      add(
+        "info",
+        `${bankLabel}の燃料補正を継続観察`,
+        `短期補正と長期補正の合計が約${total.toFixed(1)}%です。単発値ではなく、アイドル/2500rpm/負荷時で傾向を見ます。`,
+        "同じ燃料トリム項目を運転条件別に記録し、MAF/MAP、O2/A/F、燃圧と照合する"
+      );
+    }
   }
 
   window.ObdReadOnly = Object.freeze({
@@ -173,6 +298,7 @@
     getCapability,
     extractDtcCodes,
     extractMonitorValues,
+    analyzeMonitorValues,
     redactSensitiveText,
     analyzeScannerText
   });

@@ -1036,6 +1036,54 @@ body.dark .flow-node-measure .flow-step {
   line-height: 1.45;
 }
 
+.obd-monitor-insights {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 7px;
+  background: var(--panel);
+  padding: 14px;
+}
+
+.obd-monitor-insights h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.obd-monitor-insights ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.obd-monitor-insights li {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-subtle);
+  padding: 10px;
+}
+
+.obd-monitor-insights li.is-caution {
+  border-color: color-mix(in srgb, var(--manual) 46%, var(--line));
+  background: var(--manual-bg);
+}
+
+.obd-monitor-insights strong {
+  color: var(--ink);
+}
+
+.obd-monitor-insights span,
+.obd-monitor-insights em {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: normal;
+  line-height: 1.5;
+}
+
 .obd-monitor-caution {
   margin: 14px 0 0;
   border-left: 4px solid var(--manual);
