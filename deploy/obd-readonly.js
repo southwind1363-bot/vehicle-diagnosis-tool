@@ -106,6 +106,122 @@
     })
   ]);
 
+  const vehicleConnectionProfile = Object.freeze({
+    interfaceType: "web-serial-obd-adapter",
+    currentState: "safety-gated",
+    transportEnabled: false,
+    adapterFamilies: Object.freeze(["ELM327互換", "STN系互換"]),
+    baudRateCandidates: Object.freeze([38400, 115200, 9600]),
+    privacyPolicy: "VINなど診断に不要な識別情報は保存しない",
+    stopConditions: Object.freeze([
+      "利用者が停止した",
+      "通信タイムアウト",
+      "アダプター応答なし",
+      "ブラウザのシリアル接続が切断された"
+    ])
+  });
+
+  const preparedVehicleRequests = Object.freeze([
+    Object.freeze({
+      id: "adapter_identity",
+      group: "connection",
+      label: "アダプター応答確認",
+      service: "adapter",
+      pid: null,
+      stateChanging: false,
+      currentAvailability: "準備中",
+      requiresVehicleSupport: false,
+      destination: "OBDアダプター",
+      resultTarget: "接続状態",
+      safetyGate: "送信無効",
+      note: "実車通信前にアダプター応答、通信速度、タイムアウト処理を確認する"
+    }),
+    Object.freeze({
+      id: "read_stored_dtc",
+      group: "dtc",
+      label: "保存DTC読取",
+      service: "03",
+      pid: null,
+      stateChanging: false,
+      currentAvailability: "準備中",
+      requiresVehicleSupport: true,
+      destination: "車両ECU",
+      resultTarget: "診断補助DTC一覧",
+      safetyGate: "送信無効",
+      note: "取得できたコードだけを表示し、未応答ECUを故障と断定しない"
+    }),
+    Object.freeze({
+      id: "read_pending_dtc",
+      group: "dtc",
+      label: "保留DTC読取",
+      service: "07",
+      pid: null,
+      stateChanging: false,
+      currentAvailability: "準備中",
+      requiresVehicleSupport: true,
+      destination: "車両ECU",
+      resultTarget: "診断補助DTC一覧",
+      safetyGate: "送信無効",
+      note: "保存DTCと分けて扱い、発生条件はメーカー整備書で確認する"
+    }),
+    Object.freeze({
+      id: "read_freeze_frame",
+      group: "dtc",
+      label: "フリーズフレーム取得",
+      service: "02",
+      pid: null,
+      stateChanging: false,
+      currentAvailability: "準備中",
+      requiresVehicleSupport: true,
+      destination: "車両ECU",
+      resultTarget: "診断補助の発生時条件",
+      safetyGate: "送信無効",
+      note: "DTC消去前に保存し、冷間時、暖機後、症状再現時と混同しない"
+    }),
+    Object.freeze({
+      id: "monitor_supported_pids",
+      group: "live-data",
+      label: "対応PID確認",
+      service: "01",
+      pid: "00",
+      stateChanging: false,
+      currentAvailability: "準備中",
+      requiresVehicleSupport: true,
+      destination: "車両ECU",
+      resultTarget: "データモニター表示項目",
+      safetyGate: "送信無効",
+      note: "車両が対応を返したPIDだけを表示候補にする"
+    }),
+    Object.freeze({
+      id: "monitor_core_values",
+      group: "live-data",
+      label: "主要ライブデータ取得",
+      service: "01",
+      pid: "supported-only",
+      stateChanging: false,
+      currentAvailability: "準備中",
+      requiresVehicleSupport: true,
+      destination: "車両ECU",
+      resultTarget: "リアルタイムデータモニター",
+      safetyGate: "送信無効",
+      note: "回転数、車速、水温、燃料補正、電源電圧などを対応PIDの範囲で扱う"
+    }),
+    Object.freeze({
+      id: "clear_dtc_request",
+      group: "state-changing",
+      label: "DTC消去要求",
+      service: "04",
+      pid: null,
+      stateChanging: true,
+      currentAvailability: "安全検証完了まで無効",
+      requiresVehicleSupport: true,
+      destination: "車両ECU",
+      resultTarget: "DTCとレディネス状態",
+      safetyGate: "強制拒否",
+      note: "全システムスキャン、フリーズフレーム保存、利用者確認、再スキャンが揃うまで実行不可"
+    })
+  ]);
+
   function getCapability() {
     return {
       secureContext: window.isSecureContext,
@@ -121,6 +237,37 @@
       ...item,
       requiredBeforeEnable: [...item.requiredBeforeEnable]
     }));
+  }
+
+  function getVehicleConnectionProfile() {
+    return {
+      ...vehicleConnectionProfile,
+      adapterFamilies: [...vehicleConnectionProfile.adapterFamilies],
+      baudRateCandidates: [...vehicleConnectionProfile.baudRateCandidates],
+      stopConditions: [...vehicleConnectionProfile.stopConditions]
+    };
+  }
+
+  function getPreparedVehicleRequests() {
+    return preparedVehicleRequests.map((item) => ({ ...item }));
+  }
+
+  function requestPreparedVehicleRequest(requestId) {
+    const request = preparedVehicleRequests.find((item) => item.id === requestId);
+    const label = request?.label || requestId || "unknown";
+
+    return {
+      ok: false,
+      requestId,
+      label,
+      blocked: true,
+      wouldTransmit: false,
+      stateChanging: Boolean(request?.stateChanging),
+      reason: request?.stateChanging
+        ? "安全検証が完了するまで、状態変更コマンドは常に拒否します。"
+        : "接続検証中のため、この画面から車両やアダプターへ送信しません。",
+      safetyGate: request?.safetyGate || "送信無効"
+    };
   }
 
   function requestVehicleOperation(operationId) {
@@ -380,7 +527,10 @@
     configureMonitorDefinitions,
     getMonitorDefinitions,
     getVehicleOperationPlan,
+    getVehicleConnectionProfile,
+    getPreparedVehicleRequests,
     requestVehicleOperation,
+    requestPreparedVehicleRequest,
     getCapability,
     extractDtcCodes,
     extractMonitorValues,

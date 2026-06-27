@@ -1001,6 +1001,69 @@ body.dark .flow-node-measure .flow-step {
   opacity: 0.68;
 }
 
+.obd-profile-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.obd-profile-strip span {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.obd-profile-strip strong {
+  color: var(--ink);
+  font-size: 0.75rem;
+}
+
+.obd-request-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.obd-request-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 14px;
+}
+
+.obd-request-state-changing {
+  border-left-color: var(--manual);
+  background: var(--manual-bg);
+}
+
+.obd-request-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.obd-request-card button {
+  min-height: 38px;
+}
+
+.obd-request-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
 .obd-import-result {
   margin-top: 18px;
 }
@@ -1348,6 +1411,12 @@ body.dark .flow-node-measure .flow-step {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .obd-operation-grid,
+  .obd-profile-strip,
+  .obd-request-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .obd-monitor-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1422,6 +1491,12 @@ body.dark .flow-node-measure .flow-step {
   }
 
   .obd-safety-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .obd-operation-grid,
+  .obd-profile-strip,
+  .obd-request-grid {
     grid-template-columns: 1fr;
   }
 

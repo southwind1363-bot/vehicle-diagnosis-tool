@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.209.0";
+const APP_VERSION = "2.210.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -141,6 +141,8 @@ const opsResultList = document.querySelector("#opsResultList");
 const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
 const obdOperationGrid = document.querySelector("#obdOperationGrid");
+const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
+const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdSampleButton = document.querySelector("#obdSampleButton");
@@ -1877,6 +1879,10 @@ function initializeObdReadOnlyPanel() {
   obdCapabilityBadge.textContent = "実機接続準備中";
   obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 接続、DTC読取、データモニター、DTC消去は機能単位で準備し、安全検証が終わるまで車両への送信は無効にしています。`;
   renderObdOperationPlan(window.ObdReadOnly.getVehicleOperationPlan?.() || []);
+  renderObdPreparedRequests(
+    window.ObdReadOnly.getVehicleConnectionProfile?.(),
+    window.ObdReadOnly.getPreparedVehicleRequests?.() || []
+  );
 }
 
 function renderObdOperationPlan(items) {
@@ -1920,6 +1926,64 @@ function renderObdOperationPlan(items) {
 
     card.append(head, goal, list, button);
     obdOperationGrid.appendChild(card);
+  });
+}
+
+function renderObdPreparedRequests(profile, requests) {
+  obdConnectionProfile.innerHTML = "";
+  obdPreparedRequestGrid.innerHTML = "";
+
+  if (profile) {
+    [
+      ["接続方式", "Web Serial"],
+      ["状態", profile.currentState === "safety-gated" ? "安全ゲート中" : profile.currentState],
+      ["対応候補", profile.adapterFamilies.join(" / ")],
+      ["通信速度候補", profile.baudRateCandidates.join(" / ")]
+    ].forEach(([label, value]) => {
+      const item = document.createElement("span");
+      const strong = document.createElement("strong");
+      strong.textContent = label;
+      item.append(strong, document.createTextNode(value));
+      obdConnectionProfile.appendChild(item);
+    });
+  }
+
+  if (!requests.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "通信準備の定義を取得できませんでした。";
+    obdPreparedRequestGrid.appendChild(empty);
+    return;
+  }
+
+  requests.forEach((request) => {
+    const card = document.createElement("article");
+    card.className = `obd-request-card obd-request-${request.group}`;
+
+    const head = document.createElement("div");
+    head.className = "obd-operation-head";
+    const title = document.createElement("strong");
+    title.textContent = request.label;
+    const badge = document.createElement("span");
+    badge.className = "obd-operation-state";
+    badge.textContent = request.safetyGate;
+    head.append(title, badge);
+
+    const meta = document.createElement("p");
+    const pidText = request.pid ? ` PID ${request.pid}` : "";
+    meta.textContent = `${request.destination} / Mode ${request.service}${pidText} / ${request.resultTarget}`;
+
+    const note = document.createElement("p");
+    note.textContent = request.note;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = request.stateChanging ? "small-danger-button" : "secondary-button";
+    button.disabled = true;
+    button.textContent = request.stateChanging ? "実行不可" : "送信無効";
+
+    card.append(head, meta, note, button);
+    obdPreparedRequestGrid.appendChild(card);
   });
 }
 
