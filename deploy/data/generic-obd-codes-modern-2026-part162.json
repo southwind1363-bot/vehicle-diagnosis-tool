@@ -1,0 +1,1852 @@
+[
+  {
+    "id": "modern-2026-u0300-internal-control-module-software-incompatibility",
+    "code": "U0300",
+    "title": "Internal Control Module Software Incompatibility",
+    "system": "Internal Control Module Software Incompatibility",
+    "possible_causes": [
+      "Internal Control Module Software Incompatibility fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "target module or calibration",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0301-software-incompatibility-with-ecm-pcm",
+    "code": "U0301",
+    "title": "Software Incompatibility With ECM/PCM",
+    "system": "Software Incompatibility With ECM/PCM",
+    "possible_causes": [
+      "Software Incompatibility With ECM/PCM fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "ECM/PCM",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0302-software-incompatibility-with-transmission-control-module",
+    "code": "U0302",
+    "title": "Software Incompatibility With Transmission Control Module",
+    "system": "Software Incompatibility With Transmission Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Transmission Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transmission Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0303-software-incompatibility-with-transfer-case-control-module",
+    "code": "U0303",
+    "title": "Software Incompatibility With Transfer Case Control Module",
+    "system": "Software Incompatibility With Transfer Case Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Transfer Case Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Transfer Case Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0304-software-incompatibility-with-gear-shift-control-module-a",
+    "code": "U0304",
+    "title": "Software Incompatibility With Gear Shift Control Module “A”",
+    "system": "Software Incompatibility With Gear Shift Control Module “A”",
+    "possible_causes": [
+      "Software Incompatibility With Gear Shift Control Module “A” fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Gear Shift Control Module “A”",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0305-software-incompatibility-with-cruise-control-module",
+    "code": "U0305",
+    "title": "Software Incompatibility With Cruise Control Module",
+    "system": "Software Incompatibility With Cruise Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Cruise Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Cruise Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0306-software-incompatibility-with-fuel-injector-control-module",
+    "code": "U0306",
+    "title": "Software Incompatibility With Fuel Injector Control Module",
+    "system": "Software Incompatibility With Fuel Injector Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Fuel Injector Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Fuel Injector Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0307-software-incompatibility-with-glow-plug-control-module",
+    "code": "U0307",
+    "title": "Software Incompatibility With Glow Plug Control Module",
+    "system": "Software Incompatibility With Glow Plug Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Glow Plug Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Glow Plug Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0308-software-incompatibility-with-throttle-actuator-control-module",
+    "code": "U0308",
+    "title": "Software Incompatibility With Throttle Actuator Control Module",
+    "system": "Software Incompatibility With Throttle Actuator Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Throttle Actuator Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Throttle Actuator Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0309-software-incompatibility-with-alternative-fuel-control-module",
+    "code": "U0309",
+    "title": "Software Incompatibility With Alternative Fuel Control Module",
+    "system": "Software Incompatibility With Alternative Fuel Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Alternative Fuel Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Alternative Fuel Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0310-software-incompatibility-with-fuel-pump-control-module",
+    "code": "U0310",
+    "title": "Software Incompatibility With Fuel Pump Control Module",
+    "system": "Software Incompatibility With Fuel Pump Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Fuel Pump Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Fuel Pump Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0311-software-incompatibility-with-drive-motor-control-module",
+    "code": "U0311",
+    "title": "Software Incompatibility With Drive Motor Control Module",
+    "system": "Software Incompatibility With Drive Motor Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Drive Motor Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Drive Motor Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0312-software-incompatibility-with-battery-energy-control-module-a",
+    "code": "U0312",
+    "title": "Software Incompatibility With Battery Energy Control Module A",
+    "system": "Software Incompatibility With Battery Energy Control Module A",
+    "possible_causes": [
+      "Software Incompatibility With Battery Energy Control Module A fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Battery Energy Control Module A",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0313-software-incompatibility-with-battery-energy-control-module-b",
+    "code": "U0313",
+    "title": "Software Incompatibility With Battery Energy Control Module B",
+    "system": "Software Incompatibility With Battery Energy Control Module B",
+    "possible_causes": [
+      "Software Incompatibility With Battery Energy Control Module B fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Battery Energy Control Module B",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0314-software-incompatibility-with-four-wheel-drive-clutch-control-module",
+    "code": "U0314",
+    "title": "Software Incompatibility With Four-Wheel Drive Clutch Control Module",
+    "system": "Software Incompatibility With Four-Wheel Drive Clutch Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Four-Wheel Drive Clutch Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Four-Wheel Drive Clutch Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0315-software-incompatibility-with-anti-lock-brake-system-control-module",
+    "code": "U0315",
+    "title": "Software Incompatibility With Anti-Lock Brake System Control Module",
+    "system": "Software Incompatibility With Anti-Lock Brake System Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Anti-Lock Brake System Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Anti-Lock Brake System Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0316-software-incompatibility-with-vehicle-dynamics-control-module",
+    "code": "U0316",
+    "title": "Software Incompatibility With Vehicle Dynamics Control Module",
+    "system": "Software Incompatibility With Vehicle Dynamics Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Vehicle Dynamics Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Vehicle Dynamics Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0317-software-incompatibility-with-park-brake-control-module",
+    "code": "U0317",
+    "title": "Software Incompatibility With Park Brake Control Module",
+    "system": "Software Incompatibility With Park Brake Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Park Brake Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Park Brake Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0318-software-incompatibility-with-brake-system-control-module",
+    "code": "U0318",
+    "title": "Software Incompatibility With Brake System Control Module",
+    "system": "Software Incompatibility With Brake System Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Brake System Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Brake System Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0319-software-incompatibility-with-steering-effort-control-module",
+    "code": "U0319",
+    "title": "Software Incompatibility With Steering Effort Control Module",
+    "system": "Software Incompatibility With Steering Effort Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Steering Effort Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Steering Effort Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0320-software-incompatibility-with-power-steering-control-module",
+    "code": "U0320",
+    "title": "Software Incompatibility With Power Steering Control Module",
+    "system": "Software Incompatibility With Power Steering Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Power Steering Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Power Steering Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0321-software-incompatibility-with-suspension-control-module-a",
+    "code": "U0321",
+    "title": "Software Incompatibility With Suspension Control Module “A”",
+    "system": "Software Incompatibility With Suspension Control Module “A”",
+    "possible_causes": [
+      "Software Incompatibility With Suspension Control Module “A” fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Suspension Control Module “A”",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0322-software-incompatibility-with-body-control-module",
+    "code": "U0322",
+    "title": "Software Incompatibility With Body Control Module",
+    "system": "Software Incompatibility With Body Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Body Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Body Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0323-software-incompatibility-with-instrument-panel-control-module",
+    "code": "U0323",
+    "title": "Software Incompatibility With Instrument Panel Control Module",
+    "system": "Software Incompatibility With Instrument Panel Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Instrument Panel Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Instrument Panel Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0324-software-incompatibility-with-hvac-control-module",
+    "code": "U0324",
+    "title": "Software Incompatibility With HVAC Control Module",
+    "system": "Software Incompatibility With HVAC Control Module",
+    "possible_causes": [
+      "Software Incompatibility With HVAC Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "HVAC Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0325-software-incompatibility-with-auxiliary-heater-control-module",
+    "code": "U0325",
+    "title": "Software Incompatibility With Auxiliary Heater Control Module",
+    "system": "Software Incompatibility With Auxiliary Heater Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Auxiliary Heater Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Auxiliary Heater Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0326-software-incompatibility-with-vehicle-immobilizer-control-module",
+    "code": "U0326",
+    "title": "Software Incompatibility With Vehicle Immobilizer Control Module",
+    "system": "Software Incompatibility With Vehicle Immobilizer Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Vehicle Immobilizer Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Vehicle Immobilizer Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0327-software-incompatibility-with-vehicle-security-control-module",
+    "code": "U0327",
+    "title": "Software Incompatibility With Vehicle Security Control Module",
+    "system": "Software Incompatibility With Vehicle Security Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Vehicle Security Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Vehicle Security Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0328-software-incompatibility-with-steering-angle-sensor-module",
+    "code": "U0328",
+    "title": "Software Incompatibility With Steering Angle Sensor Module",
+    "system": "Software Incompatibility With Steering Angle Sensor Module",
+    "possible_causes": [
+      "Software Incompatibility With Steering Angle Sensor Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Steering Angle Sensor Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0329-software-incompatibility-with-steering-column-control-module",
+    "code": "U0329",
+    "title": "Software Incompatibility With Steering Column Control Module",
+    "system": "Software Incompatibility With Steering Column Control Module",
+    "possible_causes": [
+      "Software Incompatibility With Steering Column Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Steering Column Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0330-software-incompatibility-with-tire-pressure-monitor-module",
+    "code": "U0330",
+    "title": "Software Incompatibility With Tire Pressure Monitor Module",
+    "system": "Software Incompatibility With Tire Pressure Monitor Module",
+    "possible_causes": [
+      "Software Incompatibility With Tire Pressure Monitor Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Tire Pressure Monitor Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0331-software-incompatibility-with-body-control-module-a",
+    "code": "U0331",
+    "title": "Software Incompatibility With Body Control Module “A”",
+    "system": "Software Incompatibility With Body Control Module “A”",
+    "possible_causes": [
+      "Software Incompatibility With Body Control Module “A” fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Body Control Module “A”",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0332-software-incompatibility-with-multi-axis-acceleration-sensor-module",
+    "code": "U0332",
+    "title": "Software Incompatibility With Multi-axis Acceleration Sensor Module",
+    "system": "Software Incompatibility With Multi-axis Acceleration Sensor Module",
+    "possible_causes": [
+      "Software Incompatibility With Multi-axis Acceleration Sensor Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Multi-axis Acceleration Sensor Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0333-software-incompatibility-with-gear-shift-control-module-b",
+    "code": "U0333",
+    "title": "Software Incompatibility With Gear Shift Control Module “B”",
+    "system": "Software Incompatibility With Gear Shift Control Module “B”",
+    "possible_causes": [
+      "Software Incompatibility With Gear Shift Control Module “B” fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Gear Shift Control Module “B”",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0334-software-incompatibility-with-radio",
+    "code": "U0334",
+    "title": "Software Incompatibility With Radio",
+    "system": "Software Incompatibility With Radio",
+    "possible_causes": [
+      "Software Incompatibility With Radio fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Radio",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0335-software-incompatibility-with-hybrid-battery-pack-sensor-module",
+    "code": "U0335",
+    "title": "Software Incompatibility With Hybrid Battery Pack Sensor Module",
+    "system": "Software Incompatibility With Hybrid Battery Pack Sensor Module",
+    "possible_causes": [
+      "Software Incompatibility With Hybrid Battery Pack Sensor Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Hybrid Battery Pack Sensor Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u0336-software-incompatibility-with-restraints-control-module",
+    "code": "U0336",
+    "title": "Software Incompatibility with Restraints Control Module",
+    "system": "Software Incompatibility with Restraints Control Module",
+    "possible_causes": [
+      "Software Incompatibility with Restraints Control Module fault.",
+      "Module software, calibration, configuration, replacement/programming mismatch, network configuration, variant coding, power interruption during programming, or related module DTC influence.",
+      "Calibration IDs, software compatibility, coding, initialization, and programming procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, calibration IDs, coding/configuration data, programming history, battery voltage, and related communication DTCs.",
+      "Confirm vehicle-specific software compatibility, module variant coding, configuration, initialization, immobilizer/security steps, and programming prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery support, module power/ground, network communication, installed module part numbers, calibration levels, and configuration/coding consistency.",
+      "Separate calibration/configuration mismatch, wrong module, incomplete programming, network, power supply, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Restraints Control Module",
+      "Module software/calibration ID",
+      "Variant coding/configuration",
+      "Programming history",
+      "Module power/ground",
+      "Related U-codes"
+    ],
+    "common_mistakes": [
+      "Treating software incompatibility as a parts fault before checking coding and calibration.",
+      "Programming without battery support, OEM prerequisites, or recovery plan.",
+      "Assuming module part numbers, calibration levels, or security initialization are interchangeable across vehicles."
+    ],
+    "required_tools": [
+      "OEM-capable scan/programming tool",
+      "Stable battery support unit",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around programming/coding, immobilizer/security, SRS, brake, steering, high-voltage, and ADAS modules; failed programming or incorrect coding can immobilize the vehicle or disable safety systems, so follow OEM procedures and recovery steps."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  }
+]
