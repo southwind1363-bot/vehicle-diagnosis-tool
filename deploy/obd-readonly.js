@@ -523,6 +523,106 @@
     };
   }
 
+  function normalizeBridgeDtcSnapshot(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : [];
+    const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : [];
+    const codes = [...new Set(dtcRows.flatMap((row) => {
+      if (typeof row === "string") return extractDtcCodes(row);
+      if (!row || typeof row !== "object") return [];
+      return extractDtcCodes(row.code || row.dtc || row.id || "");
+    }))];
+
+    return {
+      source: "local_bridge",
+      intent: "read_stored_dtc",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true,
+      codes,
+      dtcs: codes.map((code) => ({ code, source: "local_bridge" })),
+      protocol: data.protocol || null,
+      ecuResponses: ecuRows.map((row) => ({
+        ecu: row?.ecu || row?.address || null,
+        status: row?.status || "unknown",
+        codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : null
+      })),
+      capturedAt: data.captured_at || null,
+      retainedRawText: false
+    };
+  }
+
+  function normalizeBridgeLivePidSnapshot(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    const values = Array.isArray(data.values) ? data.values : [];
+    const monitorValues = values
+      .map((row, index) => normalizeBridgePidValue(row, index))
+      .filter(Boolean);
+
+    return {
+      source: "local_bridge",
+      intent: "read_live_pid_snapshot",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true,
+      protocol: data.protocol || null,
+      supportedPids: Array.isArray(data.supported_pids) ? [...data.supported_pids] : [],
+      capturedAt: data.captured_at || null,
+      monitorValues,
+      monitorInsights: analyzeMonitorValues(monitorValues),
+      retainedRawText: false
+    };
+  }
+
+  function normalizeBridgePidValue(row, index) {
+    if (!row || typeof row !== "object") return null;
+    const id = String(row.id || row.monitor_id || row.pid || "").trim();
+    if (!id) return null;
+    const definition = monitorDefinitions.find((item) => item.id === id || item.pid === row.pid);
+    if (!definition) return null;
+    const valueType = definition?.valueType || (typeof row.value === "string" && !NUMBER_PATTERN.test(row.value) ? "text" : "number");
+    const parsedValue = valueType === "text" ? String(row.value ?? "").slice(0, 160) : Number(row.value);
+    if (valueType === "number" && !Number.isFinite(parsedValue)) return null;
+    if (valueType === "text" && !parsedValue) return null;
+
+    return {
+      id: definition?.id || id,
+      label: definition?.label || row.label || id,
+      value: parsedValue,
+      unit: definition?.unit || row.unit || "",
+      category: definition?.category || row.category || "ブリッジ読取",
+      valueType,
+      service: definition?.service || row.service || null,
+      pid: definition?.pid || row.pid || null,
+      scope: definition?.scope || "local-bridge",
+      supportNote: definition?.supportNote || "ローカルブリッジ応答を既存データモニター表示へ整形",
+      sourceLine: index + 1
+    };
+  }
+
+  function buildBridgeSessionSummary(parts = {}) {
+    const dtcSnapshot = parts.dtcSnapshot?.codes ? parts.dtcSnapshot : normalizeBridgeDtcSnapshot(parts.dtcSnapshot);
+    const livePidSnapshot = parts.livePidSnapshot?.monitorValues ? parts.livePidSnapshot : normalizeBridgeLivePidSnapshot(parts.livePidSnapshot);
+    const warnings = [];
+    if (dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
+    if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
+    if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
+
+    return {
+      source: "local_bridge",
+      startedAt: parts.startedAt || null,
+      endedAt: parts.endedAt || null,
+      vehicleProfile: parts.vehicleProfile || null,
+      codes: dtcSnapshot.codes,
+      monitorValues: livePidSnapshot.monitorValues,
+      monitorInsights: livePidSnapshot.monitorInsights,
+      warnings,
+      exportRequired: true,
+      retainedRawText: false,
+      wouldTransmit: false
+    };
+  }
+
   function evaluateLocalBridgeRequest(request = {}) {
     const intent = String(request.intent || "").trim();
     const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);
@@ -854,6 +954,9 @@
     requestAdvancedInterface,
     evaluateLocalBridgeRequest,
     createLocalBridgeBlockedResponse,
+    normalizeBridgeDtcSnapshot,
+    normalizeBridgeLivePidSnapshot,
+    buildBridgeSessionSummary,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,

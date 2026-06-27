@@ -91,6 +91,20 @@ check(bridgeSchemas.some((item) => item.intent === "read_live_pid_snapshot" && A
 const blockedBridgeResponse = obd.createLocalBridgeBlockedResponse("read_stored_dtc");
 check(blockedBridgeResponse.ok === false && blockedBridgeResponse.blocked === true && blockedBridgeResponse.would_transmit === false, "ブリッジ遮断レスポンスが安全側ではありません");
 check(Array.isArray(blockedBridgeResponse.data.dtcs) && blockedBridgeResponse.data.dtcs.length === 0, "遮断時DTCレスポンスが空データになっていません");
+const bridgeDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    ecu_responses: [{ ecu: "7E8", status: "ok", dtcs: ["P0171"] }],
+    dtcs: [{ code: "P0171" }, { dtc: "P0300" }, "p0171"],
+    captured_at: "2026-06-28T00:00:00Z"
+  }
+});
+check(bridgeDtcSnapshot.codes.join(",") === "P0171,P0300", "ブリッジDTC応答を既存DTC配列へ変換できません");
+check(bridgeDtcSnapshot.retainedRawText === false, "ブリッジDTC変換が原文保持になっています");
+check(bridgeDtcSnapshot.wouldTransmit === false, "ブリッジDTC変換が送信済み扱いになっています");
 const outboundRead = obd.evaluateOutboundSafety({ service: "03", stateChanging: false });
 check(outboundRead.blocked === true && outboundRead.wouldTransmit === false && outboundRead.failClosed === true, "読取系アウトバウンドが安全ゲートで停止していません");
 const outboundClear = obd.evaluateOutboundSafety({ service: "04", stateChanging: true });
@@ -114,10 +128,38 @@ check(monitorAnalysis.monitorValues.find((item) => item.id === "dpf_status")?.va
 check(!monitorAnalysis.monitorValues.some((item) => item.id === "unknown"), "未定義値を取り込んでいます");
 check(monitorAnalysis.retainedRawText === false, "モニター入力原文を保持する設定になっています");
 
+const bridgePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    supported_pids: ["0C", "05"],
+    values: [
+      { id: "engine_speed", value: 760, unit: "rpm" },
+      { pid: "05", value: 88, unit: "°C" },
+      { id: "fuel_system_status", value: "Closed loop" },
+      { id: "unknown_pid", value: "not-a-number" }
+    ],
+    captured_at: "2026-06-28T00:01:00Z"
+  }
+});
+check(bridgePidSnapshot.monitorValues.length === 3, "ブリッジPID応答の整形件数が不正です");
+check(bridgePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 760, "ブリッジ回転数を整形できません");
+check(bridgePidSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 88, "ブリッジPIDから辞書項目へ紐付けできません");
+check(bridgePidSnapshot.monitorValues.find((item) => item.id === "fuel_system_status")?.value === "Closed loop", "ブリッジ文字PIDを整形できません");
+check(bridgePidSnapshot.monitorInsights.length > 0, "ブリッジPIDから相関ヒントを生成できません");
+check(bridgePidSnapshot.retainedRawText === false, "ブリッジPID変換が原文保持になっています");
+const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot });
+check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
+check(bridgeSummary.monitorValues.length === 3, "ブリッジセッション要約へPID値を引き継げません");
+check(bridgeSummary.exportRequired === true, "ブリッジセッション要約がエクスポート前提ではありません");
+check(bridgeSummary.retainedRawText === false, "ブリッジセッション要約が原文保持になっています");
+
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 70");
+  console.log("OBD read-only safety checks: 85");
   console.log("Errors: 0");
 }
