@@ -737,6 +737,34 @@
     };
   }
 
+  function buildBridgeDiagnosticImport(parts = {}) {
+    const summary = parts.codes && parts.monitorValues ? parts : buildBridgeSessionSummary(parts);
+    const exportPayload = buildBridgeSessionExportPayload(summary);
+    const codes = Array.isArray(summary.codes) ? [...summary.codes] : [];
+    const monitorValues = Array.isArray(summary.monitorValues) ? summary.monitorValues.map((item) => ({ ...item })) : [];
+    const monitorInsights = Array.isArray(summary.monitorInsights) ? summary.monitorInsights.map((item) => ({ ...item })) : [];
+
+    return {
+      source: "local_bridge",
+      importType: "bridge_diagnostic_snapshot",
+      codes,
+      monitorValues,
+      monitorInsights,
+      bridgeSession: {
+        connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
+        vciDevices: Array.isArray(summary.vciDevices) ? summary.vciDevices.map((item) => ({ ...item })) : [],
+        warnings: [...new Set(summary.warnings || [])],
+        exportRequired: true
+      },
+      exportPayload,
+      hadSensitiveIdentifier: false,
+      sourceLength: 0,
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
+
   function evaluateLocalBridgeRequest(request = {}) {
     const intent = String(request.intent || "").trim();
     const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);
@@ -1074,6 +1102,7 @@
     normalizeBridgeLivePidSnapshot,
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
+    buildBridgeDiagnosticImport,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,
