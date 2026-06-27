@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.213.0";
+const APP_VERSION = "2.214.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -144,6 +144,7 @@ const obdCapabilityText = document.querySelector("#obdCapabilityText");
 const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
+const obdInterfaceRoadmapGrid = document.querySelector("#obdInterfaceRoadmapGrid");
 const obdInterlockSummary = document.querySelector("#obdInterlockSummary");
 const obdInterlockChecklist = document.querySelector("#obdInterlockChecklist");
 const obdScannerText = document.querySelector("#obdScannerText");
@@ -1913,6 +1914,7 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getVehicleConnectionProfile?.(),
     window.ObdReadOnly.getPreparedVehicleRequests?.() || []
   );
+  renderObdInterfaceRoadmap(window.ObdReadOnly.getAdvancedInterfaceRoadmap?.() || []);
   renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
 }
 
@@ -2015,6 +2017,47 @@ function renderObdPreparedRequests(profile, requests) {
 
     card.append(head, meta, note, button);
     obdPreparedRequestGrid.appendChild(card);
+  });
+}
+
+function renderObdInterfaceRoadmap(items) {
+  obdInterfaceRoadmapGrid.innerHTML = "";
+
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "対応インターフェースの準備順を取得できませんでした。";
+    obdInterfaceRoadmapGrid.appendChild(empty);
+    return;
+  }
+
+  [...items].sort((a, b) => a.phase - b.phase).forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "obd-interface-card";
+
+    const head = document.createElement("div");
+    head.className = "obd-operation-head";
+    const title = document.createElement("strong");
+    title.textContent = `${item.phase}. ${item.label}`;
+    const badge = document.createElement("span");
+    badge.className = "obd-operation-state";
+    badge.textContent = item.currentAvailability;
+    head.append(title, badge);
+
+    const role = document.createElement("p");
+    role.textContent = item.role;
+
+    const scope = document.createElement("p");
+    scope.textContent = item.capabilityScope.join(" / ");
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.disabled = true;
+    button.textContent = item.requiresLocalBridge ? "ブリッジ準備後" : "準備中";
+
+    card.append(head, role, scope, button);
+    obdInterfaceRoadmapGrid.appendChild(card);
   });
 }
 

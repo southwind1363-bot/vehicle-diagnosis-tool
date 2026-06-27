@@ -63,6 +63,16 @@ const blockedPreparedClear = obd.requestPreparedVehicleRequest("clear_dtc_reques
 check(blockedPreparedClear.ok === false && blockedPreparedClear.blocked === true && blockedPreparedClear.wouldTransmit === false && blockedPreparedClear.failClosed === true, "DTC消去要求が送信不可で拒否されていません");
 const blockedPreparedRead = obd.requestPreparedVehicleRequest("read_stored_dtc");
 check(blockedPreparedRead.ok === false && blockedPreparedRead.blocked === true && blockedPreparedRead.wouldTransmit === false, "DTC読取要求が安全ゲートで停止していません");
+const interfaceRoadmap = obd.getAdvancedInterfaceRoadmap();
+check(interfaceRoadmap.length >= 6, "高度インターフェースの準備順が不足しています");
+check(interfaceRoadmap[0].id === "web_serial_obd", "最初の段階がWeb Serialではありません");
+check(interfaceRoadmap.some((item) => item.id === "local_bridge" && item.requiresLocalBridge === true), "ローカルブリッジ段階がありません");
+check(interfaceRoadmap.some((item) => item.id === "j2534_passthru" && item.requiresLocalBridge === true), "J2534段階がありません");
+check(interfaceRoadmap.some((item) => item.id === "uds_canfd"), "UDS/CAN FD段階がありません");
+check(interfaceRoadmap.some((item) => item.id === "doip"), "DoIP段階がありません");
+check(interfaceRoadmap.every((item) => item.vehicleCommandEnabled === false), "高度インターフェースで実車コマンドが有効です");
+const blockedJ2534 = obd.requestAdvancedInterface("j2534_passthru");
+check(blockedJ2534.ok === false && blockedJ2534.blocked === true && blockedJ2534.wouldTransmit === false, "J2534準備要求が安全に拒否されていません");
 const outboundRead = obd.evaluateOutboundSafety({ service: "03", stateChanging: false });
 check(outboundRead.blocked === true && outboundRead.wouldTransmit === false && outboundRead.failClosed === true, "読取系アウトバウンドが安全ゲートで停止していません");
 const outboundClear = obd.evaluateOutboundSafety({ service: "04", stateChanging: true });
@@ -90,6 +100,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 49");
+  console.log("OBD read-only safety checks: 57");
   console.log("Errors: 0");
 }

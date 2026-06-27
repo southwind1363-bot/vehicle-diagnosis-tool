@@ -253,6 +253,75 @@
     })
   ]);
 
+  const advancedInterfaceRoadmap = Object.freeze([
+    Object.freeze({
+      id: "web_serial_obd",
+      phase: 1,
+      label: "Web Serial / ELM327・STN",
+      role: "汎用OBD2の読取系を先に確認する",
+      currentAvailability: "準備中",
+      requiresLocalBridge: false,
+      vehicleCommandEnabled: false,
+      capabilityScope: Object.freeze(["保存DTC読取", "保留DTC読取", "標準PID", "フリーズフレーム"]),
+      requiredBeforeEnable: Object.freeze(["HTTPS", "対応ブラウザ", "アダプター識別", "読取コマンド許可リスト"])
+    }),
+    Object.freeze({
+      id: "local_bridge",
+      phase: 2,
+      label: "ローカル通信ブリッジ",
+      role: "ブラウザUIとPC側VCI通信を分離する",
+      currentAvailability: "設計準備",
+      requiresLocalBridge: true,
+      vehicleCommandEnabled: false,
+      capabilityScope: Object.freeze(["通信ログ", "VCI抽象化", "権限確認", "失敗時復旧"]),
+      requiredBeforeEnable: Object.freeze(["ローカル署名", "明示的な起動確認", "通信ログ保存", "UIとの安全なAPI境界"])
+    }),
+    Object.freeze({
+      id: "j2534_passthru",
+      phase: 3,
+      label: "J2534 Pass-Thru",
+      role: "本格的なVCIとメーカー診断に近い通信へ広げる",
+      currentAvailability: "ローカルブリッジ後",
+      requiresLocalBridge: true,
+      vehicleCommandEnabled: false,
+      capabilityScope: Object.freeze(["VCI検出", "プロトコル選択", "メーカー固有読取", "全システムスキャン"]),
+      requiredBeforeEnable: Object.freeze(["対応DLL確認", "VCI適合", "車両適合", "電源安定", "復旧手順"])
+    }),
+    Object.freeze({
+      id: "uds_canfd",
+      phase: 4,
+      label: "UDS / CAN / CAN FD",
+      role: "新しめの車両やメーカー固有DIDへ対応する",
+      currentAvailability: "検証待ち",
+      requiresLocalBridge: true,
+      vehicleCommandEnabled: false,
+      capabilityScope: Object.freeze(["DID読取", "ECU情報", "拡張DTC", "セッション管理"]),
+      requiredBeforeEnable: Object.freeze(["診断セッション制御", "タイミング管理", "応答分割処理", "セキュリティアクセス遮断"])
+    }),
+    Object.freeze({
+      id: "doip",
+      phase: 5,
+      label: "DoIP",
+      role: "Ethernet診断車両への将来対応を分離して準備する",
+      currentAvailability: "検証待ち",
+      requiresLocalBridge: true,
+      vehicleCommandEnabled: false,
+      capabilityScope: Object.freeze(["車両検出", "ルーティング有効化", "UDS over IP", "通信監視"]),
+      requiredBeforeEnable: Object.freeze(["ネットワーク分離", "接続先確認", "ルーティング制御", "タイムアウト復旧"])
+    }),
+    Object.freeze({
+      id: "vci_sdk",
+      phase: 6,
+      label: "専用VCI SDK",
+      role: "対応機器の公式SDKがある場合だけ個別に追加する",
+      currentAvailability: "候補管理",
+      requiresLocalBridge: true,
+      vehicleCommandEnabled: false,
+      capabilityScope: Object.freeze(["公式SDK連携", "機器別機能", "ライセンス確認", "配布管理"]),
+      requiredBeforeEnable: Object.freeze(["SDK利用条件", "OS対応", "ライセンス", "サポート範囲", "責任境界"])
+    })
+  ]);
+
   function getCapability() {
     return {
       secureContext: window.isSecureContext,
@@ -289,6 +358,27 @@
 
   function getPreparedVehicleRequests() {
     return preparedVehicleRequests.map((item) => ({ ...item }));
+  }
+
+  function getAdvancedInterfaceRoadmap() {
+    return advancedInterfaceRoadmap.map((item) => ({
+      ...item,
+      capabilityScope: [...item.capabilityScope],
+      requiredBeforeEnable: [...item.requiredBeforeEnable]
+    }));
+  }
+
+  function requestAdvancedInterface(interfaceId) {
+    const item = advancedInterfaceRoadmap.find((entry) => entry.id === interfaceId);
+    return {
+      ok: false,
+      interfaceId,
+      label: item?.label || interfaceId || "unknown",
+      blocked: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false,
+      reason: "高度な通信インターフェースは設計準備中です。実車への通信は有効化していません。"
+    };
   }
 
   function requestPreparedVehicleRequest(requestId) {
@@ -591,8 +681,10 @@
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
+    getAdvancedInterfaceRoadmap,
     requestVehicleOperation,
     requestPreparedVehicleRequest,
+    requestAdvancedInterface,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,
