@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.208.0";
+const APP_VERSION = "2.209.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -140,6 +140,7 @@ const clearStorageButton = document.querySelector("#clearStorageButton");
 const opsResultList = document.querySelector("#opsResultList");
 const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
+const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdSampleButton = document.querySelector("#obdSampleButton");
@@ -1874,7 +1875,52 @@ function initializeObdReadOnlyPanel() {
   const catalogStatus = `読取辞書 ${capability.monitorDefinitionCount}項目を準備しています。`;
 
   obdCapabilityBadge.textContent = "実機接続準備中";
-  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 現在は安全検証中のため車両接続を無効にしています。`;
+  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 接続、DTC読取、データモニター、DTC消去は機能単位で準備し、安全検証が終わるまで車両への送信は無効にしています。`;
+  renderObdOperationPlan(window.ObdReadOnly.getVehicleOperationPlan?.() || []);
+}
+
+function renderObdOperationPlan(items) {
+  obdOperationGrid.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "接続機能の準備状況を取得できませんでした。";
+    obdOperationGrid.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = `obd-operation-card obd-operation-${item.commandClass}`;
+
+    const head = document.createElement("div");
+    head.className = "obd-operation-head";
+    const title = document.createElement("strong");
+    title.textContent = item.label;
+    const badge = document.createElement("span");
+    badge.className = "obd-operation-state";
+    badge.textContent = item.currentAvailability;
+    head.append(title, badge);
+
+    const goal = document.createElement("p");
+    goal.textContent = item.goal;
+
+    const list = document.createElement("ul");
+    item.requiredBeforeEnable.slice(0, 5).forEach((condition) => {
+      const li = document.createElement("li");
+      li.textContent = condition;
+      list.appendChild(li);
+    });
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = item.commandClass === "state-changing" ? "small-danger-button" : "secondary-button";
+    button.disabled = true;
+    button.textContent = item.commandClass === "state-changing" ? "安全検証完了まで無効" : "準備中";
+
+    card.append(head, goal, list, button);
+    obdOperationGrid.appendChild(card);
+  });
 }
 
 function analyzeObdScannerImport() {

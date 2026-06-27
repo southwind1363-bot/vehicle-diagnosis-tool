@@ -428,15 +428,15 @@
         <div class="obd-safety-grid">
           <article>
             <strong>読取専用</strong>
-            <span>DTCと計測データの取得だけを対象にします。</span>
+            <span>安全検証中はDTCと計測データの取得準備を優先します。</span>
           </article>
           <article>
-            <strong>消去禁止</strong>
-            <span>DTC消去や学習値初期化は実装しません。</span>
+            <strong>消去は安全ゲート中</strong>
+            <span>DTC消去や学習値初期化は、条件確認と復旧手順が揃うまで実行不可にします。</span>
           </article>
           <article>
-            <strong>作動禁止</strong>
-            <span>アクティブテストやECU書換えを許可しません。</span>
+            <strong>作動系は分離</strong>
+            <span>アクティブテストや書込み系は、読取系とは別の確認フローで段階的に扱います。</span>
           </article>
           <article>
             <strong>端末内処理</strong>
@@ -453,6 +453,16 @@
           </div>
           <button class="primary-button" type="button" disabled>車両へ接続（準備中）</button>
         </div>
+
+        <section class="obd-operation-panel" aria-labelledby="obdOperationTitle">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">CAPABILITY ROADMAP</p>
+              <h3 id="obdOperationTitle">接続後に使う機能の準備状況</h3>
+            </div>
+          </div>
+          <div id="obdOperationGrid" class="obd-operation-grid"></div>
+        </section>
 
         <section class="result-block obd-import-result">
           <div class="obd-result-heading">
@@ -486,7 +496,7 @@
             <li>読取コマンドを許可リスト方式にし、それ以外は送信前に拒否する</li>
             <li>切断、通信停止、タイムアウト時は自動的に安全終了する</li>
             <li>車台番号や位置情報など、診断に不要な識別情報は保存しない</li>
-            <li>初期段階は標準ライブデータの読取だけとし、書込み、消去、作動要求は別系統として無効化する</li>
+            <li>初期段階は標準ライブデータの読取だけを先行し、消去、学習、作動要求、書込みは確認操作、前提条件、ログ、失敗時復旧を揃えてから有効化する</li>
           </ul>
         </details>
       </section>

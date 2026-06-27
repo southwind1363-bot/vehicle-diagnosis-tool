@@ -31,25 +31,109 @@
   let monitorDefinitions = fallbackMonitorDefinitions;
 
   const policy = Object.freeze({
-    mode: "read-only-import",
+    mode: "vehicle-connection-safety-gated",
     transmitsVehicleCommands: false,
     storesRawInput: false,
     uploadsRawInput: false,
+    hardwareConnectionEnabled: false,
+    connectionPreparationEnabled: true,
     blockedOperations: Object.freeze([
       "DTC消去",
+      "学習値初期化",
       "アクティブテスト",
       "ECU書換え・コーディング",
-      "学習値初期化",
       "セキュリティアクセス"
     ])
   });
+
+  const vehicleOperationPlan = Object.freeze([
+    Object.freeze({
+      id: "connect_vehicle",
+      label: "車両接続",
+      state: "safety-gated",
+      commandClass: "transport",
+      currentAvailability: "準備中",
+      goal: "利用者が選択したUSBシリアル機器に接続し、アダプター応答を確認する",
+      requiredBeforeEnable: Object.freeze([
+        "HTTPS環境とWeb Serial対応ブラウザの確認",
+        "対応アダプター、通信速度、初期化手順の確認",
+        "接続失敗、切断、タイムアウト時の安全終了",
+        "通信ログから車台番号など不要な識別情報を保存しない確認"
+      ])
+    }),
+    Object.freeze({
+      id: "read_dtc",
+      label: "DTC読取",
+      state: "safety-gated",
+      commandClass: "read",
+      currentAvailability: "準備中",
+      goal: "保存DTC、保留DTC、フリーズフレームを取得し、診断補助へ引き継ぐ",
+      requiredBeforeEnable: Object.freeze([
+        "読取専用コマンドの許可リスト化",
+        "取得データの保存前確認とマスク処理",
+        "同時DTC、発生順、フリーズフレームを消去前に保持",
+        "未対応ECUや応答なしを異常と断定しない表示"
+      ])
+    }),
+    Object.freeze({
+      id: "live_monitor",
+      label: "データモニター",
+      state: "safety-gated",
+      commandClass: "read",
+      currentAvailability: "準備中",
+      goal: "車両が返した対応PIDだけをリアルタイム表示し、診断フローの観察条件へつなぐ",
+      requiredBeforeEnable: Object.freeze([
+        "標準PIDの要求間隔と停止条件の確認",
+        "未対応PIDや未取得値を推測補完しない表示",
+        "冷間時、暖機後、症状再現時のスナップショット分離",
+        "高電圧、燃料、ブレーキ、SRS系作業への注意表示"
+      ])
+    }),
+    Object.freeze({
+      id: "clear_dtc",
+      label: "DTC消去",
+      state: "blocked-until-safe",
+      commandClass: "state-changing",
+      currentAvailability: "安全検証完了まで無効",
+      goal: "消去前保存、前提条件、利用者確認、実行ログ、失敗時復旧を揃えてから段階的に有効化する",
+      requiredBeforeEnable: Object.freeze([
+        "全システムスキャンとフリーズフレームの保存",
+        "修理前後の比較ログ",
+        "消去対象ECU、影響範囲、レディネス再設定の説明",
+        "利用者の明示確認とキャンセル導線",
+        "失敗時の復旧手順と再スキャン"
+      ])
+    })
+  ]);
 
   function getCapability() {
     return {
       secureContext: window.isSecureContext,
       webSerialSupported: "serial" in navigator,
-      hardwareConnectionEnabled: false,
+      hardwareConnectionEnabled: policy.hardwareConnectionEnabled,
+      connectionPreparationEnabled: policy.connectionPreparationEnabled,
       monitorDefinitionCount: monitorDefinitions.length
+    };
+  }
+
+  function getVehicleOperationPlan() {
+    return vehicleOperationPlan.map((item) => ({
+      ...item,
+      requiredBeforeEnable: [...item.requiredBeforeEnable]
+    }));
+  }
+
+  function requestVehicleOperation(operationId) {
+    const operation = vehicleOperationPlan.find((item) => item.id === operationId);
+    const label = operation?.label || operationId || "unknown";
+
+    return {
+      ok: false,
+      operationId,
+      label,
+      blocked: true,
+      reason: "安全検証中のため、この画面から車両へコマンドは送信しません。",
+      requiredBeforeEnable: operation ? [...operation.requiredBeforeEnable] : []
     };
   }
 
@@ -295,6 +379,8 @@
     policy,
     configureMonitorDefinitions,
     getMonitorDefinitions,
+    getVehicleOperationPlan,
+    requestVehicleOperation,
     getCapability,
     extractDtcCodes,
     extractMonitorValues,

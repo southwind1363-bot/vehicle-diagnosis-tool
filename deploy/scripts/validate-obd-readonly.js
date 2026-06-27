@@ -24,15 +24,24 @@ check(obd?.policy?.transmitsVehicleCommands === false, "車両コマンド送信
 check(obd?.policy?.storesRawInput === false, "入力原文の保存が禁止されていません");
 check(obd?.policy?.uploadsRawInput === false, "入力原文の外部送信が禁止されていません");
 check(obd?.policy?.blockedOperations?.includes("DTC消去"), "DTC消去が禁止一覧にありません");
+check(obd?.policy?.hardwareConnectionEnabled === false, "実機接続が安全ゲート外で有効です");
+check(obd?.policy?.connectionPreparationEnabled === true, "接続準備レイヤーが無効です");
 
 const analysis = obd.analyzeScannerText("P0171 p0300 JTDKN3DU0A0123456 P0171");
 check(analysis.codes.join(",") === "P0171,P0300", "DTC抽出または重複除外が不正です");
 check(analysis.hadSensitiveIdentifier === true, "車台番号候補を検出できません");
 check(analysis.retainedRawText === false, "入力原文を保持する設定になっています");
 check(obd.getCapability().hardwareConnectionEnabled === false, "実機接続が予期せず有効です");
+check(obd.getCapability().connectionPreparationEnabled === true, "接続準備状態を取得できません");
 check(obd.configureMonitorDefinitions(monitorDefinitions) === true, "外部モニター辞書を読み込めません");
 check(obd.getMonitorDefinitions().length >= 130, "データモニター辞書が130項目未満です");
 check(obd.getCapability().monitorDefinitionCount === monitorDefinitions.length, "辞書件数を取得できません");
+const operationPlan = obd.getVehicleOperationPlan();
+check(operationPlan.length >= 4, "接続後機能の準備計画が不足しています");
+check(operationPlan.some((item) => item.id === "read_dtc"), "DTC読取準備がありません");
+check(operationPlan.some((item) => item.id === "clear_dtc" && item.commandClass === "state-changing"), "DTC消去の安全ゲート定義がありません");
+const blockedClear = obd.requestVehicleOperation("clear_dtc");
+check(blockedClear.ok === false && blockedClear.blocked === true, "DTC消去が安全ゲートで拒否されていません");
 
 const monitorAnalysis = obd.analyzeScannerText([
   "Engine RPM: 780 rpm",
@@ -56,6 +65,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 19");
+  console.log("OBD read-only safety checks: 27");
   console.log("Errors: 0");
 }
