@@ -1,0 +1,102 @@
+[
+  {
+    "id": "modern-2026-u3000-control-module",
+    "code": "U3000",
+    "title": "Control Module",
+    "system": "Control Module",
+    "possible_causes": [
+      "Control Module fault.",
+      "Control module internal status, reset history, power supply stability, shutdown sequence, ground, network wake/sleep state, software/configuration, or related module influence may be involved depending on the vehicle.",
+      "Internal failure criteria, shutdown timing, reset counters, connector pins, voltage thresholds, and recovery procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module reset/shutdown history if available, module part numbers, calibration IDs, configuration data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module power-down logic, retained accessory power behavior, network sleep/wake prerequisites, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, water intrusion, and network-related DTCs before replacing modules.",
+      "Separate module internal fault, improper power-down, low or unstable supply voltage, ground fault, relay/input circuit fault, wake/sleep logic issue, configuration mismatch, and network influence using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ground and shutdown data",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP and wake/sleep state",
+      "Module software/calibration and configuration data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, wake/sleep behavior, relays, and configuration data.",
+      "Assuming shutdown criteria, voltage thresholds, connector terminals, or reset-history meaning are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3001-control-module-improper-shutdown",
+    "code": "U3001",
+    "title": "Control Module Improper Shutdown",
+    "system": "Control Module Improper Shutdown",
+    "possible_causes": [
+      "Control Module Improper Shutdown fault.",
+      "Control module internal status, reset history, power supply stability, shutdown sequence, ground, network wake/sleep state, software/configuration, or related module influence may be involved depending on the vehicle.",
+      "Internal failure criteria, shutdown timing, reset counters, connector pins, voltage thresholds, and recovery procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module reset/shutdown history if available, module part numbers, calibration IDs, configuration data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module power-down logic, retained accessory power behavior, network sleep/wake prerequisites, software compatibility, coding/configuration, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, water intrusion, and network-related DTCs before replacing modules.",
+      "Separate module internal fault, improper power-down, low or unstable supply voltage, ground fault, relay/input circuit fault, wake/sleep logic issue, configuration mismatch, and network influence using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ground and shutdown data",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP and wake/sleep state",
+      "Module software/calibration and configuration data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, wake/sleep behavior, relays, and configuration data.",
+      "Assuming shutdown criteria, voltage thresholds, connector terminals, or reset-history meaning are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  }
+]
