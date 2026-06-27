@@ -18,6 +18,18 @@
       "use": "@vercel/static"
     },
     {
+      "src": "service-worker.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "manifest.webmanifest",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "offline-assets.json",
+      "use": "@vercel/static"
+    },
+    {
       "src": "google9fd0215a9842e2d1.html",
       "use": "@vercel/static"
     },
@@ -41,6 +53,19 @@
     }
   ],
   "headers": [
+    {
+      "source": "/service-worker.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

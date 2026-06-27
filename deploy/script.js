@@ -1,8 +1,9 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.212.0";
+const APP_VERSION = "2.213.0";
 const APP_LAST_UPDATED = "2026-06-13";
+const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
 const MANUAL_VEHICLE_VALUE = "__manual__";
@@ -179,6 +180,7 @@ updateCaseQualityPreview();
 showInitialNotice();
 updateAiButtonLabel();
 initializeObdReadOnlyPanel();
+registerOfflineCache();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -697,6 +699,32 @@ async function fetchJson(path) {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`${path} を読み込めません`);
   return response.json();
+}
+
+async function registerOfflineCache() {
+  if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
+
+  try {
+    const registration = await navigator.serviceWorker.register("service-worker.js");
+    const response = await fetch(OFFLINE_ASSET_MANIFEST, { cache: "no-store" });
+    if (!response.ok) return;
+
+    const payload = await response.json();
+    const urls = Array.isArray(payload.assets) ? payload.assets : [];
+    if (!urls.length) return;
+
+    const postCacheMessage = () => {
+      const worker = registration.active || registration.waiting || registration.installing;
+      worker?.postMessage({ type: "PRECACHE_URLS", urls });
+    };
+
+    if (registration.installing) {
+      registration.installing.addEventListener("statechange", postCacheMessage);
+    }
+    postCacheMessage();
+  } catch (_) {
+    // Offline support is best-effort and should never block diagnosis assistance.
+  }
 }
 
 function activateTab(targetId) {

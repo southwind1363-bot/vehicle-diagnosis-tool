@@ -1,0 +1,12 @@
+{
+  "name": "Vehicle Diagnosis Assistant",
+  "short_name": "Diagnosis",
+  "description": "Offline-capable vehicle diagnosis support tool for DTC lookup, scanner paste analysis, and live-data guidance.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f8",
+  "theme_color": "#17262c",
+  "orientation": "any",
+  "categories": ["utilities", "productivity"]
+}
