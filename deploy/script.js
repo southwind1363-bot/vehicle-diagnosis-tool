@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.210.0";
+const APP_VERSION = "2.211.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -143,6 +143,8 @@ const obdCapabilityText = document.querySelector("#obdCapabilityText");
 const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
+const obdInterlockSummary = document.querySelector("#obdInterlockSummary");
+const obdInterlockChecklist = document.querySelector("#obdInterlockChecklist");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdSampleButton = document.querySelector("#obdSampleButton");
@@ -1883,6 +1885,7 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getVehicleConnectionProfile?.(),
     window.ObdReadOnly.getPreparedVehicleRequests?.() || []
   );
+  renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
 }
 
 function renderObdOperationPlan(items) {
@@ -1984,6 +1987,38 @@ function renderObdPreparedRequests(profile, requests) {
 
     card.append(head, meta, note, button);
     obdPreparedRequestGrid.appendChild(card);
+  });
+}
+
+function renderObdSafetyInterlock(interlock) {
+  obdInterlockSummary.innerHTML = "";
+  obdInterlockChecklist.innerHTML = "";
+
+  if (!interlock) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "車両破損防止ゲートの状態を取得できませんでした。";
+    obdInterlockSummary.appendChild(empty);
+    return;
+  }
+
+  [
+    ["送信", interlock.outboundTransportEnabled ? "有効" : "無効"],
+    ["既定動作", interlock.defaultDecision === "block" ? "拒否" : interlock.defaultDecision],
+    ["失敗時", interlock.failClosed ? "安全側で停止" : "未設定"],
+    ["状態変更", interlock.allowsPhysicalVehicleCommands ? "許可" : "禁止"]
+  ].forEach(([label, value]) => {
+    const item = document.createElement("span");
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    item.append(strong, document.createTextNode(value));
+    obdInterlockSummary.appendChild(item);
+  });
+
+  interlock.preEnableChecklist.forEach((condition) => {
+    const li = document.createElement("li");
+    li.textContent = condition;
+    obdInterlockChecklist.appendChild(li);
   });
 }
 

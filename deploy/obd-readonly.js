@@ -110,6 +110,7 @@
     interfaceType: "web-serial-obd-adapter",
     currentState: "safety-gated",
     transportEnabled: false,
+    failClosed: true,
     adapterFamilies: Object.freeze(["ELM327互換", "STN系互換"]),
     baudRateCandidates: Object.freeze([38400, 115200, 9600]),
     privacyPolicy: "VINなど診断に不要な識別情報は保存しない",
@@ -118,6 +119,36 @@
       "通信タイムアウト",
       "アダプター応答なし",
       "ブラウザのシリアル接続が切断された"
+    ])
+  });
+
+  const vehicleDamagePreventionInterlock = Object.freeze({
+    name: "vehicle-damage-prevention",
+    status: "enforced",
+    failClosed: true,
+    outboundTransportEnabled: false,
+    allowsPhysicalVehicleCommands: false,
+    defaultDecision: "block",
+    blockedServiceModes: Object.freeze([
+      "04",
+      "08",
+      "14",
+      "27",
+      "2E",
+      "2F",
+      "31",
+      "34",
+      "36",
+      "3B",
+      "3D"
+    ]),
+    preEnableChecklist: Object.freeze([
+      "対象車両、年式、エンジン、ECU、通信プロトコルの適合確認",
+      "バッテリー電圧、補機電源、通信安定性の確認",
+      "消去前の全システムスキャン、フリーズフレーム、ライブデータ保存",
+      "DTC消去、学習、作動要求、書込みの影響範囲と復旧手順の表示",
+      "利用者の明示確認、キャンセル導線、実行ログ、再スキャンの実装",
+      "高電圧、燃料、ブレーキ、SRS、高圧油圧など危険系統の強い警告"
     ])
   });
 
@@ -248,6 +279,14 @@
     };
   }
 
+  function getVehicleDamagePreventionInterlock() {
+    return {
+      ...vehicleDamagePreventionInterlock,
+      blockedServiceModes: [...vehicleDamagePreventionInterlock.blockedServiceModes],
+      preEnableChecklist: [...vehicleDamagePreventionInterlock.preEnableChecklist]
+    };
+  }
+
   function getPreparedVehicleRequests() {
     return preparedVehicleRequests.map((item) => ({ ...item }));
   }
@@ -255,6 +294,8 @@
   function requestPreparedVehicleRequest(requestId) {
     const request = preparedVehicleRequests.find((item) => item.id === requestId);
     const label = request?.label || requestId || "unknown";
+    const service = request?.service || null;
+    const blockedByMode = service ? vehicleDamagePreventionInterlock.blockedServiceModes.includes(service) : false;
 
     return {
       ok: false,
@@ -262,11 +303,31 @@
       label,
       blocked: true,
       wouldTransmit: false,
+      failClosed: vehicleDamagePreventionInterlock.failClosed,
       stateChanging: Boolean(request?.stateChanging),
       reason: request?.stateChanging
         ? "安全検証が完了するまで、状態変更コマンドは常に拒否します。"
         : "接続検証中のため、この画面から車両やアダプターへ送信しません。",
-      safetyGate: request?.safetyGate || "送信無効"
+      safetyGate: request?.safetyGate || "送信無効",
+      blockedByMode
+    };
+  }
+
+  function evaluateOutboundSafety(request = {}) {
+    const service = String(request.service || "").toUpperCase();
+    const isBlockedService = vehicleDamagePreventionInterlock.blockedServiceModes.includes(service);
+    const isStateChanging = Boolean(request.stateChanging) || isBlockedService;
+
+    return {
+      ok: false,
+      blocked: true,
+      wouldTransmit: false,
+      failClosed: true,
+      stateChanging: isStateChanging,
+      service,
+      reason: isStateChanging
+        ? "車両状態を変更する可能性があるため、安全ゲート中は送信しません。"
+        : "安全ゲート中は読取系を含む全てのアウトバウンド送信を停止します。"
     };
   }
 
@@ -528,9 +589,11 @@
     getMonitorDefinitions,
     getVehicleOperationPlan,
     getVehicleConnectionProfile,
+    getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
     requestVehicleOperation,
     requestPreparedVehicleRequest,
+    evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,
     extractMonitorValues,
