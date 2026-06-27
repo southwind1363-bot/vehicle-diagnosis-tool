@@ -431,8 +431,8 @@
             <span>安全検証中はDTCと計測データの取得準備を優先します。</span>
           </article>
           <article>
-            <strong>消去は安全ゲート中</strong>
-            <span>DTC消去や学習値初期化は、条件確認と復旧手順が揃うまで実行不可にします。</span>
+            <strong>消去は準備中</strong>
+            <span>DTC消去や学習値初期化は、確認手順が揃うまで画面に出しません。</span>
           </article>
           <article>
             <strong>作動系は分離</strong>
@@ -468,23 +468,24 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">COMMUNICATION PREP</p>
-              <h3 id="obdPreparedRequestTitle">安全ゲート中の通信準備</h3>
+              <h3 id="obdPreparedRequestTitle">接続機能の準備状況</h3>
             </div>
           </div>
           <div id="obdConnectionProfile" class="obd-profile-strip"></div>
           <div id="obdPreparedRequestGrid" class="obd-request-grid"></div>
         </section>
 
-        <section class="obd-operation-panel obd-interlock-panel" aria-labelledby="obdInterlockTitle">
+        <details class="obd-operation-panel obd-interlock-panel">
+          <summary class="obd-interlock-summary-title">接続保護の技術メモ</summary>
           <div class="obd-result-heading">
             <div>
-              <p class="eyebrow obd-eyebrow">DAMAGE PREVENTION</p>
-              <h3 id="obdInterlockTitle">車両破損防止ゲート</h3>
+              <p class="eyebrow obd-eyebrow">TECHNICAL GUARD</p>
+              <h3 id="obdInterlockTitle">接続保護の内部条件</h3>
             </div>
           </div>
           <div id="obdInterlockSummary" class="obd-interlock-summary"></div>
           <ul id="obdInterlockChecklist" class="obd-interlock-checklist"></ul>
-        </section>
+        </details>
 
         <section class="result-block obd-import-result">
           <div class="obd-result-heading">

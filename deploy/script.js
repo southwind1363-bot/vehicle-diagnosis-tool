@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.211.0";
+const APP_VERSION = "2.212.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -1939,7 +1939,7 @@ function renderObdPreparedRequests(profile, requests) {
   if (profile) {
     [
       ["接続方式", "Web Serial"],
-      ["状態", profile.currentState === "safety-gated" ? "安全ゲート中" : profile.currentState],
+      ["状態", profile.currentState === "safety-gated" ? "準備中" : profile.currentState],
       ["対応候補", profile.adapterFamilies.join(" / ")],
       ["通信速度候補", profile.baudRateCandidates.join(" / ")]
     ].forEach(([label, value]) => {
@@ -1997,16 +1997,16 @@ function renderObdSafetyInterlock(interlock) {
   if (!interlock) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "車両破損防止ゲートの状態を取得できませんでした。";
+    empty.textContent = "接続保護の状態を取得できませんでした。";
     obdInterlockSummary.appendChild(empty);
     return;
   }
 
   [
-    ["送信", interlock.outboundTransportEnabled ? "有効" : "無効"],
-    ["既定動作", interlock.defaultDecision === "block" ? "拒否" : interlock.defaultDecision],
+    ["接続送信", interlock.outboundTransportEnabled ? "有効" : "準備中"],
+    ["既定動作", interlock.defaultDecision === "block" ? "停止" : interlock.defaultDecision],
     ["失敗時", interlock.failClosed ? "安全側で停止" : "未設定"],
-    ["状態変更", interlock.allowsPhysicalVehicleCommands ? "許可" : "禁止"]
+    ["状態変更", interlock.allowsPhysicalVehicleCommands ? "利用可" : "準備中"]
   ].forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");

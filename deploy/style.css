@@ -1069,6 +1069,18 @@ body.dark .flow-node-measure .flow-step {
   padding-top: 16px;
 }
 
+.obd-interlock-summary-title {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+  list-style-position: inside;
+}
+
+.obd-interlock-panel[open] .obd-interlock-summary-title {
+  margin-bottom: 12px;
+}
+
 .obd-interlock-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
