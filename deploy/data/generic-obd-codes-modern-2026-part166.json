@@ -1,0 +1,802 @@
+[
+  {
+    "id": "modern-2026-u3002-vehicle-identification-number",
+    "code": "U3002",
+    "title": "Vehicle Identification Number",
+    "system": "Vehicle Identification Number",
+    "possible_causes": [
+      "Vehicle Identification Number fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "VIN/configuration data",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3003-battery-voltage",
+    "code": "U3003",
+    "title": "Battery Voltage",
+    "system": "Battery Voltage",
+    "possible_causes": [
+      "Battery Voltage fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3004-accessory-power-relay",
+    "code": "U3004",
+    "title": "Accessory Power Relay",
+    "system": "Accessory Power Relay",
+    "possible_causes": [
+      "Accessory Power Relay fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3005-retained-accessory-power",
+    "code": "U3005",
+    "title": "Retained Accessory Power",
+    "system": "Retained Accessory Power",
+    "possible_causes": [
+      "Retained Accessory Power fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3006-control-module-input-power-a",
+    "code": "U3006",
+    "title": "Control Module Input Power \"A\"",
+    "system": "Control Module Input Power \"A\"",
+    "possible_causes": [
+      "Control Module Input Power \"A\" fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3007-control-module-input-power-b",
+    "code": "U3007",
+    "title": "Control Module Input Power \"B\"",
+    "system": "Control Module Input Power \"B\"",
+    "possible_causes": [
+      "Control Module Input Power \"B\" fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3008-control-module-ground-a",
+    "code": "U3008",
+    "title": "Control Module Ground \"A\"",
+    "system": "Control Module Ground \"A\"",
+    "possible_causes": [
+      "Control Module Ground \"A\" fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module ground circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3009-control-module-ground-b",
+    "code": "U3009",
+    "title": "Control Module Ground \"B\"",
+    "system": "Control Module Ground \"B\"",
+    "possible_causes": [
+      "Control Module Ground \"B\" fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module ground circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u300a-ignition-switch",
+    "code": "U300A",
+    "title": "Ignition Switch",
+    "system": "Ignition Switch",
+    "possible_causes": [
+      "Ignition Switch fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u300b-ignition-input-accessory-on-start",
+    "code": "U300B",
+    "title": "Ignition Input Accessory/On/Start",
+    "system": "Ignition Input Accessory/On/Start",
+    "possible_causes": [
+      "Ignition Input Accessory/On/Start fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u300c-ignition-input-off-on-start",
+    "code": "U300C",
+    "title": "Ignition Input Off/On/Start",
+    "system": "Ignition Input Off/On/Start",
+    "possible_causes": [
+      "Ignition Input Off/On/Start fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u300d-ignition-input-on-start",
+    "code": "U300D",
+    "title": "Ignition Input On/Start",
+    "system": "Ignition Input On/Start",
+    "possible_causes": [
+      "Ignition Input On/Start fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u300e-ignition-input-on",
+    "code": "U300E",
+    "title": "Ignition Input On",
+    "system": "Ignition Input On",
+    "possible_causes": [
+      "Ignition Input On fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u300f-ignition-input-accessory",
+    "code": "U300F",
+    "title": "Ignition Input Accessory",
+    "system": "Ignition Input Accessory",
+    "possible_causes": [
+      "Ignition Input Accessory fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3010-ignition-input-start",
+    "code": "U3010",
+    "title": "Ignition Input Start",
+    "system": "Ignition Input Start",
+    "possible_causes": [
+      "Ignition Input Start fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  },
+  {
+    "id": "modern-2026-u3011-ignition-input-off",
+    "code": "U3011",
+    "title": "Ignition Input Off",
+    "system": "Ignition Input Off",
+    "possible_causes": [
+      "Ignition Input Off fault.",
+      "Control module configuration, VIN data, power supply, ground, relay, ignition input, retained accessory power, wiring, connector, or related module influence may be involved depending on the vehicle.",
+      "Circuit names, connector pins, thresholds, wake/sleep states, and initialization procedures are vehicle-specific and must be confirmed in official service information."
+    ],
+    "check_order": [
+      "Save all-module DTCs, freeze-frame data, module part numbers, configuration/VIN data, battery voltage, ignition state, wake/sleep state, and related power, ground, or communication DTCs.",
+      "Confirm vehicle-specific module configuration, VIN learning, power distribution, relay control, ignition input logic, retained accessory power behavior, and diagnostic prerequisites in the manufacturer service manual or OEM service system.",
+      "Inspect battery condition, charging voltage, module power feeds, grounds, relays, fuses, connectors, harness condition, and network-related DTCs before replacing modules.",
+      "Separate configuration/VIN mismatch, low or unstable supply voltage, relay/input circuit fault, ground fault, wake/sleep logic issue, and module fault causes using the manufacturer procedure."
+    ],
+    "measurement_points": [
+      "Control module power/ignition circuit",
+      "All-module DTC and freeze-frame data",
+      "Battery and module supply voltage",
+      "Module ground voltage drop",
+      "Ignition/RAP input state",
+      "Module configuration and VIN data"
+    ],
+    "common_mistakes": [
+      "Replacing a module before checking battery support, power feeds, grounds, relays, ignition inputs, and configuration data.",
+      "Assuming connector terminals, wake/sleep states, voltage thresholds, or VIN procedures are common across vehicles.",
+      "Clearing or programming modules without saving the pre-repair scan, configuration data, and recovery information."
+    ],
+    "required_tools": [
+      "OEM-capable scan tool",
+      "Manufacturer service information",
+      "Digital multimeter",
+      "Stable battery support unit",
+      "Power distribution and network diagnostic tools"
+    ],
+    "safety_notes": [
+      "Use strong caution around high-voltage, SRS/restraints, brake, steering, fuel, ignition, charging, and programming/coding related systems; unstable power or incorrect configuration can disable safety-critical modules, so follow OEM disable, support, initialization, and recovery procedures."
+    ],
+    "confidence": "medium",
+    "source": "SAE J2012 / SAE J2012DA generic DTC definitions and Autel official DTC table based diagnostic guidance",
+    "source_url": [
+      "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+      "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+      "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf"
+    ],
+    "source_date": "2025-10-24",
+    "last_verified_date": "2026-06-27",
+    "service_manual_required": true
+  }
+]
