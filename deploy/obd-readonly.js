@@ -1100,6 +1100,47 @@
     };
   }
 
+  function normalizeOnboardMonitorSnapshot(input = {}) {
+    const source = input.source || "diagnostic_core";
+    const rows = Array.isArray(input.tests) ? input.tests : Array.isArray(input.values) ? input.values : [];
+    const tests = rows
+      .map((row, index) => {
+        if (!row || typeof row !== "object") return null;
+        const testId = String(row.test_id || row.testId || row.tid || row.mid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const componentId = String(row.component_id || row.componentId || row.cid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const value = Number(row.value);
+        const min = Number(row.min);
+        const max = Number(row.max);
+        const hasLimits = Number.isFinite(min) && Number.isFinite(max);
+        const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : row.passed === true;
+        if (!testId || !componentId || !Number.isFinite(value)) return null;
+        return {
+          testId,
+          componentId,
+          value,
+          min: Number.isFinite(min) ? min : null,
+          max: Number.isFinite(max) ? max : null,
+          passed,
+          status: hasLimits ? (passed ? "pass" : "fail") : "unknown",
+          sourceIndex: index + 1,
+          interpretationNote: "Mode 06 TID/CID meaning and units are vehicle-specific. Confirm the test item in the service manual."
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      schemaVersion: "onboard_monitor_snapshot_v1",
+      source,
+      capturedAt: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      testCount: tests.length,
+      failedCount: tests.filter((test) => test.status === "fail").length,
+      unknownCount: tests.filter((test) => test.status === "unknown").length,
+      tests,
+      retainedRawText: false
+    };
+  }
+
   function normalizeEcuInfoValue(row, index) {
     if (!row || typeof row !== "object") return null;
     const infoType = String(row.info_type || row.infoType || "").toUpperCase();
@@ -1369,6 +1410,28 @@
     });
   }
 
+  function decodeOnboardMonitorResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const tests = [];
+    for (let index = 0; index < bytes.length - 8; index++) {
+      if (bytes[index] !== 0x46) continue;
+      const testId = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
+      const componentId = bytes[index + 2].toString(16).toUpperCase().padStart(2, "0");
+      const value = (bytes[index + 3] * 256) + bytes[index + 4];
+      const min = (bytes[index + 5] * 256) + bytes[index + 6];
+      const max = (bytes[index + 7] * 256) + bytes[index + 8];
+      tests.push({ test_id: testId, component_id: componentId, value, min, max });
+      index += 8;
+    }
+
+    return normalizeOnboardMonitorSnapshot({
+      source: input.source || "obd_response_decoder",
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      tests
+    });
+  }
+
   function buildDecodedObdScanSession(input = {}) {
     const dtcSnapshot = input.dtcSnapshot?.schemaVersion
       ? input.dtcSnapshot
@@ -1382,6 +1445,7 @@
     const livePidSnapshot = input.livePidResponse?.monitorValues ? input.livePidResponse : decodeLivePidResponse(input.livePidResponse || {});
     const freezeFrameSnapshot = input.freezeFrameResponse?.schemaVersion ? input.freezeFrameResponse : decodeFreezeFrameResponse(input.freezeFrameResponse || {});
     const readinessSnapshot = input.readinessResponse?.schemaVersion ? input.readinessResponse : decodeReadinessResponse(input.readinessResponse || {});
+    const onboardMonitorSnapshot = input.onboardMonitorResponse?.schemaVersion ? input.onboardMonitorResponse : decodeOnboardMonitorResponse(input.onboardMonitorResponse || {});
     const ecuInfoSnapshot = input.ecuInfoResponse?.schemaVersion ? input.ecuInfoResponse : decodeEcuInfoResponse(input.ecuInfoResponse || {});
     const supportedPidMatrix = input.supportedPidResponse?.schemaVersion ? input.supportedPidResponse : decodeSupportedPidResponse(input.supportedPidResponse || {});
     return buildDiagnosticScanSession({
@@ -1394,6 +1458,7 @@
       livePidSnapshot,
       freezeFrameSnapshot,
       readinessSnapshot,
+      onboardMonitorSnapshot,
       ecuInfoSnapshot,
       supportedPidMatrix,
       ecus: input.ecus || []
@@ -1418,6 +1483,7 @@
       livePidResponses: [],
       freezeFrameResponses: [],
       readinessResponses: [],
+      onboardMonitorResponses: [],
       ecuInfoResponses: [],
       unknownResponses: []
     };
@@ -1427,7 +1493,7 @@
       if (!normalized) return;
       const bytes = parseObdHexBytes(normalized);
       if (!bytes.length) return;
-      const positiveServices = [0x41, 0x42, 0x43, 0x47, 0x49, 0x4A];
+      const positiveServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A];
       const serviceIndex = bytes.findIndex((byte) => positiveServices.includes(byte));
       const serviceByte = serviceIndex >= 0 ? bytes[serviceIndex] : null;
       const hasPair = (first, second) => bytes.some((byte, index) => byte === first && bytes[index + 1] === second);
@@ -1447,6 +1513,8 @@
         buckets.livePidResponses.push(packet);
       } else if (serviceByte === 0x42) {
         buckets.freezeFrameResponses.push(packet);
+      } else if (serviceByte === 0x46) {
+        buckets.onboardMonitorResponses.push(packet);
       } else if (serviceByte === 0x49) {
         buckets.ecuInfoResponses.push(packet);
       } else {
@@ -1483,6 +1551,7 @@
       livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: options.protocol || null },
       freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: options.protocol || null },
       readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: options.protocol || null },
+      onboardMonitorResponse: { raw: firstOrEmpty("onboardMonitorResponses"), protocol: options.protocol || null },
       ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: options.protocol || null }
     });
 
@@ -1582,6 +1651,7 @@
     const livePidSnapshot = input.livePidSnapshot?.monitorValues ? input.livePidSnapshot : normalizeBridgeLivePidSnapshot(input.livePidSnapshot || input.livePids || {});
     const freezeFrameSnapshot = input.freezeFrameSnapshot?.schemaVersion ? input.freezeFrameSnapshot : normalizeFreezeFrameSnapshot(input.freezeFrameSnapshot || input.freezeFrame || {});
     const readinessSnapshot = input.readinessSnapshot?.schemaVersion ? input.readinessSnapshot : normalizeReadinessSnapshot(input.readinessSnapshot || input.readiness || {});
+    const onboardMonitorSnapshot = input.onboardMonitorSnapshot?.schemaVersion ? input.onboardMonitorSnapshot : normalizeOnboardMonitorSnapshot(input.onboardMonitorSnapshot || input.onboardMonitor || {});
     const ecuResponseSummary = input.ecuResponseSummary?.schemaVersion ? input.ecuResponseSummary : normalizeEcuResponseSummary(input.ecuResponseSummary || input.ecus || {});
     const ecuInfoSnapshot = input.ecuInfoSnapshot?.schemaVersion ? input.ecuInfoSnapshot : normalizeEcuInfoSnapshot(input.ecuInfoSnapshot || input.ecuInfo || {});
     const supportedPidMatrix = input.supportedPidMatrix?.schemaVersion ? input.supportedPidMatrix : buildSupportedPidMatrix(input.supportedPidMatrix || input.supportedPids || {});
@@ -1591,6 +1661,7 @@
     if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
     if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
+    if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_live_data_conditions");
 
@@ -1607,6 +1678,7 @@
       dtcSnapshot,
       freezeFrameSnapshot,
       readinessSnapshot,
+      onboardMonitorSnapshot,
       ecuInfoSnapshot,
       livePidSnapshot,
       supportedPidMatrix,
@@ -1970,6 +2042,7 @@
     normalizeReadinessSnapshot,
     normalizeEcuResponseSummary,
     normalizeEcuInfoSnapshot,
+    normalizeOnboardMonitorSnapshot,
     parseObdHexBytes,
     decodeObdDtcResponse,
     mergeDtcSnapshots,
@@ -1978,6 +2051,7 @@
     decodeFreezeFrameResponse,
     decodeEcuInfoResponse,
     decodeReadinessResponse,
+    decodeOnboardMonitorResponse,
     buildDecodedObdScanSession,
     classifyObdResponseLines,
     buildScanSessionFromObdText,
