@@ -765,6 +765,45 @@
     };
   }
 
+  function mergeDiagnosticInputs(input = {}) {
+    const scannerAnalysis = analyzeScannerText(input.scannerText || "");
+    const bridgeImport = input.bridgeImport?.importType === "bridge_diagnostic_snapshot"
+      ? input.bridgeImport
+      : input.bridgeParts
+        ? buildBridgeDiagnosticImport(input.bridgeParts)
+        : null;
+    const monitorById = new Map();
+
+    scannerAnalysis.monitorValues.forEach((item) => {
+      monitorById.set(item.id, { ...item, source: "scanner_text" });
+    });
+    (bridgeImport?.monitorValues || []).forEach((item) => {
+      monitorById.set(item.id, { ...item, source: "local_bridge" });
+    });
+
+    const monitorValues = [...monitorById.values()];
+    const codes = [...new Set([
+      ...scannerAnalysis.codes,
+      ...(bridgeImport?.codes || [])
+    ])];
+    const monitorInsights = analyzeMonitorValues(monitorValues);
+
+    return {
+      source: bridgeImport ? "scanner_text_and_local_bridge" : "scanner_text",
+      importType: "combined_diagnostic_inputs",
+      codes,
+      monitorValues,
+      monitorInsights,
+      bridgeSession: bridgeImport?.bridgeSession || null,
+      bridgeExportPayload: bridgeImport?.exportPayload || null,
+      hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier,
+      sourceLength: scannerAnalysis.sourceLength,
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
+
   function evaluateLocalBridgeRequest(request = {}) {
     const intent = String(request.intent || "").trim();
     const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);
@@ -1103,6 +1142,7 @@
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,
+    mergeDiagnosticInputs,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,
