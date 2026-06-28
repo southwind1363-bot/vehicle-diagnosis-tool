@@ -206,6 +206,17 @@ for (const file of jsonFiles) {
       if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
     }
 
+    if (file === "obd-ecu-info-items-2026.json") {
+      if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
+      if (row.service !== "09") reportError(`${label}: service は 09 にしてください`);
+      if (!/^[0-9A-F]{2}$/.test(row.info_type || "")) reportError(`${label}: info_type が不正です`);
+      if (!["bitset", "text", "counter_set"].includes(row.value_type)) reportError(`${label}: value_type が不正です`);
+      if (!isNonEmptyString(row.privacy_class)) reportError(`${label}: privacy_class がありません`);
+      if (!isNonEmptyString(row.diagnostic_use)) reportError(`${label}: diagnostic_use がありません`);
+      if (!isNonEmptyString(row.storage_policy)) reportError(`${label}: storage_policy がありません`);
+      if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
+    }
+
     if (file.startsWith("diagnostic-workflows") && "monitor_ids" in row) {
       if (!isNonEmptyStringArray(row.monitor_ids)) reportError(`${label}: monitor_ids がありません`);
       if (new Set(row.monitor_ids || []).size !== (row.monitor_ids || []).length) reportError(`${label}: monitor_ids に重複があります`);

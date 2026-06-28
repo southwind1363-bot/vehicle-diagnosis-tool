@@ -425,6 +425,7 @@
   let vehicleInterfaceCatalog = Object.freeze([]);
   let freezeFrameItemCatalog = Object.freeze([]);
   let readinessMonitorCatalog = Object.freeze([]);
+  let ecuInfoItemCatalog = Object.freeze([]);
 
   function getCapability() {
     return {
@@ -434,7 +435,8 @@
       connectionPreparationEnabled: policy.connectionPreparationEnabled,
       monitorDefinitionCount: monitorDefinitions.length,
       freezeFrameItemCount: freezeFrameItemCatalog.length,
-      readinessMonitorCount: readinessMonitorCatalog.length
+      readinessMonitorCount: readinessMonitorCatalog.length,
+      ecuInfoItemCount: ecuInfoItemCatalog.length
     };
   }
 
@@ -600,6 +602,32 @@
       appliesTo: [...item.appliesTo],
       statusValues: [...item.statusValues]
     }));
+  }
+
+  function configureEcuInfoItems(rows) {
+    if (!Array.isArray(rows) || !rows.length) return false;
+    const normalized = rows
+      .filter((item) => item && typeof item.id === "string" && typeof item.info_type === "string")
+      .map((item) => Object.freeze({
+        id: item.id,
+        label: item.label || item.id,
+        service: item.service || "09",
+        infoType: String(item.info_type).toUpperCase(),
+        valueType: item.value_type || "text",
+        privacyClass: item.privacy_class || "unknown",
+        diagnosticUse: item.diagnostic_use || "",
+        storagePolicy: item.storage_policy || "",
+        serviceManualRequired: item.service_manual_required === true,
+        source: item.source || "",
+        sourceUrl: item.source_url || null
+      }));
+    if (!normalized.length || new Set(normalized.map((item) => item.id)).size !== normalized.length) return false;
+    ecuInfoItemCatalog = Object.freeze(normalized);
+    return true;
+  }
+
+  function getEcuInfoItems() {
+    return ecuInfoItemCatalog.map((item) => ({ ...item }));
   }
 
   function cloneBridgeValue(value) {
@@ -1041,6 +1069,83 @@
     };
   }
 
+  function normalizeEcuInfoSnapshot(input = {}) {
+    const source = input.source || "diagnostic_core";
+    const rows = Array.isArray(input.values) ? input.values : Array.isArray(input.ecu_info) ? input.ecu_info : [];
+    const items = rows
+      .map((row, index) => normalizeEcuInfoValue(row, index))
+      .filter(Boolean);
+    const expectedItems = ecuInfoItemCatalog.map((item) => ({
+      id: item.id,
+      label: item.label,
+      service: item.service,
+      infoType: item.infoType,
+      privacyClass: item.privacyClass,
+      captured: items.some((value) => value.id === item.id || value.infoType === item.infoType),
+      diagnosticUse: item.diagnosticUse,
+      storagePolicy: item.storagePolicy
+    }));
+
+    return {
+      schemaVersion: "ecu_info_snapshot_v1",
+      source,
+      capturedAt: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      itemCount: items.length,
+      expectedItemCount: expectedItems.length,
+      hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
+      items,
+      expectedItems,
+      retainedRawText: false
+    };
+  }
+
+  function normalizeEcuInfoValue(row, index) {
+    if (!row || typeof row !== "object") return null;
+    const infoType = String(row.info_type || row.infoType || "").toUpperCase();
+    const catalogItem = ecuInfoItemCatalog.find((item) => item.id === row.id || item.infoType === infoType);
+    const id = catalogItem?.id || String(row.id || `ecu_info_${index + 1}`).slice(0, 80);
+    const privacyClass = catalogItem?.privacyClass || row.privacy_class || "unknown";
+    const rawValue = row.value ?? row.text ?? row.data ?? "";
+    const value = privacyClass === "sensitive_identifier"
+      ? maskSensitiveIdentifier(rawValue)
+      : sanitizeEcuInfoValue(rawValue);
+
+    if (value === null || value === "") return null;
+    return {
+      id,
+      label: catalogItem?.label || row.label || id,
+      service: catalogItem?.service || row.service || "09",
+      infoType: catalogItem?.infoType || infoType || null,
+      value,
+      valueType: catalogItem?.valueType || row.value_type || "text",
+      privacyClass,
+      detected: rawValue !== null && rawValue !== undefined && String(rawValue).length > 0,
+      retainedRawValue: false,
+      diagnosticUse: catalogItem?.diagnosticUse || "",
+      storagePolicy: catalogItem?.storagePolicy || ""
+    };
+  }
+
+  function sanitizeEcuInfoValue(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitizeEcuInfoValue(item)).filter((item) => item !== null && item !== "");
+    }
+    if (value && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeEcuInfoValue(item)]));
+    }
+    const text = String(value ?? "").trim();
+    return text ? text.slice(0, 240) : "";
+  }
+
+  function maskSensitiveIdentifier(value) {
+    const text = String(value ?? "").trim().toUpperCase();
+    if (!text) return "";
+    const redacted = redactSensitiveText(text);
+    if (redacted !== text) return "[識別情報検出: 非保存]";
+    return text.length > 6 ? `${text.slice(0, 3)}...${text.slice(-3)}` : "[識別情報検出: マスク済み]";
+  }
+
   function buildSupportedPidMatrix(input = {}) {
     const source = input.source || "diagnostic_core";
     const supportedRows = Array.isArray(input) ? input : Array.isArray(input.supported_pids) ? input.supported_pids : Array.isArray(input.supportedPids) ? input.supportedPids : [];
@@ -1078,6 +1183,7 @@
     const freezeFrameSnapshot = input.freezeFrameSnapshot?.schemaVersion ? input.freezeFrameSnapshot : normalizeFreezeFrameSnapshot(input.freezeFrameSnapshot || input.freezeFrame || {});
     const readinessSnapshot = input.readinessSnapshot?.schemaVersion ? input.readinessSnapshot : normalizeReadinessSnapshot(input.readinessSnapshot || input.readiness || {});
     const ecuResponseSummary = input.ecuResponseSummary?.schemaVersion ? input.ecuResponseSummary : normalizeEcuResponseSummary(input.ecuResponseSummary || input.ecus || {});
+    const ecuInfoSnapshot = input.ecuInfoSnapshot?.schemaVersion ? input.ecuInfoSnapshot : normalizeEcuInfoSnapshot(input.ecuInfoSnapshot || input.ecuInfo || {});
     const supportedPidMatrix = input.supportedPidMatrix?.schemaVersion ? input.supportedPidMatrix : buildSupportedPidMatrix(input.supportedPidMatrix || input.supportedPids || {});
     const connectionStatus = input.connectionStatus?.displayStatus ? input.connectionStatus : normalizeBridgeConnectionStatus(input.connectionStatus || {});
     const vciList = input.vciList?.devices ? input.vciList : normalizeBridgeVciList(input.vciList || {});
@@ -1085,6 +1191,7 @@
     if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
     if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
+    if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_live_data_conditions");
 
     return {
@@ -1100,6 +1207,7 @@
       dtcSnapshot,
       freezeFrameSnapshot,
       readinessSnapshot,
+      ecuInfoSnapshot,
       livePidSnapshot,
       supportedPidMatrix,
       warnings,
@@ -1431,10 +1539,12 @@
     configureVehicleInterfaceCatalog,
     configureFreezeFrameItems,
     configureReadinessMonitors,
+    configureEcuInfoItems,
     getMonitorDefinitions,
     getVehicleInterfaceCatalog,
     getFreezeFrameItems,
     getReadinessMonitors,
+    getEcuInfoItems,
     getVehicleOperationPlan,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
@@ -1459,6 +1569,7 @@
     normalizeFreezeFrameSnapshot,
     normalizeReadinessSnapshot,
     normalizeEcuResponseSummary,
+    normalizeEcuInfoSnapshot,
     buildSupportedPidMatrix,
     buildDiagnosticScanSession,
     evaluateOutboundSafety,

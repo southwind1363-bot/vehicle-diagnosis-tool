@@ -11,6 +11,9 @@ const freezeFrameItems = JSON.parse(
 const readinessMonitors = JSON.parse(
   fs.readFileSync(new URL("../data/obd-readiness-monitors-2026.json", import.meta.url), "utf8")
 );
+const ecuInfoItems = JSON.parse(
+  fs.readFileSync(new URL("../data/obd-ecu-info-items-2026.json", import.meta.url), "utf8")
+);
 const vehicleInterfaceCatalog = JSON.parse(
   fs.readFileSync(new URL("../data/vehicle-interface-catalog-2026.json", import.meta.url), "utf8")
 );
@@ -60,8 +63,12 @@ check(obd.getFreezeFrameItems().some((item) => item.monitorId === "control_modul
 check(obd.configureReadinessMonitors(readinessMonitors) === true, "レディネスモニター辞書を読み込めません");
 check(obd.getReadinessMonitors().length >= 14, "レディネスモニター辞書が不足しています");
 check(obd.getReadinessMonitors().some((item) => item.id === "evaporative_system"), "EVAPレディネスモニターがありません");
+check(obd.configureEcuInfoItems(ecuInfoItems) === true, "ECU情報項目辞書を読み込めません");
+check(obd.getEcuInfoItems().length >= 7, "ECU情報項目辞書が不足しています");
+check(obd.getEcuInfoItems().some((item) => item.id === "calibration_verification_number"), "CVN情報項目がありません");
 check(obd.getCapability().freezeFrameItemCount === freezeFrameItems.length, "フリーズフレーム辞書件数を取得できません");
 check(obd.getCapability().readinessMonitorCount === readinessMonitors.length, "レディネス辞書件数を取得できません");
+check(obd.getCapability().ecuInfoItemCount === ecuInfoItems.length, "ECU情報辞書件数を取得できません");
 check(obd.configureVehicleInterfaceCatalog(vehicleInterfaceCatalog) === true, "VCI候補カタログを読み込めません");
 const interfaceCatalog = obd.getVehicleInterfaceCatalog();
 check(interfaceCatalog.length >= 4, "VCI候補カタログが不足しています");
@@ -302,6 +309,14 @@ const scanSession = obd.buildDiagnosticScanSession({
       { id: "misfire", label: "失火", supported: true, complete: true }
     ]
   },
+  ecuInfo: {
+    values: [
+      { id: "vin", info_type: "02", value: "JTDKN3DU0A0123456" },
+      { id: "calibration_id", info_type: "04", value: "CAL-1234" },
+      { id: "calibration_verification_number", info_type: "06", value: "CVN-ABCD" },
+      { id: "ecu_name", info_type: "0A", value: "Engine ECU" }
+    ]
+  },
   ecus: [{ ecu: "7E8", status: "ok", dtcs: ["P0171"] }],
   supportedPids: ["0C", "05", "03"]
 });
@@ -313,6 +328,11 @@ check(scanSession.freezeFrameSnapshot.expectedItemCount === freezeFrameItems.len
 check(scanSession.readinessSnapshot.incompleteCount === 1, "レディネス未完了数を集計できません");
 check(scanSession.readinessSnapshot.knownMonitorCount === readinessMonitors.length, "レディネス辞書をセッションへ反映できません");
 check(scanSession.readinessSnapshot.monitors.find((item) => item.id === "catalyst")?.diagnosticUse.includes("P0420"), "レディネス診断用途を参照できません");
+check(scanSession.ecuInfoSnapshot.expectedItemCount === ecuInfoItems.length, "ECU情報辞書をセッションへ反映できません");
+check(scanSession.ecuInfoSnapshot.hadSensitiveIdentifier === true, "VIN候補を識別情報として検出できません");
+check(scanSession.ecuInfoSnapshot.items.find((item) => item.id === "vin")?.retainedRawValue === false, "VIN生値を保持しています");
+check(!JSON.stringify(scanSession.ecuInfoSnapshot).includes("JTDKN3DU0A0123456"), "ECU情報スナップショットにVIN生値が残っています");
+check(scanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "CALIDを保持できません");
 check(scanSession.ecuResponseSummary.ecus[0].dtcCount === 1, "ECU応答サマリーへDTC件数を反映できません");
 check(scanSession.supportedPidMatrix.supportedCount >= 3, "対応PIDマトリクスを作成できません");
 check(scanSession.retainedRawFrames === false && scanSession.vehicleCommandEnabled === false && scanSession.wouldTransmit === false, "診断機セッションが送信または生フレーム保持扱いです");
@@ -321,6 +341,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 161");
+  console.log("OBD read-only safety checks: 170");
   console.log("Errors: 0");
 }

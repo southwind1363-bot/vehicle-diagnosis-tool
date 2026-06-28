@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.226.0";
+const APP_VERSION = "2.227.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -474,6 +474,7 @@ async function loadData() {
       obdMonitorDefinitions,
       obdFreezeFrameItems2026,
       obdReadinessMonitors2026,
+      obdEcuInfoItems2026,
       vehicleInterfaceCatalog2026,
       diagnosticCapabilityStatus2026,
       diagnosticCoverageRoadmap2026
@@ -671,6 +672,7 @@ async function loadData() {
       fetchJson("data/obd-monitor-definitions.json"),
       fetchJson("data/obd-freeze-frame-items-2026.json"),
       fetchJson("data/obd-readiness-monitors-2026.json"),
+      fetchJson("data/obd-ecu-info-items-2026.json"),
       fetchJson("data/vehicle-interface-catalog-2026.json"),
       fetchJson("data/diagnostic-capability-status-2026.json"),
       fetchJson("data/diagnostic-coverage-roadmap-2026.json")
@@ -684,6 +686,9 @@ async function loadData() {
     }
     if (!window.ObdReadOnly?.configureReadinessMonitors(obdReadinessMonitors2026)) {
       throw new Error("OBDレディネスモニター辞書を読み込めません");
+    }
+    if (!window.ObdReadOnly?.configureEcuInfoItems(obdEcuInfoItems2026)) {
+      throw new Error("OBD ECU情報項目辞書を読み込めません");
     }
     if (!window.ObdReadOnly?.configureVehicleInterfaceCatalog(vehicleInterfaceCatalog2026)) {
       throw new Error("VCI候補カタログを読み込めません");
@@ -713,6 +718,7 @@ async function loadData() {
       obdMonitorDefinitions,
       obdFreezeFrameItems2026,
       obdReadinessMonitors2026,
+      obdEcuInfoItems2026,
       vehicleInterfaceCatalog2026
     };
     dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件 / 詳細候補 ${countVehicleDetailOptions(dataStore.vehicleInputOptions)}件 / 年式範囲 ${dataStore.vehicleYearRangesDomestic2026.length}件。`;
