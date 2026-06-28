@@ -1,0 +1,116 @@
+[
+  {
+    "id": "coverage-generic-powertrain-p",
+    "label": "P系 汎用OBD2 DTC",
+    "coverage_area": "generic-obd2-dtc",
+    "current_state": "個別定義を拡張中",
+    "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
+    "priority": 1,
+    "current_count_note": "P系個別定義 2923件",
+    "next_actions": [
+      "未収録Pコードを公式/規格系ソースで照合する",
+      "同時DTC、フリーズフレーム、ライブデータPIDへのリンクを増やす",
+      "故障名だけでなく初期点検順、観察条件、整備書確認項目を足す"
+    ],
+    "blocked_until": [],
+    "safety_note": "コード名だけで原因を断定しない。整備書確認と実測値を必須にする。",
+    "source": "ローカル検証集計",
+    "source_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "coverage-network-u",
+    "label": "U系 通信DTC",
+    "coverage_area": "network-dtc",
+    "current_state": "個別定義を拡張中",
+    "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
+    "priority": 2,
+    "current_count_note": "U系個別定義 550件",
+    "next_actions": [
+      "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
+      "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
+      "単独UコードでECU不良と断定しない注意を標準化する"
+    ],
+    "blocked_until": [],
+    "safety_note": "通信線測定はショートや誤接続を避け、メーカー整備書の測定条件を優先する。",
+    "source": "ローカル検証集計",
+    "source_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "coverage-body-b",
+    "label": "B系 ボディDTC",
+    "coverage_area": "body-dtc",
+    "current_state": "個別定義は未整備",
+    "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
+    "priority": 3,
+    "current_count_note": "B系個別定義 0件",
+    "next_actions": [
+      "汎用/メーカー別のB系コード収録可否をソース別に分ける",
+      "SRS、ブレーキ、盗難防止など安全系は強い注意と整備書必須を付ける",
+      "Techstream/J2534などメーカー診断機由来の表示名を貼り付け解析で扱えるようにする"
+    ],
+    "blocked_until": ["公式またはメーカー診断機表示に基づく定義ソース確認"],
+    "safety_note": "SRSや盗難防止系は誤作動・復旧不能リスクがあるため、読取整理だけから始める。",
+    "source": "ローカル検証集計",
+    "source_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "coverage-chassis-c",
+    "label": "C系 シャシDTC",
+    "coverage_area": "chassis-dtc",
+    "current_state": "個別定義は未整備",
+    "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
+    "priority": 4,
+    "current_count_note": "C系個別定義 0件",
+    "next_actions": [
+      "C系コードを制動、操舵、姿勢制御、車輪速、ヨーレート、電源系に分類する",
+      "ライブデータ候補と点検条件を車種別確認前提で持たせる",
+      "作動テストやエア抜き等の変更系は安全条件が揃うまで未開放にする"
+    ],
+    "blocked_until": ["公式またはメーカー診断機表示に基づく定義ソース確認"],
+    "safety_note": "ブレーキ、操舵、ADAS系は作業条件と復旧手順が揃うまで読取補助に限定する。",
+    "source": "ローカル検証集計",
+    "source_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "coverage-oem-enhanced-dtc",
+    "label": "メーカー固有・拡張DTC",
+    "coverage_area": "oem-enhanced-dtc",
+    "current_state": "器を準備中",
+    "target_state": "メーカー診断機、J2534、UDS応答、サブコード、ステータスを診断フローへ取り込む",
+    "priority": 5,
+    "current_count_note": "メーカー固有DTCは体系化前",
+    "next_actions": [
+      "メーカー、車種、年式、ECU、DTC、サブコードを分離して保存できる形式を作る",
+      "Techstream/J2534読取結果の貼り付け解析を先に強化する",
+      "拡張DTCは出典と車種適合がない限り汎用名へ混ぜない"
+    ],
+    "blocked_until": ["車種別ソース、診断機表示、UDS/J2534読取サンプルの確認"],
+    "safety_note": "メーカー固有コードは互換性を推測せず、適合未確認なら未確認として扱う。",
+    "source": "ユーザー方針とローカル実装状況",
+    "source_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "coverage-live-data-and-active-test",
+    "label": "データリスト・作業サポート",
+    "coverage_area": "live-data-active-test",
+    "current_state": "データモニター辞書と安全ゲートを準備済み",
+    "target_state": "現行車のデータリスト、基準値、観察条件、作業サポートを段階的に増やす",
+    "priority": 6,
+    "current_count_note": "データモニター辞書 134項目",
+    "next_actions": [
+      "症状別に見るべきPIDと測定条件を増やす",
+      "正常/異常を断定せず、比較条件と次点検へつなぐ",
+      "アクティブテスト、初期化、学習、書込みは安全条件が揃うまで未開放にする"
+    ],
+    "blocked_until": ["車種別基準値、実行条件、利用者確認、ログ、復旧手順の整備"],
+    "safety_note": "作業サポートは車両状態を変えるため、読取・記録・比較の完成後に段階開放する。",
+    "source": "ローカル検証集計",
+    "source_date": "2026-06-28",
+    "service_manual_required": true
+  }
+]

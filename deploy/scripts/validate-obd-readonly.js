@@ -8,6 +8,9 @@ const monitorDefinitions = JSON.parse(
 const vehicleInterfaceCatalog = JSON.parse(
   fs.readFileSync(new URL("../data/vehicle-interface-catalog-2026.json", import.meta.url), "utf8")
 );
+const diagnosticCoverageRoadmap = JSON.parse(
+  fs.readFileSync(new URL("../data/diagnostic-coverage-roadmap-2026.json", import.meta.url), "utf8")
+);
 const context = {
   window: { isSecureContext: true },
   navigator: { serial: {} }
@@ -47,6 +50,10 @@ check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.read
 check(interfaceCatalog.some((item) => item.id === "user-vci-rcmall-mks-canable-v2-pro" && item.tooling.includes("SavvyCAN")), "CANable/SavvyCAN候補がありません");
 check(interfaceCatalog.every((item) => item.connectionEnabled === false && item.vehicleCommandEnabled === false), "VCI候補で通信または車両コマンドが有効です");
 check(interfaceCatalog.every((item) => Array.isArray(item.verificationRequired) && item.verificationRequired.length >= 4), "VCI候補の検証条件が不足しています");
+check(diagnosticCoverageRoadmap.length >= 6, "診断データ網羅ロードマップが不足しています");
+check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-body-b" && item.current_count_note.includes("0件")), "B系未整備状態がロードマップにありません");
+check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-chassis-c" && item.current_count_note.includes("0件")), "C系未整備状態がロードマップにありません");
+check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-oem-enhanced-dtc" && item.blocked_until.length), "メーカー固有DTCの確認待ち条件が不足しています");
 const operationPlan = obd.getVehicleOperationPlan();
 check(operationPlan.length >= 4, "接続後機能の準備計画が不足しています");
 check(operationPlan.some((item) => item.id === "read_dtc"), "DTC読取準備がありません");
@@ -253,6 +260,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 130");
+  console.log("OBD read-only safety checks: 134");
   console.log("Errors: 0");
 }

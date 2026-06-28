@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.221.0";
+const APP_VERSION = "2.222.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -58,6 +58,7 @@ const fallbackData = {
   japanObdInspectionNotes: [],
   realWorldCases: [],
   diagnosticWorkflows: [],
+  diagnosticCoverageRoadmap: [],
   dtcScopeRules: [],
   symptomFlows: [
     makeFlow("engine-no-start", "エンジン始動不良", "始動系、電源系、燃料系、点火系、吸気系", ["バッテリー電圧", "クランキング回転数", "燃圧", "点火信号", "DTCとフリーズフレーム"], ["battery", "starter", "fuel", "ignition"]),
@@ -145,6 +146,7 @@ const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
 const obdInterfaceRoadmapGrid = document.querySelector("#obdInterfaceRoadmapGrid");
+const obdCoverageRoadmapGrid = document.querySelector("#obdCoverageRoadmapGrid");
 const obdBridgeContractGrid = document.querySelector("#obdBridgeContractGrid");
 const obdBridgeSchemaGrid = document.querySelector("#obdBridgeSchemaGrid");
 const obdInterlockSummary = document.querySelector("#obdInterlockSummary");
@@ -467,7 +469,8 @@ async function loadData() {
       dtcFamilyWorkflows2026,
       dtcScopeRules,
       obdMonitorDefinitions,
-      vehicleInterfaceCatalog2026
+      vehicleInterfaceCatalog2026,
+      diagnosticCoverageRoadmap2026
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
       fetchJson("data/service-notes.json"),
@@ -659,7 +662,8 @@ async function loadData() {
       fetchJson("data/dtc-family-workflows-2026.json"),
       fetchJson("data/dtc-scope-rules.json"),
       fetchJson("data/obd-monitor-definitions.json"),
-      fetchJson("data/vehicle-interface-catalog-2026.json")
+      fetchJson("data/vehicle-interface-catalog-2026.json"),
+      fetchJson("data/diagnostic-coverage-roadmap-2026.json")
     ]);
 
     if (!window.ObdReadOnly?.configureMonitorDefinitions(obdMonitorDefinitions)) {
@@ -687,6 +691,7 @@ async function loadData() {
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
       diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
+      diagnosticCoverageRoadmap: diagnosticCoverageRoadmap2026,
       dtcScopeRules,
       obdMonitorDefinitions,
       vehicleInterfaceCatalog2026
@@ -1926,6 +1931,7 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getAdvancedInterfaceRoadmap?.() || [],
     window.ObdReadOnly.getVehicleInterfaceCatalog?.() || []
   );
+  renderObdCoverageRoadmap(dataStore.diagnosticCoverageRoadmap || []);
   renderObdBridgeContract(
     window.ObdReadOnly.getLocalBridgeContract?.(),
     window.ObdReadOnly.getLocalBridgeResponseSchemas?.() || []
@@ -2105,6 +2111,50 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
 
     card.append(head, role, scope, note, button);
     obdInterfaceRoadmapGrid.appendChild(card);
+  });
+}
+
+function renderObdCoverageRoadmap(items) {
+  obdCoverageRoadmapGrid.innerHTML = "";
+
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "診断データ網羅計画を取得できませんでした。";
+    obdCoverageRoadmapGrid.appendChild(empty);
+    return;
+  }
+
+  [...items].sort((a, b) => (a.priority || 99) - (b.priority || 99)).forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "obd-interface-card";
+
+    const head = document.createElement("div");
+    head.className = "obd-operation-head";
+    const title = document.createElement("strong");
+    title.textContent = item.label;
+    const badge = document.createElement("span");
+    badge.className = "obd-operation-state";
+    badge.textContent = item.current_state || "確認中";
+    head.append(title, badge);
+
+    const current = document.createElement("p");
+    current.textContent = item.current_count_note || item.coverage_area || "";
+
+    const target = document.createElement("p");
+    target.textContent = item.target_state || "";
+
+    const next = document.createElement("p");
+    next.textContent = Array.isArray(item.next_actions) ? item.next_actions.slice(0, 2).join(" / ") : "";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.disabled = true;
+    button.textContent = item.blocked_until?.length ? "ソース確認待ち" : "拡張中";
+
+    card.append(head, current, target, next, button);
+    obdCoverageRoadmapGrid.appendChild(card);
   });
 }
 

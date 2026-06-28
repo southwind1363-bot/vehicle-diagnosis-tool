@@ -197,6 +197,15 @@ for (const file of jsonFiles) {
         reportError(`${label}: monitor_interpretation_note がありません`);
       }
     }
+
+    if (file === "diagnostic-coverage-roadmap-2026.json") {
+      if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
+      if (!isNonEmptyString(row.coverage_area)) reportError(`${label}: coverage_area がありません`);
+      if (!Number.isInteger(row.priority)) reportError(`${label}: priority が整数ではありません`);
+      if (!isNonEmptyStringArray(row.next_actions)) reportError(`${label}: next_actions がありません`);
+      if (!Array.isArray(row.blocked_until)) reportError(`${label}: blocked_until は配列にしてください`);
+      if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
+    }
   }
 }
 
