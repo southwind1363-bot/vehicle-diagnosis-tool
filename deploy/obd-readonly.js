@@ -1605,6 +1605,7 @@
     };
     let value = null;
     if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) return decodeOxygenSensorPid(pid, a, b);
+    if (["34", "35", "38", "39"].includes(pid)) return decodeWideOxygenCurrentPid(pid, a, b, c, d);
     if (pid === "03") value = decodeFuelSystemStatus(a, b);
     else if (pid === "12") value = decodeSecondaryAirStatus(a);
     else if (pid === "1C") value = decodeObdStandard(a);
@@ -1629,7 +1630,6 @@
     ].includes(pid)) value = word() === null ? null : word() / 32768;
     else if (pid === "30") value = a;
     else if (pid === "32") value = signedWord() === null ? null : signedWord() / 4;
-    else if (["34", "35", "38", "39"].includes(pid) && Number.isInteger(c) && Number.isInteger(d)) value = ((c * 256) + d) / 256 - 128;
     else if (["3C", "3D", "3E", "3F"].includes(pid)) value = word() === null ? null : word() / 10 - 40;
     else if (pid === "43") value = word() === null ? null : word() * 100 / 255;
     else if (pid === "42" && Number.isInteger(b)) value = ((a * 256) + b) / 1000;
@@ -1664,6 +1664,30 @@
         pid,
         value: Number((((b - 128) * 100 / 128)).toFixed(3)),
         unit: trimDefinition.unit
+      });
+    }
+    return values.length ? values : null;
+  }
+
+  function decodeWideOxygenCurrentPid(pid, a, b, c, d) {
+    if (!Number.isInteger(b) || !Number.isInteger(c) || !Number.isInteger(d)) return null;
+    const currentDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id.endsWith("_current"));
+    const ratioDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id.endsWith("_current_ratio"));
+    const values = [];
+    if (ratioDefinition) {
+      values.push({
+        id: ratioDefinition.id,
+        pid,
+        value: Number((((a * 256) + b) / 32768).toFixed(3)),
+        unit: ratioDefinition.unit
+      });
+    }
+    if (currentDefinition) {
+      values.push({
+        id: currentDefinition.id,
+        pid,
+        value: Number((((c * 256) + d) / 256 - 128).toFixed(3)),
+        unit: currentDefinition.unit
       });
     }
     return values.length ? values : null;
