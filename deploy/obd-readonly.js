@@ -1606,7 +1606,7 @@
     let value = null;
     if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) return decodeOxygenSensorPid(pid, a, b);
     if (["34", "35", "38", "39"].includes(pid)) return decodeWideOxygenCurrentPid(pid, a, b, c, d);
-    if (pid === "01") value = decodeMonitorStatusSummary(a, b);
+    if (pid === "01") return decodeMonitorStatusPid(pid, a, b);
     else if (pid === "03") value = decodeFuelSystemStatus(a, b);
     else if (pid === "12") value = decodeSecondaryAirStatus(a);
     else if (pid === "13") value = decodeOxygenSensorLocations(a, false);
@@ -1658,11 +1658,20 @@
     return pid === "64" ? 5 : 4;
   }
 
-  function decodeMonitorStatusSummary(a, b) {
+  function decodeMonitorStatusPid(pid, a, b) {
+    const summaryDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "monitor_status");
+    const milDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "monitor_status_mil");
+    const countDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "monitor_status_dtc_count");
+    const ignitionDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "monitor_status_ignition_type");
     const dtcCount = a & 0x7F;
     const mil = (a & 0x80) !== 0 ? "mil_on" : "mil_off";
     const ignition = Number.isInteger(b) && (b & 0x08) !== 0 ? "compression" : "spark";
-    return `${mil};dtc_count=${dtcCount};ignition=${ignition}`;
+    const values = [];
+    if (summaryDefinition) values.push({ id: summaryDefinition.id, pid, value: `${mil};dtc_count=${dtcCount};ignition=${ignition}`, unit: summaryDefinition.unit });
+    if (milDefinition) values.push({ id: milDefinition.id, pid, value: mil, unit: milDefinition.unit });
+    if (countDefinition) values.push({ id: countDefinition.id, pid, value: dtcCount, unit: countDefinition.unit });
+    if (ignitionDefinition) values.push({ id: ignitionDefinition.id, pid, value: ignition, unit: ignitionDefinition.unit });
+    return values.length ? values : null;
   }
 
   function decodeOxygenSensorPid(pid, a, b) {
