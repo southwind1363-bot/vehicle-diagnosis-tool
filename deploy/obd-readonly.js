@@ -1295,6 +1295,81 @@
     });
   }
 
+  function decodeReadinessResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const serviceIndex = bytes.findIndex((byte, index) => byte === 0x41 && bytes[index + 1] === 0x01);
+    if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length) {
+      return normalizeReadinessSnapshot({
+        source: input.source || "obd_response_decoder",
+        captured_at: input.captured_at || input.capturedAt || null,
+        monitors: []
+      });
+    }
+    const a = bytes[serviceIndex + 2];
+    const b = bytes[serviceIndex + 3];
+    const c = bytes[serviceIndex + 4];
+    const d = bytes[serviceIndex + 5];
+    const compressionIgnition = (b & 0x08) !== 0;
+    const monitorBits = compressionIgnition
+      ? [
+          ["misfire", b, 0x10, 0x40],
+          ["fuel_system", b, 0x20, 0x80],
+          ["comprehensive_component", c, 0x01, 0x10],
+          ["nox_scr", c, 0x02, 0x20],
+          ["boost_pressure", c, 0x04, 0x40],
+          ["exhaust_gas_sensor", c, 0x08, 0x80],
+          ["pm_filter", d, 0x01, 0x10],
+          ["egr_vvt", d, 0x02, 0x20]
+        ]
+      : [
+          ["misfire", b, 0x10, 0x40],
+          ["fuel_system", b, 0x20, 0x80],
+          ["comprehensive_component", c, 0x01, 0x10],
+          ["catalyst", c, 0x02, 0x20],
+          ["heated_catalyst", c, 0x04, 0x40],
+          ["evaporative_system", c, 0x08, 0x80],
+          ["secondary_air", d, 0x01, 0x10],
+          ["oxygen_sensor", d, 0x02, 0x20],
+          ["oxygen_sensor_heater", d, 0x04, 0x40],
+          ["egr_vvt", d, 0x08, 0x80]
+        ];
+    const monitors = monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
+      const supported = (byte & supportedBit) !== 0;
+      const complete = supported ? (byte & incompleteBit) === 0 : false;
+      return { id, supported, complete, status: supported ? (complete ? "complete" : "not_complete") : "not_supported" };
+    });
+
+    return normalizeReadinessSnapshot({
+      source: input.source || "obd_response_decoder",
+      captured_at: input.captured_at || input.capturedAt || null,
+      mil_on: (a & 0x80) !== 0,
+      monitors
+    });
+  }
+
+  function buildDecodedObdScanSession(input = {}) {
+    const dtcSnapshot = input.dtcResponse?.schemaVersion ? input.dtcResponse : decodeObdDtcResponse(input.dtcResponse || {});
+    const livePidSnapshot = input.livePidResponse?.monitorValues ? input.livePidResponse : decodeLivePidResponse(input.livePidResponse || {});
+    const freezeFrameSnapshot = input.freezeFrameResponse?.schemaVersion ? input.freezeFrameResponse : decodeFreezeFrameResponse(input.freezeFrameResponse || {});
+    const readinessSnapshot = input.readinessResponse?.schemaVersion ? input.readinessResponse : decodeReadinessResponse(input.readinessResponse || {});
+    const ecuInfoSnapshot = input.ecuInfoResponse?.schemaVersion ? input.ecuInfoResponse : decodeEcuInfoResponse(input.ecuInfoResponse || {});
+    const supportedPidMatrix = input.supportedPidResponse?.schemaVersion ? input.supportedPidResponse : decodeSupportedPidResponse(input.supportedPidResponse || {});
+    return buildDiagnosticScanSession({
+      source: "obd_response_decoder",
+      session_id: input.session_id || input.sessionId || "decoded_obd_scan_session",
+      started_at: input.started_at || input.startedAt || null,
+      ended_at: input.ended_at || input.endedAt || null,
+      vehicleProfile: input.vehicleProfile || input.vehicle_profile || null,
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      supportedPidMatrix,
+      ecus: input.ecus || []
+    });
+  }
+
   function trimEcuInfoPayload(payload) {
     const cleaned = [...payload];
     while (cleaned.length && (cleaned[0] === 0x00 || cleaned[0] <= 0x20)) cleaned.shift();
@@ -1768,6 +1843,8 @@
     decodeLivePidResponse,
     decodeFreezeFrameResponse,
     decodeEcuInfoResponse,
+    decodeReadinessResponse,
+    buildDecodedObdScanSession,
     buildSupportedPidMatrix,
     buildDiagnosticScanSession,
     evaluateOutboundSafety,
