@@ -184,6 +184,28 @@ for (const file of jsonFiles) {
       }
     }
 
+    if (file === "obd-freeze-frame-items-2026.json") {
+      if (!isNonEmptyString(row.monitor_id)) reportError(`${label}: monitor_id がありません`);
+      if (!monitorDefinitionIds.has(row.monitor_id)) reportError(`${label}: 未登録の monitor_id ${row.monitor_id} があります`);
+      if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
+      if (row.service !== "02") reportError(`${label}: service は 02 にしてください`);
+      if (!/^[0-9A-F]{2}$/.test(row.pid || "")) reportError(`${label}: pid が不正です`);
+      if (!Number.isInteger(row.priority)) reportError(`${label}: priority が整数ではありません`);
+      if (!isNonEmptyString(row.purpose)) reportError(`${label}: purpose がありません`);
+      if (!isNonEmptyString(row.interpretation_note)) reportError(`${label}: interpretation_note がありません`);
+      if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
+    }
+
+    if (file === "obd-readiness-monitors-2026.json") {
+      if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
+      if (!isNonEmptyString(row.category)) reportError(`${label}: category がありません`);
+      if (!isNonEmptyStringArray(row.applies_to)) reportError(`${label}: applies_to がありません`);
+      if (!isNonEmptyStringArray(row.status_values)) reportError(`${label}: status_values がありません`);
+      if (!isNonEmptyString(row.diagnostic_use)) reportError(`${label}: diagnostic_use がありません`);
+      if (!isNonEmptyString(row.not_complete_note)) reportError(`${label}: not_complete_note がありません`);
+      if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
+    }
+
     if (file.startsWith("diagnostic-workflows") && "monitor_ids" in row) {
       if (!isNonEmptyStringArray(row.monitor_ids)) reportError(`${label}: monitor_ids がありません`);
       if (new Set(row.monitor_ids || []).size !== (row.monitor_ids || []).length) reportError(`${label}: monitor_ids に重複があります`);

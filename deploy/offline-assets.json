@@ -1,7 +1,7 @@
 {
-  "version": "2.225.0",
+  "version": "2.226.0",
   "generated_at": "2026-06-28",
-  "asset_count": 204,
+  "asset_count": 206,
   "assets": [
     "./",
     "index.html",
@@ -193,8 +193,10 @@
     "data/imported-verified-dtc.json",
     "data/japan-obd-inspection-notes-2026.json",
     "data/japan-obd-inspection-notes.json",
+    "data/obd-freeze-frame-items-2026.json",
     "data/obd-codes.json",
     "data/obd-monitor-definitions.json",
+    "data/obd-readiness-monitors-2026.json",
     "data/official-reference-notes-2026.json",
     "data/real-world-cases.json",
     "data/recalls-tsb-notes.json",

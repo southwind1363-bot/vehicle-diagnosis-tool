@@ -423,6 +423,8 @@
     })
   ]);
   let vehicleInterfaceCatalog = Object.freeze([]);
+  let freezeFrameItemCatalog = Object.freeze([]);
+  let readinessMonitorCatalog = Object.freeze([]);
 
   function getCapability() {
     return {
@@ -430,7 +432,9 @@
       webSerialSupported: "serial" in navigator,
       hardwareConnectionEnabled: policy.hardwareConnectionEnabled,
       connectionPreparationEnabled: policy.connectionPreparationEnabled,
-      monitorDefinitionCount: monitorDefinitions.length
+      monitorDefinitionCount: monitorDefinitions.length,
+      freezeFrameItemCount: freezeFrameItemCatalog.length,
+      readinessMonitorCount: readinessMonitorCatalog.length
     };
   }
 
@@ -539,6 +543,62 @@
       readScopeCandidates: [...item.readScopeCandidates],
       writeScopeCandidates: [...item.writeScopeCandidates],
       verificationRequired: [...item.verificationRequired]
+    }));
+  }
+
+  function configureFreezeFrameItems(rows) {
+    if (!Array.isArray(rows) || !rows.length) return false;
+    const normalized = rows
+      .filter((item) => item && typeof item.id === "string" && typeof item.monitor_id === "string")
+      .map((item) => Object.freeze({
+        id: item.id,
+        monitorId: item.monitor_id,
+        label: item.label || item.monitor_id,
+        service: item.service || "02",
+        pid: item.pid || null,
+        priority: Number.isInteger(item.priority) ? item.priority : 999,
+        purpose: item.purpose || "",
+        interpretationNote: item.interpretation_note || "",
+        serviceManualRequired: item.service_manual_required === true,
+        source: item.source || "",
+        sourceUrl: item.source_url || null
+      }))
+      .sort((a, b) => a.priority - b.priority);
+    if (!normalized.length || new Set(normalized.map((item) => item.id)).size !== normalized.length) return false;
+    freezeFrameItemCatalog = Object.freeze(normalized);
+    return true;
+  }
+
+  function configureReadinessMonitors(rows) {
+    if (!Array.isArray(rows) || !rows.length) return false;
+    const normalized = rows
+      .filter((item) => item && typeof item.id === "string" && typeof item.label === "string")
+      .map((item) => Object.freeze({
+        id: item.id,
+        label: item.label,
+        category: item.category || "状態",
+        appliesTo: Object.freeze(Array.isArray(item.applies_to) ? [...item.applies_to] : []),
+        statusValues: Object.freeze(Array.isArray(item.status_values) ? [...item.status_values] : []),
+        diagnosticUse: item.diagnostic_use || "",
+        notCompleteNote: item.not_complete_note || "",
+        serviceManualRequired: item.service_manual_required === true,
+        source: item.source || "",
+        sourceUrl: item.source_url || null
+      }));
+    if (!normalized.length || new Set(normalized.map((item) => item.id)).size !== normalized.length) return false;
+    readinessMonitorCatalog = Object.freeze(normalized);
+    return true;
+  }
+
+  function getFreezeFrameItems() {
+    return freezeFrameItemCatalog.map((item) => ({ ...item }));
+  }
+
+  function getReadinessMonitors() {
+    return readinessMonitorCatalog.map((item) => ({
+      ...item,
+      appliesTo: [...item.appliesTo],
+      statusValues: [...item.statusValues]
     }));
   }
 
@@ -881,7 +941,25 @@
     const monitorValues = rows
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean)
-      .map((item) => ({ ...item, source: "freeze_frame" }));
+      .map((item) => {
+        const catalogItem = freezeFrameItemCatalog.find((entry) => entry.monitorId === item.id || entry.pid === item.pid);
+        return {
+          ...item,
+          source: "freeze_frame",
+          freezeFramePriority: catalogItem?.priority || null,
+          interpretationNote: catalogItem?.interpretationNote || item.supportNote
+        };
+      });
+    const expectedItems = freezeFrameItemCatalog.map((item) => ({
+      id: item.id,
+      monitorId: item.monitorId,
+      label: item.label,
+      pid: item.pid,
+      priority: item.priority,
+      captured: monitorValues.some((value) => value.id === item.monitorId || value.pid === item.pid),
+      purpose: item.purpose,
+      interpretationNote: item.interpretationNote
+    }));
     const triggerCodes = extractDtcCodes([
       input.trigger_dtc,
       input.triggerDtc,
@@ -896,6 +974,9 @@
       capturedAt: input.captured_at || input.capturedAt || null,
       triggerDtc: triggerCodes[0] || null,
       monitorValues,
+      expectedItems,
+      capturedItemCount: monitorValues.length,
+      expectedItemCount: expectedItems.length,
       monitorInsights: analyzeMonitorValues(monitorValues),
       retainedRawText: false
     };
@@ -904,12 +985,26 @@
   function normalizeReadinessSnapshot(input = {}) {
     const source = input.source || "diagnostic_core";
     const monitors = Array.isArray(input) ? input : Array.isArray(input.monitors) ? input.monitors : [];
-    const normalized = monitors.map((monitor, index) => ({
-      id: String(monitor?.id || monitor?.name || `monitor_${index + 1}`).slice(0, 80),
-      label: String(monitor?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
-      supported: monitor?.supported !== false,
-      complete: monitor?.complete === true,
-      status: monitor?.status || (monitor?.complete === true ? "complete" : "not_complete")
+    const normalized = monitors.map((monitor, index) => {
+      const id = String(monitor?.id || monitor?.name || `monitor_${index + 1}`).slice(0, 80);
+      const catalogItem = readinessMonitorCatalog.find((entry) => entry.id === id);
+      return {
+        id,
+        label: String(monitor?.label || catalogItem?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
+        category: catalogItem?.category || monitor?.category || "状態",
+        supported: monitor?.supported !== false,
+        complete: monitor?.complete === true,
+        status: monitor?.status || (monitor?.complete === true ? "complete" : "not_complete"),
+        diagnosticUse: catalogItem?.diagnosticUse || "",
+        notCompleteNote: catalogItem?.notCompleteNote || ""
+      };
+    });
+    const knownMonitors = readinessMonitorCatalog.map((item) => ({
+      id: item.id,
+      label: item.label,
+      category: item.category,
+      appliesTo: [...item.appliesTo],
+      observed: normalized.some((monitor) => monitor.id === item.id)
     }));
 
     return {
@@ -919,7 +1014,9 @@
       milOn: input.mil_on === true || input.milOn === true,
       monitorCount: normalized.length,
       incompleteCount: normalized.filter((item) => item.supported && !item.complete).length,
+      knownMonitorCount: knownMonitors.length,
       monitors: normalized,
+      knownMonitors,
       retainedRawText: false
     };
   }
@@ -1332,8 +1429,12 @@
     policy,
     configureMonitorDefinitions,
     configureVehicleInterfaceCatalog,
+    configureFreezeFrameItems,
+    configureReadinessMonitors,
     getMonitorDefinitions,
     getVehicleInterfaceCatalog,
+    getFreezeFrameItems,
+    getReadinessMonitors,
     getVehicleOperationPlan,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
