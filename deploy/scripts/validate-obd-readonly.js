@@ -14,6 +14,9 @@ const diagnosticCoverageRoadmap = JSON.parse(
 const diagnosticCapabilityStatus = JSON.parse(
   fs.readFileSync(new URL("../data/diagnostic-capability-status-2026.json", import.meta.url), "utf8")
 );
+const diagnosticWorkflowsPractical = JSON.parse(
+  fs.readFileSync(new URL("../data/diagnostic-workflows-practical-2026.json", import.meta.url), "utf8")
+);
 const context = {
   window: { isSecureContext: true },
   navigator: { serial: {} }
@@ -61,6 +64,11 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent <= 5), "双方向制御の安全ゲート状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.missing.includes("実際のローカルブリッジアプリ")), "ローカルブリッジ未実装状態が不足しています");
 check(diagnosticCapabilityStatus.every((item) => item.safety_gate), "診断機能完成度に安全ゲートがありません");
+check(diagnosticWorkflowsPractical.length >= 7, "実用診断フローが不足しています");
+check(diagnosticWorkflowsPractical.some((item) => item.id === "workflow-evap-leak-p0440-p0456" && item.monitor_ids.includes("commanded_evap_purge")), "EVAP診断フローにパージ指令PIDがありません");
+check(diagnosticWorkflowsPractical.some((item) => item.id === "workflow-egr-flow-p0401-p0402" && item.monitor_ids.includes("commanded_egr")), "EGR診断フローにEGR指令PIDがありません");
+check(diagnosticWorkflowsPractical.some((item) => item.id === "workflow-power-supply-p0560-p0563" && item.monitor_ids.includes("control_module_voltage")), "電源診断フローに制御モジュール電圧PIDがありません");
+check(diagnosticWorkflowsPractical.every((item) => item.service_manual_required === true), "実用診断フローに整備書確認必須がありません");
 const operationPlan = obd.getVehicleOperationPlan();
 check(operationPlan.length >= 4, "接続後機能の準備計画が不足しています");
 check(operationPlan.some((item) => item.id === "read_dtc"), "DTC読取準備がありません");
@@ -267,6 +275,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 138");
+  console.log("OBD read-only safety checks: 143");
   console.log("Errors: 0");
 }

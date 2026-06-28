@@ -1,0 +1,226 @@
+[
+  {
+    "id": "workflow-evap-leak-p0440-p0456",
+    "title": "EVAP漏れ・パージ系DTCの切り分け",
+    "dtc_codes": ["P0440", "P0441", "P0442", "P0455", "P0456"],
+    "symptoms": ["チェックランプ点灯", "燃料臭", "給油後に警告灯点灯", "OBD検査不合格"],
+    "trial_steps": [
+      "給油直後か、燃料キャップ脱着後か、燃料残量を聞き取る。",
+      "燃料キャップ、フィラーネック、ホース、パージバルブ、ベントバルブの外観と取付状態を確認する。",
+      "燃料残量とEVAP蒸気圧を保存し、パージ指令が出ている条件と出ていない条件を分ける。",
+      "大漏れ系はスモークテスト、小漏れ系はキャップ密閉、ホース微細亀裂、バルブ閉じ不良を優先確認する。",
+      "パージ流量異常は、パージ指令と燃料トリム変化が連動するか確認する。"
+    ],
+    "measurement_points": ["燃料残量", "EVAP蒸気圧", "EVAPパージ指令値", "短期燃料補正", "長期燃料補正", "燃料キャップ密閉"],
+    "monitor_ids": ["fuel_level", "evap_vapor_pressure", "commanded_evap_purge", "stft_b1", "ltft_b1", "stft_b2", "ltft_b2", "engine_runtime", "coolant_temp"],
+    "monitor_observation_conditions": [
+      "燃料残量が極端に少ない、または満タン直後の場合はEVAP自己診断条件から外れることがあるため記録する。",
+      "暖機後アイドルと軽負荷走行でパージ指令と燃料トリムの変化を比較する。",
+      "スモークテストは燃料系作業の安全条件を満たしてから行う。"
+    ],
+    "monitor_interpretation_note": "EVAP蒸気圧の単位と符号はスキャンツールで表示差がある。単独値ではなくパージ指令、燃料残量、燃料トリム変化を合わせて見る。",
+    "if_normal_next": ["外観とキャップが正常なら、パージバルブ閉じ不良、ベントバルブ、ホース微細漏れを順に確認する。"],
+    "if_abnormal_suspect": ["パージ指令なしで燃料トリムが変化する場合は、パージバルブの閉じ不良またはホース接続誤りを疑う。"],
+    "before_replacement_checks": ["燃料キャップ密閉", "スモークテスト", "ホース接続", "パージバルブ単体点検", "ベント経路詰まり"],
+    "common_mistakes": ["P0442やP0456で先にセンサー交換する。", "燃料残量や給油直後条件を記録しない。", "キャップ交換だけで小漏れの再点検をしない。"],
+    "required_tools": ["OBD2スキャンツール", "スモークテスター", "デジタルマルチメーター", "メーカー整備書"],
+    "safety_tags": ["fuel"],
+    "source": "SAE J2012 DTC定義とSAE J1979 OBDデータ項目を基にした登録診断フロー",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2026-06-28",
+    "last_verified_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "workflow-egr-flow-p0401-p0402",
+    "title": "EGR流量不足・過多の切り分け",
+    "dtc_codes": ["P0401", "P0402"],
+    "symptoms": ["チェックランプ点灯", "ノッキング", "アイドリング不調", "エンスト", "加速不良"],
+    "trial_steps": [
+      "冷却水温が診断条件に入っているか確認し、暖機後のアイドルと軽負荷時を分けて記録する。",
+      "EGR指令値、EGR偏差、MAP、MAF、回転数、負荷を同時に保存する。",
+      "流量不足ではEGR通路詰まり、バルブ固着、差圧・温度検出の異常を確認する。",
+      "流量過多ではEGRバルブ閉じ不良、制御負圧、配線、カーボン噛み込みを確認する。",
+      "EGR作動要求や強制駆動は現段階ではこのWebアプリから実行せず、認定スキャンツールと整備書条件で行う。"
+    ],
+    "measurement_points": ["EGR指令値", "EGR偏差", "MAP", "MAF", "冷却水温", "負荷", "EGR温度"],
+    "monitor_ids": ["commanded_egr", "egr_error", "commanded_egr_and_error", "map", "maf", "engine_speed", "calculated_load", "coolant_temp", "egr_temp"],
+    "monitor_observation_conditions": [
+      "暖機後、安定アイドル、軽負荷巡航、減速直後を分けて保存する。",
+      "EGR非作動条件でEGR過多症状が出る場合は閉じ不良を優先する。",
+      "ディーゼル車はDPF再生中かどうかを別条件として扱う。"
+    ],
+    "monitor_interpretation_note": "EGR指令があるのにMAPやMAFの変化が薄い場合は流路・バルブ・検出系を分ける。指令なしで不調が出る場合は閉じ不良を疑う。",
+    "if_normal_next": ["EGR値が正常なら、吸気漏れ、燃料補正、点火時期、燃圧を確認する。"],
+    "if_abnormal_suspect": ["EGR偏差が大きい、またはMAP変化が伴わない場合は、通路詰まり、バルブ固着、検出センサーを疑う。"],
+    "before_replacement_checks": ["EGR通路詰まり", "バルブ固着", "配線・端子", "差圧または温度検出", "吸気系カーボン"],
+    "common_mistakes": ["P0401でEGRバルブだけ交換し、通路詰まりを見ない。", "P0402でアイドル不調の原因を点火系だけに絞る。"],
+    "required_tools": ["OBD2スキャンツール", "デジタルマルチメーター", "負圧計", "メーカー整備書"],
+    "safety_tags": ["exhaust"],
+    "source": "SAE J2012 DTC定義とSAE J1979 OBDデータ項目を基にした登録診断フロー",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2026-06-28",
+    "last_verified_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "workflow-air-metering-p0101-p0108",
+    "title": "MAF/MAP吸気計測系DTCの切り分け",
+    "dtc_codes": ["P0101", "P0102", "P0103", "P0106", "P0107", "P0108"],
+    "symptoms": ["加速不良", "アイドリング不調", "黒煙", "燃費悪化", "チェックランプ点灯"],
+    "trial_steps": [
+      "キーONエンジン停止でMAPと大気圧が大きくずれていないか確認する。",
+      "暖機後アイドル、2500rpm無負荷、軽負荷走行でMAF、MAP、スロットル、負荷を同時に保存する。",
+      "MAF系はエアクリーナー、吸気ダクト亀裂、二次エア吸い、センサー汚れ、電源・アースを確認する。",
+      "MAP系はホース詰まり、ポート詰まり、5V基準、信号線、エンジン機械状態を確認する。",
+      "燃料トリムと合わせ、センサー不良と吸気漏れを切り分ける。"
+    ],
+    "measurement_points": ["MAF", "MAP", "大気圧", "スロットル開度", "計算負荷", "燃料補正", "吸気温"],
+    "monitor_ids": ["maf", "map", "barometric_pressure", "throttle_position", "commanded_throttle_actuator_control", "calculated_load", "engine_speed", "intake_air_temp", "stft_b1", "ltft_b1", "stft_b2", "ltft_b2"],
+    "monitor_observation_conditions": [
+      "キーONエンジン停止、暖機後アイドル、2500rpm無負荷、症状再現時を同じ項目で保存する。",
+      "エアクリーナー脱着後やスロットル清掃後は取付状態と学習状態を記録する。",
+      "過給車は過給圧制御値も参考にし、無過給時と過給時を混同しない。"
+    ],
+    "monitor_interpretation_note": "MAF値の正常範囲は排気量と回転数で変わる。MAP、大気圧、スロットル、燃料トリムとの相関でセンサー・配管・機械状態を分ける。",
+    "if_normal_next": ["吸気計測値が正常なら、燃圧、点火、排気詰まり、EGRを確認する。"],
+    "if_abnormal_suspect": ["キーON停止でMAPと大気圧が大きく違う場合は、MAP系または大気圧検出を優先する。"],
+    "before_replacement_checks": ["吸気ダクト亀裂", "エアクリーナー詰まり", "センサー電源・アース", "MAPポート詰まり", "二次エア吸い"],
+    "common_mistakes": ["MAF清掃だけで吸気ダクト亀裂を見ない。", "過給車のMAP値をNA車と同じ感覚で判断する。"],
+    "required_tools": ["OBD2スキャンツール", "デジタルマルチメーター", "スモークテスター", "メーカー整備書"],
+    "safety_tags": [],
+    "source": "SAE J2012 DTC定義とSAE J1979 OBDデータ項目を基にした登録診断フロー",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2026-06-28",
+    "last_verified_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "workflow-coolant-thermostat-p0115-p0128",
+    "title": "水温センサー・サーモスタット系DTCの切り分け",
+    "dtc_codes": ["P0115", "P0116", "P0117", "P0118", "P0128"],
+    "symptoms": ["暖房不良", "燃費悪化", "オーバークール", "オーバーヒート", "チェックランプ点灯"],
+    "trial_steps": [
+      "冷間始動前に冷却水温、吸気温、外気温の差を確認する。",
+      "始動後の水温上昇、エンジン始動後時間、車速、負荷を保存する。",
+      "P0128ではサーモスタット開きっぱなし、冷却水量不足、ファン制御、温度センサーずれを分ける。",
+      "P0115系では配線、端子、5V基準、センサー抵抗、カプラー接触を確認する。",
+      "冷却系作業は熱傷防止のため、圧力と温度が下がってから行う。"
+    ],
+    "measurement_points": ["冷却水温", "吸気温", "外気温", "始動後時間", "車速", "負荷", "制御モジュール電圧"],
+    "monitor_ids": ["coolant_temp", "intake_air_temp", "ambient_air_temp", "engine_runtime", "vehicle_speed", "calculated_load", "control_module_voltage"],
+    "monitor_observation_conditions": [
+      "一晩放置後など冷間状態で、冷却水温と吸気温・外気温の差を記録する。",
+      "暖機中は時間、車速、ヒーター使用状態、ファン作動をメモする。",
+      "高温時のラジエーターキャップ開放は行わない。"
+    ],
+    "monitor_interpretation_note": "冷間時に温度センサー同士の差が大きい場合はセンサーまたは配線を疑う。暖機が遅い場合はサーモスタットや冷却系状態を整備書基準で確認する。",
+    "if_normal_next": ["水温上昇が正常なら、燃料補正、吸気温、ファン制御、実測温度を確認する。"],
+    "if_abnormal_suspect": ["水温が上がらない場合はサーモスタット開きっぱなし、急に飛ぶ場合はセンサー・配線接触を疑う。"],
+    "before_replacement_checks": ["冷却水量", "エア抜き状態", "センサー配線", "実測温度", "サーモスタット開弁温度"],
+    "common_mistakes": ["P0128で水温センサーだけを先に交換する。", "冷間時の温度比較をせずに判断する。"],
+    "required_tools": ["OBD2スキャンツール", "非接触温度計", "デジタルマルチメーター", "メーカー整備書"],
+    "safety_tags": ["hot_coolant"],
+    "source": "SAE J2012 DTC定義とSAE J1979 OBDデータ項目を基にした登録診断フロー",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2026-06-28",
+    "last_verified_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "workflow-throttle-correlation-p0121-p2135",
+    "title": "スロットル・アクセル相関系DTCの切り分け",
+    "dtc_codes": ["P0121", "P0122", "P0123", "P0221", "P2135"],
+    "symptoms": ["加速しない", "フェイルセーフ", "アイドリング不調", "チェックランプ点灯"],
+    "trial_steps": [
+      "バッテリー電圧とカプラー接触を確認し、低電圧や作業直後の学習未完了を分ける。",
+      "キーONでスロットル開度、スロットル制御値、回転数、負荷を保存する。",
+      "ペダル操作時の変化は認定スキャンツールで確認し、このWebアプリから作動要求は出さない。",
+      "スロットルボディ清掃後は学習手順、汚れ、バタフライ固着、配線張りを確認する。",
+      "5V基準、センサーGND、信号線を整備書ピン配置で確認する。"
+    ],
+    "measurement_points": ["スロットル開度", "スロットルアクチュエータ制御値", "制御モジュール電圧", "回転数", "負荷", "吸気温"],
+    "monitor_ids": ["throttle_position", "commanded_throttle_actuator_control", "commanded_throttle_control", "control_module_voltage", "engine_speed", "calculated_load", "intake_air_temp"],
+    "monitor_observation_conditions": [
+      "キーONエンジン停止、始動直後、暖機後アイドルを分けて保存する。",
+      "清掃・脱着・バッテリー交換後は学習未完了条件として記録する。",
+      "作動要求や強制駆動は現段階ではこのWebアプリから実行しない。"
+    ],
+    "monitor_interpretation_note": "標準PIDだけではアクセル二系統の相関を直接確認できない場合がある。スロットル開度、制御値、電圧、メーカー拡張データを合わせて判断する。",
+    "if_normal_next": ["標準PIDに異常がなければ、メーカー拡張のAPP/TPS二系統値と学習状態を確認する。"],
+    "if_abnormal_suspect": ["電圧低下や開度飛びがある場合は、端子、配線、5V基準、スロットル本体の順に確認する。"],
+    "before_replacement_checks": ["カプラー接触", "5V基準", "センサーGND", "清掃後学習", "バッテリー電圧"],
+    "common_mistakes": ["スロットル清掃後の学習未完了を故障と判断する。", "低電圧や端子接触を見ずにスロットル本体を交換する。"],
+    "required_tools": ["OBD2スキャンツール", "デジタルマルチメーター", "メーカー整備書"],
+    "safety_tags": ["driveability"],
+    "source": "SAE J2012 DTC定義とSAE J1979 OBDデータ項目を基にした登録診断フロー",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2026-06-28",
+    "last_verified_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "workflow-power-supply-p0560-p0563",
+    "title": "電源電圧系DTCの切り分け",
+    "dtc_codes": ["P0560", "P0562", "P0563"],
+    "symptoms": ["始動不良", "警告灯複数点灯", "通信DTC併発", "アイドリング不調", "メモリ消失"],
+    "trial_steps": [
+      "DTC消去前に現在故障、ペンディング、フリーズフレーム、制御モジュール電圧を保存する。",
+      "キーON、クランキング、アイドル、電装負荷ONで制御モジュール電圧を比較する。",
+      "バッテリー端子、アース、オルタネータ、ヒューズ、後付け用品の電源取り出しを確認する。",
+      "通信DTCや多数のセンサーDTCが同時にある場合は、個別部品より先に電源・アースを優先する。",
+      "高電圧側は過充電、レギュレータ異常、ジャンプスタート履歴を確認する。"
+    ],
+    "measurement_points": ["制御モジュール電圧", "回転数", "エンジン始動後時間", "MIL点灯中走行距離", "DTC消去後走行距離", "通信DTC併発"],
+    "monitor_ids": ["control_module_voltage", "engine_speed", "engine_runtime", "distance_with_mil", "distance_since_clear", "warmups_since_clear"],
+    "monitor_observation_conditions": [
+      "キーON、クランキング、暖機後アイドル、ヘッドライト・ブロワONを分けて記録する。",
+      "バッテリー交換、ジャンプスタート、後付け電装品の履歴を聞き取る。",
+      "多数DTCが同時発生した場合は発生時電圧と時系列を優先する。"
+    ],
+    "monitor_interpretation_note": "制御モジュール電圧はECUが見ている電圧であり、バッテリー端子電圧と差が出ることがある。端子間電圧と電圧降下を実測して比較する。",
+    "if_normal_next": ["電源・アースが正常なら、該当ECUの電源入力、IG系、通信線、個別DTCへ進む。"],
+    "if_abnormal_suspect": ["クランキング時低下、負荷時低下、過充電があれば、バッテリー、アース、充電系、配線抵抗を疑う。"],
+    "before_replacement_checks": ["バッテリー端子", "アース電圧降下", "充電電圧", "ヒューズ接触", "後付け用品"],
+    "common_mistakes": ["通信DTCを先に追い、低電圧原因を見落とす。", "ECU表示電圧と実測電圧を比較しない。"],
+    "required_tools": ["OBD2スキャンツール", "デジタルマルチメーター", "バッテリーテスター", "メーカー整備書"],
+    "safety_tags": ["electrical"],
+    "source": "SAE J2012 DTC定義とSAE J1979 OBDデータ項目を基にした登録診断フロー",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2026-06-28",
+    "last_verified_date": "2026-06-28",
+    "service_manual_required": true
+  },
+  {
+    "id": "workflow-o2-af-sensor-p0130-p0155",
+    "title": "O2・A/Fセンサー信号/ヒーター系DTCの切り分け",
+    "dtc_codes": ["P0130", "P0131", "P0132", "P0133", "P0135", "P0141", "P0150", "P0155"],
+    "symptoms": ["チェックランプ点灯", "燃費悪化", "排気臭", "アイドリング不調", "触媒DTC併発"],
+    "trial_steps": [
+      "バンク、センサー位置、センサー方式を整備書で確認する。",
+      "暖機後にO2電圧、A/F当量比または電流、燃料トリム、燃料システム状態を同時に保存する。",
+      "信号系は排気漏れ、吸気漏れ、燃圧、燃料トリム異常を先に切り分ける。",
+      "ヒーター系はヒューズ、電源、アース、抵抗、配線損傷を確認する。",
+      "触媒後センサーは触媒前後波形の役割が違うため、同じ基準で判断しない。"
+    ],
+    "measurement_points": ["O2センサー電圧", "A/F当量比", "A/F電流", "短期燃料補正", "長期燃料補正", "燃料システム状態", "制御モジュール電圧"],
+    "monitor_ids": ["o2_b1s1_voltage", "o2_b1s2_voltage", "o2_b2s1_voltage", "o2_b2s2_voltage", "wide_o2_b1s1_ratio", "wide_o2_b2s1_ratio", "wide_o2_b1s1_current", "wide_o2_b2s1_current", "stft_b1", "ltft_b1", "stft_b2", "ltft_b2", "fuel_system_status", "control_module_voltage"],
+    "monitor_observation_conditions": [
+      "暖機後クローズドループ状態、アイドル、2500rpm無負荷、症状再現時を分けて保存する。",
+      "排気漏れ、吸気漏れ、失火、燃圧異常がある場合はセンサー判定前に補正する。",
+      "ヒーターDTCはエンジン停止直後の高温部に注意し、電源遮断後に点検する。"
+    ],
+    "monitor_interpretation_note": "O2電圧、A/F当量比、A/F電流はセンサー方式で読み方が違う。燃料トリムと燃料システム状態を合わせ、センサー不良と混合気異常を分ける。",
+    "if_normal_next": ["センサー信号が正常なら、排気漏れ、燃圧、失火、触媒効率、ECU学習状態を確認する。"],
+    "if_abnormal_suspect": ["ヒーター系DTCで電源またはアースが欠ける場合は、センサー本体より配線・ヒューズを優先する。"],
+    "before_replacement_checks": ["バンク・センサー位置", "排気漏れ", "吸気漏れ", "ヒーター電源・アース", "燃料トリム"],
+    "common_mistakes": ["リーン/リッチ原因を直さずO2センサーだけ交換する。", "B1S1とB1S2を取り違える。", "A/Fセンサーを通常O2電圧の感覚で判断する。"],
+    "required_tools": ["OBD2スキャンツール", "デジタルマルチメーター", "排気漏れ点検工具", "メーカー整備書"],
+    "safety_tags": ["hot_exhaust"],
+    "source": "SAE J2012 DTC定義とSAE J1979 OBDデータ項目を基にした登録診断フロー",
+    "source_url": ["https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions", "https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2026-06-28",
+    "last_verified_date": "2026-06-28",
+    "service_manual_required": true
+  }
+]

@@ -1,7 +1,7 @@
 {
-  "version": "2.223.0",
+  "version": "2.224.0",
   "generated_at": "2026-06-28",
-  "asset_count": 203,
+  "asset_count": 204,
   "assets": [
     "./",
     "index.html",
@@ -16,6 +16,7 @@
     "data/diagnostic-capability-status-2026.json",
     "data/diagnostic-coverage-roadmap-2026.json",
     "data/diagnostic-workflows.json",
+    "data/diagnostic-workflows-practical-2026.json",
     "data/dtc-family-workflows-2026.json",
     "data/dtc-scope-rules.json",
     "data/dtc-standards-reference-2026.json",

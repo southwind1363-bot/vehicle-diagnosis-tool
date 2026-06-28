@@ -184,7 +184,7 @@ for (const file of jsonFiles) {
       }
     }
 
-    if (file === "diagnostic-workflows.json" && "monitor_ids" in row) {
+    if (file.startsWith("diagnostic-workflows") && "monitor_ids" in row) {
       if (!isNonEmptyStringArray(row.monitor_ids)) reportError(`${label}: monitor_ids がありません`);
       if (new Set(row.monitor_ids || []).size !== (row.monitor_ids || []).length) reportError(`${label}: monitor_ids に重複があります`);
       for (const monitorId of row.monitor_ids || []) {
