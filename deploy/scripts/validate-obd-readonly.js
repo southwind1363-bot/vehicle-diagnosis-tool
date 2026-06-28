@@ -305,7 +305,7 @@ check(mergedDtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status
 const decodedSupportedPids = obd.decodeSupportedPidResponse({ raw: "41 00 18 18 00 00" });
 check(decodedSupportedPids.supportedPids.includes("04") && decodedSupportedPids.supportedPids.includes("0C"), "対応PIDビットマップをデコードできません");
 check(decodedSupportedPids.supportedCount >= 4, "対応PIDマトリクスへ対応状態を反映できません");
-const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0D 28 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 32 FF 38 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 52 80 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 8E 7B" });
+const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0D 28 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 8E 7B" });
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "回転数PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "冷却水温PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "車速PIDをデコードできません");
@@ -334,12 +334,23 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "distance_with_mi
 check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_rail_pressure_vacuum")?.value === 79, "Fuel rail pressure vacuum PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_rail_pressure")?.value === 2000, "Fuel rail pressure PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_level")?.value === 60, "Fuel level PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "warmups_since_clear")?.value === 5, "Warmups since clear PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "distance_since_clear")?.value === 100, "Distance since clear PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "evap_vapor_pressure")?.value === -50, "EVAP vapor pressure PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "barometric_pressure")?.value === 100, "Barometric pressure PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "catalyst_temp_b1s1")?.value === 460, "Catalyst temperature PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "absolute_load")?.value === 200, "Absolute load PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_equivalence_ratio")?.value === 1, "Commanded equivalence ratio PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "relative_throttle_position")?.value === 25.098, "Relative throttle PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "ambient_air_temp")?.value === 50, "Ambient air temperature PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "absolute_throttle_b")?.value === 60, "Absolute throttle B PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "absolute_throttle_c")?.value === 40, "Absolute throttle C PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "accelerator_position_d")?.value === 50.196, "Accelerator position D PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "accelerator_position_e")?.value === 25.098, "Accelerator position E PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "accelerator_position_f")?.value === 75.294, "Accelerator position F PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_throttle_actuator")?.value === 12.549, "Commanded throttle actuator PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "time_with_mil")?.value === 60, "Time with MIL PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "time_since_clear")?.value === 120, "Time since clear PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "ethanol_percentage")?.value === 50.196, "Ethanol percentage PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_oil_temp")?.value === 60, "Engine oil temperature PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_injection_timing")?.value === 1, "Fuel injection timing PID was not decoded");
@@ -505,6 +516,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 293");
+  console.log("OBD read-only safety checks: 304");
   console.log("Errors: 0");
 }
