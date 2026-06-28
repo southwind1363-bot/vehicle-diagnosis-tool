@@ -1606,7 +1606,8 @@
     let value = null;
     if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) return decodeOxygenSensorPid(pid, a, b);
     if (["34", "35", "38", "39"].includes(pid)) return decodeWideOxygenCurrentPid(pid, a, b, c, d);
-    if (pid === "03") value = decodeFuelSystemStatus(a, b);
+    if (pid === "01") value = decodeMonitorStatusSummary(a, b);
+    else if (pid === "03") value = decodeFuelSystemStatus(a, b);
     else if (pid === "12") value = decodeSecondaryAirStatus(a);
     else if (pid === "13") value = decodeOxygenSensorLocations(a, false);
     else if (pid === "1D") value = decodeOxygenSensorLocations(a, true);
@@ -1655,6 +1656,13 @@
 
   function getStandardPidPayloadLength(pid) {
     return pid === "64" ? 5 : 4;
+  }
+
+  function decodeMonitorStatusSummary(a, b) {
+    const dtcCount = a & 0x7F;
+    const mil = (a & 0x80) !== 0 ? "mil_on" : "mil_off";
+    const ignition = Number.isInteger(b) && (b & 0x08) !== 0 ? "compression" : "spark";
+    return `${mil};dtc_count=${dtcCount};ignition=${ignition}`;
   }
 
   function decodeOxygenSensorPid(pid, a, b) {
