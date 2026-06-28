@@ -44,7 +44,7 @@
       "EGR作動要求や強制駆動は現段階ではこのWebアプリから実行せず、認定スキャンツールと整備書条件で行う。"
     ],
     "measurement_points": ["EGR指令値", "EGR偏差", "MAP", "MAF", "冷却水温", "負荷", "EGR温度"],
-    "monitor_ids": ["commanded_egr", "egr_error", "commanded_egr_and_error", "map", "maf", "engine_speed", "calculated_load", "coolant_temp", "egr_temp"],
+    "monitor_ids": ["commanded_egr", "egr_error", "commanded_egr_pid69", "egr_error_pid69", "map", "maf", "engine_speed", "calculated_load", "coolant_temp", "egr_temp"],
     "monitor_observation_conditions": [
       "暖機後、安定アイドル、軽負荷巡航、減速直後を分けて保存する。",
       "EGR非作動条件でEGR過多症状が出る場合は閉じ不良を優先する。",

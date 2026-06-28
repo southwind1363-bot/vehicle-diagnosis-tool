@@ -1611,7 +1611,7 @@
     else if (pid === "1C") value = decodeObdStandard(a);
     else if (pid === "51") value = decodeFuelType(a);
     else if ([
-      "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B", "A5"
+      "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B", "6A", "6C", "A5"
     ].includes(pid)) value = a * 100 / 255;
     else if (["05", "0F", "46"].includes(pid)) value = a - 40;
     else if (["06", "07", "08", "09", "2D"].includes(pid)) value = (a - 128) * 100 / 128;
@@ -1639,6 +1639,7 @@
     else if (["61", "62", "8E"].includes(pid)) value = a - 125;
     else if (pid === "63") value = word();
     else if (pid === "64") return decodeEnginePercentTorqueData(pid, dataBytes);
+    else if (pid === "69") return decodeCommandedEgrAndError(pid, a, b);
     else if (definition.valueType === "text") value = dataBytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
     if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
     return {
@@ -1720,6 +1721,30 @@
         unit: definition.unit
       });
     });
+    return values.length ? values : null;
+  }
+
+  function decodeCommandedEgrAndError(pid, a, b) {
+    if (!Number.isInteger(b)) return null;
+    const commandDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "commanded_egr_pid69");
+    const errorDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "egr_error_pid69");
+    const values = [];
+    if (commandDefinition) {
+      values.push({
+        id: commandDefinition.id,
+        pid,
+        value: Number((a * 100 / 255).toFixed(3)),
+        unit: commandDefinition.unit
+      });
+    }
+    if (errorDefinition) {
+      values.push({
+        id: errorDefinition.id,
+        pid,
+        value: Number(((b - 128) * 100 / 128).toFixed(3)),
+        unit: errorDefinition.unit
+      });
+    }
     return values.length ? values : null;
   }
 
