@@ -1,0 +1,99 @@
+[
+  {
+    "id": "user-vci-thinkcar-bluetooth",
+    "label": "THINKCAR系 Bluetooth VCI",
+    "interface_family": "bluetooth-obd-vci",
+    "transport": "Bluetooth / smartphone app",
+    "primary_use": "スマホ診断アプリでのOBD2読取候補",
+    "tooling": ["メーカー/対応アプリ"],
+    "read_scope_candidates": ["汎用OBD2 DTC", "標準ライブデータPID"],
+    "write_scope_candidates": [],
+    "current_status": "候補管理",
+    "connection_enabled": false,
+    "vehicle_command_enabled": false,
+    "verification_required": [
+      "正確な機種名と対応プロトコル確認",
+      "Bluetooth接続方式とPC/ブラウザ連携可否確認",
+      "取得できるDTC/ライブデータ範囲の確認",
+      "車両へ送信しない状態でサンプル応答だけを整形"
+    ],
+    "integration_note": "スマホ用VCIはWebアプリ直結ではなく、読取結果の貼り付けまたは将来のローカルブリッジ経由候補として扱う。",
+    "source": "ユーザー所有機材メモ",
+    "source_date": "2026-06-28",
+    "confidence": "ユーザー申告ベース",
+    "service_manual_required": true
+  },
+  {
+    "id": "user-vci-techstream-j2534",
+    "label": "Techstream用 J2534 VCI",
+    "interface_family": "j2534-passthru",
+    "transport": "USB / J2534 Pass-Thru",
+    "primary_use": "Techstreamなどメーカー診断系のVCI候補",
+    "tooling": ["Techstream", "J2534 DLL", "ローカルブリッジ候補"],
+    "read_scope_candidates": ["全システムスキャン候補", "メーカー固有DTC候補", "データリスト候補"],
+    "write_scope_candidates": ["DTC消去", "作動テスト", "学習/初期化", "カスタマイズ"],
+    "current_status": "候補管理",
+    "connection_enabled": false,
+    "vehicle_command_enabled": false,
+    "verification_required": [
+      "VCI機種名、J2534 DLL、OS対応の確認",
+      "対象車両、年式、ECU、通信プロトコル適合の確認",
+      "読取系APIだけを許可するローカルブリッジ境界の確認",
+      "変更系操作は実行条件、利用者確認、ログ、復旧手順が揃うまで未開放"
+    ],
+    "integration_note": "J2534は有力な拡張候補だが、現段階では読取モデルとエクスポート形式だけを準備し、状態変更操作は開放しない。",
+    "source": "ユーザー所有機材メモ",
+    "source_date": "2026-06-28",
+    "confidence": "ユーザー申告ベース",
+    "service_manual_required": true
+  },
+  {
+    "id": "user-vci-elm327",
+    "label": "ELM327",
+    "interface_family": "elm327-compatible",
+    "transport": "USB / Bluetooth / Wi-Fi候補",
+    "primary_use": "汎用OBD2 DTCと標準PID読取候補",
+    "tooling": ["ELM327 AT command family", "Web Serial候補", "ローカルブリッジ候補"],
+    "read_scope_candidates": ["Mode 03 保存DTC", "Mode 07 保留DTC", "Mode 02 フリーズフレーム", "Mode 01 標準PID"],
+    "write_scope_candidates": ["Mode 04 DTC消去"],
+    "current_status": "候補管理",
+    "connection_enabled": false,
+    "vehicle_command_enabled": false,
+    "verification_required": [
+      "アダプター品質、ファームウェア応答、通信速度候補の確認",
+      "AT初期化手順とタイムアウト時停止の確認",
+      "対応PIDのみ表示し、未対応値を推測補完しない確認",
+      "Mode 04など変更系は安全条件が揃うまで遮断"
+    ],
+    "integration_note": "汎用OBD2読取の最初の候補。Web Serialまたはローカルブリッジで読取専用から検証する。",
+    "source": "ユーザー所有機材メモ",
+    "source_date": "2026-06-28",
+    "confidence": "ユーザー申告ベース",
+    "service_manual_required": true
+  },
+  {
+    "id": "user-vci-rcmall-mks-canable-v2-pro",
+    "label": "RCmall MKS CANable V2.0 Pro",
+    "interface_family": "usb-can-canfd-adapter",
+    "transport": "USB-C / SLCAN / SocketCAN",
+    "primary_use": "CAN / CAN FD解析とSavvyCAN等での観察候補",
+    "tooling": ["SavvyCAN", "SocketCAN", "SLCAN"],
+    "read_scope_candidates": ["CANフレーム観察", "CAN FDフレーム観察", "プロトコル解析前のログ観察"],
+    "write_scope_candidates": ["CANフレーム送信"],
+    "current_status": "候補管理",
+    "connection_enabled": false,
+    "vehicle_command_enabled": false,
+    "verification_required": [
+      "ファームウェア、SLCAN/SocketCANモード、CAN FD対応設定の確認",
+      "車両ネットワークへ接続する前の終端、電源、絶縁、ビットレート確認",
+      "生フレーム保存時の識別情報/プライバシー取り扱い確認",
+      "送信機能は解析環境での安全確認が終わるまで未開放"
+    ],
+    "integration_note": "現行車のCAN/CAN FD観察基盤候補。Webアプリ側ではログ要約と診断フロー連携の器だけ先に用意する。",
+    "source": "ユーザー所有機材メモ",
+    "source_url": "https://www.amazon.co.jp/dp/B0GSGL1ZG2",
+    "source_date": "2026-06-28",
+    "confidence": "ユーザー申告ベース",
+    "service_manual_required": true
+  }
+]

@@ -422,6 +422,7 @@
       })
     })
   ]);
+  let vehicleInterfaceCatalog = Object.freeze([]);
 
   function getCapability() {
     return {
@@ -500,6 +501,44 @@
       ...item,
       dataShape: [...item.dataShape],
       safeDefault: cloneBridgeValue(item.safeDefault)
+    }));
+  }
+
+  function configureVehicleInterfaceCatalog(rows) {
+    if (!Array.isArray(rows)) return false;
+    const normalized = rows
+      .filter((item) => item && typeof item.id === "string" && typeof item.label === "string")
+      .map((item) => Object.freeze({
+        id: item.id,
+        label: item.label,
+        interfaceFamily: item.interface_family || "unknown",
+        transport: item.transport || "unknown",
+        primaryUse: item.primary_use || "",
+        tooling: Object.freeze(Array.isArray(item.tooling) ? [...item.tooling] : []),
+        readScopeCandidates: Object.freeze(Array.isArray(item.read_scope_candidates) ? [...item.read_scope_candidates] : []),
+        writeScopeCandidates: Object.freeze(Array.isArray(item.write_scope_candidates) ? [...item.write_scope_candidates] : []),
+        currentStatus: item.current_status || "候補管理",
+        connectionEnabled: false,
+        vehicleCommandEnabled: false,
+        verificationRequired: Object.freeze(Array.isArray(item.verification_required) ? [...item.verification_required] : []),
+        integrationNote: item.integration_note || "",
+        confidence: item.confidence || "未検証",
+        source: item.source || "",
+        sourceUrl: item.source_url || null
+      }));
+
+    if (new Set(normalized.map((item) => item.id)).size !== normalized.length) return false;
+    vehicleInterfaceCatalog = Object.freeze(normalized);
+    return true;
+  }
+
+  function getVehicleInterfaceCatalog() {
+    return vehicleInterfaceCatalog.map((item) => ({
+      ...item,
+      tooling: [...item.tooling],
+      readScopeCandidates: [...item.readScopeCandidates],
+      writeScopeCandidates: [...item.writeScopeCandidates],
+      verificationRequired: [...item.verificationRequired]
     }));
   }
 
@@ -1122,7 +1161,9 @@
   window.ObdReadOnly = Object.freeze({
     policy,
     configureMonitorDefinitions,
+    configureVehicleInterfaceCatalog,
     getMonitorDefinitions,
+    getVehicleInterfaceCatalog,
     getVehicleOperationPlan,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,

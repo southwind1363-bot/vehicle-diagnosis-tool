@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.220.0";
+const APP_VERSION = "2.221.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -466,7 +466,8 @@ async function loadData() {
       componentInspectionFlowsExam2026Part2,
       dtcFamilyWorkflows2026,
       dtcScopeRules,
-      obdMonitorDefinitions
+      obdMonitorDefinitions,
+      vehicleInterfaceCatalog2026
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
       fetchJson("data/service-notes.json"),
@@ -657,11 +658,15 @@ async function loadData() {
       fetchJson("data/component-inspection-flows-exam-2026-part2.json"),
       fetchJson("data/dtc-family-workflows-2026.json"),
       fetchJson("data/dtc-scope-rules.json"),
-      fetchJson("data/obd-monitor-definitions.json")
+      fetchJson("data/obd-monitor-definitions.json"),
+      fetchJson("data/vehicle-interface-catalog-2026.json")
     ]);
 
     if (!window.ObdReadOnly?.configureMonitorDefinitions(obdMonitorDefinitions)) {
       throw new Error("OBDデータモニター辞書を読み込めません");
+    }
+    if (!window.ObdReadOnly?.configureVehicleInterfaceCatalog(vehicleInterfaceCatalog2026)) {
+      throw new Error("VCI候補カタログを読み込めません");
     }
 
     dataStore = {
@@ -683,7 +688,8 @@ async function loadData() {
       realWorldCases,
       diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
       dtcScopeRules,
-      obdMonitorDefinitions
+      obdMonitorDefinitions,
+      vehicleInterfaceCatalog2026
     };
     dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件 / 詳細候補 ${countVehicleDetailOptions(dataStore.vehicleInputOptions)}件 / 年式範囲 ${dataStore.vehicleYearRangesDomestic2026.length}件。`;
     dataStatus.classList.remove("error");
@@ -1916,7 +1922,10 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getVehicleConnectionProfile?.(),
     window.ObdReadOnly.getPreparedVehicleRequests?.() || []
   );
-  renderObdInterfaceRoadmap(window.ObdReadOnly.getAdvancedInterfaceRoadmap?.() || []);
+  renderObdInterfaceRoadmap(
+    window.ObdReadOnly.getAdvancedInterfaceRoadmap?.() || [],
+    window.ObdReadOnly.getVehicleInterfaceCatalog?.() || []
+  );
   renderObdBridgeContract(
     window.ObdReadOnly.getLocalBridgeContract?.(),
     window.ObdReadOnly.getLocalBridgeResponseSchemas?.() || []
@@ -2026,10 +2035,10 @@ function renderObdPreparedRequests(profile, requests) {
   });
 }
 
-function renderObdInterfaceRoadmap(items) {
+function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
   obdInterfaceRoadmapGrid.innerHTML = "";
 
-  if (!items.length) {
+  if (!items.length && !interfaceCatalog.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
     empty.textContent = "対応インターフェースの準備順を取得できませんでした。";
@@ -2063,6 +2072,38 @@ function renderObdInterfaceRoadmap(items) {
     button.textContent = item.requiresLocalBridge ? "ブリッジ準備後" : "準備中";
 
     card.append(head, role, scope, button);
+    obdInterfaceRoadmapGrid.appendChild(card);
+  });
+
+  interfaceCatalog.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "obd-interface-card";
+
+    const head = document.createElement("div");
+    head.className = "obd-operation-head";
+    const title = document.createElement("strong");
+    title.textContent = item.label;
+    const badge = document.createElement("span");
+    badge.className = "obd-operation-state";
+    badge.textContent = item.currentStatus;
+    head.append(title, badge);
+
+    const role = document.createElement("p");
+    role.textContent = `${item.transport} / ${item.primaryUse}`;
+
+    const scope = document.createElement("p");
+    scope.textContent = item.readScopeCandidates.slice(0, 4).join(" / ") || item.interfaceFamily;
+
+    const note = document.createElement("p");
+    note.textContent = item.integrationNote;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.disabled = true;
+    button.textContent = "候補管理";
+
+    card.append(head, role, scope, note, button);
     obdInterfaceRoadmapGrid.appendChild(card);
   });
 }

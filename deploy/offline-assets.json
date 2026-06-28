@@ -1,7 +1,7 @@
 {
-  "version": "2.220.0",
+  "version": "2.221.0",
   "generated_at": "2026-06-28",
-  "asset_count": 200,
+  "asset_count": 201,
   "assets": [
     "./",
     "index.html",
@@ -198,6 +198,7 @@
     "data/service-notes.json",
     "data/symptom-flows.json",
     "data/vehicle-input-options.json",
+    "data/vehicle-interface-catalog-2026.json",
     "data/vehicle-model-catalog-domestic-2004-2026.json",
     "data/vehicle-model-catalog-domestic-2026.json",
     "data/vehicle-patterns-domestic-2026.json",
