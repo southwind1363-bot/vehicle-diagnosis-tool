@@ -1608,6 +1608,9 @@
     if (["34", "35", "38", "39"].includes(pid)) return decodeWideOxygenCurrentPid(pid, a, b, c, d);
     if (pid === "03") value = decodeFuelSystemStatus(a, b);
     else if (pid === "12") value = decodeSecondaryAirStatus(a);
+    else if (pid === "13") value = decodeOxygenSensorLocations(a, false);
+    else if (pid === "1D") value = decodeOxygenSensorLocations(a, true);
+    else if (pid === "1E") value = decodeAuxiliaryInputStatus(a);
     else if (pid === "1C") value = decodeObdStandard(a);
     else if (pid === "51") value = decodeFuelType(a);
     else if ([
@@ -1770,6 +1773,18 @@
       0x08: "pump_commanded_on_for_diagnostics"
     };
     return labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;
+  }
+
+  function decodeOxygenSensorLocations(a, fourBankLayout) {
+    const labels = fourBankLayout
+      ? ["b1s1", "b1s2", "b2s1", "b2s2", "b3s1", "b3s2", "b4s1", "b4s2"]
+      : ["b1s1", "b1s2", "b1s3", "b1s4", "b2s1", "b2s2", "b2s3", "b2s4"];
+    const present = labels.filter((_, index) => Boolean(a & (1 << index)));
+    return present.length ? present.join(",") : "none_reported";
+  }
+
+  function decodeAuxiliaryInputStatus(a) {
+    return (a & 0x01) ? "pto_active" : "pto_inactive";
   }
 
   function decodeObdStandard(a) {
