@@ -1288,7 +1288,7 @@
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
-      const decoded = decodeStandardPidValue(pid, bytes.slice(index + 2, index + 6));
+      const decoded = decodeStandardPidValue(pid, bytes.slice(index + 2, index + 2 + getStandardPidPayloadLength(pid)));
       if (Array.isArray(decoded)) values.push(...decoded);
       else if (decoded) values.push(decoded);
     }
@@ -1314,7 +1314,7 @@
       if (bytes[index] !== 0x42) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const frameNumber = bytes[index + 2];
-      const payload = bytes.slice(index + 3, index + 7);
+      const payload = bytes.slice(index + 3, index + 3 + getStandardPidPayloadLength(pid));
       if (pid === "02" && Number.isInteger(payload[0]) && Number.isInteger(payload[1])) {
         const decoded = decodeDtcPair(payload[0], payload[1]);
         if (decoded !== "P0000") triggerDtc = decoded;
@@ -1636,6 +1636,9 @@
     else if (pid === "5C") value = a - 40;
     else if (pid === "5D") value = word() === null ? null : (word() - 26880) / 128;
     else if (pid === "5E") value = word() === null ? null : word() * 0.05;
+    else if (["61", "62", "8E"].includes(pid)) value = a - 125;
+    else if (pid === "63") value = word();
+    else if (pid === "64") return decodeEnginePercentTorqueData(pid, dataBytes);
     else if (definition.valueType === "text") value = dataBytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
     if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
     return {
@@ -1644,6 +1647,10 @@
       value: typeof value === "number" ? Number(value.toFixed(3)) : value,
       unit: definition.unit
     };
+  }
+
+  function getStandardPidPayloadLength(pid) {
+    return pid === "64" ? 5 : 4;
   }
 
   function decodeOxygenSensorPid(pid, a, b) {
@@ -1690,6 +1697,29 @@
         unit: currentDefinition.unit
       });
     }
+    return values.length ? values : null;
+  }
+
+  function decodeEnginePercentTorqueData(pid, dataBytes) {
+    const ids = [
+      "engine_percent_torque_idle",
+      "engine_percent_torque_point1",
+      "engine_percent_torque_point2",
+      "engine_percent_torque_point3",
+      "engine_percent_torque_point4"
+    ];
+    const values = [];
+    ids.forEach((id, index) => {
+      const byte = dataBytes[index];
+      const definition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === id);
+      if (!definition || !Number.isInteger(byte)) return;
+      values.push({
+        id,
+        pid,
+        value: byte - 125,
+        unit: definition.unit
+      });
+    });
     return values.length ? values : null;
   }
 
