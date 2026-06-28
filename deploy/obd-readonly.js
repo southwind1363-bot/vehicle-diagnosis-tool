@@ -804,6 +804,7 @@
       pid: definition?.pid || row.pid || null,
       scope: definition?.scope || "local-bridge",
       supportNote: definition?.supportNote || "ローカルブリッジ応答を既存データモニター表示へ整形",
+      freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null,
       sourceLine: index + 1
     };
   }

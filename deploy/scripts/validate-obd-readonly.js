@@ -369,8 +369,12 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_diesel
 check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_throttle_control")?.value === 60, "Commanded throttle control PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_friction_torque")?.value === -2, "Engine friction torque PID was not decoded");
 check(decodedLivePids.wouldTransmit === false && decodedLivePids.retainedRawText === false, "ライブPIDデコードが送信または原文保持扱いです");
-const decodedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 02 00 01 71 42 0C 00 1A F8 42 05 00 7B" });
+const decodedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 05 00 7B" });
 check(decodedFreezeFrame.triggerDtc === "P0171", "フリーズフレーム応答から起点DTCをデコードできません");
+check(decodedFreezeFrame.monitorValues.find((item) => item.id === "monitor_status_dtc_count")?.value === 2, "フリーズフレームのモニター状態DTC件数をデコードできません");
+check(decodedFreezeFrame.monitorValues.find((item) => item.id === "fuel_system_status_bank1")?.value === "closed_loop_using_oxygen_sensor", "フリーズフレームの燃料制御状態をバンク別にデコードできません");
+check(decodedFreezeFrame.monitorValues.find((item) => item.id === "wide_o2_b1s1_voltage_wide")?.value === 1, "フリーズフレームのワイドO2電圧をデコードできません");
+check(decodedFreezeFrame.monitorValues.find((item) => item.id === "wide_o2_b1s1_voltage_wide")?.freezeFrameNumber === 0, "フリーズフレーム番号を保持できません");
 check(decodedFreezeFrame.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "フリーズフレーム回転数をデコードできません");
 check(decodedFreezeFrame.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "フリーズフレーム水温をデコードできません");
 check(decodedFreezeFrame.retainedRawText === false, "フリーズフレームデコードが原文保持になっています");
@@ -516,6 +520,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 304");
+  console.log("OBD read-only safety checks: 308");
   console.log("Errors: 0");
 }
