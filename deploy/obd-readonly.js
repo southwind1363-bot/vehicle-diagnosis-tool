@@ -1240,6 +1240,76 @@
     });
   }
 
+  function decodeFreezeFrameResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const values = [];
+    let triggerDtc = null;
+
+    for (let index = 0; index < bytes.length - 2; index++) {
+      if (bytes[index] !== 0x42) continue;
+      const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
+      const frameNumber = bytes[index + 2];
+      const payload = bytes.slice(index + 3, index + 7);
+      if (pid === "02" && Number.isInteger(payload[0]) && Number.isInteger(payload[1])) {
+        const decoded = decodeDtcPair(payload[0], payload[1]);
+        if (decoded !== "P0000") triggerDtc = decoded;
+        continue;
+      }
+      const decoded = decodeStandardPidValue(pid, payload);
+      if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber });
+    }
+
+    return normalizeFreezeFrameSnapshot({
+      source: input.source || "obd_response_decoder",
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      trigger_dtc: triggerDtc,
+      values
+    });
+  }
+
+  function decodeEcuInfoResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const values = [];
+
+    for (let index = 0; index < bytes.length - 2; index++) {
+      if (bytes[index] !== 0x49) continue;
+      const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
+      const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && byte === 0x49);
+      const end = nextSegment > index ? nextSegment : bytes.length;
+      const payload = trimEcuInfoPayload(bytes.slice(index + 2, end));
+      const catalogItem = ecuInfoItemCatalog.find((item) => item.infoType === infoType);
+      if (!catalogItem) continue;
+      values.push({
+        id: catalogItem.id,
+        info_type: infoType,
+        value: decodeEcuInfoPayload(payload, catalogItem.valueType)
+      });
+    }
+
+    return normalizeEcuInfoSnapshot({
+      source: input.source || "obd_response_decoder",
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      values
+    });
+  }
+
+  function trimEcuInfoPayload(payload) {
+    const cleaned = [...payload];
+    while (cleaned.length && (cleaned[0] === 0x00 || cleaned[0] <= 0x20)) cleaned.shift();
+    return cleaned;
+  }
+
+  function decodeEcuInfoPayload(payload, valueType) {
+    if (!payload.length) return "";
+    const printable = payload.every((byte) => byte >= 0x20 && byte <= 0x7E);
+    if (valueType === "counter_set" || !printable) {
+      return payload.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+    }
+    return payload.map((byte) => String.fromCharCode(byte)).join("").trim();
+  }
+
   function decodeStandardPidValue(pid, dataBytes) {
     const definition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid);
     if (!definition) return null;
@@ -1696,6 +1766,8 @@
     decodeObdDtcResponse,
     decodeSupportedPidResponse,
     decodeLivePidResponse,
+    decodeFreezeFrameResponse,
+    decodeEcuInfoResponse,
     buildSupportedPidMatrix,
     buildDiagnosticScanSession,
     evaluateOutboundSafety,
