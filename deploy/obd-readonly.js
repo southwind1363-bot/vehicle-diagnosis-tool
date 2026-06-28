@@ -1607,7 +1607,7 @@
     if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) return decodeOxygenSensorPid(pid, a, b);
     if (["34", "35", "38", "39"].includes(pid)) return decodeWideOxygenCurrentPid(pid, a, b, c, d);
     if (pid === "01") return decodeMonitorStatusPid(pid, a, b);
-    else if (pid === "03") value = decodeFuelSystemStatus(a, b);
+    else if (pid === "03") return decodeFuelSystemStatusPid(pid, a, b);
     else if (pid === "12") value = decodeSecondaryAirStatus(a);
     else if (pid === "13") value = decodeOxygenSensorLocations(a, false);
     else if (pid === "1D") value = decodeOxygenSensorLocations(a, true);
@@ -1768,7 +1768,10 @@
     return values.length ? values : null;
   }
 
-  function decodeFuelSystemStatus(a, b) {
+  function decodeFuelSystemStatusPid(pid, a, b) {
+    const summaryDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "fuel_system_status");
+    const bank1Definition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "fuel_system_status_bank1");
+    const bank2Definition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === "fuel_system_status_bank2");
     const labels = {
       0x00: "open_loop_not_ready",
       0x01: "closed_loop_using_oxygen_sensor",
@@ -1779,7 +1782,11 @@
     };
     const bank1 = labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;
     const bank2 = Number.isInteger(b) && b !== 0 ? labels[b] || `unknown_0x${b.toString(16).toUpperCase().padStart(2, "0")}` : null;
-    return bank2 ? `${bank1};${bank2}` : bank1;
+    const values = [];
+    if (summaryDefinition) values.push({ id: summaryDefinition.id, pid, value: bank2 ? `${bank1};${bank2}` : bank1, unit: summaryDefinition.unit });
+    if (bank1Definition) values.push({ id: bank1Definition.id, pid, value: bank1, unit: bank1Definition.unit });
+    if (bank2Definition && bank2) values.push({ id: bank2Definition.id, pid, value: bank2, unit: bank2Definition.unit });
+    return values.length ? values : null;
   }
 
   function decodeSecondaryAirStatus(a) {

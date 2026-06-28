@@ -315,6 +315,8 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_m
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_dtc_count")?.value === 2, "Monitor status DTC count was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_ignition_type")?.value === "spark", "Monitor status ignition type was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_system_status")?.value === "closed_loop_using_oxygen_sensor", "Fuel system status PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_system_status_bank1")?.value === "closed_loop_using_oxygen_sensor", "Fuel system bank 1 status PID was not decoded");
+check(!decodedLivePids.monitorValues.some((item) => item.id === "fuel_system_status_bank2"), "Fuel system bank 2 status should not be decoded when byte B is unused");
 check(decodedLivePids.monitorValues.find((item) => item.id === "secondary_air_status")?.value === "downstream_of_catalytic_converter", "Secondary air status PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "oxygen_sensors_present")?.value === "b1s1,b2s1,b2s2", "O2 sensor location PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "oxygen_sensors_present_4banks")?.value === "b1s1,b2s1,b3s1,b4s1", "Four-bank O2 sensor location PID was not decoded");
@@ -501,6 +503,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 289");
+  console.log("OBD read-only safety checks: 291");
   console.log("Errors: 0");
 }
