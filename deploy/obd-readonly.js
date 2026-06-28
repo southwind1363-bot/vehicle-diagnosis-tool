@@ -1601,7 +1601,11 @@
       return raw === null ? null : raw > 0x7FFF ? raw - 0x10000 : raw;
     };
     let value = null;
-    if ([
+    if (pid === "03") value = decodeFuelSystemStatus(a, b);
+    else if (pid === "12") value = decodeSecondaryAirStatus(a);
+    else if (pid === "1C") value = decodeObdStandard(a);
+    else if (pid === "51") value = decodeFuelType(a);
+    else if ([
       "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B", "A5"
     ].includes(pid)) value = a * 100 / 255;
     else if (["05", "0F", "46"].includes(pid)) value = a - 40;
@@ -1636,6 +1640,81 @@
       value: typeof value === "number" ? Number(value.toFixed(3)) : value,
       unit: definition.unit
     };
+  }
+
+  function decodeFuelSystemStatus(a, b) {
+    const labels = {
+      0x00: "open_loop_not_ready",
+      0x01: "closed_loop_using_oxygen_sensor",
+      0x02: "open_loop_due_to_engine_load_or_deceleration",
+      0x04: "open_loop_due_to_system_failure",
+      0x08: "closed_loop_with_oxygen_sensor_fault",
+      0x10: "open_loop_due_to_insufficient_temperature"
+    };
+    const bank1 = labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;
+    const bank2 = Number.isInteger(b) && b !== 0 ? labels[b] || `unknown_0x${b.toString(16).toUpperCase().padStart(2, "0")}` : null;
+    return bank2 ? `${bank1};${bank2}` : bank1;
+  }
+
+  function decodeSecondaryAirStatus(a) {
+    const labels = {
+      0x01: "upstream",
+      0x02: "downstream_of_catalytic_converter",
+      0x04: "from_outside_or_off",
+      0x08: "pump_commanded_on_for_diagnostics"
+    };
+    return labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;
+  }
+
+  function decodeObdStandard(a) {
+    const labels = {
+      0x01: "obd_ii_california_arb",
+      0x02: "obd_federal_epa",
+      0x03: "obd_and_obd_ii",
+      0x04: "obd_i",
+      0x05: "not_obd_compliant",
+      0x06: "eobd",
+      0x07: "eobd_and_obd_ii",
+      0x08: "eobd_and_obd",
+      0x09: "eobd_obd_and_obd_ii",
+      0x0A: "jobd",
+      0x0B: "jobd_and_obd_ii",
+      0x0C: "jobd_and_eobd",
+      0x0D: "jobd_eobd_and_obd_ii",
+      0x11: "engine_manufacturer_diagnostics",
+      0x13: "heavy_duty_obd",
+      0x14: "wwh_obd"
+    };
+    return labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;
+  }
+
+  function decodeFuelType(a) {
+    const labels = {
+      0x01: "gasoline",
+      0x02: "methanol",
+      0x03: "ethanol",
+      0x04: "diesel",
+      0x05: "lpg",
+      0x06: "cng",
+      0x07: "propane",
+      0x08: "electric",
+      0x09: "bifuel_gasoline",
+      0x0A: "bifuel_methanol",
+      0x0B: "bifuel_ethanol",
+      0x0C: "bifuel_lpg",
+      0x0D: "bifuel_cng",
+      0x0E: "bifuel_propane",
+      0x0F: "bifuel_electric",
+      0x10: "bifuel_electric_combustion",
+      0x11: "hybrid_gasoline",
+      0x12: "hybrid_ethanol",
+      0x13: "hybrid_diesel",
+      0x14: "hybrid_electric",
+      0x15: "hybrid_mixed_fuel",
+      0x16: "hybrid_regenerative",
+      0x17: "bifuel_diesel"
+    };
+    return labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;
   }
 
   function buildSupportedPidMatrix(input = {}) {
