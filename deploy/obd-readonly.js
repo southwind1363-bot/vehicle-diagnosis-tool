@@ -1400,6 +1400,109 @@
     });
   }
 
+  function normalizeObdLogLine(line) {
+    return String(line || "")
+      .replace(/\b(?:SEARCHING|BUS INIT|OK|NO DATA|STOPPED|ERROR|UNABLE TO CONNECT)\b/gi, " ")
+      .replace(/^[>\s]+/, "")
+      .trim();
+  }
+
+  function classifyObdResponseLines(value) {
+    const raw = String(value || "");
+    const redacted = redactSensitiveText(raw);
+    const buckets = {
+      storedDtcResponses: [],
+      pendingDtcResponses: [],
+      permanentDtcResponses: [],
+      supportedPidResponses: [],
+      livePidResponses: [],
+      freezeFrameResponses: [],
+      readinessResponses: [],
+      ecuInfoResponses: [],
+      unknownResponses: []
+    };
+
+    redacted.split(/\r?\n/).forEach((line) => {
+      const normalized = normalizeObdLogLine(line);
+      if (!normalized) return;
+      const bytes = parseObdHexBytes(normalized);
+      if (!bytes.length) return;
+      const positiveServices = [0x41, 0x42, 0x43, 0x47, 0x49, 0x4A];
+      const serviceIndex = bytes.findIndex((byte) => positiveServices.includes(byte));
+      const serviceByte = serviceIndex >= 0 ? bytes[serviceIndex] : null;
+      const hasPair = (first, second) => bytes.some((byte, index) => byte === first && bytes[index + 1] === second);
+      const packet = { bytes, response: bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ") };
+
+      if (serviceByte === 0x43) {
+        buckets.storedDtcResponses.push(packet);
+      } else if (serviceByte === 0x47) {
+        buckets.pendingDtcResponses.push(packet);
+      } else if (serviceByte === 0x4A) {
+        buckets.permanentDtcResponses.push(packet);
+      } else if (hasPair(0x41, 0x00) || hasPair(0x41, 0x20) || hasPair(0x41, 0x40) || hasPair(0x41, 0x60) || hasPair(0x41, 0x80)) {
+        buckets.supportedPidResponses.push(packet);
+      } else if (hasPair(0x41, 0x01)) {
+        buckets.readinessResponses.push(packet);
+      } else if (serviceByte === 0x41) {
+        buckets.livePidResponses.push(packet);
+      } else if (serviceByte === 0x42) {
+        buckets.freezeFrameResponses.push(packet);
+      } else if (serviceByte === 0x49) {
+        buckets.ecuInfoResponses.push(packet);
+      } else {
+        buckets.unknownResponses.push(packet);
+      }
+    });
+
+    const bucketCounts = Object.fromEntries(Object.entries(buckets).map(([key, rows]) => [key, rows.length]));
+    return {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts,
+      responseBuckets: buckets,
+      lineCount: raw ? raw.split(/\r?\n/).length : 0,
+      hadSensitiveIdentifier: raw !== redacted,
+      sourceLength: raw.length,
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
+
+  function buildScanSessionFromObdText(value, options = {}) {
+    const classified = classifyObdResponseLines(value);
+    const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
+    const session = buildDecodedObdScanSession({
+      session_id: options.session_id || options.sessionId || "obd_text_scan_session",
+      started_at: options.started_at || options.startedAt || null,
+      ended_at: options.ended_at || options.endedAt || null,
+      vehicleProfile: options.vehicleProfile || options.vehicle_profile || null,
+      storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: options.protocol || null },
+      pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: options.protocol || null },
+      permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: options.protocol || null },
+      supportedPidResponse: { raw: firstOrEmpty("supportedPidResponses"), protocol: options.protocol || null },
+      livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: options.protocol || null },
+      freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: options.protocol || null },
+      readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: options.protocol || null },
+      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: options.protocol || null }
+    });
+
+    return {
+      ...session,
+      source: "obd_text_import",
+      importClassification: {
+        schemaVersion: classified.schemaVersion,
+        bucketCounts: classified.bucketCounts,
+        lineCount: classified.lineCount
+      },
+      hadSensitiveIdentifier: classified.hadSensitiveIdentifier || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+      sourceLength: classified.sourceLength,
+      retainedRawText: false,
+      retainedRawFrames: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
+
   function trimEcuInfoPayload(payload) {
     const cleaned = [...payload];
     while (cleaned.length && (cleaned[0] === 0x00 || cleaned[0] <= 0x20)) cleaned.shift();
@@ -1876,6 +1979,8 @@
     decodeEcuInfoResponse,
     decodeReadinessResponse,
     buildDecodedObdScanSession,
+    classifyObdResponseLines,
+    buildScanSessionFromObdText,
     buildSupportedPidMatrix,
     buildDiagnosticScanSession,
     evaluateOutboundSafety,

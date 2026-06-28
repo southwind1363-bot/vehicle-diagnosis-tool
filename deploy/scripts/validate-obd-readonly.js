@@ -346,6 +346,47 @@ check(decodedScanSession.freezeFrameSnapshot.triggerDtc === "P0171", "デコー�
 check(decodedScanSession.readinessSnapshot.milOn === true, "デコード済みOBDセッションへレディネスを統合できません");
 check(decodedScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "デコード済みOBDセッションへECU情報を統合できません");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
+const obdTextLog = [
+  ">03",
+  "7E8 06 43 01 71 03 00 00 00",
+  ">07",
+  "7E8 04 47 01 71 00 00",
+  ">0A",
+  "7E8 04 4A 03 00 00 00",
+  ">0100",
+  "7E8 06 41 00 18 18 00 00",
+  ">0101",
+  "7E8 06 41 01 81 07 22 00",
+  ">010C",
+  "7E8 04 41 0C 1A F8",
+  ">0105",
+  "7E8 03 41 05 7B",
+  ">0202",
+  "7E8 05 42 02 00 01 71",
+  ">020C",
+  "7E8 04 42 0C 00 1A F8",
+  ">0904",
+  "7E8 10 0A 49 04 01 43 41 4C 2D 31 32 33 34"
+].join("\n");
+const classifiedObdText = obd.classifyObdResponseLines(obdTextLog);
+check(classifiedObdText.schemaVersion === "obd_response_line_classification_v1", "OBD log classification schema is invalid");
+check(classifiedObdText.bucketCounts.storedDtcResponses === 1, "OBD log stored DTC response was not classified");
+check(classifiedObdText.bucketCounts.pendingDtcResponses === 1, "OBD log pending DTC response was not classified");
+check(classifiedObdText.bucketCounts.permanentDtcResponses === 1, "OBD log permanent DTC response was not classified");
+check(classifiedObdText.bucketCounts.livePidResponses === 2, "OBD log live PID responses were not classified");
+check(classifiedObdText.retainedRawText === false && classifiedObdText.wouldTransmit === false, "OBD log classification retained raw text or allowed transmit");
+const textScanSession = obd.buildScanSessionFromObdText(obdTextLog, { session_id: "obd-text-test", protocol: "ISO15765-4" });
+check(textScanSession.schemaVersion === "scan_session_v1", "OBD text log was not converted to scan session");
+check(textScanSession.importClassification.bucketCounts.freezeFrameResponses === 2, "OBD text scan session did not keep freeze-frame bucket count");
+check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored"), "OBD text scan session did not include stored DTC");
+check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "pending"), "OBD text scan session did not include pending DTC");
+check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "permanent"), "OBD text scan session did not include permanent DTC");
+check(textScanSession.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "OBD text scan session did not decode engine RPM");
+check(textScanSession.livePidSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "OBD text scan session did not decode coolant temperature");
+check(textScanSession.freezeFrameSnapshot.triggerDtc === "P0171", "OBD text scan session did not decode freeze-frame trigger DTC");
+check(textScanSession.readinessSnapshot.milOn === true, "OBD text scan session did not decode readiness");
+check(textScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "OBD text scan session did not decode CALID");
+check(textScanSession.retainedRawText === false && textScanSession.retainedRawFrames === false && textScanSession.wouldTransmit === false, "OBD text scan session retained raw text/frames or allowed transmit");
 const scanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-1",
   dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }, "P0300"] },
@@ -396,6 +437,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 214");
+  console.log("OBD read-only safety checks: 233");
   console.log("Errors: 0");
 }
