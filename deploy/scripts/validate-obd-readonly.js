@@ -291,6 +291,18 @@ check(mergedDiagnosticInput.bridgeExportPayload.schema_version === "bridge_sessi
 check(mergedDiagnosticInput.hadSensitiveIdentifier === true, "統合診断入力が貼り付け側の識別情報候補を引き継げません");
 check(mergedDiagnosticInput.retainedRawText === false, "統合診断入力が原文保持になっています");
 check(mergedDiagnosticInput.wouldTransmit === false && mergedDiagnosticInput.vehicleCommandEnabled === false, "統合診断入力が送信可能扱いになっています");
+const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
+check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
+check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
+const decodedSupportedPids = obd.decodeSupportedPidResponse({ raw: "41 00 18 18 00 00" });
+check(decodedSupportedPids.supportedPids.includes("04") && decodedSupportedPids.supportedPids.includes("0C"), "対応PIDビットマップをデコードできません");
+check(decodedSupportedPids.supportedCount >= 4, "対応PIDマトリクスへ対応状態を反映できません");
+const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 0C 1A F8 41 05 7B 41 0D 28 41 42 34 98" });
+check(decodedLivePids.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "回転数PIDをデコードできません");
+check(decodedLivePids.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "冷却水温PIDをデコードできません");
+check(decodedLivePids.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "車速PIDをデコードできません");
+check(decodedLivePids.monitorValues.find((item) => item.id === "control_module_voltage")?.value === 13.464, "制御モジュール電圧PIDをデコードできません");
+check(decodedLivePids.wouldTransmit === false && decodedLivePids.retainedRawText === false, "ライブPIDデコードが送信または原文保持扱いです");
 const scanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-1",
   dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }, "P0300"] },
@@ -341,6 +353,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 170");
+  console.log("OBD read-only safety checks: 181");
   console.log("Errors: 0");
 }

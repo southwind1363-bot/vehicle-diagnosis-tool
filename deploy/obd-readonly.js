@@ -1146,6 +1146,128 @@
     return text.length > 6 ? `${text.slice(0, 3)}...${text.slice(-3)}` : "[識別情報検出: マスク済み]";
   }
 
+  function parseObdHexBytes(value) {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item >= 0 && item <= 255);
+    }
+    const text = String(value || "")
+      .replace(/\b(?:SEARCHING|BUS INIT|OK|NO DATA|STOPPED|ERROR|UNABLE TO CONNECT)\b/gi, " ")
+      .replace(/[>:]/g, " ");
+    return (text.match(/\b[0-9A-F]{2}\b/gi) || []).map((byte) => parseInt(byte, 16));
+  }
+
+  function decodeObdDtcResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const serviceByte = bytes.find((byte) => byte === 0x43 || byte === 0x47 || byte === 0x4A);
+    if (serviceByte === undefined) {
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        capturedAt: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || null,
+        dtcs: []
+      });
+    }
+    const start = bytes.indexOf(serviceByte) + 1;
+    const codes = [];
+    for (let index = start; index + 1 < bytes.length; index += 2) {
+      const high = bytes[index];
+      const low = bytes[index + 1];
+      if (high === 0 && low === 0) continue;
+      codes.push(decodeDtcPair(high, low));
+    }
+    return normalizeDtcSnapshot({
+      source: input.source || "obd_response_decoder",
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      status: serviceByte === 0x47 ? "pending" : "stored",
+      dtcs: [...new Set(codes)]
+    });
+  }
+
+  function decodeDtcPair(high, low) {
+    const system = ["P", "C", "B", "U"][(high & 0xC0) >> 6];
+    const first = ((high & 0x30) >> 4).toString(16).toUpperCase();
+    const second = (high & 0x0F).toString(16).toUpperCase();
+    const third = ((low & 0xF0) >> 4).toString(16).toUpperCase();
+    const fourth = (low & 0x0F).toString(16).toUpperCase();
+    return `${system}${first}${second}${third}${fourth}`;
+  }
+
+  function decodeSupportedPidResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const serviceIndex = bytes.findIndex((byte, index) => byte === 0x41 && Number.isInteger(bytes[index + 1]));
+    if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length) {
+      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [] });
+    }
+    const basePid = bytes[serviceIndex + 1];
+    const bitBytes = bytes.slice(serviceIndex + 2, serviceIndex + 6);
+    const supportedPids = [];
+    bitBytes.forEach((byte, byteIndex) => {
+      for (let bit = 7; bit >= 0; bit--) {
+        if (byte & (1 << bit)) {
+          supportedPids.push((basePid + byteIndex * 8 + (8 - bit)).toString(16).toUpperCase().padStart(2, "0"));
+        }
+      }
+    });
+    return buildSupportedPidMatrix({
+      source: input.source || "obd_response_decoder",
+      captured_at: input.captured_at || input.capturedAt || null,
+      supported_pids: supportedPids
+    });
+  }
+
+  function decodeLivePidResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const values = [];
+    for (let index = 0; index < bytes.length - 2; index++) {
+      if (bytes[index] !== 0x41) continue;
+      const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
+      const decoded = decodeStandardPidValue(pid, bytes.slice(index + 2, index + 6));
+      if (decoded) values.push(decoded);
+    }
+    return normalizeBridgeLivePidSnapshot({
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: {
+        protocol: input.protocol || null,
+        supported_pids: [],
+        values,
+        captured_at: input.captured_at || input.capturedAt || null
+      }
+    });
+  }
+
+  function decodeStandardPidValue(pid, dataBytes) {
+    const definition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid);
+    if (!definition) return null;
+    const a = dataBytes[0];
+    const b = dataBytes[1];
+    if (!Number.isInteger(a)) return null;
+    let value = null;
+    if (pid === "04" || pid === "11" || pid === "2C" || pid === "2E" || pid === "2F") value = a * 100 / 255;
+    else if (["05", "0F", "46"].includes(pid)) value = a - 40;
+    else if (["06", "07", "08", "09", "2D"].includes(pid)) value = (a - 128) * 100 / 128;
+    else if (pid === "0A") value = a * 3;
+    else if (pid === "0B" || pid === "33") value = a;
+    else if (pid === "0C" && Number.isInteger(b)) value = ((a * 256) + b) / 4;
+    else if (pid === "0D") value = a;
+    else if (pid === "0E") value = (a / 2) - 64;
+    else if (pid === "10" && Number.isInteger(b)) value = ((a * 256) + b) / 100;
+    else if (pid === "1F" && Number.isInteger(b)) value = (a * 256) + b;
+    else if (pid === "42" && Number.isInteger(b)) value = ((a * 256) + b) / 1000;
+    else if (definition.valueType === "text") value = dataBytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+    if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
+    return {
+      id: definition.id,
+      pid,
+      value: typeof value === "number" ? Number(value.toFixed(3)) : value,
+      unit: definition.unit
+    };
+  }
+
   function buildSupportedPidMatrix(input = {}) {
     const source = input.source || "diagnostic_core";
     const supportedRows = Array.isArray(input) ? input : Array.isArray(input.supported_pids) ? input.supported_pids : Array.isArray(input.supportedPids) ? input.supportedPids : [];
@@ -1570,6 +1692,10 @@
     normalizeReadinessSnapshot,
     normalizeEcuResponseSummary,
     normalizeEcuInfoSnapshot,
+    parseObdHexBytes,
+    decodeObdDtcResponse,
+    decodeSupportedPidResponse,
+    decodeLivePidResponse,
     buildSupportedPidMatrix,
     buildDiagnosticScanSession,
     evaluateOutboundSafety,
