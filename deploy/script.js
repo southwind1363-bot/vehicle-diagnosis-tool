@@ -1,7 +1,7 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.222.0";
+const APP_VERSION = "2.223.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -58,6 +58,7 @@ const fallbackData = {
   japanObdInspectionNotes: [],
   realWorldCases: [],
   diagnosticWorkflows: [],
+  diagnosticCapabilityStatus: [],
   diagnosticCoverageRoadmap: [],
   dtcScopeRules: [],
   symptomFlows: [
@@ -146,6 +147,7 @@ const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
 const obdInterfaceRoadmapGrid = document.querySelector("#obdInterfaceRoadmapGrid");
+const obdCapabilityStatusGrid = document.querySelector("#obdCapabilityStatusGrid");
 const obdCoverageRoadmapGrid = document.querySelector("#obdCoverageRoadmapGrid");
 const obdBridgeContractGrid = document.querySelector("#obdBridgeContractGrid");
 const obdBridgeSchemaGrid = document.querySelector("#obdBridgeSchemaGrid");
@@ -470,6 +472,7 @@ async function loadData() {
       dtcScopeRules,
       obdMonitorDefinitions,
       vehicleInterfaceCatalog2026,
+      diagnosticCapabilityStatus2026,
       diagnosticCoverageRoadmap2026
     ] = await Promise.all([
       fetchJson("data/obd-codes.json"),
@@ -663,6 +666,7 @@ async function loadData() {
       fetchJson("data/dtc-scope-rules.json"),
       fetchJson("data/obd-monitor-definitions.json"),
       fetchJson("data/vehicle-interface-catalog-2026.json"),
+      fetchJson("data/diagnostic-capability-status-2026.json"),
       fetchJson("data/diagnostic-coverage-roadmap-2026.json")
     ]);
 
@@ -691,6 +695,7 @@ async function loadData() {
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
       diagnosticWorkflows: [...diagnosticWorkflows, ...componentInspectionFlows, ...componentInspectionFlowsExam2026, ...componentInspectionFlowsExam2026Part2, ...dtcFamilyWorkflows2026],
+      diagnosticCapabilityStatus: diagnosticCapabilityStatus2026,
       diagnosticCoverageRoadmap: diagnosticCoverageRoadmap2026,
       dtcScopeRules,
       obdMonitorDefinitions,
@@ -1931,6 +1936,7 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getAdvancedInterfaceRoadmap?.() || [],
     window.ObdReadOnly.getVehicleInterfaceCatalog?.() || []
   );
+  renderObdCapabilityStatus(dataStore.diagnosticCapabilityStatus || []);
   renderObdCoverageRoadmap(dataStore.diagnosticCoverageRoadmap || []);
   renderObdBridgeContract(
     window.ObdReadOnly.getLocalBridgeContract?.(),
@@ -2155,6 +2161,50 @@ function renderObdCoverageRoadmap(items) {
 
     card.append(head, current, target, next, button);
     obdCoverageRoadmapGrid.appendChild(card);
+  });
+}
+
+function renderObdCapabilityStatus(items) {
+  obdCapabilityStatusGrid.innerHTML = "";
+
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "診断機能の完成度を取得できませんでした。";
+    obdCapabilityStatusGrid.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "obd-interface-card";
+
+    const head = document.createElement("div");
+    head.className = "obd-operation-head";
+    const title = document.createElement("strong");
+    title.textContent = item.label;
+    const badge = document.createElement("span");
+    badge.className = "obd-operation-state";
+    badge.textContent = `${item.progress_percent || 0}%`;
+    head.append(title, badge);
+
+    const status = document.createElement("p");
+    status.textContent = `${item.current_status || "確認中"} / ${item.current_basis || ""}`;
+
+    const missing = document.createElement("p");
+    missing.textContent = Array.isArray(item.missing) ? `不足: ${item.missing.slice(0, 3).join(" / ")}` : "";
+
+    const next = document.createElement("p");
+    next.textContent = item.next_build || "";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.disabled = true;
+    button.textContent = item.safety_gate || "確認中";
+
+    card.append(head, status, missing, next, button);
+    obdCapabilityStatusGrid.appendChild(card);
   });
 }
 

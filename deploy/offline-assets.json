@@ -1,7 +1,7 @@
 {
-  "version": "2.222.0",
+  "version": "2.223.0",
   "generated_at": "2026-06-28",
-  "asset_count": 202,
+  "asset_count": 203,
   "assets": [
     "./",
     "index.html",
@@ -13,6 +13,7 @@
     "data/component-inspection-flows-exam-2026-part2.json",
     "data/component-inspection-flows-exam-2026.json",
     "data/component-inspection-flows.json",
+    "data/diagnostic-capability-status-2026.json",
     "data/diagnostic-coverage-roadmap-2026.json",
     "data/diagnostic-workflows.json",
     "data/dtc-family-workflows-2026.json",

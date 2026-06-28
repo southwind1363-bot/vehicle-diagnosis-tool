@@ -1,0 +1,141 @@
+[
+  {
+    "id": "capability-generic-obd2-dtc",
+    "label": "汎用OBD2 DTC",
+    "target_level": "ハイスペック診断機の基礎データ",
+    "current_status": "拡張中",
+    "progress_percent": 60,
+    "current_basis": "P系2923件、U系550件、個別DTC定義3473件、ファミリーフロー16件",
+    "done": [
+      "P/U系の個別定義を大量追加",
+      "未知コードをファミリーフローへ退避",
+      "整備書確認必須と出典前提の方針を固定"
+    ],
+    "missing": [
+      "B/C系の個別定義",
+      "メーカー固有DTC",
+      "サブコード、ステータス、ECU別情報"
+    ],
+    "next_build": "B/C系とメーカー固有を、出典確認済みデータとして別レイヤーで追加する。",
+    "safety_gate": "コード名だけで原因断定しない",
+    "source": "ローカル検証集計と開発ロードマップ",
+    "source_date": "2026-06-28"
+  },
+  {
+    "id": "capability-live-data",
+    "label": "データモニター",
+    "target_level": "症状別に見るべき値を提示し、値の相関まで見る",
+    "current_status": "基礎辞書あり",
+    "progress_percent": 35,
+    "current_basis": "データモニター辞書134項目、貼り付け解析とブリッジ取込モデルあり",
+    "done": [
+      "主要PIDと拡張候補の辞書化",
+      "貼り付けデータから値を抽出",
+      "燃料補正、電圧、温度、MAPなどの相関ヒント生成"
+    ],
+    "missing": [
+      "車種別基準値",
+      "測定条件別の正常範囲",
+      "グラフ、時系列記録、症状再現時比較"
+    ],
+    "next_build": "症状別ワークフローに必要PID、観察条件、異常時の次点検を紐付ける。",
+    "safety_gate": "未対応PIDを推測補完しない",
+    "source": "ローカル検証集計と開発ロードマップ",
+    "source_date": "2026-06-28"
+  },
+  {
+    "id": "capability-local-bridge",
+    "label": "ローカルブリッジ / VCI連携",
+    "target_level": "ELM327、J2534、CAN/CAN FDを安全境界越しに扱う",
+    "current_status": "契約と表示モデル準備済み",
+    "progress_percent": 25,
+    "current_basis": "ブリッジ契約、応答型、VCI候補、診断取込、統合入力モデルあり",
+    "done": [
+      "接続状態、VCI一覧、DTC、ライブPID、セッション要約の応答型",
+      "THINKCAR系、Techstream/J2534、ELM327、CANable候補管理",
+      "実車送信なしのデータ整形"
+    ],
+    "missing": [
+      "実際のローカルブリッジアプリ",
+      "J2534 DLL連携",
+      "ELM327/Web Serial読取",
+      "CAN FDログ要約"
+    ],
+    "next_build": "まず読取専用のローカルブリッジを作り、サンプル応答から既存診断フローへ流す。",
+    "safety_gate": "connection_enabled:false / vehicle_command_enabled:false",
+    "source": "ローカル検証集計と開発ロードマップ",
+    "source_date": "2026-06-28"
+  },
+  {
+    "id": "capability-oem-enhanced",
+    "label": "メーカー固有診断",
+    "target_level": "Techstream級の車種別DTC、データリスト、作業サポート",
+    "current_status": "器を準備中",
+    "progress_percent": 10,
+    "current_basis": "メーカー固有DTC用ロードマップとJ2534候補を登録",
+    "done": [
+      "メーカー固有を汎用DTCと混ぜない方針",
+      "車種、年式、ECU、サブコードを分離する方針",
+      "J2534/Techstream候補管理"
+    ],
+    "missing": [
+      "車種別ECU構成",
+      "メーカー固有DTC定義",
+      "データリスト項目",
+      "メーカー診断機表示のサンプル"
+    ],
+    "next_build": "Techstream等の読取結果貼り付けを解析できる形式から先に作る。",
+    "safety_gate": "車種適合未確認なら未確認として扱う",
+    "source": "ローカル検証集計と開発ロードマップ",
+    "source_date": "2026-06-28"
+  },
+  {
+    "id": "capability-bidirectional",
+    "label": "双方向制御・作業サポート",
+    "target_level": "アクティブテスト、初期化、学習、DTC消去まで段階対応",
+    "current_status": "安全ゲート中",
+    "progress_percent": 5,
+    "current_basis": "変更系Intentと危険サービスを遮断済み",
+    "done": [
+      "DTC消去、作動要求、書込み、セキュリティアクセスを遮断",
+      "有効化前条件を内部モデル化",
+      "UIでは怖く見せず準備中として表示"
+    ],
+    "missing": [
+      "車種適合",
+      "実行条件",
+      "利用者確認",
+      "ログ",
+      "失敗時復旧手順",
+      "再スキャン"
+    ],
+    "next_build": "読取、保存、比較、診断手順が安定してから、低リスクな作業サポートを個別に検証する。",
+    "safety_gate": "安全条件が揃うまで未開放",
+    "source": "ローカル検証集計と開発ロードマップ",
+    "source_date": "2026-06-28"
+  },
+  {
+    "id": "capability-guided-diagnostics",
+    "label": "診断支援ワークフロー",
+    "target_level": "DTC、問診、ライブデータ、点検順を一つの流れで案内",
+    "current_status": "統合中",
+    "progress_percent": 45,
+    "current_basis": "問診、DTC検索、診断フロー、ライブデータヒント、外部診断機貼り付け解析あり",
+    "done": [
+      "症状別問診",
+      "DTCと整備データの照合",
+      "外部診断機貼り付け解析",
+      "ブリッジ取込と貼り付け入力の統合モデル"
+    ],
+    "missing": [
+      "車種別基準値との自動比較",
+      "時系列ログ",
+      "修理前後比較",
+      "診断結果から次の測定条件を自動提示"
+    ],
+    "next_build": "診断フローに必要PID、観察条件、異常解釈、次点検を構造化して追加する。",
+    "safety_gate": "推測と事実を分け、整備書確認を残す",
+    "source": "ローカル検証集計と開発ロードマップ",
+    "source_date": "2026-06-28"
+  }
+]

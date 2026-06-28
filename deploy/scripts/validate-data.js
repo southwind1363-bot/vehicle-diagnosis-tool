@@ -206,6 +206,17 @@ for (const file of jsonFiles) {
       if (!Array.isArray(row.blocked_until)) reportError(`${label}: blocked_until は配列にしてください`);
       if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
     }
+
+    if (file === "diagnostic-capability-status-2026.json") {
+      if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
+      if (!isNonEmptyString(row.target_level)) reportError(`${label}: target_level がありません`);
+      if (!Number.isInteger(row.progress_percent) || row.progress_percent < 0 || row.progress_percent > 100) {
+        reportError(`${label}: progress_percent は0-100の整数にしてください`);
+      }
+      if (!isNonEmptyStringArray(row.done)) reportError(`${label}: done がありません`);
+      if (!isNonEmptyStringArray(row.missing)) reportError(`${label}: missing がありません`);
+      if (!isNonEmptyString(row.safety_gate)) reportError(`${label}: safety_gate がありません`);
+    }
   }
 }
 
