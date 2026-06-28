@@ -843,6 +843,176 @@
     };
   }
 
+  function normalizeDtcSnapshot(input = {}) {
+    const source = input.source || "diagnostic_core";
+    const rawRows = Array.isArray(input.dtcs) ? input.dtcs : Array.isArray(input.codes) ? input.codes : [];
+    const rows = rawRows.flatMap((row) => {
+      if (typeof row === "string") {
+        return extractDtcCodes(row).map((code) => ({ code }));
+      }
+      if (!row || typeof row !== "object") return [];
+      const codes = extractDtcCodes(row.code || row.dtc || row.id || "");
+      return codes.map((code) => ({
+        code,
+        status: row.status || row.kind || input.status || "unknown",
+        ecu: row.ecu || row.ecu_id || row.address || null,
+        freezeFrameAvailable: row.freeze_frame_available === true || row.freezeFrameAvailable === true
+      }));
+    });
+    const byCode = new Map();
+    rows.forEach((row) => {
+      if (!byCode.has(row.code)) byCode.set(row.code, { ...row, source });
+    });
+
+    return {
+      schemaVersion: "dtc_snapshot_v1",
+      source,
+      capturedAt: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      codes: [...byCode.keys()],
+      dtcs: [...byCode.values()],
+      retainedRawText: false
+    };
+  }
+
+  function normalizeFreezeFrameSnapshot(input = {}) {
+    const source = input.source || "diagnostic_core";
+    const rows = Array.isArray(input.values) ? input.values : Array.isArray(input.freeze_frame) ? input.freeze_frame : [];
+    const monitorValues = rows
+      .map((row, index) => normalizeBridgePidValue(row, index))
+      .filter(Boolean)
+      .map((item) => ({ ...item, source: "freeze_frame" }));
+    const triggerCodes = extractDtcCodes([
+      input.trigger_dtc,
+      input.triggerDtc,
+      input.freeze_dtc,
+      input.freezeDtc,
+      input.dtc
+    ].filter(Boolean).join(" "));
+
+    return {
+      schemaVersion: "freeze_frame_snapshot_v1",
+      source,
+      capturedAt: input.captured_at || input.capturedAt || null,
+      triggerDtc: triggerCodes[0] || null,
+      monitorValues,
+      monitorInsights: analyzeMonitorValues(monitorValues),
+      retainedRawText: false
+    };
+  }
+
+  function normalizeReadinessSnapshot(input = {}) {
+    const source = input.source || "diagnostic_core";
+    const monitors = Array.isArray(input) ? input : Array.isArray(input.monitors) ? input.monitors : [];
+    const normalized = monitors.map((monitor, index) => ({
+      id: String(monitor?.id || monitor?.name || `monitor_${index + 1}`).slice(0, 80),
+      label: String(monitor?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
+      supported: monitor?.supported !== false,
+      complete: monitor?.complete === true,
+      status: monitor?.status || (monitor?.complete === true ? "complete" : "not_complete")
+    }));
+
+    return {
+      schemaVersion: "readiness_snapshot_v1",
+      source,
+      capturedAt: input.captured_at || input.capturedAt || null,
+      milOn: input.mil_on === true || input.milOn === true,
+      monitorCount: normalized.length,
+      incompleteCount: normalized.filter((item) => item.supported && !item.complete).length,
+      monitors: normalized,
+      retainedRawText: false
+    };
+  }
+
+  function normalizeEcuResponseSummary(input = {}) {
+    const source = input.source || "diagnostic_core";
+    const rows = Array.isArray(input) ? input : Array.isArray(input.ecus) ? input.ecus : Array.isArray(input.ecu_responses) ? input.ecu_responses : [];
+    return {
+      schemaVersion: "ecu_response_summary_v1",
+      source,
+      capturedAt: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
+      ecus: rows.map((row, index) => ({
+        id: String(row?.id || row?.ecu || row?.address || `ecu_${index + 1}`).slice(0, 40),
+        name: row?.name ? String(row.name).slice(0, 120) : null,
+        address: row?.address || row?.ecu || null,
+        status: row?.status || "unknown",
+        dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Array.isArray(row?.dtcs) ? row.dtcs.length : null,
+        responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : null
+      })),
+      retainedRawText: false
+    };
+  }
+
+  function buildSupportedPidMatrix(input = {}) {
+    const source = input.source || "diagnostic_core";
+    const supportedRows = Array.isArray(input) ? input : Array.isArray(input.supported_pids) ? input.supported_pids : Array.isArray(input.supportedPids) ? input.supportedPids : [];
+    const supported = new Set(supportedRows
+      .map((pid) => String(pid).toUpperCase().replace(/^0X/, "").padStart(2, "0")));
+    const items = monitorDefinitions
+      .filter((definition) => definition.service === "01" && definition.pid)
+      .map((definition) => ({
+        id: definition.id,
+        label: definition.label,
+        service: definition.service,
+        pid: definition.pid,
+        unit: definition.unit,
+        category: definition.category,
+        supported: supported.has(String(definition.pid).toUpperCase()),
+        scope: definition.scope,
+        supportNote: definition.supportNote
+      }));
+
+    return {
+      schemaVersion: "supported_pid_matrix_v1",
+      source,
+      capturedAt: input.captured_at || input.capturedAt || null,
+      supportedPids: [...supported],
+      supportedCount: items.filter((item) => item.supported).length,
+      knownPidCount: items.length,
+      items,
+      retainedRawText: false
+    };
+  }
+
+  function buildDiagnosticScanSession(input = {}) {
+    const dtcSnapshot = input.dtcSnapshot?.schemaVersion ? input.dtcSnapshot : normalizeDtcSnapshot(input.dtcSnapshot || input);
+    const livePidSnapshot = input.livePidSnapshot?.monitorValues ? input.livePidSnapshot : normalizeBridgeLivePidSnapshot(input.livePidSnapshot || input.livePids || {});
+    const freezeFrameSnapshot = input.freezeFrameSnapshot?.schemaVersion ? input.freezeFrameSnapshot : normalizeFreezeFrameSnapshot(input.freezeFrameSnapshot || input.freezeFrame || {});
+    const readinessSnapshot = input.readinessSnapshot?.schemaVersion ? input.readinessSnapshot : normalizeReadinessSnapshot(input.readinessSnapshot || input.readiness || {});
+    const ecuResponseSummary = input.ecuResponseSummary?.schemaVersion ? input.ecuResponseSummary : normalizeEcuResponseSummary(input.ecuResponseSummary || input.ecus || {});
+    const supportedPidMatrix = input.supportedPidMatrix?.schemaVersion ? input.supportedPidMatrix : buildSupportedPidMatrix(input.supportedPidMatrix || input.supportedPids || {});
+    const connectionStatus = input.connectionStatus?.displayStatus ? input.connectionStatus : normalizeBridgeConnectionStatus(input.connectionStatus || {});
+    const vciList = input.vciList?.devices ? input.vciList : normalizeBridgeVciList(input.vciList || {});
+    const warnings = [];
+    if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
+    if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
+    if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
+    if (livePidSnapshot.monitorValues.length) warnings.push("compare_live_data_conditions");
+
+    return {
+      schemaVersion: "scan_session_v1",
+      source: input.source || "diagnostic_core",
+      sessionId: String(input.session_id || input.sessionId || "local_scan_session").slice(0, 80),
+      startedAt: input.started_at || input.startedAt || null,
+      endedAt: input.ended_at || input.endedAt || null,
+      vehicleProfile: input.vehicleProfile || input.vehicle_profile || null,
+      connectionStatus,
+      vciDevices: vciList.devices || [],
+      ecuResponseSummary,
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix,
+      warnings,
+      retainedRawText: false,
+      retainedRawFrames: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
+
   function evaluateLocalBridgeRequest(request = {}) {
     const intent = String(request.intent || "").trim();
     const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);
@@ -1184,6 +1354,12 @@
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,
     mergeDiagnosticInputs,
+    normalizeDtcSnapshot,
+    normalizeFreezeFrameSnapshot,
+    normalizeReadinessSnapshot,
+    normalizeEcuResponseSummary,
+    buildSupportedPidMatrix,
+    buildDiagnosticScanSession,
     evaluateOutboundSafety,
     getCapability,
     extractDtcCodes,

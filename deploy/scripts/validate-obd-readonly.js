@@ -270,11 +270,40 @@ check(mergedDiagnosticInput.bridgeExportPayload.schema_version === "bridge_sessi
 check(mergedDiagnosticInput.hadSensitiveIdentifier === true, "統合診断入力が貼り付け側の識別情報候補を引き継げません");
 check(mergedDiagnosticInput.retainedRawText === false, "統合診断入力が原文保持になっています");
 check(mergedDiagnosticInput.wouldTransmit === false && mergedDiagnosticInput.vehicleCommandEnabled === false, "統合診断入力が送信可能扱いになっています");
+const scanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-1",
+  dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }, "P0300"] },
+  livePidSnapshot: bridgePidSnapshot,
+  freezeFrame: {
+    trigger_dtc: "P0171",
+    values: [
+      { id: "engine_speed", value: 2200, unit: "rpm" },
+      { id: "coolant_temp", value: 84, unit: "°C" }
+    ]
+  },
+  readiness: {
+    mil_on: true,
+    monitors: [
+      { id: "catalyst", label: "触媒", supported: true, complete: false },
+      { id: "misfire", label: "失火", supported: true, complete: true }
+    ]
+  },
+  ecus: [{ ecu: "7E8", status: "ok", dtcs: ["P0171"] }],
+  supportedPids: ["0C", "05", "03"]
+});
+check(scanSession.schemaVersion === "scan_session_v1", "診断機セッション形式が不正です");
+check(scanSession.dtcSnapshot.codes.join(",") === "P0171,P0300", "診断機セッションへDTCを統合できません");
+check(scanSession.freezeFrameSnapshot.triggerDtc === "P0171", "フリーズフレームの起点DTCを保持できません");
+check(scanSession.freezeFrameSnapshot.monitorValues.length === 2, "フリーズフレーム値をPID辞書へ整形できません");
+check(scanSession.readinessSnapshot.incompleteCount === 1, "レディネス未完了数を集計できません");
+check(scanSession.ecuResponseSummary.ecus[0].dtcCount === 1, "ECU応答サマリーへDTC件数を反映できません");
+check(scanSession.supportedPidMatrix.supportedCount >= 3, "対応PIDマトリクスを作成できません");
+check(scanSession.retainedRawFrames === false && scanSession.vehicleCommandEnabled === false && scanSession.wouldTransmit === false, "診断機セッションが送信または生フレーム保持扱いです");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 143");
+  console.log("OBD read-only safety checks: 151");
   console.log("Errors: 0");
 }
