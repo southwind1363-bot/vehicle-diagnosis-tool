@@ -1592,9 +1592,18 @@
     if (!definition) return null;
     const a = dataBytes[0];
     const b = dataBytes[1];
+    const c = dataBytes[2];
+    const d = dataBytes[3];
     if (!Number.isInteger(a)) return null;
+    const word = () => Number.isInteger(b) ? (a * 256) + b : null;
+    const signedWord = () => {
+      const raw = word();
+      return raw === null ? null : raw > 0x7FFF ? raw - 0x10000 : raw;
+    };
     let value = null;
-    if (pid === "04" || pid === "11" || pid === "2C" || pid === "2E" || pid === "2F") value = a * 100 / 255;
+    if ([
+      "04", "11", "2C", "2E", "2F", "45", "47", "48", "49", "4A", "4B", "4C", "52", "5A", "5B", "A5"
+    ].includes(pid)) value = a * 100 / 255;
     else if (["05", "0F", "46"].includes(pid)) value = a - 40;
     else if (["06", "07", "08", "09", "2D"].includes(pid)) value = (a - 128) * 100 / 128;
     else if (pid === "0A") value = a * 3;
@@ -1603,8 +1612,22 @@
     else if (pid === "0D") value = a;
     else if (pid === "0E") value = (a / 2) - 64;
     else if (pid === "10" && Number.isInteger(b)) value = ((a * 256) + b) / 100;
-    else if (pid === "1F" && Number.isInteger(b)) value = (a * 256) + b;
+    else if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) value = a / 200;
+    else if (["1F", "21", "31", "4D", "4E"].includes(pid)) value = word();
+    else if (pid === "22") value = word() === null ? null : word() * 0.079;
+    else if (pid === "23") value = word() === null ? null : word() * 10;
+    else if ([
+      "24", "25", "26", "27", "28", "29", "2A", "2B", "44"
+    ].includes(pid)) value = word() === null ? null : word() / 32768;
+    else if (pid === "30") value = a;
+    else if (pid === "32") value = signedWord() === null ? null : signedWord() / 4;
+    else if (["34", "35", "38", "39"].includes(pid) && Number.isInteger(c) && Number.isInteger(d)) value = ((c * 256) + d) / 256 - 128;
+    else if (["3C", "3D", "3E", "3F"].includes(pid)) value = word() === null ? null : word() / 10 - 40;
+    else if (pid === "43") value = word() === null ? null : word() * 100 / 255;
     else if (pid === "42" && Number.isInteger(b)) value = ((a * 256) + b) / 1000;
+    else if (pid === "5C") value = a - 40;
+    else if (pid === "5D") value = word() === null ? null : (word() - 26880) / 128;
+    else if (pid === "5E") value = word() === null ? null : word() * 0.05;
     else if (definition.valueType === "text") value = dataBytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
     if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
     return {
