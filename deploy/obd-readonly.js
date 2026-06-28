@@ -1605,6 +1605,7 @@
     };
     let value = null;
     if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) return decodeOxygenSensorPid(pid, a, b);
+    if (["24", "25", "26", "27", "28", "29", "2A", "2B"].includes(pid)) return decodeWideOxygenVoltagePid(pid, a, b, c, d);
     if (["34", "35", "38", "39"].includes(pid)) return decodeWideOxygenCurrentPid(pid, a, b, c, d);
     if (pid === "01") return decodeMonitorStatusPid(pid, a, b);
     else if (pid === "03") return decodeFuelSystemStatusPid(pid, a, b);
@@ -1629,9 +1630,7 @@
     else if (["1F", "21", "31", "4D", "4E"].includes(pid)) value = word();
     else if (pid === "22") value = word() === null ? null : word() * 0.079;
     else if (pid === "23") value = word() === null ? null : word() * 10;
-    else if ([
-      "24", "25", "26", "27", "28", "29", "2A", "2B", "44"
-    ].includes(pid)) value = word() === null ? null : word() / 32768;
+    else if (pid === "44") value = word() === null ? null : word() / 32768;
     else if (pid === "30") value = a;
     else if (pid === "32") value = signedWord() === null ? null : signedWord() / 4;
     else if (["3C", "3D", "3E", "3F"].includes(pid)) value = word() === null ? null : word() / 10 - 40;
@@ -1692,6 +1691,30 @@
         pid,
         value: Number((((b - 128) * 100 / 128)).toFixed(3)),
         unit: trimDefinition.unit
+      });
+    }
+    return values.length ? values : null;
+  }
+
+  function decodeWideOxygenVoltagePid(pid, a, b, c, d) {
+    if (!Number.isInteger(b) || !Number.isInteger(c) || !Number.isInteger(d)) return null;
+    const ratioDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id.endsWith("_ratio"));
+    const voltageDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id.endsWith("_voltage_wide"));
+    const values = [];
+    if (ratioDefinition) {
+      values.push({
+        id: ratioDefinition.id,
+        pid,
+        value: Number((((a * 256) + b) / 32768).toFixed(3)),
+        unit: ratioDefinition.unit
+      });
+    }
+    if (voltageDefinition) {
+      values.push({
+        id: voltageDefinition.id,
+        pid,
+        value: Number((((c * 256) + d) / 8192).toFixed(3)),
+        unit: voltageDefinition.unit
       });
     }
     return values.length ? values : null;
