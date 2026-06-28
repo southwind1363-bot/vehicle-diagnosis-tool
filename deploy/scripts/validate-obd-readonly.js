@@ -294,6 +294,14 @@ check(mergedDiagnosticInput.wouldTransmit === false && mergedDiagnosticInput.veh
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
+const decodedPendingDtc = obd.decodeObdDtcResponse({ raw: "47 01 71 00 00" });
+const decodedPermanentDtc = obd.decodeObdDtcResponse({ raw: "4A 03 00 00 00" });
+check(decodedPendingDtc.dtcs.find((item) => item.code === "P0171")?.status === "pending", "保留DTC種別を保持できません");
+check(decodedPermanentDtc.dtcs.find((item) => item.code === "P0300")?.status === "permanent", "永久DTC種別を保持できません");
+const mergedDtcSnapshot = obd.mergeDtcSnapshots(decodedStoredDtc, decodedPendingDtc, decodedPermanentDtc);
+check(mergedDtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored"), "保存DTCを統合できません");
+check(mergedDtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "pending"), "保留DTCを統合できません");
+check(mergedDtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "permanent"), "永久DTCを統合できません");
 const decodedSupportedPids = obd.decodeSupportedPidResponse({ raw: "41 00 18 18 00 00" });
 check(decodedSupportedPids.supportedPids.includes("04") && decodedSupportedPids.supportedPids.includes("0C"), "対応PIDビットマップをデコードできません");
 check(decodedSupportedPids.supportedCount >= 4, "対応PIDマトリクスへ対応状態を反映できません");
@@ -320,7 +328,9 @@ check(decodedReadiness.monitors.find((item) => item.id === "evaporative_system")
 check(decodedReadiness.retainedRawText === false, "レディネスデコードが原文保持になっています");
 const decodedScanSession = obd.buildDecodedObdScanSession({
   session_id: "decoded-test",
-  dtcResponse: { raw: "43 01 71 03 00 00 00" },
+  storedDtcResponse: { raw: "43 01 71 03 00 00 00" },
+  pendingDtcResponse: { raw: "47 01 71 00 00" },
+  permanentDtcResponse: { raw: "4A 03 00 00 00" },
   supportedPidResponse: { raw: "41 00 18 18 00 00" },
   livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
   freezeFrameResponse: { raw: "42 02 00 01 71 42 0C 00 1A F8" },
@@ -329,6 +339,8 @@ const decodedScanSession = obd.buildDecodedObdScanSession({
 });
 check(decodedScanSession.schemaVersion === "scan_session_v1", "デコード済みOBDセッション形式が不正です");
 check(decodedScanSession.dtcSnapshot.codes.includes("P0171"), "デコード済みOBDセッションへDTCを統合できません");
+check(decodedScanSession.dtcSnapshot.dtcs.some((item) => item.status === "pending"), "デコード済みOBDセッションへ保留DTCを統合できません");
+check(decodedScanSession.dtcSnapshot.dtcs.some((item) => item.status === "permanent"), "デコード済みOBDセッションへ永久DTCを統合できません");
 check(decodedScanSession.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "デコード済みOBDセッションへライブPIDを統合できません");
 check(decodedScanSession.freezeFrameSnapshot.triggerDtc === "P0171", "デコード済みOBDセッションへフリーズフレームを統合できません");
 check(decodedScanSession.readinessSnapshot.milOn === true, "デコード済みOBDセッションへレディネスを統合できません");
@@ -384,6 +396,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 204");
+  console.log("OBD read-only safety checks: 214");
   console.log("Errors: 0");
 }

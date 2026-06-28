@@ -1177,13 +1177,35 @@
       if (high === 0 && low === 0) continue;
       codes.push(decodeDtcPair(high, low));
     }
+    const status = serviceByte === 0x47 ? "pending" : serviceByte === 0x4A ? "permanent" : "stored";
     return normalizeDtcSnapshot({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || null,
-      status: serviceByte === 0x47 ? "pending" : "stored",
-      dtcs: [...new Set(codes)]
+      status,
+      dtcs: [...new Set(codes)].map((code) => ({ code, status }))
     });
+  }
+
+  function mergeDtcSnapshots(...snapshots) {
+    const rows = snapshots
+      .filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))
+      .flatMap((snapshot) => snapshot.dtcs.map((row) => ({ ...row, source: row.source || snapshot.source || "diagnostic_core" })));
+    const byCodeAndStatus = new Map();
+    rows.forEach((row) => {
+      const key = `${row.code || ""}::${row.status || "unknown"}`;
+      if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
+    });
+    const mergedRows = [...byCodeAndStatus.values()];
+    return {
+      schemaVersion: "dtc_snapshot_v1",
+      source: "merged_dtc_snapshots",
+      capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null,
+      protocol: snapshots.find((item) => item?.protocol)?.protocol || null,
+      codes: [...new Set(mergedRows.map((row) => row.code))],
+      dtcs: mergedRows,
+      retainedRawText: false
+    };
   }
 
   function decodeDtcPair(high, low) {
@@ -1348,7 +1370,15 @@
   }
 
   function buildDecodedObdScanSession(input = {}) {
-    const dtcSnapshot = input.dtcResponse?.schemaVersion ? input.dtcResponse : decodeObdDtcResponse(input.dtcResponse || {});
+    const dtcSnapshot = input.dtcSnapshot?.schemaVersion
+      ? input.dtcSnapshot
+      : input.storedDtcResponse || input.pendingDtcResponse || input.permanentDtcResponse
+        ? mergeDtcSnapshots(
+            input.storedDtcResponse?.schemaVersion ? input.storedDtcResponse : decodeObdDtcResponse(input.storedDtcResponse || {}),
+            input.pendingDtcResponse?.schemaVersion ? input.pendingDtcResponse : decodeObdDtcResponse(input.pendingDtcResponse || {}),
+            input.permanentDtcResponse?.schemaVersion ? input.permanentDtcResponse : decodeObdDtcResponse(input.permanentDtcResponse || {})
+          )
+        : input.dtcResponse?.schemaVersion ? input.dtcResponse : decodeObdDtcResponse(input.dtcResponse || {});
     const livePidSnapshot = input.livePidResponse?.monitorValues ? input.livePidResponse : decodeLivePidResponse(input.livePidResponse || {});
     const freezeFrameSnapshot = input.freezeFrameResponse?.schemaVersion ? input.freezeFrameResponse : decodeFreezeFrameResponse(input.freezeFrameResponse || {});
     const readinessSnapshot = input.readinessResponse?.schemaVersion ? input.readinessResponse : decodeReadinessResponse(input.readinessResponse || {});
@@ -1839,6 +1869,7 @@
     normalizeEcuInfoSnapshot,
     parseObdHexBytes,
     decodeObdDtcResponse,
+    mergeDtcSnapshots,
     decodeSupportedPidResponse,
     decodeLivePidResponse,
     decodeFreezeFrameResponse,
