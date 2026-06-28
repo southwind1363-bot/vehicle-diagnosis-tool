@@ -785,7 +785,8 @@
     if (!row || typeof row !== "object") return null;
     const id = String(row.id || row.monitor_id || row.pid || "").trim();
     if (!id) return null;
-    const definition = monitorDefinitions.find((item) => item.id === id || item.pid === row.pid);
+    const definition = monitorDefinitions.find((item) => item.id === id)
+      || monitorDefinitions.find((item) => item.pid === row.pid);
     if (!definition) return null;
     const valueType = definition?.valueType || (typeof row.value === "string" && !NUMBER_PATTERN.test(row.value) ? "text" : "number");
     const parsedValue = valueType === "text" ? String(row.value ?? "").slice(0, 160) : Number(row.value);
@@ -1288,7 +1289,8 @@
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const decoded = decodeStandardPidValue(pid, bytes.slice(index + 2, index + 6));
-      if (decoded) values.push(decoded);
+      if (Array.isArray(decoded)) values.push(...decoded);
+      else if (decoded) values.push(decoded);
     }
     return normalizeBridgeLivePidSnapshot({
       ok: true,
@@ -1319,7 +1321,8 @@
         continue;
       }
       const decoded = decodeStandardPidValue(pid, payload);
-      if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber });
+      if (Array.isArray(decoded)) values.push(...decoded.map((item) => ({ ...item, freeze_frame_number: frameNumber })));
+      else if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber });
     }
 
     return normalizeFreezeFrameSnapshot({
@@ -1601,6 +1604,7 @@
       return raw === null ? null : raw > 0x7FFF ? raw - 0x10000 : raw;
     };
     let value = null;
+    if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) return decodeOxygenSensorPid(pid, a, b);
     if (pid === "03") value = decodeFuelSystemStatus(a, b);
     else if (pid === "12") value = decodeSecondaryAirStatus(a);
     else if (pid === "1C") value = decodeObdStandard(a);
@@ -1616,7 +1620,7 @@
     else if (pid === "0D") value = a;
     else if (pid === "0E") value = (a / 2) - 64;
     else if (pid === "10" && Number.isInteger(b)) value = ((a * 256) + b) / 100;
-    else if (["14", "15", "16", "17", "18", "19", "1A", "1B"].includes(pid)) value = a / 200;
+
     else if (["1F", "21", "31", "4D", "4E"].includes(pid)) value = word();
     else if (pid === "22") value = word() === null ? null : word() * 0.079;
     else if (pid === "23") value = word() === null ? null : word() * 10;
@@ -1640,6 +1644,29 @@
       value: typeof value === "number" ? Number(value.toFixed(3)) : value,
       unit: definition.unit
     };
+  }
+
+  function decodeOxygenSensorPid(pid, a, b) {
+    const voltageDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id.endsWith("_voltage"));
+    const trimDefinition = monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id.endsWith("_stft"));
+    const values = [];
+    if (voltageDefinition) {
+      values.push({
+        id: voltageDefinition.id,
+        pid,
+        value: Number((a / 200).toFixed(3)),
+        unit: voltageDefinition.unit
+      });
+    }
+    if (trimDefinition && Number.isInteger(b)) {
+      values.push({
+        id: trimDefinition.id,
+        pid,
+        value: Number((((b - 128) * 100 / 128)).toFixed(3)),
+        unit: trimDefinition.unit
+      });
+    }
+    return values.length ? values : null;
   }
 
   function decodeFuelSystemStatus(a, b) {
