@@ -402,7 +402,7 @@ const decodedScanSession = obd.buildDecodedObdScanSession({
   permanentDtcResponse: { raw: "4A 03 00 00 00" },
   supportedPidResponse: { raw: "41 00 18 18 00 00" },
   livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
-  freezeFrameResponse: { raw: "42 02 00 01 71 42 0C 00 1A F8" },
+  freezeFrameResponse: { raw: "42 02 00 01 71 42 24 00 80 00 20 00 42 0C 00 1A F8" },
   readinessResponse: { raw: "41 01 81 07 22 00" },
   onboardMonitorResponse: { raw: "46 01 01 00 64 00 32 00 C8" },
   ecuInfoResponse: { raw: "49 04 01 43 41 4C 2D 31 32 33 34" }
@@ -413,6 +413,7 @@ check(decodedScanSession.dtcSnapshot.dtcs.some((item) => item.status === "pendin
 check(decodedScanSession.dtcSnapshot.dtcs.some((item) => item.status === "permanent"), "デコード済みOBDセッションへ永久DTCを統合できません");
 check(decodedScanSession.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "デコード済みOBDセッションへライブPIDを統合できません");
 check(decodedScanSession.freezeFrameSnapshot.triggerDtc === "P0171", "デコード済みOBDセッションへフリーズフレームを統合できません");
+check(decodedScanSession.freezeFrameSnapshot.monitorValues.find((item) => item.id === "wide_o2_b1s1_voltage_wide")?.freezeFrameNumber === 0, "デコード済みOBDセッションでフリーズフレーム番号を保持できません");
 check(decodedScanSession.readinessSnapshot.milOn === true, "デコード済みOBDセッションへレディネスを統合できません");
 check(decodedScanSession.onboardMonitorSnapshot.testCount === 1, "デコード済みOBDセッションへMode 06を統合できません");
 check(decodedScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "デコード済みOBDセッションへECU情報を統合できません");
@@ -520,6 +521,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 308");
+  console.log("OBD read-only safety checks: 309");
   console.log("Errors: 0");
 }
