@@ -1,4 +1,5 @@
 import http from "node:http";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,6 +28,7 @@ const BLOCKED_WRITE_INTENTS = new Set([
 export function createLocalBridgeApp(options = {}) {
   const pairingToken = String(options.pairingToken || process.env.LOCAL_BRIDGE_PAIRING_TOKEN || "");
   const bridgeVersion = options.bridgeVersion || "readonly-dev-0.1.0";
+  const replaySnapshot = buildReplaySnapshot(options);
 
   return http.createServer(async (request, response) => {
     setCorsHeaders(request, response);
@@ -60,7 +62,7 @@ export function createLocalBridgeApp(options = {}) {
       return;
     }
 
-    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion));
+    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot));
   });
 }
 
@@ -75,7 +77,7 @@ function validateBridgeRequest(body, pairingToken) {
   return { ok: true };
 }
 
-function buildReadOnlyResponse(request, bridgeVersion) {
+function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   const base = {
     request_id: request.request_id,
     ok: true,
@@ -96,7 +98,8 @@ function buildReadOnlyResponse(request, bridgeVersion) {
         vci_connected: true,
         vehicle_connected: false,
         vehicle_command_enabled: false,
-        sample_mode: true
+        sample_mode: true,
+        replay_loaded: Boolean(replaySnapshot)
       }
     };
   }
@@ -132,6 +135,19 @@ function buildReadOnlyResponse(request, bridgeVersion) {
     };
   }
 
+  if ((request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc") && replaySnapshot) {
+    const status = request.intent === "read_pending_dtc" ? "pending" : "stored";
+    return {
+      ...base,
+      data: {
+        protocol: replaySnapshot.protocol,
+        captured_at: new Date().toISOString(),
+        ecu_responses: replaySnapshot.ecuResponses,
+        dtcs: replaySnapshot.dtcs.map((item) => ({ ...item, status }))
+      }
+    };
+  }
+
   if (request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc") {
     const status = request.intent === "read_pending_dtc" ? "pending" : "stored";
     return {
@@ -163,6 +179,17 @@ function buildReadOnlyResponse(request, bridgeVersion) {
     };
   }
 
+  if (request.intent === "read_supported_pids" && replaySnapshot) {
+    return {
+      ...base,
+      data: {
+        protocol: replaySnapshot.protocol,
+        supported_pids: replaySnapshot.supportedPids,
+        captured_at: new Date().toISOString()
+      }
+    };
+  }
+
   if (request.intent === "read_supported_pids") {
     return {
       ...base,
@@ -170,6 +197,18 @@ function buildReadOnlyResponse(request, bridgeVersion) {
         protocol: "ISO15765-4",
         supported_pids: ["04", "05", "06", "07", "0B", "0C", "0D", "10", "11", "42"],
         captured_at: new Date().toISOString()
+      }
+    };
+  }
+
+  if (request.intent === "read_live_pid_snapshot" && replaySnapshot) {
+    return {
+      ...base,
+      data: {
+        protocol: replaySnapshot.protocol,
+        supported_pids: replaySnapshot.supportedPids,
+        captured_at: new Date().toISOString(),
+        values: replaySnapshot.liveValues
       }
     };
   }
@@ -193,6 +232,161 @@ function buildReadOnlyResponse(request, bridgeVersion) {
   }
 
   return buildBlockedResponse(request.request_id, "intent_not_implemented");
+}
+
+function buildReplaySnapshot(options = {}) {
+  const replayText = String(options.replayLogText || readReplayLogFile(options.replayLogPath || process.env.LOCAL_BRIDGE_REPLAY_LOG) || "");
+  return replayText ? decodeReplayLog(replayText) : null;
+}
+
+function readReplayLogFile(filePath) {
+  if (!filePath) return "";
+  try {
+    return fs.readFileSync(path.resolve(filePath), "utf8");
+  } catch (_error) {
+    return "";
+  }
+}
+
+export function decodeReplayLog(text) {
+  const packets = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => parseReplayLineBytes(line))
+    .filter((packet) => packet.bytes.length);
+  const dtcs = [];
+  const liveValues = [];
+  const supportedPids = new Set();
+  const ecus = new Set();
+
+  packets.forEach(({ ecu, bytes }) => {
+    if (ecu) ecus.add(ecu);
+    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x43, 0x47, 0x4A].includes(byte));
+    if (serviceIndex < 0) return;
+    const service = bytes[serviceIndex];
+
+    if (service === 0x43 || service === 0x47 || service === 0x4A) {
+      const status = service === 0x47 ? "pending" : service === 0x4A ? "permanent" : "stored";
+      for (let index = serviceIndex + 1; index + 1 < bytes.length; index += 2) {
+        const high = bytes[index];
+        const low = bytes[index + 1];
+        if (high === 0 && low === 0) continue;
+        dtcs.push({ code: decodeDtcPair(high, low), status, ecu: ecu || null });
+      }
+      return;
+    }
+
+    if (service === 0x41) {
+      const pid = toHexByte(bytes[serviceIndex + 1]);
+      if (!pid) return;
+      if (isSupportedPidBase(bytes[serviceIndex + 1])) {
+        decodeSupportedPids(bytes.slice(serviceIndex + 2, serviceIndex + 6), bytes[serviceIndex + 1]).forEach((item) => supportedPids.add(item));
+        return;
+      }
+      const decoded = decodeLivePid(pid, bytes.slice(serviceIndex + 2));
+      if (decoded) {
+        liveValues.push(decoded);
+        supportedPids.add(pid);
+      }
+    }
+  });
+
+  return {
+    protocol: "ISO15765-4-log-replay",
+    ecuResponses: [...ecus].map((ecu) => ({ ecu, status: "replay", dtcs: dtcs.filter((item) => item.ecu === ecu).map((item) => item.code) })),
+    dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
+    liveValues: uniqueBy(liveValues, (item) => item.id),
+    supportedPids: [...supportedPids].sort()
+  };
+}
+
+function parseReplayLineBytes(line) {
+  const normalized = normalizeReplayCanLine(line);
+  const tokens = normalized.toUpperCase().match(/\b[0-9A-F]{2,8}\b/g) || [];
+  const hasCanId = /^[0-9A-F]{3}$/.test(tokens[0] || "") || /^[0-9A-F]{8}$/.test(tokens[0] || "");
+  const ecu = hasCanId ? tokens[0] : null;
+  const byteTokens = (hasCanId ? tokens.slice(1) : tokens).filter((token) => /^[0-9A-F]{2}$/.test(token));
+  return { ecu, bytes: byteTokens.map((token) => parseInt(token, 16)) };
+}
+
+function normalizeReplayCanLine(line) {
+  let text = String(line || "").trim().replace(/^\(\s*[0-9]+(?:\.[0-9]+)?\s*\)\s+/, "");
+  text = text.replace(/\b([0-9A-F]{3}|[0-9A-F]{8})#([0-9A-F]{2,128})\b/gi, (_match, id, data) => {
+    const bytes = data.match(/[0-9A-F]{2}/gi) || [];
+    return [id.toUpperCase(), ...bytes.map((byte) => byte.toUpperCase())].join(" ");
+  });
+  text = text.replace(/\b([0-9A-F]{3}|[0-9A-F]{8})\s+\[(\d{1,2})\]\s+((?:[0-9A-F]{2}[\s,]*){1,64})/gi, (_match, id, length, data) => {
+    const lengthByte = Math.max(0, Math.min(255, parseInt(length, 10) || 0)).toString(16).toUpperCase().padStart(2, "0");
+    const bytes = data.match(/[0-9A-F]{2}/gi) || [];
+    return [id.toUpperCase(), lengthByte, ...bytes.map((byte) => byte.toUpperCase())].join(" ");
+  });
+  const csv = normalizeReplayCsvLine(text);
+  return csv || text;
+}
+
+function normalizeReplayCsvLine(line) {
+  if (!/[,;\t]/.test(line)) return "";
+  const parts = String(line).split(/[,;\t]/).map((part) => part.trim()).filter(Boolean);
+  const idIndex = parts.findIndex((part) => /^[0-9A-F]{3}$|^[0-9A-F]{8}$/i.test(part));
+  if (idIndex < 0) return "";
+  let byteStart = parts.length;
+  while (byteStart > idIndex + 1 && /^[0-9A-F]{2}$/i.test(parts[byteStart - 1])) byteStart -= 1;
+  const bytes = parts.slice(byteStart).filter((part) => /^[0-9A-F]{2}$/i.test(part));
+  if (!bytes.length) return "";
+  const lengthPart = parts[byteStart - 1] || "";
+  const parsedLength = /^\d{1,3}$/.test(lengthPart) ? parseInt(lengthPart, 10) : bytes.length;
+  const lengthByte = Math.max(0, Math.min(255, parsedLength)).toString(16).toUpperCase().padStart(2, "0");
+  return [parts[idIndex].toUpperCase(), lengthByte, ...bytes.map((byte) => byte.toUpperCase())].join(" ");
+}
+
+function decodeDtcPair(high, low) {
+  const system = ["P", "C", "B", "U"][(high & 0xC0) >> 6];
+  return `${system}${((high & 0x30) >> 4).toString(16)}${(high & 0x0F).toString(16)}${((low & 0xF0) >> 4).toString(16)}${(low & 0x0F).toString(16)}`.toUpperCase();
+}
+
+function decodeLivePid(pid, payload) {
+  const a = payload[0];
+  const b = payload[1];
+  const pidMap = {
+    "04": ["calculated_load", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "05": ["coolant_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
+    "0B": ["map", Number.isInteger(a) ? a : null, "kPa"],
+    "0C": ["engine_speed", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 4 : null, "rpm"],
+    "0D": ["vehicle_speed", Number.isInteger(a) ? a : null, "km/h"],
+    "10": ["maf", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 100 : null, "g/s"],
+    "11": ["throttle_position", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "42": ["control_module_voltage", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 1000 : null, "V"]
+  };
+  const row = pidMap[pid];
+  if (!row || !Number.isFinite(row[1])) return null;
+  return { id: row[0], pid, value: Number(row[1].toFixed(2)), unit: row[2] };
+}
+
+function decodeSupportedPids(bytes, basePid) {
+  const supported = [];
+  bytes.forEach((byte, byteIndex) => {
+    for (let bit = 7; bit >= 0; bit--) {
+      if (byte & (1 << bit)) supported.push(toHexByte(basePid + byteIndex * 8 + (8 - bit)));
+    }
+  });
+  return supported.filter(Boolean);
+}
+
+function isSupportedPidBase(pid) {
+  return [0x00, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xE0].includes(pid);
+}
+
+function toHexByte(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 255 ? value.toString(16).toUpperCase().padStart(2, "0") : "";
+}
+
+function uniqueBy(items, getKey) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function buildBlockedResponse(requestId, error) {

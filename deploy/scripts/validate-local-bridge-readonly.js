@@ -70,10 +70,37 @@ try {
   await new Promise((resolve) => server.close(resolve));
 }
 
+const replayLog = [
+  "can0 7E8#0643000001710300",
+  "can0 7E8#04410C1AF8",
+  "(171234.123456) can0 7E8#0341057B",
+  "0.001,7E8,false,Rx,0,4,41,42,37,78"
+].join("\n");
+const replayServer = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", replayLogText: replayLog });
+const replayPort = await new Promise((resolve) => {
+  replayServer.listen(0, "127.0.0.1", () => resolve(replayServer.address().port));
+});
+
+try {
+  const replayStatus = await post(replayPort, "bridge_status");
+  check(replayStatus.data.replay_loaded === true, "replay mode was not reported in bridge_status");
+
+  const replayDtc = await post(replayPort, "read_stored_dtc");
+  check(replayDtc.data.dtcs.some((item) => item.code === "P0171"), "replay DTC response did not include P0171");
+  check(replayDtc.data.ecu_responses[0].ecu === "7E8", "replay DTC response did not keep ECU address");
+
+  const replayLive = await post(replayPort, "read_live_pid_snapshot");
+  check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
+  check(replayLive.data.values.some((item) => item.id === "coolant_temp" && item.value === 83), "replay live response did not decode coolant temperature");
+  check(replayLive.data.values.some((item) => item.id === "control_module_voltage" && item.value === 14.2), "replay live response did not decode module voltage");
+} finally {
+  await new Promise((resolve) => replayServer.close(resolve));
+}
+
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 17");
+  console.log("Local bridge read-only checks: 23");
   console.log("Errors: 0");
 }
