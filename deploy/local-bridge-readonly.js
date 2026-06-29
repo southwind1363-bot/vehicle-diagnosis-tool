@@ -445,6 +445,21 @@ function decodeLivePidValues(pid, payload) {
     ];
   }
 
+  const catalystTempPidMap = {
+    "3C": "catalyst_temp_b1s1",
+    "3D": "catalyst_temp_b2s1",
+    "3E": "catalyst_temp_b1s2",
+    "3F": "catalyst_temp_b2s2"
+  };
+  if (catalystTempPidMap[pid] && Number.isInteger(a) && Number.isInteger(b)) {
+    return [{
+      id: catalystTempPidMap[pid],
+      pid,
+      value: Number(((((a * 256) + b) / 10) - 40).toFixed(1)),
+      unit: "°C"
+    }];
+  }
+
   const decoded = decodeLivePid(pid, payload);
   return decoded ? [decoded] : [];
 }
@@ -484,6 +499,19 @@ function decodeLivePid(pid, payload) {
     "44": ["commanded_equivalence_ratio", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 32768 : null, ""],
     "45": ["relative_throttle_position", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "46": ["ambient_air_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
+    "47": ["absolute_throttle_b", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "48": ["absolute_throttle_c", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "49": ["accelerator_position_d", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "4A": ["accelerator_position_e", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "4B": ["accelerator_position_f", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "4C": ["commanded_throttle_actuator", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "4D": ["time_with_mil", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "min"],
+    "4E": ["time_since_clear", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "min"],
+    "52": ["ethanol_percentage", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "5A": ["relative_accelerator_position", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "5B": ["hybrid_battery_remaining", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "5C": ["engine_oil_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
+    "5D": ["fuel_injection_timing", Number.isInteger(a) && Number.isInteger(b) ? (((a * 256) + b) / 128) - 210 : null, "°"],
     "5E": ["engine_fuel_rate", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.05 : null, "L/h"]
   };
   const row = pidMap[pid];
