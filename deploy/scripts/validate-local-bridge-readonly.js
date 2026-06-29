@@ -72,9 +72,11 @@ try {
 
 const replayLog = [
   "can0 7E8#0643000001710300",
+  "can0 7E8#06410181070000",
   "can0 7E8#04410C1AF8",
   "(171234.123456) can0 7E8#0341057B",
   "0.001,7E8,false,Rx,0,4,41,42,37,78",
+  "can0 7E8#0742010081070000",
   "can0 7E8#054202000171",
   "can0 7E8#04420C001AF8",
   "can0 7E8#034205007B"
@@ -96,11 +98,17 @@ try {
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
   check(replayLive.data.values.some((item) => item.id === "coolant_temp" && item.value === 83), "replay live response did not decode coolant temperature");
   check(replayLive.data.values.some((item) => item.id === "control_module_voltage" && item.value === 14.2), "replay live response did not decode module voltage");
+  check(replayLive.data.values.some((item) => item.id === "mil_status" && item.value === true), "replay live response did not decode MIL status");
+  check(replayLive.data.values.some((item) => item.id === "stored_dtc_count" && item.value === 1), "replay live response did not decode stored DTC count");
+  check(replayLive.data.values.some((item) => item.id === "readiness_flag_count" && item.value === 3), "replay live response did not decode readiness flags");
 
   const replayFreezeFrame = await post(replayPort, "read_freeze_frame");
   check(replayFreezeFrame.data.trigger_dtc === "P0171", "replay freeze frame did not decode trigger DTC");
   check(replayFreezeFrame.data.values.some((item) => item.id === "engine_speed" && item.value === 1726 && item.freeze_frame_number === 0), "replay freeze frame did not decode engine speed");
   check(replayFreezeFrame.data.values.some((item) => item.id === "coolant_temp" && item.value === 83 && item.freeze_frame_number === 0), "replay freeze frame did not decode coolant temperature");
+  check(replayFreezeFrame.data.values.some((item) => item.id === "mil_status" && item.value === true && item.freeze_frame_number === 0), "replay freeze frame did not decode MIL status");
+  check(replayFreezeFrame.data.values.some((item) => item.id === "stored_dtc_count" && item.value === 1 && item.freeze_frame_number === 0), "replay freeze frame did not decode stored DTC count");
+  check(replayFreezeFrame.data.values.some((item) => item.id === "readiness_flag_count" && item.value === 3 && item.freeze_frame_number === 0), "replay freeze frame did not decode readiness flags");
 } finally {
   await new Promise((resolve) => replayServer.close(resolve));
 }
@@ -109,6 +117,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 26");
+  console.log("Local bridge read-only checks: 32");
   console.log("Errors: 0");
 }

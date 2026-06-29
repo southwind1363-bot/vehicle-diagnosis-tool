@@ -315,7 +315,7 @@ Web側では同じ値を一度だけ設定します。
 localStorage.setItem("vehicle-diagnosis-obd-dev-token-v1", "任意の12文字以上のトークン")
 ```
 
-このブリッジは読取専用サンプルです。`bridge_status`、`list_vci`、`read_stored_dtc`、`read_freeze_frame`、`read_live_pid_snapshot` などの読取応答を返し、DTC消去、作動要求、書込み、セキュリティアクセスは拒否します。ログ再生では `7E8#04410C1AF8`、`7E8 [4] 41 0C 1A F8`、SavvyCAN系CSVのような保存ログをDTC/フリーズフレーム/ライブPID応答へ変換します。
+このブリッジは読取専用サンプルです。`bridge_status`、`list_vci`、`read_stored_dtc`、`read_freeze_frame`、`read_live_pid_snapshot` などの読取応答を返し、DTC消去、作動要求、書込み、セキュリティアクセスは拒否します。ログ再生では `7E8#04410C1AF8`、`7E8 [4] 41 0C 1A F8`、SavvyCAN系CSVのような保存ログをDTC/フリーズフレーム/ライブPID/Mode01 PID01のMIL・DTC数・レディネス生ステータス応答へ変換します。
 
 接続基盤の参考仕様:
 

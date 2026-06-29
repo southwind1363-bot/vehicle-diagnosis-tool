@@ -297,12 +297,12 @@ export function decodeReplayLog(text) {
         triggerDtc = decodeDtcPair(bytes[serviceIndex + 3], bytes[serviceIndex + 4]);
         return;
       }
-      const decoded = decodeLivePid(pid, bytes.slice(serviceIndex + 3));
-      if (decoded) {
-        freezeFrameValues.push({
+      const decodedValues = decodeLivePidValues(pid, bytes.slice(serviceIndex + 3));
+      if (decodedValues.length) {
+        decodedValues.forEach((decoded) => freezeFrameValues.push({
           ...decoded,
           freeze_frame_number: frameNumber
-        });
+        }));
         supportedPids.add(pid);
       }
       return;
@@ -315,9 +315,9 @@ export function decodeReplayLog(text) {
         decodeSupportedPids(bytes.slice(serviceIndex + 2, serviceIndex + 6), bytes[serviceIndex + 1]).forEach((item) => supportedPids.add(item));
         return;
       }
-      const decoded = decodeLivePid(pid, bytes.slice(serviceIndex + 2));
-      if (decoded) {
-        liveValues.push(decoded);
+      const decodedValues = decodeLivePidValues(pid, bytes.slice(serviceIndex + 2));
+      if (decodedValues.length) {
+        decodedValues.forEach((decoded) => liveValues.push(decoded));
         supportedPids.add(pid);
       }
     }
@@ -378,6 +378,27 @@ function decodeDtcPair(high, low) {
   return `${system}${((high & 0x30) >> 4).toString(16)}${(high & 0x0F).toString(16)}${((low & 0xF0) >> 4).toString(16)}${(low & 0x0F).toString(16)}`.toUpperCase();
 }
 
+function decodeLivePidValues(pid, payload) {
+  const a = payload[0];
+  const b = payload[1];
+  const c = payload[2];
+  const d = payload[3];
+
+  if (pid === "01" && [a, b, c, d].every(Number.isInteger)) {
+    return [
+      { id: "mil_status", pid, value: Boolean(a & 0x80), unit: "boolean" },
+      { id: "stored_dtc_count", pid, value: a & 0x7F, unit: "count" },
+      { id: "readiness_status_byte_b", pid, value: b, unit: "raw" },
+      { id: "readiness_status_byte_c", pid, value: c, unit: "raw" },
+      { id: "readiness_status_byte_d", pid, value: d, unit: "raw" },
+      { id: "readiness_flag_count", pid, value: countSetBits(b) + countSetBits(c) + countSetBits(d), unit: "count" }
+    ];
+  }
+
+  const decoded = decodeLivePid(pid, payload);
+  return decoded ? [decoded] : [];
+}
+
 function decodeLivePid(pid, payload) {
   const a = payload[0];
   const b = payload[1];
@@ -394,6 +415,15 @@ function decodeLivePid(pid, payload) {
   const row = pidMap[pid];
   if (!row || !Number.isFinite(row[1])) return null;
   return { id: row[0], pid, value: Number(row[1].toFixed(2)), unit: row[2] };
+}
+
+function countSetBits(value) {
+  if (!Number.isInteger(value)) return 0;
+  let count = 0;
+  for (let bit = 0; bit < 8; bit++) {
+    if (value & (1 << bit)) count += 1;
+  }
+  return count;
 }
 
 function decodeSupportedPids(bytes, basePid) {
