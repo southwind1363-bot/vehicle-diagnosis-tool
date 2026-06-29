@@ -1090,6 +1090,9 @@
         dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Array.isArray(row?.dtcs) ? row.dtcs.length : null,
         responseCount: Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : null,
         services: Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
+        negativeResponseCount: Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : 0,
+        negativeRequestedServices: Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
+        negativeResponseLabels: Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : [],
         responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : null
       })),
       retainedRawText: false
@@ -1528,13 +1531,14 @@
       readinessResponses: [],
       onboardMonitorResponses: [],
       ecuInfoResponses: [],
+      negativeResponses: [],
       unknownResponses: []
     };
 
     buildObdLogPackets(redacted).forEach((packetInput) => {
       const bytes = packetInput.bytes;
-      const positiveServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A];
-      const serviceIndex = bytes.findIndex((byte) => positiveServices.includes(byte));
+      const responseServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F];
+      const serviceIndex = bytes.findIndex((byte) => responseServices.includes(byte));
       const serviceByte = serviceIndex >= 0 ? bytes[serviceIndex] : null;
       const hasPair = (first, second) => bytes.some((byte, index) => byte === first && bytes[index + 1] === second);
       const metadata = {
@@ -1548,7 +1552,9 @@
         ...metadata
       };
 
-      if (serviceByte === 0x43) {
+      if (serviceByte === 0x7F) {
+        buckets.negativeResponses.push({ ...packet, negativeResponse: decodeNegativeObdResponse(bytes, serviceIndex) });
+      } else if (serviceByte === 0x43) {
         buckets.storedDtcResponses.push(packet);
       } else if (serviceByte === 0x47) {
         buckets.pendingDtcResponses.push(packet);
@@ -1574,10 +1580,12 @@
     const bucketCounts = Object.fromEntries(Object.entries(buckets).map(([key, rows]) => [key, rows.length]));
     const ecuResponses = buildEcuResponsesFromResponseBuckets(buckets);
     const isoTpSummary = buildIsoTpSummary(buckets);
+    const negativeResponseSummary = buildNegativeResponseSummary(buckets.negativeResponses);
     return {
       schemaVersion: "obd_response_line_classification_v1",
       bucketCounts,
       isoTpSummary,
+      negativeResponseSummary,
       ecuResponseCount: ecuResponses.length,
       ecuResponses,
       responseBuckets: buckets,
@@ -1655,6 +1663,43 @@
     };
   }
 
+  function buildNegativeResponseSummary(negativeResponses = []) {
+    const rows = Array.isArray(negativeResponses) ? negativeResponses : [];
+    const responseCodes = [...new Set(rows.map((packet) => packet?.negativeResponse?.responseCode).filter(Boolean))];
+    const requestedServices = [...new Set(rows.map((packet) => packet?.negativeResponse?.requestedService).filter(Boolean))];
+    return {
+      totalCount: rows.length,
+      requestedServices,
+      responseCodes,
+      responseLabels: [...new Set(rows.map((packet) => packet?.negativeResponse?.responseLabel).filter(Boolean))]
+    };
+  }
+
+  function decodeNegativeObdResponse(bytes, serviceIndex) {
+    const requestedService = bytes[serviceIndex + 1];
+    const responseCode = bytes[serviceIndex + 2];
+    return {
+      requestedService: Number.isInteger(requestedService) ? requestedService.toString(16).toUpperCase().padStart(2, "0") : null,
+      responseCode: Number.isInteger(responseCode) ? responseCode.toString(16).toUpperCase().padStart(2, "0") : null,
+      responseLabel: decodeNegativeResponseCode(responseCode)
+    };
+  }
+
+  function decodeNegativeResponseCode(responseCode) {
+    const labels = {
+      0x10: "general_reject",
+      0x11: "service_not_supported",
+      0x12: "subfunction_not_supported",
+      0x13: "incorrect_message_length_or_format",
+      0x21: "busy_repeat_request",
+      0x22: "conditions_not_correct",
+      0x31: "request_out_of_range",
+      0x33: "security_access_denied",
+      0x78: "response_pending"
+    };
+    return labels[responseCode] || "unknown_negative_response";
+  }
+
   function finalizeIsoTpMetadata(metadata) {
     const { nextSequenceNumber, ...publicMetadata } = metadata || {};
     return publicMetadata;
@@ -1683,9 +1728,23 @@
     const packets = Object.values(responseBuckets || {}).flat().filter((row) => row?.ecu);
     const byEcu = new Map();
     packets.forEach((packet) => {
-      const current = byEcu.get(packet.ecu) || { ecu: packet.ecu, address: packet.address || packet.ecu, status: "ok", response_count: 0, services: new Set() };
+      const current = byEcu.get(packet.ecu) || {
+        ecu: packet.ecu,
+        address: packet.address || packet.ecu,
+        status: "ok",
+        response_count: 0,
+        services: new Set(),
+        negative_response_count: 0,
+        negative_requested_services: new Set(),
+        negative_response_labels: new Set()
+      };
       current.response_count += 1;
       if (packet.service) current.services.add(packet.service);
+      if (packet.negativeResponse) {
+        current.negative_response_count += 1;
+        if (packet.negativeResponse.requestedService) current.negative_requested_services.add(packet.negativeResponse.requestedService);
+        if (packet.negativeResponse.responseLabel) current.negative_response_labels.add(packet.negativeResponse.responseLabel);
+      }
       byEcu.set(packet.ecu, current);
     });
     return [...byEcu.values()].map((row) => ({
@@ -1693,7 +1752,10 @@
       address: row.address,
       status: row.status,
       response_count: row.response_count,
-      services: [...row.services]
+      services: [...row.services],
+      negative_response_count: row.negative_response_count,
+      negative_requested_services: [...row.negative_requested_services],
+      negative_response_labels: [...row.negative_response_labels]
     }));
   }
 
@@ -1725,11 +1787,13 @@
         schemaVersion: classified.schemaVersion,
         bucketCounts: classified.bucketCounts,
         isoTpSummary: classified.isoTpSummary,
+        negativeResponseSummary: classified.negativeResponseSummary,
         lineCount: classified.lineCount
       },
       warnings: mergeUniqueStrings(
         session.warnings,
-        classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : []
+        classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : [],
+        classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
       ),
       hadSensitiveIdentifier: classified.hadSensitiveIdentifier || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: classified.sourceLength,

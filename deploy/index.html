@@ -447,6 +447,33 @@
 
         <p id="obdCapabilityText" class="data-status">車両接続機能の対応状況を確認しています。</p>
 
+        <section class="obd-operation-panel" aria-labelledby="obdProgressTitle">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">CURRENT PROGRESS</p>
+              <h3 id="obdProgressTitle">OBD2車両読取の進行状況</h3>
+            </div>
+          </div>
+          <div class="obd-progress-grid">
+            <article>
+              <strong>読取データ基盤</strong>
+              <span>DTC、フリーズフレーム、ライブPID、レディネス、Mode06、Mode09を既存診断フローへ統合中。</span>
+            </article>
+            <article>
+              <strong>実ログ解析</strong>
+              <span>CAN ID、ISO-TP分割応答、否定応答、未換算RAW値を保持して読取結果を捨てにくくしています。</span>
+            </article>
+            <article>
+              <strong>実車接続</strong>
+              <span>Web Serial、ELM327/STN、ローカルブリッジ、J2534などの接続層は準備中。車両送信はまだ無効です。</span>
+            </article>
+            <article>
+              <strong>次の中身</strong>
+              <span>対応PID、ECU別応答、読取ログの整形を増やし、接続後に診断機として使える土台を優先します。</span>
+            </article>
+          </div>
+        </section>
+
         <div class="obd-connection-bar">
           <div>
             <span class="obd-connection-label">接続状態</span>

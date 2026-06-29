@@ -885,6 +885,34 @@ body.dark .flow-node-measure .flow-step {
   line-height: 1.55;
 }
 
+.obd-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.obd-progress-grid article {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent-strong);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 14px;
+}
+
+.obd-progress-grid strong {
+  color: var(--ink);
+}
+
+.obd-progress-grid span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
 .obd-import-label {
   margin-top: 18px;
 }

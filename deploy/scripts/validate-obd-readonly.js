@@ -477,7 +477,9 @@ const obdTextLog = [
   "7E8 09 46 01 01 00 64 00 32 00 C8",
   ">0904",
   "7E8 10 0B 49 04 01 43 41 4C",
-  "7E8 21 2D 31 32 33 34"
+  "7E8 21 2D 31 32 33 34",
+  ">0102",
+  "7E8 03 7F 01 12"
 ].join("\n");
 const classifiedObdText = obd.classifyObdResponseLines(obdTextLog);
 check(classifiedObdText.schemaVersion === "obd_response_line_classification_v1", "OBD log classification schema is invalid");
@@ -486,6 +488,11 @@ check(classifiedObdText.bucketCounts.pendingDtcResponses === 1, "OBD log pending
 check(classifiedObdText.bucketCounts.permanentDtcResponses === 1, "OBD log permanent DTC response was not classified");
 check(classifiedObdText.bucketCounts.livePidResponses === 2, "OBD log live PID responses were not classified");
 check(classifiedObdText.bucketCounts.onboardMonitorResponses === 1, "OBD log Mode 06 response was not classified");
+check(classifiedObdText.bucketCounts.negativeResponses === 1, "OBD log negative response was not classified");
+check(classifiedObdText.responseBuckets.negativeResponses[0]?.negativeResponse?.requestedService === "01", "否定応答の要求サービスを保持できません");
+check(classifiedObdText.responseBuckets.negativeResponses[0]?.negativeResponse?.responseLabel === "subfunction_not_supported", "否定応答コードを分類できません");
+check(classifiedObdText.negativeResponseSummary.totalCount === 1, "否定応答件数を集計できません");
+check(classifiedObdText.negativeResponseSummary.responseCodes.includes("12"), "否定応答コード一覧を集計できません");
 check(classifiedObdText.responseBuckets.livePidResponses[0]?.ecu === "7E8", "OBDログ分類でECUアドレスを保持できません");
 check(classifiedObdText.responseBuckets.livePidResponses[0]?.frameLength === 4, "OBDログ分類でCANフレーム長を保持できません");
 check(classifiedObdText.ecuResponseCount === 1, "OBDログ分類でECU応答数を集計できません");
@@ -508,8 +515,12 @@ check(classifiedObdText.retainedRawText === false && classifiedObdText.wouldTran
 const textScanSession = obd.buildScanSessionFromObdText(obdTextLog, { session_id: "obd-text-test", protocol: "ISO15765-4" });
 check(textScanSession.schemaVersion === "scan_session_v1", "OBD text log was not converted to scan session");
 check(textScanSession.importClassification.bucketCounts.freezeFrameResponses === 2, "OBD text scan session did not keep freeze-frame bucket count");
+check(textScanSession.importClassification.negativeResponseSummary.totalCount === 1, "OBD text scan session did not keep negative response summary");
+check(textScanSession.warnings.includes("negative_obd_response_present"), "OBD text scan session did not reflect negative response warning");
 check(textScanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount >= 8, "OBD text scan session did not keep ECU response count");
 check(textScanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.services.includes("46"), "OBD text scan session did not keep ECU service list");
+check(textScanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.negativeResponseCount === 1, "OBD text scan session did not keep ECU negative response count");
+check(textScanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.negativeRequestedServices.includes("01"), "OBD text scan session did not keep ECU negative requested service");
 check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored"), "OBD text scan session did not include stored DTC");
 check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "pending"), "OBD text scan session did not include pending DTC");
 check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "permanent"), "OBD text scan session did not include permanent DTC");
@@ -578,6 +589,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 348");
+  console.log("OBD read-only safety checks: 357");
   console.log("Errors: 0");
 }
