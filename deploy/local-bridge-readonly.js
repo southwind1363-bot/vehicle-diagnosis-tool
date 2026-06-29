@@ -25,7 +25,7 @@ const BLOCKED_WRITE_INTENTS = new Set([
   "ecu_reset"
 ]);
 const SAMPLE_SUPPORTED_PIDS = [
-  "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11", "1C",
+  "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11", "12", "1C", "1E",
   "1F", "21", "22", "23", "2C", "2D", "2E", "2F", "30", "31", "32", "33",
   "3C", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C",
   "4D", "4E", "51", "52", "59", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "6A", "6C", "8E"
@@ -44,7 +44,9 @@ const SAMPLE_LIVE_VALUES = [
   { id: "intake_air_temp", pid: "0F", value: 40, unit: "°C" },
   { id: "maf_air_flow", pid: "10", value: 6.55, unit: "g/s" },
   { id: "throttle_position", pid: "11", value: 50.2, unit: "%" },
+  { id: "secondary_air_status", pid: "12", value: "upstream_of_catalytic_converter", unit: "" },
   { id: "obd_standard", pid: "1C", value: "eobd_and_obd_ii", unit: "" },
+  { id: "auxiliary_input_status", pid: "1E", value: "pto_inactive", unit: "" },
   { id: "engine_runtime", pid: "1F", value: 600, unit: "s" },
   { id: "distance_with_mil", pid: "21", value: 100, unit: "km" },
   { id: "fuel_rail_pressure", pid: "22", value: 2000, unit: "kPa" },
@@ -456,6 +458,14 @@ function decodeLivePidValues(pid, payload) {
     return [{ id: "obd_standard", pid, value: decodeObdStandard(a), unit: "" }];
   }
 
+  if (pid === "12" && Number.isInteger(a)) {
+    return [{ id: "secondary_air_status", pid, value: decodeSecondaryAirStatus(a), unit: "" }];
+  }
+
+  if (pid === "1E" && Number.isInteger(a)) {
+    return [{ id: "auxiliary_input_status", pid, value: (a & 0x01) ? "pto_active" : "pto_inactive", unit: "" }];
+  }
+
   const o2SensorPidMap = {
     "14": ["o2_b1s1_voltage", "o2_b1s1_stft"],
     "15": ["o2_b1s2_voltage", "o2_b1s2_stft"],
@@ -676,6 +686,16 @@ function decodeObdStandard(value) {
     0x24: "heavy_duty_euro_obd_stage_ii_no_nox_control"
   };
   return standards[value] || `unknown_${toHexByte(value)}`;
+}
+
+function decodeSecondaryAirStatus(value) {
+  const statuses = {
+    0x01: "upstream_of_catalytic_converter",
+    0x02: "downstream_of_catalytic_converter",
+    0x04: "from_outside_or_off",
+    0x08: "pump_commanded_for_diagnostics"
+  };
+  return statuses[value] || `unknown_${toHexByte(value)}`;
 }
 
 function decodePercentCentered(value) {
