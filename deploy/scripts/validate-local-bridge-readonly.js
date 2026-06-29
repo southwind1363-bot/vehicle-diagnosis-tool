@@ -73,9 +73,26 @@ try {
 const replayLog = [
   "can0 7E8#0643000001710300",
   "can0 7E8#06410181070000",
+  "can0 7E8#03410680",
+  "can0 7E8#03410799",
+  "can0 7E8#0341087A",
+  "can0 7E8#03410988",
+  "can0 7E8#03410A28",
   "can0 7E8#04410C1AF8",
+  "can0 7E8#03410E80",
+  "can0 7E8#03410F50",
+  "can0 7E8#0441140180",
+  "can0 7E8#04411F0258",
+  "can0 7E8#0441210064",
+  "can0 7E8#0441220100",
+  "can0 7E8#04412300C8",
+  "can0 7E8#03412F80",
+  "can0 7E8#03413364",
   "(171234.123456) can0 7E8#0341057B",
   "0.001,7E8,false,Rx,0,4,41,42,37,78",
+  "can0 7E8#0441448000",
+  "can0 7E8#03414650",
+  "can0 7E8#04415E0064",
   "can0 7E8#0742010081070000",
   "can0 7E8#054202000171",
   "can0 7E8#04420C001AF8",
@@ -101,6 +118,18 @@ try {
   check(replayLive.data.values.some((item) => item.id === "mil_status" && item.value === true), "replay live response did not decode MIL status");
   check(replayLive.data.values.some((item) => item.id === "stored_dtc_count" && item.value === 1), "replay live response did not decode stored DTC count");
   check(replayLive.data.values.some((item) => item.id === "readiness_flag_count" && item.value === 3), "replay live response did not decode readiness flags");
+  check(replayLive.data.values.some((item) => item.id === "stft_b1" && item.value === 0), "replay live response did not decode STFT B1");
+  check(replayLive.data.values.some((item) => item.id === "ltft_b1" && item.value === 19.53), "replay live response did not decode LTFT B1");
+  check(replayLive.data.values.some((item) => item.id === "fuel_pressure" && item.value === 120), "replay live response did not decode fuel pressure");
+  check(replayLive.data.values.some((item) => item.id === "intake_air_temp" && item.value === 40), "replay live response did not decode intake air temperature");
+  check(replayLive.data.values.some((item) => item.id === "o2_b1s1_voltage" && item.value === 0.005), "replay live response did not decode O2 B1S1 voltage");
+  check(replayLive.data.values.some((item) => item.id === "engine_runtime" && item.value === 600), "replay live response did not decode engine runtime");
+  check(replayLive.data.values.some((item) => item.id === "fuel_rail_pressure" && item.value === 2000), "replay live response did not decode fuel rail pressure");
+  check(replayLive.data.values.some((item) => item.id === "fuel_level" && item.value === 50.2), "replay live response did not decode fuel level");
+  check(replayLive.data.values.some((item) => item.id === "barometric_pressure" && item.value === 100), "replay live response did not decode barometric pressure");
+  check(replayLive.data.values.some((item) => item.id === "commanded_equivalence_ratio" && item.value === 1), "replay live response did not decode commanded equivalence ratio");
+  check(replayLive.data.values.some((item) => item.id === "ambient_air_temp" && item.value === 40), "replay live response did not decode ambient air temperature");
+  check(replayLive.data.values.some((item) => item.id === "engine_fuel_rate" && item.value === 5), "replay live response did not decode engine fuel rate");
 
   const replayFreezeFrame = await post(replayPort, "read_freeze_frame");
   check(replayFreezeFrame.data.trigger_dtc === "P0171", "replay freeze frame did not decode trigger DTC");
@@ -117,6 +146,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 32");
+  console.log("Local bridge read-only checks: 44");
   console.log("Errors: 0");
 }

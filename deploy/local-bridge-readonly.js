@@ -395,6 +395,24 @@ function decodeLivePidValues(pid, payload) {
     ];
   }
 
+  const o2SensorPidMap = {
+    "14": ["o2_b1s1_voltage", "o2_b1s1_stft"],
+    "15": ["o2_b1s2_voltage", "o2_b1s2_stft"],
+    "16": ["o2_b1s3_voltage", "o2_b1s3_stft"],
+    "17": ["o2_b1s4_voltage", "o2_b1s4_stft"],
+    "18": ["o2_b2s1_voltage", "o2_b2s1_stft"],
+    "19": ["o2_b2s2_voltage", "o2_b2s2_stft"],
+    "1A": ["o2_b2s3_voltage", "o2_b2s3_stft"],
+    "1B": ["o2_b2s4_voltage", "o2_b2s4_stft"]
+  };
+  if (o2SensorPidMap[pid] && Number.isInteger(a) && Number.isInteger(b)) {
+    const [voltageId, trimId] = o2SensorPidMap[pid];
+    return [
+      { id: voltageId, pid, value: Number((a / 200).toFixed(3)), unit: "V" },
+      { id: trimId, pid, value: decodePercentCentered(b), unit: "%" }
+    ];
+  }
+
   const decoded = decodeLivePid(pid, payload);
   return decoded ? [decoded] : [];
 }
@@ -405,16 +423,36 @@ function decodeLivePid(pid, payload) {
   const pidMap = {
     "04": ["calculated_load", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "05": ["coolant_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
+    "06": ["stft_b1", decodePercentCentered(a), "%"],
+    "07": ["ltft_b1", decodePercentCentered(a), "%"],
+    "08": ["stft_b2", decodePercentCentered(a), "%"],
+    "09": ["ltft_b2", decodePercentCentered(a), "%"],
+    "0A": ["fuel_pressure", Number.isInteger(a) ? a * 3 : null, "kPa"],
     "0B": ["map", Number.isInteger(a) ? a : null, "kPa"],
     "0C": ["engine_speed", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 4 : null, "rpm"],
     "0D": ["vehicle_speed", Number.isInteger(a) ? a : null, "km/h"],
+    "0E": ["timing_advance", Number.isInteger(a) ? (a / 2) - 64 : null, "°"],
+    "0F": ["intake_air_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
     "10": ["maf", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 100 : null, "g/s"],
     "11": ["throttle_position", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
-    "42": ["control_module_voltage", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 1000 : null, "V"]
+    "1F": ["engine_runtime", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "s"],
+    "21": ["distance_with_mil", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "km"],
+    "22": ["fuel_rail_pressure_vacuum", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.079 : null, "kPa"],
+    "23": ["fuel_rail_pressure", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 10 : null, "kPa"],
+    "2F": ["fuel_level", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "33": ["barometric_pressure", Number.isInteger(a) ? a : null, "kPa"],
+    "42": ["control_module_voltage", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 1000 : null, "V"],
+    "44": ["commanded_equivalence_ratio", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 32768 : null, ""],
+    "46": ["ambient_air_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
+    "5E": ["engine_fuel_rate", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.05 : null, "L/h"]
   };
   const row = pidMap[pid];
   if (!row || !Number.isFinite(row[1])) return null;
   return { id: row[0], pid, value: Number(row[1].toFixed(2)), unit: row[2] };
+}
+
+function decodePercentCentered(value) {
+  return Number.isInteger(value) ? (value * 100 / 128) - 100 : null;
 }
 
 function countSetBits(value) {
