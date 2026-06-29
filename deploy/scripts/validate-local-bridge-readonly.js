@@ -56,6 +56,9 @@ try {
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
   check(live.data.values.some((item) => item.id === "control_module_voltage"), "live PID response did not include module voltage");
+  check(live.data.supported_pids.includes("8E"), "live PID response did not advertise friction torque support");
+  check(live.data.values.some((item) => item.id === "engine_friction_torque" && item.value === -5), "live PID response did not include sample friction torque");
+  check(live.data.values.length >= 40, "live PID sample response did not include expanded monitor values");
 
   const blockedWrite = await post(port, "clear_dtc");
   check(blockedWrite.ok === false && blockedWrite.blocked === true, "write intent was not blocked");
@@ -203,6 +206,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 73");
+  console.log("Local bridge read-only checks: 76");
   console.log("Errors: 0");
 }

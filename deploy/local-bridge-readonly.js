@@ -24,6 +24,55 @@ const BLOCKED_WRITE_INTENTS = new Set([
   "request_download",
   "ecu_reset"
 ]);
+const SAMPLE_SUPPORTED_PIDS = [
+  "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11",
+  "1F", "21", "22", "23", "2C", "2D", "2E", "2F", "30", "31", "32", "33",
+  "3C", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C",
+  "4D", "4E", "52", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "8E"
+];
+const SAMPLE_LIVE_VALUES = [
+  { id: "engine_speed", pid: "0C", value: 1726, unit: "rpm" },
+  { id: "coolant_temp", pid: "05", value: 83, unit: "°C" },
+  { id: "vehicle_speed", pid: "0D", value: 0, unit: "km/h" },
+  { id: "calculated_load", pid: "04", value: 21.6, unit: "%" },
+  { id: "stft_b1", pid: "06", value: 0, unit: "%" },
+  { id: "ltft_b1", pid: "07", value: 19.53, unit: "%" },
+  { id: "fuel_pressure", pid: "0A", value: 120, unit: "kPa" },
+  { id: "intake_manifold_pressure", pid: "0B", value: 40, unit: "kPa" },
+  { id: "intake_air_temp", pid: "0F", value: 40, unit: "°C" },
+  { id: "maf_air_flow", pid: "10", value: 6.55, unit: "g/s" },
+  { id: "throttle_position", pid: "11", value: 50.2, unit: "%" },
+  { id: "engine_runtime", pid: "1F", value: 600, unit: "s" },
+  { id: "distance_with_mil", pid: "21", value: 100, unit: "km" },
+  { id: "fuel_rail_pressure", pid: "22", value: 2000, unit: "kPa" },
+  { id: "commanded_egr", pid: "2C", value: 50.2, unit: "%" },
+  { id: "egr_error", pid: "2D", value: 12.5, unit: "%" },
+  { id: "commanded_evap_purge", pid: "2E", value: 25.1, unit: "%" },
+  { id: "fuel_level", pid: "2F", value: 50.2, unit: "%" },
+  { id: "warmups_since_clear", pid: "30", value: 5, unit: "count" },
+  { id: "distance_since_clear", pid: "31", value: 120, unit: "km" },
+  { id: "barometric_pressure", pid: "33", value: 100, unit: "kPa" },
+  { id: "catalyst_temp_b1s1", pid: "3C", value: 360, unit: "°C" },
+  { id: "control_module_voltage", pid: "42", value: 14.2, unit: "V" },
+  { id: "absolute_load", pid: "43", value: 100.39, unit: "%" },
+  { id: "commanded_equivalence_ratio", pid: "44", value: 1, unit: "λ" },
+  { id: "relative_throttle_position", pid: "45", value: 50.2, unit: "%" },
+  { id: "ambient_air_temp", pid: "46", value: 40, unit: "°C" },
+  { id: "absolute_throttle_b", pid: "47", value: 50.2, unit: "%" },
+  { id: "accelerator_position_d", pid: "49", value: 37.65, unit: "%" },
+  { id: "commanded_throttle_actuator", pid: "4C", value: 50.2, unit: "%" },
+  { id: "time_with_mil", pid: "4D", value: 60, unit: "min" },
+  { id: "time_since_clear", pid: "4E", value: 120, unit: "min" },
+  { id: "ethanol_percentage", pid: "52", value: 25.1, unit: "%" },
+  { id: "hybrid_battery_remaining", pid: "5B", value: 56.47, unit: "%" },
+  { id: "engine_oil_temp", pid: "5C", value: 60, unit: "°C" },
+  { id: "fuel_injection_timing", pid: "5D", value: 8, unit: "°" },
+  { id: "engine_fuel_rate", pid: "5E", value: 5, unit: "L/h" },
+  { id: "driver_demand_torque", pid: "61", value: 15, unit: "%" },
+  { id: "actual_engine_torque", pid: "62", value: 25, unit: "%" },
+  { id: "engine_reference_torque", pid: "63", value: 400, unit: "Nm" },
+  { id: "engine_friction_torque", pid: "8E", value: -5, unit: "%" }
+];
 
 export function createLocalBridgeApp(options = {}) {
   const pairingToken = String(options.pairingToken || process.env.LOCAL_BRIDGE_PAIRING_TOKEN || "");
@@ -207,7 +256,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        supported_pids: ["04", "05", "06", "07", "0B", "0C", "0D", "10", "11", "42"],
+        supported_pids: SAMPLE_SUPPORTED_PIDS,
         captured_at: new Date().toISOString()
       }
     };
@@ -230,15 +279,9 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        supported_pids: ["04", "05", "0B", "0C", "0D", "10", "11", "42"],
+        supported_pids: SAMPLE_SUPPORTED_PIDS,
         captured_at: new Date().toISOString(),
-        values: [
-          { id: "engine_speed", pid: "0C", value: 1726, unit: "rpm" },
-          { id: "coolant_temp", pid: "05", value: 83, unit: "°C" },
-          { id: "vehicle_speed", pid: "0D", value: 0, unit: "km/h" },
-          { id: "calculated_load", pid: "04", value: 21.6, unit: "%" },
-          { id: "control_module_voltage", pid: "42", value: 14.2, unit: "V" }
-        ]
+        values: SAMPLE_LIVE_VALUES
       }
     };
   }
