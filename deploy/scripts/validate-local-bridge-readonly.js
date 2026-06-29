@@ -117,6 +117,10 @@ const replayLog = [
   "can0 7E8#03415C64",
   "can0 7E8#04415D6D00",
   "can0 7E8#04415E0064",
+  "can0 7E8#0341618C",
+  "can0 7E8#03416296",
+  "can0 7E8#0441630190",
+  "can0 7E8#0741647D82878C91",
   "can0 7E8#0742010081070000",
   "can0 7E8#054202000171",
   "can0 7E8#04420C001AF8",
@@ -176,6 +180,11 @@ try {
   check(replayLive.data.values.some((item) => item.id === "engine_oil_temp" && item.value === 60), "replay live response did not decode engine oil temperature");
   check(replayLive.data.values.some((item) => item.id === "fuel_injection_timing" && item.value === 8), "replay live response did not decode fuel injection timing");
   check(replayLive.data.values.some((item) => item.id === "engine_fuel_rate" && item.value === 5), "replay live response did not decode engine fuel rate");
+  check(replayLive.data.values.some((item) => item.id === "driver_demand_torque" && item.value === 15), "replay live response did not decode driver demand torque");
+  check(replayLive.data.values.some((item) => item.id === "actual_engine_torque" && item.value === 25), "replay live response did not decode actual engine torque");
+  check(replayLive.data.values.some((item) => item.id === "engine_reference_torque" && item.value === 400), "replay live response did not decode engine reference torque");
+  check(replayLive.data.values.some((item) => item.id === "engine_percent_torque_idle" && item.value === 0), "replay live response did not decode idle torque point");
+  check(replayLive.data.values.some((item) => item.id === "engine_percent_torque_point4" && item.value === 20), "replay live response did not decode torque point 4");
 
   const replayFreezeFrame = await post(replayPort, "read_freeze_frame");
   check(replayFreezeFrame.data.trigger_dtc === "P0171", "replay freeze frame did not decode trigger DTC");
@@ -192,6 +201,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 67");
+  console.log("Local bridge read-only checks: 72");
   console.log("Errors: 0");
 }

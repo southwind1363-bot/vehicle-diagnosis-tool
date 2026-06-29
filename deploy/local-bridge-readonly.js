@@ -460,6 +460,16 @@ function decodeLivePidValues(pid, payload) {
     }];
   }
 
+  if (pid === "64" && [a, b, c, d, payload[4]].every(Number.isInteger)) {
+    return [
+      { id: "engine_percent_torque_idle", pid, value: a - 125, unit: "%" },
+      { id: "engine_percent_torque_point1", pid, value: b - 125, unit: "%" },
+      { id: "engine_percent_torque_point2", pid, value: c - 125, unit: "%" },
+      { id: "engine_percent_torque_point3", pid, value: d - 125, unit: "%" },
+      { id: "engine_percent_torque_point4", pid, value: payload[4] - 125, unit: "%" }
+    ];
+  }
+
   const decoded = decodeLivePid(pid, payload);
   return decoded ? [decoded] : [];
 }
@@ -512,7 +522,10 @@ function decodeLivePid(pid, payload) {
     "5B": ["hybrid_battery_remaining", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "5C": ["engine_oil_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
     "5D": ["fuel_injection_timing", Number.isInteger(a) && Number.isInteger(b) ? (((a * 256) + b) / 128) - 210 : null, "°"],
-    "5E": ["engine_fuel_rate", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.05 : null, "L/h"]
+    "5E": ["engine_fuel_rate", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.05 : null, "L/h"],
+    "61": ["driver_demand_torque", Number.isInteger(a) ? a - 125 : null, "%"],
+    "62": ["actual_engine_torque", Number.isInteger(a) ? a - 125 : null, "%"],
+    "63": ["engine_reference_torque", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "Nm"]
   };
   const row = pidMap[pid];
   if (!row || !Number.isFinite(row[1])) return null;
