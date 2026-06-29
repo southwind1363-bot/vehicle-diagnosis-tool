@@ -61,6 +61,8 @@ try {
   check(live.data.supported_pids.includes("59"), "live PID response did not advertise absolute fuel rail pressure support");
   check(live.data.values.some((item) => item.id === "fuel_rail_pressure_absolute" && item.value === 2000), "live PID response did not include sample absolute fuel rail pressure");
   check(live.data.values.some((item) => item.id === "fuel_type" && item.value === "diesel"), "live PID response did not include sample fuel type");
+  check(live.data.values.some((item) => item.id === "commanded_diesel_intake_air_flow" && item.value === 50.2), "live PID response did not include sample diesel intake air flow command");
+  check(live.data.values.some((item) => item.id === "commanded_throttle_control" && item.value === 50.2), "live PID response did not include sample diesel throttle control command");
   check(live.data.values.length >= 40, "live PID sample response did not include expanded monitor values");
 
   const blockedWrite = await post(port, "clear_dtc");
@@ -129,6 +131,8 @@ const replayLog = [
   "can0 7E8#03416296",
   "can0 7E8#0441630190",
   "can0 7E8#0741647D82878C91",
+  "can0 7E8#03416A80",
+  "can0 7E8#03416C80",
   "can0 7E8#03418E78",
   "can0 7E8#0742010081070000",
   "can0 7E8#054202000171",
@@ -196,6 +200,8 @@ try {
   check(replayLive.data.values.some((item) => item.id === "engine_reference_torque" && item.value === 400), "replay live response did not decode engine reference torque");
   check(replayLive.data.values.some((item) => item.id === "engine_percent_torque_idle" && item.value === 0), "replay live response did not decode idle torque point");
   check(replayLive.data.values.some((item) => item.id === "engine_percent_torque_point4" && item.value === 20), "replay live response did not decode torque point 4");
+  check(replayLive.data.values.some((item) => item.id === "commanded_diesel_intake_air_flow" && item.value === 50.2), "replay live response did not decode diesel intake air flow command");
+  check(replayLive.data.values.some((item) => item.id === "commanded_throttle_control" && item.value === 50.2), "replay live response did not decode diesel throttle control command");
   check(replayLive.data.values.some((item) => item.id === "engine_friction_torque" && item.value === -5), "replay live response did not decode engine friction torque");
 
   const replayFreezeFrame = await post(replayPort, "read_freeze_frame");
@@ -213,6 +219,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 81");
+  console.log("Local bridge read-only checks: 85");
   console.log("Errors: 0");
 }

@@ -28,7 +28,7 @@ const SAMPLE_SUPPORTED_PIDS = [
   "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11",
   "1F", "21", "22", "23", "2C", "2D", "2E", "2F", "30", "31", "32", "33",
   "3C", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C",
-  "4D", "4E", "51", "52", "59", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "8E"
+  "4D", "4E", "51", "52", "59", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "6A", "6C", "8E"
 ];
 const SAMPLE_LIVE_VALUES = [
   { id: "engine_speed", pid: "0C", value: 1726, unit: "rpm" },
@@ -73,6 +73,8 @@ const SAMPLE_LIVE_VALUES = [
   { id: "driver_demand_torque", pid: "61", value: 15, unit: "%" },
   { id: "actual_engine_torque", pid: "62", value: 25, unit: "%" },
   { id: "engine_reference_torque", pid: "63", value: 400, unit: "Nm" },
+  { id: "commanded_diesel_intake_air_flow", pid: "6A", value: 50.2, unit: "%" },
+  { id: "commanded_throttle_control", pid: "6C", value: 50.2, unit: "%" },
   { id: "engine_friction_torque", pid: "8E", value: -5, unit: "%" }
 ];
 
@@ -575,6 +577,8 @@ function decodeLivePid(pid, payload) {
     "61": ["driver_demand_torque", Number.isInteger(a) ? a - 125 : null, "%"],
     "62": ["actual_engine_torque", Number.isInteger(a) ? a - 125 : null, "%"],
     "63": ["engine_reference_torque", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "Nm"],
+    "6A": ["commanded_diesel_intake_air_flow", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "6C": ["commanded_throttle_control", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "8E": ["engine_friction_torque", Number.isInteger(a) ? a - 125 : null, "%"]
   };
   const row = pidMap[pid];
