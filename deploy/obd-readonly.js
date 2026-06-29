@@ -1223,7 +1223,7 @@
         .map((item) => Number(item))
         .filter((item) => Number.isInteger(item) && item >= 0 && item <= 255);
     }
-    const text = String(value || "")
+    const text = normalizeCanLogLineFormat(value)
       .replace(/\b(?:SEARCHING|BUS INIT|OK|NO DATA|STOPPED|ERROR|UNABLE TO CONNECT)\b/gi, " ")
       .replace(/[>:]/g, " ");
     return (text.match(/\b[0-9A-F]{2}\b/gi) || []).map((byte) => parseInt(byte, 16));
@@ -1512,10 +1512,52 @@
   }
 
   function normalizeObdLogLine(line) {
-    return String(line || "")
+    return normalizeCanLogLineFormat(line)
       .replace(/\b(?:SEARCHING|BUS INIT|OK|NO DATA|STOPPED|ERROR|UNABLE TO CONNECT)\b/gi, " ")
       .replace(/^[>\s]+/, "")
       .trim();
+  }
+
+  function normalizeCanLogLineFormat(line) {
+    let text = String(line || "").trim();
+    if (!text) return "";
+    text = text.replace(/^\(\s*[0-9]+(?:\.[0-9]+)?\s*\)\s+/, "");
+
+    text = text.replace(/\b([0-9A-F]{3}|[0-9A-F]{8})#([0-9A-F]{2,128})\b/gi, (_match, id, data) => {
+      const bytes = data.match(/[0-9A-F]{2}/gi) || [];
+      return [id.toUpperCase(), ...bytes.map((byte) => byte.toUpperCase())].join(" ");
+    });
+
+    text = text.replace(/\b([0-9A-F]{3}|[0-9A-F]{8})\s+\[(\d{1,2})\]\s+((?:[0-9A-F]{2}[\s,]*){1,64})/gi, (_match, id, length, data) => {
+      const lengthByte = Math.max(0, Math.min(255, parseInt(length, 10) || 0)).toString(16).toUpperCase().padStart(2, "0");
+      const bytes = data.match(/[0-9A-F]{2}/gi) || [];
+      return [id.toUpperCase(), lengthByte, ...bytes.map((byte) => byte.toUpperCase())].join(" ");
+    });
+
+    const csvNormalized = normalizeCanCsvLogLine(text);
+    if (csvNormalized) return csvNormalized;
+
+    return text;
+  }
+
+  function normalizeCanCsvLogLine(line) {
+    const text = String(line || "");
+    if (!/[,;\t]/.test(text)) return "";
+    const parts = text.split(/[,;\t]/).map((part) => part.trim()).filter(Boolean);
+    const idIndex = parts.findIndex((part) => /^[0-9A-F]{3}$|^[0-9A-F]{8}$/i.test(part));
+    if (idIndex < 0) return "";
+
+    let byteStart = parts.length;
+    while (byteStart > idIndex + 1 && /^[0-9A-F]{2}$/i.test(parts[byteStart - 1])) {
+      byteStart -= 1;
+    }
+    const bytes = parts.slice(byteStart).filter((part) => /^[0-9A-F]{2}$/i.test(part));
+    if (!bytes.length) return "";
+
+    const lengthPart = parts[byteStart - 1] || "";
+    const parsedLength = /^\d{1,3}$/.test(lengthPart) ? parseInt(lengthPart, 10) : bytes.length;
+    const lengthByte = Math.max(0, Math.min(255, parsedLength)).toString(16).toUpperCase().padStart(2, "0");
+    return [parts[idIndex].toUpperCase(), lengthByte, ...bytes.map((byte) => byte.toUpperCase())].join(" ");
   }
 
   function classifyObdResponseLines(value) {

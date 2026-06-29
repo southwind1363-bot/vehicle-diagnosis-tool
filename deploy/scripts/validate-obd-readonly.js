@@ -531,6 +531,27 @@ check(textScanSession.readinessSnapshot.milOn === true, "OBD text scan session d
 check(textScanSession.onboardMonitorSnapshot.tests[0]?.status === "pass", "OBD text scan session did not decode Mode 06");
 check(textScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "OBD text scan session did not decode CALID");
 check(textScanSession.retainedRawText === false && textScanSession.retainedRawFrames === false && textScanSession.wouldTransmit === false, "OBD text scan session retained raw text/frames or allowed transmit");
+const compactCanLog = [
+  "can0 7E8#04410C1AF8",
+  "(171234.123456) can0 7E8#0341057B"
+].join("\n");
+const compactCanSession = obd.buildScanSessionFromObdText(compactCanLog, { session_id: "compact-can-log", protocol: "ISO15765-4" });
+check(compactCanSession.importClassification.bucketCounts.livePidResponses === 2, "Compact CAN log live PID responses were not classified");
+check(compactCanSession.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Compact CAN log did not decode engine RPM");
+check(compactCanSession.livePidSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "Compact CAN log did not decode coolant temperature");
+check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount === 2, "Compact CAN log did not keep ECU response count");
+check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.services.includes("41"), "Compact CAN log did not keep ECU service list");
+check(compactCanSession.wouldTransmit === false && compactCanSession.retainedRawFrames === false, "Compact CAN log import retained raw frames or allowed transmit");
+const bracketCanClassification = obd.classifyObdResponseLines("can0  7E8   [4]  41 0C 1A F8");
+check(bracketCanClassification.responseBuckets.livePidResponses[0]?.ecu === "7E8", "Bracket CAN log did not keep ECU address");
+check(bracketCanClassification.responseBuckets.livePidResponses[0]?.frameLength === 4, "Bracket CAN log did not keep frame length");
+const extendedCanClassification = obd.classifyObdResponseLines("(0.000000) can0 18DAF110#06410018180000");
+check(extendedCanClassification.responseBuckets.supportedPidResponses[0]?.ecu === "18DAF110", "Extended CAN ID log did not keep ECU address");
+check(obd.buildScanSessionFromObdText("(0.000000) can0 18DAF110#06410018180000").supportedPidMatrix.supportedPids.includes("04"), "Extended CAN ID log did not decode supported PIDs");
+const savvyCanCsvSession = obd.buildScanSessionFromObdText("0.001,7E8,false,Rx,0,4,41,0C,1A,F8", { session_id: "savvycan-csv-log" });
+check(savvyCanCsvSession.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "SavvyCAN CSV log did not decode engine RPM");
+check(savvyCanCsvSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount === 1, "SavvyCAN CSV log did not keep ECU response count");
+check(savvyCanCsvSession.wouldTransmit === false && savvyCanCsvSession.retainedRawFrames === false, "SavvyCAN CSV log import retained raw frames or allowed transmit");
 const scanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-1",
   dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }, "P0300"] },
@@ -589,6 +610,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 357");
+  console.log("OBD read-only safety checks: 370");
   console.log("Errors: 0");
 }
