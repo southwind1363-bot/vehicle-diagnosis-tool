@@ -3,7 +3,9 @@ const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
 const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
-const APP_VERSION = "2.254.0";
+const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
+const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
+const APP_VERSION = "2.255.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -166,6 +168,10 @@ const obdDevControls = document.querySelector("#obdDevControls");
 const obdDevIdentifyButton = document.querySelector("#obdDevIdentifyButton");
 const obdDevReadDtcButton = document.querySelector("#obdDevReadDtcButton");
 const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
+const obdDevBridgeStatusButton = document.querySelector("#obdDevBridgeStatusButton");
+const obdDevBridgeVciButton = document.querySelector("#obdDevBridgeVciButton");
+const obdDevBridgeDtcButton = document.querySelector("#obdDevBridgeDtcButton");
+const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton");
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
 const obdDevSessionSummary = document.querySelector("#obdDevSessionSummary");
@@ -202,6 +208,10 @@ const obdDevSession = {
   readLoopActive: false,
   lastRawText: "",
   connectedAt: null,
+  bridgeEndpoint: null,
+  bridgeStatus: null,
+  bridgeVciList: null,
+  lastSession: null,
   selectedPidList: ["010C", "0105", "010D", "0104", "010B", "0110", "0111", "0106", "0107", "0142"]
 };
 
@@ -290,6 +300,10 @@ obdDevConnectButton.addEventListener("click", connectObdDeveloperVci);
 obdDevIdentifyButton.addEventListener("click", identifyObdDeveloperVci);
 obdDevReadDtcButton.addEventListener("click", readObdDeveloperDtc);
 obdDevSnapshotButton.addEventListener("click", readObdDeveloperLiveSnapshot);
+obdDevBridgeStatusButton.addEventListener("click", probeObdLocalBridge);
+obdDevBridgeVciButton.addEventListener("click", listObdLocalBridgeVci);
+obdDevBridgeDtcButton.addEventListener("click", readObdLocalBridgeDtc);
+obdDevBridgeLiveButton.addEventListener("click", readObdLocalBridgeLiveSnapshot);
 obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
 noticeCloseButton.addEventListener("click", () => {
   localStorage.setItem(NOTICE_KEY, "accepted");
@@ -2014,18 +2028,24 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevIdentifyButton.disabled = !unlocked || !connected;
   obdDevReadDtcButton.disabled = !unlocked || !connected;
   obdDevSnapshotButton.disabled = !unlocked || !connected;
+  obdDevBridgeStatusButton.disabled = !unlocked;
+  obdDevBridgeVciButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeLiveButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevDisconnectButton.disabled = !connected;
-  obdDevConnectionState.textContent = connected ? "VCI接続中" : "車両未接続";
+  obdDevConnectionState.textContent = connected ? "Web Serial接続中" : obdDevSession.bridgeEndpoint ? "ブリッジ確認済み" : "車両未接続";
 
   if (!unlocked) {
     obdDevStatus.textContent = "この端末に開発トークンを設定した場合だけ解除できます。読取系コマンドのみ送信します。";
   } else if (!serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
   } else if (!connected) {
-    obdDevStatus.textContent = "VCIをUSB接続し、開発読取を開始してください。ELM327/STN互換の読取テスト用です。";
+    obdDevStatus.textContent = obdDevSession.bridgeEndpoint
+      ? "ローカルブリッジ確認済みです。VCI一覧、DTC、ライブデータ読取を試せます。"
+      : "Web SerialのELM327/STN、またはローカルブリッジ経由のJ2534/CANable系読取を試せます。";
   }
 
-  renderObdDeveloperSessionSummary();
+  renderObdDeveloperSessionSummary(obdDevSession.lastSession);
 }
 
 function unlockObdDeveloperMode() {
@@ -2073,6 +2093,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.readLoopActive = true;
     obdDevSession.lastRawText = "";
     obdDevSession.connectedAt = new Date().toISOString();
+    obdDevSession.lastSession = null;
     obdDevStatus.textContent = `VCIへ接続しました。通信速度 ${baudRate}。`;
     readElmDeveloperLoop();
     renderObdDeveloperGate();
@@ -2130,6 +2151,110 @@ async function readObdDeveloperLiveSnapshot() {
   await runObdDeveloperRead("データモニター読取", ["0100", ...obdDevSession.selectedPidList]);
 }
 
+async function probeObdLocalBridge() {
+  if (!obdDevModeUnlocked) return;
+  try {
+    obdDevStatus.textContent = "ローカルブリッジを確認しています。";
+    const response = await sendObdLocalBridgeIntent("bridge_status", {}, { discover: true });
+    const status = window.ObdReadOnly.normalizeBridgeConnectionStatus(response);
+    obdDevSession.bridgeStatus = status;
+    obdDevStatus.textContent = `ブリッジ状態: ${status.displayStatus} / ${status.nextAction}`;
+    renderObdDeveloperSessionSummary(null);
+  } catch (error) {
+    obdDevStatus.textContent = `ローカルブリッジを確認できません: ${error?.message || error}`;
+  } finally {
+    renderObdDeveloperGate();
+  }
+}
+
+async function listObdLocalBridgeVci() {
+  await runObdLocalBridgeRead("VCI一覧", "list_vci", {}, (response) => {
+    const vciList = window.ObdReadOnly.normalizeBridgeVciList(response);
+    obdDevSession.bridgeVciList = vciList;
+    obdDevStatus.textContent = `VCI ${vciList.deviceCount}件 / Driver ${vciList.driverStatus}`;
+    renderObdDeveloperSessionSummary(null);
+  });
+}
+
+async function readObdLocalBridgeDtc() {
+  await runObdLocalBridgeRead("ブリッジDTC読取", "read_stored_dtc", {}, (response) => {
+    renderObdBridgeReadout({ dtcResponse: response });
+  });
+}
+
+async function readObdLocalBridgeLiveSnapshot() {
+  await runObdLocalBridgeRead("ブリッジライブ読取", "read_live_pid_snapshot", {}, (response) => {
+    renderObdBridgeReadout({ livePidResponse: response });
+  });
+}
+
+async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
+  if (!obdDevModeUnlocked) return;
+  try {
+    obdDevStatus.textContent = `${label}中です。`;
+    const response = await sendObdLocalBridgeIntent(intent, payload);
+    if (response.blocked === true || response.ok === false) {
+      throw new Error((response.errors || []).join(" / ") || "bridge_response_not_ok");
+    }
+    onSuccess(response);
+    obdDevStatus.textContent = `${label}が完了しました。`;
+  } catch (error) {
+    obdDevStatus.textContent = `${label}に失敗しました: ${error?.message || error}`;
+  } finally {
+    renderObdDeveloperGate();
+  }
+}
+
+async function sendObdLocalBridgeIntent(intent, payload = {}, options = {}) {
+  if (!isAllowedLocalBridgeIntent(intent)) throw new Error(`許可していないIntentです: ${intent}`);
+  const pairingToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
+  if (pairingToken.length < 12) throw new Error("開発トークンが未設定です。");
+  const request = {
+    request_id: generateId(),
+    api_version: "v1",
+    intent,
+    timestamp: new Date().toISOString(),
+    pairing_token: pairingToken,
+    data: payload
+  };
+
+  const endpoints = options.discover || !obdDevSession.bridgeEndpoint
+    ? OBD_LOCAL_BRIDGE_PORTS.flatMap((port) => OBD_LOCAL_BRIDGE_PATHS.map((path) => `http://127.0.0.1:${port}${path}`))
+    : [obdDevSession.bridgeEndpoint];
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const json = await response.json();
+      obdDevSession.bridgeEndpoint = endpoint;
+      return json;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("local_bridge_not_found");
+}
+
+function isAllowedLocalBridgeIntent(intent) {
+  return [
+    "bridge_status",
+    "list_vci",
+    "adapter_identity",
+    "read_stored_dtc",
+    "read_pending_dtc",
+    "read_freeze_frame",
+    "read_supported_pids",
+    "read_live_pid_snapshot"
+  ].includes(intent);
+}
+
 async function runObdDeveloperRead(label, commands) {
   if (!obdDevSession.writer || !obdDevSession.reader) {
     obdDevStatus.textContent = "VCIが接続されていません。";
@@ -2148,6 +2273,7 @@ async function runObdDeveloperRead(label, commands) {
       session_id: "web-serial-dev-readout",
       protocol: "ELM327"
     });
+    obdDevSession.lastSession = session;
     renderObdDeveloperReadout(session);
     obdDevStatus.textContent = `${label}が完了しました。取れた値だけ表示します。`;
   } catch (error) {
@@ -2219,11 +2345,51 @@ function renderObdDeveloperReadout(session) {
   renderObdDeveloperSessionSummary(session);
 }
 
+function renderObdBridgeReadout(parts = {}) {
+  const dtcSnapshot = parts.dtcResponse
+    ? window.ObdReadOnly.normalizeBridgeDtcSnapshot(parts.dtcResponse)
+    : null;
+  const livePidSnapshot = parts.livePidResponse
+    ? window.ObdReadOnly.normalizeBridgeLivePidSnapshot(parts.livePidResponse)
+    : null;
+  const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
+    dtcSnapshot: dtcSnapshot || undefined,
+    livePidSnapshot: livePidSnapshot || undefined,
+    connectionStatus: obdDevSession.bridgeStatus || undefined,
+    vciList: obdDevSession.bridgeVciList || undefined
+  });
+  const session = window.ObdReadOnly.buildDiagnosticScanSession({
+    session_id: "local-bridge-dev-readout",
+    dtcSnapshot: dtcSnapshot || { dtcs: [] },
+    livePidSnapshot: livePidSnapshot || { values: [] },
+    connectionStatus: importResult.connectionStatus,
+    vciList: importResult.vciList
+  });
+  obdDevSession.lastSession = session;
+  const monitorValues = livePidSnapshot?.monitorValues || [];
+  const codes = dtcSnapshot?.dtcs?.map((item) => item.code).filter(Boolean) || [];
+
+  if (monitorValues.length) {
+    renderObdMonitorValues(monitorValues, livePidSnapshot.monitorInsights || []);
+  }
+  if (codes.length) {
+    obdDetectedCodes.innerHTML = "";
+    [...new Set(codes)].forEach((code) => obdDetectedCodes.appendChild(createObdDtcCard(code)));
+    obdImportStatus.textContent = `${codes.length}件のブリッジDTCを読取りました。`;
+  } else if (dtcSnapshot) {
+    obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
+  }
+  renderObdDeveloperSessionSummary(session);
+}
+
 function renderObdDeveloperSessionSummary(session = null) {
   obdDevSessionSummary.innerHTML = "";
+  const bridgeDeviceCount = obdDevSession.bridgeVciList?.deviceCount ?? 0;
   const values = [
-    ["接続", obdDevSession.port ? "VCI接続中" : "未接続"],
+    ["接続", obdDevSession.port ? "Web Serial" : obdDevSession.bridgeEndpoint ? "Local Bridge" : "未接続"],
     ["開始", obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA],
+    ["Bridge", obdDevSession.bridgeEndpoint ? "確認済み" : "未確認"],
+    ["VCI", bridgeDeviceCount],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0]
   ];
