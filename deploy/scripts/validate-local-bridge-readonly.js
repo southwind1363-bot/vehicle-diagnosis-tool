@@ -74,7 +74,10 @@ const replayLog = [
   "can0 7E8#0643000001710300",
   "can0 7E8#04410C1AF8",
   "(171234.123456) can0 7E8#0341057B",
-  "0.001,7E8,false,Rx,0,4,41,42,37,78"
+  "0.001,7E8,false,Rx,0,4,41,42,37,78",
+  "can0 7E8#054202000171",
+  "can0 7E8#04420C001AF8",
+  "can0 7E8#034205007B"
 ].join("\n");
 const replayServer = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", replayLogText: replayLog });
 const replayPort = await new Promise((resolve) => {
@@ -93,6 +96,11 @@ try {
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
   check(replayLive.data.values.some((item) => item.id === "coolant_temp" && item.value === 83), "replay live response did not decode coolant temperature");
   check(replayLive.data.values.some((item) => item.id === "control_module_voltage" && item.value === 14.2), "replay live response did not decode module voltage");
+
+  const replayFreezeFrame = await post(replayPort, "read_freeze_frame");
+  check(replayFreezeFrame.data.trigger_dtc === "P0171", "replay freeze frame did not decode trigger DTC");
+  check(replayFreezeFrame.data.values.some((item) => item.id === "engine_speed" && item.value === 1726 && item.freeze_frame_number === 0), "replay freeze frame did not decode engine speed");
+  check(replayFreezeFrame.data.values.some((item) => item.id === "coolant_temp" && item.value === 83 && item.freeze_frame_number === 0), "replay freeze frame did not decode coolant temperature");
 } finally {
   await new Promise((resolve) => replayServer.close(resolve));
 }
@@ -101,6 +109,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 23");
+  console.log("Local bridge read-only checks: 26");
   console.log("Errors: 0");
 }

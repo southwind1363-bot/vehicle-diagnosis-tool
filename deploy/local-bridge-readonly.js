@@ -164,6 +164,18 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     };
   }
 
+  if (request.intent === "read_freeze_frame" && replaySnapshot) {
+    return {
+      ...base,
+      data: {
+        protocol: replaySnapshot.protocol,
+        captured_at: new Date().toISOString(),
+        trigger_dtc: replaySnapshot.triggerDtc,
+        values: replaySnapshot.freezeFrameValues
+      }
+    };
+  }
+
   if (request.intent === "read_freeze_frame") {
     return {
       ...base,
@@ -255,12 +267,14 @@ export function decodeReplayLog(text) {
     .filter((packet) => packet.bytes.length);
   const dtcs = [];
   const liveValues = [];
+  const freezeFrameValues = [];
   const supportedPids = new Set();
   const ecus = new Set();
+  let triggerDtc = null;
 
   packets.forEach(({ ecu, bytes }) => {
     if (ecu) ecus.add(ecu);
-    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x43, 0x47, 0x4A].includes(byte));
+    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x42, 0x43, 0x47, 0x4A].includes(byte));
     if (serviceIndex < 0) return;
     const service = bytes[serviceIndex];
 
@@ -271,6 +285,25 @@ export function decodeReplayLog(text) {
         const low = bytes[index + 1];
         if (high === 0 && low === 0) continue;
         dtcs.push({ code: decodeDtcPair(high, low), status, ecu: ecu || null });
+      }
+      return;
+    }
+
+    if (service === 0x42) {
+      const pid = toHexByte(bytes[serviceIndex + 1]);
+      const frameNumber = bytes[serviceIndex + 2];
+      if (!pid || !Number.isInteger(frameNumber)) return;
+      if (pid === "02" && serviceIndex + 4 < bytes.length) {
+        triggerDtc = decodeDtcPair(bytes[serviceIndex + 3], bytes[serviceIndex + 4]);
+        return;
+      }
+      const decoded = decodeLivePid(pid, bytes.slice(serviceIndex + 3));
+      if (decoded) {
+        freezeFrameValues.push({
+          ...decoded,
+          freeze_frame_number: frameNumber
+        });
+        supportedPids.add(pid);
       }
       return;
     }
@@ -295,6 +328,8 @@ export function decodeReplayLog(text) {
     ecuResponses: [...ecus].map((ecu) => ({ ecu, status: "replay", dtcs: dtcs.filter((item) => item.ecu === ecu).map((item) => item.code) })),
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
     liveValues: uniqueBy(liveValues, (item) => item.id),
+    freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}`),
+    triggerDtc,
     supportedPids: [...supportedPids].sort()
   };
 }
