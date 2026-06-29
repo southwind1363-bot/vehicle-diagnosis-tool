@@ -1,13 +1,14 @@
 {
-  "version": "2.255.0",
+  "version": "2.256.0",
   "generated_at": "2026-06-28",
-  "asset_count": 207,
+  "asset_count": 208,
   "assets": [
     "./",
     "index.html",
     "style.css",
     "script.js",
     "obd-readonly.js",
+    "local-bridge-readonly.js",
     "manifest.webmanifest",
     "service-worker.js",
     "data/component-inspection-flows-exam-2026-part2.json",

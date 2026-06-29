@@ -47,21 +47,22 @@
     "id": "capability-local-bridge",
     "label": "ローカルブリッジ / VCI連携",
     "target_level": "ELM327、J2534、CAN/CAN FDを安全境界越しに扱う",
-    "current_status": "契約と表示モデル準備済み",
-    "progress_percent": 25,
-    "current_basis": "ブリッジ契約、応答型、VCI候補、診断取込、統合入力モデルあり",
+    "current_status": "開発用読取ブリッジ同梱",
+    "progress_percent": 34,
+    "current_basis": "ブリッジ契約、応答型、Web側操作、PC側サンプルブリッジ、診断取込、統合入力モデルあり",
     "done": [
       "接続状態、VCI一覧、DTC、ライブPID、セッション要約の応答型",
       "THINKCAR系、Techstream/J2534、ELM327、CANable候補管理",
-      "実車送信なしのデータ整形"
+      "実車送信なしのデータ整形",
+      "PC側ローカルブリッジの読取専用サンプル実装"
     ],
     "missing": [
-      "実際のローカルブリッジアプリ",
+      "実VCIドライバ連携",
       "J2534 DLL連携",
-      "ELM327/Web Serial読取",
+      "THINKCAR Bluetooth VCI連携",
       "CAN FDログ要約"
     ],
-    "next_build": "まず読取専用のローカルブリッジを作り、サンプル応答から既存診断フローへ流す。",
+    "next_build": "J2534/CANable/THINKCARを実ドライバへつなぐ前に、読取応答を同じブリッジ契約で受ける。",
     "safety_gate": "connection_enabled:false / vehicle_command_enabled:false",
     "source": "ローカル検証集計と開発ロードマップ",
     "source_date": "2026-06-28"

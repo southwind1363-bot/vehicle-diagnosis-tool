@@ -6,8 +6,10 @@
   "scripts": {
     "start": "C:\\Progra~1\\nodejs\\node.exe server.js",
     "dev": "C:\\Progra~1\\nodejs\\node.exe server.js",
+    "bridge:dev": "C:\\Progra~1\\nodejs\\node.exe local-bridge-readonly.js",
     "validate:data": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-data.js",
     "validate:obd": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-obd-readonly.js",
+    "validate:bridge": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-local-bridge-readonly.js",
     "report:coverage": "C:\\Progra~1\\nodejs\\node.exe scripts/report-dtc-coverage.js",
     "import:dtc:sample": "C:\\Progra~1\\nodejs\\node.exe scripts/import-verified-dtc-csv.js --input scripts/fixtures/verified-dtc-sample.csv --source \"検証用サンプル\" --source-url \"https://example.invalid/verified-dtc-sample\" --source-date \"2026-05-31\""
   },
