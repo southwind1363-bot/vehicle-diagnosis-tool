@@ -1262,25 +1262,33 @@
 
   function decodeSupportedPidResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
-    const serviceIndex = bytes.findIndex((byte, index) => byte === 0x41 && Number.isInteger(bytes[index + 1]));
-    if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length) {
+    const supportedPids = [];
+    for (let index = 0; index + 5 < bytes.length; index++) {
+      if (bytes[index] !== 0x41 || !Number.isInteger(bytes[index + 1])) continue;
+      if (!isSupportedPidBase(bytes[index + 1])) continue;
+      const basePid = bytes[index + 1];
+      const bitBytes = bytes.slice(index + 2, index + 6);
+      bitBytes.forEach((byte, byteIndex) => {
+        for (let bit = 7; bit >= 0; bit--) {
+          if (byte & (1 << bit)) {
+            supportedPids.push((basePid + byteIndex * 8 + (8 - bit)).toString(16).toUpperCase().padStart(2, "0"));
+          }
+        }
+      });
+      index += 5;
+    }
+    if (!supportedPids.length) {
       return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [] });
     }
-    const basePid = bytes[serviceIndex + 1];
-    const bitBytes = bytes.slice(serviceIndex + 2, serviceIndex + 6);
-    const supportedPids = [];
-    bitBytes.forEach((byte, byteIndex) => {
-      for (let bit = 7; bit >= 0; bit--) {
-        if (byte & (1 << bit)) {
-          supportedPids.push((basePid + byteIndex * 8 + (8 - bit)).toString(16).toUpperCase().padStart(2, "0"));
-        }
-      }
-    });
     return buildSupportedPidMatrix({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
-      supported_pids: supportedPids
+      supported_pids: [...new Set(supportedPids)]
     });
+  }
+
+  function isSupportedPidBase(pid) {
+    return [0x00, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xE0].includes(pid);
   }
 
   function decodeLivePidResponse(input = {}) {
@@ -1289,9 +1297,11 @@
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
-      const decoded = decodeStandardPidValue(pid, bytes.slice(index + 2, index + 2 + getStandardPidPayloadLength(pid)));
+      const payloadLength = getStandardPidPayloadLength(pid);
+      const decoded = decodeStandardPidValue(pid, bytes.slice(index + 2, index + 2 + payloadLength));
       if (Array.isArray(decoded)) values.push(...decoded);
       else if (decoded) values.push(decoded);
+      index += 1 + payloadLength;
     }
     return normalizeBridgeLivePidSnapshot({
       ok: true,
@@ -1315,15 +1325,18 @@
       if (bytes[index] !== 0x42) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const frameNumber = bytes[index + 2];
-      const payload = bytes.slice(index + 3, index + 3 + getStandardPidPayloadLength(pid));
+      const payloadLength = getStandardPidPayloadLength(pid);
+      const payload = bytes.slice(index + 3, index + 3 + payloadLength);
       if (pid === "02" && Number.isInteger(payload[0]) && Number.isInteger(payload[1])) {
         const decoded = decodeDtcPair(payload[0], payload[1]);
         if (decoded !== "P0000") triggerDtc = decoded;
+        index += 2 + payloadLength;
         continue;
       }
       const decoded = decodeStandardPidValue(pid, payload);
       if (Array.isArray(decoded)) values.push(...decoded.map((item) => ({ ...item, freeze_frame_number: frameNumber })));
       else if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber });
+      index += 2 + payloadLength;
     }
 
     return normalizeFreezeFrameSnapshot({
@@ -1655,7 +1668,21 @@
   }
 
   function getStandardPidPayloadLength(pid) {
-    return pid === "64" ? 5 : 4;
+    const oneBytePids = [
+      "04", "05", "06", "07", "08", "09", "0A", "0B", "0D", "0E", "0F", "11", "12", "13", "1C", "1D", "1E",
+      "2C", "2D", "2E", "2F", "30", "33", "45", "46", "47", "48", "49", "4A", "4B", "4C", "51", "52", "5A",
+      "5B", "5C", "61", "62", "6A", "6C", "8E", "A5"
+    ];
+    const twoBytePids = [
+      "02", "03", "0C", "10", "14", "15", "16", "17", "18", "19", "1A", "1B", "1F", "21", "22", "23",
+      "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "5D", "5E", "63", "69"
+    ];
+    const fourBytePids = ["01", "24", "25", "26", "27", "28", "29", "2A", "2B", "34", "35", "38", "39"];
+    if (oneBytePids.includes(pid)) return 1;
+    if (twoBytePids.includes(pid)) return 2;
+    if (fourBytePids.includes(pid)) return 4;
+    if (pid === "64") return 5;
+    return 0;
   }
 
   function decodeMonitorStatusPid(pid, a, b) {
