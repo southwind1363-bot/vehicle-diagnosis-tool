@@ -525,7 +525,8 @@ function decodeLivePid(pid, payload) {
     "5E": ["engine_fuel_rate", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.05 : null, "L/h"],
     "61": ["driver_demand_torque", Number.isInteger(a) ? a - 125 : null, "%"],
     "62": ["actual_engine_torque", Number.isInteger(a) ? a - 125 : null, "%"],
-    "63": ["engine_reference_torque", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "Nm"]
+    "63": ["engine_reference_torque", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "Nm"],
+    "8E": ["engine_friction_torque", Number.isInteger(a) ? a - 125 : null, "%"]
   };
   const row = pidMap[pid];
   if (!row || !Number.isFinite(row[1])) return null;

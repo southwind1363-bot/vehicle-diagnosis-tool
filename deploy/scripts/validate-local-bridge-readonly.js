@@ -121,6 +121,7 @@ const replayLog = [
   "can0 7E8#03416296",
   "can0 7E8#0441630190",
   "can0 7E8#0741647D82878C91",
+  "can0 7E8#03418E78",
   "can0 7E8#0742010081070000",
   "can0 7E8#054202000171",
   "can0 7E8#04420C001AF8",
@@ -185,6 +186,7 @@ try {
   check(replayLive.data.values.some((item) => item.id === "engine_reference_torque" && item.value === 400), "replay live response did not decode engine reference torque");
   check(replayLive.data.values.some((item) => item.id === "engine_percent_torque_idle" && item.value === 0), "replay live response did not decode idle torque point");
   check(replayLive.data.values.some((item) => item.id === "engine_percent_torque_point4" && item.value === 20), "replay live response did not decode torque point 4");
+  check(replayLive.data.values.some((item) => item.id === "engine_friction_torque" && item.value === -5), "replay live response did not decode engine friction torque");
 
   const replayFreezeFrame = await post(replayPort, "read_freeze_frame");
   check(replayFreezeFrame.data.trigger_dtc === "P0171", "replay freeze frame did not decode trigger DTC");
@@ -201,6 +203,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 72");
+  console.log("Local bridge read-only checks: 73");
   console.log("Errors: 0");
 }
