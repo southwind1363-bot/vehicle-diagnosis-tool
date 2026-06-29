@@ -308,7 +308,7 @@ check(decodedSupportedPids.supportedPids.includes("20") && decodedSupportedPids.
 check(decodedSupportedPids.supportedCount >= 4, "対応PIDマトリクスへ対応状態を反映できません");
 const ignoredNonBitmapPid = obd.decodeSupportedPidResponse({ raw: "41 0C 1A F8 41 05 7B" });
 check(ignoredNonBitmapPid.supportedPids.length === 0, "ライブPID応答を対応PIDビットマップとして誤読しています");
-const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0D 28 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 8E 7B" });
+const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0D 28 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 84 5A 41 8C 80 41 8E 7B 41 A6 00 01 E2 40" });
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "回転数PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "冷却水温PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "車速PIDをデコードできません");
@@ -316,6 +316,14 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "control_module_v
 const livePayloadWithHeaderByte = obd.decodeLivePidResponse({ raw: "41 42 41 00 41 0D 28" });
 check(livePayloadWithHeaderByte.monitorValues.find((item) => item.id === "control_module_voltage")?.value === 16.64, "ライブPIDペイロード内の41を応答ヘッダとして誤読しています");
 check(livePayloadWithHeaderByte.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "ライブPIDペイロード後の次PIDを読み進められません");
+const liveUnknownLengthTextPid = obd.decodeLivePidResponse({ raw: "41 65 01 02 41 0D 28" });
+check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "長さ未定義の状態系PIDを値として保持できません");
+check(liveUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "長さ未定義PIDの後続PIDを読み進められません");
+const liveUndecodedNumberPid = obd.decodeLivePidResponse({ raw: "41 75 01 90 41 7A 00 64 41 0D 28" });
+check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90", "式未実装の数値PIDをRAW値として保持できません");
+check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.decoded === false, "式未実装の数値PIDに未換算フラグがありません");
+check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "dpf_differential_pressure")?.value === "00 64", "DPF系の式未実装PIDをRAW値として保持できません");
+check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "式未実装PIDの後続PIDを読み進められません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status")?.value === "mil_on;dtc_count=2;ignition=spark", "Monitor status PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_mil")?.value === "mil_on", "Monitor status MIL value was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_dtc_count")?.value === 2, "Monitor status DTC count was not decoded");
@@ -373,7 +381,10 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_egr_pi
 check(decodedLivePids.monitorValues.find((item) => item.id === "egr_error_pid69")?.value === 12.5, "PID 69 EGR error was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_diesel_intake_air_flow")?.value === 40, "Commanded diesel intake air flow PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_throttle_control")?.value === 60, "Commanded throttle control PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "manifold_surface_temp")?.value === 50, "Manifold surface temperature PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_throttle_actuator_control")?.value === 50.196, "Commanded throttle actuator control PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_friction_torque")?.value === -2, "Engine friction torque PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "odometer")?.value === 12345.6, "ECU odometer PID was not decoded");
 check(decodedLivePids.wouldTransmit === false && decodedLivePids.retainedRawText === false, "ライブPIDデコードが送信または原文保持扱いです");
 const decodedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 05 00 7B" });
 check(decodedFreezeFrame.triggerDtc === "P0171", "フリーズフレーム応答から起点DTCをデコードできません");
@@ -386,6 +397,12 @@ check(decodedFreezeFrame.monitorValues.find((item) => item.id === "coolant_temp"
 const freezePayloadWithHeaderByte = obd.decodeFreezeFrameResponse({ raw: "42 42 00 42 00 42 0D 00 28" });
 check(freezePayloadWithHeaderByte.monitorValues.find((item) => item.id === "control_module_voltage")?.value === 16.896, "フリーズフレームペイロード内の42を応答ヘッダとして誤読しています");
 check(freezePayloadWithHeaderByte.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームペイロード後の次PIDを読み進められません");
+const freezeUnknownLengthTextPid = obd.decodeFreezeFrameResponse({ raw: "42 65 00 01 02 42 0D 00 28" });
+check(freezeUnknownLengthTextPid.monitorValues.find((item) => item.id === "auxiliary_io_supported")?.value === "01 02", "フリーズフレームで長さ未定義の状態系PIDを値として保持できません");
+check(freezeUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで長さ未定義PIDの後続PIDを読み進められません");
+const freezeUndecodedNumberPid = obd.decodeFreezeFrameResponse({ raw: "42 75 00 01 90 42 0D 00 28" });
+check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90", "フリーズフレームで式未実装の数値PIDをRAW値として保持できません");
+check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで式未実装PIDの後続PIDを読み進められません");
 check(decodedFreezeFrame.retainedRawText === false, "フリーズフレームデコードが原文保持になっています");
 const decodedEcuInfo = obd.decodeEcuInfoResponse({ raw: "49 02 01 4A 54 44 4B 4E 33 44 55 30 41 30 31 32 33 34 35 36 49 04 01 43 41 4C 2D 31 32 33 34 49 0A 01 45 6E 67 69 6E 65 20 45 43 55" });
 check(decodedEcuInfo.hadSensitiveIdentifier === true, "Mode 09 VINを識別情報として検出できません");
@@ -531,6 +548,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 316");
+  console.log("OBD read-only safety checks: 329");
   console.log("Errors: 0");
 }

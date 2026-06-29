@@ -788,10 +788,12 @@
     const definition = monitorDefinitions.find((item) => item.id === id)
       || monitorDefinitions.find((item) => item.pid === row.pid);
     if (!definition) return null;
+    const isUndecodedRaw = row.decoded === false;
     const valueType = definition?.valueType || (typeof row.value === "string" && !NUMBER_PATTERN.test(row.value) ? "text" : "number");
-    const parsedValue = valueType === "text" ? String(row.value ?? "").slice(0, 160) : Number(row.value);
-    if (valueType === "number" && !Number.isFinite(parsedValue)) return null;
+    const parsedValue = valueType === "text" || isUndecodedRaw ? String(row.value ?? "").slice(0, 160) : Number(row.value);
+    if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;
     if (valueType === "text" && !parsedValue) return null;
+    if (isUndecodedRaw && !parsedValue) return null;
 
     return {
       id: definition?.id || id,
@@ -799,12 +801,14 @@
       value: parsedValue,
       unit: definition?.unit || row.unit || "",
       category: definition?.category || row.category || "ブリッジ読取",
-      valueType,
+      valueType: isUndecodedRaw ? "raw_hex" : valueType,
       service: definition?.service || row.service || null,
       pid: definition?.pid || row.pid || null,
       scope: definition?.scope || "local-bridge",
       supportNote: definition?.supportNote || "ローカルブリッジ応答を既存データモニター表示へ整形",
       freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null,
+      decoded: isUndecodedRaw ? false : true,
+      note: isUndecodedRaw ? row.note || "未換算RAW値" : row.note || null,
       sourceLine: index + 1
     };
   }
@@ -1298,10 +1302,11 @@
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const payloadLength = getStandardPidPayloadLength(pid);
-      const decoded = decodeStandardPidValue(pid, bytes.slice(index + 2, index + 2 + payloadLength));
+      const payload = getResponsePayload(bytes, index + 2, payloadLength, 0x41);
+      const decoded = decodeStandardPidValue(pid, payload);
       if (Array.isArray(decoded)) values.push(...decoded);
       else if (decoded) values.push(decoded);
-      index += 1 + payloadLength;
+      index += 1 + payload.length;
     }
     return normalizeBridgeLivePidSnapshot({
       ok: true,
@@ -1326,17 +1331,17 @@
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const frameNumber = bytes[index + 2];
       const payloadLength = getStandardPidPayloadLength(pid);
-      const payload = bytes.slice(index + 3, index + 3 + payloadLength);
+      const payload = getResponsePayload(bytes, index + 3, payloadLength, 0x42);
       if (pid === "02" && Number.isInteger(payload[0]) && Number.isInteger(payload[1])) {
         const decoded = decodeDtcPair(payload[0], payload[1]);
         if (decoded !== "P0000") triggerDtc = decoded;
-        index += 2 + payloadLength;
+        index += 2 + payload.length;
         continue;
       }
       const decoded = decodeStandardPidValue(pid, payload);
       if (Array.isArray(decoded)) values.push(...decoded.map((item) => ({ ...item, freeze_frame_number: frameNumber })));
       else if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber });
-      index += 2 + payloadLength;
+      index += 2 + payload.length;
     }
 
     return normalizeFreezeFrameSnapshot({
@@ -1613,6 +1618,9 @@
     const d = dataBytes[3];
     if (!Number.isInteger(a)) return null;
     const word = () => Number.isInteger(b) ? (a * 256) + b : null;
+    const doubleWord = () => [a, b, c, d].every(Number.isInteger)
+      ? (a * 0x1000000) + (b * 0x10000) + (c * 0x100) + d
+      : null;
     const signedWord = () => {
       const raw = word();
       return raw === null ? null : raw > 0x7FFF ? raw - 0x10000 : raw;
@@ -1657,7 +1665,11 @@
     else if (pid === "63") value = word();
     else if (pid === "64") return decodeEnginePercentTorqueData(pid, dataBytes);
     else if (pid === "69") return decodeCommandedEgrAndError(pid, a, b);
-    else if (definition.valueType === "text") value = dataBytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+    else if (pid === "84") value = a - 40;
+    else if (pid === "8C") value = a * 100 / 255;
+    else if (pid === "A6") value = doubleWord() === null ? null : doubleWord() / 10;
+    else if (definition.valueType === "text") value = formatRawPidBytes(dataBytes);
+    else if (definition.valueType === "number") return buildUndecodedPidValue(definition, pid, dataBytes);
     if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
     return {
       id: definition.id,
@@ -1667,22 +1679,49 @@
     };
   }
 
+  function buildUndecodedPidValue(definition, pid, dataBytes) {
+    const rawHex = formatRawPidBytes(dataBytes);
+    if (!rawHex) return null;
+    return {
+      id: definition.id,
+      pid,
+      value: rawHex,
+      unit: definition.unit || "",
+      decoded: false,
+      note: "未換算RAW値"
+    };
+  }
+
+  function formatRawPidBytes(dataBytes) {
+    return dataBytes
+      .filter(Number.isInteger)
+      .map((byte) => byte.toString(16).toUpperCase().padStart(2, "0"))
+      .join(" ");
+  }
+
   function getStandardPidPayloadLength(pid) {
     const oneBytePids = [
       "04", "05", "06", "07", "08", "09", "0A", "0B", "0D", "0E", "0F", "11", "12", "13", "1C", "1D", "1E",
       "2C", "2D", "2E", "2F", "30", "33", "45", "46", "47", "48", "49", "4A", "4B", "4C", "51", "52", "5A",
-      "5B", "5C", "61", "62", "6A", "6C", "8E", "A5"
+      "5B", "5C", "61", "62", "6A", "6C", "84", "8C", "8E", "A5"
     ];
     const twoBytePids = [
       "02", "03", "0C", "10", "14", "15", "16", "17", "18", "19", "1A", "1B", "1F", "21", "22", "23",
       "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "5D", "5E", "63", "69"
     ];
-    const fourBytePids = ["01", "24", "25", "26", "27", "28", "29", "2A", "2B", "34", "35", "38", "39"];
+    const fourBytePids = ["01", "24", "25", "26", "27", "28", "29", "2A", "2B", "34", "35", "38", "39", "A6"];
     if (oneBytePids.includes(pid)) return 1;
     if (twoBytePids.includes(pid)) return 2;
     if (fourBytePids.includes(pid)) return 4;
     if (pid === "64") return 5;
     return 0;
+  }
+
+  function getResponsePayload(bytes, payloadStart, payloadLength, responseHeader) {
+    if (payloadLength > 0) return bytes.slice(payloadStart, payloadStart + payloadLength);
+    const nextHeader = bytes.findIndex((byte, nextIndex) => nextIndex > payloadStart && byte === responseHeader);
+    const payloadEnd = nextHeader > payloadStart ? nextHeader : bytes.length;
+    return bytes.slice(payloadStart, payloadEnd);
   }
 
   function decodeMonitorStatusPid(pid, a, b) {
