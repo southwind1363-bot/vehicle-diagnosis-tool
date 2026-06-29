@@ -413,6 +413,38 @@ function decodeLivePidValues(pid, payload) {
     ];
   }
 
+  const wideO2VoltagePidMap = {
+    "24": ["wide_o2_b1s1_ratio", "wide_o2_b1s1_voltage_wide"],
+    "25": ["wide_o2_b1s2_ratio", "wide_o2_b1s2_voltage_wide"],
+    "26": ["wide_o2_b1s3_ratio", "wide_o2_b1s3_voltage_wide"],
+    "27": ["wide_o2_b1s4_ratio", "wide_o2_b1s4_voltage_wide"],
+    "28": ["wide_o2_b2s1_ratio", "wide_o2_b2s1_voltage_wide"],
+    "29": ["wide_o2_b2s2_ratio", "wide_o2_b2s2_voltage_wide"],
+    "2A": ["wide_o2_b2s3_ratio", "wide_o2_b2s3_voltage_wide"],
+    "2B": ["wide_o2_b2s4_ratio", "wide_o2_b2s4_voltage_wide"]
+  };
+  if (wideO2VoltagePidMap[pid] && [a, b, c, d].every(Number.isInteger)) {
+    const [ratioId, voltageId] = wideO2VoltagePidMap[pid];
+    return [
+      { id: ratioId, pid, value: Number((((a * 256) + b) / 32768).toFixed(3)), unit: "" },
+      { id: voltageId, pid, value: Number((((c * 256) + d) / 8192).toFixed(3)), unit: "V" }
+    ];
+  }
+
+  const wideO2CurrentPidMap = {
+    "34": ["wide_o2_b1s1_current_ratio", "wide_o2_b1s1_current"],
+    "35": ["wide_o2_b1s2_current_ratio", "wide_o2_b1s2_current"],
+    "38": ["wide_o2_b2s1_current_ratio", "wide_o2_b2s1_current"],
+    "39": ["wide_o2_b2s2_current_ratio", "wide_o2_b2s2_current"]
+  };
+  if (wideO2CurrentPidMap[pid] && [a, b, c, d].every(Number.isInteger)) {
+    const [ratioId, currentId] = wideO2CurrentPidMap[pid];
+    return [
+      { id: ratioId, pid, value: Number((((a * 256) + b) / 32768).toFixed(3)), unit: "" },
+      { id: currentId, pid, value: Number(((((c * 256) + d) - 32768) / 256).toFixed(3)), unit: "mA" }
+    ];
+  }
+
   const decoded = decodeLivePid(pid, payload);
   return decoded ? [decoded] : [];
 }
@@ -439,10 +471,18 @@ function decodeLivePid(pid, payload) {
     "21": ["distance_with_mil", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "km"],
     "22": ["fuel_rail_pressure_vacuum", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.079 : null, "kPa"],
     "23": ["fuel_rail_pressure", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 10 : null, "kPa"],
+    "2C": ["commanded_egr", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "2D": ["egr_error", decodePercentCentered(a), "%"],
+    "2E": ["commanded_evap_purge", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "2F": ["fuel_level", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "30": ["warmups_since_clear", Number.isInteger(a) ? a : null, "count"],
+    "31": ["distance_since_clear", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "km"],
+    "32": ["evap_vapor_pressure", Number.isInteger(a) && Number.isInteger(b) ? (((a * 256) + b) / 4) : null, "Pa"],
     "33": ["barometric_pressure", Number.isInteger(a) ? a : null, "kPa"],
     "42": ["control_module_voltage", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 1000 : null, "V"],
+    "43": ["absolute_load", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 100 / 255 : null, "%"],
     "44": ["commanded_equivalence_ratio", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) / 32768 : null, ""],
+    "45": ["relative_throttle_position", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "46": ["ambient_air_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
     "5E": ["engine_fuel_rate", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 0.05 : null, "L/h"]
   };

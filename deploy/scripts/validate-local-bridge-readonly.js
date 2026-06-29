@@ -86,11 +86,21 @@ const replayLog = [
   "can0 7E8#0441210064",
   "can0 7E8#0441220100",
   "can0 7E8#04412300C8",
+  "can0 7E8#06412480004000",
+  "can0 7E8#03412C80",
+  "can0 7E8#03412D90",
+  "can0 7E8#03412E40",
   "can0 7E8#03412F80",
+  "can0 7E8#03413005",
+  "can0 7E8#0441310078",
+  "can0 7E8#0441320100",
   "can0 7E8#03413364",
+  "can0 7E8#06413480008100",
   "(171234.123456) can0 7E8#0341057B",
   "0.001,7E8,false,Rx,0,4,41,42,37,78",
+  "can0 7E8#0441430100",
   "can0 7E8#0441448000",
+  "can0 7E8#03414580",
   "can0 7E8#03414650",
   "can0 7E8#04415E0064",
   "can0 7E8#0742010081070000",
@@ -125,9 +135,21 @@ try {
   check(replayLive.data.values.some((item) => item.id === "o2_b1s1_voltage" && item.value === 0.005), "replay live response did not decode O2 B1S1 voltage");
   check(replayLive.data.values.some((item) => item.id === "engine_runtime" && item.value === 600), "replay live response did not decode engine runtime");
   check(replayLive.data.values.some((item) => item.id === "fuel_rail_pressure" && item.value === 2000), "replay live response did not decode fuel rail pressure");
+  check(replayLive.data.values.some((item) => item.id === "wide_o2_b1s1_ratio" && item.value === 1), "replay live response did not decode wide O2 voltage ratio");
+  check(replayLive.data.values.some((item) => item.id === "wide_o2_b1s1_voltage_wide" && item.value === 2), "replay live response did not decode wide O2 voltage");
+  check(replayLive.data.values.some((item) => item.id === "commanded_egr" && item.value === 50.2), "replay live response did not decode commanded EGR");
+  check(replayLive.data.values.some((item) => item.id === "egr_error" && item.value === 12.5), "replay live response did not decode EGR error");
+  check(replayLive.data.values.some((item) => item.id === "commanded_evap_purge" && item.value === 25.1), "replay live response did not decode EVAP purge");
   check(replayLive.data.values.some((item) => item.id === "fuel_level" && item.value === 50.2), "replay live response did not decode fuel level");
+  check(replayLive.data.values.some((item) => item.id === "warmups_since_clear" && item.value === 5), "replay live response did not decode warmups since clear");
+  check(replayLive.data.values.some((item) => item.id === "distance_since_clear" && item.value === 120), "replay live response did not decode distance since clear");
+  check(replayLive.data.values.some((item) => item.id === "evap_vapor_pressure" && item.value === 64), "replay live response did not decode EVAP vapor pressure");
   check(replayLive.data.values.some((item) => item.id === "barometric_pressure" && item.value === 100), "replay live response did not decode barometric pressure");
+  check(replayLive.data.values.some((item) => item.id === "wide_o2_b1s1_current_ratio" && item.value === 1), "replay live response did not decode wide O2 current ratio");
+  check(replayLive.data.values.some((item) => item.id === "wide_o2_b1s1_current" && item.value === 1), "replay live response did not decode wide O2 current");
+  check(replayLive.data.values.some((item) => item.id === "absolute_load" && item.value === 100.39), "replay live response did not decode absolute load");
   check(replayLive.data.values.some((item) => item.id === "commanded_equivalence_ratio" && item.value === 1), "replay live response did not decode commanded equivalence ratio");
+  check(replayLive.data.values.some((item) => item.id === "relative_throttle_position" && item.value === 50.2), "replay live response did not decode relative throttle position");
   check(replayLive.data.values.some((item) => item.id === "ambient_air_temp" && item.value === 40), "replay live response did not decode ambient air temperature");
   check(replayLive.data.values.some((item) => item.id === "engine_fuel_rate" && item.value === 5), "replay live response did not decode engine fuel rate");
 
@@ -146,6 +168,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 44");
+  console.log("Local bridge read-only checks: 58");
   console.log("Errors: 0");
 }
