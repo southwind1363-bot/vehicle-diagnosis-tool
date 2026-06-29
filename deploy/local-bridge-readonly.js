@@ -25,13 +25,15 @@ const BLOCKED_WRITE_INTENTS = new Set([
   "ecu_reset"
 ]);
 const SAMPLE_SUPPORTED_PIDS = [
-  "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11",
+  "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11",
   "1F", "21", "22", "23", "2C", "2D", "2E", "2F", "30", "31", "32", "33",
   "3C", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C",
   "4D", "4E", "51", "52", "59", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "6A", "6C", "8E"
 ];
 const SAMPLE_LIVE_VALUES = [
   { id: "engine_speed", pid: "0C", value: 1726, unit: "rpm" },
+  { id: "fuel_system_status_bank1", pid: "03", value: "closed_loop_oxygen_sensor_feedback", unit: "" },
+  { id: "fuel_system_status_bank2", pid: "03", value: "not_available", unit: "" },
   { id: "coolant_temp", pid: "05", value: 83, unit: "°C" },
   { id: "vehicle_speed", pid: "0D", value: 0, unit: "km/h" },
   { id: "calculated_load", pid: "04", value: 21.6, unit: "%" },
@@ -442,6 +444,13 @@ function decodeLivePidValues(pid, payload) {
     ];
   }
 
+  if (pid === "03" && Number.isInteger(a) && Number.isInteger(b)) {
+    return [
+      { id: "fuel_system_status_bank1", pid, value: decodeFuelSystemStatus(a), unit: "" },
+      { id: "fuel_system_status_bank2", pid, value: decodeFuelSystemStatus(b), unit: "" }
+    ];
+  }
+
   const o2SensorPidMap = {
     "14": ["o2_b1s1_voltage", "o2_b1s1_stft"],
     "15": ["o2_b1s2_voltage", "o2_b1s2_stft"],
@@ -613,6 +622,18 @@ function decodeFuelType(value) {
     0x16: "hybrid_regenerative"
   };
   return fuelTypes[value] || `unknown_${toHexByte(value)}`;
+}
+
+function decodeFuelSystemStatus(value) {
+  const statuses = {
+    0x00: "not_available",
+    0x01: "open_loop_insufficient_temperature",
+    0x02: "closed_loop_oxygen_sensor_feedback",
+    0x04: "open_loop_engine_load_or_fuel_cut",
+    0x08: "open_loop_system_failure",
+    0x10: "closed_loop_with_fault"
+  };
+  return statuses[value] || `unknown_${toHexByte(value)}`;
 }
 
 function decodePercentCentered(value) {
