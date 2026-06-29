@@ -58,6 +58,9 @@ try {
   check(live.data.values.some((item) => item.id === "control_module_voltage"), "live PID response did not include module voltage");
   check(live.data.supported_pids.includes("8E"), "live PID response did not advertise friction torque support");
   check(live.data.values.some((item) => item.id === "engine_friction_torque" && item.value === -5), "live PID response did not include sample friction torque");
+  check(live.data.supported_pids.includes("59"), "live PID response did not advertise absolute fuel rail pressure support");
+  check(live.data.values.some((item) => item.id === "fuel_rail_pressure_absolute" && item.value === 2000), "live PID response did not include sample absolute fuel rail pressure");
+  check(live.data.values.some((item) => item.id === "fuel_type" && item.value === "diesel"), "live PID response did not include sample fuel type");
   check(live.data.values.length >= 40, "live PID sample response did not include expanded monitor values");
 
   const blockedWrite = await post(port, "clear_dtc");
@@ -114,7 +117,9 @@ const replayLog = [
   "can0 7E8#03414C80",
   "can0 7E8#04414D003C",
   "can0 7E8#04414E0078",
+  "can0 7E8#03415104",
   "can0 7E8#03415240",
+  "can0 7E8#04415900C8",
   "can0 7E8#03415A80",
   "can0 7E8#03415B90",
   "can0 7E8#03415C64",
@@ -179,7 +184,9 @@ try {
   check(replayLive.data.values.some((item) => item.id === "commanded_throttle_actuator" && item.value === 50.2), "replay live response did not decode commanded throttle actuator");
   check(replayLive.data.values.some((item) => item.id === "time_with_mil" && item.value === 60), "replay live response did not decode time with MIL");
   check(replayLive.data.values.some((item) => item.id === "time_since_clear" && item.value === 120), "replay live response did not decode time since clear");
+  check(replayLive.data.values.some((item) => item.id === "fuel_type" && item.value === "diesel"), "replay live response did not decode fuel type");
   check(replayLive.data.values.some((item) => item.id === "ethanol_percentage" && item.value === 25.1), "replay live response did not decode ethanol percentage");
+  check(replayLive.data.values.some((item) => item.id === "fuel_rail_pressure_absolute" && item.value === 2000), "replay live response did not decode absolute fuel rail pressure");
   check(replayLive.data.values.some((item) => item.id === "hybrid_battery_remaining" && item.value === 56.47), "replay live response did not decode hybrid battery remaining");
   check(replayLive.data.values.some((item) => item.id === "engine_oil_temp" && item.value === 60), "replay live response did not decode engine oil temperature");
   check(replayLive.data.values.some((item) => item.id === "fuel_injection_timing" && item.value === 8), "replay live response did not decode fuel injection timing");
@@ -206,6 +213,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 76");
+  console.log("Local bridge read-only checks: 81");
   console.log("Errors: 0");
 }

@@ -28,7 +28,7 @@ const SAMPLE_SUPPORTED_PIDS = [
   "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11",
   "1F", "21", "22", "23", "2C", "2D", "2E", "2F", "30", "31", "32", "33",
   "3C", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C",
-  "4D", "4E", "52", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "8E"
+  "4D", "4E", "51", "52", "59", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "8E"
 ];
 const SAMPLE_LIVE_VALUES = [
   { id: "engine_speed", pid: "0C", value: 1726, unit: "rpm" },
@@ -63,7 +63,9 @@ const SAMPLE_LIVE_VALUES = [
   { id: "commanded_throttle_actuator", pid: "4C", value: 50.2, unit: "%" },
   { id: "time_with_mil", pid: "4D", value: 60, unit: "min" },
   { id: "time_since_clear", pid: "4E", value: 120, unit: "min" },
+  { id: "fuel_type", pid: "51", value: "diesel", unit: "" },
   { id: "ethanol_percentage", pid: "52", value: 25.1, unit: "%" },
+  { id: "fuel_rail_pressure_absolute", pid: "59", value: 2000, unit: "kPa" },
   { id: "hybrid_battery_remaining", pid: "5B", value: 56.47, unit: "%" },
   { id: "engine_oil_temp", pid: "5C", value: 60, unit: "°C" },
   { id: "fuel_injection_timing", pid: "5D", value: 8, unit: "°" },
@@ -520,6 +522,9 @@ function decodeLivePidValues(pid, payload) {
 function decodeLivePid(pid, payload) {
   const a = payload[0];
   const b = payload[1];
+  if (pid === "51" && Number.isInteger(a)) {
+    return { id: "fuel_type", pid, value: decodeFuelType(a), unit: "" };
+  }
   const pidMap = {
     "04": ["calculated_load", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "05": ["coolant_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
@@ -561,6 +566,7 @@ function decodeLivePid(pid, payload) {
     "4D": ["time_with_mil", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "min"],
     "4E": ["time_since_clear", Number.isInteger(a) && Number.isInteger(b) ? (a * 256) + b : null, "min"],
     "52": ["ethanol_percentage", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
+    "59": ["fuel_rail_pressure_absolute", Number.isInteger(a) && Number.isInteger(b) ? ((a * 256) + b) * 10 : null, "kPa"],
     "5A": ["relative_accelerator_position", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "5B": ["hybrid_battery_remaining", Number.isInteger(a) ? a * 100 / 255 : null, "%"],
     "5C": ["engine_oil_temp", Number.isInteger(a) ? a - 40 : null, "°C"],
@@ -574,6 +580,35 @@ function decodeLivePid(pid, payload) {
   const row = pidMap[pid];
   if (!row || !Number.isFinite(row[1])) return null;
   return { id: row[0], pid, value: Number(row[1].toFixed(2)), unit: row[2] };
+}
+
+function decodeFuelType(value) {
+  const fuelTypes = {
+    0x00: "not_available",
+    0x01: "gasoline",
+    0x02: "methanol",
+    0x03: "ethanol",
+    0x04: "diesel",
+    0x05: "lpg",
+    0x06: "cng",
+    0x07: "propane",
+    0x08: "electric",
+    0x09: "bifuel_gasoline",
+    0x0A: "bifuel_methanol",
+    0x0B: "bifuel_ethanol",
+    0x0C: "bifuel_lpg",
+    0x0D: "bifuel_cng",
+    0x0E: "bifuel_propane",
+    0x0F: "bifuel_electric",
+    0x10: "bifuel_electric_combustion",
+    0x11: "hybrid_gasoline",
+    0x12: "hybrid_ethanol",
+    0x13: "hybrid_diesel",
+    0x14: "hybrid_electric",
+    0x15: "hybrid_mixed_fuel",
+    0x16: "hybrid_regenerative"
+  };
+  return fuelTypes[value] || `unknown_${toHexByte(value)}`;
 }
 
 function decodePercentCentered(value) {
