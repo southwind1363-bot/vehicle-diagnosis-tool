@@ -25,7 +25,7 @@ const BLOCKED_WRITE_INTENTS = new Set([
   "ecu_reset"
 ]);
 const SAMPLE_SUPPORTED_PIDS = [
-  "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11", "12", "1C", "1E",
+  "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11", "12", "13", "1C", "1D", "1E",
   "1F", "21", "22", "23", "2C", "2D", "2E", "2F", "30", "31", "32", "33",
   "3C", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C",
   "4D", "4E", "51", "52", "59", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "6A", "6C", "8E"
@@ -45,7 +45,9 @@ const SAMPLE_LIVE_VALUES = [
   { id: "maf_air_flow", pid: "10", value: 6.55, unit: "g/s" },
   { id: "throttle_position", pid: "11", value: 50.2, unit: "%" },
   { id: "secondary_air_status", pid: "12", value: "upstream_of_catalytic_converter", unit: "" },
+  { id: "oxygen_sensors_present", pid: "13", value: "b1s1,b1s2", unit: "" },
   { id: "obd_standard", pid: "1C", value: "eobd_and_obd_ii", unit: "" },
+  { id: "oxygen_sensors_present_4banks", pid: "1D", value: "b1s1,b1s2", unit: "" },
   { id: "auxiliary_input_status", pid: "1E", value: "pto_inactive", unit: "" },
   { id: "engine_runtime", pid: "1F", value: 600, unit: "s" },
   { id: "distance_with_mil", pid: "21", value: 100, unit: "km" },
@@ -462,6 +464,14 @@ function decodeLivePidValues(pid, payload) {
     return [{ id: "secondary_air_status", pid, value: decodeSecondaryAirStatus(a), unit: "" }];
   }
 
+  if (pid === "13" && Number.isInteger(a)) {
+    return [{ id: "oxygen_sensors_present", pid, value: decodeOxygenSensorsPresent(a, false), unit: "" }];
+  }
+
+  if (pid === "1D" && Number.isInteger(a)) {
+    return [{ id: "oxygen_sensors_present_4banks", pid, value: decodeOxygenSensorsPresent(a, true), unit: "" }];
+  }
+
   if (pid === "1E" && Number.isInteger(a)) {
     return [{ id: "auxiliary_input_status", pid, value: (a & 0x01) ? "pto_active" : "pto_inactive", unit: "" }];
   }
@@ -696,6 +706,14 @@ function decodeSecondaryAirStatus(value) {
     0x08: "pump_commanded_for_diagnostics"
   };
   return statuses[value] || `unknown_${toHexByte(value)}`;
+}
+
+function decodeOxygenSensorsPresent(value, fourBanks) {
+  const labels = fourBanks
+    ? ["b1s1", "b1s2", "b2s1", "b2s2", "b3s1", "b3s2", "b4s1", "b4s2"]
+    : ["b1s1", "b1s2", "b1s3", "b1s4", "b2s1", "b2s2", "b2s3", "b2s4"];
+  const present = labels.filter((_label, index) => value & (1 << index));
+  return present.length ? present.join(",") : "none";
 }
 
 function decodePercentCentered(value) {
