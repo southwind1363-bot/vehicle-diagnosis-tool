@@ -1531,16 +1531,17 @@
       unknownResponses: []
     };
 
-    redacted.split(/\r?\n/).forEach((line) => {
-      const normalized = normalizeObdLogLine(line);
-      if (!normalized) return;
-      const bytes = parseObdHexBytes(normalized);
-      if (!bytes.length) return;
+    buildObdLogPackets(redacted).forEach((packetInput) => {
+      const bytes = packetInput.bytes;
       const positiveServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A];
       const serviceIndex = bytes.findIndex((byte) => positiveServices.includes(byte));
       const serviceByte = serviceIndex >= 0 ? bytes[serviceIndex] : null;
       const hasPair = (first, second) => bytes.some((byte, index) => byte === first && bytes[index + 1] === second);
-      const metadata = extractObdFrameMetadata(normalized, serviceByte, serviceIndex);
+      const metadata = {
+        ...packetInput.metadata,
+        service: Number.isInteger(serviceByte) ? serviceByte.toString(16).toUpperCase().padStart(2, "0") : packetInput.metadata?.service || null,
+        serviceIndex: Number.isInteger(serviceIndex) && serviceIndex >= 0 ? serviceIndex : packetInput.metadata?.serviceIndex || null
+      };
       const packet = {
         bytes,
         response: bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" "),
@@ -1572,9 +1573,11 @@
 
     const bucketCounts = Object.fromEntries(Object.entries(buckets).map(([key, rows]) => [key, rows.length]));
     const ecuResponses = buildEcuResponsesFromResponseBuckets(buckets);
+    const isoTpSummary = buildIsoTpSummary(buckets);
     return {
       schemaVersion: "obd_response_line_classification_v1",
       bucketCounts,
+      isoTpSummary,
       ecuResponseCount: ecuResponses.length,
       ecuResponses,
       responseBuckets: buckets,
@@ -1585,6 +1588,76 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
+  }
+
+  function buildObdLogPackets(text) {
+    const packets = [];
+    const pendingIsoTp = new Map();
+
+    String(text || "").split(/\r?\n/).forEach((line) => {
+      const normalized = normalizeObdLogLine(line);
+      if (!normalized) return;
+      const bytes = parseObdHexBytes(normalized);
+      if (!bytes.length) return;
+      const metadata = extractObdFrameMetadata(normalized, null, null);
+      const pci = bytes[0];
+      const isFirstFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x10 && Number.isInteger(bytes[1]);
+      const isConsecutiveFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x20;
+
+      if (isFirstFrame) {
+        const expectedLength = ((pci & 0x0F) * 0x100) + bytes[1];
+        const payload = bytes.slice(2);
+        pendingIsoTp.set(metadata.ecu, {
+          metadata: { ...metadata, isoTp: true, expectedLength, frameCount: 1, nextSequenceNumber: 1, sequenceError: false },
+          payload,
+          expectedLength
+        });
+        if (payload.length >= expectedLength) {
+          const completed = pendingIsoTp.get(metadata.ecu);
+          pendingIsoTp.delete(metadata.ecu);
+          packets.push({ bytes: completed.payload.slice(0, expectedLength), metadata: finalizeIsoTpMetadata(completed.metadata) });
+        }
+        return;
+      }
+
+      if (isConsecutiveFrame && pendingIsoTp.has(metadata.ecu)) {
+        const current = pendingIsoTp.get(metadata.ecu);
+        const sequenceNumber = pci & 0x0F;
+        if (sequenceNumber !== current.metadata.nextSequenceNumber) current.metadata.sequenceError = true;
+        current.metadata.nextSequenceNumber = (sequenceNumber + 1) & 0x0F;
+        current.payload.push(...bytes.slice(1));
+        current.metadata.frameCount += 1;
+        if (current.payload.length >= current.expectedLength) {
+          pendingIsoTp.delete(metadata.ecu);
+          packets.push({ bytes: current.payload.slice(0, current.expectedLength), metadata: finalizeIsoTpMetadata(current.metadata) });
+        }
+        return;
+      }
+
+      packets.push({ bytes, metadata });
+    });
+
+    pendingIsoTp.forEach((current) => {
+      packets.push({ bytes: current.payload.slice(0, current.expectedLength), metadata: finalizeIsoTpMetadata({ ...current.metadata, incomplete: true }) });
+    });
+
+    return packets;
+  }
+
+  function buildIsoTpSummary(responseBuckets) {
+    const packets = Object.values(responseBuckets || {}).flat();
+    const isoTpPackets = packets.filter((packet) => packet?.isoTp === true);
+    return {
+      totalCount: isoTpPackets.length,
+      incompleteCount: isoTpPackets.filter((packet) => packet.incomplete === true).length,
+      sequenceErrorCount: isoTpPackets.filter((packet) => packet.sequenceError === true).length,
+      affectedEcus: [...new Set(isoTpPackets.filter((packet) => packet.incomplete === true || packet.sequenceError === true).map((packet) => packet.ecu).filter(Boolean))]
+    };
+  }
+
+  function finalizeIsoTpMetadata(metadata) {
+    const { nextSequenceNumber, ...publicMetadata } = metadata || {};
+    return publicMetadata;
   }
 
   function extractObdFrameMetadata(line, serviceByte, serviceIndex) {
@@ -1651,8 +1724,13 @@
       importClassification: {
         schemaVersion: classified.schemaVersion,
         bucketCounts: classified.bucketCounts,
+        isoTpSummary: classified.isoTpSummary,
         lineCount: classified.lineCount
       },
+      warnings: mergeUniqueStrings(
+        session.warnings,
+        classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : []
+      ),
       hadSensitiveIdentifier: classified.hadSensitiveIdentifier || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: classified.sourceLength,
       retainedRawText: false,
@@ -1660,6 +1738,10 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
+  }
+
+  function mergeUniqueStrings(...groups) {
+    return [...new Set(groups.flatMap((group) => Array.isArray(group) ? group : []).filter(Boolean))];
   }
 
   function trimEcuInfoPayload(payload) {

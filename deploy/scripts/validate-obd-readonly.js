@@ -476,7 +476,8 @@ const obdTextLog = [
   ">0601",
   "7E8 09 46 01 01 00 64 00 32 00 C8",
   ">0904",
-  "7E8 10 0A 49 04 01 43 41 4C 2D 31 32 33 34"
+  "7E8 10 0B 49 04 01 43 41 4C",
+  "7E8 21 2D 31 32 33 34"
 ].join("\n");
 const classifiedObdText = obd.classifyObdResponseLines(obdTextLog);
 check(classifiedObdText.schemaVersion === "obd_response_line_classification_v1", "OBD log classification schema is invalid");
@@ -489,6 +490,20 @@ check(classifiedObdText.responseBuckets.livePidResponses[0]?.ecu === "7E8", "OBD
 check(classifiedObdText.responseBuckets.livePidResponses[0]?.frameLength === 4, "OBDログ分類でCANフレーム長を保持できません");
 check(classifiedObdText.ecuResponseCount === 1, "OBDログ分類でECU応答数を集計できません");
 check(classifiedObdText.ecuResponses[0]?.services.includes("43") && classifiedObdText.ecuResponses[0]?.services.includes("49"), "OBDログ分類でECU別サービス一覧を保持できません");
+check(classifiedObdText.responseBuckets.ecuInfoResponses[0]?.isoTp === true, "ISO-TP分割応答を再構成済みとして保持できません");
+check(classifiedObdText.responseBuckets.ecuInfoResponses[0]?.frameCount === 2, "ISO-TP分割応答のフレーム数を保持できません");
+check(classifiedObdText.responseBuckets.ecuInfoResponses[0]?.sequenceError === false, "正常なISO-TP分割応答を順序異常として扱っています");
+check(classifiedObdText.responseBuckets.ecuInfoResponses[0]?.response === "49 04 01 43 41 4C 2D 31 32 33 34", "ISO-TP分割応答をMode09ペイロードへ再構成できません");
+check(classifiedObdText.isoTpSummary.totalCount === 1 && classifiedObdText.isoTpSummary.sequenceErrorCount === 0, "ISO-TP正常応答の集計が不正です");
+const classifiedSequenceError = obd.classifyObdResponseLines([
+  "7E8 10 0B 49 04 01 43 41 4C",
+  "7E8 22 2D 31 32 33 34"
+].join("\n"));
+check(classifiedSequenceError.responseBuckets.ecuInfoResponses[0]?.sequenceError === true, "ISO-TP連続フレーム欠番を検出できません");
+check(classifiedSequenceError.isoTpSummary.sequenceErrorCount === 1, "ISO-TP順序異常件数を集計できません");
+const incompleteIsoTpSession = obd.buildScanSessionFromObdText("7E8 10 0B 49 04 01 43 41 4C", { session_id: "isotp-incomplete" });
+check(incompleteIsoTpSession.importClassification.isoTpSummary.incompleteCount === 1, "ISO-TP未完了件数をセッションへ保持できません");
+check(incompleteIsoTpSession.warnings.includes("isotp_reassembly_issue"), "ISO-TP未完了をセッション警告へ反映できません");
 check(classifiedObdText.retainedRawText === false && classifiedObdText.wouldTransmit === false, "OBD log classification retained raw text or allowed transmit");
 const textScanSession = obd.buildScanSessionFromObdText(obdTextLog, { session_id: "obd-text-test", protocol: "ISO15765-4" });
 check(textScanSession.schemaVersion === "scan_session_v1", "OBD text log was not converted to scan session");
@@ -563,6 +578,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 339");
+  console.log("OBD read-only safety checks: 348");
   console.log("Errors: 0");
 }
