@@ -25,7 +25,7 @@ const BLOCKED_WRITE_INTENTS = new Set([
   "ecu_reset"
 ]);
 const SAMPLE_SUPPORTED_PIDS = [
-  "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11",
+  "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11", "1C",
   "1F", "21", "22", "23", "2C", "2D", "2E", "2F", "30", "31", "32", "33",
   "3C", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C",
   "4D", "4E", "51", "52", "59", "5A", "5B", "5C", "5D", "5E", "61", "62", "63", "64", "6A", "6C", "8E"
@@ -44,6 +44,7 @@ const SAMPLE_LIVE_VALUES = [
   { id: "intake_air_temp", pid: "0F", value: 40, unit: "°C" },
   { id: "maf_air_flow", pid: "10", value: 6.55, unit: "g/s" },
   { id: "throttle_position", pid: "11", value: 50.2, unit: "%" },
+  { id: "obd_standard", pid: "1C", value: "eobd_and_obd_ii", unit: "" },
   { id: "engine_runtime", pid: "1F", value: 600, unit: "s" },
   { id: "distance_with_mil", pid: "21", value: 100, unit: "km" },
   { id: "fuel_rail_pressure", pid: "22", value: 2000, unit: "kPa" },
@@ -451,6 +452,10 @@ function decodeLivePidValues(pid, payload) {
     ];
   }
 
+  if (pid === "1C" && Number.isInteger(a)) {
+    return [{ id: "obd_standard", pid, value: decodeObdStandard(a), unit: "" }];
+  }
+
   const o2SensorPidMap = {
     "14": ["o2_b1s1_voltage", "o2_b1s1_stft"],
     "15": ["o2_b1s2_voltage", "o2_b1s2_stft"],
@@ -634,6 +639,43 @@ function decodeFuelSystemStatus(value) {
     0x10: "closed_loop_with_fault"
   };
   return statuses[value] || `unknown_${toHexByte(value)}`;
+}
+
+function decodeObdStandard(value) {
+  const standards = {
+    0x01: "obd_ii_carb",
+    0x02: "obd_epa",
+    0x03: "obd_and_obd_ii",
+    0x04: "obd_i",
+    0x05: "not_obd_compliant",
+    0x06: "eobd",
+    0x07: "eobd_and_obd_ii",
+    0x08: "eobd_and_obd",
+    0x09: "eobd_obd_and_obd_ii",
+    0x0A: "jobd",
+    0x0B: "jobd_and_obd_ii",
+    0x0C: "jobd_and_eobd",
+    0x0D: "jobd_eobd_and_obd_ii",
+    0x11: "engine_manufacturer_diagnostics",
+    0x12: "engine_manufacturer_diagnostics_enhanced",
+    0x13: "heavy_duty_obd_c",
+    0x14: "heavy_duty_obd",
+    0x15: "world_wide_harmonized_obd",
+    0x17: "heavy_duty_eobd_i",
+    0x18: "heavy_duty_eobd_i_no_nox_control",
+    0x19: "heavy_duty_eobd_ii",
+    0x1A: "heavy_duty_eobd_ii_no_nox_control",
+    0x1C: "brazil_obd_phase_1",
+    0x1D: "brazil_obd_phase_2",
+    0x1E: "korean_obd",
+    0x1F: "india_obd_i",
+    0x20: "india_obd_ii",
+    0x21: "heavy_duty_euro_obd_stage_i",
+    0x22: "heavy_duty_euro_obd_stage_i_no_nox_control",
+    0x23: "heavy_duty_euro_obd_stage_ii",
+    0x24: "heavy_duty_euro_obd_stage_ii_no_nox_control"
+  };
+  return standards[value] || `unknown_${toHexByte(value)}`;
 }
 
 function decodePercentCentered(value) {

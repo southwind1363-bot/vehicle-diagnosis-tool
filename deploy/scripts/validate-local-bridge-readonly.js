@@ -56,6 +56,7 @@ try {
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
   check(live.data.values.some((item) => item.id === "fuel_system_status_bank1" && item.value === "closed_loop_oxygen_sensor_feedback"), "live PID response did not include sample fuel system status bank 1");
+  check(live.data.values.some((item) => item.id === "obd_standard" && item.value === "eobd_and_obd_ii"), "live PID response did not include sample OBD standard");
   check(live.data.values.some((item) => item.id === "control_module_voltage"), "live PID response did not include module voltage");
   check(live.data.supported_pids.includes("8E"), "live PID response did not advertise friction torque support");
   check(live.data.values.some((item) => item.id === "engine_friction_torque" && item.value === -5), "live PID response did not include sample friction torque");
@@ -92,6 +93,7 @@ const replayLog = [
   "can0 7E8#03410E80",
   "can0 7E8#03410F50",
   "can0 7E8#0441140180",
+  "can0 7E8#03411C07",
   "can0 7E8#04411F0258",
   "can0 7E8#0441210064",
   "can0 7E8#0441220100",
@@ -163,6 +165,7 @@ try {
   check(replayLive.data.values.some((item) => item.id === "readiness_flag_count" && item.value === 3), "replay live response did not decode readiness flags");
   check(replayLive.data.values.some((item) => item.id === "fuel_system_status_bank1" && item.value === "closed_loop_oxygen_sensor_feedback"), "replay live response did not decode fuel system status bank 1");
   check(replayLive.data.values.some((item) => item.id === "fuel_system_status_bank2" && item.value === "not_available"), "replay live response did not decode fuel system status bank 2");
+  check(replayLive.data.values.some((item) => item.id === "obd_standard" && item.value === "eobd_and_obd_ii"), "replay live response did not decode OBD standard");
   check(replayLive.data.values.some((item) => item.id === "stft_b1" && item.value === 0), "replay live response did not decode STFT B1");
   check(replayLive.data.values.some((item) => item.id === "ltft_b1" && item.value === 19.53), "replay live response did not decode LTFT B1");
   check(replayLive.data.values.some((item) => item.id === "fuel_pressure" && item.value === 120), "replay live response did not decode fuel pressure");
@@ -223,6 +226,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 88");
+  console.log("Local bridge read-only checks: 90");
   console.log("Errors: 0");
 }
