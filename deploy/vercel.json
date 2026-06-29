@@ -18,6 +18,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "local-bridge-readonly.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "service-worker.js",
       "use": "@vercel/static"
     },
