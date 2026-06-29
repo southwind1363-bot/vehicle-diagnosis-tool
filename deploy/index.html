@@ -457,12 +457,12 @@
           <div class="obd-progress-grid">
             <article class="obd-progress-score-card">
               <strong>完成度</strong>
-              <span class="obd-progress-score">診断機全体 18% / OBD2読取 33%</span>
+              <span class="obd-progress-score">診断機全体 19% / OBD2読取 36%</span>
               <span>100%は実車接続、読取、データ解釈、複数VCI、車種適合、記録、段階的な作業機能まで含む完成状態です。</span>
             </article>
             <article class="obd-progress-breakdown-card">
               <strong>内訳</strong>
-              <span>データ 34% / ログ解析 66% / 接続層 10% / 車種適合 12% / 記録 28% / 作業機能 0%</span>
+              <span>データ 34% / ログ解析 66% / 接続層 18% / 車種適合 12% / 記録 28% / 作業機能 0%</span>
               <span>数字は実装済み機能だけを反映し、ロードマップ追加だけでは上げません。</span>
             </article>
             <article>
@@ -475,7 +475,7 @@
             </article>
             <article>
               <strong>実車接続</strong>
-              <span>Web Serial、ELM327/STN、ローカルブリッジ、J2534などの接続層は準備中。車両送信はまだ無効です。</span>
+              <span>Web Serialの開発者限定読取テストを追加。一般利用者には開放せず、変更系コマンドは無効です。</span>
             </article>
             <article>
               <strong>次の中身</strong>
@@ -487,10 +487,44 @@
         <div class="obd-connection-bar">
           <div>
             <span class="obd-connection-label">接続状態</span>
-            <strong>車両未接続</strong>
+            <strong id="obdDevConnectionState">車両未接続</strong>
           </div>
-          <button class="primary-button" type="button" disabled>車両へ接続（準備中）</button>
+          <button id="obdDevConnectButton" class="primary-button" type="button" disabled>開発読取を開始</button>
         </div>
+
+        <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdDevGateTitle">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">DEVELOPER READOUT</p>
+              <h3 id="obdDevGateTitle">開発専用VCI読取テスト</h3>
+            </div>
+            <span id="obdDevModeBadge" class="confidence-badge">ロック中</span>
+          </div>
+          <div class="obd-dev-gate">
+            <label>
+              開発トークン
+              <input id="obdDevPasswordInput" type="password" autocomplete="off" placeholder="この端末に設定した値">
+            </label>
+            <label>
+              通信速度
+              <select id="obdDevBaudRate">
+                <option value="38400">38400</option>
+                <option value="115200">115200</option>
+                <option value="9600">9600</option>
+              </select>
+            </label>
+            <button id="obdDevUnlockButton" class="secondary-button" type="button">開発モード解除</button>
+            <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
+          </div>
+          <div id="obdDevControls" class="obd-dev-controls" hidden>
+            <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>VCI確認</button>
+            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>DTC読取</button>
+            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>データモニター読取</button>
+            <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>
+          </div>
+          <p id="obdDevStatus" class="data-status">開発モード解除後、対応ブラウザでVCIを選択できます。読取系コマンドのみ送信します。</p>
+          <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
+        </section>
 
         <section class="obd-operation-panel" aria-labelledby="obdOperationTitle">
           <div class="obd-result-heading">

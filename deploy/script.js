@@ -1,7 +1,9 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
-const APP_VERSION = "2.253.0";
+const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
+const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
+const APP_VERSION = "2.254.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -153,6 +155,20 @@ const obdBridgeContractGrid = document.querySelector("#obdBridgeContractGrid");
 const obdBridgeSchemaGrid = document.querySelector("#obdBridgeSchemaGrid");
 const obdInterlockSummary = document.querySelector("#obdInterlockSummary");
 const obdInterlockChecklist = document.querySelector("#obdInterlockChecklist");
+const obdDevConnectionState = document.querySelector("#obdDevConnectionState");
+const obdDevConnectButton = document.querySelector("#obdDevConnectButton");
+const obdDevPasswordInput = document.querySelector("#obdDevPasswordInput");
+const obdDevBaudRate = document.querySelector("#obdDevBaudRate");
+const obdDevUnlockButton = document.querySelector("#obdDevUnlockButton");
+const obdDevLockButton = document.querySelector("#obdDevLockButton");
+const obdDevModeBadge = document.querySelector("#obdDevModeBadge");
+const obdDevControls = document.querySelector("#obdDevControls");
+const obdDevIdentifyButton = document.querySelector("#obdDevIdentifyButton");
+const obdDevReadDtcButton = document.querySelector("#obdDevReadDtcButton");
+const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
+const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
+const obdDevStatus = document.querySelector("#obdDevStatus");
+const obdDevSessionSummary = document.querySelector("#obdDevSessionSummary");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdSampleButton = document.querySelector("#obdSampleButton");
@@ -175,6 +191,19 @@ let dataStore = fallbackData;
 let savedCases = loadCases();
 let copyToastTimer = null;
 let activeResultView = "flow";
+let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
+const obdDevSession = {
+  port: null,
+  reader: null,
+  writer: null,
+  decoder: null,
+  encoder: null,
+  textBuffer: "",
+  readLoopActive: false,
+  lastRawText: "",
+  connectedAt: null,
+  selectedPidList: ["010C", "0105", "010D", "0104", "010B", "0110", "0111", "0106", "0107", "0142"]
+};
 
 appVersion.textContent = APP_VERSION;
 lastUpdated.textContent = APP_LAST_UPDATED;
@@ -255,6 +284,13 @@ obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
+obdDevUnlockButton.addEventListener("click", unlockObdDeveloperMode);
+obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
+obdDevConnectButton.addEventListener("click", connectObdDeveloperVci);
+obdDevIdentifyButton.addEventListener("click", identifyObdDeveloperVci);
+obdDevReadDtcButton.addEventListener("click", readObdDeveloperDtc);
+obdDevSnapshotButton.addEventListener("click", readObdDeveloperLiveSnapshot);
+obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
 noticeCloseButton.addEventListener("click", () => {
   localStorage.setItem(NOTICE_KEY, "accepted");
   noticeModal.close();
@@ -1947,6 +1983,7 @@ function initializeObdReadOnlyPanel() {
 
   obdCapabilityBadge.textContent = "実機接続準備中";
   obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 接続、DTC読取、データモニター、DTC消去は機能単位で準備し、安全検証が終わるまで車両への送信は無効にしています。`;
+  renderObdDeveloperGate(capability);
   renderObdOperationPlan(window.ObdReadOnly.getVehicleOperationPlan?.() || []);
   renderObdPreparedRequests(
     window.ObdReadOnly.getVehicleConnectionProfile?.(),
@@ -1963,6 +2000,240 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getLocalBridgeResponseSchemas?.() || []
   );
   renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
+}
+
+function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
+  const unlocked = obdDevModeUnlocked === true;
+  const connected = Boolean(obdDevSession.port);
+  const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
+
+  obdDevModeBadge.textContent = unlocked ? "開発モード" : "ロック中";
+  obdDevControls.hidden = !unlocked;
+  obdDevLockButton.disabled = !unlocked;
+  obdDevConnectButton.disabled = !unlocked || !serialReady || connected;
+  obdDevIdentifyButton.disabled = !unlocked || !connected;
+  obdDevReadDtcButton.disabled = !unlocked || !connected;
+  obdDevSnapshotButton.disabled = !unlocked || !connected;
+  obdDevDisconnectButton.disabled = !connected;
+  obdDevConnectionState.textContent = connected ? "VCI接続中" : "車両未接続";
+
+  if (!unlocked) {
+    obdDevStatus.textContent = "この端末に開発トークンを設定した場合だけ解除できます。読取系コマンドのみ送信します。";
+  } else if (!serialReady) {
+    obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
+  } else if (!connected) {
+    obdDevStatus.textContent = "VCIをUSB接続し、開発読取を開始してください。ELM327/STN互換の読取テスト用です。";
+  }
+
+  renderObdDeveloperSessionSummary();
+}
+
+function unlockObdDeveloperMode() {
+  const configuredToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
+  if (configuredToken.length < 12) {
+    obdDevStatus.textContent = "この端末に開発トークンが未設定です。";
+    return;
+  }
+  if (obdDevPasswordInput.value !== configuredToken) {
+    obdDevStatus.textContent = "開発トークンが違います。";
+    return;
+  }
+  obdDevModeUnlocked = true;
+  sessionStorage.setItem(OBD_DEV_MODE_KEY, "enabled");
+  obdDevPasswordInput.value = "";
+  obdDevStatus.textContent = "開発モードを解除しました。読取系コマンドだけ使用できます。";
+  renderObdDeveloperGate();
+}
+
+function lockObdDeveloperMode() {
+  obdDevModeUnlocked = false;
+  sessionStorage.removeItem(OBD_DEV_MODE_KEY);
+  obdDevStatus.textContent = "開発モードをロックしました。";
+  renderObdDeveloperGate();
+}
+
+async function connectObdDeveloperVci() {
+  if (!obdDevModeUnlocked) return;
+  if (!("serial" in navigator)) {
+    obdDevStatus.textContent = "このブラウザはWeb Serialに対応していません。";
+    return;
+  }
+
+  try {
+    const baudRate = Number(obdDevBaudRate.value) || 38400;
+    obdDevStatus.textContent = "VCIを選択してください。";
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate });
+    obdDevSession.port = port;
+    obdDevSession.reader = port.readable.getReader();
+    obdDevSession.writer = port.writable.getWriter();
+    obdDevSession.decoder = new TextDecoder();
+    obdDevSession.encoder = new TextEncoder();
+    obdDevSession.textBuffer = "";
+    obdDevSession.readLoopActive = true;
+    obdDevSession.lastRawText = "";
+    obdDevSession.connectedAt = new Date().toISOString();
+    obdDevStatus.textContent = `VCIへ接続しました。通信速度 ${baudRate}。`;
+    readElmDeveloperLoop();
+    renderObdDeveloperGate();
+    await initializeElmDeveloperAdapter();
+  } catch (error) {
+    obdDevStatus.textContent = `接続できませんでした: ${error?.message || error}`;
+    await disconnectObdDeveloperVci();
+  }
+}
+
+async function disconnectObdDeveloperVci() {
+  const { reader, writer, port } = obdDevSession;
+  obdDevSession.reader = null;
+  obdDevSession.writer = null;
+  obdDevSession.port = null;
+  obdDevSession.readLoopActive = false;
+
+  try {
+    if (reader) {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
+    if (writer) {
+      writer.releaseLock();
+    }
+    if (port) {
+      await port.close().catch(() => {});
+    }
+  } finally {
+    obdDevStatus.textContent = "VCI接続を切断しました。";
+    renderObdDeveloperGate();
+  }
+}
+
+async function initializeElmDeveloperAdapter() {
+  const initCommands = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+  const responses = [];
+  for (const command of initCommands) {
+    responses.push(`${command}\n${await sendElmDeveloperCommand(command, 2500)}`);
+  }
+  appendObdDeveloperLog(responses.join("\n"));
+  obdDevStatus.textContent = "VCI初期化を送信しました。次にVCI確認、DTC読取、データモニター読取を試せます。";
+  renderObdDeveloperGate();
+}
+
+async function identifyObdDeveloperVci() {
+  await runObdDeveloperRead("VCI確認", ["ATI", "AT@1"]);
+}
+
+async function readObdDeveloperDtc() {
+  await runObdDeveloperRead("DTC読取", ["03", "07"]);
+}
+
+async function readObdDeveloperLiveSnapshot() {
+  await runObdDeveloperRead("データモニター読取", ["0100", ...obdDevSession.selectedPidList]);
+}
+
+async function runObdDeveloperRead(label, commands) {
+  if (!obdDevSession.writer || !obdDevSession.reader) {
+    obdDevStatus.textContent = "VCIが接続されていません。";
+    return;
+  }
+
+  try {
+    obdDevStatus.textContent = `${label}中です。`;
+    const chunks = [];
+    for (const command of commands) {
+      chunks.push(`>${command}`);
+      chunks.push(await sendElmDeveloperCommand(command, 3500));
+    }
+    appendObdDeveloperLog(chunks.join("\n"));
+    const session = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
+      session_id: "web-serial-dev-readout",
+      protocol: "ELM327"
+    });
+    renderObdDeveloperReadout(session);
+    obdDevStatus.textContent = `${label}が完了しました。取れた値だけ表示します。`;
+  } catch (error) {
+    obdDevStatus.textContent = `${label}に失敗しました: ${error?.message || error}`;
+  } finally {
+    renderObdDeveloperGate();
+  }
+}
+
+async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
+  const normalized = String(command || "").trim().toUpperCase();
+  if (!isAllowedObdDeveloperCommand(normalized)) {
+    throw new Error(`許可していないコマンドです: ${normalized}`);
+  }
+  obdDevSession.textBuffer = "";
+  await obdDevSession.writer.write(obdDevSession.encoder.encode(`${normalized}\r`));
+  return readElmDeveloperResponse(timeoutMs);
+}
+
+function isAllowedObdDeveloperCommand(command) {
+  return [
+    "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1",
+    "03", "07", "0100",
+    ...obdDevSession.selectedPidList
+  ].includes(command);
+}
+
+async function readElmDeveloperLoop() {
+  while (obdDevSession.readLoopActive && obdDevSession.reader) {
+    try {
+      const result = await obdDevSession.reader.read();
+      if (result.done) break;
+      obdDevSession.textBuffer += obdDevSession.decoder.decode(result.value || new Uint8Array(), { stream: true });
+      obdDevSession.textBuffer = obdDevSession.textBuffer.slice(-12000);
+    } catch (_error) {
+      if (obdDevSession.readLoopActive) {
+        obdDevStatus.textContent = "VCI受信が停止しました。接続をやり直してください。";
+      }
+      break;
+    }
+  }
+}
+
+async function readElmDeveloperResponse(timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (obdDevSession.textBuffer.includes(">")) break;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  return obdDevSession.textBuffer.replace(/[>\r]/g, "").trim();
+}
+
+function appendObdDeveloperLog(text) {
+  const sanitized = window.ObdReadOnly.redactSensitiveText(String(text || ""));
+  obdDevSession.lastRawText = [obdDevSession.lastRawText, sanitized].filter(Boolean).join("\n").slice(-20000);
+}
+
+function renderObdDeveloperReadout(session) {
+  const monitorValues = session.livePidSnapshot?.monitorValues || [];
+  const codes = session.dtcSnapshot?.dtcs?.map((item) => item.code).filter(Boolean) || [];
+  obdScannerText.value = obdDevSession.lastRawText;
+  analyzeObdScannerImport();
+  if (monitorValues.length) renderObdMonitorValues(monitorValues, session.livePidSnapshot.monitorInsights || []);
+  if (codes.length) {
+    obdDetectedCodes.innerHTML = "";
+    [...new Set(codes)].forEach((code) => obdDetectedCodes.appendChild(createObdDtcCard(code)));
+    obdImportStatus.textContent = `${codes.length}件の車両DTCを読取りました。`;
+  }
+  renderObdDeveloperSessionSummary(session);
+}
+
+function renderObdDeveloperSessionSummary(session = null) {
+  obdDevSessionSummary.innerHTML = "";
+  const values = [
+    ["接続", obdDevSession.port ? "VCI接続中" : "未接続"],
+    ["開始", obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA],
+    ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
+    ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0]
+  ];
+  values.forEach(([label, value]) => {
+    const item = document.createElement("span");
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    item.append(strong, document.createTextNode(String(value)));
+    obdDevSessionSummary.appendChild(item);
+  });
 }
 
 function renderObdOperationPlan(items) {
