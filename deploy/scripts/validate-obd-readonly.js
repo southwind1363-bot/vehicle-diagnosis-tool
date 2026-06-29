@@ -324,6 +324,7 @@ check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_tem
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.decoded === false, "式未実装の数値PIDに未換算フラグがありません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "dpf_differential_pressure")?.value === "00 64", "DPF系の式未実装PIDをRAW値として保持できません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "式未実装PIDの後続PIDを読み進められません");
+check(liveUndecodedNumberPid.monitorValueSummary.undecodedRawCount === 2, "ライブPIDの未換算RAW件数を集計できません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status")?.value === "mil_on;dtc_count=2;ignition=spark", "Monitor status PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_mil")?.value === "mil_on", "Monitor status MIL value was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_dtc_count")?.value === 2, "Monitor status DTC count was not decoded");
@@ -403,6 +404,7 @@ check(freezeUnknownLengthTextPid.monitorValues.find((item) => item.id === "vehic
 const freezeUndecodedNumberPid = obd.decodeFreezeFrameResponse({ raw: "42 75 00 01 90 42 0D 00 28" });
 check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90", "フリーズフレームで式未実装の数値PIDをRAW値として保持できません");
 check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで式未実装PIDの後続PIDを読み進められません");
+check(freezeUndecodedNumberPid.monitorValueSummary.undecodedRawCount === 1, "フリーズフレームの未換算RAW件数を集計できません");
 check(decodedFreezeFrame.retainedRawText === false, "フリーズフレームデコードが原文保持になっています");
 const decodedEcuInfo = obd.decodeEcuInfoResponse({ raw: "49 02 01 4A 54 44 4B 4E 33 44 55 30 41 30 31 32 33 34 35 36 49 04 01 43 41 4C 2D 31 32 33 34 49 0A 01 45 6E 67 69 6E 65 20 45 43 55" });
 check(decodedEcuInfo.hadSensitiveIdentifier === true, "Mode 09 VINを識別情報として検出できません");
@@ -445,6 +447,13 @@ check(decodedScanSession.readinessSnapshot.milOn === true, "デコード済みOB
 check(decodedScanSession.onboardMonitorSnapshot.testCount === 1, "デコード済みOBDセッションへMode 06を統合できません");
 check(decodedScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "デコード済みOBDセッションへECU情報を統合できません");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
+const rawPidScanSession = obd.buildDecodedObdScanSession({
+  session_id: "raw-pid-session",
+  livePidResponse: { raw: "41 75 01 90 41 0D 28" },
+  freezeFrameResponse: { raw: "42 75 00 01 90" }
+});
+check(rawPidScanSession.monitorValueSummary.undecodedRawCount === 2, "診断セッションへ未換算RAW件数を統合できません");
+check(rawPidScanSession.warnings.includes("raw_pid_values_need_conversion"), "診断セッションへ未換算RAW警告を反映できません");
 const obdTextLog = [
   ">03",
   "7E8 06 43 01 71 03 00 00 00",
@@ -476,10 +485,16 @@ check(classifiedObdText.bucketCounts.pendingDtcResponses === 1, "OBD log pending
 check(classifiedObdText.bucketCounts.permanentDtcResponses === 1, "OBD log permanent DTC response was not classified");
 check(classifiedObdText.bucketCounts.livePidResponses === 2, "OBD log live PID responses were not classified");
 check(classifiedObdText.bucketCounts.onboardMonitorResponses === 1, "OBD log Mode 06 response was not classified");
+check(classifiedObdText.responseBuckets.livePidResponses[0]?.ecu === "7E8", "OBDログ分類でECUアドレスを保持できません");
+check(classifiedObdText.responseBuckets.livePidResponses[0]?.frameLength === 4, "OBDログ分類でCANフレーム長を保持できません");
+check(classifiedObdText.ecuResponseCount === 1, "OBDログ分類でECU応答数を集計できません");
+check(classifiedObdText.ecuResponses[0]?.services.includes("43") && classifiedObdText.ecuResponses[0]?.services.includes("49"), "OBDログ分類でECU別サービス一覧を保持できません");
 check(classifiedObdText.retainedRawText === false && classifiedObdText.wouldTransmit === false, "OBD log classification retained raw text or allowed transmit");
 const textScanSession = obd.buildScanSessionFromObdText(obdTextLog, { session_id: "obd-text-test", protocol: "ISO15765-4" });
 check(textScanSession.schemaVersion === "scan_session_v1", "OBD text log was not converted to scan session");
 check(textScanSession.importClassification.bucketCounts.freezeFrameResponses === 2, "OBD text scan session did not keep freeze-frame bucket count");
+check(textScanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount >= 8, "OBD text scan session did not keep ECU response count");
+check(textScanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.services.includes("46"), "OBD text scan session did not keep ECU service list");
 check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored"), "OBD text scan session did not include stored DTC");
 check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "pending"), "OBD text scan session did not include pending DTC");
 check(textScanSession.dtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "permanent"), "OBD text scan session did not include permanent DTC");
@@ -548,6 +563,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 329");
+  console.log("OBD read-only safety checks: 339");
   console.log("Errors: 0");
 }

@@ -776,6 +776,7 @@
       supportedPids: Array.isArray(data.supported_pids) ? [...data.supported_pids] : [],
       capturedAt: data.captured_at || null,
       monitorValues,
+      monitorValueSummary: buildMonitorValueSummary(monitorValues),
       monitorInsights: analyzeMonitorValues(monitorValues),
       retainedRawText: false
     };
@@ -813,6 +814,20 @@
     };
   }
 
+  function buildMonitorValueSummary(values = []) {
+    const rows = Array.isArray(values) ? values : [];
+    const undecodedRawCount = rows.filter((item) => item?.decoded === false || item?.valueType === "raw_hex").length;
+    const numericCount = rows.filter((item) => item?.valueType !== "text" && item?.valueType !== "raw_hex" && Number.isFinite(item?.value)).length;
+    const textCount = rows.filter((item) => item?.valueType === "text").length;
+    return {
+      totalCount: rows.length,
+      decodedCount: Math.max(0, rows.length - undecodedRawCount),
+      undecodedRawCount,
+      numericCount,
+      textCount
+    };
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     const dtcSnapshot = parts.dtcSnapshot?.codes ? parts.dtcSnapshot : normalizeBridgeDtcSnapshot(parts.dtcSnapshot);
     const livePidSnapshot = parts.livePidSnapshot?.monitorValues ? parts.livePidSnapshot : normalizeBridgeLivePidSnapshot(parts.livePidSnapshot);
@@ -822,6 +837,7 @@
     if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
+    if (livePidSnapshot.monitorValueSummary?.undecodedRawCount > 0) warnings.push("raw_pid_values_need_conversion");
 
     return {
       source: "local_bridge",
@@ -832,6 +848,7 @@
       vciDevices: vciList.devices,
       codes: dtcSnapshot.codes,
       monitorValues: livePidSnapshot.monitorValues,
+      monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
       warnings,
       exportRequired: true,
@@ -859,6 +876,7 @@
         vci_devices: summary.vciDevices || [],
         dtc_codes: summary.codes || [],
         monitor_values: summary.monitorValues || [],
+        monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(summary.monitorValues || []),
         monitor_insights: summary.monitorInsights || [],
         warnings: [...new Set(summary.warnings || [])]
       },
@@ -1008,6 +1026,7 @@
       capturedAt: input.captured_at || input.capturedAt || null,
       triggerDtc: triggerCodes[0] || null,
       monitorValues,
+      monitorValueSummary: buildMonitorValueSummary(monitorValues),
       expectedItems,
       capturedItemCount: monitorValues.length,
       expectedItemCount: expectedItems.length,
@@ -1069,6 +1088,8 @@
         address: row?.address || row?.ecu || null,
         status: row?.status || "unknown",
         dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Array.isArray(row?.dtcs) ? row.dtcs.length : null,
+        responseCount: Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : null,
+        services: Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
         responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : null
       })),
       retainedRawText: false
@@ -1519,7 +1540,12 @@
       const serviceIndex = bytes.findIndex((byte) => positiveServices.includes(byte));
       const serviceByte = serviceIndex >= 0 ? bytes[serviceIndex] : null;
       const hasPair = (first, second) => bytes.some((byte, index) => byte === first && bytes[index + 1] === second);
-      const packet = { bytes, response: bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ") };
+      const metadata = extractObdFrameMetadata(normalized, serviceByte, serviceIndex);
+      const packet = {
+        bytes,
+        response: bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" "),
+        ...metadata
+      };
 
       if (serviceByte === 0x43) {
         buckets.storedDtcResponses.push(packet);
@@ -1545,9 +1571,12 @@
     });
 
     const bucketCounts = Object.fromEntries(Object.entries(buckets).map(([key, rows]) => [key, rows.length]));
+    const ecuResponses = buildEcuResponsesFromResponseBuckets(buckets);
     return {
       schemaVersion: "obd_response_line_classification_v1",
       bucketCounts,
+      ecuResponseCount: ecuResponses.length,
+      ecuResponses,
       responseBuckets: buckets,
       lineCount: raw ? raw.split(/\r?\n/).length : 0,
       hadSensitiveIdentifier: raw !== redacted,
@@ -1558,9 +1587,47 @@
     };
   }
 
+  function extractObdFrameMetadata(line, serviceByte, serviceIndex) {
+    const tokens = String(line || "").toUpperCase().match(/\b[0-9A-F]{2,8}\b/g) || [];
+    const first = tokens[0] || "";
+    const second = tokens[1] || "";
+    const hasCanId = /^[0-9A-F]{3}$/.test(first) || /^[0-9A-F]{8}$/.test(first);
+    const frameLength = hasCanId && /^[0-9A-F]{2}$/.test(second) ? parseInt(second, 16) : null;
+    return {
+      ecu: hasCanId ? first : null,
+      address: hasCanId ? first : null,
+      frameLength,
+      service: Number.isInteger(serviceByte) ? serviceByte.toString(16).toUpperCase().padStart(2, "0") : null,
+      serviceIndex: Number.isInteger(serviceIndex) && serviceIndex >= 0 ? serviceIndex : null
+    };
+  }
+
+  function buildEcuResponsesFromClassifiedObd(classified) {
+    return buildEcuResponsesFromResponseBuckets(classified?.responseBuckets || {});
+  }
+
+  function buildEcuResponsesFromResponseBuckets(responseBuckets) {
+    const packets = Object.values(responseBuckets || {}).flat().filter((row) => row?.ecu);
+    const byEcu = new Map();
+    packets.forEach((packet) => {
+      const current = byEcu.get(packet.ecu) || { ecu: packet.ecu, address: packet.address || packet.ecu, status: "ok", response_count: 0, services: new Set() };
+      current.response_count += 1;
+      if (packet.service) current.services.add(packet.service);
+      byEcu.set(packet.ecu, current);
+    });
+    return [...byEcu.values()].map((row) => ({
+      ecu: row.ecu,
+      address: row.address,
+      status: row.status,
+      response_count: row.response_count,
+      services: [...row.services]
+    }));
+  }
+
   function buildScanSessionFromObdText(value, options = {}) {
     const classified = classifyObdResponseLines(value);
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
+    const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: options.session_id || options.sessionId || "obd_text_scan_session",
       started_at: options.started_at || options.startedAt || null,
@@ -1574,7 +1641,8 @@
       freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: options.protocol || null },
       readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: options.protocol || null },
       onboardMonitorResponse: { raw: firstOrEmpty("onboardMonitorResponses"), protocol: options.protocol || null },
-      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: options.protocol || null }
+      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: options.protocol || null },
+      ecus: ecuResponses
     });
 
     return {
@@ -2001,6 +2069,9 @@
     if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_live_data_conditions");
+    if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
+      warnings.push("raw_pid_values_need_conversion");
+    }
 
     return {
       schemaVersion: "scan_session_v1",
@@ -2019,6 +2090,10 @@
       ecuInfoSnapshot,
       livePidSnapshot,
       supportedPidMatrix,
+      monitorValueSummary: buildMonitorValueSummary([
+        ...livePidSnapshot.monitorValues,
+        ...freezeFrameSnapshot.monitorValues
+      ]),
       warnings,
       retainedRawText: false,
       retainedRawFrames: false,
