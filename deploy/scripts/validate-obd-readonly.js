@@ -287,8 +287,11 @@ const bridgeSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   }
 });
 check(bridgeSupportedPidSnapshot.source === "local_bridge", "ブリッジ対応PID応答のsourceが不正です");
+check(bridgeSupportedPidSnapshot.intent === "read_supported_pids" && bridgeSupportedPidSnapshot.blocked === false && bridgeSupportedPidSnapshot.wouldTransmit === false, "ブリッジ対応PID応答の安全メタ情報が不正です");
 check(bridgeSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "ブリッジ対応PID応答を整形できません");
 check(bridgeSupportedPidSnapshot.supportedCount === 2, "ブリッジ対応PID件数を集計できません");
+const bridgeEmptySupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({});
+check(bridgeEmptySupportedPidSnapshot.supportedPids.length === 0 && bridgeEmptySupportedPidSnapshot.blocked === true, "空のブリッジ対応PID応答を安全側へ整形できません");
 const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
@@ -304,8 +307,11 @@ const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   }
 });
 check(bridgeFreezeFrameSnapshot.source === "local_bridge", "ブリッジフリーズフレーム応答のsourceが不正です");
+check(bridgeFreezeFrameSnapshot.intent === "read_freeze_frame" && bridgeFreezeFrameSnapshot.blocked === false && bridgeFreezeFrameSnapshot.wouldTransmit === false, "ブリッジフリーズフレーム応答の安全メタ情報が不正です");
 check(bridgeFreezeFrameSnapshot.triggerDtc === "P0171", "ブリッジフリーズフレーム起点DTCを整形できません");
 check(bridgeFreezeFrameSnapshot.monitorValues.length === 2, "ブリッジフリーズフレーム値を整形できません");
+const bridgeEmptyFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({});
+check(bridgeEmptyFreezeFrameSnapshot.monitorValues.length === 0 && bridgeEmptyFreezeFrameSnapshot.blocked === true, "空のブリッジフリーズフレーム応答を安全側へ整形できません");
 const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
@@ -338,9 +344,12 @@ const bridgeEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   }
 });
 check(bridgeEcuInfoSnapshot.source === "local_bridge", "Bridge ECU info source was not normalized");
+check(bridgeEcuInfoSnapshot.intent === "read_ecu_info" && bridgeEcuInfoSnapshot.blocked === false && bridgeEcuInfoSnapshot.wouldTransmit === false, "Bridge ECU info safety metadata was not normalized");
 check(bridgeEcuInfoSnapshot.hadSensitiveIdentifier === true, "Bridge ECU info did not detect sensitive identifiers");
 check(!JSON.stringify(bridgeEcuInfoSnapshot).includes("JTDKN3DU0A0123456"), "Bridge ECU info retained raw VIN");
 check(bridgeEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge ECU info did not retain CALID");
+const bridgeEmptyEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({});
+check(bridgeEmptyEcuInfoSnapshot.itemCount === 0 && bridgeEmptyEcuInfoSnapshot.blocked === true, "Empty Bridge ECU info response was not fail-closed");
 const bridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
@@ -355,7 +364,10 @@ const bridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   }
 });
 check(bridgeOnboardMonitorSnapshot.source === "local_bridge", "Bridge Mode 06 source was not normalized");
+check(bridgeOnboardMonitorSnapshot.intent === "read_onboard_monitor" && bridgeOnboardMonitorSnapshot.blocked === false && bridgeOnboardMonitorSnapshot.wouldTransmit === false, "Bridge Mode 06 safety metadata was not normalized");
 check(bridgeOnboardMonitorSnapshot.failedCount === 1, "Bridge Mode 06 failed count was not carried");
+const bridgeEmptyOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({});
+check(bridgeEmptyOnboardMonitorSnapshot.testCount === 0 && bridgeEmptyOnboardMonitorSnapshot.blocked === true, "Empty Bridge Mode 06 response was not fail-closed");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");

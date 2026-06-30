@@ -903,23 +903,35 @@
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const supportedPids = Array.isArray(data.supported_pids) ? data.supported_pids : Array.isArray(data.supportedPids) ? data.supportedPids : [];
-    return buildSupportedPidMatrix({
+    return {
+      ...buildSupportedPidMatrix({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: data.protocol || null,
       supported_pids: supportedPids
-    });
+      }),
+      intent: "read_supported_pids",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true
+    };
   }
 
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    return normalizeFreezeFrameSnapshot({
+    return {
+      ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: data.protocol || null,
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.dtc || null,
       values: Array.isArray(data.values) ? data.values : []
-    });
+      }),
+      intent: "read_freeze_frame",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true
+    };
   }
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
@@ -974,22 +986,34 @@
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    return normalizeEcuInfoSnapshot({
+    return {
+      ...normalizeEcuInfoSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: data.protocol || null,
       values: Array.isArray(data.values) ? data.values : Array.isArray(data.ecu_info) ? data.ecu_info : []
-    });
+      }),
+      intent: "read_ecu_info",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true
+    };
   }
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    return normalizeOnboardMonitorSnapshot({
+    return {
+      ...normalizeOnboardMonitorSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: data.protocol || null,
       tests: Array.isArray(data.tests) ? data.tests : Array.isArray(data.values) ? data.values : []
-    });
+      }),
+      intent: "read_onboard_monitor",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true
+    };
   }
 
   function normalizeBridgePidValue(row, index) {
