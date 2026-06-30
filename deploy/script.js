@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.293.0";
+const APP_VERSION = "2.294.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -175,6 +175,7 @@ const obdDevBridgePendingDtcButton = document.querySelector("#obdDevBridgePendin
 const obdDevBridgePermanentDtcButton = document.querySelector("#obdDevBridgePermanentDtcButton");
 const obdDevBridgeEcuInfoButton = document.querySelector("#obdDevBridgeEcuInfoButton");
 const obdDevBridgeMonitorButton = document.querySelector("#obdDevBridgeMonitorButton");
+const obdDevBridgeSupportedPidButton = document.querySelector("#obdDevBridgeSupportedPidButton");
 const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton");
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
@@ -311,6 +312,7 @@ obdDevBridgePendingDtcButton.addEventListener("click", readObdLocalBridgePending
 obdDevBridgePermanentDtcButton.addEventListener("click", readObdLocalBridgePermanentDtc);
 obdDevBridgeEcuInfoButton.addEventListener("click", readObdLocalBridgeEcuInfo);
 obdDevBridgeMonitorButton.addEventListener("click", readObdLocalBridgeOnboardMonitor);
+obdDevBridgeSupportedPidButton.addEventListener("click", readObdLocalBridgeSupportedPids);
 obdDevBridgeLiveButton.addEventListener("click", readObdLocalBridgeLiveSnapshot);
 obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
 noticeCloseButton.addEventListener("click", () => {
@@ -2043,6 +2045,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevBridgePermanentDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeEcuInfoButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeMonitorButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeSupportedPidButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeLiveButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevDisconnectButton.disabled = !connected;
   obdDevConnectionState.textContent = connected ? "Web Serial接続中" : obdDevSession.bridgeEndpoint ? "ブリッジ確認済み" : "車両未接続";
@@ -2219,6 +2222,12 @@ async function readObdLocalBridgeEcuInfo() {
 async function readObdLocalBridgeOnboardMonitor() {
   await runObdLocalBridgeRead("ブリッジ監視結果読取", "read_onboard_monitor", {}, (response) => {
     renderObdBridgeReadout({ onboardMonitorResponse: response });
+  });
+}
+
+async function readObdLocalBridgeSupportedPids() {
+  await runObdLocalBridgeRead("ブリッジ対応PID読取", "read_supported_pids", {}, (response) => {
+    renderObdBridgeReadout({ supportedPidResponse: response });
   });
 }
 
@@ -2401,11 +2410,19 @@ function renderObdBridgeReadout(parts = {}) {
   const ecuInfoSnapshot = parts.ecuInfoResponse
     ? window.ObdReadOnly.normalizeBridgeEcuInfoSnapshot(parts.ecuInfoResponse)
     : null;
+  const onboardMonitorSnapshot = parts.onboardMonitorResponse
+    ? window.ObdReadOnly.normalizeBridgeOnboardMonitorSnapshot(parts.onboardMonitorResponse)
+    : null;
+  const supportedPidMatrix = parts.supportedPidResponse
+    ? window.ObdReadOnly.normalizeBridgeSupportedPidSnapshot(parts.supportedPidResponse)
+    : null;
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
     freezeFrameSnapshot: freezeFrameSnapshot || undefined,
     ecuInfoSnapshot: ecuInfoSnapshot || undefined,
+    onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
+    supportedPidMatrix: supportedPidMatrix || undefined,
     connectionStatus: obdDevSession.bridgeStatus || undefined,
     vciList: obdDevSession.bridgeVciList || undefined
   });
@@ -2415,6 +2432,8 @@ function renderObdBridgeReadout(parts = {}) {
     livePidSnapshot: livePidSnapshot || { values: [] },
     freezeFrameSnapshot: freezeFrameSnapshot || { values: [] },
     ecuInfoSnapshot: ecuInfoSnapshot || { values: [] },
+    onboardMonitorSnapshot: onboardMonitorSnapshot || { tests: [] },
+    supportedPidMatrix: supportedPidMatrix || { supported_pids: [] },
     connectionStatus: importResult.connectionStatus,
     vciList: importResult.vciList
   });
