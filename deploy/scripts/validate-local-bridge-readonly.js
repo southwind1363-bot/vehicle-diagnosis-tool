@@ -258,6 +258,7 @@ try {
   check(replayFreezeFrame.data.values.some((item) => item.id === "mil_status" && item.value === true && item.freeze_frame_number === 0), "replay freeze frame did not decode MIL status");
   check(replayFreezeFrame.data.values.some((item) => item.id === "stored_dtc_count" && item.value === 1 && item.freeze_frame_number === 0), "replay freeze frame did not decode stored DTC count");
   check(replayFreezeFrame.data.values.some((item) => item.id === "readiness_flag_count" && item.value === 3 && item.freeze_frame_number === 0), "replay freeze frame did not decode readiness flags");
+  check(replayFreezeFrame.data.values.every((item) => monitorDefinitionIds.has(item.id) || bridgeComputedValueIds.has(item.id)), "replay freeze frame included an id not registered in monitor definitions or bridge computed values");
 } finally {
   await new Promise((resolve) => replayServer.close(resolve));
 }
@@ -266,6 +267,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 110");
+  console.log("Local bridge read-only checks: 111");
   console.log("Errors: 0");
 }
