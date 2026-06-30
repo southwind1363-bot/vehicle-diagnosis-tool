@@ -327,8 +327,11 @@ const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   }
 });
 check(bridgeReadinessSnapshot.source === "local_bridge", "Bridge readiness source was not normalized");
+check(bridgeReadinessSnapshot.intent === "readiness_snapshot" && bridgeReadinessSnapshot.blocked === false && bridgeReadinessSnapshot.wouldTransmit === false, "Bridge readiness safety metadata was not normalized");
 check(bridgeReadinessSnapshot.milOn === true, "Bridge readiness did not carry MIL status");
 check(bridgeReadinessSnapshot.incompleteCount === 1, "Bridge readiness did not count incomplete monitors");
+const bridgeEmptyReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({});
+check(bridgeEmptyReadinessSnapshot.monitorCount === 0 && bridgeEmptyReadinessSnapshot.blocked === true, "Empty Bridge readiness response was not fail-closed");
 const bridgeEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,

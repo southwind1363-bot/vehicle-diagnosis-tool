@@ -937,16 +937,23 @@
   function normalizeBridgeReadinessSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const rows = Array.isArray(data.values) ? data.values : Array.isArray(response.monitorValues) ? response.monitorValues : [];
+    const withBridgeMetadata = (snapshot) => ({
+      ...snapshot,
+      intent: "readiness_snapshot",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true
+    });
     const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => [row.id, row.value]));
     const b = Number(valueById.get("readiness_status_byte_b"));
     const c = Number(valueById.get("readiness_status_byte_c"));
     const d = Number(valueById.get("readiness_status_byte_d"));
     if (![b, c, d].every(Number.isFinite)) {
-      return normalizeReadinessSnapshot({
+      return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
         monitors: []
-      });
+      }));
     }
     const compressionIgnition = (b & 0x08) !== 0;
     const monitorBits = compressionIgnition
@@ -972,7 +979,7 @@
           ["oxygen_sensor_heater", d, 0x04, 0x40],
           ["egr_vvt", d, 0x08, 0x80]
         ];
-    return normalizeReadinessSnapshot({
+    return withBridgeMetadata(normalizeReadinessSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
@@ -981,7 +988,7 @@
         const complete = supported ? (byte & incompleteBit) === 0 : false;
         return { id, supported, complete, status: supported ? (complete ? "complete" : "not_complete") : "not_supported" };
       })
-    });
+    }));
   }
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
