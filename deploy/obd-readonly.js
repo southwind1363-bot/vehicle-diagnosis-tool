@@ -340,6 +340,7 @@
       "adapter_identity",
       "read_stored_dtc",
       "read_pending_dtc",
+      "read_permanent_dtc",
       "read_freeze_frame",
       "read_supported_pids",
       "read_ecu_info",
@@ -403,6 +404,17 @@
     Object.freeze({
       intent: "read_stored_dtc",
       label: "Stored DTC snapshot",
+      dataShape: Object.freeze(["protocol", "ecu_responses", "dtcs", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        ecu_responses: Object.freeze([]),
+        dtcs: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "read_permanent_dtc",
+      label: "Permanent DTC snapshot",
       dataShape: Object.freeze(["protocol", "ecu_responses", "dtcs", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,

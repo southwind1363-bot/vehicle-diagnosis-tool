@@ -91,6 +91,10 @@ try {
   check(pendingDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "pending"), "pending DTC response included an invalid code or status");
   check(pendingDtc.data.dtcs.every((item) => ecuResponseCodes(pendingDtc).includes(item.code)), "pending DTC response did not match ECU response DTC list");
   check(hasUniqueDtcCodes(pendingDtc.data.dtcs), "pending DTC response included duplicate codes");
+  const permanentDtc = await post(port, "read_permanent_dtc");
+  check(permanentDtc.data.dtcs.some((item) => item.code === "P0300" && item.status === "permanent"), "permanent DTC response did not include sample P0300");
+  check(permanentDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "permanent"), "permanent DTC response included an invalid code or status");
+  check(permanentDtc.data.dtcs.every((item) => ecuResponseCodes(permanentDtc).includes(item.code)), "permanent DTC response did not match ECU response DTC list");
 
   const freezeFrame = await post(port, "read_freeze_frame");
   check(freezeFrame.data.trigger_dtc === "P0171", "freeze frame response did not include trigger DTC");
@@ -217,6 +221,7 @@ const replayLog = [
   "can0 7E8#094601010064003200C8",
   "can0 7E8#09460201012C003200C8",
   "can0 7E8#0742010081070000",
+  "can0 7E8#044A030000",
   "can0 7E8#054202000171",
   "can0 7E8#04420C001AF8",
   "can0 7E8#034205007B"
@@ -236,6 +241,9 @@ try {
   check(replayDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "stored"), "replay stored DTC response included an invalid code or status");
   check(replayDtc.data.dtcs.every((item) => ecuResponseCodes(replayDtc).includes(item.code)), "replay stored DTC response did not match ECU response DTC list");
   check(hasUniqueDtcCodes(replayDtc.data.dtcs), "replay stored DTC response included duplicate codes");
+  const replayPermanentDtc = await post(replayPort, "read_permanent_dtc");
+  check(replayPermanentDtc.data.dtcs.some((item) => item.code === "P0300" && item.status === "permanent"), "replay permanent DTC response did not include P0300");
+  check(replayPermanentDtc.data.dtcs.every((item) => ecuResponseCodes(replayPermanentDtc).includes(item.code)), "replay permanent DTC response did not match ECU response DTC list");
 
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
@@ -324,6 +332,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 136");
+  console.log("Local bridge read-only checks: 142");
   console.log("Errors: 0");
 }

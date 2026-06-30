@@ -135,6 +135,7 @@ check(bridgeContract.requiresPairingToken === true, "ローカルブリッジの
 check(bridgeContract.allowedReadIntents.includes("read_stored_dtc"), "保存DTC読取Intentがありません");
 check(bridgeContract.blockedWriteIntents.includes("clear_dtc"), "DTC消去Intentが遮断対象にありません");
 check(bridgeContract.logPolicy.storeRawFrames === false, "ローカルブリッジ契約が生フレーム保存を許可しています");
+check(bridgeContract.allowedReadIntents.includes("read_permanent_dtc"), "Permanent DTC read intent is missing");
 const blockedBridgeRead = obd.evaluateLocalBridgeRequest({ request_id: "test", api_version: "v1", intent: "read_stored_dtc", timestamp: "2026-06-28T00:00:00Z", pairing_token: "dummy" });
 check(blockedBridgeRead.blocked === true && blockedBridgeRead.wouldTransmit === false && blockedBridgeRead.knownReadIntent === true, "ローカルブリッジ読取Intentが安全に停止していません");
 const blockedBridgeClear = obd.evaluateLocalBridgeRequest({ request_id: "test", api_version: "v1", intent: "clear_dtc", timestamp: "2026-06-28T00:00:00Z", pairing_token: "dummy" });
@@ -143,6 +144,7 @@ const bridgeSchemas = obd.getLocalBridgeResponseSchemas();
 check(bridgeSchemas.length >= 5, "ローカルブリッジ応答型が不足しています");
 check(bridgeSchemas.some((item) => item.intent === "bridge_status" && item.safeDefault.status === "not_connected"), "ブリッジ状態の安全な既定値がありません");
 check(bridgeSchemas.some((item) => item.intent === "adapter_identity" && item.safeDefault.vehicle_command_enabled === false), "アダプター識別応答型の安全な既定値がありません");
+check(bridgeSchemas.some((item) => item.intent === "read_permanent_dtc" && Array.isArray(item.safeDefault.dtcs)), "Permanent DTC bridge response schema is missing");
 check(bridgeSchemas.some((item) => item.intent === "read_freeze_frame" && Array.isArray(item.safeDefault.values)), "フリーズフレーム応答型がありません");
 check(bridgeSchemas.some((item) => item.intent === "read_supported_pids" && Array.isArray(item.safeDefault.supported_pids)), "対応PID応答型がありません");
 check(bridgeSchemas.some((item) => item.intent === "read_ecu_info" && Array.isArray(item.safeDefault.values)), "ECU info bridge response schema is missing");
@@ -745,6 +747,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 416");
+  console.log("OBD read-only safety checks: 418");
   console.log("Errors: 0");
 }

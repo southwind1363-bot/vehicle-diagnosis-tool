@@ -11,6 +11,7 @@ const READ_INTENTS = new Set([
   "adapter_identity",
   "read_stored_dtc",
   "read_pending_dtc",
+  "read_permanent_dtc",
   "read_freeze_frame",
   "read_supported_pids",
   "read_ecu_info",
@@ -210,31 +211,32 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     };
   }
 
-  if ((request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc") && replaySnapshot) {
-    const status = request.intent === "read_pending_dtc" ? "pending" : "stored";
+  if ((request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc" || request.intent === "read_permanent_dtc") && replaySnapshot) {
+    const status = request.intent === "read_pending_dtc" ? "pending" : request.intent === "read_permanent_dtc" ? "permanent" : "stored";
+    const dtcs = status === "permanent"
+      ? replaySnapshot.dtcs.filter((item) => item.status === "permanent")
+      : uniqueBy(replaySnapshot.dtcs.map((item) => ({ ...item, status })), (item) => item.code);
     return {
       ...base,
       data: {
         protocol: replaySnapshot.protocol,
         captured_at: new Date().toISOString(),
-        ecu_responses: replaySnapshot.ecuResponses,
-        dtcs: replaySnapshot.dtcs.map((item) => ({ ...item, status }))
+        ecu_responses: buildEcuResponsesForDtcs(replaySnapshot.ecuResponses, dtcs),
+        dtcs
       }
     };
   }
 
-  if (request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc") {
-    const status = request.intent === "read_pending_dtc" ? "pending" : "stored";
+  if (request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc" || request.intent === "read_permanent_dtc") {
+    const status = request.intent === "read_pending_dtc" ? "pending" : request.intent === "read_permanent_dtc" ? "permanent" : "stored";
+    const sampleCodes = status === "permanent" ? ["P0300"] : ["P0171", "P0300"];
     return {
       ...base,
       data: {
         protocol: "ISO15765-4",
         captured_at: new Date().toISOString(),
-        ecu_responses: [{ ecu: "7E8", status: "sample", dtcs: ["P0171", "P0300"] }],
-        dtcs: [
-          { code: "P0171", status, ecu: "7E8" },
-          { code: "P0300", status, ecu: "7E8" }
-        ]
+        ecu_responses: [{ ecu: "7E8", status: "sample", dtcs: sampleCodes }],
+        dtcs: sampleCodes.map((code) => ({ code, status, ecu: "7E8" }))
       }
     };
   }
@@ -362,6 +364,14 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
 function buildReplaySnapshot(options = {}) {
   const replayText = String(options.replayLogText || readReplayLogFile(options.replayLogPath || process.env.LOCAL_BRIDGE_REPLAY_LOG) || "");
   return replayText ? decodeReplayLog(replayText) : null;
+}
+
+function buildEcuResponsesForDtcs(ecuResponses = [], dtcs = []) {
+  return ecuResponses.map((row) => {
+    const ecu = row?.ecu || null;
+    const codes = dtcs.filter((item) => !ecu || item.ecu === ecu).map((item) => item.code);
+    return { ...row, dtcs: [...new Set(codes)] };
+  });
 }
 
 function readReplayLogFile(filePath) {
