@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.303.0";
+const APP_VERSION = "2.304.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2524,13 +2524,19 @@ function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
 function renderObdDeveloperSessionSummary(session = null) {
   obdDevSessionSummary.innerHTML = "";
   const bridgeDeviceCount = obdDevSession.bridgeVciList?.deviceCount ?? 0;
+  const dtcStatusSummary = formatObdBridgeDtcStatusSummary(session?.dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
   const values = [
     ["接続", obdDevSession.port ? "Web Serial" : obdDevSession.bridgeEndpoint ? "Local Bridge" : "未接続"],
     ["開始", obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA],
     ["Bridge", obdDevSession.bridgeEndpoint ? "確認済み" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
-    ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0]
+    ["DTC内訳", dtcStatusSummary || NO_DATA],
+    ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0],
+    ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
+    ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
+    ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
+    ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0]
   ];
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
