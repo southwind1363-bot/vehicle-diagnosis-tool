@@ -1,8 +1,14 @@
 import { createLocalBridgeApp } from "../local-bridge-readonly.js";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const failures = [];
 const token = "local-bridge-test-token";
 const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge" });
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const monitorDefinitionRows = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "data", "obd-monitor-definitions.json"), "utf8"));
+const monitorDefinitionIds = new Set(monitorDefinitionRows.map((row) => row.id));
 
 function check(condition, message) {
   if (!condition) failures.push(message);
@@ -76,6 +82,8 @@ try {
   check(live.data.values.some((item) => item.id === "commanded_diesel_intake_air_flow" && item.value === 50.2), "live PID response did not include sample diesel intake air flow command");
   check(live.data.values.some((item) => item.id === "commanded_throttle_control" && item.value === 50.2), "live PID response did not include sample diesel throttle control command");
   check(live.data.values.length >= 40, "live PID sample response did not include expanded monitor values");
+  check(live.data.values.every((item) => monitorDefinitionIds.has(item.id)), "live PID sample response included an id not registered in monitor definitions");
+  check(live.data.values.every((item) => live.data.supported_pids.includes(item.pid)), "live PID sample response included a pid not advertised as supported");
 
   const blockedWrite = await post(port, "clear_dtc");
   check(blockedWrite.ok === false && blockedWrite.blocked === true, "write intent was not blocked");
@@ -248,6 +256,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 106");
+  console.log("Local bridge read-only checks: 108");
   console.log("Errors: 0");
 }
