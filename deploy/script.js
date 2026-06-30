@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.299.0";
+const APP_VERSION = "2.300.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2200,19 +2200,19 @@ async function listObdLocalBridgeVci() {
 
 async function readObdLocalBridgeDtc() {
   await runObdLocalBridgeRead("ブリッジDTC読取", "read_stored_dtc", {}, (response) => {
-    renderObdBridgeReadout({ dtcResponse: response });
+    renderObdBridgeReadout({ dtcResponse: { ...response, intent: "read_stored_dtc" } });
   });
 }
 
 async function readObdLocalBridgePendingDtc() {
   await runObdLocalBridgeRead("ブリッジ保留DTC読取", "read_pending_dtc", {}, (response) => {
-    renderObdBridgeReadout({ dtcResponse: response });
+    renderObdBridgeReadout({ dtcResponse: { ...response, intent: "read_pending_dtc" } });
   });
 }
 
 async function readObdLocalBridgePermanentDtc() {
   await runObdLocalBridgeRead("ブリッジ永久DTC読取", "read_permanent_dtc", {}, (response) => {
-    renderObdBridgeReadout({ dtcResponse: response });
+    renderObdBridgeReadout({ dtcResponse: { ...response, intent: "read_permanent_dtc" } });
   });
 }
 
