@@ -55,6 +55,10 @@ try {
 
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
+  check(live.data.values.some((item) => item.id === "map" && item.value === 40), "live PID response did not include sample MAP");
+  check(live.data.values.some((item) => item.id === "maf" && item.value === 6.55), "live PID response did not include sample MAF");
+  check(live.data.values.some((item) => item.id === "fuel_rail_pressure_vacuum" && item.value === 20.22), "live PID response did not include sample fuel rail vacuum pressure");
+  check(live.data.values.some((item) => item.id === "fuel_rail_pressure" && item.value === 2000), "live PID response did not include sample fuel rail pressure");
   check(live.data.values.some((item) => item.id === "fuel_system_status_bank1" && item.value === "closed_loop_oxygen_sensor_feedback"), "live PID response did not include sample fuel system status bank 1");
   check(live.data.values.some((item) => item.id === "secondary_air_status" && item.value === "upstream_of_catalytic_converter"), "live PID response did not include sample secondary air status");
   check(live.data.values.some((item) => item.id === "oxygen_sensors_present" && item.value === "b1s1,b1s2"), "live PID response did not include sample oxygen sensor locations");
@@ -244,6 +248,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 102");
+  console.log("Local bridge read-only checks: 106");
   console.log("Errors: 0");
 }
