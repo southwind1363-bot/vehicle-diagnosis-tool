@@ -14,6 +14,7 @@ const READ_INTENTS = new Set([
   "read_freeze_frame",
   "read_supported_pids",
   "read_ecu_info",
+  "read_onboard_monitor",
   "read_live_pid_snapshot"
 ]);
 const BLOCKED_WRITE_INTENTS = new Set([
@@ -93,6 +94,10 @@ const SAMPLE_ECU_INFO_VALUES = [
   { id: "calibration_id", info_type: "04", value: "CAL-1234" },
   { id: "calibration_verification_number", info_type: "06", value: "CVN-ABCD" },
   { id: "ecu_name", info_type: "0A", value: "Engine ECU" }
+];
+const SAMPLE_ONBOARD_MONITOR_TESTS = [
+  { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
+  { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
 ];
 
 export function createLocalBridgeApp(options = {}) {
@@ -305,6 +310,28 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     };
   }
 
+  if (request.intent === "read_onboard_monitor" && replaySnapshot) {
+    return {
+      ...base,
+      data: {
+        protocol: replaySnapshot.protocol,
+        tests: replaySnapshot.onboardMonitorTests,
+        captured_at: new Date().toISOString()
+      }
+    };
+  }
+
+  if (request.intent === "read_onboard_monitor") {
+    return {
+      ...base,
+      data: {
+        protocol: "ISO15765-4",
+        tests: SAMPLE_ONBOARD_MONITOR_TESTS,
+        captured_at: new Date().toISOString()
+      }
+    };
+  }
+
   if (request.intent === "read_live_pid_snapshot" && replaySnapshot) {
     return {
       ...base,
@@ -355,13 +382,14 @@ export function decodeReplayLog(text) {
   const liveValues = [];
   const freezeFrameValues = [];
   const ecuInfoValues = [];
+  const onboardMonitorTests = [];
   const supportedPids = new Set();
   const ecus = new Set();
   let triggerDtc = null;
 
   packets.forEach(({ ecu, bytes }) => {
     if (ecu) ecus.add(ecu);
-    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x42, 0x43, 0x47, 0x49, 0x4A].includes(byte));
+    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A].includes(byte));
     if (serviceIndex < 0) return;
     const service = bytes[serviceIndex];
 
@@ -401,6 +429,12 @@ export function decodeReplayLog(text) {
       return;
     }
 
+    if (service === 0x46) {
+      const decoded = decodeOnboardMonitorTest(bytes.slice(serviceIndex + 1));
+      if (decoded) onboardMonitorTests.push(decoded);
+      return;
+    }
+
     if (service === 0x41) {
       const pid = toHexByte(bytes[serviceIndex + 1]);
       if (!pid) return;
@@ -423,6 +457,7 @@ export function decodeReplayLog(text) {
     liveValues: uniqueBy(liveValues, (item) => item.id),
     freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}`),
     ecuInfoValues: uniqueBy(ecuInfoValues, (item) => item.id),
+    onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}`),
     triggerDtc,
     supportedPids: [...supportedPids].sort()
   };
@@ -677,6 +712,17 @@ function decodeEcuInfoValue(infoTypeByte, payload = []) {
   const value = bytesToAscii(bytes);
   if (!value) return null;
   return { id, info_type: infoType, value };
+}
+
+function decodeOnboardMonitorTest(payload = []) {
+  if (payload.length < 8) return null;
+  return {
+    test_id: toHexByte(payload[0]),
+    component_id: toHexByte(payload[1]),
+    value: (payload[2] * 256) + payload[3],
+    min: (payload[4] * 256) + payload[5],
+    max: (payload[6] * 256) + payload[7]
+  };
 }
 
 function trimEcuInfoPayload(payload = []) {

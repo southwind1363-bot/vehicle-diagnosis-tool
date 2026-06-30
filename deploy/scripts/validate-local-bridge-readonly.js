@@ -105,6 +105,10 @@ try {
   check(ecuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "ECU info response did not include sample ECU name");
   check(ecuInfo.data.values.some((item) => item.id === "vin"), "ECU info response did not include sample VIN for downstream redaction checks");
 
+  const onboardMonitor = await post(port, "read_onboard_monitor");
+  check(onboardMonitor.data.tests.some((item) => item.test_id === "01" && item.value === 100), "on-board monitor response did not include sample passing test");
+  check(onboardMonitor.data.tests.some((item) => item.test_id === "02" && item.value === 300), "on-board monitor response did not include sample failing test");
+
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
   check(live.data.values.some((item) => item.id === "map" && item.value === 40), "live PID response did not include sample MAP");
@@ -210,6 +214,8 @@ const replayLog = [
   "can0 7E8#03418E78",
   "can0 7E8#0C49040143414C2D31323334",
   "can0 7E8#0C490A01456E67696E6520454355",
+  "can0 7E8#094601010064003200C8",
+  "can0 7E8#09460201012C003200C8",
   "can0 7E8#0742010081070000",
   "can0 7E8#054202000171",
   "can0 7E8#04420C001AF8",
@@ -234,6 +240,10 @@ try {
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
   check(replayEcuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "replay ECU info did not decode ECU name");
+
+  const replayOnboardMonitor = await post(replayPort, "read_onboard_monitor");
+  check(replayOnboardMonitor.data.tests.some((item) => item.test_id === "01" && item.value === 100), "replay Mode 06 did not decode passing test");
+  check(replayOnboardMonitor.data.tests.some((item) => item.test_id === "02" && item.value === 300), "replay Mode 06 did not decode failing test");
 
   const replayLive = await post(replayPort, "read_live_pid_snapshot");
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
@@ -314,6 +324,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 132");
+  console.log("Local bridge read-only checks: 136");
   console.log("Errors: 0");
 }

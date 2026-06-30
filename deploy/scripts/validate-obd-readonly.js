@@ -146,6 +146,7 @@ check(bridgeSchemas.some((item) => item.intent === "adapter_identity" && item.sa
 check(bridgeSchemas.some((item) => item.intent === "read_freeze_frame" && Array.isArray(item.safeDefault.values)), "フリーズフレーム応答型がありません");
 check(bridgeSchemas.some((item) => item.intent === "read_supported_pids" && Array.isArray(item.safeDefault.supported_pids)), "対応PID応答型がありません");
 check(bridgeSchemas.some((item) => item.intent === "read_ecu_info" && Array.isArray(item.safeDefault.values)), "ECU info bridge response schema is missing");
+check(bridgeSchemas.some((item) => item.intent === "read_onboard_monitor" && Array.isArray(item.safeDefault.tests)), "On-board monitor bridge response schema is missing");
 check(bridgeSchemas.some((item) => item.intent === "read_live_pid_snapshot" && Array.isArray(item.safeDefault.values)), "ライブPID応答型がありません");
 const bridgeStatus = obd.normalizeBridgeConnectionStatus({
   ok: true,
@@ -322,12 +323,28 @@ check(bridgeEcuInfoSnapshot.source === "local_bridge", "Bridge ECU info source w
 check(bridgeEcuInfoSnapshot.hadSensitiveIdentifier === true, "Bridge ECU info did not detect sensitive identifiers");
 check(!JSON.stringify(bridgeEcuInfoSnapshot).includes("JTDKN3DU0A0123456"), "Bridge ECU info retained raw VIN");
 check(bridgeEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge ECU info did not retain CALID");
-const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, adapterIdentity: bridgeAdapterIdentity });
+const bridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    tests: [
+      { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
+      { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
+    ],
+    captured_at: "2026-06-28T00:01:55Z"
+  }
+});
+check(bridgeOnboardMonitorSnapshot.source === "local_bridge", "Bridge Mode 06 source was not normalized");
+check(bridgeOnboardMonitorSnapshot.failedCount === 1, "Bridge Mode 06 failed count was not carried");
+const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge session summary did not carry ECU DTC count");
 check(bridgeSummary.monitorValues.length === 3, "ブリッジセッション要約へPID値を引き継げません");
 check(bridgeSummary.readinessSnapshot.incompleteCount === 1, "Bridge session summary did not carry readiness");
+check(bridgeSummary.onboardMonitorSnapshot.failedCount === 1, "Bridge session summary did not carry Mode 06");
 check(bridgeSummary.supportedPidMatrix.supportedPids.includes("0C"), "ブリッジセッション要約へ対応PIDを引き継げません");
 check(bridgeSummary.freezeFrameSnapshot.triggerDtc === "P0171", "ブリッジセッション要約へフリーズフレームを引き継げません");
 check(bridgeSummary.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge session summary did not carry ECU info");
@@ -344,6 +361,7 @@ const bridgeExportPayload = obd.buildBridgeSessionExportPayload({
   freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
   readinessSnapshot: bridgeReadinessSnapshot,
   ecuInfoSnapshot: bridgeEcuInfoSnapshot,
+  onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot,
   adapterIdentity: bridgeAdapterIdentity,
   supportedPidMatrix: bridgeSupportedPidSnapshot,
   exportedAt: "2026-06-28T00:02:00Z"
@@ -358,6 +376,7 @@ check(bridgeExportPayload.session.ecu_response_summary.ecus[0]?.address === "7E8
 check(bridgeExportPayload.session.supported_pid_matrix.supportedPids.includes("40"), "ブリッジエクスポートへ対応PIDを引き継げません");
 check(bridgeExportPayload.session.readiness_snapshot.incompleteCount === 1, "Bridge export did not carry readiness");
 check(bridgeExportPayload.session.ecu_info_snapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge export did not carry ECU info");
+check(bridgeExportPayload.session.onboard_monitor_snapshot.failedCount === 1, "Bridge export did not carry Mode 06");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
 check(bridgeExportPayload.safety.blocked_write_intents.includes("clear_dtc"), "ブリッジエクスポートの安全メタ情報が不足しています");
@@ -369,6 +388,7 @@ const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
   readinessSnapshot: bridgeReadinessSnapshot,
   ecuInfoSnapshot: bridgeEcuInfoSnapshot,
+  onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot,
   adapterIdentity: bridgeAdapterIdentity,
   supportedPidMatrix: bridgeSupportedPidSnapshot
 });
@@ -379,6 +399,7 @@ check(bridgeDiagnosticImport.monitorValues.length === 3, "ブリッジ診断取�
 check(bridgeDiagnosticImport.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not carry readiness");
 check(bridgeDiagnosticImport.supportedPidMatrix.supportedPids.includes("05"), "ブリッジ診断取込へ対応PIDを引き継げません");
 check(bridgeDiagnosticImport.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge diagnostic import did not carry ECU info");
+check(bridgeDiagnosticImport.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not carry Mode 06");
 check(bridgeDiagnosticImport.freezeFrameSnapshot.monitorValues.length === 2, "ブリッジ診断取込へフリーズフレームを引き継げません");
 check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取込へ相関ヒントを引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.vciDevices.length === 1, "ブリッジ診断取込へVCI表示モデルを引き継げません");
@@ -724,6 +745,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 409");
+  console.log("OBD read-only safety checks: 416");
   console.log("Errors: 0");
 }

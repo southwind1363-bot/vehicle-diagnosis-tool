@@ -343,6 +343,7 @@
       "read_freeze_frame",
       "read_supported_pids",
       "read_ecu_info",
+      "read_onboard_monitor",
       "read_live_pid_snapshot"
     ]),
     blockedWriteIntents: Object.freeze([
@@ -438,6 +439,16 @@
       safeDefault: Object.freeze({
         protocol: null,
         values: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "read_onboard_monitor",
+      label: "On-board monitor snapshot",
+      dataShape: Object.freeze(["protocol", "tests", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        tests: Object.freeze([]),
         captured_at: null
       })
     }),
@@ -931,6 +942,16 @@
     });
   }
 
+  function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    return normalizeOnboardMonitorSnapshot({
+      source: "local_bridge",
+      captured_at: data.captured_at || data.capturedAt || null,
+      protocol: data.protocol || null,
+      tests: Array.isArray(data.tests) ? data.tests : Array.isArray(data.values) ? data.values : []
+    });
+  }
+
   function normalizeBridgePidValue(row, index) {
     if (!row || typeof row !== "object") return null;
     const id = String(row.id || row.monitor_id || row.pid || "").trim();
@@ -993,6 +1014,9 @@
     const ecuInfoSnapshot = parts.ecuInfoSnapshot?.schemaVersion
       ? parts.ecuInfoSnapshot
       : normalizeBridgeEcuInfoSnapshot(parts.ecuInfoSnapshot || parts.ecuInfoResponse || {});
+    const onboardMonitorSnapshot = parts.onboardMonitorSnapshot?.schemaVersion
+      ? parts.onboardMonitorSnapshot
+      : normalizeBridgeOnboardMonitorSnapshot(parts.onboardMonitorSnapshot || parts.onboardMonitorResponse || {});
     const ecuResponseSummary = parts.ecuResponseSummary?.schemaVersion
       ? parts.ecuResponseSummary
       : normalizeEcuResponseSummary(parts.ecuResponseSummary || {
@@ -1014,6 +1038,7 @@
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
     if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
+    if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
 
@@ -1030,6 +1055,7 @@
       supportedPidMatrix,
       readinessSnapshot,
       ecuInfoSnapshot,
+      onboardMonitorSnapshot,
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -1064,6 +1090,7 @@
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         readiness_snapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
         ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
+        onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: summary.monitorValues || [],
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(summary.monitorValues || []),
@@ -1095,6 +1122,7 @@
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
       readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
       ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
+      onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
       bridgeSession: {
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
@@ -2834,6 +2862,7 @@
     normalizeBridgeFreezeFrameSnapshot,
     normalizeBridgeReadinessSnapshot,
     normalizeBridgeEcuInfoSnapshot,
+    normalizeBridgeOnboardMonitorSnapshot,
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,
