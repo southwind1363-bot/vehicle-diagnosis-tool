@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.300.0";
+const APP_VERSION = "2.301.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2407,24 +2407,25 @@ function renderObdDeveloperReadout(session) {
 }
 
 function renderObdBridgeReadout(parts = {}) {
+  const previousSession = obdDevSession.lastSession || {};
   const dtcSnapshot = parts.dtcResponse
     ? window.ObdReadOnly.normalizeBridgeDtcSnapshot(parts.dtcResponse)
-    : null;
+    : previousSession.dtcSnapshot || null;
   const livePidSnapshot = parts.livePidResponse
     ? window.ObdReadOnly.normalizeBridgeLivePidSnapshot(parts.livePidResponse)
-    : null;
+    : previousSession.livePidSnapshot || null;
   const freezeFrameSnapshot = parts.freezeFrameResponse
     ? window.ObdReadOnly.normalizeBridgeFreezeFrameSnapshot(parts.freezeFrameResponse)
-    : null;
+    : previousSession.freezeFrameSnapshot || null;
   const ecuInfoSnapshot = parts.ecuInfoResponse
     ? window.ObdReadOnly.normalizeBridgeEcuInfoSnapshot(parts.ecuInfoResponse)
-    : null;
+    : previousSession.ecuInfoSnapshot || null;
   const onboardMonitorSnapshot = parts.onboardMonitorResponse
     ? window.ObdReadOnly.normalizeBridgeOnboardMonitorSnapshot(parts.onboardMonitorResponse)
-    : null;
+    : previousSession.onboardMonitorSnapshot || null;
   const supportedPidMatrix = parts.supportedPidResponse
     ? window.ObdReadOnly.normalizeBridgeSupportedPidSnapshot(parts.supportedPidResponse)
-    : null;
+    : previousSession.supportedPidMatrix || null;
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
@@ -2449,7 +2450,8 @@ function renderObdBridgeReadout(parts = {}) {
   obdDevSession.lastSession = session;
   const monitorValues = livePidSnapshot?.monitorValues || [];
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
-  const codes = dtcSnapshot?.dtcs?.map((item) => item.code).filter(Boolean) || [];
+  const currentDtcSnapshot = parts.dtcResponse ? dtcSnapshot : null;
+  const codes = currentDtcSnapshot?.dtcs?.map((item) => item.code).filter(Boolean) || [];
 
   if (monitorValues.length) {
     renderObdMonitorValues(monitorValues, livePidSnapshot.monitorInsights || []);
@@ -2460,15 +2462,15 @@ function renderObdBridgeReadout(parts = {}) {
     obdDetectedCodes.innerHTML = "";
     [...new Set(codes)].forEach((code) => obdDetectedCodes.appendChild(createObdDtcCard(code)));
     obdImportStatus.textContent = `${codes.length}件のブリッジDTCを読取りました。`;
-  } else if (dtcSnapshot) {
+  } else if (currentDtcSnapshot) {
     obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
-  } else if (freezeFrameSnapshot) {
+  } else if (parts.freezeFrameResponse && freezeFrameSnapshot) {
     obdImportStatus.textContent = `ブリッジフリーズフレームを${freezeFrameValues.length}項目読取りました。`;
-  } else if (ecuInfoSnapshot) {
+  } else if (parts.ecuInfoResponse && ecuInfoSnapshot) {
     obdImportStatus.textContent = `ブリッジECU情報を${ecuInfoSnapshot.itemCount || 0}項目読取りました。`;
-  } else if (onboardMonitorSnapshot) {
+  } else if (parts.onboardMonitorResponse && onboardMonitorSnapshot) {
     obdImportStatus.textContent = `ブリッジ監視結果を${onboardMonitorSnapshot.testCount || 0}項目読取りました。`;
-  } else if (supportedPidMatrix) {
+  } else if (parts.supportedPidResponse && supportedPidMatrix) {
     obdImportStatus.textContent = `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。`;
   }
   renderObdDeveloperSessionSummary(session);
