@@ -793,6 +793,17 @@
     });
   }
 
+  function normalizeBridgeFreezeFrameSnapshot(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    return normalizeFreezeFrameSnapshot({
+      source: "local_bridge",
+      captured_at: data.captured_at || data.capturedAt || null,
+      protocol: data.protocol || null,
+      trigger_dtc: data.trigger_dtc || data.triggerDtc || data.dtc || null,
+      values: Array.isArray(data.values) ? data.values : []
+    });
+  }
+
   function normalizeBridgePidValue(row, index) {
     if (!row || typeof row !== "object") return null;
     const id = String(row.id || row.monitor_id || row.pid || "").trim();
@@ -842,6 +853,9 @@
   function buildBridgeSessionSummary(parts = {}) {
     const dtcSnapshot = parts.dtcSnapshot?.codes ? parts.dtcSnapshot : normalizeBridgeDtcSnapshot(parts.dtcSnapshot);
     const livePidSnapshot = parts.livePidSnapshot?.monitorValues ? parts.livePidSnapshot : normalizeBridgeLivePidSnapshot(parts.livePidSnapshot);
+    const freezeFrameSnapshot = parts.freezeFrameSnapshot?.schemaVersion
+      ? parts.freezeFrameSnapshot
+      : normalizeBridgeFreezeFrameSnapshot(parts.freezeFrameSnapshot || parts.freezeFrameResponse || {});
     const supportedPidMatrix = parts.supportedPidMatrix?.schemaVersion
       ? parts.supportedPidMatrix
       : normalizeBridgeSupportedPidSnapshot(parts.supportedPidMatrix || parts.supportedPidSnapshot || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
@@ -850,8 +864,9 @@
     const warnings = [];
     if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
+    if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
-    if (livePidSnapshot.monitorValueSummary?.undecodedRawCount > 0) warnings.push("raw_pid_values_need_conversion");
+    if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
 
     return {
       source: "local_bridge",
@@ -865,6 +880,7 @@
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
+      freezeFrameSnapshot,
       warnings,
       exportRequired: true,
       retainedRawText: false,
@@ -891,6 +907,7 @@
         vci_devices: summary.vciDevices || [],
         dtc_codes: summary.codes || [],
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+        freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: summary.monitorValues || [],
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(summary.monitorValues || []),
         monitor_insights: summary.monitorInsights || [],
@@ -918,6 +935,7 @@
       monitorValues,
       monitorInsights,
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+      freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
       bridgeSession: {
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: Array.isArray(summary.vciDevices) ? summary.vciDevices.map((item) => ({ ...item })) : [],
@@ -2651,6 +2669,7 @@
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
     normalizeBridgeSupportedPidSnapshot,
+    normalizeBridgeFreezeFrameSnapshot,
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,

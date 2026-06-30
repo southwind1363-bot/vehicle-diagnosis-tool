@@ -251,10 +251,29 @@ const bridgeSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
 check(bridgeSupportedPidSnapshot.source === "local_bridge", "ブリッジ対応PID応答のsourceが不正です");
 check(bridgeSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "ブリッジ対応PID応答を整形できません");
 check(bridgeSupportedPidSnapshot.supportedCount === 2, "ブリッジ対応PID件数を集計できません");
-const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot });
+const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    trigger_dtc: "P0171",
+    values: [
+      { id: "engine_speed", value: 760, unit: "rpm", freeze_frame_number: 0 },
+      { pid: "05", value: 88, unit: "°C", freeze_frame_number: 0 }
+    ],
+    captured_at: "2026-06-28T00:01:45Z"
+  }
+});
+check(bridgeFreezeFrameSnapshot.source === "local_bridge", "ブリッジフリーズフレーム応答のsourceが不正です");
+check(bridgeFreezeFrameSnapshot.triggerDtc === "P0171", "ブリッジフリーズフレーム起点DTCを整形できません");
+check(bridgeFreezeFrameSnapshot.monitorValues.length === 2, "ブリッジフリーズフレーム値を整形できません");
+const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 check(bridgeSummary.monitorValues.length === 3, "ブリッジセッション要約へPID値を引き継げません");
 check(bridgeSummary.supportedPidMatrix.supportedPids.includes("0C"), "ブリッジセッション要約へ対応PIDを引き継げません");
+check(bridgeSummary.freezeFrameSnapshot.triggerDtc === "P0171", "ブリッジセッション要約へフリーズフレームを引き継げません");
+check(bridgeSummary.warnings.includes("freeze_frame_available"), "ブリッジセッション要約へフリーズフレーム警告を反映できません");
 check(bridgeSummary.connectionStatus.displayStatus === "未接続", "ブリッジセッション要約の接続状態が不正です");
 check(Array.isArray(bridgeSummary.vciDevices) && bridgeSummary.vciDevices.length === 0, "ブリッジセッション要約のVCI初期値が不正です");
 check(bridgeSummary.exportRequired === true, "ブリッジセッション要約がエクスポート前提ではありません");
@@ -264,6 +283,7 @@ const bridgeExportPayload = obd.buildBridgeSessionExportPayload({
   vciList: bridgeVciList,
   dtcSnapshot: bridgeDtcSnapshot,
   livePidSnapshot: bridgePidSnapshot,
+  freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
   supportedPidMatrix: bridgeSupportedPidSnapshot,
   exportedAt: "2026-06-28T00:02:00Z"
 });
@@ -273,6 +293,7 @@ check(bridgeExportPayload.vehicle_command_enabled === false, "ブリッジエク
 check(bridgeExportPayload.retained_raw_frames === false && bridgeExportPayload.retained_raw_text === false, "ブリッジエクスポートが原文保持になっています");
 check(bridgeExportPayload.session.dtc_codes.join(",") === "P0171,P0300", "ブリッジエクスポートへDTCを引き継げません");
 check(bridgeExportPayload.session.supported_pid_matrix.supportedPids.includes("40"), "ブリッジエクスポートへ対応PIDを引き継げません");
+check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
 check(bridgeExportPayload.safety.blocked_write_intents.includes("clear_dtc"), "ブリッジエクスポートの安全メタ情報が不足しています");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
@@ -280,12 +301,14 @@ const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   vciList: bridgeVciList,
   dtcSnapshot: bridgeDtcSnapshot,
   livePidSnapshot: bridgePidSnapshot,
+  freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
   supportedPidMatrix: bridgeSupportedPidSnapshot
 });
 check(bridgeDiagnosticImport.importType === "bridge_diagnostic_snapshot", "ブリッジ診断取込の種別が不正です");
 check(bridgeDiagnosticImport.codes.join(",") === "P0171,P0300", "ブリッジ診断取込へDTCを引き継げません");
 check(bridgeDiagnosticImport.monitorValues.length === 3, "ブリッジ診断取込へPID値を引き継げません");
 check(bridgeDiagnosticImport.supportedPidMatrix.supportedPids.includes("05"), "ブリッジ診断取込へ対応PIDを引き継げません");
+check(bridgeDiagnosticImport.freezeFrameSnapshot.monitorValues.length === 2, "ブリッジ診断取込へフリーズフレームを引き継げません");
 check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取込へ相関ヒントを引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.vciDevices.length === 1, "ブリッジ診断取込へVCI表示モデルを引き継げません");
 check(bridgeDiagnosticImport.exportPayload.schema_version === "bridge_session_export_v1", "ブリッジ診断取込のエクスポート形式が不正です");
@@ -629,6 +652,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 377");
+  console.log("OBD read-only safety checks: 384");
   console.log("Errors: 0");
 }
