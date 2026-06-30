@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.306.0";
+const APP_VERSION = "2.307.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2416,6 +2416,9 @@ function renderObdBridgeReadout(parts = {}) {
   const livePidSnapshot = parts.livePidResponse
     ? window.ObdReadOnly.normalizeBridgeLivePidSnapshot(parts.livePidResponse)
     : previousSession.livePidSnapshot || null;
+  const readinessSnapshot = parts.livePidResponse
+    ? window.ObdReadOnly.normalizeBridgeReadinessSnapshot(parts.livePidResponse)
+    : previousSession.readinessSnapshot || null;
   const freezeFrameSnapshot = parts.freezeFrameResponse
     ? window.ObdReadOnly.normalizeBridgeFreezeFrameSnapshot(parts.freezeFrameResponse)
     : previousSession.freezeFrameSnapshot || null;
@@ -2431,6 +2434,7 @@ function renderObdBridgeReadout(parts = {}) {
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
+    readinessSnapshot: readinessSnapshot || undefined,
     freezeFrameSnapshot: freezeFrameSnapshot || undefined,
     ecuInfoSnapshot: ecuInfoSnapshot || undefined,
     onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
@@ -2442,6 +2446,7 @@ function renderObdBridgeReadout(parts = {}) {
     session_id: "local-bridge-dev-readout",
     dtcSnapshot: dtcSnapshot || { dtcs: [] },
     livePidSnapshot: livePidSnapshot || { values: [] },
+    readinessSnapshot: readinessSnapshot || { monitors: [] },
     freezeFrameSnapshot: freezeFrameSnapshot || { values: [] },
     ecuInfoSnapshot: ecuInfoSnapshot || { values: [] },
     onboardMonitorSnapshot: onboardMonitorSnapshot || { tests: [] },
@@ -2474,6 +2479,8 @@ function renderObdBridgeReadout(parts = {}) {
     obdImportStatus.textContent = `ブリッジ監視結果を${onboardMonitorSnapshot.testCount || 0}項目読取りました。`;
   } else if (parts.supportedPidResponse && supportedPidMatrix) {
     obdImportStatus.textContent = `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。`;
+  } else if (parts.livePidResponse && readinessSnapshot?.monitorCount) {
+    obdImportStatus.textContent = `ブリッジライブ値とレディネス${readinessSnapshot.monitorCount}項目を読取りました。未完了${readinessSnapshot.incompleteCount}項目です。`;
   }
   renderObdDeveloperSessionSummary(session);
 }
@@ -2529,6 +2536,17 @@ function renderObdBridgeSessionDetails(session = null) {
       const status = item.status ? ` ${item.status}` : "";
       return `${id || item.id || "test"}: ${formatObdBridgeReadoutValue(item)}${status}`;
     })]);
+  }
+
+  const readinessMonitors = session?.readinessSnapshot?.monitors || [];
+  if (readinessMonitors.length) {
+    const incomplete = readinessMonitors.filter((item) => item.supported && !item.complete);
+    const visible = (incomplete.length ? incomplete : readinessMonitors.filter((item) => item.supported)).slice(0, 6);
+    const lines = [
+      `MIL: ${session.readinessSnapshot.milOn ? "ON" : "OFF"} / 未完了 ${session.readinessSnapshot.incompleteCount}項目`,
+      ...visible.map((item) => `${item.label || item.id}: ${item.complete ? "完了" : "未完了"}`)
+    ];
+    sections.push(["レディネス", lines]);
   }
 
   const supportedPids = session?.supportedPidMatrix?.supportedPids || [];
@@ -2602,6 +2620,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0],
+    ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
     ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
     ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
     ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
