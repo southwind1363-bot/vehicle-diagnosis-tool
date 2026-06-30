@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.302.0";
+const APP_VERSION = "2.303.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2461,7 +2461,8 @@ function renderObdBridgeReadout(parts = {}) {
   if (currentCodes.length) {
     obdDetectedCodes.innerHTML = "";
     [...new Set(dtcSnapshot.dtcs.map((item) => item.code).filter(Boolean))].forEach((code) => obdDetectedCodes.appendChild(createObdDtcCard(code)));
-    obdImportStatus.textContent = `${currentCodes.length}件のブリッジDTCを読取りました。累計${dtcSnapshot.dtcs.length}件です。`;
+    const statusSummary = formatObdBridgeDtcStatusSummary(dtcSnapshot.dtcs);
+    obdImportStatus.textContent = `${currentCodes.length}件のブリッジDTCを読取りました。累計${dtcSnapshot.dtcs.length}件です。${statusSummary}`;
   } else if (currentDtcSnapshot) {
     obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
   } else if (parts.freezeFrameResponse && freezeFrameSnapshot) {
@@ -2474,6 +2475,24 @@ function renderObdBridgeReadout(parts = {}) {
     obdImportStatus.textContent = `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。`;
   }
   renderObdDeveloperSessionSummary(session);
+}
+
+function formatObdBridgeDtcStatusSummary(dtcs = []) {
+  const labels = {
+    stored: "保存",
+    pending: "保留",
+    permanent: "永久",
+    unknown: "不明"
+  };
+  const counts = dtcs.reduce((acc, item) => {
+    const status = item?.status || "unknown";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const parts = ["stored", "pending", "permanent", "unknown"]
+    .filter((status) => counts[status] > 0)
+    .map((status) => `${labels[status]}${counts[status]}件`);
+  return parts.length ? ` 内訳: ${parts.join(" / ")}。` : "";
 }
 
 function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
