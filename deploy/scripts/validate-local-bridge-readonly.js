@@ -9,6 +9,14 @@ const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const monitorDefinitionRows = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "data", "obd-monitor-definitions.json"), "utf8"));
 const monitorDefinitionIds = new Set(monitorDefinitionRows.map((row) => row.id));
+const bridgeComputedValueIds = new Set([
+  "mil_status",
+  "stored_dtc_count",
+  "readiness_status_byte_b",
+  "readiness_status_byte_c",
+  "readiness_status_byte_d",
+  "readiness_flag_count"
+]);
 
 function check(condition, message) {
   if (!condition) failures.push(message);
@@ -240,6 +248,8 @@ try {
   check(replayLive.data.values.some((item) => item.id === "commanded_diesel_intake_air_flow" && item.value === 50.2), "replay live response did not decode diesel intake air flow command");
   check(replayLive.data.values.some((item) => item.id === "commanded_throttle_control" && item.value === 50.2), "replay live response did not decode diesel throttle control command");
   check(replayLive.data.values.some((item) => item.id === "engine_friction_torque" && item.value === -5), "replay live response did not decode engine friction torque");
+  check(replayLive.data.values.every((item) => monitorDefinitionIds.has(item.id) || bridgeComputedValueIds.has(item.id)), "replay live response included an id not registered in monitor definitions or bridge computed values");
+  check(replayLive.data.values.every((item) => replayLive.data.supported_pids.includes(item.pid)), "replay live response included a pid not advertised as supported");
 
   const replayFreezeFrame = await post(replayPort, "read_freeze_frame");
   check(replayFreezeFrame.data.trigger_dtc === "P0171", "replay freeze frame did not decode trigger DTC");
@@ -256,6 +266,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 108");
+  console.log("Local bridge read-only checks: 110");
   console.log("Errors: 0");
 }
