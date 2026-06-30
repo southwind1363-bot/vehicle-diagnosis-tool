@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.294.0";
+const APP_VERSION = "2.295.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -176,6 +176,7 @@ const obdDevBridgePermanentDtcButton = document.querySelector("#obdDevBridgePerm
 const obdDevBridgeEcuInfoButton = document.querySelector("#obdDevBridgeEcuInfoButton");
 const obdDevBridgeMonitorButton = document.querySelector("#obdDevBridgeMonitorButton");
 const obdDevBridgeSupportedPidButton = document.querySelector("#obdDevBridgeSupportedPidButton");
+const obdDevBridgeFreezeFrameButton = document.querySelector("#obdDevBridgeFreezeFrameButton");
 const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton");
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
@@ -313,6 +314,7 @@ obdDevBridgePermanentDtcButton.addEventListener("click", readObdLocalBridgePerma
 obdDevBridgeEcuInfoButton.addEventListener("click", readObdLocalBridgeEcuInfo);
 obdDevBridgeMonitorButton.addEventListener("click", readObdLocalBridgeOnboardMonitor);
 obdDevBridgeSupportedPidButton.addEventListener("click", readObdLocalBridgeSupportedPids);
+obdDevBridgeFreezeFrameButton.addEventListener("click", readObdLocalBridgeFreezeFrame);
 obdDevBridgeLiveButton.addEventListener("click", readObdLocalBridgeLiveSnapshot);
 obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
 noticeCloseButton.addEventListener("click", () => {
@@ -2046,6 +2048,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevBridgeEcuInfoButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeMonitorButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeSupportedPidButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeFreezeFrameButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeLiveButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevDisconnectButton.disabled = !connected;
   obdDevConnectionState.textContent = connected ? "Web Serial接続中" : obdDevSession.bridgeEndpoint ? "ブリッジ確認済み" : "車両未接続";
@@ -2228,6 +2231,12 @@ async function readObdLocalBridgeOnboardMonitor() {
 async function readObdLocalBridgeSupportedPids() {
   await runObdLocalBridgeRead("ブリッジ対応PID読取", "read_supported_pids", {}, (response) => {
     renderObdBridgeReadout({ supportedPidResponse: response });
+  });
+}
+
+async function readObdLocalBridgeFreezeFrame() {
+  await runObdLocalBridgeRead("ブリッジフリーズフレーム読取", "read_freeze_frame", {}, (response) => {
+    renderObdBridgeReadout({ freezeFrameResponse: response });
   });
 }
 
