@@ -931,6 +931,19 @@
     const ecuInfoSnapshot = parts.ecuInfoSnapshot?.schemaVersion
       ? parts.ecuInfoSnapshot
       : normalizeBridgeEcuInfoSnapshot(parts.ecuInfoSnapshot || parts.ecuInfoResponse || {});
+    const ecuResponseSummary = parts.ecuResponseSummary?.schemaVersion
+      ? parts.ecuResponseSummary
+      : normalizeEcuResponseSummary(parts.ecuResponseSummary || {
+        source: "local_bridge",
+        captured_at: dtcSnapshot.capturedAt || null,
+        protocol: dtcSnapshot.protocol || null,
+        ecu_responses: (dtcSnapshot.ecuResponses || []).map((row) => ({
+          address: row.ecu || null,
+          status: row.status || "unknown",
+          dtc_count: Number.isInteger(row.codeCount) ? row.codeCount : null,
+          services: ["03"]
+        }))
+      });
     const connectionStatus = parts.connectionStatus?.displayStatus ? parts.connectionStatus : normalizeBridgeConnectionStatus(parts.connectionStatus);
     const vciList = parts.vciList?.devices ? parts.vciList : normalizeBridgeVciList(parts.vciList);
     const adapterIdentity = parts.adapterIdentity?.intent === "adapter_identity" ? parts.adapterIdentity : normalizeBridgeAdapterIdentity(parts.adapterIdentity || {});
@@ -950,6 +963,7 @@
       vciDevices: vciList.devices,
       adapterIdentity,
       codes: dtcSnapshot.codes,
+      ecuResponseSummary,
       supportedPidMatrix,
       ecuInfoSnapshot,
       monitorValues: livePidSnapshot.monitorValues,
@@ -982,6 +996,7 @@
         vci_devices: summary.vciDevices || [],
         adapter_identity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
         dtc_codes: summary.codes || [],
+        ecu_response_summary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
@@ -1011,6 +1026,7 @@
       codes,
       monitorValues,
       monitorInsights,
+      ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
       ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),

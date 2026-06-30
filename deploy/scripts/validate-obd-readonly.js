@@ -307,6 +307,8 @@ check(!JSON.stringify(bridgeEcuInfoSnapshot).includes("JTDKN3DU0A0123456"), "Bri
 check(bridgeEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge ECU info did not retain CALID");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
+check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");
+check(bridgeSummary.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge session summary did not carry ECU DTC count");
 check(bridgeSummary.monitorValues.length === 3, "ブリッジセッション要約へPID値を引き継げません");
 check(bridgeSummary.supportedPidMatrix.supportedPids.includes("0C"), "ブリッジセッション要約へ対応PIDを引き継げません");
 check(bridgeSummary.freezeFrameSnapshot.triggerDtc === "P0171", "ブリッジセッション要約へフリーズフレームを引き継げません");
@@ -333,6 +335,7 @@ check(bridgeExportPayload.vehicle_command_enabled === false, "ブリッジエク
 check(bridgeExportPayload.retained_raw_frames === false && bridgeExportPayload.retained_raw_text === false, "ブリッジエクスポートが原文保持になっています");
 check(bridgeExportPayload.session.adapter_identity.adapterFamily === "elm327", "ブリッジエクスポートへアダプター情報を引き継げません");
 check(bridgeExportPayload.session.dtc_codes.join(",") === "P0171,P0300", "ブリッジエクスポートへDTCを引き継げません");
+check(bridgeExportPayload.session.ecu_response_summary.ecus[0]?.address === "7E8", "Bridge export did not carry ECU response summary");
 check(bridgeExportPayload.session.supported_pid_matrix.supportedPids.includes("40"), "ブリッジエクスポートへ対応PIDを引き継げません");
 check(bridgeExportPayload.session.ecu_info_snapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge export did not carry ECU info");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
@@ -350,6 +353,7 @@ const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
 });
 check(bridgeDiagnosticImport.importType === "bridge_diagnostic_snapshot", "ブリッジ診断取込の種別が不正です");
 check(bridgeDiagnosticImport.codes.join(",") === "P0171,P0300", "ブリッジ診断取込へDTCを引き継げません");
+check(bridgeDiagnosticImport.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge diagnostic import did not carry ECU response summary");
 check(bridgeDiagnosticImport.monitorValues.length === 3, "ブリッジ診断取込へPID値を引き継げません");
 check(bridgeDiagnosticImport.supportedPidMatrix.supportedPids.includes("05"), "ブリッジ診断取込へ対応PIDを引き継げません");
 check(bridgeDiagnosticImport.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge diagnostic import did not carry ECU info");
@@ -698,6 +702,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 400");
+  console.log("OBD read-only safety checks: 403");
   console.log("Errors: 0");
 }
