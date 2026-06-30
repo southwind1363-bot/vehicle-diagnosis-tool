@@ -1268,7 +1268,8 @@
     });
     const byCode = new Map();
     rows.forEach((row) => {
-      if (!byCode.has(row.code)) byCode.set(row.code, { ...row, source });
+      const key = `${row.code}::${row.status || "unknown"}`;
+      if (!byCode.has(key)) byCode.set(key, { ...row, source });
     });
 
     return {
@@ -1276,7 +1277,7 @@
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || null,
-      codes: [...byCode.keys()],
+      codes: [...new Set([...byCode.values()].map((row) => row.code))],
       dtcs: [...byCode.values()],
       retainedRawText: false
     };

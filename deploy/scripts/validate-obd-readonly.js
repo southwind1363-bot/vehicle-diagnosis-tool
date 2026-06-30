@@ -229,6 +229,10 @@ const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 check(bridgePendingDtcSnapshot.intent === "read_pending_dtc", "保留DTCブリッジ応答のintentが不正です");
 check(bridgePendingDtcSnapshot.dtcs.length === 1 && bridgePendingDtcSnapshot.dtcs[0]?.status === "pending", "保留DTCブリッジ応答の種別または重複除外が不正です");
+const bridgeMixedDtcSession = obd.buildDiagnosticScanSession({
+  dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored" }, { code: "P0171", status: "pending" }] }
+});
+check(bridgeMixedDtcSession.dtcSnapshot.dtcs.length === 2, "同一DTCの保存/保留状態をセッション内で保持できません");
 const bridgeEmptyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({});
 check(bridgeEmptyDtcSnapshot.codes.length === 0 && bridgeEmptyDtcSnapshot.dtcs.length === 0 && bridgeEmptyDtcSnapshot.blocked === true, "空DTCブリッジ応答を安全側へ整形できません");
 const outboundRead = obd.evaluateOutboundSafety({ service: "03", stateChanging: false });

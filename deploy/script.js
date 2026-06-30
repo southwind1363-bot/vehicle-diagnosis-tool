@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.301.0";
+const APP_VERSION = "2.302.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2408,9 +2408,10 @@ function renderObdDeveloperReadout(session) {
 
 function renderObdBridgeReadout(parts = {}) {
   const previousSession = obdDevSession.lastSession || {};
-  const dtcSnapshot = parts.dtcResponse
+  const currentDtcSnapshot = parts.dtcResponse
     ? window.ObdReadOnly.normalizeBridgeDtcSnapshot(parts.dtcResponse)
-    : previousSession.dtcSnapshot || null;
+    : null;
+  const dtcSnapshot = mergeObdBridgeDtcSnapshots(previousSession.dtcSnapshot, currentDtcSnapshot);
   const livePidSnapshot = parts.livePidResponse
     ? window.ObdReadOnly.normalizeBridgeLivePidSnapshot(parts.livePidResponse)
     : previousSession.livePidSnapshot || null;
@@ -2450,18 +2451,17 @@ function renderObdBridgeReadout(parts = {}) {
   obdDevSession.lastSession = session;
   const monitorValues = livePidSnapshot?.monitorValues || [];
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
-  const currentDtcSnapshot = parts.dtcResponse ? dtcSnapshot : null;
-  const codes = currentDtcSnapshot?.dtcs?.map((item) => item.code).filter(Boolean) || [];
+  const currentCodes = currentDtcSnapshot?.dtcs?.map((item) => item.code).filter(Boolean) || [];
 
   if (monitorValues.length) {
     renderObdMonitorValues(monitorValues, livePidSnapshot.monitorInsights || []);
   } else if (freezeFrameValues.length) {
     renderObdMonitorValues(freezeFrameValues, freezeFrameSnapshot.monitorInsights || []);
   }
-  if (codes.length) {
+  if (currentCodes.length) {
     obdDetectedCodes.innerHTML = "";
-    [...new Set(codes)].forEach((code) => obdDetectedCodes.appendChild(createObdDtcCard(code)));
-    obdImportStatus.textContent = `${codes.length}件のブリッジDTCを読取りました。`;
+    [...new Set(dtcSnapshot.dtcs.map((item) => item.code).filter(Boolean))].forEach((code) => obdDetectedCodes.appendChild(createObdDtcCard(code)));
+    obdImportStatus.textContent = `${currentCodes.length}件のブリッジDTCを読取りました。累計${dtcSnapshot.dtcs.length}件です。`;
   } else if (currentDtcSnapshot) {
     obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
   } else if (parts.freezeFrameResponse && freezeFrameSnapshot) {
@@ -2474,6 +2474,32 @@ function renderObdBridgeReadout(parts = {}) {
     obdImportStatus.textContent = `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。`;
   }
   renderObdDeveloperSessionSummary(session);
+}
+
+function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
+  if (!previousSnapshot?.dtcs?.length) return currentSnapshot || null;
+  if (!currentSnapshot?.dtcs) return previousSnapshot;
+  const dtcsByKind = new Map();
+  [...previousSnapshot.dtcs, ...currentSnapshot.dtcs].forEach((item) => {
+    const code = item?.code;
+    if (!code) return;
+    const status = item.status || "unknown";
+    const key = `${code}::${status}`;
+    if (!dtcsByKind.has(key)) dtcsByKind.set(key, { ...item, status });
+  });
+  const ecuResponses = [
+    ...(previousSnapshot.ecuResponses || []),
+    ...(currentSnapshot.ecuResponses || [])
+  ];
+  return {
+    ...currentSnapshot,
+    codes: [...new Set([...dtcsByKind.values()].map((item) => item.code))],
+    dtcs: [...dtcsByKind.values()],
+    protocol: currentSnapshot.protocol || previousSnapshot.protocol || null,
+    ecuResponses,
+    capturedAt: currentSnapshot.capturedAt || previousSnapshot.capturedAt || null,
+    retainedRawText: false
+  };
 }
 
 function renderObdDeveloperSessionSummary(session = null) {
