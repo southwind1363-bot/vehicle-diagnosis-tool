@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.305.0";
+const APP_VERSION = "2.306.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -181,6 +181,7 @@ const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton")
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
 const obdDevSessionSummary = document.querySelector("#obdDevSessionSummary");
+const obdDevSessionDetails = document.querySelector("#obdDevSessionDetails");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdSampleButton = document.querySelector("#obdSampleButton");
@@ -2478,12 +2479,6 @@ function renderObdBridgeReadout(parts = {}) {
 }
 
 function formatObdBridgeDtcStatusSummary(dtcs = []) {
-  const labels = {
-    stored: "保存",
-    pending: "保留",
-    permanent: "永久",
-    unknown: "不明"
-  };
   const counts = dtcs.reduce((acc, item) => {
     const status = item?.status || "unknown";
     acc[status] = (acc[status] || 0) + 1;
@@ -2491,8 +2486,82 @@ function formatObdBridgeDtcStatusSummary(dtcs = []) {
   }, {});
   const parts = ["stored", "pending", "permanent", "unknown"]
     .filter((status) => counts[status] > 0)
-    .map((status) => `${labels[status]}${counts[status]}件`);
+    .map((status) => `${formatObdBridgeDtcStatusLabel(status)}${counts[status]}件`);
   return parts.length ? ` 内訳: ${parts.join(" / ")}。` : "";
+}
+
+function formatObdBridgeDtcStatusLabel(status = "unknown") {
+  return {
+    stored: "保存",
+    pending: "保留",
+    permanent: "永久",
+    unknown: "不明"
+  }[status] || status;
+}
+
+function formatObdBridgeReadoutValue(item = {}) {
+  const value = item.value ?? item.result ?? item.raw ?? NO_DATA;
+  const unit = item.unit ? ` ${item.unit}` : "";
+  return `${value}${unit}`;
+}
+
+function renderObdBridgeSessionDetails(session = null) {
+  if (!obdDevSessionDetails) return;
+  obdDevSessionDetails.innerHTML = "";
+
+  const sections = [];
+  const dtcs = session?.dtcSnapshot?.dtcs || [];
+  if (dtcs.length) {
+    const summary = formatObdBridgeDtcStatusSummary(dtcs).replace(/^ 内訳: /, "").replace(/。$/, "");
+    const lines = dtcs.slice(0, 8).map((item) => `${item.code} ${formatObdBridgeDtcStatusLabel(item.status || "unknown")}`);
+    sections.push(["DTC状態", [summary, ...lines].filter(Boolean)]);
+  }
+
+  const ecuItems = session?.ecuInfoSnapshot?.items || [];
+  if (ecuItems.length) {
+    sections.push(["ECU情報", ecuItems.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`)]);
+  }
+
+  const monitorTests = session?.onboardMonitorSnapshot?.tests || [];
+  if (monitorTests.length) {
+    sections.push(["Mode06", monitorTests.slice(0, 6).map((item) => {
+      const id = [item.testId || item.tid, item.componentId || item.cid].filter(Boolean).join("/");
+      const status = item.status ? ` ${item.status}` : "";
+      return `${id || item.id || "test"}: ${formatObdBridgeReadoutValue(item)}${status}`;
+    })]);
+  }
+
+  const supportedPids = session?.supportedPidMatrix?.supportedPids || [];
+  if (supportedPids.length) {
+    const suffix = supportedPids.length > 18 ? "..." : "";
+    sections.push(["対応PID", [`${supportedPids.length}件: ${supportedPids.slice(0, 18).join(", ")}${suffix}`]]);
+  }
+
+  const freezeFrameValues = session?.freezeFrameSnapshot?.monitorValues || [];
+  if (freezeFrameValues.length) {
+    sections.push(["フリーズフレーム", freezeFrameValues.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`)]);
+  }
+
+  if (!sections.length) {
+    obdDevSessionDetails.hidden = true;
+    return;
+  }
+
+  sections.forEach(([title, lines]) => {
+    const card = document.createElement("article");
+    card.className = "obd-session-detail-card";
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+    const list = document.createElement("ul");
+    lines.forEach((line) => {
+      const item = document.createElement("li");
+      item.textContent = line;
+      list.appendChild(item);
+    });
+    card.append(heading, list);
+    obdDevSessionDetails.appendChild(card);
+  });
+  obdDevSessionDetails.hidden = false;
 }
 
 function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
@@ -2545,6 +2614,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     item.append(strong, document.createTextNode(String(value)));
     obdDevSessionSummary.appendChild(item);
   });
+  renderObdBridgeSessionDetails(session);
 }
 
 function renderObdOperationPlan(items) {
