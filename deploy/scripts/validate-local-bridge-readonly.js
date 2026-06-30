@@ -30,6 +30,11 @@ function ecuResponseCodes(payload) {
   return (payload?.data?.ecu_responses || []).flatMap((item) => item.dtcs || []);
 }
 
+function hasUniqueDtcCodes(items) {
+  const codes = (items || []).map((item) => item.code);
+  return new Set(codes).size === codes.length;
+}
+
 function post(port, intent, pairingToken = token) {
   return fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "POST",
@@ -76,9 +81,11 @@ try {
   check(dtc.data.ecu_responses[0].ecu === "7E8", "stored DTC response did not include ECU address");
   check(dtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "stored"), "stored DTC response included an invalid code or status");
   check(dtc.data.dtcs.every((item) => ecuResponseCodes(dtc).includes(item.code)), "stored DTC response did not match ECU response DTC list");
+  check(hasUniqueDtcCodes(dtc.data.dtcs), "stored DTC response included duplicate codes");
   const pendingDtc = await post(port, "read_pending_dtc");
   check(pendingDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "pending"), "pending DTC response included an invalid code or status");
   check(pendingDtc.data.dtcs.every((item) => ecuResponseCodes(pendingDtc).includes(item.code)), "pending DTC response did not match ECU response DTC list");
+  check(hasUniqueDtcCodes(pendingDtc.data.dtcs), "pending DTC response included duplicate codes");
 
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
@@ -202,6 +209,7 @@ try {
   check(replayDtc.data.ecu_responses[0].ecu === "7E8", "replay DTC response did not keep ECU address");
   check(replayDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "stored"), "replay stored DTC response included an invalid code or status");
   check(replayDtc.data.dtcs.every((item) => ecuResponseCodes(replayDtc).includes(item.code)), "replay stored DTC response did not match ECU response DTC list");
+  check(hasUniqueDtcCodes(replayDtc.data.dtcs), "replay stored DTC response included duplicate codes");
 
   const replayLive = await post(replayPort, "read_live_pid_snapshot");
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
@@ -282,6 +290,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 117");
+  console.log("Local bridge read-only checks: 120");
   console.log("Errors: 0");
 }
