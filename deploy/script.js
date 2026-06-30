@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.289.0";
+const APP_VERSION = "2.290.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -171,6 +171,7 @@ const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
 const obdDevBridgeStatusButton = document.querySelector("#obdDevBridgeStatusButton");
 const obdDevBridgeVciButton = document.querySelector("#obdDevBridgeVciButton");
 const obdDevBridgeDtcButton = document.querySelector("#obdDevBridgeDtcButton");
+const obdDevBridgePermanentDtcButton = document.querySelector("#obdDevBridgePermanentDtcButton");
 const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton");
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
@@ -303,6 +304,7 @@ obdDevSnapshotButton.addEventListener("click", readObdDeveloperLiveSnapshot);
 obdDevBridgeStatusButton.addEventListener("click", probeObdLocalBridge);
 obdDevBridgeVciButton.addEventListener("click", listObdLocalBridgeVci);
 obdDevBridgeDtcButton.addEventListener("click", readObdLocalBridgeDtc);
+obdDevBridgePermanentDtcButton.addEventListener("click", readObdLocalBridgePermanentDtc);
 obdDevBridgeLiveButton.addEventListener("click", readObdLocalBridgeLiveSnapshot);
 obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
 noticeCloseButton.addEventListener("click", () => {
@@ -2031,6 +2033,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevBridgeStatusButton.disabled = !unlocked;
   obdDevBridgeVciButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
+  obdDevBridgePermanentDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeLiveButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevDisconnectButton.disabled = !connected;
   obdDevConnectionState.textContent = connected ? "Web Serial接続中" : obdDevSession.bridgeEndpoint ? "ブリッジ確認済み" : "車両未接続";
@@ -2147,6 +2150,10 @@ async function readObdDeveloperDtc() {
   await runObdDeveloperRead("DTC読取", ["03", "07"]);
 }
 
+async function readObdDeveloperPermanentDtc() {
+  await runObdDeveloperRead("永久DTC読取", ["0A"]);
+}
+
 async function readObdDeveloperLiveSnapshot() {
   await runObdDeveloperRead("データモニター読取", ["0100", ...obdDevSession.selectedPidList]);
 }
@@ -2178,6 +2185,12 @@ async function listObdLocalBridgeVci() {
 
 async function readObdLocalBridgeDtc() {
   await runObdLocalBridgeRead("ブリッジDTC読取", "read_stored_dtc", {}, (response) => {
+    renderObdBridgeReadout({ dtcResponse: response });
+  });
+}
+
+async function readObdLocalBridgePermanentDtc() {
+  await runObdLocalBridgeRead("ブリッジ永久DTC読取", "read_permanent_dtc", {}, (response) => {
     renderObdBridgeReadout({ dtcResponse: response });
   });
 }
@@ -2299,7 +2312,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
 function isAllowedObdDeveloperCommand(command) {
   return [
     "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1",
-    "03", "07", "0100",
+    "03", "07", "0A", "0100",
     ...obdDevSession.selectedPidList
   ].includes(command);
 }
