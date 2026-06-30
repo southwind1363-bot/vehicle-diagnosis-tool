@@ -413,6 +413,17 @@
       })
     }),
     Object.freeze({
+      intent: "read_pending_dtc",
+      label: "Pending DTC snapshot",
+      dataShape: Object.freeze(["protocol", "ecu_responses", "dtcs", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        ecu_responses: Object.freeze([]),
+        dtcs: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
       intent: "read_permanent_dtc",
       label: "Permanent DTC snapshot",
       dataShape: Object.freeze(["protocol", "ecu_responses", "dtcs", "captured_at"]),
@@ -728,20 +739,37 @@
     const data = response && typeof response === "object" ? response.data || response : {};
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : [];
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : [];
-    const codes = [...new Set(dtcRows.flatMap((row) => {
-      if (typeof row === "string") return extractDtcCodes(row);
+    const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
+      ? response.intent
+      : ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(data.intent)
+        ? data.intent
+        : "read_stored_dtc";
+    const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";
+    const entries = dtcRows.flatMap((row) => {
+      if (typeof row === "string") return extractDtcCodes(row).map((code) => ({ code, status: defaultStatus }));
       if (!row || typeof row !== "object") return [];
-      return extractDtcCodes(row.code || row.dtc || row.id || "");
-    }))];
+      return extractDtcCodes(row.code || row.dtc || row.id || "").map((code) => ({
+        code,
+        status: row.status || row.kind || defaultStatus
+      }));
+    });
+    const seen = new Set();
+    const dtcs = entries.filter((entry) => {
+      const key = `${entry.code}::${entry.status}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const codes = [...new Set(dtcs.map((item) => item.code))];
 
     return {
       source: "local_bridge",
-      intent: "read_stored_dtc",
+      intent,
       ok: response.ok === true,
       blocked: response.blocked !== false,
       wouldTransmit: response.would_transmit === true,
       codes,
-      dtcs: codes.map((code) => ({ code, source: "local_bridge" })),
+      dtcs: dtcs.map((item) => ({ ...item, source: "local_bridge" })),
       protocol: data.protocol || null,
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
