@@ -469,6 +469,14 @@
   let freezeFrameItemCatalog = Object.freeze([]);
   let readinessMonitorCatalog = Object.freeze([]);
   let ecuInfoItemCatalog = Object.freeze([]);
+  const bridgeComputedPidDefinitions = Object.freeze({
+    mil_status: Object.freeze({ id: "mil_status", label: "MIL status", unit: "boolean", category: "readiness", valueType: "boolean", pid: "01" }),
+    stored_dtc_count: Object.freeze({ id: "stored_dtc_count", label: "Stored DTC count", unit: "count", category: "readiness", valueType: "number", pid: "01" }),
+    readiness_status_byte_b: Object.freeze({ id: "readiness_status_byte_b", label: "Readiness byte B", unit: "raw", category: "readiness", valueType: "number", pid: "01" }),
+    readiness_status_byte_c: Object.freeze({ id: "readiness_status_byte_c", label: "Readiness byte C", unit: "raw", category: "readiness", valueType: "number", pid: "01" }),
+    readiness_status_byte_d: Object.freeze({ id: "readiness_status_byte_d", label: "Readiness byte D", unit: "raw", category: "readiness", valueType: "number", pid: "01" }),
+    readiness_flag_count: Object.freeze({ id: "readiness_flag_count", label: "Readiness flag count", unit: "count", category: "readiness", valueType: "number", pid: "01" })
+  });
 
   function getCapability() {
     return {
@@ -863,6 +871,56 @@
     });
   }
 
+  function normalizeBridgeReadinessSnapshot(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    const rows = Array.isArray(data.values) ? data.values : Array.isArray(response.monitorValues) ? response.monitorValues : [];
+    const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => [row.id, row.value]));
+    const b = Number(valueById.get("readiness_status_byte_b"));
+    const c = Number(valueById.get("readiness_status_byte_c"));
+    const d = Number(valueById.get("readiness_status_byte_d"));
+    if (![b, c, d].every(Number.isFinite)) {
+      return normalizeReadinessSnapshot({
+        source: "local_bridge",
+        captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
+        monitors: []
+      });
+    }
+    const compressionIgnition = (b & 0x08) !== 0;
+    const monitorBits = compressionIgnition
+      ? [
+          ["misfire", b, 0x10, 0x40],
+          ["fuel_system", b, 0x20, 0x80],
+          ["comprehensive_component", c, 0x01, 0x10],
+          ["nox_scr", c, 0x02, 0x20],
+          ["boost_pressure", c, 0x04, 0x40],
+          ["exhaust_gas_sensor", c, 0x08, 0x80],
+          ["pm_filter", d, 0x01, 0x10],
+          ["egr_vvt", d, 0x02, 0x20]
+        ]
+      : [
+          ["misfire", b, 0x10, 0x40],
+          ["fuel_system", b, 0x20, 0x80],
+          ["comprehensive_component", c, 0x01, 0x10],
+          ["catalyst", c, 0x02, 0x20],
+          ["heated_catalyst", c, 0x04, 0x40],
+          ["evaporative_system", c, 0x08, 0x80],
+          ["secondary_air", d, 0x01, 0x10],
+          ["oxygen_sensor", d, 0x02, 0x20],
+          ["oxygen_sensor_heater", d, 0x04, 0x40],
+          ["egr_vvt", d, 0x08, 0x80]
+        ];
+    return normalizeReadinessSnapshot({
+      source: "local_bridge",
+      captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
+      mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
+      monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
+        const supported = (byte & supportedBit) !== 0;
+        const complete = supported ? (byte & incompleteBit) === 0 : false;
+        return { id, supported, complete, status: supported ? (complete ? "complete" : "not_complete") : "not_supported" };
+      })
+    });
+  }
+
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     return normalizeEcuInfoSnapshot({
@@ -878,11 +936,12 @@
     const id = String(row.id || row.monitor_id || row.pid || "").trim();
     if (!id) return null;
     const definition = monitorDefinitions.find((item) => item.id === id)
-      || monitorDefinitions.find((item) => item.pid === row.pid);
+      || monitorDefinitions.find((item) => item.pid === row.pid)
+      || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
     const isUndecodedRaw = row.decoded === false;
     const valueType = definition?.valueType || (typeof row.value === "string" && !NUMBER_PATTERN.test(row.value) ? "text" : "number");
-    const parsedValue = valueType === "text" || isUndecodedRaw ? String(row.value ?? "").slice(0, 160) : Number(row.value);
+    const parsedValue = valueType === "boolean" ? row.value === true : valueType === "text" || isUndecodedRaw ? String(row.value ?? "").slice(0, 160) : Number(row.value);
     if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;
     if (valueType === "text" && !parsedValue) return null;
     if (isUndecodedRaw && !parsedValue) return null;
@@ -928,6 +987,9 @@
     const supportedPidMatrix = parts.supportedPidMatrix?.schemaVersion
       ? parts.supportedPidMatrix
       : normalizeBridgeSupportedPidSnapshot(parts.supportedPidMatrix || parts.supportedPidSnapshot || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
+    const readinessSnapshot = parts.readinessSnapshot?.schemaVersion
+      ? parts.readinessSnapshot
+      : normalizeBridgeReadinessSnapshot(parts.readinessSnapshot || parts.readinessResponse || parts.livePidResponse || livePidSnapshot);
     const ecuInfoSnapshot = parts.ecuInfoSnapshot?.schemaVersion
       ? parts.ecuInfoSnapshot
       : normalizeBridgeEcuInfoSnapshot(parts.ecuInfoSnapshot || parts.ecuInfoResponse || {});
@@ -951,6 +1013,7 @@
     if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
+    if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
 
@@ -965,6 +1028,7 @@
       codes: dtcSnapshot.codes,
       ecuResponseSummary,
       supportedPidMatrix,
+      readinessSnapshot,
       ecuInfoSnapshot,
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
@@ -998,6 +1062,7 @@
         dtc_codes: summary.codes || [],
         ecu_response_summary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+        readiness_snapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
         ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: summary.monitorValues || [],
@@ -1028,6 +1093,7 @@
       monitorInsights,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+      readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
       ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
       bridgeSession: {
@@ -2766,6 +2832,7 @@
     normalizeBridgeLivePidSnapshot,
     normalizeBridgeSupportedPidSnapshot,
     normalizeBridgeFreezeFrameSnapshot,
+    normalizeBridgeReadinessSnapshot,
     normalizeBridgeEcuInfoSnapshot,
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
