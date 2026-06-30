@@ -283,6 +283,17 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     };
   }
 
+  if (request.intent === "read_ecu_info" && replaySnapshot) {
+    return {
+      ...base,
+      data: {
+        protocol: replaySnapshot.protocol,
+        values: replaySnapshot.ecuInfoValues,
+        captured_at: new Date().toISOString()
+      }
+    };
+  }
+
   if (request.intent === "read_ecu_info") {
     return {
       ...base,
@@ -343,13 +354,14 @@ export function decodeReplayLog(text) {
   const dtcs = [];
   const liveValues = [];
   const freezeFrameValues = [];
+  const ecuInfoValues = [];
   const supportedPids = new Set();
   const ecus = new Set();
   let triggerDtc = null;
 
   packets.forEach(({ ecu, bytes }) => {
     if (ecu) ecus.add(ecu);
-    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x42, 0x43, 0x47, 0x4A].includes(byte));
+    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x42, 0x43, 0x47, 0x49, 0x4A].includes(byte));
     if (serviceIndex < 0) return;
     const service = bytes[serviceIndex];
 
@@ -383,6 +395,12 @@ export function decodeReplayLog(text) {
       return;
     }
 
+    if (service === 0x49) {
+      const decoded = decodeEcuInfoValue(bytes[serviceIndex + 1], bytes.slice(serviceIndex + 2));
+      if (decoded) ecuInfoValues.push(decoded);
+      return;
+    }
+
     if (service === 0x41) {
       const pid = toHexByte(bytes[serviceIndex + 1]);
       if (!pid) return;
@@ -404,6 +422,7 @@ export function decodeReplayLog(text) {
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
     liveValues: uniqueBy(liveValues, (item) => item.id),
     freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}`),
+    ecuInfoValues: uniqueBy(ecuInfoValues, (item) => item.id),
     triggerDtc,
     supportedPids: [...supportedPids].sort()
   };
@@ -642,6 +661,36 @@ function decodeLivePid(pid, payload) {
   if (!row || !Number.isFinite(row[1])) return null;
   if (row[2] === "raw_mask") return { id: row[0], pid, value: `mask_${toHexByte(row[1])}`, unit: "" };
   return { id: row[0], pid, value: Number(row[1].toFixed(2)), unit: row[2] };
+}
+
+function decodeEcuInfoValue(infoTypeByte, payload = []) {
+  const infoType = toHexByte(infoTypeByte);
+  const itemMap = {
+    "02": "vin",
+    "04": "calibration_id",
+    "06": "calibration_verification_number",
+    "0A": "ecu_name"
+  };
+  const id = itemMap[infoType];
+  if (!id) return null;
+  const bytes = trimEcuInfoPayload(payload);
+  const value = bytesToAscii(bytes);
+  if (!value) return null;
+  return { id, info_type: infoType, value };
+}
+
+function trimEcuInfoPayload(payload = []) {
+  const bytes = payload.filter(Number.isInteger);
+  if (bytes.length > 1 && bytes[0] <= 0x10) return bytes.slice(1);
+  return bytes;
+}
+
+function bytesToAscii(bytes = []) {
+  return bytes
+    .filter((byte) => byte >= 0x20 && byte <= 0x7E)
+    .map((byte) => String.fromCharCode(byte))
+    .join("")
+    .trim();
 }
 
 function decodeFuelType(value) {

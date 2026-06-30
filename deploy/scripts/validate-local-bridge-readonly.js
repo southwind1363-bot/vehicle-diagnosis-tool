@@ -208,6 +208,8 @@ const replayLog = [
   "can0 7E8#03416A80",
   "can0 7E8#03416C80",
   "can0 7E8#03418E78",
+  "can0 7E8#0C49040143414C2D31323334",
+  "can0 7E8#0C490A01456E67696E6520454355",
   "can0 7E8#0742010081070000",
   "can0 7E8#054202000171",
   "can0 7E8#04420C001AF8",
@@ -228,6 +230,10 @@ try {
   check(replayDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "stored"), "replay stored DTC response included an invalid code or status");
   check(replayDtc.data.dtcs.every((item) => ecuResponseCodes(replayDtc).includes(item.code)), "replay stored DTC response did not match ECU response DTC list");
   check(hasUniqueDtcCodes(replayDtc.data.dtcs), "replay stored DTC response included duplicate codes");
+
+  const replayEcuInfo = await post(replayPort, "read_ecu_info");
+  check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
+  check(replayEcuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "replay ECU info did not decode ECU name");
 
   const replayLive = await post(replayPort, "read_live_pid_snapshot");
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
@@ -308,6 +314,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 130");
+  console.log("Local bridge read-only checks: 132");
   console.log("Errors: 0");
 }
