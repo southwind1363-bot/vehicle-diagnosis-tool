@@ -457,17 +457,17 @@
           <div class="obd-progress-grid">
             <article class="obd-progress-score-card">
               <strong>完成度</strong>
-              <span class="obd-progress-score">診断機全体 26% / OBD2読取 60%</span>
+              <span class="obd-progress-score">診断機全体 30% / OBD2読取 68%</span>
               <span>100%は実車接続、読取、データ解釈、複数VCI、車種適合、記録、段階的な作業機能まで含む完成状態です。</span>
             </article>
             <article class="obd-progress-breakdown-card">
               <strong>内訳</strong>
-              <span>データ 39% / ログ解析 90% / 接続層 33% / 車種適合 12% / 記録 28% / 作業機能 0%</span>
+              <span>データ 44% / ログ解析 90% / 接続層 42% / 車種適合 12% / 記録 35% / 作業機能 0%</span>
               <span>数字は実装済み機能だけを反映し、ロードマップ追加だけでは上げません。</span>
             </article>
             <article>
               <strong>読取データ基盤</strong>
-              <span>DTC、フリーズフレーム、ライブPID、レディネス、Mode06、Mode09を既存診断フローへ統合中。</span>
+              <span>DTC、フリーズフレーム、ライブPID、レディネス、Mode06、Mode09を同一セッションへ積み上げ中。</span>
             </article>
             <article>
               <strong>実ログ解析</strong>
@@ -475,11 +475,11 @@
             </article>
             <article>
               <strong>実車接続</strong>
-              <span>Web SerialとPC側ローカルブリッジの開発者限定読取入口を追加。保存ログ再生も読取応答へ変換できます。</span>
+              <span>Web SerialとPC側ローカルブリッジの開発者限定読取入口を追加。DTC種別、対応PID、ECU情報、FF、Mode06を取込できます。</span>
             </article>
             <article>
               <strong>次の中身</strong>
-              <span>対応PID、ECU別応答、読取ログの整形を増やし、接続後に診断機として使える土台を優先します。</span>
+              <span>実VCIドライバ連携の前に、車種適合、記録、読取ログ比較を増やして診断機として使える土台を優先します。</span>
             </article>
           </div>
         </section>
