@@ -388,6 +388,17 @@
       })
     }),
     Object.freeze({
+      intent: "adapter_identity",
+      label: "Adapter identity",
+      dataShape: Object.freeze(["adapter_name", "adapter_family", "firmware_version", "vehicle_command_enabled"]),
+      safeDefault: Object.freeze({
+        adapter_name: null,
+        adapter_family: null,
+        firmware_version: null,
+        vehicle_command_enabled: false
+      })
+    }),
+    Object.freeze({
       intent: "read_stored_dtc",
       label: "Stored DTC snapshot",
       dataShape: Object.freeze(["protocol", "ecu_responses", "dtcs", "captured_at"]),
@@ -395,6 +406,27 @@
         protocol: null,
         ecu_responses: Object.freeze([]),
         dtcs: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "read_freeze_frame",
+      label: "Freeze frame snapshot",
+      dataShape: Object.freeze(["protocol", "trigger_dtc", "values", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        trigger_dtc: null,
+        values: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "read_supported_pids",
+      label: "Supported PID snapshot",
+      dataShape: Object.freeze(["protocol", "supported_pids", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        supported_pids: Object.freeze([]),
         captured_at: null
       })
     }),
@@ -759,6 +791,22 @@
     };
   }
 
+  function normalizeBridgeAdapterIdentity(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    return {
+      source: "local_bridge",
+      intent: "adapter_identity",
+      ok: response.ok === true,
+      blocked: response.blocked !== false,
+      wouldTransmit: response.would_transmit === true,
+      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : null,
+      adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : null,
+      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : null,
+      vehicleCommandEnabled: false,
+      retainedRawText: false
+    };
+  }
+
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const values = Array.isArray(data.values) ? data.values : [];
@@ -861,6 +909,7 @@
       : normalizeBridgeSupportedPidSnapshot(parts.supportedPidMatrix || parts.supportedPidSnapshot || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
     const connectionStatus = parts.connectionStatus?.displayStatus ? parts.connectionStatus : normalizeBridgeConnectionStatus(parts.connectionStatus);
     const vciList = parts.vciList?.devices ? parts.vciList : normalizeBridgeVciList(parts.vciList);
+    const adapterIdentity = parts.adapterIdentity?.intent === "adapter_identity" ? parts.adapterIdentity : normalizeBridgeAdapterIdentity(parts.adapterIdentity || {});
     const warnings = [];
     if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
@@ -875,6 +924,7 @@
       vehicleProfile: parts.vehicleProfile || null,
       connectionStatus,
       vciDevices: vciList.devices,
+      adapterIdentity,
       codes: dtcSnapshot.codes,
       supportedPidMatrix,
       monitorValues: livePidSnapshot.monitorValues,
@@ -905,6 +955,7 @@
         vehicle_profile: summary.vehicleProfile || null,
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: summary.vciDevices || [],
+        adapter_identity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
         dtc_codes: summary.codes || [],
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
@@ -939,6 +990,7 @@
       bridgeSession: {
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: Array.isArray(summary.vciDevices) ? summary.vciDevices.map((item) => ({ ...item })) : [],
+        adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
         warnings: [...new Set(summary.warnings || [])],
         exportRequired: true
       },
@@ -2666,6 +2718,7 @@
     createLocalBridgeBlockedResponse,
     normalizeBridgeConnectionStatus,
     normalizeBridgeVciList,
+    normalizeBridgeAdapterIdentity,
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
     normalizeBridgeSupportedPidSnapshot,

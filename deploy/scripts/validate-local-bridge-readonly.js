@@ -76,6 +76,11 @@ try {
   check(vci.data.devices.length === 1, "list_vci did not return sample VCI");
   check(vci.data.devices[0].connected === true, "sample VCI was not connected");
 
+  const adapterIdentity = await post(port, "adapter_identity");
+  check(adapterIdentity.data.adapter_name === "Read-only Local Bridge Sample", "adapter_identity did not return sample adapter name");
+  check(adapterIdentity.data.adapter_family === "local_bridge_sample", "adapter_identity did not return adapter family");
+  check(adapterIdentity.data.vehicle_command_enabled === false, "adapter_identity enabled vehicle commands");
+
   const dtc = await post(port, "read_stored_dtc");
   check(dtc.data.dtcs.some((item) => item.code === "P0171"), "stored DTC response did not include P0171");
   check(dtc.data.ecu_responses[0].ecu === "7E8", "stored DTC response did not include ECU address");
@@ -86,6 +91,14 @@ try {
   check(pendingDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "pending"), "pending DTC response included an invalid code or status");
   check(pendingDtc.data.dtcs.every((item) => ecuResponseCodes(pendingDtc).includes(item.code)), "pending DTC response did not match ECU response DTC list");
   check(hasUniqueDtcCodes(pendingDtc.data.dtcs), "pending DTC response included duplicate codes");
+
+  const freezeFrame = await post(port, "read_freeze_frame");
+  check(freezeFrame.data.trigger_dtc === "P0171", "freeze frame response did not include trigger DTC");
+  check(freezeFrame.data.values.some((item) => item.id === "engine_speed"), "freeze frame response did not include engine speed");
+
+  const supportedPids = await post(port, "read_supported_pids");
+  check(supportedPids.data.supported_pids.includes("0C"), "supported PID response did not include engine speed PID");
+  check(supportedPids.data.supported_pids.every((pid) => /^[0-9A-F]{2}$/.test(pid)), "supported PID response included invalid PID format");
 
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
@@ -290,6 +303,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 120");
+  console.log("Local bridge read-only checks: 127");
   console.log("Errors: 0");
 }
