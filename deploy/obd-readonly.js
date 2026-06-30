@@ -782,6 +782,17 @@
     };
   }
 
+  function normalizeBridgeSupportedPidSnapshot(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    const supportedPids = Array.isArray(data.supported_pids) ? data.supported_pids : Array.isArray(data.supportedPids) ? data.supportedPids : [];
+    return buildSupportedPidMatrix({
+      source: "local_bridge",
+      captured_at: data.captured_at || data.capturedAt || null,
+      protocol: data.protocol || null,
+      supported_pids: supportedPids
+    });
+  }
+
   function normalizeBridgePidValue(row, index) {
     if (!row || typeof row !== "object") return null;
     const id = String(row.id || row.monitor_id || row.pid || "").trim();
@@ -831,6 +842,9 @@
   function buildBridgeSessionSummary(parts = {}) {
     const dtcSnapshot = parts.dtcSnapshot?.codes ? parts.dtcSnapshot : normalizeBridgeDtcSnapshot(parts.dtcSnapshot);
     const livePidSnapshot = parts.livePidSnapshot?.monitorValues ? parts.livePidSnapshot : normalizeBridgeLivePidSnapshot(parts.livePidSnapshot);
+    const supportedPidMatrix = parts.supportedPidMatrix?.schemaVersion
+      ? parts.supportedPidMatrix
+      : normalizeBridgeSupportedPidSnapshot(parts.supportedPidMatrix || parts.supportedPidSnapshot || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
     const connectionStatus = parts.connectionStatus?.displayStatus ? parts.connectionStatus : normalizeBridgeConnectionStatus(parts.connectionStatus);
     const vciList = parts.vciList?.devices ? parts.vciList : normalizeBridgeVciList(parts.vciList);
     const warnings = [];
@@ -847,6 +861,7 @@
       connectionStatus,
       vciDevices: vciList.devices,
       codes: dtcSnapshot.codes,
+      supportedPidMatrix,
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -875,6 +890,7 @@
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: summary.vciDevices || [],
         dtc_codes: summary.codes || [],
+        supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         monitor_values: summary.monitorValues || [],
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(summary.monitorValues || []),
         monitor_insights: summary.monitorInsights || [],
@@ -901,6 +917,7 @@
       codes,
       monitorValues,
       monitorInsights,
+      supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
       bridgeSession: {
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: Array.isArray(summary.vciDevices) ? summary.vciDevices.map((item) => ({ ...item })) : [],
@@ -2633,6 +2650,7 @@
     normalizeBridgeVciList,
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
+    normalizeBridgeSupportedPidSnapshot,
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,
