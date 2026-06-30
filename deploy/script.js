@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.307.0";
+const APP_VERSION = "2.308.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2451,6 +2451,7 @@ function renderObdBridgeReadout(parts = {}) {
     ecuInfoSnapshot: ecuInfoSnapshot || { values: [] },
     onboardMonitorSnapshot: onboardMonitorSnapshot || { tests: [] },
     supportedPidMatrix: supportedPidMatrix || { supported_pids: [] },
+    ecuResponseSummary: importResult.ecuResponseSummary,
     connectionStatus: importResult.connectionStatus,
     vciList: importResult.vciList
   });
@@ -2527,6 +2528,16 @@ function renderObdBridgeSessionDetails(session = null) {
   const ecuItems = session?.ecuInfoSnapshot?.items || [];
   if (ecuItems.length) {
     sections.push(["ECU情報", ecuItems.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`)]);
+  }
+
+  const ecuResponses = session?.ecuResponseSummary?.ecus || [];
+  if (ecuResponses.length) {
+    sections.push(["ECU応答", ecuResponses.slice(0, 6).map((item) => {
+      const services = item.services?.length ? ` / Svc ${item.services.join(",")}` : "";
+      const negatives = item.negativeResponseCount ? ` / 否定応答${item.negativeResponseCount}` : "";
+      const dtcs = Number.isInteger(item.dtcCount) ? ` / DTC ${item.dtcCount}` : "";
+      return `${item.address || item.id}: ${item.status || "unknown"}${dtcs}${services}${negatives}`;
+    })]);
   }
 
   const monitorTests = session?.onboardMonitorSnapshot?.tests || [];
@@ -2619,6 +2630,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["VCI", bridgeDeviceCount],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
+    ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0],
     ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
     ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
