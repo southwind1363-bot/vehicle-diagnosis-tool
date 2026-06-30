@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.283.0";
+const APP_VERSION = "2.284.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2251,6 +2251,7 @@ function isAllowedLocalBridgeIntent(intent) {
     "read_pending_dtc",
     "read_freeze_frame",
     "read_supported_pids",
+    "read_ecu_info",
     "read_live_pid_snapshot"
   ].includes(intent);
 }
@@ -2355,10 +2356,14 @@ function renderObdBridgeReadout(parts = {}) {
   const freezeFrameSnapshot = parts.freezeFrameResponse
     ? window.ObdReadOnly.normalizeBridgeFreezeFrameSnapshot(parts.freezeFrameResponse)
     : null;
+  const ecuInfoSnapshot = parts.ecuInfoResponse
+    ? window.ObdReadOnly.normalizeBridgeEcuInfoSnapshot(parts.ecuInfoResponse)
+    : null;
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
     freezeFrameSnapshot: freezeFrameSnapshot || undefined,
+    ecuInfoSnapshot: ecuInfoSnapshot || undefined,
     connectionStatus: obdDevSession.bridgeStatus || undefined,
     vciList: obdDevSession.bridgeVciList || undefined
   });
@@ -2367,6 +2372,7 @@ function renderObdBridgeReadout(parts = {}) {
     dtcSnapshot: dtcSnapshot || { dtcs: [] },
     livePidSnapshot: livePidSnapshot || { values: [] },
     freezeFrameSnapshot: freezeFrameSnapshot || { values: [] },
+    ecuInfoSnapshot: ecuInfoSnapshot || { values: [] },
     connectionStatus: importResult.connectionStatus,
     vciList: importResult.vciList
   });

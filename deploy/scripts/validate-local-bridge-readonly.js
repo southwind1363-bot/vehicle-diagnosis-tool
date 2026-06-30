@@ -100,6 +100,11 @@ try {
   check(supportedPids.data.supported_pids.includes("0C"), "supported PID response did not include engine speed PID");
   check(supportedPids.data.supported_pids.every((pid) => /^[0-9A-F]{2}$/.test(pid)), "supported PID response included invalid PID format");
 
+  const ecuInfo = await post(port, "read_ecu_info");
+  check(ecuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "ECU info response did not include sample CALID");
+  check(ecuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "ECU info response did not include sample ECU name");
+  check(ecuInfo.data.values.some((item) => item.id === "vin"), "ECU info response did not include sample VIN for downstream redaction checks");
+
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
   check(live.data.values.some((item) => item.id === "map" && item.value === 40), "live PID response did not include sample MAP");
@@ -303,6 +308,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 127");
+  console.log("Local bridge read-only checks: 130");
   console.log("Errors: 0");
 }

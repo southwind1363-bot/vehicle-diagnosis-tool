@@ -13,6 +13,7 @@ const READ_INTENTS = new Set([
   "read_pending_dtc",
   "read_freeze_frame",
   "read_supported_pids",
+  "read_ecu_info",
   "read_live_pid_snapshot"
 ]);
 const BLOCKED_WRITE_INTENTS = new Set([
@@ -86,6 +87,12 @@ const SAMPLE_LIVE_VALUES = [
   { id: "commanded_diesel_intake_air_flow", pid: "6A", value: 50.2, unit: "%" },
   { id: "commanded_throttle_control", pid: "6C", value: 50.2, unit: "%" },
   { id: "engine_friction_torque", pid: "8E", value: -5, unit: "%" }
+];
+const SAMPLE_ECU_INFO_VALUES = [
+  { id: "vin", info_type: "02", value: "JTDKN3DU0A0123456" },
+  { id: "calibration_id", info_type: "04", value: "CAL-1234" },
+  { id: "calibration_verification_number", info_type: "06", value: "CVN-ABCD" },
+  { id: "ecu_name", info_type: "0A", value: "Engine ECU" }
 ];
 
 export function createLocalBridgeApp(options = {}) {
@@ -271,6 +278,17 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       data: {
         protocol: "ISO15765-4",
         supported_pids: SAMPLE_SUPPORTED_PIDS,
+        captured_at: new Date().toISOString()
+      }
+    };
+  }
+
+  if (request.intent === "read_ecu_info") {
+    return {
+      ...base,
+      data: {
+        protocol: "ISO15765-4",
+        values: SAMPLE_ECU_INFO_VALUES,
         captured_at: new Date().toISOString()
       }
     };

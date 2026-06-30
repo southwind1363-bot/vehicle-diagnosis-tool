@@ -342,6 +342,7 @@
       "read_pending_dtc",
       "read_freeze_frame",
       "read_supported_pids",
+      "read_ecu_info",
       "read_live_pid_snapshot"
     ]),
     blockedWriteIntents: Object.freeze([
@@ -427,6 +428,16 @@
       safeDefault: Object.freeze({
         protocol: null,
         supported_pids: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "read_ecu_info",
+      label: "ECU information snapshot",
+      dataShape: Object.freeze(["protocol", "values", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        values: Object.freeze([]),
         captured_at: null
       })
     }),
@@ -852,6 +863,16 @@
     });
   }
 
+  function normalizeBridgeEcuInfoSnapshot(response = {}) {
+    const data = response && typeof response === "object" ? response.data || response : {};
+    return normalizeEcuInfoSnapshot({
+      source: "local_bridge",
+      captured_at: data.captured_at || data.capturedAt || null,
+      protocol: data.protocol || null,
+      values: Array.isArray(data.values) ? data.values : Array.isArray(data.ecu_info) ? data.ecu_info : []
+    });
+  }
+
   function normalizeBridgePidValue(row, index) {
     if (!row || typeof row !== "object") return null;
     const id = String(row.id || row.monitor_id || row.pid || "").trim();
@@ -907,6 +928,9 @@
     const supportedPidMatrix = parts.supportedPidMatrix?.schemaVersion
       ? parts.supportedPidMatrix
       : normalizeBridgeSupportedPidSnapshot(parts.supportedPidMatrix || parts.supportedPidSnapshot || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
+    const ecuInfoSnapshot = parts.ecuInfoSnapshot?.schemaVersion
+      ? parts.ecuInfoSnapshot
+      : normalizeBridgeEcuInfoSnapshot(parts.ecuInfoSnapshot || parts.ecuInfoResponse || {});
     const connectionStatus = parts.connectionStatus?.displayStatus ? parts.connectionStatus : normalizeBridgeConnectionStatus(parts.connectionStatus);
     const vciList = parts.vciList?.devices ? parts.vciList : normalizeBridgeVciList(parts.vciList);
     const adapterIdentity = parts.adapterIdentity?.intent === "adapter_identity" ? parts.adapterIdentity : normalizeBridgeAdapterIdentity(parts.adapterIdentity || {});
@@ -927,6 +951,7 @@
       adapterIdentity,
       codes: dtcSnapshot.codes,
       supportedPidMatrix,
+      ecuInfoSnapshot,
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -958,6 +983,7 @@
         adapter_identity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
         dtc_codes: summary.codes || [],
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+        ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: summary.monitorValues || [],
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(summary.monitorValues || []),
@@ -986,6 +1012,7 @@
       monitorValues,
       monitorInsights,
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+      ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
       bridgeSession: {
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
@@ -2723,6 +2750,7 @@
     normalizeBridgeLivePidSnapshot,
     normalizeBridgeSupportedPidSnapshot,
     normalizeBridgeFreezeFrameSnapshot,
+    normalizeBridgeEcuInfoSnapshot,
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,
