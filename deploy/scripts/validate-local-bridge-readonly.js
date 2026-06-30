@@ -22,6 +22,10 @@ function check(condition, message) {
   if (!condition) failures.push(message);
 }
 
+function isDtcCode(value) {
+  return /^[BCPU][0-3][0-9A-F]{3}$/.test(String(value || ""));
+}
+
 function post(port, intent, pairingToken = token) {
   return fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "POST",
@@ -66,6 +70,9 @@ try {
   const dtc = await post(port, "read_stored_dtc");
   check(dtc.data.dtcs.some((item) => item.code === "P0171"), "stored DTC response did not include P0171");
   check(dtc.data.ecu_responses[0].ecu === "7E8", "stored DTC response did not include ECU address");
+  check(dtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "stored"), "stored DTC response included an invalid code or status");
+  const pendingDtc = await post(port, "read_pending_dtc");
+  check(pendingDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "pending"), "pending DTC response included an invalid code or status");
 
   const live = await post(port, "read_live_pid_snapshot");
   check(live.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "live PID response did not include engine speed");
@@ -187,6 +194,7 @@ try {
   const replayDtc = await post(replayPort, "read_stored_dtc");
   check(replayDtc.data.dtcs.some((item) => item.code === "P0171"), "replay DTC response did not include P0171");
   check(replayDtc.data.ecu_responses[0].ecu === "7E8", "replay DTC response did not keep ECU address");
+  check(replayDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "stored"), "replay stored DTC response included an invalid code or status");
 
   const replayLive = await post(replayPort, "read_live_pid_snapshot");
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
@@ -267,6 +275,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 111");
+  console.log("Local bridge read-only checks: 114");
   console.log("Errors: 0");
 }
