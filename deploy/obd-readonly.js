@@ -1550,12 +1550,19 @@
     const aliases = [
       ["supported_info_types_00", "supported_info_types_00", "00"],
       ["supported_info_types", "supported_info_types_00", "00"],
+      ["supported_mode09_types", "supported_info_types_00", "00"],
       ["vin", "vin", "02"],
+      ["vin_value", "vin", "02"],
       ["calibration_id", "calibration_id", "04"],
+      ["calid", "calibration_id", "04"],
+      ["cal_id", "calibration_id", "04"],
       ["calibration_identification", "calibration_id", "04"],
       ["calibration_verification_number", "calibration_verification_number", "06"],
       ["cvn", "calibration_verification_number", "06"],
-      ["ecu_name", "ecu_name", "0A"]
+      ["cvn_value", "calibration_verification_number", "06"],
+      ["ecu_name", "ecu_name", "0A"],
+      ["module_name", "ecu_name", "0A"],
+      ["ecu_label", "ecu_name", "0A"]
     ];
     return aliases
       .filter(([key]) => input[key] !== undefined && input[key] !== null && input[key] !== "")

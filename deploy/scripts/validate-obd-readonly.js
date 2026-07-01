@@ -417,6 +417,17 @@ const ecuInfoSnapshotObject = obd.normalizeEcuInfoSnapshot({
 });
 check(ecuInfoSnapshotObject.itemCount === 3, "ECU info snapshot object fields were not normalized");
 check(ecuInfoSnapshotObject.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-OBJECT", "ECU info snapshot object CVN was not retained");
+const ecuInfoSnapshotExtendedAliases = obd.normalizeEcuInfoSnapshot({
+  source: "diagnostic_core",
+  supported_mode09_types: "55 60 00 00",
+  vin_value: "JTDKN3DU0A0123456",
+  calid: "CAL-ALIAS",
+  cvn_value: "CVN-ALIAS",
+  module_name: "ABS ECU"
+});
+check(ecuInfoSnapshotExtendedAliases.itemCount === 5, "Extended ECU info alias fields were not normalized");
+check(ecuInfoSnapshotExtendedAliases.items.find((item) => item.id === "calibration_id")?.value === "CAL-ALIAS", "Extended ECU info alias CALID was not retained");
+check(ecuInfoSnapshotExtendedAliases.items.find((item) => item.id === "ecu_name")?.value === "ABS ECU", "Extended ECU info alias ECU name was not retained");
 const bridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
