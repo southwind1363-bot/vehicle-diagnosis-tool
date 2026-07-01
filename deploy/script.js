@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.325.0";
+const APP_VERSION = "2.326.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2096,6 +2096,20 @@ function sortEtaTargets(values = []) {
     .sort((a, b) => (order.get(a) || 98) - (order.get(b) || 98) || a.localeCompare(b, "ja"));
 }
 
+function getEtaSortValue(value) {
+  return sortEtaTargets([value])[0] === value
+    ? {
+        "2026-Q3 前半見込み": 1,
+        "2026-Q3 見込み": 2,
+        "2026-Q3 後半見込み": 3,
+        "2026-Q4 見込み": 4,
+        "2026-Q4 以降見込み": 5,
+        "2027 以降見込み": 6,
+        "時期未定": 99
+      }[value] || 98
+    : 98;
+}
+
 function summarizeEtaTargets(values = [], limit = 2) {
   const sorted = sortEtaTargets(values);
   return sorted.length ? sorted.slice(0, limit).join(" / ") : "時期未定";
@@ -2112,6 +2126,33 @@ function summarizeLowestProgress(items = [], getLabel, getProgress, limit = 2) {
     .slice(0, limit)
     .map((item) => `${item.label} ${item.progress}%`)
     .join(" / ");
+}
+
+function summarizeUpcomingReadiness(items = [], getLabel, getProgress, getEta, limit = 2) {
+  return items
+    .map((item) => ({
+      label: getLabel(item),
+      progress: normalizeProgressPercent(getProgress(item)),
+      eta: getEta(item)
+    }))
+    .filter((item) => item.label && item.progress !== null && item.eta)
+    .sort((a, b) => getEtaSortValue(a.eta) - getEtaSortValue(b.eta) || b.progress - a.progress || a.label.localeCompare(b.label, "ja"))
+    .slice(0, limit)
+    .map((item) => `${item.label} ${item.progress}% (${item.eta})`)
+    .join(" / ");
+}
+
+function summarizeTaskCount(doneItems = [], missingItems = []) {
+  const doneCount = Array.isArray(doneItems) ? doneItems.length : 0;
+  const missingCount = Array.isArray(missingItems) ? missingItems.length : 0;
+  const totalCount = doneCount + missingCount;
+  if (!totalCount) return "進捗項目を整理中";
+  return `完了 ${doneCount}/${totalCount}項目 / 残り${missingCount}項目`;
+}
+
+function summarizeRemainingChecks(items = [], limit = 2) {
+  if (!Array.isArray(items) || !items.length) return "確認項目なし";
+  return `残り確認 ${items.length}件: ${items.slice(0, limit).join(" / ")}`;
 }
 
 function renderObdProgressOverview() {
@@ -2147,6 +2188,18 @@ function renderObdProgressOverview() {
   const weakestCapabilities = summarizeLowestProgress(capabilityItems, (item) => item.label, (item) => item.progress_percent);
   const weakestCoverage = summarizeLowestProgress(coverageItems, (item) => item.label, (item) => item.progress_percent);
   const weakestInterfaces = summarizeLowestProgress(interfaceCatalog, (item) => item.label, (item) => item.progressPercent);
+  const upcomingInterfaces = summarizeUpcomingReadiness(
+    interfaceCatalog,
+    (item) => item.label,
+    (item) => item.progressPercent,
+    (item) => item.etaTarget
+  );
+  const upcomingCapabilities = summarizeUpcomingReadiness(
+    capabilityItems,
+    (item) => item.label,
+    (item) => item.progress_percent,
+    (item) => item.eta_target
+  );
   const allEtas = [
     ...capabilityItems.map((item) => item.eta_target),
     ...coverageItems.map((item) => item.eta_target),
@@ -2164,17 +2217,17 @@ function renderObdProgressOverview() {
     {
       title: "完了見込み",
       primary: `Q3目標 ${q3Targets}系統 / Q4目標 ${q4Targets}系統`,
-      detail: `直近の目標時期: ${summarizeEtaTargets(allEtas, 3)}`
+      detail: `先行候補: ${upcomingInterfaces || upcomingCapabilities || summarizeEtaTargets(allEtas, 3)}`
     },
     {
       title: "対応インターフェース",
       primary: `候補 ${interfaceCatalog.length}件 / 平均 ${candidateProgress}%`,
-      detail: `最も遅い所: ${weakestInterfaces || "集計中"} / 目標: ${interfaceEtas}`
+      detail: `先に使える候補: ${upcomingInterfaces || "集計中"} / 遅い所: ${weakestInterfaces || "集計中"}`
     },
     {
       title: "読取機能",
       primary: `DTC / PID / FF / ECU情報 / Mode06 平均 ${readoutProgress}%`,
-      detail: `弱い所: ${weakestCapabilities || "集計中"} / 目標: ${capabilityEtas}`
+      detail: `先行機能: ${upcomingCapabilities || "集計中"} / 弱い所: ${weakestCapabilities || "集計中"}`
     },
     {
       title: "データ網羅",
@@ -2701,7 +2754,8 @@ function renderObdBridgeReadout(parts = {}) {
   } else if (currentDtcSnapshot) {
     obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
   } else if (parts.freezeFrameResponse && freezeFrameSnapshot) {
-    obdImportStatus.textContent = `ブリッジフリーズフレームを${freezeFrameValues.length}項目読取りました。`;
+    const triggerSummary = freezeFrameSnapshot.triggerDtc ? ` 起点${freezeFrameSnapshot.triggerDtc}` : "";
+    obdImportStatus.textContent = `ブリッジフリーズフレームを${freezeFrameValues.length}項目読取りました。${triggerSummary}`.trim();
   } else if (parts.ecuInfoResponse && ecuInfoSnapshot) {
     const keySummary = ecuInfoSnapshot.keyItemSummary?.totalCount
       ? ` 主要${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}件`
@@ -2716,11 +2770,16 @@ function renderObdBridgeReadout(parts = {}) {
       : "";
     obdImportStatus.textContent = `ブリッジECU情報を${ecuInfoSnapshot.itemCount || 0}項目読取りました。${keySummary}${missingKeySummary}${supportedTypeSummary}`.trim();
   } else if (parts.onboardMonitorResponse && onboardMonitorSnapshot) {
-    obdImportStatus.textContent = `ブリッジ監視結果を${onboardMonitorSnapshot.testCount || 0}項目読取りました。`;
+    const failedSummary = onboardMonitorSnapshot.failedCount > 0
+      ? ` 範囲外${onboardMonitorSnapshot.failedCount}件`
+      : " 範囲外0件";
+    obdImportStatus.textContent = `ブリッジ監視結果を${onboardMonitorSnapshot.testCount || 0}項目読取りました。${failedSummary}`.trim();
   } else if (parts.supportedPidResponse && supportedPidMatrix) {
-    obdImportStatus.textContent = `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。`;
+    const pidPreview = supportedPidMatrix.supportedPids?.slice(0, 4).join(", ");
+    obdImportStatus.textContent = `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。${pidPreview ? ` 先頭 ${pidPreview}` : ""}`.trim();
   } else if (parts.livePidResponse && readinessSnapshot?.monitorCount) {
-    obdImportStatus.textContent = `ブリッジライブ値とレディネス${readinessSnapshot.monitorCount}項目を読取りました。未完了${readinessSnapshot.incompleteCount}項目です。`;
+    const valueSummary = monitorValues.length ? ` ライブ値${monitorValues.length}項目` : "";
+    obdImportStatus.textContent = `ブリッジライブ値とレディネス${readinessSnapshot.monitorCount}項目を読取りました。${valueSummary} / 未完了${readinessSnapshot.incompleteCount}項目`.trim();
   }
   renderObdDeveloperSessionSummary(session);
 }
@@ -3172,15 +3231,18 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     const note = document.createElement("p");
     note.textContent = item.integrationNote;
 
+    const checks = document.createElement("p");
+    checks.textContent = summarizeRemainingChecks(item.verificationRequired);
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-button";
     button.disabled = true;
-    button.textContent = "候補管理";
+    button.textContent = Array.isArray(item.verificationRequired) && item.verificationRequired.length
+      ? `残り${item.verificationRequired.length}確認`
+      : "候補管理";
 
-    button.textContent = item.etaTarget || "時期未定";
-
-    card.append(head, role, scope, status, next, eta, note, button);
+    card.append(head, role, scope, status, next, eta, note, checks, button);
     obdInterfaceRoadmapGrid.appendChild(card);
   });
 }
@@ -3220,6 +3282,11 @@ function renderObdCoverageRoadmap(items) {
     const next = document.createElement("p");
     next.textContent = Array.isArray(item.next_actions) ? item.next_actions.slice(0, 2).join(" / ") : "";
 
+    const remaining = document.createElement("p");
+    remaining.textContent = Array.isArray(item.blocked_until) && item.blocked_until.length
+      ? `停止条件 ${item.blocked_until.length}件: ${item.blocked_until.slice(0, 1).join(" / ")}`
+      : `次工程 ${Array.isArray(item.next_actions) ? item.next_actions.length : 0}件`;
+
     const eta = document.createElement("p");
     eta.textContent = `使える状態の目標: ${item.eta_target || "時期未定"}`;
 
@@ -3229,7 +3296,7 @@ function renderObdCoverageRoadmap(items) {
     button.disabled = true;
     button.textContent = item.blocked_until?.length ? "ソース確認待ち" : "拡張中";
 
-    card.append(head, current, target, next, eta, button);
+    card.append(head, current, target, next, remaining, eta, button);
     obdCoverageRoadmapGrid.appendChild(card);
   });
 }
@@ -3261,6 +3328,9 @@ function renderObdCapabilityStatus(items) {
     const status = document.createElement("p");
     status.textContent = `${item.current_status || "確認中"} / ${item.current_basis || ""}`;
 
+    const progressDetail = document.createElement("p");
+    progressDetail.textContent = summarizeTaskCount(item.done, item.missing);
+
     const missing = document.createElement("p");
     missing.textContent = Array.isArray(item.missing) ? `不足: ${item.missing.slice(0, 3).join(" / ")}` : "";
 
@@ -3276,7 +3346,7 @@ function renderObdCapabilityStatus(items) {
     button.disabled = true;
     button.textContent = item.safety_gate || "確認中";
 
-    card.append(head, status, missing, next, eta, button);
+    card.append(head, status, progressDetail, missing, next, eta, button);
     obdCapabilityStatusGrid.appendChild(card);
   });
 }
