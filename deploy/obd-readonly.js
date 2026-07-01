@@ -993,12 +993,21 @@
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const values = Array.isArray(data.values)
+      ? data.values
+      : Array.isArray(data.items)
+        ? data.items
+        : Array.isArray(data.ecu_info)
+          ? data.ecu_info
+          : Array.isArray(data.ecu_info_items)
+            ? data.ecu_info_items
+            : [];
     return {
       ...normalizeEcuInfoSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: data.protocol || null,
-      values: Array.isArray(data.values) ? data.values : Array.isArray(data.ecu_info) ? data.ecu_info : []
+      values
       }),
       intent: "read_ecu_info",
       ok: response.ok === true,
@@ -1433,7 +1442,15 @@
 
   function normalizeEcuInfoSnapshot(input = {}) {
     const source = input.source || "diagnostic_core";
-    const rows = Array.isArray(input.values) ? input.values : Array.isArray(input.ecu_info) ? input.ecu_info : [];
+    const rows = Array.isArray(input.values)
+      ? input.values
+      : Array.isArray(input.items)
+        ? input.items
+        : Array.isArray(input.ecu_info)
+          ? input.ecu_info
+          : Array.isArray(input.ecu_info_items)
+            ? input.ecu_info_items
+            : [];
     const items = rows
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);

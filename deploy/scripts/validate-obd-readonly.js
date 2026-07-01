@@ -357,6 +357,28 @@ check(!JSON.stringify(bridgeEcuInfoSnapshot).includes("JTDKN3DU0A0123456"), "Bri
 check(bridgeEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge ECU info did not retain CALID");
 const bridgeEmptyEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({});
 check(bridgeEmptyEcuInfoSnapshot.itemCount === 0 && bridgeEmptyEcuInfoSnapshot.blocked === true, "Empty Bridge ECU info response was not fail-closed");
+const bridgeAliasEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    items: [
+      { id: "calibration_verification_number", info_type: "06", value: "CVN-ABCD" },
+      { id: "ecu_name", info_type: "0A", value: "Powertrain ECU" }
+    ],
+    captured_at: "2026-06-28T00:01:51Z"
+  }
+});
+check(bridgeAliasEcuInfoSnapshot.itemCount === 2, "Bridge ECU info alias items were not normalized");
+check(bridgeAliasEcuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-ABCD", "Bridge ECU info alias CALID/CVN item was not retained");
+const ecuInfoSnapshotAlias = obd.normalizeEcuInfoSnapshot({
+  source: "diagnostic_core",
+  items: [
+    { id: "ecu_name", info_type: "0A", value: "Hybrid ECU" }
+  ]
+});
+check(ecuInfoSnapshotAlias.itemCount === 1 && ecuInfoSnapshotAlias.items[0]?.value === "Hybrid ECU", "ECU info snapshot alias items were not normalized");
 const bridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
