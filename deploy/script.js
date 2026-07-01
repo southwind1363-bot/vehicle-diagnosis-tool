@@ -5,7 +5,45 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.311.0";
+const OBD_INTERFACE_PROGRESS = Object.freeze({
+  web_serial_obd: Object.freeze({
+    progressPercent: 61,
+    currentBasis: "Web Serial と ELM327 系の読取モデル、PID 辞書、フリーズフレーム整形まで実装済み。",
+    nextBuild: "実アダプター差分、初期化手順、貼り付け結果との比較を詰める。",
+    etaTarget: "2026-Q3 前半見込み"
+  }),
+  local_bridge: Object.freeze({
+    progressPercent: 52,
+    currentBasis: "ブラウザからローカルブリッジの状態確認、読取応答整形、セッション統合まで実装済み。",
+    nextBuild: "J2534 / CANable / THINKCAR の実ドライバ接続と読取応答の差分吸収を進める。",
+    etaTarget: "2026-Q3 見込み"
+  }),
+  j2534_passthru: Object.freeze({
+    progressPercent: 36,
+    currentBasis: "read-only 受け口と候補整理まで完了。DLL 実接続は未着手。",
+    nextBuild: "DLL ローダー、接続確認、読取応答の正規化を追加する。",
+    etaTarget: "2026-Q3 見込み"
+  }),
+  uds_canfd: Object.freeze({
+    progressPercent: 24,
+    currentBasis: "UDS / CAN FD の対象範囲と安全境界を整理済み。実 transport は未実装。",
+    nextBuild: "read-only DID / ECU 情報の応答モデルとログ整形を先に固める。",
+    etaTarget: "2026-Q4 見込み"
+  }),
+  doip: Object.freeze({
+    progressPercent: 16,
+    currentBasis: "対象レイヤーと前提条件の整理段階。接続基盤は未着手。",
+    nextBuild: "ローカルブリッジ経由の接続確認と UDS over IP の読取モデルを準備する。",
+    etaTarget: "2026-Q4 以降見込み"
+  }),
+  vci_sdk: Object.freeze({
+    progressPercent: 12,
+    currentBasis: "候補管理と安全境界の整理段階。SDK 連携は未実装。",
+    nextBuild: "対象 SDK の選定、導入条件、read-only ラッパー設計を進める。",
+    etaTarget: "2026-Q4 以降見込み"
+  })
+});
+const APP_VERSION = "2.313.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -147,6 +185,7 @@ const clearStorageButton = document.querySelector("#clearStorageButton");
 const opsResultList = document.querySelector("#opsResultList");
 const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
+const obdProgressGrid = document.querySelector(".obd-progress-grid");
 const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
@@ -2011,6 +2050,7 @@ function initializeObdReadOnlyPanel() {
 
   obdCapabilityBadge.textContent = "実機接続準備中";
   obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 接続、DTC読取、データモニター、DTC消去は機能単位で準備し、安全検証が終わるまで車両への送信は無効にしています。`;
+  renderObdProgressOverview(capability);
   renderObdDeveloperGate(capability);
   renderObdOperationPlan(window.ObdReadOnly.getVehicleOperationPlan?.() || []);
   renderObdPreparedRequests(
@@ -2028,6 +2068,146 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getLocalBridgeResponseSchemas?.() || []
   );
   renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
+}
+
+function normalizeProgressPercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+}
+
+function averageProgressPercent(values) {
+  const normalized = values.map((value) => normalizeProgressPercent(value)).filter((value) => value !== null);
+  if (!normalized.length) return 0;
+  return Math.round(normalized.reduce((sum, value) => sum + value, 0) / normalized.length);
+}
+
+function sortEtaTargets(values = []) {
+  const order = new Map([
+    ["2026-Q3 前半見込み", 1],
+    ["2026-Q3 見込み", 2],
+    ["2026-Q3 後半見込み", 3],
+    ["2026-Q4 見込み", 4],
+    ["2026-Q4 以降見込み", 5],
+    ["2027 以降見込み", 6],
+    ["時期未定", 99]
+  ]);
+  return [...new Set(values.filter((value) => typeof value === "string" && value.length > 0))]
+    .sort((a, b) => (order.get(a) || 98) - (order.get(b) || 98) || a.localeCompare(b, "ja"));
+}
+
+function summarizeEtaTargets(values = [], limit = 2) {
+  const sorted = sortEtaTargets(values);
+  return sorted.length ? sorted.slice(0, limit).join(" / ") : "時期未定";
+}
+
+function summarizeLowestProgress(items = [], getLabel, getProgress, limit = 2) {
+  return items
+    .map((item) => ({
+      label: getLabel(item),
+      progress: normalizeProgressPercent(getProgress(item))
+    }))
+    .filter((item) => item.label && item.progress !== null)
+    .sort((a, b) => a.progress - b.progress || a.label.localeCompare(b.label, "ja"))
+    .slice(0, limit)
+    .map((item) => `${item.label} ${item.progress}%`)
+    .join(" / ");
+}
+
+function renderObdProgressOverview() {
+  if (!obdProgressGrid) return;
+
+  const interfacePhases = window.ObdReadOnly?.getAdvancedInterfaceRoadmap?.() || [];
+  const interfaceCatalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
+  const capabilityItems = dataStore.diagnosticCapabilityStatus || [];
+  const coverageItems = dataStore.diagnosticCoverageRoadmap || [];
+  const readoutCapabilityIds = new Set([
+    "capability-generic-obd2-dtc",
+    "capability-live-data",
+    "capability-local-bridge",
+    "capability-guided-diagnostics"
+  ]);
+
+  const phaseProgress = averageProgressPercent(interfacePhases.map((item) => OBD_INTERFACE_PROGRESS[item.id]?.progressPercent));
+  const candidateProgress = averageProgressPercent(interfaceCatalog.map((item) => item.progressPercent));
+  const interfaceProgress = averageProgressPercent([phaseProgress, candidateProgress]);
+  const capabilityProgress = averageProgressPercent(capabilityItems.map((item) => item.progress_percent));
+  const coverageProgress = averageProgressPercent(coverageItems.map((item) => item.progress_percent));
+  const readoutProgress = averageProgressPercent(
+    capabilityItems.filter((item) => readoutCapabilityIds.has(item.id)).map((item) => item.progress_percent)
+  );
+  const overallProgress = averageProgressPercent([capabilityProgress, coverageProgress, interfaceProgress]);
+
+  const interfaceEtas = summarizeEtaTargets([
+    ...interfacePhases.map((item) => OBD_INTERFACE_PROGRESS[item.id]?.etaTarget),
+    ...interfaceCatalog.map((item) => item.etaTarget)
+  ]);
+  const capabilityEtas = summarizeEtaTargets(capabilityItems.map((item) => item.eta_target));
+  const coverageEtas = summarizeEtaTargets(coverageItems.map((item) => item.eta_target));
+  const weakestCapabilities = summarizeLowestProgress(capabilityItems, (item) => item.label, (item) => item.progress_percent);
+  const weakestCoverage = summarizeLowestProgress(coverageItems, (item) => item.label, (item) => item.progress_percent);
+  const weakestInterfaces = summarizeLowestProgress(interfaceCatalog, (item) => item.label, (item) => item.progressPercent);
+  const allEtas = [
+    ...capabilityItems.map((item) => item.eta_target),
+    ...coverageItems.map((item) => item.eta_target),
+    ...interfaceCatalog.map((item) => item.etaTarget)
+  ].filter((value) => typeof value === "string" && value.length > 0);
+  const q3Targets = allEtas.filter((value) => value.startsWith("2026-Q3")).length;
+  const q4Targets = allEtas.filter((value) => value.startsWith("2026-Q4")).length;
+
+  const cards = [
+    {
+      title: "完成度",
+      primary: `診断機全体 ${overallProgress}% / OBD2読取 ${readoutProgress}%`,
+      detail: `機能 ${capabilityProgress}% / 網羅 ${coverageProgress}% / 接続 ${interfaceProgress}%`
+    },
+    {
+      title: "完了見込み",
+      primary: `Q3目標 ${q3Targets}系統 / Q4目標 ${q4Targets}系統`,
+      detail: `直近の目標時期: ${summarizeEtaTargets(allEtas, 3)}`
+    },
+    {
+      title: "対応インターフェース",
+      primary: `候補 ${interfaceCatalog.length}件 / 平均 ${candidateProgress}%`,
+      detail: `最も遅い所: ${weakestInterfaces || "集計中"} / 目標: ${interfaceEtas}`
+    },
+    {
+      title: "読取機能",
+      primary: `DTC / PID / FF / ECU情報 / Mode06 平均 ${readoutProgress}%`,
+      detail: `弱い所: ${weakestCapabilities || "集計中"} / 目標: ${capabilityEtas}`
+    },
+    {
+      title: "データ網羅",
+      primary: `P/U/B/C/OEM/作業支援 平均 ${coverageProgress}%`,
+      detail: `弱い所: ${weakestCoverage || "集計中"} / 目標: ${coverageEtas}`
+    },
+    {
+      title: "判定基準",
+      primary: "数字は実装済みだけを反映",
+      detail: "ロードマップ追加だけでは上げず、読取、整形、取込、比較、保存の実装で更新する。"
+    }
+  ];
+
+  obdProgressGrid.innerHTML = "";
+  cards.forEach((card, index) => {
+    const article = document.createElement("article");
+    article.className = index === 0
+      ? "obd-progress-score-card"
+      : index === 1
+        ? "obd-progress-breakdown-card"
+        : "";
+
+    const title = document.createElement("strong");
+    title.textContent = card.title;
+    const primary = document.createElement("span");
+    if (index === 0) primary.className = "obd-progress-score";
+    primary.textContent = card.primary;
+    const detail = document.createElement("span");
+    detail.textContent = card.detail;
+
+    article.append(title, primary, detail);
+    obdProgressGrid.appendChild(article);
+  });
 }
 
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
@@ -2176,14 +2356,13 @@ async function readObdDeveloperLiveSnapshot() {
 }
 
 async function probeObdLocalBridge() {
-  if (!obdDevModeUnlocked) return;
   try {
     obdDevStatus.textContent = "ローカルブリッジを確認しています。";
-    const response = await sendObdLocalBridgeIntent("bridge_status", {}, { discover: true });
+    const response = await sendObdLocalBridgeStatusIntent("bridge_status", {}, { discover: true });
     const status = window.ObdReadOnly.normalizeBridgeConnectionStatus(response);
     obdDevSession.bridgeStatus = status;
     try {
-      const adapterResponse = await sendObdLocalBridgeIntent("adapter_identity", {});
+      const adapterResponse = await sendObdLocalBridgeStatusIntent("adapter_identity", {});
       obdDevSession.adapterIdentity = window.ObdReadOnly.normalizeBridgeAdapterIdentity(adapterResponse);
     } catch (adapterError) {
       obdDevSession.adapterIdentity = null;
@@ -2324,6 +2503,45 @@ function isAllowedLocalBridgeIntent(intent) {
     "read_onboard_monitor",
     "read_live_pid_snapshot"
   ].includes(intent);
+}
+
+function isSafeLocalBridgeIntent(intent) {
+  return ["bridge_status", "list_vci", "adapter_identity"].includes(intent);
+}
+
+async function sendObdLocalBridgeStatusIntent(intent, payload = {}, options = {}) {
+  if (!isSafeLocalBridgeIntent(intent)) {
+    throw new Error(`unsupported_public_local_bridge_intent ${intent}`);
+  }
+  const request = {
+    request_id: generateId(),
+    api_version: "v1",
+    intent,
+    timestamp: new Date().toISOString(),
+    data: payload
+  };
+  const endpoints = options.discover || !obdDevSession.bridgeEndpoint
+    ? OBD_LOCAL_BRIDGE_PORTS.flatMap((port) => OBD_LOCAL_BRIDGE_PATHS.map((path) => `http://127.0.0.1:${port}${path}`))
+    : [obdDevSession.bridgeEndpoint];
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const json = await response.json();
+      obdDevSession.bridgeEndpoint = endpoint;
+      return json;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("local_bridge_not_found");
 }
 
 async function runObdDeveloperRead(label, commands) {
@@ -2823,6 +3041,12 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
   }
 
   [...items].sort((a, b) => a.phase - b.phase).forEach((item) => {
+    const progress = OBD_INTERFACE_PROGRESS[item.id] || {
+      progressPercent: 0,
+      currentBasis: item.currentAvailability || "確認中",
+      nextBuild: "",
+      etaTarget: "時期未定"
+    };
     const card = document.createElement("article");
     card.className = "obd-interface-card";
 
@@ -2832,7 +3056,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     title.textContent = `${item.phase}. ${item.label}`;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
-    badge.textContent = item.currentAvailability;
+    badge.textContent = `${progress.progressPercent || 0}%`;
     head.append(title, badge);
 
     const role = document.createElement("p");
@@ -2841,13 +3065,29 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     const scope = document.createElement("p");
     scope.textContent = item.capabilityScope.join(" / ");
 
+    const status = document.createElement("p");
+    status.textContent = `${item.currentAvailability || "確認中"} / ${progress.currentBasis || ""}`;
+
+    const next = document.createElement("p");
+    next.textContent = progress.nextBuild || "";
+
+    const eta = document.createElement("p");
+    eta.textContent = `使える状態の目標: ${progress.etaTarget || "時期未定"}`;
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-button";
     button.disabled = true;
     button.textContent = item.requiresLocalBridge ? "ブリッジ準備後" : "準備中";
 
-    card.append(head, role, scope, button);
+    if (item.id === "local_bridge") {
+      button.disabled = false;
+      button.textContent = "接続確認";
+      button.addEventListener("click", () => {
+        probeObdLocalBridge();
+      });
+    }
+    card.append(head, role, scope, status, next, eta, button);
     obdInterfaceRoadmapGrid.appendChild(card);
   });
 
@@ -2861,7 +3101,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     title.textContent = item.label;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
-    badge.textContent = item.currentStatus;
+    badge.textContent = `${item.progressPercent || 0}%`;
     head.append(title, badge);
 
     const role = document.createElement("p");
@@ -2869,6 +3109,15 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
 
     const scope = document.createElement("p");
     scope.textContent = item.readScopeCandidates.slice(0, 4).join(" / ") || item.interfaceFamily;
+
+    const status = document.createElement("p");
+    status.textContent = `${item.currentStatus || "確認中"} / ${item.currentBasis || ""}`;
+
+    const next = document.createElement("p");
+    next.textContent = item.nextBuild || "";
+
+    const eta = document.createElement("p");
+    eta.textContent = `使える状態の目標: ${item.etaTarget || "時期未定"}`;
 
     const note = document.createElement("p");
     note.textContent = item.integrationNote;
@@ -2879,7 +3128,9 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     button.disabled = true;
     button.textContent = "候補管理";
 
-    card.append(head, role, scope, note, button);
+    button.textContent = item.etaTarget || "時期未定";
+
+    card.append(head, role, scope, status, next, eta, note, button);
     obdInterfaceRoadmapGrid.appendChild(card);
   });
 }
@@ -2905,11 +3156,13 @@ function renderObdCoverageRoadmap(items) {
     title.textContent = item.label;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
-    badge.textContent = item.current_state || "確認中";
+    badge.textContent = normalizeProgressPercent(item.progress_percent) !== null
+      ? `${normalizeProgressPercent(item.progress_percent)}%`
+      : item.current_state || "確認中";
     head.append(title, badge);
 
     const current = document.createElement("p");
-    current.textContent = item.current_count_note || item.coverage_area || "";
+    current.textContent = `${item.current_state || "確認中"} / ${item.current_count_note || item.coverage_area || ""}`;
 
     const target = document.createElement("p");
     target.textContent = item.target_state || "";
@@ -2917,13 +3170,16 @@ function renderObdCoverageRoadmap(items) {
     const next = document.createElement("p");
     next.textContent = Array.isArray(item.next_actions) ? item.next_actions.slice(0, 2).join(" / ") : "";
 
+    const eta = document.createElement("p");
+    eta.textContent = `使える状態の目標: ${item.eta_target || "時期未定"}`;
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-button";
     button.disabled = true;
     button.textContent = item.blocked_until?.length ? "ソース確認待ち" : "拡張中";
 
-    card.append(head, current, target, next, button);
+    card.append(head, current, target, next, eta, button);
     obdCoverageRoadmapGrid.appendChild(card);
   });
 }
@@ -2961,13 +3217,16 @@ function renderObdCapabilityStatus(items) {
     const next = document.createElement("p");
     next.textContent = item.next_build || "";
 
+    const eta = document.createElement("p");
+    eta.textContent = `使える状態の目標: ${item.eta_target || "時期未定"}`;
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-button";
     button.disabled = true;
     button.textContent = item.safety_gate || "確認中";
 
-    card.append(head, status, missing, next, button);
+    card.append(head, status, missing, next, eta, button);
     obdCapabilityStatusGrid.appendChild(card);
   });
 }

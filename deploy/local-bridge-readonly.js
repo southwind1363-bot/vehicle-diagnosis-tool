@@ -18,6 +18,11 @@ const READ_INTENTS = new Set([
   "read_onboard_monitor",
   "read_live_pid_snapshot"
 ]);
+const SAFE_STATUS_INTENTS = new Set([
+  "bridge_status",
+  "list_vci",
+  "adapter_identity"
+]);
 const BLOCKED_WRITE_INTENTS = new Set([
   "clear_dtc",
   "routine_control",
@@ -146,10 +151,13 @@ function validateBridgeRequest(body, pairingToken) {
   if (!body || typeof body !== "object") return { ok: false, error: "invalid_json" };
   if (!pairingToken || pairingToken.length < 12) return { ok: false, error: "bridge_pairing_token_not_configured" };
   if (body.api_version !== API_VERSION) return { ok: false, error: "unsupported_api_version" };
-  if (!body.request_id || !body.intent || !body.timestamp || !body.pairing_token) return { ok: false, error: "missing_required_field" };
-  if (body.pairing_token !== pairingToken) return { ok: false, error: "pairing_token_mismatch" };
+  if (!body.request_id || !body.intent || !body.timestamp) return { ok: false, error: "missing_required_field" };
   if (BLOCKED_WRITE_INTENTS.has(body.intent)) return { ok: false, error: "write_intent_blocked" };
   if (!READ_INTENTS.has(body.intent)) return { ok: false, error: "unknown_intent" };
+  if (!SAFE_STATUS_INTENTS.has(body.intent)) {
+    if (!body.pairing_token) return { ok: false, error: "missing_required_field" };
+    if (body.pairing_token !== pairingToken) return { ok: false, error: "pairing_token_mismatch" };
+  }
   return { ok: true };
 }
 

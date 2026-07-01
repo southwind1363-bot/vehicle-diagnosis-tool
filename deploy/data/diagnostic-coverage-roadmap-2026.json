@@ -4,6 +4,7 @@
     "label": "P系 汎用OBD2 DTC",
     "coverage_area": "generic-obd2-dtc",
     "current_state": "個別定義を拡張中",
+    "progress_percent": 62,
     "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
     "priority": 1,
     "current_count_note": "P系個別定義 2923件",
@@ -16,6 +17,7 @@
     "safety_note": "コード名だけで原因を断定しない。整備書確認と実測値を必須にする。",
     "source": "ローカル検証集計",
     "source_date": "2026-06-28",
+    "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   },
   {
@@ -23,6 +25,7 @@
     "label": "U系 通信DTC",
     "coverage_area": "network-dtc",
     "current_state": "個別定義を拡張中",
+    "progress_percent": 56,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
     "current_count_note": "U系個別定義 550件",
@@ -35,6 +38,7 @@
     "safety_note": "通信線測定はショートや誤接続を避け、メーカー整備書の測定条件を優先する。",
     "source": "ローカル検証集計",
     "source_date": "2026-06-28",
+    "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   },
   {
@@ -42,6 +46,7 @@
     "label": "B系 ボディDTC",
     "coverage_area": "body-dtc",
     "current_state": "個別定義は未整備",
+    "progress_percent": 8,
     "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
     "priority": 3,
     "current_count_note": "B系個別定義 0件",
@@ -54,6 +59,7 @@
     "safety_note": "SRSや盗難防止系は誤作動・復旧不能リスクがあるため、読取整理だけから始める。",
     "source": "ローカル検証集計",
     "source_date": "2026-06-28",
+    "eta_target": "2026-Q4 見込み",
     "service_manual_required": true
   },
   {
@@ -61,6 +67,7 @@
     "label": "C系 シャシDTC",
     "coverage_area": "chassis-dtc",
     "current_state": "個別定義は未整備",
+    "progress_percent": 8,
     "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
     "priority": 4,
     "current_count_note": "C系個別定義 0件",
@@ -73,6 +80,7 @@
     "safety_note": "ブレーキ、操舵、ADAS系は作業条件と復旧手順が揃うまで読取補助に限定する。",
     "source": "ローカル検証集計",
     "source_date": "2026-06-28",
+    "eta_target": "2026-Q4 見込み",
     "service_manual_required": true
   },
   {
@@ -80,6 +88,7 @@
     "label": "メーカー固有・拡張DTC",
     "coverage_area": "oem-enhanced-dtc",
     "current_state": "器を準備中",
+    "progress_percent": 12,
     "target_state": "メーカー診断機、J2534、UDS応答、サブコード、ステータスを診断フローへ取り込む",
     "priority": 5,
     "current_count_note": "メーカー固有DTCは体系化前",
@@ -92,6 +101,7 @@
     "safety_note": "メーカー固有コードは互換性を推測せず、適合未確認なら未確認として扱う。",
     "source": "ユーザー方針とローカル実装状況",
     "source_date": "2026-06-28",
+    "eta_target": "2026-Q4 見込み",
     "service_manual_required": true
   },
   {
@@ -99,6 +109,7 @@
     "label": "データリスト・作業サポート",
     "coverage_area": "live-data-active-test",
     "current_state": "データモニター辞書と安全ゲートを準備済み",
+    "progress_percent": 38,
     "target_state": "現行車のデータリスト、基準値、観察条件、作業サポートを段階的に増やす",
     "priority": 6,
     "current_count_note": "データモニター辞書 165項目",
@@ -111,6 +122,7 @@
     "safety_note": "作業サポートは車両状態を変えるため、読取・記録・比較の完成後に段階開放する。",
     "source": "ローカル検証集計",
     "source_date": "2026-06-28",
+    "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   }
 ]

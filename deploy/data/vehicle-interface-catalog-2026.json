@@ -9,6 +9,10 @@
     "read_scope_candidates": ["汎用OBD2 DTC", "標準ライブデータPID"],
     "write_scope_candidates": [],
     "current_status": "候補管理",
+    "progress_percent": 18,
+    "current_basis": "スマホアプリ前提の候補整理まで完了。ブラウザ/PC側の読取統合は未実装。",
+    "next_build": "PC側ブリッジ経由の取込と Bluetooth 接続確認手順を追加する。",
+    "eta_target": "2026-Q4 以降見込み",
     "connection_enabled": false,
     "vehicle_command_enabled": false,
     "verification_required": [
@@ -33,6 +37,10 @@
     "read_scope_candidates": ["全システムスキャン候補", "メーカー固有DTC候補", "データリスト候補"],
     "write_scope_candidates": ["DTC消去", "作動テスト", "学習/初期化", "カスタマイズ"],
     "current_status": "候補管理",
+    "progress_percent": 36,
+    "current_basis": "J2534 候補整理と read-only ブリッジ受け口まで完了。DLL 実接続は未着手。",
+    "next_build": "DLL ローダー、接続確認、読取応答の正規化を順に追加する。",
+    "eta_target": "2026-Q3 見込み",
     "connection_enabled": false,
     "vehicle_command_enabled": false,
     "verification_required": [
@@ -57,6 +65,10 @@
     "read_scope_candidates": ["Mode 03 保存DTC", "Mode 07 保留DTC", "Mode 02 フリーズフレーム", "Mode 01 標準PID"],
     "write_scope_candidates": ["Mode 04 DTC消去"],
     "current_status": "候補管理",
+    "progress_percent": 58,
+    "current_basis": "Web Serial と read-only ブリッジの読取モデルがあり、状態確認 UI まで実装済み。",
+    "next_build": "実アダプター接続確認と PID / FF / Mode09 の実読取差分を詰める。",
+    "eta_target": "2026-Q3 前半見込み",
     "connection_enabled": false,
     "vehicle_command_enabled": false,
     "verification_required": [
@@ -81,6 +93,10 @@
     "read_scope_candidates": ["CANフレーム観察", "CAN FDフレーム観察", "プロトコル解析前のログ観察"],
     "write_scope_candidates": ["CANフレーム送信"],
     "current_status": "候補管理",
+    "progress_percent": 32,
+    "current_basis": "CAN/CAN FD ログ取込の前提整理と候補登録まで完了。実接続基盤は未実装。",
+    "next_build": "SocketCAN / SLCAN 接続確認と読取ログのブリッジ正規化を追加する。",
+    "eta_target": "2026-Q3 後半見込み",
     "connection_enabled": false,
     "vehicle_command_enabled": false,
     "verification_required": [

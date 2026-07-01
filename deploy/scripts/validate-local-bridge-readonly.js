@@ -80,6 +80,12 @@ try {
   check(adapterIdentity.data.adapter_name === "Read-only Local Bridge Sample", "adapter_identity did not return sample adapter name");
   check(adapterIdentity.data.adapter_family === "local_bridge_sample", "adapter_identity did not return adapter family");
   check(adapterIdentity.data.vehicle_command_enabled === false, "adapter_identity enabled vehicle commands");
+  const publicStatus = await post(port, "bridge_status", "");
+  check(publicStatus.ok === true && publicStatus.blocked === false, "public bridge_status should work without pairing token");
+  const publicAdapterIdentity = await post(port, "adapter_identity", "");
+  check(publicAdapterIdentity.ok === true && publicAdapterIdentity.blocked === false, "public adapter_identity should work without pairing token");
+  const publicVci = await post(port, "list_vci", "");
+  check(publicVci.ok === true && publicVci.blocked === false, "public list_vci should work without pairing token");
 
   const dtc = await post(port, "read_stored_dtc");
   check(dtc.data.dtcs.some((item) => item.code === "P0171"), "stored DTC response did not include P0171");
@@ -143,7 +149,7 @@ try {
   check(blockedWrite.ok === false && blockedWrite.blocked === true, "write intent was not blocked");
   check(blockedWrite.would_transmit === false, "blocked write intent would transmit");
 
-  const badToken = await post(port, "bridge_status", "wrong-token-value");
+  const badToken = await post(port, "read_stored_dtc", "wrong-token-value");
   check(badToken.ok === false && badToken.errors.includes("pairing_token_mismatch"), "bad token was not rejected");
 
   const unknown = await post(port, "unknown_intent");

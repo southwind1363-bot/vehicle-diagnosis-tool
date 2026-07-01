@@ -20,7 +20,8 @@
     "next_build": "B/C系とメーカー固有を、出典確認済みデータとして別レイヤーで追加する。",
     "safety_gate": "コード名だけで原因断定しない",
     "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28"
+    "source_date": "2026-06-28",
+    "eta_target": "2026-Q3 見込み"
   },
   {
     "id": "capability-live-data",
@@ -43,15 +44,16 @@
     "next_build": "症状別ワークフローに必要PID、観察条件、異常時の次点検を紐付ける。",
     "safety_gate": "未対応PIDを推測補完しない",
     "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28"
+    "source_date": "2026-06-28",
+    "eta_target": "2026-Q3 見込み"
   },
   {
     "id": "capability-local-bridge",
     "label": "ローカルブリッジ / VCI連携",
     "target_level": "ELM327、J2534、CAN/CAN FDを安全境界越しに扱う",
-    "current_status": "開発用読取ブリッジ同梱",
-    "progress_percent": 44,
-    "current_basis": "ブリッジ契約、応答型、Web側操作、PC側サンプルブリッジ、DTC/FF/対応PID/ECU情報/Mode06/レディネス取込、セッション積み上げモデルあり",
+    "current_status": "読取入口あり",
+    "progress_percent": 52,
+    "current_basis": "ブリッジ契約、応答型、Web側操作、PC側サンプルブリッジ、DTC/FF/対応PID/ECU情報/Mode06/レディネス取込、status/list_vci/adapter_identity の接続確認入口あり",
     "done": [
       "接続状態、VCI一覧、DTC、ライブPID、フリーズフレーム、対応PID、ECU情報、Mode06、セッション要約の応答型",
       "THINKCAR系、Techstream/J2534、ELM327、CANable候補管理",
@@ -65,10 +67,11 @@
       "THINKCAR Bluetooth VCI連携",
       "CAN FDログ要約"
     ],
-    "next_build": "J2534/CANable/THINKCARを実ドライバへつなぐ前に、読取応答を同じブリッジ契約で受ける。",
-    "safety_gate": "connection_enabled:false / vehicle_command_enabled:false",
+    "next_build": "J2534/CANable/THINKCARを実ドライバへつなぐ前に、Mode09差分と読取応答を同じブリッジ契約で受ける。",
+    "safety_gate": "read-only status intents有効 / vehicle_command_enabled:false",
     "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28"
+    "source_date": "2026-06-28",
+    "eta_target": "2026-Q3 見込み"
   },
   {
     "id": "capability-oem-enhanced",
@@ -91,7 +94,8 @@
     "next_build": "Techstream等の読取結果貼り付けを解析できる形式から先に作る。",
     "safety_gate": "車種適合未確認なら未確認として扱う",
     "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28"
+    "source_date": "2026-06-28",
+    "eta_target": "2026-Q4 見込み"
   },
   {
     "id": "capability-bidirectional",
@@ -116,7 +120,8 @@
     "next_build": "読取、保存、比較、診断手順が安定してから、低リスクな作業サポートを個別に検証する。",
     "safety_gate": "安全条件が揃うまで未開放",
     "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28"
+    "source_date": "2026-06-28",
+    "eta_target": "2027 以降見込み"
   },
   {
     "id": "capability-guided-diagnostics",
@@ -141,6 +146,7 @@
     "next_build": "診断フローに必要PID、観察条件、異常解釈、次点検を構造化して追加する。",
     "safety_gate": "推測と事実を分け、整備書確認を残す",
     "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28"
+    "source_date": "2026-06-28",
+    "eta_target": "2026-Q3 見込み"
   }
 ]
