@@ -365,6 +365,7 @@ check(bridgeEcuInfoSnapshot.hadSensitiveIdentifier === true, "Bridge ECU info di
 check(!JSON.stringify(bridgeEcuInfoSnapshot).includes("JTDKN3DU0A0123456"), "Bridge ECU info retained raw VIN");
 check(bridgeEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge ECU info did not retain CALID");
 check(bridgeEcuInfoSnapshot.keyItemSummary.capturedCount === 3 && bridgeEcuInfoSnapshot.keyItemSummary.missingLabels.includes("キャリブレーション確認番号 CVN"), "Bridge ECU info key item summary was not built");
+check(bridgeEcuInfoSnapshot.supportInfoTypesCaptured === false, "Bridge ECU info incorrectly marked supported info types as captured");
 const bridgeEmptyEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({});
 check(bridgeEmptyEcuInfoSnapshot.itemCount === 0 && bridgeEmptyEcuInfoSnapshot.blocked === true, "Empty Bridge ECU info response was not fail-closed");
 const bridgeAliasEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
@@ -383,6 +384,7 @@ const bridgeAliasEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
 check(bridgeAliasEcuInfoSnapshot.itemCount === 2, "Bridge ECU info alias items were not normalized");
 check(bridgeAliasEcuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-ABCD", "Bridge ECU info alias CALID/CVN item was not retained");
 check(bridgeAliasEcuInfoSnapshot.keyItemSummary.capturedLabels.includes("キャリブレーション確認番号 CVN"), "Bridge ECU info alias key item summary did not include CVN");
+check(bridgeAliasEcuInfoSnapshot.supportInfoTypesCaptured === false, "Bridge ECU info alias incorrectly marked supported info types as captured");
 const ecuInfoSnapshotAlias = obd.normalizeEcuInfoSnapshot({
   source: "diagnostic_core",
   items: [
@@ -423,6 +425,8 @@ check(bridgeSummary.readoutCoverage.capturedCategories >= 7, "Bridge session sum
 check(bridgeSummary.readoutCoverage.emptyCategories === 0, "Bridge session summary counted missing readout sections as empty");
 check(bridgeSummary.readoutCoverage.items.some((item) => item.id === "ecu_info_snapshot" && item.available === true && item.count === 3), "Bridge session summary readout coverage did not count ECU info");
 check(bridgeSummary.warnings.includes("bridge_readout_incomplete"), "Bridge session summary did not warn about incomplete readout sections");
+check(bridgeSummary.warnings.includes("mode09_key_items_missing"), "Bridge session summary did not warn about missing key Mode 09 items");
+check(bridgeSummary.warnings.includes("mode09_supported_types_unknown"), "Bridge session summary did not warn about missing supported Mode 09 info types");
 check(bridgeSummary.protocol === "ISO15765-4", "ブリッジセッション要約へprotocolを引き継げません");
 check(bridgeSummary.capturedAt === "2026-06-28T00:00:00Z", "ブリッジセッション要約へcapturedAtを引き継げません");
 check(bridgeSummary.warnings.includes("freeze_frame_available"), "ブリッジセッション要約へフリーズフレーム警告を反映できません");
@@ -856,6 +860,9 @@ check(scanSession.ecuInfoSnapshot.items.find((item) => item.id === "vin")?.retai
 check(!JSON.stringify(scanSession.ecuInfoSnapshot).includes("JTDKN3DU0A0123456"), "ECU情報スナップショットにVIN生値が残っています");
 check(scanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "CALIDを保持できません");
 check(scanSession.ecuInfoSnapshot.keyItemSummary.capturedCount === 4 && scanSession.ecuInfoSnapshot.keyItemSummary.missingCount === 0, "ECU情報主要項目要約をセッションへ反映できません");
+check(scanSession.ecuInfoSnapshot.supportInfoTypesCaptured === false, "Scan session incorrectly marked supported info types as captured");
+check(!scanSession.warnings.includes("mode09_key_items_missing"), "Scan session warned about missing key Mode 09 items despite complete key set");
+check(scanSession.warnings.includes("mode09_supported_types_unknown"), "Scan session did not warn about missing supported Mode 09 info types");
 check(scanSession.ecuResponseSummary.ecus[0].dtcCount === 1, "ECU応答サマリーへDTC件数を反映できません");
 check(scanSession.adapterIdentity.adapterFamily === "elm327", "診断機セッションへアダプター識別情報を反映できません");
 check(scanSession.protocol === "ISO15765-4", "診断機セッションへprotocolを反映できません");

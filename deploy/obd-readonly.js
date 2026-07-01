@@ -1210,6 +1210,8 @@
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
     if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
     if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
+    if (ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
+    if (ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
     const protocol = dtcSnapshot.protocol
@@ -1576,6 +1578,7 @@
     const keyItems = expectedItems.filter((item) => keyItemIds.has(item.id));
     const capturedKeyItems = keyItems.filter((item) => item.captured);
     const missingKeyItems = keyItems.filter((item) => !item.captured);
+    const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured);
 
     return {
       schemaVersion: "ecu_info_snapshot_v1",
@@ -1594,6 +1597,7 @@
         capturedLabels: capturedKeyItems.map((item) => item.label),
         missingLabels: missingKeyItems.map((item) => item.label)
       },
+      supportInfoTypesCaptured: supportedInfoTypesCaptured,
       retainedRawText: false
     };
   }
@@ -2725,6 +2729,8 @@
     if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
     if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
+    if (ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
+    if (ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_live_data_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
       warnings.push("raw_pid_values_need_conversion");

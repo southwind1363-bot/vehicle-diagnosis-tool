@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.316.0";
+const APP_VERSION = "2.317.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2747,6 +2747,8 @@ function formatObdBridgeWarningLabel(code = "") {
     confirm_dtc_with_service_manual: "DTCは整備書で再確認",
     bridge_readout_incomplete: "未取得の読取項目あり",
     bridge_readout_empty_sections: "空応答の読取項目あり",
+    mode09_key_items_missing: "Mode09主要項目に未取得あり",
+    mode09_supported_types_unknown: "Mode09対応情報タイプ00が未取得",
     freeze_frame_available: "フリーズフレームあり",
     readiness_incomplete: "レディネス未完了あり",
     onboard_monitor_test_failed: "Mode06で範囲外あり",
