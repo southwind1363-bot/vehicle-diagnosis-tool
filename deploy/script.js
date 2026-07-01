@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.314.0";
+const APP_VERSION = "2.315.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2745,6 +2745,8 @@ function formatObdBridgeWarningLabel(code = "") {
   return {
     local_bridge_disabled: "接続は読取モデルのまま",
     confirm_dtc_with_service_manual: "DTCは整備書で再確認",
+    bridge_readout_incomplete: "未取得の読取項目あり",
+    bridge_readout_empty_sections: "空応答の読取項目あり",
     freeze_frame_available: "フリーズフレームあり",
     readiness_incomplete: "レディネス未完了あり",
     onboard_monitor_test_failed: "Mode06で範囲外あり",
@@ -2790,7 +2792,9 @@ function renderObdBridgeSessionDetails(session = null) {
   if (coverage?.totalCategories) {
     const lines = [
       `進捗: ${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})`,
-      `未取得: ${coverage.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"}`
+      `取得済み: ${coverage.capturedCategories || 0} / 空応答: ${coverage.emptyCategories || 0} / 未取得: ${coverage.missingCategories || 0}`,
+      `未取得: ${coverage.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"}`,
+      `空応答: ${coverage.emptyLabels?.length ? coverage.emptyLabels.join(" / ") : "なし"}`
     ];
     coverage.items
       .filter((item) => item.available)
@@ -2922,6 +2926,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["VCI", bridgeDeviceCount],
     ["Adapter", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
     ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
+    ["取得済", coverage?.capturedCategories ?? 0],
+    ["空応答", coverage?.emptyCategories ?? 0],
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],

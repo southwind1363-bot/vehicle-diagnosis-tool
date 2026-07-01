@@ -1150,15 +1150,21 @@
       status: item.available ? (item.count > 0 ? "captured" : "empty") : "missing"
     }));
     const availableCount = items.filter((item) => item.available).length;
+    const capturedItems = items.filter((item) => item.status === "captured");
+    const emptyItems = items.filter((item) => item.status === "empty");
     const missingItems = items.filter((item) => !item.available);
 
     return {
       schemaVersion: "readout_coverage_v1",
       totalCategories: items.length,
       availableCategories: availableCount,
+      capturedCategories: capturedItems.length,
+      emptyCategories: emptyItems.length,
       missingCategories: missingItems.length,
       progressPercent: Math.round((availableCount / items.length) * 100),
       items,
+      emptyIds: emptyItems.map((item) => item.id),
+      emptyLabels: emptyItems.map((item) => item.label),
       missingIds: missingItems.map((item) => item.id),
       missingLabels: missingItems.map((item) => item.label)
     };
@@ -1233,6 +1239,8 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
+    if (readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
+    if (readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
 
     return {
       source: "local_bridge",
@@ -2737,6 +2745,8 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
+    if (readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
+    if (readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
 
     return {
       schemaVersion: "scan_session_v1",
