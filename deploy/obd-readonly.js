@@ -997,21 +997,12 @@
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const values = Array.isArray(data.values)
-      ? data.values
-      : Array.isArray(data.items)
-        ? data.items
-        : Array.isArray(data.ecu_info)
-          ? data.ecu_info
-          : Array.isArray(data.ecu_info_items)
-            ? data.ecu_info_items
-            : [];
     return {
       ...normalizeEcuInfoSnapshot({
-      source: "local_bridge",
-      captured_at: data.captured_at || data.capturedAt || null,
-      protocol: data.protocol || null,
-      values
+        ...data,
+        source: "local_bridge",
+        captured_at: data.captured_at || data.capturedAt || null,
+        protocol: data.protocol || null
       }),
       intent: "read_ecu_info",
       ok: response.ok === true,
@@ -1550,17 +1541,34 @@
     };
   }
 
+  function collectEcuInfoRows(input = {}) {
+    if (Array.isArray(input.values)) return input.values;
+    if (Array.isArray(input.items)) return input.items;
+    if (Array.isArray(input.ecu_info)) return input.ecu_info;
+    if (Array.isArray(input.ecu_info_items)) return input.ecu_info_items;
+    if (!input || typeof input !== "object") return [];
+    const aliases = [
+      ["supported_info_types_00", "supported_info_types_00", "00"],
+      ["supported_info_types", "supported_info_types_00", "00"],
+      ["vin", "vin", "02"],
+      ["calibration_id", "calibration_id", "04"],
+      ["calibration_identification", "calibration_id", "04"],
+      ["calibration_verification_number", "calibration_verification_number", "06"],
+      ["cvn", "calibration_verification_number", "06"],
+      ["ecu_name", "ecu_name", "0A"]
+    ];
+    return aliases
+      .filter(([key]) => input[key] !== undefined && input[key] !== null && input[key] !== "")
+      .map(([key, id, infoType]) => ({
+        id,
+        info_type: infoType,
+        value: input[key]
+      }));
+  }
+
   function normalizeEcuInfoSnapshot(input = {}) {
     const source = input.source || "diagnostic_core";
-    const rows = Array.isArray(input.values)
-      ? input.values
-      : Array.isArray(input.items)
-        ? input.items
-        : Array.isArray(input.ecu_info)
-          ? input.ecu_info
-          : Array.isArray(input.ecu_info_items)
-            ? input.ecu_info_items
-            : [];
+    const rows = collectEcuInfoRows(input);
     const items = rows
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);

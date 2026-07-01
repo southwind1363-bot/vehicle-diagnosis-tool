@@ -387,6 +387,21 @@ check(bridgeAliasEcuInfoSnapshot.itemCount === 2, "Bridge ECU info alias items w
 check(bridgeAliasEcuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-ABCD", "Bridge ECU info alias CALID/CVN item was not retained");
 check(bridgeAliasEcuInfoSnapshot.keyItemSummary.capturedLabels.includes("キャリブレーション確認番号 CVN"), "Bridge ECU info alias key item summary did not include CVN");
 check(bridgeAliasEcuInfoSnapshot.supportInfoTypesCaptured === false, "Bridge ECU info alias incorrectly marked supported info types as captured");
+const bridgeObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    supported_info_types: "55 60 00 00",
+    vin: "JTDKN3DU0A0123456",
+    calibration_id: "CAL-OBJECT",
+    ecu_name: "Gateway ECU"
+  }
+});
+check(bridgeObjectEcuInfoSnapshot.itemCount === 4, "Bridge object ECU info fields were not normalized");
+check(bridgeObjectEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-OBJECT", "Bridge object ECU info did not retain CALID");
+check(bridgeObjectEcuInfoSnapshot.supportInfoTypesCaptured === true, "Bridge object ECU info did not mark supported info types as captured");
 const ecuInfoSnapshotAlias = obd.normalizeEcuInfoSnapshot({
   source: "diagnostic_core",
   items: [
@@ -394,6 +409,14 @@ const ecuInfoSnapshotAlias = obd.normalizeEcuInfoSnapshot({
   ]
 });
 check(ecuInfoSnapshotAlias.itemCount === 1 && ecuInfoSnapshotAlias.items[0]?.value === "Hybrid ECU", "ECU info snapshot alias items were not normalized");
+const ecuInfoSnapshotObject = obd.normalizeEcuInfoSnapshot({
+  source: "diagnostic_core",
+  supported_info_types: "55 60 00 00",
+  calibration_verification_number: "CVN-OBJECT",
+  ecu_name: "Battery ECU"
+});
+check(ecuInfoSnapshotObject.itemCount === 3, "ECU info snapshot object fields were not normalized");
+check(ecuInfoSnapshotObject.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-OBJECT", "ECU info snapshot object CVN was not retained");
 const bridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
