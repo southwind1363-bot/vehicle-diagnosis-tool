@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.309.0";
+const APP_VERSION = "2.310.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3051,31 +3051,110 @@ function renderObdSafetyInterlock(interlock) {
 }
 
 function analyzeObdScannerImport() {
-  const analysis = window.ObdReadOnly.analyzeScannerText(obdScannerText.value);
+  const scannerText = obdScannerText.value;
+  const hasScannerText = scannerText.trim().length > 0;
+  const currentSession = obdDevSession.lastSession;
+  const bridgeImport = currentSession && window.ObdReadOnly?.buildBridgeDiagnosticImport
+    ? window.ObdReadOnly.buildBridgeDiagnosticImport({
+      connectionStatus: currentSession.connectionStatus,
+      vciList: { devices: currentSession.vciDevices || [] },
+      adapterIdentity: currentSession.adapterIdentity,
+      dtcSnapshot: currentSession.dtcSnapshot,
+      livePidSnapshot: currentSession.livePidSnapshot,
+      freezeFrameSnapshot: currentSession.freezeFrameSnapshot,
+      readinessSnapshot: currentSession.readinessSnapshot,
+      ecuInfoSnapshot: currentSession.ecuInfoSnapshot,
+      onboardMonitorSnapshot: currentSession.onboardMonitorSnapshot,
+      supportedPidMatrix: currentSession.supportedPidMatrix,
+      ecuResponseSummary: currentSession.ecuResponseSummary
+    })
+    : null;
+  const analysis = bridgeImport && window.ObdReadOnly?.mergeDiagnosticInputs
+    ? window.ObdReadOnly.mergeDiagnosticInputs({ scannerText, bridgeImport })
+    : window.ObdReadOnly.analyzeScannerText(scannerText);
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
 
-  if (!obdScannerText.value.trim()) {
+  if (!hasScannerText && !bridgeImport) {
     obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
     obdMonitorStatus.textContent = "計測値はまだ解析していません。";
     obdMonitorCount.textContent = "0項目";
     return;
   }
 
+  const notes = [];
+  if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
+  if (analysis.connectionStatus?.displayStatus) {
+    notes.push(`状態 ${analysis.connectionStatus.displayStatus}`);
+  }
+  if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
+    notes.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
+  }
+  if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) {
+    notes.push(`VCI ${analysis.vciDevices.length}件`);
+  }
+  if (analysis.readinessSnapshot?.incompleteCount > 0) {
+    notes.push(`レディネス未完了${analysis.readinessSnapshot.incompleteCount}項目`);
+  }
+  if (analysis.monitorValueSummary?.totalCount > 0) {
+    notes.push(`読取値${analysis.monitorValueSummary.totalCount}項目`);
+  }
+  if (analysis.supportedPidMatrix?.supportedCount > 0) {
+    notes.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
+  }
+  if (analysis.ecuResponseSummary?.ecus?.length > 0) {
+    notes.push(`ECU応答${analysis.ecuResponseSummary.ecus.length}件`);
+  }
+  if (analysis.ecuInfoSnapshot?.itemCount > 0) {
+    notes.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
+  }
+  if (analysis.onboardMonitorSnapshot?.testCount > 0) {
+    notes.push(`Mode06 ${analysis.onboardMonitorSnapshot.testCount}件`);
+  }
+  if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) {
+    notes.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
+  }
+  if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
+    notes.push(`注意${analysis.warnings.length}件`);
+  }
+  const sourcePrefix = bridgeImport
+    ? hasScannerText
+      ? "貼り付け結果とブリッジ読取を統合し、"
+      : "ブリッジ読取結果を反映し、"
+    : "";
+  const detailNote = notes.length ? ` ${notes.join(" / ")}。` : "";
+
   if (!analysis.codes.length) {
     obdImportStatus.textContent = analysis.hadSensitiveIdentifier
-      ? "識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。"
-      : "標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。";
+      ? `識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。${detailNote}`
+      : bridgeImport
+        ? `${hasScannerText ? "ブリッジ読取と統合しましたが" : "ブリッジ読取結果では"}、標準形式のDTCは検出できませんでした。${detailNote}`
+        : "標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。";
   } else {
-    obdImportStatus.textContent = `${analysis.codes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。`;
+    obdImportStatus.textContent = `${sourcePrefix}${analysis.codes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
     analysis.codes.forEach((code) => {
       obdDetectedCodes.appendChild(createObdDtcCard(code));
     });
   }
 
   renderObdMonitorValues(analysis.monitorValues, analysis.monitorInsights);
+  if (bridgeImport && analysis.monitorValues.length) {
+    const bridgeValueCount = analysis.monitorValues.filter((item) => item.source === "local_bridge").length;
+    const scannerValueCount = analysis.monitorValues.filter((item) => item.source === "scanner_text").length;
+    const summary = [`統合入力で${analysis.monitorValues.length}項目を表示しています。`];
+    if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
+    if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
+    obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
+  } else if (bridgeImport && !analysis.monitorValues.length) {
+    const summary = ["計測値は0項目です。"];
+    if (analysis.readinessSnapshot?.monitorCount > 0) summary.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
+    if (analysis.supportedPidMatrix?.supportedCount > 0) summary.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
+    if (analysis.ecuInfoSnapshot?.itemCount > 0) summary.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
+    if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) summary.push(`フリーズフレーム${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
+    obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
+  }
 }
 
 function createObdDtcCard(code) {
