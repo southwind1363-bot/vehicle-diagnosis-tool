@@ -495,6 +495,17 @@ check(bridgeOnboardMonitorSnapshot.intent === "read_onboard_monitor" && bridgeOn
 check(bridgeOnboardMonitorSnapshot.failedCount === 1, "Bridge Mode 06 failed count was not carried");
 const bridgeEmptyOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({});
 check(bridgeEmptyOnboardMonitorSnapshot.testCount === 0 && bridgeEmptyOnboardMonitorSnapshot.blocked === true, "Empty Bridge Mode 06 response was not fail-closed");
+const bridgeAliasOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mode06_tests: [
+      { test_id: "01", component_id: "01", value: 90, min: 50, max: 200 }
+    ]
+  }
+});
+check(bridgeAliasOnboardMonitorSnapshot.testCount === 1, "Bridge Mode 06 alias tests were not normalized");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");

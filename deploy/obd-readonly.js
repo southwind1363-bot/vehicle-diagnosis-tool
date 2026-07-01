@@ -1052,7 +1052,15 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: data.protocol || null,
-      tests: Array.isArray(data.tests) ? data.tests : Array.isArray(data.values) ? data.values : []
+      tests: Array.isArray(data.tests)
+        ? data.tests
+        : Array.isArray(data.values)
+          ? data.values
+          : Array.isArray(data.mode06_tests)
+            ? data.mode06_tests
+            : Array.isArray(data.monitor_tests)
+              ? data.monitor_tests
+              : []
       }),
       intent: "read_onboard_monitor",
       ok: response.ok === true,
