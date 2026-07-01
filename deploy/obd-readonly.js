@@ -883,7 +883,13 @@
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const values = Array.isArray(data.values) ? data.values : [];
+    const values = Array.isArray(data.values)
+      ? data.values
+      : Array.isArray(data.monitor_values)
+        ? data.monitor_values
+        : Array.isArray(data.pid_values)
+          ? data.pid_values
+          : [];
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
@@ -895,7 +901,7 @@
       blocked: response.blocked !== false,
       wouldTransmit: response.would_transmit === true,
       protocol: data.protocol || null,
-      supportedPids: Array.isArray(data.supported_pids) ? [...data.supported_pids] : [],
+      supportedPids: collectBridgeSupportedPids(data),
       capturedAt: data.captured_at || null,
       monitorValues,
       monitorValueSummary: buildMonitorValueSummary(monitorValues),
@@ -937,8 +943,14 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: data.protocol || null,
-      trigger_dtc: data.trigger_dtc || data.triggerDtc || data.dtc || null,
-      values: Array.isArray(data.values) ? data.values : []
+      trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
+      values: Array.isArray(data.values)
+        ? data.values
+        : Array.isArray(data.freeze_frame_values)
+          ? data.freeze_frame_values
+          : Array.isArray(data.monitor_values)
+            ? data.monitor_values
+            : []
       }),
       intent: "read_freeze_frame",
       ok: response.ok === true,
