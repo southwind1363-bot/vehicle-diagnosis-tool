@@ -835,14 +835,14 @@
   function normalizeBridgeVciList(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const devices = Array.isArray(data.devices) ? data.devices : Array.isArray(data.vci_devices) ? data.vci_devices : [];
-    const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || null;
+    const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || null;
     const normalizedDevices = devices.map((device, index) => {
-      const id = String(device?.id || device?.device_id || `vci_${index + 1}`).slice(0, 80);
+      const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
       return {
         id,
         label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
         vendor: device?.vendor ? String(device.vendor).slice(0, 80) : null,
-        driverStatus: device?.driver_status || data.driver_status || "unknown",
+        driverStatus: device?.driver_status || device?.driverStatus || data.driver_status || data.driverStatus || "unknown",
         connected: device?.connected === true,
         selected: selectedDeviceId ? id === selectedDeviceId : index === 0 && devices.length === 1,
         supportNote: "VCI識別情報は表示用に最小化し、シリアル番号などの生識別子は保持しません。"
@@ -855,7 +855,7 @@
       ok: response.ok === true,
       blocked: response.blocked !== false,
       wouldTransmit: response.would_transmit === true,
-      driverStatus: data.driver_status || "not_checked",
+      driverStatus: data.driver_status || data.driverStatus || "not_checked",
       selectedDeviceId,
       devices: normalizedDevices,
       deviceCount: normalizedDevices.length,
@@ -873,9 +873,9 @@
       ok: response.ok === true,
       blocked: response.blocked !== false,
       wouldTransmit: response.would_transmit === true,
-      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : null,
-      adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : null,
-      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : null,
+      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : data.name ? String(data.name).slice(0, 80) : null,
+      adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : data.family ? String(data.family).slice(0, 80) : null,
+      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : null,
       vehicleCommandEnabled: false,
       retainedRawText: false
     };

@@ -213,12 +213,13 @@ const bridgeVciListAliases = obd.normalizeBridgeVciList({
   would_transmit: false,
   data: {
     vci_devices: [
-      { device_id: "alias-vci", name: "Alias VCI", connected: true }
+      { deviceId: "alias-vci", name: "Alias VCI", connected: true, driverStatus: "ready" }
     ],
-    selectedDeviceId: "alias-vci"
+    selectedDeviceId: "alias-vci",
+    driverStatus: "ready"
   }
 });
-check(bridgeVciListAliases.deviceCount === 1 && bridgeVciListAliases.devices[0].selected === true, "Bridge VCI list aliases were not normalized");
+check(bridgeVciListAliases.deviceCount === 1 && bridgeVciListAliases.devices[0].selected === true && bridgeVciListAliases.devices[0].driverStatus === "ready", "Bridge VCI list aliases were not normalized");
 const bridgeAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,
@@ -239,9 +240,9 @@ const bridgeAdapterIdentityAliases = obd.normalizeBridgeAdapterIdentity({
   blocked: false,
   would_transmit: false,
   data: {
-    adapterName: "Alias Adapter",
-    adapterFamily: "j2534",
-    firmwareVersion: "2.0"
+    name: "Alias Adapter",
+    family: "j2534",
+    firmware: "2.0"
   }
 });
 check(bridgeAdapterIdentityAliases.adapterFamily === "j2534" && bridgeAdapterIdentityAliases.firmwareVersion === "2.0", "Bridge adapter identity aliases were not normalized");
