@@ -416,6 +416,8 @@ check(bridgeSummary.onboardMonitorSnapshot.failedCount === 1, "Bridge session su
 check(bridgeSummary.supportedPidMatrix.supportedPids.includes("0C"), "ブリッジセッション要約へ対応PIDを引き継げません");
 check(bridgeSummary.freezeFrameSnapshot.triggerDtc === "P0171", "ブリッジセッション要約へフリーズフレームを引き継げません");
 check(bridgeSummary.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge session summary did not carry ECU info");
+check(bridgeSummary.readoutCoverage.progressPercent >= 80, "Bridge session summary did not build readout coverage");
+check(bridgeSummary.readoutCoverage.items.some((item) => item.id === "ecu_info_snapshot" && item.available === true && item.count === 3), "Bridge session summary readout coverage did not count ECU info");
 check(bridgeSummary.protocol === "ISO15765-4", "ブリッジセッション要約へprotocolを引き継げません");
 check(bridgeSummary.capturedAt === "2026-06-28T00:00:00Z", "ブリッジセッション要約へcapturedAtを引き継げません");
 check(bridgeSummary.warnings.includes("freeze_frame_available"), "ブリッジセッション要約へフリーズフレーム警告を反映できません");
@@ -449,6 +451,7 @@ check(bridgeExportPayload.session.supported_pid_matrix.supportedPids.includes("4
 check(bridgeExportPayload.session.readiness_snapshot.incompleteCount === 1, "Bridge export did not carry readiness");
 check(bridgeExportPayload.session.ecu_info_snapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge export did not carry ECU info");
 check(bridgeExportPayload.session.onboard_monitor_snapshot.failedCount === 1, "Bridge export did not carry Mode 06");
+check(bridgeExportPayload.session.readout_coverage.progressPercent >= 80, "Bridge export did not carry readout coverage");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
 check(bridgeExportPayload.safety.blocked_write_intents.includes("clear_dtc"), "ブリッジエクスポートの安全メタ情報が不足しています");
@@ -472,6 +475,7 @@ check(bridgeDiagnosticImport.readinessSnapshot.incompleteCount === 1, "Bridge di
 check(bridgeDiagnosticImport.supportedPidMatrix.supportedPids.includes("05"), "ブリッジ診断取込へ対応PIDを引き継げません");
 check(bridgeDiagnosticImport.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge diagnostic import did not carry ECU info");
 check(bridgeDiagnosticImport.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not carry Mode 06");
+check(bridgeDiagnosticImport.readoutCoverage.progressPercent >= 80, "Bridge diagnostic import did not carry readout coverage");
 check(bridgeDiagnosticImport.freezeFrameSnapshot.monitorValues.length === 2, "ブリッジ診断取込へフリーズフレームを引き継げません");
 check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取込へ相関ヒントを引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.vciDevices.length === 1, "ブリッジ診断取込へVCI表示モデルを引き継げません");
@@ -513,6 +517,24 @@ check(mergedDiagnosticInput.adapterIdentity?.adapterFamily === "elm327", "統合
 check(mergedDiagnosticInput.hadSensitiveIdentifier === true, "統合診断入力が貼り付け側の識別情報候補を引き継げません");
 check(mergedDiagnosticInput.retainedRawText === false, "統合診断入力が原文保持になっています");
 check(mergedDiagnosticInput.wouldTransmit === false && mergedDiagnosticInput.vehicleCommandEnabled === false, "統合診断入力が送信可能扱いになっています");
+const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
+check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
+check(emptyReadoutCoverage.missingLabels.includes("ECU情報") && emptyReadoutCoverage.missingLabels.includes("Mode06"), "Empty readout coverage missing labels are incomplete");
+const populatedScanSession = obd.buildDiagnosticScanSession({
+  session_id: "coverage-check",
+  dtcSnapshot: bridgeDtcSnapshot,
+  livePidSnapshot: bridgePidSnapshot,
+  freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
+  readinessSnapshot: bridgeReadinessSnapshot,
+  ecuInfoSnapshot: bridgeEcuInfoSnapshot,
+  onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot,
+  supportedPidMatrix: bridgeSupportedPidSnapshot,
+  connectionStatus: bridgeStatus,
+  vciList: bridgeVciList,
+  adapterIdentity: bridgeAdapterIdentity
+});
+check(populatedScanSession.readoutCoverage.progressPercent >= 90, "Diagnostic scan session did not build readout coverage");
+check(populatedScanSession.readoutCoverage.missingCategories === 0, "Diagnostic scan session readout coverage marked populated data as missing");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");

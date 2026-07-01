@@ -1083,6 +1083,87 @@
     };
   }
 
+  function buildReadoutCoverageSnapshot(input = {}) {
+    const items = [
+      {
+        id: "connection_status",
+        label: "接続状態",
+        available: Boolean(input.connectionStatus?.displayStatus),
+        count: input.connectionStatus?.displayStatus ? 1 : 0
+      },
+      {
+        id: "vci_devices",
+        label: "VCI一覧",
+        available: Array.isArray(input.vciDevices) && input.vciDevices.length > 0,
+        count: Array.isArray(input.vciDevices) ? input.vciDevices.length : 0
+      },
+      {
+        id: "adapter_identity",
+        label: "アダプター情報",
+        available: Boolean(input.adapterIdentity?.adapterName || input.adapterIdentity?.adapterFamily || input.adapterIdentity?.firmwareVersion),
+        count: input.adapterIdentity?.adapterName || input.adapterIdentity?.adapterFamily || input.adapterIdentity?.firmwareVersion ? 1 : 0
+      },
+      {
+        id: "dtc_snapshot",
+        label: "DTC",
+        available: input.dtcSnapshot?.blocked === false || Array.isArray(input.dtcSnapshot?.dtcs),
+        count: Array.isArray(input.dtcSnapshot?.dtcs) ? input.dtcSnapshot.dtcs.length : 0
+      },
+      {
+        id: "live_pid_snapshot",
+        label: "ライブPID",
+        available: input.livePidSnapshot?.blocked === false || Array.isArray(input.livePidSnapshot?.monitorValues),
+        count: Array.isArray(input.livePidSnapshot?.monitorValues) ? input.livePidSnapshot.monitorValues.length : 0
+      },
+      {
+        id: "freeze_frame_snapshot",
+        label: "フリーズフレーム",
+        available: input.freezeFrameSnapshot?.blocked === false || Array.isArray(input.freezeFrameSnapshot?.monitorValues),
+        count: Array.isArray(input.freezeFrameSnapshot?.monitorValues) ? input.freezeFrameSnapshot.monitorValues.length : 0
+      },
+      {
+        id: "readiness_snapshot",
+        label: "レディネス",
+        available: input.readinessSnapshot?.blocked === false || Array.isArray(input.readinessSnapshot?.monitors),
+        count: Array.isArray(input.readinessSnapshot?.monitors) ? input.readinessSnapshot.monitorCount || input.readinessSnapshot.monitors.length : 0
+      },
+      {
+        id: "ecu_info_snapshot",
+        label: "ECU情報",
+        available: input.ecuInfoSnapshot?.blocked === false || Array.isArray(input.ecuInfoSnapshot?.items),
+        count: Array.isArray(input.ecuInfoSnapshot?.items) ? input.ecuInfoSnapshot.itemCount || input.ecuInfoSnapshot.items.length : 0
+      },
+      {
+        id: "onboard_monitor_snapshot",
+        label: "Mode06",
+        available: input.onboardMonitorSnapshot?.blocked === false || Array.isArray(input.onboardMonitorSnapshot?.tests),
+        count: Array.isArray(input.onboardMonitorSnapshot?.tests) ? input.onboardMonitorSnapshot.testCount || input.onboardMonitorSnapshot.tests.length : 0
+      },
+      {
+        id: "supported_pid_matrix",
+        label: "対応PID",
+        available: input.supportedPidMatrix?.blocked === false || Array.isArray(input.supportedPidMatrix?.supportedPids),
+        count: Array.isArray(input.supportedPidMatrix?.supportedPids) ? input.supportedPidMatrix.supportedCount || input.supportedPidMatrix.supportedPids.length : 0
+      }
+    ].map((item) => Object.freeze({
+      ...item,
+      status: item.available ? (item.count > 0 ? "captured" : "empty") : "missing"
+    }));
+    const availableCount = items.filter((item) => item.available).length;
+    const missingItems = items.filter((item) => !item.available);
+
+    return {
+      schemaVersion: "readout_coverage_v1",
+      totalCategories: items.length,
+      availableCategories: availableCount,
+      missingCategories: missingItems.length,
+      progressPercent: Math.round((availableCount / items.length) * 100),
+      items,
+      missingIds: missingItems.map((item) => item.id),
+      missingLabels: missingItems.map((item) => item.label)
+    };
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     const dtcSnapshot = parts.dtcSnapshot?.codes ? parts.dtcSnapshot : normalizeBridgeDtcSnapshot(parts.dtcSnapshot);
     const livePidSnapshot = parts.livePidSnapshot?.monitorValues ? parts.livePidSnapshot : normalizeBridgeLivePidSnapshot(parts.livePidSnapshot);
@@ -1140,6 +1221,18 @@
       || onboardMonitorSnapshot.capturedAt
       || ecuResponseSummary.capturedAt
       || null;
+    const readoutCoverage = buildReadoutCoverageSnapshot({
+      connectionStatus,
+      vciDevices: vciList.devices,
+      adapterIdentity,
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
+    });
 
     return {
       source: "local_bridge",
@@ -1157,6 +1250,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
+      readoutCoverage,
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -1194,6 +1288,7 @@
         readiness_snapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
         ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
+        readout_coverage: summary.readoutCoverage || buildReadoutCoverageSnapshot(),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: summary.monitorValues || [],
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(summary.monitorValues || []),
@@ -1228,6 +1323,7 @@
       readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
       ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
+      readoutCoverage: summary.readoutCoverage || buildReadoutCoverageSnapshot(),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
       bridgeSession: {
         capturedAt: summary.capturedAt || null,
@@ -2629,6 +2725,18 @@
       || onboardMonitorSnapshot.capturedAt
       || ecuResponseSummary.capturedAt
       || null;
+    const readoutCoverage = buildReadoutCoverageSnapshot({
+      connectionStatus,
+      vciDevices: vciList.devices,
+      adapterIdentity,
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
+    });
 
     return {
       schemaVersion: "scan_session_v1",
@@ -2650,6 +2758,7 @@
       ecuInfoSnapshot,
       livePidSnapshot,
       supportedPidMatrix,
+      readoutCoverage,
       monitorValueSummary: buildMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
@@ -3014,6 +3123,7 @@
     buildBridgeSessionSummary,
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,
+    buildReadoutCoverageSnapshot,
     mergeDiagnosticInputs,
     normalizeDtcSnapshot,
     normalizeFreezeFrameSnapshot,

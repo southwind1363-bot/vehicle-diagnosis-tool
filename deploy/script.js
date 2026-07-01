@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.313.0";
+const APP_VERSION = "2.314.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2786,6 +2786,19 @@ function renderObdBridgeSessionDetails(session = null) {
     ]]);
   }
 
+  const coverage = session?.readoutCoverage;
+  if (coverage?.totalCategories) {
+    const lines = [
+      `進捗: ${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})`,
+      `未取得: ${coverage.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"}`
+    ];
+    coverage.items
+      .filter((item) => item.available)
+      .slice(0, 6)
+      .forEach((item) => lines.push(`${item.label}: ${item.count} / ${item.status === "empty" ? "空応答" : "取得済み"}`));
+    sections.push(["読取カバレッジ", lines]);
+  }
+
   const dtcs = session?.dtcSnapshot?.dtcs || [];
   if (dtcs.length) {
     const summary = formatObdBridgeDtcStatusSummary(dtcs).replace(/^ 内訳: /, "").replace(/。$/, "");
@@ -2900,6 +2913,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   obdDevSessionSummary.innerHTML = "";
   const bridgeDeviceCount = obdDevSession.bridgeVciList?.deviceCount ?? 0;
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(session?.dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
+  const coverage = session?.readoutCoverage || null;
   const values = [
     ["接続", obdDevSession.port ? "Web Serial" : obdDevSession.bridgeEndpoint ? "Local Bridge" : "未接続"],
     ["状態", session?.connectionStatus?.displayStatus || obdDevSession.bridgeStatus?.displayStatus || NO_DATA],
@@ -2907,6 +2921,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["Bridge", obdDevSession.bridgeEndpoint ? "確認済み" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ["Adapter", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
+    ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
+    ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
