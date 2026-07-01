@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.327.0";
+const APP_VERSION = "2.328.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2755,7 +2755,9 @@ function renderObdBridgeReadout(parts = {}) {
     obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
   } else if (parts.freezeFrameResponse && freezeFrameSnapshot) {
     const triggerSummary = freezeFrameSnapshot.triggerDtc ? ` 起点${freezeFrameSnapshot.triggerDtc}` : "";
-    obdImportStatus.textContent = `ブリッジフリーズフレームを${freezeFrameValues.length}項目読取りました。${triggerSummary}`.trim();
+    obdImportStatus.textContent = freezeFrameValues.length
+      ? `ブリッジフリーズフレームを${freezeFrameValues.length}項目読取りました。${triggerSummary}`.trim()
+      : "ブリッジフリーズフレーム応答を受け取りました。項目は0件です。";
   } else if (parts.ecuInfoResponse && ecuInfoSnapshot) {
     const keySummary = ecuInfoSnapshot.keyItemSummary?.totalCount
       ? ` 主要${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}件`
@@ -2768,18 +2770,29 @@ function renderObdBridgeReadout(parts = {}) {
     const supportedTypeSummary = ecuInfoSnapshot.supportInfoTypesSummary?.count
       ? ` / Mode09対応${ecuInfoSnapshot.supportInfoTypesSummary.count}件${supportedLabels ? ` (${supportedLabels})` : ""}`
       : "";
-    obdImportStatus.textContent = `ブリッジECU情報を${ecuInfoSnapshot.itemCount || 0}項目読取りました。${keySummary}${missingKeySummary}${supportedTypeSummary}`.trim();
+    const unsupportedSummary = ecuInfoSnapshot.supportInfoTypesCaptured === false ? " / Mode09対応情報タイプ00は未取得" : "";
+    obdImportStatus.textContent = ecuInfoSnapshot.itemCount
+      ? `ブリッジECU情報を${ecuInfoSnapshot.itemCount || 0}項目読取りました。${keySummary}${missingKeySummary}${supportedTypeSummary}`.trim()
+      : `ブリッジECU情報応答を受け取りました。項目は0件です。${unsupportedSummary}`.trim();
   } else if (parts.onboardMonitorResponse && onboardMonitorSnapshot) {
     const failedSummary = onboardMonitorSnapshot.failedCount > 0
       ? ` 範囲外${onboardMonitorSnapshot.failedCount}件`
       : " 範囲外0件";
-    obdImportStatus.textContent = `ブリッジ監視結果を${onboardMonitorSnapshot.testCount || 0}項目読取りました。${failedSummary}`.trim();
+    obdImportStatus.textContent = onboardMonitorSnapshot.testCount
+      ? `ブリッジ監視結果を${onboardMonitorSnapshot.testCount || 0}項目読取りました。${failedSummary}`.trim()
+      : "ブリッジ監視結果応答を受け取りました。項目は0件です。";
   } else if (parts.supportedPidResponse && supportedPidMatrix) {
     const pidPreview = supportedPidMatrix.supportedPids?.slice(0, 4).join(", ");
-    obdImportStatus.textContent = `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。${pidPreview ? ` 先頭 ${pidPreview}` : ""}`.trim();
+    obdImportStatus.textContent = supportedPidMatrix.supportedCount
+      ? `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。${pidPreview ? ` 先頭 ${pidPreview}` : ""}`.trim()
+      : "ブリッジ対応PID応答を受け取りました。対応PIDは0件です。";
   } else if (parts.livePidResponse && readinessSnapshot?.monitorCount) {
     const valueSummary = monitorValues.length ? ` ライブ値${monitorValues.length}項目` : "";
     obdImportStatus.textContent = `ブリッジライブ値とレディネス${readinessSnapshot.monitorCount}項目を読取りました。${valueSummary} / 未完了${readinessSnapshot.incompleteCount}項目`.trim();
+  } else if (parts.livePidResponse && readinessSnapshot) {
+    obdImportStatus.textContent = monitorValues.length
+      ? `ブリッジライブ値を${monitorValues.length}項目読取りました。レディネス項目は0件です。`
+      : "ブリッジライブ値応答を受け取りました。項目は0件です。";
   }
   renderObdDeveloperSessionSummary(session);
 }
