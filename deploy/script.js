@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.319.0";
+const APP_VERSION = "2.320.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3403,7 +3403,8 @@ function analyzeObdScannerImport() {
     notes.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
   }
   if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
-    notes.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件`);
+    const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 3).join(" / ");
+    notes.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
   }
   if (analysis.ecuResponseSummary?.ecus?.length > 0) {
     notes.push(`ECU応答${analysis.ecuResponseSummary.ecus.length}件`);
@@ -3452,7 +3453,10 @@ function analyzeObdScannerImport() {
     const summary = ["計測値は0項目です。"];
     if (analysis.readinessSnapshot?.monitorCount > 0) summary.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
     if (analysis.supportedPidMatrix?.supportedCount > 0) summary.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
-    if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) summary.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件`);
+    if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
+      const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 2).join(" / ");
+      summary.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
+    }
     if (analysis.ecuInfoSnapshot?.itemCount > 0) summary.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
     if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) summary.push(`フリーズフレーム${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
