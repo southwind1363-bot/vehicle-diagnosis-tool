@@ -1112,11 +1112,28 @@
     if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
+    const protocol = dtcSnapshot.protocol
+      || livePidSnapshot.protocol
+      || freezeFrameSnapshot.protocol
+      || ecuInfoSnapshot.protocol
+      || onboardMonitorSnapshot.protocol
+      || ecuResponseSummary.protocol
+      || null;
+    const capturedAt = dtcSnapshot.capturedAt
+      || livePidSnapshot.capturedAt
+      || freezeFrameSnapshot.capturedAt
+      || readinessSnapshot.capturedAt
+      || ecuInfoSnapshot.capturedAt
+      || onboardMonitorSnapshot.capturedAt
+      || ecuResponseSummary.capturedAt
+      || null;
 
     return {
       source: "local_bridge",
       startedAt: parts.startedAt || null,
       endedAt: parts.endedAt || null,
+      capturedAt,
+      protocol,
       vehicleProfile: parts.vehicleProfile || null,
       connectionStatus,
       vciDevices: vciList.devices,
@@ -1152,6 +1169,8 @@
       session: {
         started_at: summary.startedAt || null,
         ended_at: summary.endedAt || null,
+        captured_at: summary.capturedAt || null,
+        protocol: summary.protocol || null,
         vehicle_profile: summary.vehicleProfile || null,
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: summary.vciDevices || [],
@@ -1186,6 +1205,8 @@
     return {
       source: "local_bridge",
       importType: "bridge_diagnostic_snapshot",
+      protocol: summary.protocol || null,
+      capturedAt: summary.capturedAt || null,
       codes,
       monitorValues,
       monitorInsights,
@@ -1196,6 +1217,8 @@
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
       bridgeSession: {
+        capturedAt: summary.capturedAt || null,
+        protocol: summary.protocol || null,
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: Array.isArray(summary.vciDevices) ? summary.vciDevices.map((item) => ({ ...item })) : [],
         adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
@@ -1237,12 +1260,25 @@
     return {
       source: bridgeImport ? "scanner_text_and_local_bridge" : "scanner_text",
       importType: "combined_diagnostic_inputs",
+      protocol: bridgeImport?.protocol || null,
+      capturedAt: bridgeImport?.capturedAt || null,
       codes,
       monitorValues,
+      monitorValueSummary: buildMonitorValueSummary(monitorValues),
       monitorInsights,
+      ecuResponseSummary: bridgeImport?.ecuResponseSummary || null,
+      supportedPidMatrix: bridgeImport?.supportedPidMatrix || null,
+      readinessSnapshot: bridgeImport?.readinessSnapshot || null,
+      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || null,
+      onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || null,
+      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || null,
+      connectionStatus: bridgeImport?.bridgeSession?.connectionStatus || null,
+      vciDevices: bridgeImport?.bridgeSession?.vciDevices || [],
+      adapterIdentity: bridgeImport?.bridgeSession?.adapterIdentity || null,
       bridgeSession: bridgeImport?.bridgeSession || null,
       bridgeExportPayload: bridgeImport?.exportPayload || null,
-      hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier,
+      warnings: [...new Set(bridgeImport?.bridgeSession?.warnings || [])],
+      hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: scannerAnalysis.sourceLength,
       retainedRawText: false,
       wouldTransmit: false,
@@ -2546,6 +2582,7 @@
     const supportedPidMatrix = input.supportedPidMatrix?.schemaVersion ? input.supportedPidMatrix : buildSupportedPidMatrix(input.supportedPidMatrix || input.supportedPids || {});
     const connectionStatus = input.connectionStatus?.displayStatus ? input.connectionStatus : normalizeBridgeConnectionStatus(input.connectionStatus || {});
     const vciList = input.vciList?.devices ? input.vciList : normalizeBridgeVciList(input.vciList || {});
+    const adapterIdentity = input.adapterIdentity?.intent === "adapter_identity" ? input.adapterIdentity : normalizeBridgeAdapterIdentity(input.adapterIdentity || {});
     const warnings = [];
     if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
@@ -2556,6 +2593,21 @@
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
       warnings.push("raw_pid_values_need_conversion");
     }
+    const protocol = dtcSnapshot.protocol
+      || livePidSnapshot.protocol
+      || freezeFrameSnapshot.protocol
+      || ecuInfoSnapshot.protocol
+      || onboardMonitorSnapshot.protocol
+      || ecuResponseSummary.protocol
+      || null;
+    const capturedAt = dtcSnapshot.capturedAt
+      || livePidSnapshot.capturedAt
+      || freezeFrameSnapshot.capturedAt
+      || readinessSnapshot.capturedAt
+      || ecuInfoSnapshot.capturedAt
+      || onboardMonitorSnapshot.capturedAt
+      || ecuResponseSummary.capturedAt
+      || null;
 
     return {
       schemaVersion: "scan_session_v1",
@@ -2563,9 +2615,12 @@
       sessionId: String(input.session_id || input.sessionId || "local_scan_session").slice(0, 80),
       startedAt: input.started_at || input.startedAt || null,
       endedAt: input.ended_at || input.endedAt || null,
+      capturedAt,
+      protocol,
       vehicleProfile: input.vehicleProfile || input.vehicle_profile || null,
       connectionStatus,
       vciDevices: vciList.devices || [],
+      adapterIdentity,
       ecuResponseSummary,
       dtcSnapshot,
       freezeFrameSnapshot,

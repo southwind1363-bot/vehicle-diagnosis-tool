@@ -5,7 +5,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
-const APP_VERSION = "2.308.0";
+const APP_VERSION = "2.309.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -218,6 +218,7 @@ const obdDevSession = {
   bridgeEndpoint: null,
   bridgeStatus: null,
   bridgeVciList: null,
+  adapterIdentity: null,
   lastSession: null,
   selectedPidList: ["010C", "0105", "010D", "0104", "010B", "0110", "0111", "0106", "0107", "0142"]
 };
@@ -2181,7 +2182,15 @@ async function probeObdLocalBridge() {
     const response = await sendObdLocalBridgeIntent("bridge_status", {}, { discover: true });
     const status = window.ObdReadOnly.normalizeBridgeConnectionStatus(response);
     obdDevSession.bridgeStatus = status;
-    obdDevStatus.textContent = `ブリッジ状態: ${status.displayStatus} / ${status.nextAction}`;
+    try {
+      const adapterResponse = await sendObdLocalBridgeIntent("adapter_identity", {});
+      obdDevSession.adapterIdentity = window.ObdReadOnly.normalizeBridgeAdapterIdentity(adapterResponse);
+    } catch (adapterError) {
+      obdDevSession.adapterIdentity = null;
+      appendObdDeveloperLog(`adapter_identity\n${adapterError?.message || adapterError}`);
+    }
+    const adapterLabel = obdDevSession.adapterIdentity?.adapterName || obdDevSession.adapterIdentity?.adapterFamily || "識別未取得";
+    obdDevStatus.textContent = `ブリッジ状態: ${status.displayStatus} / ${adapterLabel}`;
     renderObdDeveloperSessionSummary(null);
   } catch (error) {
     obdDevStatus.textContent = `ローカルブリッジを確認できません: ${error?.message || error}`;
@@ -2453,7 +2462,8 @@ function renderObdBridgeReadout(parts = {}) {
     supportedPidMatrix: supportedPidMatrix || { supported_pids: [] },
     ecuResponseSummary: importResult.ecuResponseSummary,
     connectionStatus: importResult.connectionStatus,
-    vciList: importResult.vciList
+    vciList: importResult.vciList,
+    adapterIdentity: obdDevSession.adapterIdentity || importResult.bridgeSession?.adapterIdentity || undefined
   });
   obdDevSession.lastSession = session;
   const monitorValues = livePidSnapshot?.monitorValues || [];
@@ -2513,11 +2523,51 @@ function formatObdBridgeReadoutValue(item = {}) {
   return `${value}${unit}`;
 }
 
+function formatObdBridgeWarningLabel(code = "") {
+  return {
+    local_bridge_disabled: "接続は読取モデルのまま",
+    confirm_dtc_with_service_manual: "DTCは整備書で再確認",
+    freeze_frame_available: "フリーズフレームあり",
+    readiness_incomplete: "レディネス未完了あり",
+    onboard_monitor_test_failed: "Mode06で範囲外あり",
+    compare_values_under_same_conditions: "同条件比較が必要",
+    raw_pid_values_need_conversion: "未換算PIDあり",
+    save_before_clear: "消去前保存が必要",
+    sensitive_identifier_redacted: "識別情報は伏せて保持"
+  }[code] || code;
+}
+
 function renderObdBridgeSessionDetails(session = null) {
   if (!obdDevSessionDetails) return;
   obdDevSessionDetails.innerHTML = "";
 
   const sections = [];
+  const connectionStatus = session?.connectionStatus || obdDevSession.bridgeStatus;
+  const vciDevices = session?.vciDevices || obdDevSession.bridgeVciList?.devices || [];
+  const vciDriverStatus = obdDevSession.bridgeVciList?.driverStatus || vciDevices[0]?.driverStatus || NO_DATA;
+  if (connectionStatus?.displayStatus || vciDevices.length) {
+    const lines = [
+      `状態: ${connectionStatus?.displayStatus || NO_DATA}`,
+      `次動作: ${connectionStatus?.nextAction || NO_DATA}`,
+      `Driver: ${vciDriverStatus}`
+    ];
+    vciDevices.slice(0, 4).forEach((item) => {
+      lines.push(`${item.label || item.id}: ${item.connected ? "接続" : "未接続"} / ${item.selected ? "選択中" : "待機"}`);
+    });
+    sections.push(["接続", lines]);
+  }
+
+  const readoutProtocol = session?.protocol || NO_DATA;
+  const capturedAt = session?.capturedAt || NO_DATA;
+  const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
+  if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || warningLines.length)) {
+    sections.push(["読取メタ", [
+      `Protocol: ${readoutProtocol}`,
+      `Captured: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`,
+      ...warningLines.slice(0, 6).map((item) => `注意: ${item}`)
+    ]]);
+  }
+
   const dtcs = session?.dtcSnapshot?.dtcs || [];
   if (dtcs.length) {
     const summary = formatObdBridgeDtcStatusSummary(dtcs).replace(/^ 内訳: /, "").replace(/。$/, "");
@@ -2538,6 +2588,15 @@ function renderObdBridgeSessionDetails(session = null) {
       const dtcs = Number.isInteger(item.dtcCount) ? ` / DTC ${item.dtcCount}` : "";
       return `${item.address || item.id}: ${item.status || "unknown"}${dtcs}${services}${negatives}`;
     })]);
+  }
+
+  const adapterIdentity = session?.adapterIdentity || obdDevSession.adapterIdentity;
+  if (adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion) {
+    sections.push(["アダプター", [
+      `名称: ${adapterIdentity.adapterName || NO_DATA}`,
+      `系統: ${adapterIdentity.adapterFamily || NO_DATA}`,
+      `FW: ${adapterIdentity.firmwareVersion || NO_DATA}`
+    ]]);
   }
 
   const monitorTests = session?.onboardMonitorSnapshot?.tests || [];
@@ -2625,9 +2684,11 @@ function renderObdDeveloperSessionSummary(session = null) {
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(session?.dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
   const values = [
     ["接続", obdDevSession.port ? "Web Serial" : obdDevSession.bridgeEndpoint ? "Local Bridge" : "未接続"],
+    ["状態", session?.connectionStatus?.displayStatus || obdDevSession.bridgeStatus?.displayStatus || NO_DATA],
     ["開始", obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA],
     ["Bridge", obdDevSession.bridgeEndpoint ? "確認済み" : "未確認"],
     ["VCI", bridgeDeviceCount],
+    ["Adapter", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
