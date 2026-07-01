@@ -741,8 +741,8 @@
 
   function normalizeBridgeDtcSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : [];
-    const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : [];
+    const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
+    const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
     const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
       ? response.intent
       : ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(data.intent)
@@ -778,9 +778,9 @@
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
         status: row?.status || "unknown",
-        codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : null
+        codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : null
       })),
-      capturedAt: data.captured_at || null,
+      capturedAt: data.captured_at || data.capturedAt || null,
       retainedRawText: false
     };
   }
