@@ -789,8 +789,8 @@
     const data = response && typeof response === "object" ? response.data || response : {};
     const status = String(data.status || "not_connected");
     const paired = data.paired === true;
-    const vciConnected = data.vci_connected === true;
-    const vehicleConnected = data.vehicle_connected === true;
+    const vciConnected = data.vci_connected === true || data.vciConnected === true;
+    const vehicleConnected = data.vehicle_connected === true || data.vehicleConnected === true;
     let displayStatus = "準備中";
     let nextAction = "ローカルブリッジを起動しても、この画面からはまだ車両へ送信しません。";
 
@@ -817,8 +817,8 @@
       ok: response.ok === true,
       blocked: response.blocked !== false,
       wouldTransmit: response.would_transmit === true,
-      bridgeVersion: data.bridge_version || null,
-      apiVersion: data.api_version || localBridgeContract.apiVersion,
+      bridgeVersion: data.bridge_version || data.bridgeVersion || null,
+      apiVersion: data.api_version || data.apiVersion || localBridgeContract.apiVersion,
       status,
       displayStatus,
       paired,
@@ -834,8 +834,8 @@
 
   function normalizeBridgeVciList(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const devices = Array.isArray(data.devices) ? data.devices : [];
-    const selectedDeviceId = data.selected_device_id || null;
+    const devices = Array.isArray(data.devices) ? data.devices : Array.isArray(data.vci_devices) ? data.vci_devices : [];
+    const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || null;
     const normalizedDevices = devices.map((device, index) => {
       const id = String(device?.id || device?.device_id || `vci_${index + 1}`).slice(0, 80);
       return {
@@ -873,9 +873,9 @@
       ok: response.ok === true,
       blocked: response.blocked !== false,
       wouldTransmit: response.would_transmit === true,
-      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : null,
-      adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : null,
-      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : null,
+      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : null,
+      adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : null,
+      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : null,
       vehicleCommandEnabled: false,
       retainedRawText: false
     };
