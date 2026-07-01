@@ -179,8 +179,8 @@ check(bridgeStatus.vehicleCommandEnabled === false, "ブリッジ接続状態モ
 check(bridgeStatus.retainedRawText === false, "ブリッジ接続状態モデルが原文保持になっています");
 const bridgeStatusAliases = obd.normalizeBridgeConnectionStatus({
   ok: true,
-  blocked: false,
-  would_transmit: false,
+  isBlocked: false,
+  wouldTransmit: false,
   data: {
     bridgeVersion: "0.2.0",
     apiVersion: "v1",

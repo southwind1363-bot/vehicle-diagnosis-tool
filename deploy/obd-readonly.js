@@ -739,8 +739,17 @@
     };
   }
 
+  function readBridgeResponseSafety(response = {}) {
+    return {
+      ok: response.ok === true,
+      blocked: response.blocked !== false && response.isBlocked !== false,
+      wouldTransmit: response.would_transmit === true || response.wouldTransmit === true
+    };
+  }
+
   function normalizeBridgeDtcSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
     const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
@@ -769,9 +778,9 @@
     return {
       source: "local_bridge",
       intent,
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true,
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit,
       codes,
       dtcs: dtcs.map((item) => ({ ...item, source: "local_bridge" })),
       protocol: data.protocol || null,
@@ -787,6 +796,7 @@
 
   function normalizeBridgeConnectionStatus(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     const status = String(data.status || "not_connected");
     const paired = data.paired === true;
     const vciConnected = data.vci_connected === true || data.vciConnected === true;
@@ -814,9 +824,9 @@
     return {
       source: "local_bridge",
       intent: "bridge_status",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true,
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit,
       bridgeVersion: data.bridge_version || data.bridgeVersion || null,
       apiVersion: data.api_version || data.apiVersion || localBridgeContract.apiVersion,
       status,
@@ -834,6 +844,7 @@
 
   function normalizeBridgeVciList(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     const devices = Array.isArray(data.devices) ? data.devices : Array.isArray(data.vci_devices) ? data.vci_devices : [];
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || null;
     const normalizedDevices = devices.map((device, index) => {
@@ -852,9 +863,9 @@
     return {
       source: "local_bridge",
       intent: "list_vci",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true,
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit,
       driverStatus: data.driver_status || data.driverStatus || "not_checked",
       selectedDeviceId,
       devices: normalizedDevices,
@@ -867,12 +878,13 @@
 
   function normalizeBridgeAdapterIdentity(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     return {
       source: "local_bridge",
       intent: "adapter_identity",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true,
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit,
       adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : data.name ? String(data.name).slice(0, 80) : null,
       adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : data.family ? String(data.family).slice(0, 80) : null,
       firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : null,
@@ -883,6 +895,7 @@
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     const values = Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.monitor_values)
@@ -897,9 +910,9 @@
     return {
       source: "local_bridge",
       intent: "read_live_pid_snapshot",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true,
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit,
       protocol: data.protocol || null,
       supportedPids: collectBridgeSupportedPids(data),
       capturedAt: data.captured_at || null,
@@ -921,6 +934,7 @@
 
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     const supportedPids = collectBridgeSupportedPids(data);
     return {
       ...buildSupportedPidMatrix({
@@ -930,14 +944,15 @@
       supported_pids: supportedPids
       }),
       intent: "read_supported_pids",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit
     };
   }
 
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
@@ -953,14 +968,15 @@
             : []
       }),
       intent: "read_freeze_frame",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit
     };
   }
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     const rows = Array.isArray(data.values)
       ? data.values
       : Array.isArray(response.monitorValues)
@@ -978,9 +994,9 @@
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
       intent: "readiness_snapshot",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit
     });
     const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => [row.id, row.value]));
     const b = Number(valueById.get("readiness_status_byte_b"));
@@ -1031,6 +1047,7 @@
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
@@ -1039,14 +1056,15 @@
         protocol: data.protocol || null
       }),
       intent: "read_ecu_info",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit
     };
   }
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const safety = readBridgeResponseSafety(response);
     return {
       ...normalizeOnboardMonitorSnapshot({
       source: "local_bridge",
@@ -1063,9 +1081,9 @@
               : []
       }),
       intent: "read_onboard_monitor",
-      ok: response.ok === true,
-      blocked: response.blocked !== false,
-      wouldTransmit: response.would_transmit === true
+      ok: safety.ok,
+      blocked: safety.blocked,
+      wouldTransmit: safety.wouldTransmit
     };
   }
 
