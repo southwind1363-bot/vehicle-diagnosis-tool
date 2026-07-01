@@ -305,6 +305,16 @@ check(bridgeSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "ブリ
 check(bridgeSupportedPidSnapshot.supportedCount === 2, "ブリッジ対応PID件数を集計できません");
 const bridgeEmptySupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({});
 check(bridgeEmptySupportedPidSnapshot.supportedPids.length === 0 && bridgeEmptySupportedPidSnapshot.blocked === true, "空のブリッジ対応PID応答を安全側へ整形できません");
+const bridgeTextSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    supported_pid_list: "0C 05 40",
+    captured_at: "2026-06-28T00:01:31Z"
+  }
+});
+check(bridgeTextSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "Text bridge supported PID list was not normalized");
 const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
@@ -345,6 +355,18 @@ check(bridgeReadinessSnapshot.milOn === true, "Bridge readiness did not carry MI
 check(bridgeReadinessSnapshot.incompleteCount === 1, "Bridge readiness did not count incomplete monitors");
 const bridgeEmptyReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({});
 check(bridgeEmptyReadinessSnapshot.monitorCount === 0 && bridgeEmptyReadinessSnapshot.blocked === true, "Empty Bridge readiness response was not fail-closed");
+const bridgeObjectReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mil_on: true,
+    readiness_status_byte_b: 0x07,
+    readiness_status_byte_c: 0x22,
+    readiness_status_byte_d: 0x00
+  }
+});
+check(bridgeObjectReadinessSnapshot.milOn === true && bridgeObjectReadinessSnapshot.incompleteCount === 1, "Object bridge readiness fields were not normalized");
 const bridgeEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,

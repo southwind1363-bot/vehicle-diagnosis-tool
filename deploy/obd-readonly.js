@@ -904,9 +904,18 @@
     };
   }
 
+  function collectBridgeSupportedPids(data = {}) {
+    if (Array.isArray(data.supported_pids)) return data.supported_pids;
+    if (Array.isArray(data.supportedPids)) return data.supportedPids;
+    const text = data.supported_pid_list || data.supportedPidsText || data.supported_pids_text || "";
+    return typeof text === "string" && text.trim()
+      ? text.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean)
+      : [];
+  }
+
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const supportedPids = Array.isArray(data.supported_pids) ? data.supported_pids : Array.isArray(data.supportedPids) ? data.supportedPids : [];
+    const supportedPids = collectBridgeSupportedPids(data);
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
@@ -940,7 +949,20 @@
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const rows = Array.isArray(data.values) ? data.values : Array.isArray(response.monitorValues) ? response.monitorValues : [];
+    const rows = Array.isArray(data.values)
+      ? data.values
+      : Array.isArray(response.monitorValues)
+        ? response.monitorValues
+        : [
+            data.mil_on !== undefined ? { id: "mil_status", value: data.mil_on } : null,
+            data.milStatus !== undefined ? { id: "mil_status", value: data.milStatus } : null,
+            data.readiness_status_byte_b !== undefined ? { id: "readiness_status_byte_b", value: data.readiness_status_byte_b } : null,
+            data.readiness_status_byte_c !== undefined ? { id: "readiness_status_byte_c", value: data.readiness_status_byte_c } : null,
+            data.readiness_status_byte_d !== undefined ? { id: "readiness_status_byte_d", value: data.readiness_status_byte_d } : null,
+            data.readinessStatusByteB !== undefined ? { id: "readiness_status_byte_b", value: data.readinessStatusByteB } : null,
+            data.readinessStatusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.readinessStatusByteC } : null,
+            data.readinessStatusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.readinessStatusByteD } : null
+          ].filter(Boolean);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
       intent: "readiness_snapshot",
