@@ -364,6 +364,7 @@ check(bridgeEcuInfoSnapshot.intent === "read_ecu_info" && bridgeEcuInfoSnapshot.
 check(bridgeEcuInfoSnapshot.hadSensitiveIdentifier === true, "Bridge ECU info did not detect sensitive identifiers");
 check(!JSON.stringify(bridgeEcuInfoSnapshot).includes("JTDKN3DU0A0123456"), "Bridge ECU info retained raw VIN");
 check(bridgeEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge ECU info did not retain CALID");
+check(bridgeEcuInfoSnapshot.keyItemSummary.capturedCount === 3 && bridgeEcuInfoSnapshot.keyItemSummary.missingLabels.includes("キャリブレーション確認番号 CVN"), "Bridge ECU info key item summary was not built");
 const bridgeEmptyEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({});
 check(bridgeEmptyEcuInfoSnapshot.itemCount === 0 && bridgeEmptyEcuInfoSnapshot.blocked === true, "Empty Bridge ECU info response was not fail-closed");
 const bridgeAliasEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
@@ -381,6 +382,7 @@ const bridgeAliasEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
 });
 check(bridgeAliasEcuInfoSnapshot.itemCount === 2, "Bridge ECU info alias items were not normalized");
 check(bridgeAliasEcuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-ABCD", "Bridge ECU info alias CALID/CVN item was not retained");
+check(bridgeAliasEcuInfoSnapshot.keyItemSummary.capturedLabels.includes("キャリブレーション確認番号 CVN"), "Bridge ECU info alias key item summary did not include CVN");
 const ecuInfoSnapshotAlias = obd.normalizeEcuInfoSnapshot({
   source: "diagnostic_core",
   items: [
@@ -853,6 +855,7 @@ check(scanSession.ecuInfoSnapshot.hadSensitiveIdentifier === true, "VIN候補を
 check(scanSession.ecuInfoSnapshot.items.find((item) => item.id === "vin")?.retainedRawValue === false, "VIN生値を保持しています");
 check(!JSON.stringify(scanSession.ecuInfoSnapshot).includes("JTDKN3DU0A0123456"), "ECU情報スナップショットにVIN生値が残っています");
 check(scanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "CALIDを保持できません");
+check(scanSession.ecuInfoSnapshot.keyItemSummary.capturedCount === 4 && scanSession.ecuInfoSnapshot.keyItemSummary.missingCount === 0, "ECU情報主要項目要約をセッションへ反映できません");
 check(scanSession.ecuResponseSummary.ecus[0].dtcCount === 1, "ECU応答サマリーへDTC件数を反映できません");
 check(scanSession.adapterIdentity.adapterFamily === "elm327", "診断機セッションへアダプター識別情報を反映できません");
 check(scanSession.protocol === "ISO15765-4", "診断機セッションへprotocolを反映できません");

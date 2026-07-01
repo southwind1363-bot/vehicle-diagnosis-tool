@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.315.0";
+const APP_VERSION = "2.316.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2812,7 +2812,15 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const ecuItems = session?.ecuInfoSnapshot?.items || [];
   if (ecuItems.length) {
-    sections.push(["ECU情報", ecuItems.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`)]);
+    const keySummary = session?.ecuInfoSnapshot?.keyItemSummary;
+    const lines = [];
+    if (keySummary?.totalCount) {
+      lines.push(`主要項目: ${keySummary.capturedCount}/${keySummary.totalCount}`);
+      lines.push(`取得: ${keySummary.capturedLabels?.length ? keySummary.capturedLabels.join(" / ") : "なし"}`);
+      lines.push(`未取得: ${keySummary.missingLabels?.length ? keySummary.missingLabels.join(" / ") : "なし"}`);
+    }
+    lines.push(...ecuItems.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`));
+    sections.push(["ECU情報", lines]);
   }
 
   const ecuResponses = session?.ecuResponseSummary?.ecus || [];
@@ -2936,6 +2944,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
     ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
     ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
+    ["主要ECU情報", session?.ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${session.ecuInfoSnapshot.keyItemSummary.capturedCount}/${session.ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
     ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
     ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0]
   ];

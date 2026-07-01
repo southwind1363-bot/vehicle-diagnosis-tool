@@ -1572,6 +1572,10 @@
       diagnosticUse: item.diagnosticUse,
       storagePolicy: item.storagePolicy
     }));
+    const keyItemIds = new Set(["vin", "calibration_id", "calibration_verification_number", "ecu_name"]);
+    const keyItems = expectedItems.filter((item) => keyItemIds.has(item.id));
+    const capturedKeyItems = keyItems.filter((item) => item.captured);
+    const missingKeyItems = keyItems.filter((item) => !item.captured);
 
     return {
       schemaVersion: "ecu_info_snapshot_v1",
@@ -1583,6 +1587,13 @@
       hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
       items,
       expectedItems,
+      keyItemSummary: {
+        totalCount: keyItems.length,
+        capturedCount: capturedKeyItems.length,
+        missingCount: missingKeyItems.length,
+        capturedLabels: capturedKeyItems.map((item) => item.label),
+        missingLabels: missingKeyItems.map((item) => item.label)
+      },
       retainedRawText: false
     };
   }
