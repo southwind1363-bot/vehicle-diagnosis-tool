@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.324.0";
+const APP_VERSION = "2.325.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2710,8 +2710,9 @@ function renderObdBridgeReadout(parts = {}) {
     const missingKeySummary = ecuInfoSnapshot.keyItemSummary?.missingCount
       ? ` / 未取得${ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`
       : "";
+    const supportedLabels = ecuInfoSnapshot.supportInfoTypesSummary?.labels?.slice(0, 2).join(" / ");
     const supportedTypeSummary = ecuInfoSnapshot.supportInfoTypesSummary?.count
-      ? ` / Mode09対応${ecuInfoSnapshot.supportInfoTypesSummary.count}件`
+      ? ` / Mode09対応${ecuInfoSnapshot.supportInfoTypesSummary.count}件${supportedLabels ? ` (${supportedLabels})` : ""}`
       : "";
     obdImportStatus.textContent = `ブリッジECU情報を${ecuInfoSnapshot.itemCount || 0}項目読取りました。${keySummary}${missingKeySummary}${supportedTypeSummary}`.trim();
   } else if (parts.onboardMonitorResponse && onboardMonitorSnapshot) {
