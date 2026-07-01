@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.317.0";
+const APP_VERSION = "2.318.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2815,7 +2815,12 @@ function renderObdBridgeSessionDetails(session = null) {
   const ecuItems = session?.ecuInfoSnapshot?.items || [];
   if (ecuItems.length) {
     const keySummary = session?.ecuInfoSnapshot?.keyItemSummary;
+    const supportedTypeSummary = session?.ecuInfoSnapshot?.supportInfoTypesSummary;
     const lines = [];
+    if (supportedTypeSummary?.count) {
+      lines.push(`対応タイプ00: ${supportedTypeSummary.count}件`);
+      lines.push(`対応: ${supportedTypeSummary.labels.slice(0, 6).join(" / ")}${supportedTypeSummary.count > 6 ? "..." : ""}`);
+    }
     if (keySummary?.totalCount) {
       lines.push(`主要項目: ${keySummary.capturedCount}/${keySummary.totalCount}`);
       lines.push(`取得: ${keySummary.capturedLabels?.length ? keySummary.capturedLabels.join(" / ") : "なし"}`);
@@ -2947,6 +2952,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
     ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
     ["主要ECU情報", session?.ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${session.ecuInfoSnapshot.keyItemSummary.capturedCount}/${session.ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
+    ["Mode09対応", session?.ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],
     ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
     ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0]
   ];

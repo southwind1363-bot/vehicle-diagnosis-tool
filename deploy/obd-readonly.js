@@ -1579,6 +1579,8 @@
     const capturedKeyItems = keyItems.filter((item) => item.captured);
     const missingKeyItems = keyItems.filter((item) => !item.captured);
     const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured);
+    const supportedInfoTypesItem = items.find((item) => item.id === "supported_info_types_00");
+    const supportedInfoTypesSummary = decodeMode09SupportedInfoTypes(supportedInfoTypesItem?.value);
 
     return {
       schemaVersion: "ecu_info_snapshot_v1",
@@ -1598,6 +1600,7 @@
         missingLabels: missingKeyItems.map((item) => item.label)
       },
       supportInfoTypesCaptured: supportedInfoTypesCaptured,
+      supportInfoTypesSummary: supportedInfoTypesSummary,
       retainedRawText: false
     };
   }
@@ -1679,6 +1682,34 @@
     }
     const text = String(value ?? "").trim();
     return text ? text.slice(0, 240) : "";
+  }
+
+  function decodeMode09SupportedInfoTypes(value) {
+    const bytes = parseObdHexBytes(value);
+    if (!bytes.length) {
+      return {
+        count: 0,
+        ids: [],
+        labels: []
+      };
+    }
+    const ids = [];
+    bytes.forEach((byte, byteIndex) => {
+      for (let bit = 0; bit < 8; bit += 1) {
+        if ((byte & (0x80 >> bit)) === 0) continue;
+        ids.push((byteIndex * 8) + bit + 1);
+      }
+    });
+    const hexIds = ids.map((id) => id.toString(16).toUpperCase().padStart(2, "0"));
+    const labels = hexIds.map((infoType) => {
+      const item = ecuInfoItemCatalog.find((row) => row.infoType === infoType);
+      return item ? item.label : `情報タイプ ${infoType}`;
+    });
+    return {
+      count: hexIds.length,
+      ids: hexIds,
+      labels
+    };
   }
 
   function maskSensitiveIdentifier(value) {

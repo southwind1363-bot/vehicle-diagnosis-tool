@@ -111,6 +111,7 @@ try {
   check(supportedPids.data.supported_pids.every((pid) => /^[0-9A-F]{2}$/.test(pid)), "supported PID response included invalid PID format");
 
   const ecuInfo = await post(port, "read_ecu_info");
+  check(ecuInfo.data.values.some((item) => item.id === "supported_info_types_00" && item.value === "55 60 00 00"), "ECU info response did not include supported info types");
   check(ecuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "ECU info response did not include sample CALID");
   check(ecuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "ECU info response did not include sample ECU name");
   check(ecuInfo.data.values.some((item) => item.id === "vin"), "ECU info response did not include sample VIN for downstream redaction checks");

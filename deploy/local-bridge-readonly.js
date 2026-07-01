@@ -96,6 +96,7 @@ const SAMPLE_LIVE_VALUES = [
   { id: "engine_friction_torque", pid: "8E", value: -5, unit: "%" }
 ];
 const SAMPLE_ECU_INFO_VALUES = [
+  { id: "supported_info_types_00", info_type: "00", value: "55 60 00 00" },
   { id: "vin", info_type: "02", value: "JTDKN3DU0A0123456" },
   { id: "calibration_id", info_type: "04", value: "CAL-1234" },
   { id: "calibration_verification_number", info_type: "06", value: "CVN-ABCD" },
