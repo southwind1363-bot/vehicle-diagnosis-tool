@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.323.0";
+const APP_VERSION = "2.324.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2706,8 +2706,9 @@ function renderObdBridgeReadout(parts = {}) {
     const keySummary = ecuInfoSnapshot.keyItemSummary?.totalCount
       ? ` 主要${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}件`
       : "";
+    const missingLabels = ecuInfoSnapshot.keyItemSummary?.missingLabels?.slice(0, 2).join(" / ");
     const missingKeySummary = ecuInfoSnapshot.keyItemSummary?.missingCount
-      ? ` / 未取得${ecuInfoSnapshot.keyItemSummary.missingCount}件`
+      ? ` / 未取得${ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`
       : "";
     const supportedTypeSummary = ecuInfoSnapshot.supportInfoTypesSummary?.count
       ? ` / Mode09対応${ecuInfoSnapshot.supportInfoTypesSummary.count}件`
