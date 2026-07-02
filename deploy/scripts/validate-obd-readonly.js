@@ -281,6 +281,20 @@ const bridgeDtcAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 check(bridgeDtcAliasSnapshot.codes.join(",") === "P0420", "Bridge DTC alias codes were not normalized");
 check(bridgeDtcAliasSnapshot.ecuResponses[0]?.codeCount === 1, "Bridge DTC alias ECU response count was not normalized");
+const ecuResponseSummaryAliases = obd.normalizeEcuResponseSummary({
+  ecus: [
+    {
+      address: "7E8",
+      dtcCount: 2,
+      responseCount: 3,
+      negativeResponseCount: 1,
+      negativeRequestedServices: ["09"],
+      negativeResponseLabels: ["sub-function not supported"],
+      responseTimeMs: 45
+    }
+  ]
+});
+check(ecuResponseSummaryAliases.ecus[0]?.dtcCount === 2 && ecuResponseSummaryAliases.ecus[0]?.negativeRequestedServices[0] === "09" && ecuResponseSummaryAliases.ecus[0]?.responseTimeMs === 45, "ECU response summary camelCase aliases were not normalized");
 const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_pending_dtc",
   ok: true,
