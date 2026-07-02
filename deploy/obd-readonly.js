@@ -1286,9 +1286,12 @@
           services: ["03"]
         }))
       });
-    const connectionStatus = parts.connectionStatus?.displayStatus ? parts.connectionStatus : normalizeBridgeConnectionStatus(parts.connectionStatus);
-    const vciList = parts.vciList?.devices ? parts.vciList : normalizeBridgeVciList(parts.vciList);
-    const adapterIdentity = parts.adapterIdentity?.intent === "adapter_identity" ? parts.adapterIdentity : normalizeBridgeAdapterIdentity(parts.adapterIdentity || {});
+    const connectionStatusInput = parts.connectionStatus || parts.connection_status || {};
+    const vciListInput = parts.vciList || parts.vci_list || {};
+    const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || {};
+    const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
+    const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
+    const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
     const warnings = [];
     if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
@@ -2881,9 +2884,12 @@
     const ecuResponseSummary = input.ecuResponseSummary?.schemaVersion ? input.ecuResponseSummary : normalizeEcuResponseSummary(input.ecuResponseSummary || input.ecus || {});
     const ecuInfoSnapshot = input.ecuInfoSnapshot?.schemaVersion ? input.ecuInfoSnapshot : normalizeEcuInfoSnapshot(input.ecuInfoSnapshot || input.ecuInfo || {});
     const supportedPidMatrix = input.supportedPidMatrix?.schemaVersion ? input.supportedPidMatrix : buildSupportedPidMatrix(input.supportedPidMatrix || input.supportedPids || {});
-    const connectionStatus = input.connectionStatus?.displayStatus ? input.connectionStatus : normalizeBridgeConnectionStatus(input.connectionStatus || {});
-    const vciList = input.vciList?.devices ? input.vciList : normalizeBridgeVciList(input.vciList || {});
-    const adapterIdentity = input.adapterIdentity?.intent === "adapter_identity" ? input.adapterIdentity : normalizeBridgeAdapterIdentity(input.adapterIdentity || {});
+    const connectionStatusInput = input.connectionStatus || input.connection_status || {};
+    const vciListInput = input.vciList || input.vci_list || {};
+    const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || {};
+    const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
+    const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
+    const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
     const warnings = [];
     if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
