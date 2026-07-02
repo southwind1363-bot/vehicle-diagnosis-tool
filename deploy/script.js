@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.348.0";
+const APP_VERSION = "2.349.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2191,7 +2191,7 @@ function buildLocalBridgeImplementationSnapshot() {
     .map((item) => ({
       id: item.id,
       label: item.label,
-      available: item.connectionEnabled === true
+      available: Number.isFinite(item.progressPercent) ? item.progressPercent > 0 : Boolean(item.currentBasis || item.nextBuild)
     }));
   const modelDone = modelChecks.filter((item) => item.available).length;
   const driverDone = driverChecks.filter((item) => item.available).length;
@@ -2227,6 +2227,17 @@ function getInterfaceProgressState(interfaceId) {
     currentBasis: "確認中",
     nextBuild: "",
     etaTarget: "時期未定"
+  };
+}
+
+function getInterfaceCatalogDisplayState(item) {
+  const progress = getInterfaceProgressState(item?.id);
+  return {
+    ...item,
+    progressPercent: Number.isFinite(progress?.progressPercent) ? progress.progressPercent : item?.progressPercent || 0,
+    currentBasis: progress?.currentBasis || item?.currentBasis || "",
+    nextBuild: progress?.nextBuild || item?.nextBuild || "",
+    etaTarget: progress?.etaTarget || item?.etaTarget || "時期未定"
   };
 }
 
@@ -2346,6 +2357,7 @@ function renderObdProgressOverview() {
 
   const interfacePhases = window.ObdReadOnly?.getAdvancedInterfaceRoadmap?.() || [];
   const interfaceCatalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
+  const interfaceCatalogStates = interfaceCatalog.map((item) => getInterfaceCatalogDisplayState(item));
   const capabilityItems = getCapabilityDisplayItems(dataStore.diagnosticCapabilityStatus || []);
   const coverageItems = dataStore.diagnosticCoverageRoadmap || [];
   const readoutCapabilityIds = new Set([
@@ -2356,7 +2368,7 @@ function renderObdProgressOverview() {
   ]);
 
   const phaseProgress = averageProgressPercent(interfacePhases.map((item) => getInterfaceProgressState(item.id)?.progressPercent));
-  const candidateProgress = averageProgressPercent(interfaceCatalog.map((item) => item.progressPercent));
+  const candidateProgress = averageProgressPercent(interfaceCatalogStates.map((item) => item.progressPercent));
   const interfaceProgress = averageProgressPercent([phaseProgress, candidateProgress]);
   const capabilityProgress = averageProgressPercent(capabilityItems.map((item) => item.progress_percent));
   const coverageProgress = averageProgressPercent(coverageItems.map((item) => item.progress_percent));
@@ -2367,15 +2379,15 @@ function renderObdProgressOverview() {
 
   const interfaceEtas = summarizeEtaTargets([
     ...interfacePhases.map((item) => getInterfaceProgressState(item.id)?.etaTarget),
-    ...interfaceCatalog.map((item) => item.etaTarget)
+    ...interfaceCatalogStates.map((item) => item.etaTarget)
   ]);
   const capabilityEtas = summarizeEtaTargets(capabilityItems.map((item) => item.eta_target));
   const coverageEtas = summarizeEtaTargets(coverageItems.map((item) => item.eta_target));
   const weakestCapabilities = summarizeLowestProgress(capabilityItems, (item) => item.label, (item) => item.progress_percent);
   const weakestCoverage = summarizeLowestProgress(coverageItems, (item) => item.label, (item) => item.progress_percent);
-  const weakestInterfaces = summarizeLowestProgress(interfaceCatalog, (item) => item.label, (item) => item.progressPercent);
+  const weakestInterfaces = summarizeLowestProgress(interfaceCatalogStates, (item) => item.label, (item) => item.progressPercent);
   const upcomingInterfaces = summarizeUpcomingReadiness(
-    interfaceCatalog,
+    interfaceCatalogStates,
     (item) => item.label,
     (item) => item.progressPercent,
     (item) => item.etaTarget
@@ -2389,7 +2401,7 @@ function renderObdProgressOverview() {
   const allEtas = [
     ...capabilityItems.map((item) => item.eta_target),
     ...coverageItems.map((item) => item.eta_target),
-    ...interfaceCatalog.map((item) => item.etaTarget)
+    ...interfaceCatalogStates.map((item) => item.etaTarget)
   ].filter((value) => typeof value === "string" && value.length > 0);
   const q3Targets = allEtas.filter((value) => value.startsWith("2026-Q3")).length;
   const q4Targets = allEtas.filter((value) => value.startsWith("2026-Q4")).length;
@@ -2407,7 +2419,7 @@ function renderObdProgressOverview() {
     },
     {
       title: "対応インターフェース",
-      primary: `候補 ${interfaceCatalog.length}件 / 平均 ${candidateProgress}%`,
+      primary: `候補 ${interfaceCatalogStates.length}件 / 平均 ${candidateProgress}%`,
       detail: `先に使える候補: ${upcomingInterfaces || "集計中"} / 遅い所: ${weakestInterfaces || "集計中"}`
     },
     {
@@ -3252,7 +3264,7 @@ function renderObdOperationPlan(items) {
     const head = document.createElement("div");
     head.className = "obd-operation-head";
     const title = document.createElement("strong");
-    title.textContent = item.label;
+    title.textContent = display.label;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
     badge.textContent = item.currentAvailability;
@@ -3395,7 +3407,8 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
   });
 
   interfaceCatalog.forEach((item) => {
-    const evidence = buildInterfaceImplementationEvidence(item);
+    const display = getInterfaceCatalogDisplayState(item);
+    const evidence = buildInterfaceImplementationEvidence(display);
     const card = document.createElement("article");
     card.className = "obd-interface-card";
 
@@ -3405,26 +3418,26 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     title.textContent = item.label;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
-    badge.textContent = `${item.progressPercent || 0}%`;
+    badge.textContent = `${display.progressPercent || 0}%`;
     head.append(title, badge);
 
     const role = document.createElement("p");
-    role.textContent = `${item.transport} / ${item.primaryUse}`;
+    role.textContent = `${display.transport} / ${display.primaryUse}`;
 
     const scope = document.createElement("p");
-    scope.textContent = item.readScopeCandidates.slice(0, 4).join(" / ") || item.interfaceFamily;
+    scope.textContent = display.readScopeCandidates.slice(0, 4).join(" / ") || display.interfaceFamily;
 
     const status = document.createElement("p");
-    status.textContent = `${item.currentStatus || "確認中"} / ${item.currentBasis || ""}`;
+    status.textContent = `${display.currentStatus || "確認中"} / ${display.currentBasis || ""}`;
 
     const next = document.createElement("p");
-    next.textContent = item.nextBuild || "";
+    next.textContent = display.nextBuild || "";
 
     const eta = document.createElement("p");
-    eta.textContent = `使える状態の目標: ${item.etaTarget || "時期未定"}`;
+    eta.textContent = `使える状態の目標: ${display.etaTarget || "時期未定"}`;
 
     const note = document.createElement("p");
-    note.textContent = item.integrationNote;
+    note.textContent = display.integrationNote;
 
     const implementation = document.createElement("p");
     implementation.textContent = `${evidence.summary} / ${evidence.missing}`;

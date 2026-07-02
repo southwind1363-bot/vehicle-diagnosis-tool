@@ -1169,66 +1169,76 @@
   }
 
   function buildReadoutCoverageSnapshot(input = {}) {
+    const connectionStatusInput = input.connectionStatus || input.connection_status || {};
+    const vciDevicesInput = input.vciDevices || input.vci_devices || [];
+    const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || {};
+    const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot || {};
+    const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot || {};
+    const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot || {};
+    const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot || {};
+    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || {};
+    const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || {};
+    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || {};
     const items = [
       {
         id: "connection_status",
         label: "接続状態",
-        available: Boolean(input.connectionStatus?.displayStatus),
-        count: input.connectionStatus?.displayStatus ? 1 : 0
+        available: Boolean(connectionStatusInput?.displayStatus),
+        count: connectionStatusInput?.displayStatus ? 1 : 0
       },
       {
         id: "vci_devices",
         label: "VCI一覧",
-        available: Array.isArray(input.vciDevices) && input.vciDevices.length > 0,
-        count: Array.isArray(input.vciDevices) ? input.vciDevices.length : 0
+        available: Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0,
+        count: Array.isArray(vciDevicesInput) ? vciDevicesInput.length : 0
       },
       {
         id: "adapter_identity",
         label: "アダプター情報",
-        available: Boolean(input.adapterIdentity?.adapterName || input.adapterIdentity?.adapterFamily || input.adapterIdentity?.firmwareVersion),
-        count: input.adapterIdentity?.adapterName || input.adapterIdentity?.adapterFamily || input.adapterIdentity?.firmwareVersion ? 1 : 0
+        available: Boolean(adapterIdentityInput?.adapterName || adapterIdentityInput?.adapterFamily || adapterIdentityInput?.firmwareVersion),
+        count: adapterIdentityInput?.adapterName || adapterIdentityInput?.adapterFamily || adapterIdentityInput?.firmwareVersion ? 1 : 0
       },
       {
         id: "dtc_snapshot",
         label: "DTC",
-        available: input.dtcSnapshot?.blocked === false || Array.isArray(input.dtcSnapshot?.dtcs),
-        count: Array.isArray(input.dtcSnapshot?.dtcs) ? input.dtcSnapshot.dtcs.length : 0
+        available: dtcSnapshotInput?.blocked === false || Array.isArray(dtcSnapshotInput?.dtcs),
+        count: Array.isArray(dtcSnapshotInput?.dtcs) ? dtcSnapshotInput.dtcs.length : 0
       },
       {
         id: "live_pid_snapshot",
         label: "ライブPID",
-        available: input.livePidSnapshot?.blocked === false || Array.isArray(input.livePidSnapshot?.monitorValues),
-        count: Array.isArray(input.livePidSnapshot?.monitorValues) ? input.livePidSnapshot.monitorValues.length : 0
+        available: livePidSnapshotInput?.blocked === false || Array.isArray(livePidSnapshotInput?.monitorValues),
+        count: Array.isArray(livePidSnapshotInput?.monitorValues) ? livePidSnapshotInput.monitorValues.length : 0
       },
       {
         id: "freeze_frame_snapshot",
         label: "フリーズフレーム",
-        available: input.freezeFrameSnapshot?.blocked === false || Array.isArray(input.freezeFrameSnapshot?.monitorValues),
-        count: Array.isArray(input.freezeFrameSnapshot?.monitorValues) ? input.freezeFrameSnapshot.monitorValues.length : 0
+        available: freezeFrameSnapshotInput?.blocked === false || Array.isArray(freezeFrameSnapshotInput?.monitorValues),
+        count: Array.isArray(freezeFrameSnapshotInput?.monitorValues) ? freezeFrameSnapshotInput.monitorValues.length : 0
       },
       {
         id: "readiness_snapshot",
         label: "レディネス",
-        available: input.readinessSnapshot?.blocked === false || Array.isArray(input.readinessSnapshot?.monitors),
-        count: Array.isArray(input.readinessSnapshot?.monitors) ? input.readinessSnapshot.monitorCount || input.readinessSnapshot.monitors.length : 0
+        available: readinessSnapshotInput?.blocked === false || Array.isArray(readinessSnapshotInput?.monitors),
+        count: Array.isArray(readinessSnapshotInput?.monitors) ? readinessSnapshotInput.monitorCount || readinessSnapshotInput.monitors.length : 0
       },
       {
         id: "ecu_info_snapshot",
         label: "ECU情報",
-        available: input.ecuInfoSnapshot?.blocked === false || Array.isArray(input.ecuInfoSnapshot?.items),
-        count: Array.isArray(input.ecuInfoSnapshot?.items) ? input.ecuInfoSnapshot.itemCount || input.ecuInfoSnapshot.items.length : 0
+        available: ecuInfoSnapshotInput?.blocked === false || Array.isArray(ecuInfoSnapshotInput?.items),
+        count: Array.isArray(ecuInfoSnapshotInput?.items) ? ecuInfoSnapshotInput.itemCount || ecuInfoSnapshotInput.items.length : 0
       },
       {
         id: "onboard_monitor_snapshot",
         label: "Mode06",
-        available: input.onboardMonitorSnapshot?.blocked === false || Array.isArray(input.onboardMonitorSnapshot?.tests),
-        count: Array.isArray(input.onboardMonitorSnapshot?.tests) ? input.onboardMonitorSnapshot.testCount || input.onboardMonitorSnapshot.tests.length : 0
+        available: onboardMonitorSnapshotInput?.blocked === false || Array.isArray(onboardMonitorSnapshotInput?.tests),
+        count: Array.isArray(onboardMonitorSnapshotInput?.tests) ? onboardMonitorSnapshotInput.testCount || onboardMonitorSnapshotInput.tests.length : 0
       },
       {
         id: "supported_pid_matrix",
         label: "対応PID",
-        available: input.supportedPidMatrix?.blocked === false || Array.isArray(input.supportedPidMatrix?.supportedPids),
-        count: Array.isArray(input.supportedPidMatrix?.supportedPids) ? input.supportedPidMatrix.supportedCount || input.supportedPidMatrix.supportedPids.length : 0
+        available: supportedPidMatrixInput?.blocked === false || Array.isArray(supportedPidMatrixInput?.supportedPids),
+        count: Array.isArray(supportedPidMatrixInput?.supportedPids) ? supportedPidMatrixInput.supportedCount || supportedPidMatrixInput.supportedPids.length : 0
       }
     ].map((item) => Object.freeze({
       ...item,
@@ -1256,26 +1266,34 @@
   }
 
   function buildBridgeSessionSummary(parts = {}) {
-    const dtcSnapshot = parts.dtcSnapshot?.codes ? parts.dtcSnapshot : normalizeBridgeDtcSnapshot(parts.dtcSnapshot);
-    const livePidSnapshot = parts.livePidSnapshot?.monitorValues ? parts.livePidSnapshot : normalizeBridgeLivePidSnapshot(parts.livePidSnapshot);
-    const freezeFrameSnapshot = parts.freezeFrameSnapshot?.schemaVersion
-      ? parts.freezeFrameSnapshot
-      : normalizeBridgeFreezeFrameSnapshot(parts.freezeFrameSnapshot || parts.freezeFrameResponse || {});
-    const supportedPidMatrix = parts.supportedPidMatrix?.schemaVersion
-      ? parts.supportedPidMatrix
-      : normalizeBridgeSupportedPidSnapshot(parts.supportedPidMatrix || parts.supportedPidSnapshot || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
-    const readinessSnapshot = parts.readinessSnapshot?.schemaVersion
-      ? parts.readinessSnapshot
-      : normalizeBridgeReadinessSnapshot(parts.readinessSnapshot || parts.readinessResponse || parts.livePidResponse || livePidSnapshot);
-    const ecuInfoSnapshot = parts.ecuInfoSnapshot?.schemaVersion
-      ? parts.ecuInfoSnapshot
-      : normalizeBridgeEcuInfoSnapshot(parts.ecuInfoSnapshot || parts.ecuInfoResponse || {});
-    const onboardMonitorSnapshot = parts.onboardMonitorSnapshot?.schemaVersion
-      ? parts.onboardMonitorSnapshot
-      : normalizeBridgeOnboardMonitorSnapshot(parts.onboardMonitorSnapshot || parts.onboardMonitorResponse || {});
-    const ecuResponseSummary = parts.ecuResponseSummary?.schemaVersion
-      ? parts.ecuResponseSummary
-      : normalizeEcuResponseSummary(parts.ecuResponseSummary || {
+    const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
+    const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot;
+    const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
+    const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot;
+    const readinessSnapshotInput = parts.readinessSnapshot || parts.readiness_snapshot || parts.readinessResponse || parts.readiness_response || parts.livePidResponse || parts.live_pid_response;
+    const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
+    const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
+    const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary;
+    const dtcSnapshot = dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
+    const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+      ? freezeFrameSnapshotInput
+      : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
+    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
+      ? supportedPidMatrixInput
+      : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
+    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+      ? readinessSnapshotInput
+      : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || livePidSnapshot);
+    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+      ? ecuInfoSnapshotInput
+      : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {});
+    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+      ? onboardMonitorSnapshotInput
+      : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {});
+    const ecuResponseSummary = ecuResponseSummaryInput?.schemaVersion
+      ? ecuResponseSummaryInput
+      : normalizeEcuResponseSummary(ecuResponseSummaryInput || {
         source: "local_bridge",
         captured_at: dtcSnapshot.capturedAt || null,
         protocol: dtcSnapshot.protocol || null,
@@ -1360,8 +1378,50 @@
     };
   }
 
+  function hasBridgeSummaryContent(parts = {}) {
+    return Boolean(
+      Array.isArray(parts.codes)
+      || Array.isArray(parts.dtc_codes)
+      || Array.isArray(parts.monitorValues)
+      || Array.isArray(parts.monitor_values)
+      || parts.readoutCoverage
+      || parts.readout_coverage
+      || parts.capturedAt
+      || parts.captured_at
+    );
+  }
+
+  function normalizeBridgeSummaryAliases(parts = {}) {
+    return {
+      source: parts.source || "local_bridge",
+      startedAt: parts.startedAt || parts.started_at || null,
+      endedAt: parts.endedAt || parts.ended_at || null,
+      capturedAt: parts.capturedAt || parts.captured_at || null,
+      protocol: parts.protocol || null,
+      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
+      connectionStatus: parts.connectionStatus || parts.connection_status || normalizeBridgeConnectionStatus(),
+      vciDevices: parts.vciDevices || parts.vci_devices || [],
+      adapterIdentity: parts.adapterIdentity || parts.adapter_identity || normalizeBridgeAdapterIdentity(),
+      codes: parts.codes || parts.dtc_codes || [],
+      ecuResponseSummary: parts.ecuResponseSummary || parts.ecu_response_summary || normalizeEcuResponseSummary({ source: "local_bridge" }),
+      supportedPidMatrix: parts.supportedPidMatrix || parts.supported_pid_matrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+      readinessSnapshot: parts.readinessSnapshot || parts.readiness_snapshot || normalizeBridgeReadinessSnapshot(),
+      ecuInfoSnapshot: parts.ecuInfoSnapshot || parts.ecu_info_snapshot || normalizeBridgeEcuInfoSnapshot(),
+      onboardMonitorSnapshot: parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || normalizeBridgeOnboardMonitorSnapshot(),
+      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || buildReadoutCoverageSnapshot(),
+      freezeFrameSnapshot: parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || normalizeBridgeFreezeFrameSnapshot(),
+      monitorValues: parts.monitorValues || parts.monitor_values || [],
+      monitorValueSummary: parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(parts.monitorValues || parts.monitor_values || []),
+      monitorInsights: parts.monitorInsights || parts.monitor_insights || [],
+      warnings: [...new Set(parts.warnings || [])],
+      exportRequired: true,
+      retainedRawText: false,
+      wouldTransmit: false
+    };
+  }
+
   function buildBridgeSessionExportPayload(parts = {}) {
-    const summary = parts.codes && parts.monitorValues ? parts : buildBridgeSessionSummary(parts);
+    const summary = hasBridgeSummaryContent(parts) ? normalizeBridgeSummaryAliases(parts) : buildBridgeSessionSummary(parts);
     return {
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
@@ -1402,7 +1462,7 @@
   }
 
   function buildBridgeDiagnosticImport(parts = {}) {
-    const summary = parts.codes && parts.monitorValues ? parts : buildBridgeSessionSummary(parts);
+    const summary = hasBridgeSummaryContent(parts) ? normalizeBridgeSummaryAliases(parts) : buildBridgeSessionSummary(parts);
     const exportPayload = buildBridgeSessionExportPayload(summary);
     const codes = Array.isArray(summary.codes) ? [...summary.codes] : [];
     const monitorValues = Array.isArray(summary.monitorValues) ? summary.monitorValues.map((item) => ({ ...item })) : [];
@@ -1442,11 +1502,14 @@
   }
 
   function mergeDiagnosticInputs(input = {}) {
-    const scannerAnalysis = analyzeScannerText(input.scannerText || "");
-    const bridgeImport = input.bridgeImport?.importType === "bridge_diagnostic_snapshot"
-      ? input.bridgeImport
-      : input.bridgeParts
-        ? buildBridgeDiagnosticImport(input.bridgeParts)
+    const scannerTextInput = input.scannerText || input.scanner_text || "";
+    const bridgeImportInput = input.bridgeImport || input.bridge_import;
+    const bridgePartsInput = input.bridgeParts || input.bridge_parts;
+    const scannerAnalysis = analyzeScannerText(scannerTextInput);
+    const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
+      ? bridgeImportInput
+      : bridgePartsInput
+        ? buildBridgeDiagnosticImport(bridgePartsInput)
         : null;
     const monitorById = new Map();
 
@@ -2115,21 +2178,58 @@
   }
 
   function buildDecodedObdScanSession(input = {}) {
-    const dtcSnapshot = input.dtcSnapshot?.schemaVersion
-      ? input.dtcSnapshot
-      : input.storedDtcResponse || input.pendingDtcResponse || input.permanentDtcResponse
+    const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot;
+    const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot;
+    const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot;
+    const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot;
+    const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot;
+    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot;
+    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix;
+    const dtcSnapshot = dtcSnapshotInput?.schemaVersion || dtcSnapshotInput?.codes
+      ? dtcSnapshotInput
+      : input.storedDtcResponse || input.stored_dtc_response || input.pendingDtcResponse || input.pending_dtc_response || input.permanentDtcResponse || input.permanent_dtc_response
         ? mergeDtcSnapshots(
-            input.storedDtcResponse?.schemaVersion ? input.storedDtcResponse : decodeObdDtcResponse(input.storedDtcResponse || {}),
-            input.pendingDtcResponse?.schemaVersion ? input.pendingDtcResponse : decodeObdDtcResponse(input.pendingDtcResponse || {}),
-            input.permanentDtcResponse?.schemaVersion ? input.permanentDtcResponse : decodeObdDtcResponse(input.permanentDtcResponse || {})
+            input.storedDtcResponse?.schemaVersion || input.stored_dtc_response?.schemaVersion ? (input.storedDtcResponse || input.stored_dtc_response) : decodeObdDtcResponse(input.storedDtcResponse || input.stored_dtc_response || {}),
+            input.pendingDtcResponse?.schemaVersion || input.pending_dtc_response?.schemaVersion ? (input.pendingDtcResponse || input.pending_dtc_response) : decodeObdDtcResponse(input.pendingDtcResponse || input.pending_dtc_response || {}),
+            input.permanentDtcResponse?.schemaVersion || input.permanent_dtc_response?.schemaVersion ? (input.permanentDtcResponse || input.permanent_dtc_response) : decodeObdDtcResponse(input.permanentDtcResponse || input.permanent_dtc_response || {})
           )
-        : input.dtcResponse?.schemaVersion ? input.dtcResponse : decodeObdDtcResponse(input.dtcResponse || {});
-    const livePidSnapshot = input.livePidResponse?.monitorValues ? input.livePidResponse : decodeLivePidResponse(input.livePidResponse || {});
-    const freezeFrameSnapshot = input.freezeFrameResponse?.schemaVersion ? input.freezeFrameResponse : decodeFreezeFrameResponse(input.freezeFrameResponse || {});
-    const readinessSnapshot = input.readinessResponse?.schemaVersion ? input.readinessResponse : decodeReadinessResponse(input.readinessResponse || {});
-    const onboardMonitorSnapshot = input.onboardMonitorResponse?.schemaVersion ? input.onboardMonitorResponse : decodeOnboardMonitorResponse(input.onboardMonitorResponse || {});
-    const ecuInfoSnapshot = input.ecuInfoResponse?.schemaVersion ? input.ecuInfoResponse : decodeEcuInfoResponse(input.ecuInfoResponse || {});
-    const supportedPidMatrix = input.supportedPidResponse?.schemaVersion ? input.supportedPidResponse : decodeSupportedPidResponse(input.supportedPidResponse || {});
+        : input.dtcResponse?.schemaVersion ? input.dtcResponse : decodeObdDtcResponse(input.dtcResponse || input.dtc_response || {});
+    const livePidResponseInput = input.livePidResponse || input.live_pid_response || {};
+    const freezeFrameResponseInput = input.freezeFrameResponse || input.freeze_frame_response || {};
+    const readinessResponseInput = input.readinessResponse || input.readiness_response || {};
+    const onboardMonitorResponseInput = input.onboardMonitorResponse || input.onboard_monitor_response || {};
+    const ecuInfoResponseInput = input.ecuInfoResponse || input.ecu_info_response || {};
+    const supportedPidResponseInput = input.supportedPidResponse || input.supported_pid_response || {};
+    const livePidSnapshot = livePidSnapshotInput?.monitorValues
+      ? livePidSnapshotInput
+      : livePidResponseInput?.monitorValues
+        ? livePidResponseInput
+        : decodeLivePidResponse(livePidResponseInput);
+    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+      ? freezeFrameSnapshotInput
+      : freezeFrameResponseInput?.schemaVersion
+        ? freezeFrameResponseInput
+        : decodeFreezeFrameResponse(freezeFrameResponseInput);
+    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+      ? readinessSnapshotInput
+      : readinessResponseInput?.schemaVersion
+        ? readinessResponseInput
+        : decodeReadinessResponse(readinessResponseInput);
+    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+      ? onboardMonitorSnapshotInput
+      : onboardMonitorResponseInput?.schemaVersion
+        ? onboardMonitorResponseInput
+        : decodeOnboardMonitorResponse(onboardMonitorResponseInput);
+    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+      ? ecuInfoSnapshotInput
+      : ecuInfoResponseInput?.schemaVersion
+        ? ecuInfoResponseInput
+        : decodeEcuInfoResponse(ecuInfoResponseInput);
+    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
+      ? supportedPidMatrixInput
+      : supportedPidResponseInput?.schemaVersion
+        ? supportedPidResponseInput
+        : decodeSupportedPidResponse(supportedPidResponseInput);
     return buildDiagnosticScanSession({
       source: "obd_response_decoder",
       session_id: input.session_id || input.sessionId || "decoded_obd_scan_session",
@@ -2876,14 +2976,22 @@
   }
 
   function buildDiagnosticScanSession(input = {}) {
-    const dtcSnapshot = input.dtcSnapshot?.schemaVersion ? input.dtcSnapshot : normalizeDtcSnapshot(input.dtcSnapshot || input);
-    const livePidSnapshot = input.livePidSnapshot?.monitorValues ? input.livePidSnapshot : normalizeBridgeLivePidSnapshot(input.livePidSnapshot || input.livePids || {});
-    const freezeFrameSnapshot = input.freezeFrameSnapshot?.schemaVersion ? input.freezeFrameSnapshot : normalizeFreezeFrameSnapshot(input.freezeFrameSnapshot || input.freezeFrame || {});
-    const readinessSnapshot = input.readinessSnapshot?.schemaVersion ? input.readinessSnapshot : normalizeReadinessSnapshot(input.readinessSnapshot || input.readiness || {});
-    const onboardMonitorSnapshot = input.onboardMonitorSnapshot?.schemaVersion ? input.onboardMonitorSnapshot : normalizeOnboardMonitorSnapshot(input.onboardMonitorSnapshot || input.onboardMonitor || {});
-    const ecuResponseSummary = input.ecuResponseSummary?.schemaVersion ? input.ecuResponseSummary : normalizeEcuResponseSummary(input.ecuResponseSummary || input.ecus || {});
-    const ecuInfoSnapshot = input.ecuInfoSnapshot?.schemaVersion ? input.ecuInfoSnapshot : normalizeEcuInfoSnapshot(input.ecuInfoSnapshot || input.ecuInfo || {});
-    const supportedPidMatrix = input.supportedPidMatrix?.schemaVersion ? input.supportedPidMatrix : buildSupportedPidMatrix(input.supportedPidMatrix || input.supportedPids || {});
+    const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot || input;
+    const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot || input.livePids || input.live_pids || {};
+    const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot || input.freezeFrame || input.freeze_frame || {};
+    const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot || input.readiness || {};
+    const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitor || input.onboard_monitor || {};
+    const ecuResponseSummaryInput = input.ecuResponseSummary || input.ecu_response_summary || input.ecus || input.ecu_responses || {};
+    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfo || input.ecu_info || {};
+    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPids || input.supported_pids || {};
+    const dtcSnapshot = dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput);
+    const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
+    const readinessSnapshot = readinessSnapshotInput?.schemaVersion ? readinessSnapshotInput : normalizeReadinessSnapshot(readinessSnapshotInput);
+    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput);
+    const ecuResponseSummary = ecuResponseSummaryInput?.schemaVersion ? ecuResponseSummaryInput : normalizeEcuResponseSummary(ecuResponseSummaryInput);
+    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion ? ecuInfoSnapshotInput : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput);
+    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion ? supportedPidMatrixInput : buildSupportedPidMatrix(supportedPidMatrixInput);
     const connectionStatusInput = input.connectionStatus || input.connection_status || {};
     const vciListInput = input.vciList || input.vci_list || {};
     const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || {};
