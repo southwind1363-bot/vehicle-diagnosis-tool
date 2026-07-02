@@ -1715,10 +1715,13 @@
   }
 
   function collectEcuInfoRows(input = {}) {
+    if (Array.isArray(input)) return input;
     if (Array.isArray(input.values)) return input.values;
     if (Array.isArray(input.items)) return input.items;
     if (Array.isArray(input.ecu_info)) return input.ecu_info;
     if (Array.isArray(input.ecu_info_items)) return input.ecu_info_items;
+    if (Array.isArray(input.ecuInfo)) return input.ecuInfo;
+    if (Array.isArray(input.ecuInfoItems)) return input.ecuInfoItems;
     if (Array.isArray(input.mode09_items)) return input.mode09_items;
     if (Array.isArray(input.mode09Items)) return input.mode09Items;
     if (Array.isArray(input.info_values)) return input.info_values;
@@ -1727,19 +1730,28 @@
     const aliases = [
       ["supported_info_types_00", "supported_info_types_00", "00"],
       ["supported_info_types", "supported_info_types_00", "00"],
+      ["supportedInfoTypes", "supported_info_types_00", "00"],
       ["supported_mode09_types", "supported_info_types_00", "00"],
+      ["supportedMode09Types", "supported_info_types_00", "00"],
       ["vin", "vin", "02"],
       ["vin_value", "vin", "02"],
+      ["vinValue", "vin", "02"],
       ["calibration_id", "calibration_id", "04"],
+      ["calibrationId", "calibration_id", "04"],
       ["calid", "calibration_id", "04"],
       ["cal_id", "calibration_id", "04"],
       ["calibration_identification", "calibration_id", "04"],
       ["calibration_verification_number", "calibration_verification_number", "06"],
+      ["calibrationVerificationNumber", "calibration_verification_number", "06"],
       ["cvn", "calibration_verification_number", "06"],
       ["cvn_value", "calibration_verification_number", "06"],
+      ["cvnValue", "calibration_verification_number", "06"],
       ["ecu_name", "ecu_name", "0A"],
+      ["ecuName", "ecu_name", "0A"],
       ["module_name", "ecu_name", "0A"],
-      ["ecu_label", "ecu_name", "0A"]
+      ["moduleName", "ecu_name", "0A"],
+      ["ecu_label", "ecu_name", "0A"],
+      ["ecuLabel", "ecu_name", "0A"]
     ];
     return aliases
       .filter(([key]) => input[key] !== undefined && input[key] !== null && input[key] !== "")
@@ -2196,7 +2208,7 @@
     const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot;
     const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot;
     const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot;
-    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot;
+    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfo || input.ecu_info || input.ecuInfoItems || input.ecu_info_items;
     const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix;
     const dtcSnapshot = dtcSnapshotInput?.schemaVersion || dtcSnapshotInput?.codes
       ? dtcSnapshotInput
@@ -2235,9 +2247,11 @@
         : decodeOnboardMonitorResponse(onboardMonitorResponseInput);
     const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
-      : ecuInfoResponseInput?.schemaVersion
-        ? ecuInfoResponseInput
-        : decodeEcuInfoResponse(ecuInfoResponseInput);
+      : (Array.isArray(ecuInfoSnapshotInput) || (ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0))
+        ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
+        : ecuInfoResponseInput?.schemaVersion
+          ? ecuInfoResponseInput
+          : decodeEcuInfoResponse(ecuInfoResponseInput);
     const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : supportedPidResponseInput?.schemaVersion
@@ -2995,7 +3009,7 @@
     const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot || input.readiness || {};
     const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitor || input.onboard_monitor || {};
     const ecuResponseSummaryInput = input.ecuResponseSummary || input.ecu_response_summary || input.ecus || input.ecu_responses || {};
-    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfo || input.ecu_info || {};
+    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfo || input.ecu_info || input.ecuInfoItems || input.ecu_info_items || {};
     const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPids || input.supported_pids || {};
     const dtcSnapshot = dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput);
     const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);

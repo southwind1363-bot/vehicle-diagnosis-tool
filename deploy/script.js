@@ -1,6 +1,8 @@
 const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
+const OBD_ACCESS_MODE_KEY = "vehicle-diagnosis-obd-access-v1";
+const OBD_ACCESS_PASSWORD_HASH = "ff61c820434cfe58f495f0688990b3c02c12120bb1bd4d167d92f88b3de0d7e0";
 const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
@@ -49,8 +51,8 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-thinkcar-bluetooth": "local_bridge",
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
-const APP_VERSION = "2.350.0";
-const APP_LAST_UPDATED = "2026-06-13";
+const APP_VERSION = "2.351.0";
+const APP_LAST_UPDATED = "2026-07-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -191,6 +193,12 @@ const clearStorageButton = document.querySelector("#clearStorageButton");
 const opsResultList = document.querySelector("#opsResultList");
 const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
+const obdAccessProtected = document.querySelector("#obdAccessProtected");
+const obdAccessPasswordInput = document.querySelector("#obdAccessPasswordInput");
+const obdAccessUnlockButton = document.querySelector("#obdAccessUnlockButton");
+const obdAccessLockButton = document.querySelector("#obdAccessLockButton");
+const obdAccessModeBadge = document.querySelector("#obdAccessModeBadge");
+const obdAccessStatus = document.querySelector("#obdAccessStatus");
 const obdProgressGrid = document.querySelector(".obd-progress-grid");
 const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
@@ -249,6 +257,7 @@ let dataStore = fallbackData;
 let savedCases = loadCases();
 let copyToastTimer = null;
 let activeResultView = "flow";
+let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled";
 let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
 const obdDevSession = {
   port: null,
@@ -347,6 +356,13 @@ obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
+obdAccessUnlockButton.addEventListener("click", unlockObdAccess);
+obdAccessLockButton.addEventListener("click", lockObdAccess);
+obdAccessPasswordInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  void unlockObdAccess();
+});
 obdDevUnlockButton.addEventListener("click", unlockObdDeveloperMode);
 obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
 obdDevConnectButton.addEventListener("click", connectObdDeveloperVci);
@@ -2043,6 +2059,7 @@ function initializeObdReadOnlyPanel() {
     obdCapabilityBadge.textContent = "準備機能を読込できません";
     obdCapabilityText.textContent = "OBD2読取準備モジュールを読み込めませんでした。";
     obdCapabilityText.classList.add("error");
+    renderObdAccessGate();
     return;
   }
 
@@ -2056,6 +2073,7 @@ function initializeObdReadOnlyPanel() {
 
   obdCapabilityBadge.textContent = "実機接続準備中";
   obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 接続、DTC読取、データモニター、DTC消去は機能単位で準備し、安全検証が終わるまで車両への送信は無効にしています。`;
+  renderObdAccessGate();
   renderObdProgressOverview(capability);
   renderObdDeveloperGate(capability);
   renderObdOperationPlan(window.ObdReadOnly.getVehicleOperationPlan?.() || []);
@@ -2074,6 +2092,29 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getLocalBridgeResponseSchemas?.() || []
   );
   renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
+}
+
+async function hashObdAccessPassword(value) {
+  const normalized = typeof value === "string" ? value : "";
+  const encoded = new TextEncoder().encode(normalized);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function renderObdAccessGate() {
+  const unlocked = obdAccessUnlocked === true;
+
+  obdAccessModeBadge.textContent = unlocked ? "解除済み" : "ロック中";
+  obdAccessUnlockButton.disabled = unlocked;
+  obdAccessLockButton.disabled = !unlocked;
+  obdAccessProtected.hidden = !unlocked;
+
+  if (!unlocked) {
+    obdAccessStatus.textContent = "実車テスト中は、パスワードを知っている端末だけ OBD2 読取画面を開けます。";
+    return;
+  }
+
+  obdAccessStatus.textContent = "このセッションでは OBD2 読取画面を開いています。タブを閉じるかロックで再び隠せます。";
 }
 
 function normalizeProgressPercent(value) {
@@ -2522,6 +2563,32 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   }
 
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
+}
+
+async function unlockObdAccess() {
+  if (!crypto?.subtle) {
+    obdAccessStatus.textContent = "このブラウザではパスワード照合を開始できません。";
+    return;
+  }
+  obdAccessUnlockButton.disabled = true;
+  const passwordHash = await hashObdAccessPassword(obdAccessPasswordInput.value);
+  if (passwordHash !== OBD_ACCESS_PASSWORD_HASH) {
+    obdAccessUnlockButton.disabled = false;
+    obdAccessStatus.textContent = "パスワードが違います。";
+    return;
+  }
+  obdAccessUnlocked = true;
+  sessionStorage.setItem(OBD_ACCESS_MODE_KEY, "enabled");
+  obdAccessPasswordInput.value = "";
+  obdAccessUnlockButton.disabled = false;
+  renderObdAccessGate();
+}
+
+function lockObdAccess() {
+  obdAccessUnlocked = false;
+  sessionStorage.removeItem(OBD_ACCESS_MODE_KEY);
+  obdAccessPasswordInput.value = "";
+  renderObdAccessGate();
 }
 
 function unlockObdDeveloperMode() {

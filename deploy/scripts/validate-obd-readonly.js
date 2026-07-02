@@ -590,6 +590,82 @@ const bridgeMode09AliasItems = obd.normalizeBridgeEcuInfoSnapshot({
 });
 check(bridgeMode09AliasItems.itemCount === 2, "Bridge Mode09 item aliases were not normalized");
 check(bridgeMode09AliasItems.items.find((item) => item.id === "calibration_id")?.value === "CAL-MODE09", "Bridge Mode09 alias CALID was not retained");
+const bridgeMode09SnakeAliasItems = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mode09_items: [
+      { item_id: "calibration_verification_number", mode09_type: "06", decoded_value: "CVN-MODE09" },
+      { item_id: "ecu_name", mode09_type: "0A", raw_value: "Brake ECU" }
+    ]
+  }
+});
+check(bridgeMode09SnakeAliasItems.itemCount === 2, "Bridge mode09_items snake_case aliases were not normalized");
+check(bridgeMode09SnakeAliasItems.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-MODE09", "Bridge mode09_items snake_case CVN was not retained");
+const bridgeExtendedObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    supported_mode09_types: "55 60 00 00",
+    calid: "CAL-BRIDGE-ALIAS",
+    cvn_value: "CVN-BRIDGE-ALIAS",
+    module_name: "HV ECU"
+  }
+});
+check(bridgeExtendedObjectEcuInfoSnapshot.itemCount === 4, "Bridge extended ECU info object aliases were not normalized");
+check(bridgeExtendedObjectEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-BRIDGE-ALIAS", "Bridge extended ECU info object CALID was not retained");
+check(bridgeExtendedObjectEcuInfoSnapshot.items.find((item) => item.id === "ecu_name")?.value === "HV ECU", "Bridge extended ECU info object ECU name was not retained");
+const bridgeCamelObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    supportedInfoTypes: "55 60 00 00",
+    vinValue: "JTDKN3DU0A0123456",
+    calibrationId: "CAL-BRIDGE-CAMEL",
+    calibrationVerificationNumber: "CVN-BRIDGE-CAMEL",
+    moduleName: "Gateway Camel ECU"
+  }
+});
+check(bridgeCamelObjectEcuInfoSnapshot.itemCount === 5, "Bridge camelCase ECU info object aliases were not normalized");
+check(bridgeCamelObjectEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-BRIDGE-CAMEL", "Bridge camelCase ECU info object CALID was not retained");
+check(bridgeCamelObjectEcuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-BRIDGE-CAMEL", "Bridge camelCase ECU info object CVN was not retained");
+check(bridgeCamelObjectEcuInfoSnapshot.items.find((item) => item.id === "ecu_name")?.value === "Gateway Camel ECU", "Bridge camelCase ECU info object ECU name was not retained");
+const bridgeInfoValuesCamelAliasSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol: "ISO15765-4",
+    capturedAt: "2026-06-28T00:01:52Z",
+    infoValues: [
+      { infoType: "00", value: "55 60 00 00" },
+      { infoType: "04", decodedValue: "CAL-INFOVALUES-BRIDGE" }
+    ]
+  }
+});
+check(bridgeInfoValuesCamelAliasSnapshot.capturedAt === "2026-06-28T00:01:52Z", "Bridge ECU info did not accept capturedAt camelCase alias input");
+check(bridgeInfoValuesCamelAliasSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-INFOVALUES-BRIDGE", "Bridge ECU info did not retain calibration_id from infoValues camelCase alias input");
+check(bridgeInfoValuesCamelAliasSnapshot.supportInfoTypesCaptured === true, "Bridge ECU info did not mark supported info types from infoValues camelCase alias input");
+const bridgeEcuInfoItemsCamelAliasSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    capturedAt: "2026-06-28T00:01:53Z",
+    ecuInfoItems: [
+      { itemId: "calibration_id", infoType: "04", decodedValue: "CAL-ECUINFOITEMS-BRIDGE" },
+      { itemId: "ecu_name", infoType: "0A", rawValue: "Steering ECU" }
+    ]
+  }
+});
+check(bridgeEcuInfoItemsCamelAliasSnapshot.itemCount === 2, "Bridge ECU info did not accept ecuInfoItems camelCase alias input");
+check(bridgeEcuInfoItemsCamelAliasSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-ECUINFOITEMS-BRIDGE", "Bridge ECU info did not retain calibration_id from ecuInfoItems camelCase alias input");
+check(bridgeEcuInfoItemsCamelAliasSnapshot.items.find((item) => item.id === "ecu_name")?.value === "Steering ECU", "Bridge ECU info did not retain ECU name from ecuInfoItems camelCase alias input");
 const ecuInfoSnapshotAlias = obd.normalizeEcuInfoSnapshot({
   source: "diagnostic_core",
   items: [
@@ -616,6 +692,27 @@ const ecuInfoSnapshotExtendedAliases = obd.normalizeEcuInfoSnapshot({
 check(ecuInfoSnapshotExtendedAliases.itemCount === 5, "Extended ECU info alias fields were not normalized");
 check(ecuInfoSnapshotExtendedAliases.items.find((item) => item.id === "calibration_id")?.value === "CAL-ALIAS", "Extended ECU info alias CALID was not retained");
 check(ecuInfoSnapshotExtendedAliases.items.find((item) => item.id === "ecu_name")?.value === "ABS ECU", "Extended ECU info alias ECU name was not retained");
+const ecuInfoSnapshotCamelObjectAliases = obd.normalizeEcuInfoSnapshot({
+  source: "diagnostic_core",
+  supportedInfoTypes: "55 60 00 00",
+  vinValue: "JTDKN3DU0A0123456",
+  calibrationId: "CAL-CAMEL",
+  calibrationVerificationNumber: "CVN-CAMEL",
+  ecuName: "Battery Camel ECU"
+});
+check(ecuInfoSnapshotCamelObjectAliases.itemCount === 5, "CamelCase ECU info object aliases were not normalized");
+check(ecuInfoSnapshotCamelObjectAliases.items.find((item) => item.id === "calibration_id")?.value === "CAL-CAMEL", "CamelCase ECU info object CALID was not retained");
+check(ecuInfoSnapshotCamelObjectAliases.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-CAMEL", "CamelCase ECU info object CVN was not retained");
+check(ecuInfoSnapshotCamelObjectAliases.items.find((item) => item.id === "ecu_name")?.value === "Battery Camel ECU", "CamelCase ECU info object ECU name was not retained");
+const ecuInfoSnapshotCamelItemsAlias = obd.normalizeEcuInfoSnapshot({
+  ecuInfo: [
+    { itemId: "calibration_id", infoType: "04", decodedValue: "CAL-ECUINFO-CAMEL" },
+    { itemId: "ecu_name", infoType: "0A", rawValue: "Body Camel ECU" }
+  ]
+});
+check(ecuInfoSnapshotCamelItemsAlias.itemCount === 2, "CamelCase ecuInfo row aliases were not normalized");
+check(ecuInfoSnapshotCamelItemsAlias.items.find((item) => item.id === "calibration_id")?.value === "CAL-ECUINFO-CAMEL", "CamelCase ecuInfo row CALID was not retained");
+check(ecuInfoSnapshotCamelItemsAlias.items.find((item) => item.id === "ecu_name")?.value === "Body Camel ECU", "CamelCase ecuInfo row ECU name was not retained");
 const ecuInfoSnapshotInfoValuesAlias = obd.normalizeEcuInfoSnapshot({
   info_values: [
     { info_type: "02", value: "JTDKN3DU0A0123456" },
@@ -1206,6 +1303,24 @@ check(decodedScanSessionSnapshotSet.onboardMonitorSnapshot.failedCount === 1, "D
 check(decodedScanSessionSnapshotSet.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Decoded OBD session did not accept ecu_info_snapshot alias input");
 check(decodedScanSessionSnapshotSet.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept supported_pid_matrix alias input");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
+const decodedScanSessionEcuInfoCamelAlias = obd.buildDecodedObdScanSession({
+  session_id: "decoded-ecuinfo-camel-alias-test",
+  ecuInfo: [
+    { itemId: "calibration_id", infoType: "04", decodedValue: "CAL-DECODED-CAMEL" },
+    { itemId: "ecu_name", infoType: "0A", rawValue: "Decoded Camel ECU" }
+  ]
+});
+check(decodedScanSessionEcuInfoCamelAlias.ecuInfoSnapshot.itemCount === 2, "Decoded OBD session did not accept ecuInfo camelCase alias input");
+check(decodedScanSessionEcuInfoCamelAlias.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-DECODED-CAMEL", "Decoded OBD session did not retain calibration_id from ecuInfo camelCase alias input");
+const decodedScanSessionEcuInfoItemsCamelAlias = obd.buildDecodedObdScanSession({
+  session_id: "decoded-ecuinfoitems-camel-alias-test",
+  ecuInfoItems: [
+    { itemId: "calibration_verification_number", infoType: "06", decodedValue: "CVN-DECODED-CAMEL" },
+    { itemId: "ecu_name", infoType: "0A", rawValue: "Decoded Items Camel ECU" }
+  ]
+});
+check(decodedScanSessionEcuInfoItemsCamelAlias.ecuInfoSnapshot.itemCount === 2, "Decoded OBD session did not accept ecuInfoItems camelCase alias input");
+check(decodedScanSessionEcuInfoItemsCamelAlias.ecuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-DECODED-CAMEL", "Decoded OBD session did not retain CVN from ecuInfoItems camelCase alias input");
 const rawPidScanSession = obd.buildDecodedObdScanSession({
   session_id: "raw-pid-session",
   livePidResponse: { raw: "41 75 01 90 41 0D 28" },
@@ -1429,6 +1544,24 @@ check(scanSessionSnapshotAliases.readinessSnapshot.incompleteCount === 1, "Diagn
 check(scanSessionSnapshotAliases.onboardMonitorSnapshot.failedCount === 1, "Diagnostic scan session did not accept onboard_monitor_snapshot alias input");
 check(scanSessionSnapshotAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept ecu_info_snapshot alias input");
 check(scanSessionSnapshotAliases.supportedPidMatrix.supportedPids.includes("05"), "Diagnostic scan session did not accept supported_pid_matrix alias input");
+const scanSessionEcuInfoCamelAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-ecuinfo-camel",
+  ecuInfo: [
+    { itemId: "calibration_id", infoType: "04", decodedValue: "CAL-SCAN-CAMEL" },
+    { itemId: "ecu_name", infoType: "0A", rawValue: "Scan Camel ECU" }
+  ]
+});
+check(scanSessionEcuInfoCamelAliases.ecuInfoSnapshot.itemCount === 2, "Diagnostic scan session did not accept ecuInfo camelCase alias input");
+check(scanSessionEcuInfoCamelAliases.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-SCAN-CAMEL", "Diagnostic scan session did not retain calibration_id from ecuInfo camelCase alias input");
+const scanSessionEcuInfoItemsCamelAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-ecuinfoitems-camel",
+  ecuInfoItems: [
+    { itemId: "calibration_verification_number", infoType: "06", decodedValue: "CVN-SCAN-CAMEL" },
+    { itemId: "ecu_name", infoType: "0A", rawValue: "Scan Items Camel ECU" }
+  ]
+});
+check(scanSessionEcuInfoItemsCamelAliases.ecuInfoSnapshot.itemCount === 2, "Diagnostic scan session did not accept ecuInfoItems camelCase alias input");
+check(scanSessionEcuInfoItemsCamelAliases.ecuInfoSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-SCAN-CAMEL", "Diagnostic scan session did not retain CVN from ecuInfoItems camelCase alias input");
 const scanSessionEcuResponseAlias = obd.buildDiagnosticScanSession({
   session_id: "shop-test-ecu-response-alias",
   dtc_snapshot: bridgeDtcSnapshot,

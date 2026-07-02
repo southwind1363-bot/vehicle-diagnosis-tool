@@ -446,6 +446,26 @@
         </div>
 
         <p id="obdCapabilityText" class="data-status">車両接続機能の対応状況を確認しています。</p>
+        <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdAccessGateTitle">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">ACCESS CONTROL</p>
+              <h3 id="obdAccessGateTitle">OBD2車両読取の画面ロック</h3>
+            </div>
+            <span id="obdAccessModeBadge" class="confidence-badge">ロック中</span>
+          </div>
+          <div class="obd-dev-gate">
+            <label>
+              パスワード
+              <input id="obdAccessPasswordInput" type="password" autocomplete="current-password" placeholder="パスワードを入力">
+            </label>
+            <button id="obdAccessUnlockButton" class="secondary-button" type="button">画面を開く</button>
+            <button id="obdAccessLockButton" class="secondary-button" type="button" disabled>ロック</button>
+          </div>
+          <p id="obdAccessStatus" class="data-status">実車テスト中は、パスワードを知っている端末だけ OBD2 読取画面を開けます。</p>
+        </section>
+
+        <div id="obdAccessProtected" hidden>
 
         <section class="obd-operation-panel" aria-labelledby="obdProgressTitle">
           <div class="obd-result-heading">
@@ -637,6 +657,7 @@
             <li>初期段階は標準ライブデータの読取だけを先行し、消去、学習、作動要求、書込みは確認操作、前提条件、ログ、失敗時復旧を揃えてから有効化する</li>
           </ul>
         </details>
+        </div>
       </section>
     </section>
   </main>
