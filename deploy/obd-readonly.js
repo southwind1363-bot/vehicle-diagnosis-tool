@@ -802,9 +802,9 @@
     const data = response && typeof response === "object" ? response.data || response : {};
     const safety = readBridgeResponseSafety(response);
     const status = String(data.status || "not_connected");
-    const paired = data.paired === true;
-    const vciConnected = data.vci_connected === true || data.vciConnected === true;
-    const vehicleConnected = data.vehicle_connected === true || data.vehicleConnected === true;
+    const paired = data.paired === true || data.is_paired === true || data.isPaired === true;
+    const vciConnected = data.vci_connected === true || data.vciConnected === true || data.vci_ready === true || data.vciReady === true;
+    const vehicleConnected = data.vehicle_connected === true || data.vehicleConnected === true || data.car_connected === true || data.carConnected === true;
     let displayStatus = "準備中";
     let nextAction = "ローカルブリッジを起動しても、この画面からはまだ車両へ送信しません。";
 
@@ -849,8 +849,14 @@
   function normalizeBridgeVciList(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const safety = readBridgeResponseSafety(response);
-    const devices = Array.isArray(data.devices) ? data.devices : Array.isArray(data.vci_devices) ? data.vci_devices : [];
-    const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || null;
+    const devices = Array.isArray(data.devices)
+      ? data.devices
+      : Array.isArray(data.vci_devices)
+        ? data.vci_devices
+        : Array.isArray(data.items)
+          ? data.items
+          : [];
+    const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
     const normalizedDevices = devices.map((device, index) => {
       const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
       return {
@@ -858,7 +864,7 @@
         label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
         vendor: device?.vendor ? String(device.vendor).slice(0, 80) : null,
         driverStatus: device?.driver_status || device?.driverStatus || data.driver_status || data.driverStatus || "unknown",
-        connected: device?.connected === true,
+        connected: device?.connected === true || device?.is_connected === true || device?.isConnected === true,
         selected: selectedDeviceId ? id === selectedDeviceId : index === 0 && devices.length === 1,
         supportNote: "VCI識別情報は表示用に最小化し、シリアル番号などの生識別子は保持しません。"
       };
@@ -889,9 +895,9 @@
       ok: safety.ok,
       blocked: safety.blocked,
       wouldTransmit: safety.wouldTransmit,
-      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : data.name ? String(data.name).slice(0, 80) : null,
+      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : data.name ? String(data.name).slice(0, 80) : data.adapter ? String(data.adapter).slice(0, 80) : null,
       adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : data.family ? String(data.family).slice(0, 80) : null,
-      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : null,
+      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : data.version ? String(data.version).slice(0, 80) : null,
       vehicleCommandEnabled: false,
       retainedRawText: false
     };

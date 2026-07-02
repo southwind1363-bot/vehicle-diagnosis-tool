@@ -193,6 +193,19 @@ const bridgeStatusAliases = obd.normalizeBridgeConnectionStatus({
   }
 });
 check(bridgeStatusAliases.bridgeVersion === "0.2.0" && bridgeStatusAliases.vciConnected === true && bridgeStatusAliases.vehicleConnected === true, "Bridge connection status aliases were not normalized");
+const bridgeStatusExtendedAliases = obd.normalizeBridgeConnectionStatus({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    bridgeVersion: "0.2.1",
+    status: "ready",
+    is_paired: true,
+    vci_ready: true,
+    car_connected: true
+  }
+});
+check(bridgeStatusExtendedAliases.paired === true && bridgeStatusExtendedAliases.vciConnected === true && bridgeStatusExtendedAliases.vehicleConnected === true, "Extended bridge connection status aliases were not normalized");
 const bridgeVciList = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,
@@ -222,6 +235,19 @@ const bridgeVciListAliases = obd.normalizeBridgeVciList({
   }
 });
 check(bridgeVciListAliases.deviceCount === 1 && bridgeVciListAliases.devices[0].selected === true && bridgeVciListAliases.devices[0].driverStatus === "ready", "Bridge VCI list aliases were not normalized");
+const bridgeVciListExtendedAliases = obd.normalizeBridgeVciList({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    items: [
+      { deviceId: "item-vci", name: "Item VCI", isConnected: true }
+    ],
+    selectedVciId: "item-vci",
+    driver_status: "ready"
+  }
+});
+check(bridgeVciListExtendedAliases.deviceCount === 1 && bridgeVciListExtendedAliases.devices[0].connected === true && bridgeVciListExtendedAliases.devices[0].selected === true, "Extended bridge VCI list aliases were not normalized");
 const bridgeAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,
@@ -248,6 +274,17 @@ const bridgeAdapterIdentityAliases = obd.normalizeBridgeAdapterIdentity({
   }
 });
 check(bridgeAdapterIdentityAliases.adapterFamily === "j2534" && bridgeAdapterIdentityAliases.firmwareVersion === "2.0", "Bridge adapter identity aliases were not normalized");
+const bridgeAdapterIdentityExtendedAliases = obd.normalizeBridgeAdapterIdentity({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    adapter: "VCI Adapter",
+    family: "canfd",
+    version: "3.1"
+  }
+});
+check(bridgeAdapterIdentityExtendedAliases.adapterName === "VCI Adapter" && bridgeAdapterIdentityExtendedAliases.firmwareVersion === "3.1", "Extended bridge adapter identity aliases were not normalized");
 const blockedBridgeResponse = obd.createLocalBridgeBlockedResponse("read_stored_dtc");
 check(blockedBridgeResponse.ok === false && blockedBridgeResponse.blocked === true && blockedBridgeResponse.would_transmit === false, "ブリッジ遮断レスポンスが安全側ではありません");
 check(Array.isArray(blockedBridgeResponse.data.dtcs) && blockedBridgeResponse.data.dtcs.length === 0, "遮断時DTCレスポンスが空データになっていません");
