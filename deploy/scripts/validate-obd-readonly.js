@@ -149,6 +149,8 @@ const blockedBridgeRead = obd.evaluateLocalBridgeRequest({ request_id: "test", a
 check(blockedBridgeRead.blocked === true && blockedBridgeRead.wouldTransmit === false && blockedBridgeRead.knownReadIntent === true, "ローカルブリッジ読取Intentが安全に停止していません");
 const blockedBridgeClear = obd.evaluateLocalBridgeRequest({ request_id: "test", api_version: "v1", intent: "clear_dtc", timestamp: "2026-06-28T00:00:00Z", pairing_token: "dummy" });
 check(blockedBridgeClear.blocked === true && blockedBridgeClear.wouldTransmit === false && blockedBridgeClear.blockedWriteIntent === true, "ローカルブリッジ変更系Intentが安全に停止していません");
+const blockedBridgeReadAliases = obd.evaluateLocalBridgeRequest({ requestId: "test", apiVersion: "v1", intent: "read_stored_dtc", timestamp: "2026-06-28T00:00:00Z", pairingToken: "dummy" });
+check(blockedBridgeReadAliases.missingFields.length === 0 && blockedBridgeReadAliases.knownReadIntent === true, "ローカルブリッジ要求aliasを吸収できません");
 const bridgeSchemas = obd.getLocalBridgeResponseSchemas();
 check(bridgeSchemas.length >= 5, "ローカルブリッジ応答型が不足しています");
 check(bridgeSchemas.some((item) => item.intent === "bridge_status" && item.safeDefault.status === "not_connected"), "ブリッジ状態の安全な既定値がありません");

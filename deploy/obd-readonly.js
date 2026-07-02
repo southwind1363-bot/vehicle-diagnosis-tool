@@ -2909,10 +2909,17 @@
   }
 
   function evaluateLocalBridgeRequest(request = {}) {
-    const intent = String(request.intent || "").trim();
+    const normalizedRequest = {
+      request_id: request.request_id || request.requestId || null,
+      api_version: request.api_version || request.apiVersion || null,
+      intent: request.intent || null,
+      timestamp: request.timestamp || null,
+      pairing_token: request.pairing_token || request.pairingToken || null
+    };
+    const intent = String(normalizedRequest.intent || "").trim();
     const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);
     const isBlockedWrite = localBridgeContract.blockedWriteIntents.includes(intent);
-    const missingFields = localBridgeContract.requiredRequestFields.filter((field) => !request[field]);
+    const missingFields = localBridgeContract.requiredRequestFields.filter((field) => !normalizedRequest[field]);
 
     return {
       ok: false,
