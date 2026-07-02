@@ -1105,14 +1105,14 @@
 
   function normalizeBridgePidValue(row, index) {
     if (!row || typeof row !== "object") return null;
-    const id = String(row.id || row.monitor_id || row.pid || "").trim();
+    const id = String(row.id || row.monitor_id || row.monitorId || row.pid || "").trim();
     if (!id) return null;
     const definition = monitorDefinitions.find((item) => item.id === id)
       || monitorDefinitions.find((item) => item.pid === row.pid)
       || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
     const isUndecodedRaw = row.decoded === false;
-    const valueType = definition?.valueType || (typeof row.value === "string" && !NUMBER_PATTERN.test(row.value) ? "text" : "number");
+    const valueType = definition?.valueType || row.value_type || row.valueType || (typeof row.value === "string" && !NUMBER_PATTERN.test(row.value) ? "text" : "number");
     const parsedValue = valueType === "boolean" ? row.value === true : valueType === "text" || isUndecodedRaw ? String(row.value ?? "").slice(0, 160) : Number(row.value);
     if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;
     if (valueType === "text" && !parsedValue) return null;

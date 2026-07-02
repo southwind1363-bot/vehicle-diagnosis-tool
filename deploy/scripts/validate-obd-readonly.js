@@ -363,13 +363,14 @@ const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
     protocol_name: "ISO15765-4",
     supported_pid_list: "0C 05",
     monitorValues: [
-      { id: "engine_speed", value: 800, unit: "rpm" },
-      { pid: "05", value: 82, unit: "°C" }
+      { monitorId: "engine_speed", value: 800, unit: "rpm" },
+      { pid: "05", value: 82, unit: "°C", valueType: "number" }
     ],
     capturedAt: "2026-06-28T00:01:01Z"
   }
 });
 check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05" && bridgePidAliasSnapshot.protocol === "ISO15765-4" && bridgePidAliasSnapshot.capturedAt === "2026-06-28T00:01:01Z", "Bridge live PID aliases were not normalized");
+check(bridgePidAliasSnapshot.monitorValues[0]?.id === "engine_speed" && bridgePidAliasSnapshot.monitorValues[1]?.valueType === "number", "Bridge live PID row aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues.length === 2, "Bridge live PID monitor_values alias was not normalized");
 const bridgeSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   ok: true,
