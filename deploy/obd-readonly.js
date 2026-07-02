@@ -991,9 +991,17 @@
     const safety = readBridgeResponseSafety(response);
     const rows = Array.isArray(data.values)
       ? data.values
-      : Array.isArray(response.monitorValues)
-        ? response.monitorValues
-        : [
+      : Array.isArray(data.monitor_values)
+        ? data.monitor_values
+        : Array.isArray(data.monitorValues)
+          ? data.monitorValues
+          : Array.isArray(data.readiness_values)
+            ? data.readiness_values
+            : Array.isArray(data.readinessValues)
+              ? data.readinessValues
+              : Array.isArray(response.monitorValues)
+                ? response.monitorValues
+                : [
             data.mil_on !== undefined ? { id: "mil_status", value: data.mil_on } : null,
             data.milStatus !== undefined ? { id: "mil_status", value: data.milStatus } : null,
             data.readiness_status_byte_b !== undefined ? { id: "readiness_status_byte_b", value: data.readiness_status_byte_b } : null,
@@ -1094,7 +1102,11 @@
               ? data.monitor_tests
               : Array.isArray(data.monitorTests)
                 ? data.monitorTests
-              : []
+                : Array.isArray(data.onboard_monitor_tests)
+                  ? data.onboard_monitor_tests
+                  : Array.isArray(data.onboardMonitorTests)
+                    ? data.onboardMonitorTests
+                    : []
       }),
       intent: "read_onboard_monitor",
       ok: safety.ok,
@@ -1622,6 +1634,10 @@
     if (Array.isArray(input.items)) return input.items;
     if (Array.isArray(input.ecu_info)) return input.ecu_info;
     if (Array.isArray(input.ecu_info_items)) return input.ecu_info_items;
+    if (Array.isArray(input.mode09_items)) return input.mode09_items;
+    if (Array.isArray(input.mode09Items)) return input.mode09Items;
+    if (Array.isArray(input.info_values)) return input.info_values;
+    if (Array.isArray(input.infoValues)) return input.infoValues;
     if (!input || typeof input !== "object") return [];
     const aliases = [
       ["supported_info_types_00", "supported_info_types_00", "00"],
@@ -1698,15 +1714,31 @@
 
   function normalizeOnboardMonitorSnapshot(input = {}) {
     const source = input.source || "diagnostic_core";
-    const rows = Array.isArray(input.tests) ? input.tests : Array.isArray(input.values) ? input.values : [];
+    const rows = Array.isArray(input.tests)
+      ? input.tests
+      : Array.isArray(input.values)
+        ? input.values
+        : Array.isArray(input.mode06_tests)
+          ? input.mode06_tests
+          : Array.isArray(input.mode06Tests)
+            ? input.mode06Tests
+            : Array.isArray(input.monitor_tests)
+              ? input.monitor_tests
+              : Array.isArray(input.monitorTests)
+                ? input.monitorTests
+                : Array.isArray(input.onboard_monitor_tests)
+                  ? input.onboard_monitor_tests
+                  : Array.isArray(input.onboardMonitorTests)
+                    ? input.onboardMonitorTests
+                    : [];
     const tests = rows
       .map((row, index) => {
         if (!row || typeof row !== "object") return null;
-        const testId = String(row.test_id || row.testId || row.tid || row.mid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
-        const componentId = String(row.component_id || row.componentId || row.cid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
-        const value = Number(row.value);
-        const min = Number(row.min);
-        const max = Number(row.max);
+        const testId = String(row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const componentId = String(row.component_id || row.componentId || row.cid || row.component || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const value = Number(row.value ?? row.measured ?? row.measured_value ?? row.measuredValue ?? row.result ?? row.test_value ?? row.testValue);
+        const min = Number(row.min ?? row.minimum ?? row.min_value ?? row.minValue);
+        const max = Number(row.max ?? row.maximum ?? row.max_value ?? row.maxValue);
         const hasLimits = Number.isFinite(min) && Number.isFinite(max);
         const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : row.passed === true;
         if (!testId || !componentId || !Number.isFinite(value)) return null;
@@ -1739,11 +1771,12 @@
 
   function normalizeEcuInfoValue(row, index) {
     if (!row || typeof row !== "object") return null;
-    const infoType = String(row.info_type || row.infoType || "").toUpperCase();
-    const catalogItem = ecuInfoItemCatalog.find((item) => item.id === row.id || item.infoType === infoType);
-    const id = catalogItem?.id || String(row.id || `ecu_info_${index + 1}`).slice(0, 80);
+    const infoType = String(row.info_type || row.infoType || row.mode09_type || row.mode09Type || row.type || "").toUpperCase();
+    const rowId = row.id || row.item_id || row.itemId || row.mode09_id || row.mode09Id;
+    const catalogItem = ecuInfoItemCatalog.find((item) => item.id === rowId || item.infoType === infoType);
+    const id = catalogItem?.id || String(rowId || `ecu_info_${index + 1}`).slice(0, 80);
     const privacyClass = catalogItem?.privacyClass || row.privacy_class || "unknown";
-    const rawValue = row.value ?? row.text ?? row.data ?? "";
+    const rawValue = row.value ?? row.text ?? row.data ?? row.raw_value ?? row.rawValue ?? row.decoded_value ?? row.decodedValue ?? "";
     const value = privacyClass === "sensitive_identifier"
       ? maskSensitiveIdentifier(rawValue)
       : sanitizeEcuInfoValue(rawValue);
@@ -1755,7 +1788,7 @@
       service: catalogItem?.service || row.service || "09",
       infoType: catalogItem?.infoType || infoType || null,
       value,
-      valueType: catalogItem?.valueType || row.value_type || "text",
+      valueType: catalogItem?.valueType || row.value_type || row.valueType || "text",
       privacyClass,
       detected: rawValue !== null && rawValue !== undefined && String(rawValue).length > 0,
       retainedRawValue: false,

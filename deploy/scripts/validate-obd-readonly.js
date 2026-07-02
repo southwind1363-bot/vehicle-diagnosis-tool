@@ -463,6 +463,20 @@ const bridgeObjectReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   }
 });
 check(bridgeObjectReadinessSnapshot.milOn === true && bridgeObjectReadinessSnapshot.incompleteCount === 1, "Object bridge readiness fields were not normalized");
+const bridgeReadinessAliasRows = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    readinessValues: [
+      { id: "mil_status", value: true },
+      { id: "readiness_status_byte_b", value: 0x07 },
+      { id: "readiness_status_byte_c", value: 0x22 },
+      { id: "readiness_status_byte_d", value: 0x00 }
+    ]
+  }
+});
+check(bridgeReadinessAliasRows.milOn === true && bridgeReadinessAliasRows.incompleteCount === 1, "Bridge readiness row aliases were not normalized");
 const bridgeEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
@@ -520,6 +534,19 @@ const bridgeObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
 check(bridgeObjectEcuInfoSnapshot.itemCount === 4, "Bridge object ECU info fields were not normalized");
 check(bridgeObjectEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-OBJECT", "Bridge object ECU info did not retain CALID");
 check(bridgeObjectEcuInfoSnapshot.supportInfoTypesCaptured === true, "Bridge object ECU info did not mark supported info types as captured");
+const bridgeMode09AliasItems = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mode09Items: [
+      { item_id: "calibration_id", mode09_type: "04", decodedValue: "CAL-MODE09" },
+      { itemId: "ecu_name", mode09Type: "0A", rawValue: "Body ECU" }
+    ]
+  }
+});
+check(bridgeMode09AliasItems.itemCount === 2, "Bridge Mode09 item aliases were not normalized");
+check(bridgeMode09AliasItems.items.find((item) => item.id === "calibration_id")?.value === "CAL-MODE09", "Bridge Mode09 alias CALID was not retained");
 const ecuInfoSnapshotAlias = obd.normalizeEcuInfoSnapshot({
   source: "diagnostic_core",
   items: [
@@ -575,6 +602,17 @@ const bridgeAliasOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnaps
   }
 });
 check(bridgeAliasOnboardMonitorSnapshot.testCount === 1, "Bridge Mode 06 alias tests were not normalized");
+const bridgeOnboardMonitorExtendedAliases = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    onboardMonitorTests: [
+      { monitorId: "03", component: "02", measuredValue: 75, minimum: 50, maximum: 100 }
+    ]
+  }
+});
+check(bridgeOnboardMonitorExtendedAliases.testCount === 1 && bridgeOnboardMonitorExtendedAliases.failedCount === 0, "Bridge Mode 06 extended aliases were not normalized");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");
