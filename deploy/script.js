@@ -43,7 +43,13 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.349.1";
+const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
+  "user-vci-elm327": "web_serial_obd",
+  "user-vci-techstream-j2534": "j2534_passthru",
+  "user-vci-thinkcar-bluetooth": "local_bridge",
+  "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
+});
+const APP_VERSION = "2.350.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2231,7 +2237,8 @@ function getInterfaceProgressState(interfaceId) {
 }
 
 function getInterfaceCatalogDisplayState(item) {
-  const progress = getInterfaceProgressState(item?.id);
+  const mappedInterfaceId = OBD_INTERFACE_PROGRESS_BY_CATALOG_ID[item?.id];
+  const progress = mappedInterfaceId ? getInterfaceProgressState(mappedInterfaceId) : getInterfaceProgressState(item?.id);
   return {
     ...item,
     progressPercent: Number.isFinite(progress?.progressPercent) ? progress.progressPercent : item?.progressPercent || 0,
@@ -2253,6 +2260,24 @@ function getCapabilityDisplayItems(items = []) {
       missing: snapshot.missingLabels,
       next_build: snapshot.nextBuild,
       eta_target: snapshot.etaTarget
+    };
+  });
+}
+
+function getCoverageRoadmapDisplayItems(items = []) {
+  return items.map((item) => {
+    if (item?.id !== "coverage-live-data-and-active-test") return item;
+    const snapshot = buildLocalBridgeImplementationSnapshot();
+    return {
+      ...item,
+      progress_percent: Math.max(normalizeProgressPercent(item.progress_percent) || 0, snapshot.progressPercent || 0),
+      current_state: "read-only 実装を優先して拡張中",
+      current_count_note: `実装根拠 ${snapshot.modelDone || 0}/${snapshot.modelTotal || 0} / VCI候補 ${snapshot.driverDone || 0}/${snapshot.driverTotal || 0}`,
+      next_actions: Array.isArray(snapshot.missingLabels) && snapshot.missingLabels.length
+        ? snapshot.missingLabels.slice(0, 3)
+        : item.next_actions,
+      eta_target: snapshot.etaTarget || item.eta_target,
+      source: "ローカルブリッジ実装スナップショット"
     };
   });
 }
@@ -2359,7 +2384,7 @@ function renderObdProgressOverview() {
   const interfaceCatalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
   const interfaceCatalogStates = interfaceCatalog.map((item) => getInterfaceCatalogDisplayState(item));
   const capabilityItems = getCapabilityDisplayItems(dataStore.diagnosticCapabilityStatus || []);
-  const coverageItems = dataStore.diagnosticCoverageRoadmap || [];
+  const coverageItems = getCoverageRoadmapDisplayItems(dataStore.diagnosticCoverageRoadmap || []);
   const readoutCapabilityIds = new Set([
     "capability-generic-obd2-dtc",
     "capability-live-data",
@@ -3460,8 +3485,9 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
 
 function renderObdCoverageRoadmap(items) {
   obdCoverageRoadmapGrid.innerHTML = "";
+  const displayItems = getCoverageRoadmapDisplayItems(items);
 
-  if (!items.length) {
+  if (!displayItems.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
     empty.textContent = "診断データ網羅計画を取得できませんでした。";
@@ -3469,7 +3495,7 @@ function renderObdCoverageRoadmap(items) {
     return;
   }
 
-  [...items].sort((a, b) => (a.priority || 99) - (b.priority || 99)).forEach((item) => {
+  [...displayItems].sort((a, b) => (a.priority || 99) - (b.priority || 99)).forEach((item) => {
     const card = document.createElement("article");
     card.className = "obd-interface-card";
 

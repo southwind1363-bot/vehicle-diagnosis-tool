@@ -435,6 +435,12 @@ const bridgeTextSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   }
 });
 check(bridgeTextSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "Text bridge supported PID list was not normalized");
+const supportedPidMatrixAliasInputs = obd.buildSupportedPidMatrix({
+  supported_pids: ["0c", "05", "40"],
+  captured_at: "2026-06-28T00:01:30Z"
+});
+check(supportedPidMatrixAliasInputs.supportedPids.join(",") === "0C,05,40", "Supported PID matrix did not accept supported_pids alias input");
+check(supportedPidMatrixAliasInputs.capturedAt === "2026-06-28T00:01:30Z", "Supported PID matrix did not accept captured_at alias input");
 const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
@@ -732,6 +738,14 @@ check(bridgeSummarySnapshotAliases.freezeFrameSnapshot.triggerDtc === "P0171", "
 check(bridgeSummarySnapshotAliases.readinessSnapshot.incompleteCount === 1, "Bridge session summary did not accept readiness_snapshot alias input");
 check(bridgeSummarySnapshotAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge session summary did not accept ecu_info_snapshot alias input");
 check(bridgeSummarySnapshotAliases.onboardMonitorSnapshot.failedCount === 1, "Bridge session summary did not accept onboard_monitor_snapshot alias input");
+const bridgeSummaryResponseAliases = obd.buildBridgeSessionSummary({
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_response: bridgeFreezeFrameSnapshot,
+  supported_pid_snapshot: bridgeSupportedPidSnapshot
+});
+check(bridgeSummaryResponseAliases.freezeFrameSnapshot.triggerDtc === "P0171", "Bridge session summary did not accept freeze_frame_response alias input");
+check(bridgeSummaryResponseAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge session summary did not accept supported_pid_snapshot alias input");
 const bridgeExportPayload = obd.buildBridgeSessionExportPayload({
   connectionStatus: bridgeStatus,
   vciList: bridgeVciList,
@@ -777,22 +791,44 @@ const bridgeExportSummaryAliases = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:08:00Z",
   dtc_codes: ["P0171"],
   monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 650, unit: "rpm", valueType: "number", decoded: true }],
+  monitor_value_summary: { totalCount: 1, decodedCount: 1, undecodedRawCount: 0, numericCount: 1, textCount: 0 },
   monitor_insights: [{ id: "engine_speed_high", severity: "info" }],
-  connection_status: bridgeStatus,
-  vci_devices: bridgeVciList.devices,
+  warnings: ["freeze_frame_available", "freeze_frame_available"],
+  connection_status: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+  },
+  vci_list: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { items: [{ deviceId: "summary-export-vci", name: "Summary Export VCI", isConnected: true }], selectedVciId: "summary-export-vci" }
+  },
   adapter_identity: bridgeAdapterIdentity,
-  supported_pid_matrix: bridgeSupportedPidSnapshot,
-  readiness_snapshot: bridgeReadinessSnapshot,
-  ecu_info_snapshot: bridgeEcuInfoSnapshot,
-  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_snapshot: bridgeSupportedPidSnapshot,
+  readiness_response: bridgeReadinessSnapshot,
+  ecu_info_response: bridgeEcuInfoSnapshot,
+  onboard_monitor_response: bridgeOnboardMonitorSnapshot,
   readout_coverage: bridgeSummary.readoutCoverage,
-  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  freeze_frame_response: bridgeFreezeFrameSnapshot,
   ecu_response_summary: bridgeSummary.ecuResponseSummary
 });
 check(bridgeExportSummaryAliases.session.captured_at === "2026-06-28T00:08:00Z", "Bridge export did not accept captured_at summary alias input");
 check(bridgeExportSummaryAliases.session.dtc_codes[0] === "P0171", "Bridge export did not accept dtc_codes summary alias input");
 check(bridgeExportSummaryAliases.session.monitor_values[0]?.id === "engine_speed", "Bridge export did not accept monitor_values summary alias input");
+check(bridgeExportSummaryAliases.session.monitor_value_summary.totalCount === 1, "Bridge export did not accept monitor_value_summary summary alias input");
+check(bridgeExportSummaryAliases.session.monitor_insights[0]?.id === "engine_speed_high", "Bridge export did not accept monitor_insights summary alias input");
+check(bridgeExportSummaryAliases.session.warnings.length === 1 && bridgeExportSummaryAliases.session.warnings[0] === "freeze_frame_available", "Bridge export did not deduplicate warnings summary alias input");
+check(bridgeExportSummaryAliases.session.connection_status.paired === true && bridgeExportSummaryAliases.session.connection_status.vehicleConnected === true, "Bridge export did not normalize connection_status summary alias input");
+check(bridgeExportSummaryAliases.session.vci_devices[0]?.id === "summary-export-vci", "Bridge export did not accept vci_list summary alias input");
 check(bridgeExportSummaryAliases.session.adapter_identity.adapterFamily === "elm327", "Bridge export did not accept adapter_identity summary alias input");
+check(bridgeExportSummaryAliases.session.supported_pid_matrix.supportedPids.includes("40"), "Bridge export did not accept supported_pid_snapshot summary alias input");
+check(bridgeExportSummaryAliases.session.freeze_frame_snapshot.triggerDtc === "P0171", "Bridge export did not accept freeze_frame_response summary alias input");
+check(bridgeExportSummaryAliases.session.readiness_snapshot.incompleteCount === 1, "Bridge export did not accept readiness_response summary alias input");
+check(bridgeExportSummaryAliases.session.ecu_info_snapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge export did not accept ecu_info_response summary alias input");
+check(bridgeExportSummaryAliases.session.onboard_monitor_snapshot.failedCount === 1, "Bridge export did not accept onboard_monitor_response summary alias input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   connectionStatus: bridgeStatus,
   vciList: bridgeVciList,
@@ -831,22 +867,44 @@ const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
   protocol: "ISO15765-4",
   dtc_codes: ["P0171"],
   monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 650, unit: "rpm", valueType: "number", decoded: true }],
+  monitor_value_summary: { totalCount: 1, decodedCount: 1, undecodedRawCount: 0, numericCount: 1, textCount: 0 },
   monitor_insights: [{ id: "engine_speed_high", severity: "info" }],
-  connection_status: bridgeStatus,
-  vci_devices: bridgeVciList.devices,
+  warnings: ["freeze_frame_available", "freeze_frame_available"],
+  connection_status: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+  },
+  vci_list: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { items: [{ deviceId: "summary-import-vci", name: "Summary Import VCI", isConnected: true }], selectedVciId: "summary-import-vci" }
+  },
   adapter_identity: bridgeAdapterIdentity,
-  supported_pid_matrix: bridgeSupportedPidSnapshot,
-  readiness_snapshot: bridgeReadinessSnapshot,
-  ecu_info_snapshot: bridgeEcuInfoSnapshot,
-  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_snapshot: bridgeSupportedPidSnapshot,
+  readiness_response: bridgeReadinessSnapshot,
+  ecu_info_response: bridgeEcuInfoSnapshot,
+  onboard_monitor_response: bridgeOnboardMonitorSnapshot,
   readout_coverage: bridgeSummary.readoutCoverage,
-  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  freeze_frame_response: bridgeFreezeFrameSnapshot,
   ecu_response_summary: bridgeSummary.ecuResponseSummary
 });
 check(bridgeDiagnosticImportAliases.capturedAt === "2026-06-28T00:09:00Z", "Bridge diagnostic import did not accept captured_at summary alias input");
 check(bridgeDiagnosticImportAliases.codes[0] === "P0171", "Bridge diagnostic import did not accept dtc_codes summary alias input");
 check(bridgeDiagnosticImportAliases.monitorValues[0]?.id === "engine_speed", "Bridge diagnostic import did not accept monitor_values summary alias input");
+check(bridgeDiagnosticImportAliases.monitorInsights[0]?.id === "engine_speed_high", "Bridge diagnostic import did not accept monitor_insights summary alias input");
+check(bridgeDiagnosticImportAliases.exportPayload.session.monitor_value_summary.totalCount === 1, "Bridge diagnostic import did not accept monitor_value_summary summary alias input");
+check(bridgeDiagnosticImportAliases.bridgeSession.warnings.length === 1 && bridgeDiagnosticImportAliases.bridgeSession.warnings[0] === "freeze_frame_available", "Bridge diagnostic import did not deduplicate warnings summary alias input");
+check(bridgeDiagnosticImportAliases.bridgeSession.connectionStatus.paired === true && bridgeDiagnosticImportAliases.bridgeSession.connectionStatus.vehicleConnected === true, "Bridge diagnostic import did not normalize connection_status summary alias input");
 check(bridgeDiagnosticImportAliases.bridgeSession.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not accept adapter_identity summary alias input");
+check(bridgeDiagnosticImportAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge diagnostic import did not accept supported_pid_snapshot summary alias input");
+check(bridgeDiagnosticImportAliases.freezeFrameSnapshot.triggerDtc === "P0171", "Bridge diagnostic import did not accept freeze_frame_response summary alias input");
+check(bridgeDiagnosticImportAliases.bridgeSession.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not accept vci_list summary alias input");
+check(bridgeDiagnosticImportAliases.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not accept readiness_response summary alias input");
+check(bridgeDiagnosticImportAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not accept ecu_info_response summary alias input");
+check(bridgeDiagnosticImportAliases.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not accept onboard_monitor_response summary alias input");
 const mergedDiagnosticInput = obd.mergeDiagnosticInputs({
   scannerText: [
     "P0171 JTDKN3DU0A0123456",
@@ -881,28 +939,49 @@ const mergedDiagnosticInputAliases = obd.mergeDiagnosticInputs({
     "P0171 JTDKN3DU0A0123456",
     "Engine RPM: 650 rpm"
   ].join("\n"),
-  bridge_import: bridgeDiagnosticImportAliases
+  bridge_import: bridgeDiagnosticImport
 });
 check(mergedDiagnosticInputAliases.codes.includes("P0171"), "Combined diagnostic inputs did not accept scanner_text alias input");
 check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_import alias input");
+check(mergedDiagnosticInputAliases.monitorInsights.length > 0, "Combined diagnostic inputs did not rebuild monitor insights from bridge_import alias input");
+const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_parts: {
+    dtc_snapshot: bridgeDtcSnapshot,
+    live_pid_snapshot: bridgePidSnapshot,
+    freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+    readiness_snapshot: bridgeReadinessSnapshot,
+    ecu_info_snapshot: bridgeEcuInfoSnapshot,
+    onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+    supported_pid_matrix: bridgeSupportedPidSnapshot,
+    connection_status: bridgeStatus,
+    vci_devices: bridgeVciList.devices,
+    adapter_identity: bridgeAdapterIdentity,
+    ecu_response_summary: bridgeSummary.ecuResponseSummary
+  }
+});
+check(mergedDiagnosticInputBridgeParts.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_parts alias input");
+check(mergedDiagnosticInputBridgeParts.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from bridge_parts alias input");
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
 check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
 check(emptyReadoutCoverage.capturedCategories === 0 && emptyReadoutCoverage.emptyCategories === 0, "Empty readout coverage counted missing data as captured or empty");
 check(emptyReadoutCoverage.missingLabels.includes("ECU情報") && emptyReadoutCoverage.missingLabels.includes("Mode06"), "Empty readout coverage missing labels are incomplete");
 const aliasReadoutCoverage = obd.buildReadoutCoverageSnapshot({
   connection_status: bridgeStatus,
-  vci_devices: bridgeVciList.devices,
+  vci_list: bridgeVciList,
   adapter_identity: bridgeAdapterIdentity,
   dtc_snapshot: bridgeDtcSnapshot,
   live_pid_snapshot: bridgePidSnapshot,
-  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
-  readiness_snapshot: bridgeReadinessSnapshot,
-  ecu_info_snapshot: bridgeEcuInfoSnapshot,
-  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
-  supported_pid_matrix: bridgeSupportedPidSnapshot
+  freeze_frame_response: bridgeFreezeFrameSnapshot,
+  readiness_response: bridgeReadinessSnapshot,
+  ecu_info_response: bridgeEcuInfoSnapshot,
+  onboard_monitor_response: bridgeOnboardMonitorSnapshot,
+  supported_pid_snapshot: bridgeSupportedPidSnapshot
 });
 check(aliasReadoutCoverage.progressPercent >= 80, "Readout coverage did not accept snake_case alias inputs");
-check(aliasReadoutCoverage.items.some((item) => item.id === "vci_devices" && item.count === 1), "Readout coverage did not count vci_devices alias input");
+check(aliasReadoutCoverage.items.some((item) => item.id === "vci_devices" && item.count === 1), "Readout coverage did not count vci_list alias input");
+check(aliasReadoutCoverage.items.some((item) => item.id === "freeze_frame_snapshot" && item.count === 2), "Readout coverage did not accept freeze_frame_response alias input");
+check(aliasReadoutCoverage.items.some((item) => item.id === "supported_pid_matrix" && item.count >= 2), "Readout coverage did not accept supported_pid_snapshot alias input");
 const populatedScanSession = obd.buildDiagnosticScanSession({
   session_id: "coverage-check",
   dtcSnapshot: bridgeDtcSnapshot,
@@ -1080,6 +1159,9 @@ check(decodedScanSession.onboardMonitorSnapshot.testCount === 1, "デコード�
 check(decodedScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "デコード済みOBDセッションへECU情報を統合できません");
 const decodedScanSessionAliasInputs = obd.buildDecodedObdScanSession({
   session_id: "decoded-alias-test",
+  started_at: "2026-06-28T00:12:00Z",
+  ended_at: "2026-06-28T00:13:00Z",
+  vehicle_profile: { maker: "Toyota", model: "Prius" },
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
   pending_dtc_response: { raw: "47 01 71 00 00" },
   permanent_dtc_response: { raw: "4A 03 00 00 00" },
@@ -1093,6 +1175,14 @@ const decodedScanSessionAliasInputs = obd.buildDecodedObdScanSession({
 check(decodedScanSessionAliasInputs.dtcSnapshot.codes.includes("P0171"), "Decoded OBD session did not accept stored_dtc_response alias input");
 check(decodedScanSessionAliasInputs.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept supported_pid_response alias input");
 check(decodedScanSessionAliasInputs.onboardMonitorSnapshot.testCount === 1, "Decoded OBD session did not accept onboard_monitor_response alias input");
+check(decodedScanSessionAliasInputs.startedAt === "2026-06-28T00:12:00Z" && decodedScanSessionAliasInputs.endedAt === "2026-06-28T00:13:00Z", "Decoded OBD session did not accept started_at or ended_at alias input");
+check(decodedScanSessionAliasInputs.vehicleProfile?.model === "Prius", "Decoded OBD session did not accept vehicle_profile alias input");
+const decodedScanSessionEcuResponsesAlias = obd.buildDecodedObdScanSession({
+  session_id: "decoded-ecu-responses-alias-test",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  ecu_responses: [{ ecu: "7E8", status: "ok", dtcs: ["P0171"] }]
+});
+check(decodedScanSessionEcuResponsesAlias.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Decoded OBD session did not accept ecu_responses alias input");
 const decodedScanSessionSnapshotAlias = obd.buildDecodedObdScanSession({
   session_id: "decoded-snapshot-alias-test",
   dtc_snapshot: bridgeDtcSnapshot,
@@ -1200,6 +1290,15 @@ check(textScanSession.readinessSnapshot.milOn === true, "OBD text scan session d
 check(textScanSession.onboardMonitorSnapshot.tests[0]?.status === "pass", "OBD text scan session did not decode Mode 06");
 check(textScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "OBD text scan session did not decode CALID");
 check(textScanSession.retainedRawText === false && textScanSession.retainedRawFrames === false && textScanSession.wouldTransmit === false, "OBD text scan session retained raw text/frames or allowed transmit");
+const textScanSessionAliasOptions = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-alias-options",
+  started_at: "2026-06-28T00:14:00Z",
+  ended_at: "2026-06-28T00:15:00Z",
+  vehicle_profile: { maker: "Toyota", model: "Corolla" },
+  protocol: "ISO15765-4"
+});
+check(textScanSessionAliasOptions.startedAt === "2026-06-28T00:14:00Z" && textScanSessionAliasOptions.endedAt === "2026-06-28T00:15:00Z", "OBD text scan session did not accept started_at or ended_at option alias input");
+check(textScanSessionAliasOptions.vehicleProfile?.model === "Corolla", "OBD text scan session did not accept vehicle_profile option alias input");
 const compactCanLog = [
   "can0 7E8#04410C1AF8",
   "(171234.123456) can0 7E8#0341057B"

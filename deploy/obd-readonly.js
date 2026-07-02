@@ -1170,15 +1170,18 @@
 
   function buildReadoutCoverageSnapshot(input = {}) {
     const connectionStatusInput = input.connectionStatus || input.connection_status || {};
-    const vciDevicesInput = input.vciDevices || input.vci_devices || [];
+    const vciDevicesInput = input.vciDevices || input.vci_devices || input.vciList || input.vci_list || [];
     const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || {};
     const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot || {};
     const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot || {};
-    const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot || {};
-    const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot || {};
-    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || {};
-    const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || {};
-    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || {};
+    const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot || input.freezeFrameResponse || input.freeze_frame_response || {};
+    const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot || input.readinessResponse || input.readiness_response || {};
+    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfoResponse || input.ecu_info_response || {};
+    const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitorResponse || input.onboard_monitor_response || {};
+    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPidSnapshot || input.supported_pid_snapshot || {};
+    const vciDevices = Array.isArray(vciDevicesInput)
+      ? vciDevicesInput
+      : (vciDevicesInput?.devices || normalizeBridgeVciList(vciDevicesInput).devices);
     const items = [
       {
         id: "connection_status",
@@ -1189,8 +1192,8 @@
       {
         id: "vci_devices",
         label: "VCI一覧",
-        available: Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0,
-        count: Array.isArray(vciDevicesInput) ? vciDevicesInput.length : 0
+        available: Array.isArray(vciDevices) && vciDevices.length > 0,
+        count: Array.isArray(vciDevices) ? vciDevices.length : 0
       },
       {
         id: "adapter_identity",
@@ -1392,6 +1395,14 @@
   }
 
   function normalizeBridgeSummaryAliases(parts = {}) {
+    const connectionStatusInput = parts.connectionStatus || parts.connection_status || {};
+    const vciDevicesInput = parts.vciDevices || parts.vci_devices || parts.vciList || parts.vci_list || [];
+    const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || {};
+    const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot;
+    const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
+    const readinessSnapshotInput = parts.readinessSnapshot || parts.readiness_snapshot || parts.readinessResponse || parts.readiness_response || parts.livePidResponse || parts.live_pid_response;
+    const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
+    const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
     return {
       source: parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,
@@ -1399,17 +1410,19 @@
       capturedAt: parts.capturedAt || parts.captured_at || null,
       protocol: parts.protocol || null,
       vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
-      connectionStatus: parts.connectionStatus || parts.connection_status || normalizeBridgeConnectionStatus(),
-      vciDevices: parts.vciDevices || parts.vci_devices || [],
-      adapterIdentity: parts.adapterIdentity || parts.adapter_identity || normalizeBridgeAdapterIdentity(),
+      connectionStatus: connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput),
+      vciDevices: Array.isArray(vciDevicesInput)
+        ? vciDevicesInput
+        : (vciDevicesInput?.devices || normalizeBridgeVciList(vciDevicesInput).devices),
+      adapterIdentity: adapterIdentityInput?.adapterName ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput),
       codes: parts.codes || parts.dtc_codes || [],
       ecuResponseSummary: parts.ecuResponseSummary || parts.ecu_response_summary || normalizeEcuResponseSummary({ source: "local_bridge" }),
-      supportedPidMatrix: parts.supportedPidMatrix || parts.supported_pid_matrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
-      readinessSnapshot: parts.readinessSnapshot || parts.readiness_snapshot || normalizeBridgeReadinessSnapshot(),
-      ecuInfoSnapshot: parts.ecuInfoSnapshot || parts.ecu_info_snapshot || normalizeBridgeEcuInfoSnapshot(),
-      onboardMonitorSnapshot: parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || normalizeBridgeOnboardMonitorSnapshot(),
+      supportedPidMatrix: supportedPidMatrixInput || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
+      readinessSnapshot: readinessSnapshotInput || normalizeBridgeReadinessSnapshot(),
+      ecuInfoSnapshot: ecuInfoSnapshotInput || normalizeBridgeEcuInfoSnapshot(),
+      onboardMonitorSnapshot: onboardMonitorSnapshotInput || normalizeBridgeOnboardMonitorSnapshot(),
       readoutCoverage: parts.readoutCoverage || parts.readout_coverage || buildReadoutCoverageSnapshot(),
-      freezeFrameSnapshot: parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || normalizeBridgeFreezeFrameSnapshot(),
+      freezeFrameSnapshot: freezeFrameSnapshotInput || normalizeBridgeFreezeFrameSnapshot(),
       monitorValues: parts.monitorValues || parts.monitor_values || [],
       monitorValueSummary: parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(parts.monitorValues || parts.monitor_values || []),
       monitorInsights: parts.monitorInsights || parts.monitor_insights || [],
@@ -2243,7 +2256,7 @@
       onboardMonitorSnapshot,
       ecuInfoSnapshot,
       supportedPidMatrix,
-      ecus: input.ecus || []
+      ecus: input.ecus || input.ecu_responses || []
     });
   }
 
