@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.343.0";
+const APP_VERSION = "2.344.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2163,22 +2163,22 @@ function buildLocalBridgeImplementationSnapshot() {
   const interfaceCatalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
 
   const modelChecks = [
-    { id: "bridge_contract", available: Boolean(contract?.connectionEnabled && contract?.vehicleCommandEnabled === false) },
-    { id: "bridge_status", available: allowedReadIntents.has("bridge_status") && schemaIntents.has("bridge_status") && typeof window.ObdReadOnly?.normalizeBridgeConnectionStatus === "function" },
-    { id: "list_vci", available: allowedReadIntents.has("list_vci") && schemaIntents.has("list_vci") && typeof window.ObdReadOnly?.normalizeBridgeVciList === "function" },
-    { id: "adapter_identity", available: allowedReadIntents.has("adapter_identity") && schemaIntents.has("adapter_identity") && typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function" },
-    { id: "read_stored_dtc", available: allowedReadIntents.has("read_stored_dtc") && schemaIntents.has("read_stored_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
-    { id: "read_pending_dtc", available: allowedReadIntents.has("read_pending_dtc") && schemaIntents.has("read_pending_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
-    { id: "read_permanent_dtc", available: allowedReadIntents.has("read_permanent_dtc") && schemaIntents.has("read_permanent_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
-    { id: "read_freeze_frame", available: allowedReadIntents.has("read_freeze_frame") && schemaIntents.has("read_freeze_frame") && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function" },
-    { id: "read_supported_pids", available: allowedReadIntents.has("read_supported_pids") && schemaIntents.has("read_supported_pids") && typeof window.ObdReadOnly?.normalizeBridgeSupportedPidSnapshot === "function" },
-    { id: "read_live_pid_snapshot", available: allowedReadIntents.has("read_live_pid_snapshot") && schemaIntents.has("read_live_pid_snapshot") && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function" },
-    { id: "readiness_snapshot", available: typeof window.ObdReadOnly?.normalizeBridgeReadinessSnapshot === "function" },
-    { id: "read_ecu_info", available: allowedReadIntents.has("read_ecu_info") && schemaIntents.has("read_ecu_info") && typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function" },
-    { id: "read_onboard_monitor", available: allowedReadIntents.has("read_onboard_monitor") && schemaIntents.has("read_onboard_monitor") && typeof window.ObdReadOnly?.normalizeBridgeOnboardMonitorSnapshot === "function" },
-    { id: "session_summary", available: typeof window.ObdReadOnly?.buildBridgeSessionSummary === "function" },
-    { id: "session_export", available: typeof window.ObdReadOnly?.buildBridgeSessionExportPayload === "function" },
-    { id: "diagnostic_import", available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function" }
+    { id: "bridge_contract", label: "read-onlyブリッジ契約", available: Boolean(contract?.connectionEnabled && contract?.vehicleCommandEnabled === false) },
+    { id: "bridge_status", label: "接続状態の表示モデル", available: allowedReadIntents.has("bridge_status") && schemaIntents.has("bridge_status") && typeof window.ObdReadOnly?.normalizeBridgeConnectionStatus === "function" },
+    { id: "list_vci", label: "VCI一覧の表示モデル", available: allowedReadIntents.has("list_vci") && schemaIntents.has("list_vci") && typeof window.ObdReadOnly?.normalizeBridgeVciList === "function" },
+    { id: "adapter_identity", label: "アダプター情報の表示モデル", available: allowedReadIntents.has("adapter_identity") && schemaIntents.has("adapter_identity") && typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function" },
+    { id: "read_stored_dtc", label: "保存DTC応答の正規化", available: allowedReadIntents.has("read_stored_dtc") && schemaIntents.has("read_stored_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
+    { id: "read_pending_dtc", label: "保留DTC応答の正規化", available: allowedReadIntents.has("read_pending_dtc") && schemaIntents.has("read_pending_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
+    { id: "read_permanent_dtc", label: "永久DTC応答の正規化", available: allowedReadIntents.has("read_permanent_dtc") && schemaIntents.has("read_permanent_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
+    { id: "read_freeze_frame", label: "フリーズフレーム応答の正規化", available: allowedReadIntents.has("read_freeze_frame") && schemaIntents.has("read_freeze_frame") && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function" },
+    { id: "read_supported_pids", label: "対応PID応答の正規化", available: allowedReadIntents.has("read_supported_pids") && schemaIntents.has("read_supported_pids") && typeof window.ObdReadOnly?.normalizeBridgeSupportedPidSnapshot === "function" },
+    { id: "read_live_pid_snapshot", label: "ライブPID応答の正規化", available: allowedReadIntents.has("read_live_pid_snapshot") && schemaIntents.has("read_live_pid_snapshot") && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function" },
+    { id: "readiness_snapshot", label: "レディネス整形", available: typeof window.ObdReadOnly?.normalizeBridgeReadinessSnapshot === "function" },
+    { id: "read_ecu_info", label: "ECU情報応答の正規化", available: allowedReadIntents.has("read_ecu_info") && schemaIntents.has("read_ecu_info") && typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function" },
+    { id: "read_onboard_monitor", label: "Mode06応答の正規化", available: allowedReadIntents.has("read_onboard_monitor") && schemaIntents.has("read_onboard_monitor") && typeof window.ObdReadOnly?.normalizeBridgeOnboardMonitorSnapshot === "function" },
+    { id: "session_summary", label: "セッション要約", available: typeof window.ObdReadOnly?.buildBridgeSessionSummary === "function" },
+    { id: "session_export", label: "エクスポート", available: typeof window.ObdReadOnly?.buildBridgeSessionExportPayload === "function" },
+    { id: "diagnostic_import", label: "診断取込", available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function" }
   ];
   const pendingDriverIds = new Set([
     "user-vci-elm327",
@@ -2190,12 +2190,21 @@ function buildLocalBridgeImplementationSnapshot() {
     .filter((item) => pendingDriverIds.has(item.id))
     .map((item) => ({
       id: item.id,
+      label: item.label,
       available: item.connectionEnabled === true
     }));
   const modelDone = modelChecks.filter((item) => item.available).length;
   const driverDone = driverChecks.filter((item) => item.available).length;
   const totalCount = modelChecks.length + driverChecks.length;
   const progressPercent = totalCount ? Math.round(((modelDone + driverDone) / totalCount) * 100) : 0;
+  const doneLabels = [
+    ...modelChecks.filter((item) => item.available).map((item) => item.label),
+    ...driverChecks.filter((item) => item.available).map((item) => `${item.label} 実接続`)
+  ];
+  const missingLabels = [
+    ...modelChecks.filter((item) => !item.available).map((item) => item.label),
+    ...driverChecks.filter((item) => !item.available).map((item) => `${item.label} 実接続`)
+  ];
 
   return {
     progressPercent,
@@ -2203,6 +2212,8 @@ function buildLocalBridgeImplementationSnapshot() {
     modelTotal: modelChecks.length,
     driverDone,
     driverTotal: driverChecks.length,
+    doneLabels,
+    missingLabels,
     currentBasis: `読取モデル ${modelDone}/${modelChecks.length}項目、実VCI連携 ${driverDone}/${driverChecks.length}系統を実装済み。`,
     nextBuild: "J2534 / CANable / THINKCAR の実接続差分を同じread-onlyブリッジ契約へ揃える。",
     etaTarget: "2026-Q3 見込み"
@@ -2227,6 +2238,8 @@ function getCapabilityDisplayItems(items = []) {
       ...item,
       progress_percent: snapshot.progressPercent,
       current_basis: `${snapshot.currentBasis} 応答型、要約、エクスポート、診断取込まで同一モデルで扱えます。`,
+      done: snapshot.doneLabels,
+      missing: snapshot.missingLabels,
       next_build: snapshot.nextBuild,
       eta_target: snapshot.etaTarget
     };
