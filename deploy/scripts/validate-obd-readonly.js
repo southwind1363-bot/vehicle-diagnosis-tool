@@ -675,6 +675,9 @@ check(Array.isArray(bridgeSummary.vciDevices) && bridgeSummary.vciDevices.length
 check(bridgeSummary.exportRequired === true, "ブリッジセッション要約がエクスポート前提ではありません");
 check(bridgeSummary.retainedRawText === false, "ブリッジセッション要約が原文保持になっています");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
+  started_at: "2026-06-28T00:03:00Z",
+  ended_at: "2026-06-28T00:04:00Z",
+  vehicle_profile: { maker: "Toyota", model: "Prius" },
   connection_status: {
     ok: true,
     blocked: false,
@@ -699,6 +702,8 @@ const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
 check(bridgeSummaryAliasInputs.connectionStatus.displayStatus === "読取準備モデル", "Bridge session summary did not accept connection_status alias input");
 check(bridgeSummaryAliasInputs.vciDevices[0]?.id === "summary-vci", "Bridge session summary did not accept vci_list alias input");
 check(bridgeSummaryAliasInputs.adapterIdentity.adapterName === "Summary Adapter", "Bridge session summary did not accept adapter_identity alias input");
+check(bridgeSummaryAliasInputs.startedAt === "2026-06-28T00:03:00Z" && bridgeSummaryAliasInputs.endedAt === "2026-06-28T00:04:00Z", "Bridge session summary did not accept started_at or ended_at alias input");
+check(bridgeSummaryAliasInputs.vehicleProfile?.maker === "Toyota", "Bridge session summary did not accept vehicle_profile alias input");
 const bridgeExportPayload = obd.buildBridgeSessionExportPayload({
   connectionStatus: bridgeStatus,
   vciList: bridgeVciList,
@@ -729,6 +734,17 @@ check(bridgeExportPayload.session.readout_coverage.progressPercent >= 80, "Bridg
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
 check(bridgeExportPayload.safety.blocked_write_intents.includes("clear_dtc"), "ブリッジエクスポートの安全メタ情報が不足しています");
+const bridgeExportAliasInputs = obd.buildBridgeSessionExportPayload({
+  started_at: "2026-06-28T00:05:00Z",
+  ended_at: "2026-06-28T00:06:00Z",
+  exported_at: "2026-06-28T00:07:00Z",
+  vehicle_profile: { maker: "Toyota", model: "Aqua" },
+  dtcSnapshot: bridgeDtcSnapshot,
+  livePidSnapshot: bridgePidSnapshot
+});
+check(bridgeExportAliasInputs.exported_at === "2026-06-28T00:07:00Z", "Bridge export did not accept exported_at alias input");
+check(bridgeExportAliasInputs.session.started_at === "2026-06-28T00:05:00Z" && bridgeExportAliasInputs.session.ended_at === "2026-06-28T00:06:00Z", "Bridge export did not accept started_at or ended_at alias input");
+check(bridgeExportAliasInputs.session.vehicle_profile?.model === "Aqua", "Bridge export did not accept vehicle_profile alias input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   connectionStatus: bridgeStatus,
   vciList: bridgeVciList,

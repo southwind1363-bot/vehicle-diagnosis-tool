@@ -1334,11 +1334,11 @@
 
     return {
       source: "local_bridge",
-      startedAt: parts.startedAt || null,
-      endedAt: parts.endedAt || null,
+      startedAt: parts.startedAt || parts.started_at || null,
+      endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt,
       protocol,
-      vehicleProfile: parts.vehicleProfile || null,
+      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
@@ -1364,7 +1364,7 @@
     const summary = parts.codes && parts.monitorValues ? parts : buildBridgeSessionSummary(parts);
     return {
       schema_version: "bridge_session_export_v1",
-      exported_at: parts.exportedAt || new Date().toISOString(),
+      exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
       source: "local_bridge",
       connection_enabled: false,
       vehicle_command_enabled: false,
