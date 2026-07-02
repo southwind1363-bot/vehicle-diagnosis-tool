@@ -344,6 +344,7 @@ const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   blocked: false,
   would_transmit: false,
   data: {
+    protocol_name: "ISO15765-4",
     supported_pid_list: "0C 05",
     monitor_values: [
       { id: "engine_speed", value: 800, unit: "rpm" },
@@ -351,7 +352,7 @@ const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
     ]
   }
 });
-check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05", "Bridge live PID supported PID alias was not normalized");
+check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05" && bridgePidAliasSnapshot.protocol === "ISO15765-4", "Bridge live PID supported PID/protocol alias was not normalized");
 check(bridgePidAliasSnapshot.monitorValues.length === 2, "Bridge live PID monitor_values alias was not normalized");
 const bridgeSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   ok: true,

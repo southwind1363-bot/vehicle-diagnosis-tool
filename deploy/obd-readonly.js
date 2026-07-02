@@ -747,6 +747,10 @@
     };
   }
 
+  function readBridgeProtocol(data = {}) {
+    return data.protocol || data.protocol_name || data.protocolName || data.bus_protocol || null;
+  }
+
   function normalizeBridgeDtcSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const safety = readBridgeResponseSafety(response);
@@ -783,7 +787,7 @@
       wouldTransmit: safety.wouldTransmit,
       codes,
       dtcs: dtcs.map((item) => ({ ...item, source: "local_bridge" })),
-      protocol: data.protocol || null,
+      protocol: readBridgeProtocol(data),
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
         status: row?.status || "unknown",
@@ -913,7 +917,7 @@
       ok: safety.ok,
       blocked: safety.blocked,
       wouldTransmit: safety.wouldTransmit,
-      protocol: data.protocol || null,
+      protocol: readBridgeProtocol(data),
       supportedPids: collectBridgeSupportedPids(data),
       capturedAt: data.captured_at || null,
       monitorValues,
@@ -940,7 +944,7 @@
       ...buildSupportedPidMatrix({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
-      protocol: data.protocol || null,
+      protocol: readBridgeProtocol(data),
       supported_pids: supportedPids
       }),
       intent: "read_supported_pids",
@@ -957,7 +961,7 @@
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
-      protocol: data.protocol || null,
+      protocol: readBridgeProtocol(data),
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
       values: Array.isArray(data.values)
         ? data.values
@@ -1053,7 +1057,7 @@
         ...data,
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
-        protocol: data.protocol || null
+        protocol: readBridgeProtocol(data)
       }),
       intent: "read_ecu_info",
       ok: safety.ok,
@@ -1069,7 +1073,7 @@
       ...normalizeOnboardMonitorSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
-      protocol: data.protocol || null,
+      protocol: readBridgeProtocol(data),
       tests: Array.isArray(data.tests)
         ? data.tests
         : Array.isArray(data.values)
