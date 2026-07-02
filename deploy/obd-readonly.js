@@ -904,8 +904,12 @@
       ? data.values
       : Array.isArray(data.monitor_values)
         ? data.monitor_values
+        : Array.isArray(data.monitorValues)
+          ? data.monitorValues
         : Array.isArray(data.pid_values)
           ? data.pid_values
+          : Array.isArray(data.pidValues)
+            ? data.pidValues
           : [];
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
@@ -919,7 +923,7 @@
       wouldTransmit: safety.wouldTransmit,
       protocol: readBridgeProtocol(data),
       supportedPids: collectBridgeSupportedPids(data),
-      capturedAt: data.captured_at || null,
+      capturedAt: data.captured_at || data.capturedAt || null,
       monitorValues,
       monitorValueSummary: buildMonitorValueSummary(monitorValues),
       monitorInsights: analyzeMonitorValues(monitorValues),
@@ -967,8 +971,12 @@
         ? data.values
         : Array.isArray(data.freeze_frame_values)
           ? data.freeze_frame_values
+          : Array.isArray(data.freezeFrameValues)
+            ? data.freezeFrameValues
           : Array.isArray(data.monitor_values)
             ? data.monitor_values
+            : Array.isArray(data.monitorValues)
+              ? data.monitorValues
             : []
       }),
       intent: "read_freeze_frame",
@@ -1080,8 +1088,12 @@
           ? data.values
           : Array.isArray(data.mode06_tests)
             ? data.mode06_tests
+            : Array.isArray(data.mode06Tests)
+              ? data.mode06Tests
             : Array.isArray(data.monitor_tests)
               ? data.monitor_tests
+              : Array.isArray(data.monitorTests)
+                ? data.monitorTests
               : []
       }),
       intent: "read_onboard_monitor",

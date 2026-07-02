@@ -348,13 +348,14 @@ const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   data: {
     protocol_name: "ISO15765-4",
     supported_pid_list: "0C 05",
-    monitor_values: [
+    monitorValues: [
       { id: "engine_speed", value: 800, unit: "rpm" },
       { pid: "05", value: 82, unit: "°C" }
-    ]
+    ],
+    capturedAt: "2026-06-28T00:01:01Z"
   }
 });
-check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05" && bridgePidAliasSnapshot.protocol === "ISO15765-4", "Bridge live PID supported PID/protocol alias was not normalized");
+check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05" && bridgePidAliasSnapshot.protocol === "ISO15765-4" && bridgePidAliasSnapshot.capturedAt === "2026-06-28T00:01:01Z", "Bridge live PID aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues.length === 2, "Bridge live PID monitor_values alias was not normalized");
 const bridgeSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   ok: true,
@@ -408,7 +409,7 @@ const bridgeAliasFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   would_transmit: false,
   data: {
     trigger_code: "P0300",
-    freeze_frame_values: [
+    freezeFrameValues: [
       { id: "engine_speed", value: 1100, unit: "rpm", freeze_frame_number: 1 }
     ]
   }
@@ -553,7 +554,7 @@ const bridgeAliasOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnaps
   blocked: false,
   would_transmit: false,
   data: {
-    mode06_tests: [
+    mode06Tests: [
       { test_id: "01", component_id: "01", value: 90, min: 50, max: 200 }
     ]
   }
