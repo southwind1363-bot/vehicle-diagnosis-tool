@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.344.0";
+const APP_VERSION = "2.345.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2246,6 +2246,101 @@ function getCapabilityDisplayItems(items = []) {
   });
 }
 
+function buildInterfaceImplementationEvidence(item) {
+  const contract = window.ObdReadOnly?.getLocalBridgeContract?.();
+  const preparedRequests = window.ObdReadOnly?.getPreparedVehicleRequests?.() || [];
+  const connectionProfile = window.ObdReadOnly?.getVehicleConnectionProfile?.();
+  const sharedChecks = [
+    {
+      label: "read-only境界",
+      available: Boolean(contract?.connectionEnabled && contract?.vehicleCommandEnabled === false)
+    },
+    {
+      label: "読取応答整形",
+      available:
+        typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function"
+        && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function"
+        && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function"
+        && typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function"
+    },
+    {
+      label: "診断取込",
+      available:
+        typeof window.ObdReadOnly?.buildBridgeSessionSummary === "function"
+        && typeof window.ObdReadOnly?.buildBridgeSessionExportPayload === "function"
+        && typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function"
+    }
+  ];
+  const candidateChecksById = {
+    "user-vci-elm327": [
+      {
+        label: "Web Serial準備",
+        available: Boolean(connectionProfile?.interfaceType === "web-serial-obd-adapter")
+      },
+      {
+        label: "標準OBD読取要求",
+        available: ["read_stored_dtc", "read_live_pid_snapshot", "read_freeze_frame"].every((id) => preparedRequests.some((request) => request.id === id))
+      },
+      {
+        label: "実接続",
+        available: item.connectionEnabled === true
+      }
+    ],
+    "user-vci-techstream-j2534": [
+      {
+        label: "VCI列挙表示",
+        available: typeof window.ObdReadOnly?.normalizeBridgeVciList === "function"
+      },
+      {
+        label: "アダプター識別",
+        available: typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function"
+      },
+      {
+        label: "実接続",
+        available: item.connectionEnabled === true
+      }
+    ],
+    "user-vci-thinkcar-bluetooth": [
+      {
+        label: "VCI列挙表示",
+        available: typeof window.ObdReadOnly?.normalizeBridgeVciList === "function"
+      },
+      {
+        label: "貼り付け/ブリッジ取込",
+        available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function"
+      },
+      {
+        label: "実接続",
+        available: item.connectionEnabled === true
+      }
+    ],
+    "user-vci-rcmall-mks-canable-v2-pro": [
+      {
+        label: "VCI列挙表示",
+        available: typeof window.ObdReadOnly?.normalizeBridgeVciList === "function"
+      },
+      {
+        label: "CAN系読取取込の器",
+        available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function"
+      },
+      {
+        label: "実接続",
+        available: item.connectionEnabled === true
+      }
+    ]
+  };
+  const candidateChecks = candidateChecksById[item.id] || [];
+  const allChecks = [...sharedChecks, ...candidateChecks];
+  const doneCount = allChecks.filter((check) => check.available).length;
+  const totalCount = allChecks.length;
+  const missingLabels = allChecks.filter((check) => !check.available).map((check) => check.label);
+
+  return {
+    summary: totalCount ? `実装根拠 ${doneCount}/${totalCount}項目` : "実装根拠を整理中",
+    missing: missingLabels.length ? `未実装: ${missingLabels.join(" / ")}` : "未実装: なし"
+  };
+}
+
 function renderObdProgressOverview() {
   if (!obdProgressGrid) return;
 
@@ -3300,6 +3395,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
   });
 
   interfaceCatalog.forEach((item) => {
+    const evidence = buildInterfaceImplementationEvidence(item);
     const card = document.createElement("article");
     card.className = "obd-interface-card";
 
@@ -3330,6 +3426,9 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     const note = document.createElement("p");
     note.textContent = item.integrationNote;
 
+    const implementation = document.createElement("p");
+    implementation.textContent = `${evidence.summary} / ${evidence.missing}`;
+
     const checks = document.createElement("p");
     checks.textContent = summarizeRemainingChecks(item.verificationRequired);
 
@@ -3341,7 +3440,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
       ? `残り${item.verificationRequired.length}確認`
       : "候補管理";
 
-    card.append(head, role, scope, status, next, eta, note, checks, button);
+    card.append(head, role, scope, status, next, eta, note, implementation, checks, button);
     obdInterfaceRoadmapGrid.appendChild(card);
   });
 }
