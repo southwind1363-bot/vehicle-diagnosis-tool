@@ -43,7 +43,7 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q4 以降見込み"
   })
 });
-const APP_VERSION = "2.342.0";
+const APP_VERSION = "2.343.0";
 const APP_LAST_UPDATED = "2026-06-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2155,12 +2155,90 @@ function summarizeRemainingChecks(items = [], limit = 2) {
   return `残り確認 ${items.length}件: ${items.slice(0, limit).join(" / ")}`;
 }
 
+function buildLocalBridgeImplementationSnapshot() {
+  const contract = window.ObdReadOnly?.getLocalBridgeContract?.();
+  const schemas = window.ObdReadOnly?.getLocalBridgeResponseSchemas?.() || [];
+  const schemaIntents = new Set(schemas.map((item) => item.intent));
+  const allowedReadIntents = new Set(contract?.allowedReadIntents || []);
+  const interfaceCatalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
+
+  const modelChecks = [
+    { id: "bridge_contract", available: Boolean(contract?.connectionEnabled && contract?.vehicleCommandEnabled === false) },
+    { id: "bridge_status", available: allowedReadIntents.has("bridge_status") && schemaIntents.has("bridge_status") && typeof window.ObdReadOnly?.normalizeBridgeConnectionStatus === "function" },
+    { id: "list_vci", available: allowedReadIntents.has("list_vci") && schemaIntents.has("list_vci") && typeof window.ObdReadOnly?.normalizeBridgeVciList === "function" },
+    { id: "adapter_identity", available: allowedReadIntents.has("adapter_identity") && schemaIntents.has("adapter_identity") && typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function" },
+    { id: "read_stored_dtc", available: allowedReadIntents.has("read_stored_dtc") && schemaIntents.has("read_stored_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
+    { id: "read_pending_dtc", available: allowedReadIntents.has("read_pending_dtc") && schemaIntents.has("read_pending_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
+    { id: "read_permanent_dtc", available: allowedReadIntents.has("read_permanent_dtc") && schemaIntents.has("read_permanent_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
+    { id: "read_freeze_frame", available: allowedReadIntents.has("read_freeze_frame") && schemaIntents.has("read_freeze_frame") && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function" },
+    { id: "read_supported_pids", available: allowedReadIntents.has("read_supported_pids") && schemaIntents.has("read_supported_pids") && typeof window.ObdReadOnly?.normalizeBridgeSupportedPidSnapshot === "function" },
+    { id: "read_live_pid_snapshot", available: allowedReadIntents.has("read_live_pid_snapshot") && schemaIntents.has("read_live_pid_snapshot") && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function" },
+    { id: "readiness_snapshot", available: typeof window.ObdReadOnly?.normalizeBridgeReadinessSnapshot === "function" },
+    { id: "read_ecu_info", available: allowedReadIntents.has("read_ecu_info") && schemaIntents.has("read_ecu_info") && typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function" },
+    { id: "read_onboard_monitor", available: allowedReadIntents.has("read_onboard_monitor") && schemaIntents.has("read_onboard_monitor") && typeof window.ObdReadOnly?.normalizeBridgeOnboardMonitorSnapshot === "function" },
+    { id: "session_summary", available: typeof window.ObdReadOnly?.buildBridgeSessionSummary === "function" },
+    { id: "session_export", available: typeof window.ObdReadOnly?.buildBridgeSessionExportPayload === "function" },
+    { id: "diagnostic_import", available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function" }
+  ];
+  const pendingDriverIds = new Set([
+    "user-vci-elm327",
+    "user-vci-techstream-j2534",
+    "user-vci-thinkcar-bluetooth",
+    "user-vci-rcmall-mks-canable-v2-pro"
+  ]);
+  const driverChecks = interfaceCatalog
+    .filter((item) => pendingDriverIds.has(item.id))
+    .map((item) => ({
+      id: item.id,
+      available: item.connectionEnabled === true
+    }));
+  const modelDone = modelChecks.filter((item) => item.available).length;
+  const driverDone = driverChecks.filter((item) => item.available).length;
+  const totalCount = modelChecks.length + driverChecks.length;
+  const progressPercent = totalCount ? Math.round(((modelDone + driverDone) / totalCount) * 100) : 0;
+
+  return {
+    progressPercent,
+    modelDone,
+    modelTotal: modelChecks.length,
+    driverDone,
+    driverTotal: driverChecks.length,
+    currentBasis: `読取モデル ${modelDone}/${modelChecks.length}項目、実VCI連携 ${driverDone}/${driverChecks.length}系統を実装済み。`,
+    nextBuild: "J2534 / CANable / THINKCAR の実接続差分を同じread-onlyブリッジ契約へ揃える。",
+    etaTarget: "2026-Q3 見込み"
+  };
+}
+
+function getInterfaceProgressState(interfaceId) {
+  if (interfaceId === "local_bridge") return buildLocalBridgeImplementationSnapshot();
+  return OBD_INTERFACE_PROGRESS[interfaceId] || {
+    progressPercent: 0,
+    currentBasis: "確認中",
+    nextBuild: "",
+    etaTarget: "時期未定"
+  };
+}
+
+function getCapabilityDisplayItems(items = []) {
+  return items.map((item) => {
+    if (item?.id !== "capability-local-bridge") return item;
+    const snapshot = buildLocalBridgeImplementationSnapshot();
+    return {
+      ...item,
+      progress_percent: snapshot.progressPercent,
+      current_basis: `${snapshot.currentBasis} 応答型、要約、エクスポート、診断取込まで同一モデルで扱えます。`,
+      next_build: snapshot.nextBuild,
+      eta_target: snapshot.etaTarget
+    };
+  });
+}
+
 function renderObdProgressOverview() {
   if (!obdProgressGrid) return;
 
   const interfacePhases = window.ObdReadOnly?.getAdvancedInterfaceRoadmap?.() || [];
   const interfaceCatalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
-  const capabilityItems = dataStore.diagnosticCapabilityStatus || [];
+  const capabilityItems = getCapabilityDisplayItems(dataStore.diagnosticCapabilityStatus || []);
   const coverageItems = dataStore.diagnosticCoverageRoadmap || [];
   const readoutCapabilityIds = new Set([
     "capability-generic-obd2-dtc",
@@ -2169,7 +2247,7 @@ function renderObdProgressOverview() {
     "capability-guided-diagnostics"
   ]);
 
-  const phaseProgress = averageProgressPercent(interfacePhases.map((item) => OBD_INTERFACE_PROGRESS[item.id]?.progressPercent));
+  const phaseProgress = averageProgressPercent(interfacePhases.map((item) => getInterfaceProgressState(item.id)?.progressPercent));
   const candidateProgress = averageProgressPercent(interfaceCatalog.map((item) => item.progressPercent));
   const interfaceProgress = averageProgressPercent([phaseProgress, candidateProgress]);
   const capabilityProgress = averageProgressPercent(capabilityItems.map((item) => item.progress_percent));
@@ -2180,7 +2258,7 @@ function renderObdProgressOverview() {
   const overallProgress = averageProgressPercent([capabilityProgress, coverageProgress, interfaceProgress]);
 
   const interfaceEtas = summarizeEtaTargets([
-    ...interfacePhases.map((item) => OBD_INTERFACE_PROGRESS[item.id]?.etaTarget),
+    ...interfacePhases.map((item) => getInterfaceProgressState(item.id)?.etaTarget),
     ...interfaceCatalog.map((item) => item.etaTarget)
   ]);
   const capabilityEtas = summarizeEtaTargets(capabilityItems.map((item) => item.eta_target));
@@ -3163,12 +3241,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
   }
 
   [...items].sort((a, b) => a.phase - b.phase).forEach((item) => {
-    const progress = OBD_INTERFACE_PROGRESS[item.id] || {
-      progressPercent: 0,
-      currentBasis: item.currentAvailability || "確認中",
-      nextBuild: "",
-      etaTarget: "時期未定"
-    };
+    const progress = getInterfaceProgressState(item.id);
     const card = document.createElement("article");
     card.className = "obd-interface-card";
 
@@ -3316,8 +3389,9 @@ function renderObdCoverageRoadmap(items) {
 
 function renderObdCapabilityStatus(items) {
   obdCapabilityStatusGrid.innerHTML = "";
+  const displayItems = getCapabilityDisplayItems(items);
 
-  if (!items.length) {
+  if (!displayItems.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
     empty.textContent = "診断機能の完成度を取得できませんでした。";
@@ -3325,7 +3399,7 @@ function renderObdCapabilityStatus(items) {
     return;
   }
 
-  items.forEach((item) => {
+  displayItems.forEach((item) => {
     const card = document.createElement("article");
     card.className = "obd-interface-card";
 
