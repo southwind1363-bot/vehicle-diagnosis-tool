@@ -1414,15 +1414,27 @@
       vciDevices: Array.isArray(vciDevicesInput)
         ? vciDevicesInput
         : (vciDevicesInput?.devices || normalizeBridgeVciList(vciDevicesInput).devices),
-      adapterIdentity: adapterIdentityInput?.adapterName ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput),
+      adapterIdentity: adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput),
       codes: parts.codes || parts.dtc_codes || [],
-      ecuResponseSummary: parts.ecuResponseSummary || parts.ecu_response_summary || normalizeEcuResponseSummary({ source: "local_bridge" }),
-      supportedPidMatrix: supportedPidMatrixInput || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
-      readinessSnapshot: readinessSnapshotInput || normalizeBridgeReadinessSnapshot(),
-      ecuInfoSnapshot: ecuInfoSnapshotInput || normalizeBridgeEcuInfoSnapshot(),
-      onboardMonitorSnapshot: onboardMonitorSnapshotInput || normalizeBridgeOnboardMonitorSnapshot(),
+      ecuResponseSummary: (parts.ecuResponseSummary || parts.ecu_response_summary)?.schemaVersion
+        ? (parts.ecuResponseSummary || parts.ecu_response_summary)
+        : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || { source: "local_bridge" }),
+      supportedPidMatrix: supportedPidMatrixInput?.schemaVersion
+        ? supportedPidMatrixInput
+        : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } }),
+      readinessSnapshot: readinessSnapshotInput?.schemaVersion
+        ? readinessSnapshotInput
+        : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {}),
+      ecuInfoSnapshot: ecuInfoSnapshotInput?.schemaVersion
+        ? ecuInfoSnapshotInput
+        : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}),
+      onboardMonitorSnapshot: onboardMonitorSnapshotInput?.schemaVersion
+        ? onboardMonitorSnapshotInput
+        : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}),
       readoutCoverage: parts.readoutCoverage || parts.readout_coverage || buildReadoutCoverageSnapshot(),
-      freezeFrameSnapshot: freezeFrameSnapshotInput || normalizeBridgeFreezeFrameSnapshot(),
+      freezeFrameSnapshot: freezeFrameSnapshotInput?.schemaVersion
+        ? freezeFrameSnapshotInput
+        : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}),
       monitorValues: parts.monitorValues || parts.monitor_values || [],
       monitorValueSummary: parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(parts.monitorValues || parts.monitor_values || []),
       monitorInsights: parts.monitorInsights || parts.monitor_insights || [],
