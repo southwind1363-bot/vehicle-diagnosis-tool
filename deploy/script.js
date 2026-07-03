@@ -12,6 +12,140 @@ const BRIDGE_BACKED_INTERFACE_IDS = Object.freeze([
   "user-vci-techstream-j2534",
   "user-vci-rcmall-mks-canable-v2-pro"
 ]);
+const INTERFACE_CANDIDATE_DISPLAY_NAMES = Object.freeze({
+  "user-vci-thinkcar-bluetooth": "THINKCAR系候補",
+  "user-vci-techstream-j2534": "J2534候補",
+  "user-vci-rcmall-mks-canable-v2-pro": "CANable候補"
+});
+const BRIDGE_BACKED_IMPLEMENTATION_CHECK_BUILDERS = Object.freeze({
+  "user-vci-techstream-j2534": (item) => [
+    {
+      label: "VCI列挙表示",
+      available: hasBridgeVciSupport()
+    },
+    {
+      label: "アダプター識別",
+      available: hasBridgeAdapterIdentitySupport()
+    },
+    {
+      label: "実接続",
+      available: item.connectionEnabled === true
+    }
+  ],
+  "user-vci-thinkcar-bluetooth": (item) => [
+    {
+      label: "VCI列挙表示",
+      available: hasBridgeVciSupport()
+    },
+    {
+      label: "Bluetooth読取取込",
+      available: hasBridgeBluetoothImportSupport()
+    },
+    {
+      label: "実接続",
+      available: item.connectionEnabled === true
+    }
+  ],
+  "user-vci-rcmall-mks-canable-v2-pro": (item) => [
+    {
+      label: "VCI列挙表示",
+      available: hasBridgeVciSupport()
+    },
+    {
+      label: "CAN系読取取込の器",
+      available: hasBridgeDiagnosticImportSupport()
+    },
+    {
+      label: "実接続",
+      available: item.connectionEnabled === true
+    }
+  ]
+});
+const ELM327_IMPLEMENTATION_CHECK_LABELS = Object.freeze({
+  webSerial: "Web Serial準備",
+  standardRead: "標準OBD読取要求",
+  liveConnection: "実接続"
+});
+
+function hasBridgeAdapterIdentitySupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function";
+}
+
+function hasBridgeDiagnosticImportSupport() {
+  return typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function";
+}
+
+function hasBridgeLivePidSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function";
+}
+
+function hasBridgeFreezeFrameSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function";
+}
+
+function hasBridgeDtcSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function";
+}
+
+function hasBridgeEcuInfoSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function";
+}
+
+function hasBridgeConnectionStatusSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeConnectionStatus === "function";
+}
+
+function hasBridgeSupportedPidSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeSupportedPidSnapshot === "function";
+}
+
+function hasBridgeVciSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeVciList === "function";
+}
+
+function hasBridgeIntentModel(intentId, schemaIntents, allowedReadIntents, supportCheck) {
+  return allowedReadIntents.has(intentId) && schemaIntents.has(intentId) && supportCheck();
+}
+
+function hasBridgeReadinessSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeReadinessSnapshot === "function";
+}
+
+function hasBridgeOnboardMonitorSupport() {
+  return typeof window.ObdReadOnly?.normalizeBridgeOnboardMonitorSnapshot === "function";
+}
+
+function hasBridgeSessionSummarySupport() {
+  return typeof window.ObdReadOnly?.buildBridgeSessionSummary === "function";
+}
+
+function hasBridgeSessionExportSupport() {
+  return typeof window.ObdReadOnly?.buildBridgeSessionExportPayload === "function";
+}
+
+function hasBridgeMergeDiagnosticInputsSupport() {
+  return typeof window.ObdReadOnly?.mergeDiagnosticInputs === "function";
+}
+
+function hasBridgeDiagnosticImportPipelineSupport() {
+  return hasBridgeSessionSummarySupport()
+    && hasBridgeSessionExportSupport()
+    && hasBridgeDiagnosticImportSupport();
+}
+
+function hasBridgeBluetoothImportSupport() {
+  return hasBridgeDiagnosticImportSupport()
+    && hasBridgeLivePidSupport()
+    && hasBridgeFreezeFrameSupport();
+}
+
+function hasBridgeReadNormalizationSupport() {
+  return hasBridgeDtcSupport()
+    && hasBridgeLivePidSupport()
+    && hasBridgeFreezeFrameSupport()
+    && hasBridgeEcuInfoSupport();
+}
+
 const OBD_INTERFACE_PROGRESS = Object.freeze({
   web_serial_obd: Object.freeze({
     progressPercent: 61,
@@ -2217,21 +2351,21 @@ function buildLocalBridgeImplementationSnapshot() {
 
   const modelChecks = [
     { id: "bridge_contract", label: "read-onlyブリッジ契約", available: Boolean(contract?.connectionEnabled && contract?.vehicleCommandEnabled === false) },
-    { id: "bridge_status", label: "接続状態の表示モデル", available: allowedReadIntents.has("bridge_status") && schemaIntents.has("bridge_status") && typeof window.ObdReadOnly?.normalizeBridgeConnectionStatus === "function" },
-    { id: "list_vci", label: "VCI一覧の表示モデル", available: allowedReadIntents.has("list_vci") && schemaIntents.has("list_vci") && typeof window.ObdReadOnly?.normalizeBridgeVciList === "function" },
-    { id: "adapter_identity", label: "アダプター情報の表示モデル", available: allowedReadIntents.has("adapter_identity") && schemaIntents.has("adapter_identity") && typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function" },
-    { id: "read_stored_dtc", label: "保存DTC応答の正規化", available: allowedReadIntents.has("read_stored_dtc") && schemaIntents.has("read_stored_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
-    { id: "read_pending_dtc", label: "保留DTC応答の正規化", available: allowedReadIntents.has("read_pending_dtc") && schemaIntents.has("read_pending_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
-    { id: "read_permanent_dtc", label: "永久DTC応答の正規化", available: allowedReadIntents.has("read_permanent_dtc") && schemaIntents.has("read_permanent_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function" },
-    { id: "read_freeze_frame", label: "フリーズフレーム応答の正規化", available: allowedReadIntents.has("read_freeze_frame") && schemaIntents.has("read_freeze_frame") && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function" },
-    { id: "read_supported_pids", label: "対応PID応答の正規化", available: allowedReadIntents.has("read_supported_pids") && schemaIntents.has("read_supported_pids") && typeof window.ObdReadOnly?.normalizeBridgeSupportedPidSnapshot === "function" },
-    { id: "read_live_pid_snapshot", label: "ライブPID応答の正規化", available: allowedReadIntents.has("read_live_pid_snapshot") && schemaIntents.has("read_live_pid_snapshot") && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function" },
-    { id: "readiness_snapshot", label: "レディネス整形", available: typeof window.ObdReadOnly?.normalizeBridgeReadinessSnapshot === "function" },
-    { id: "read_ecu_info", label: "ECU情報応答の正規化", available: allowedReadIntents.has("read_ecu_info") && schemaIntents.has("read_ecu_info") && typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function" },
-    { id: "read_onboard_monitor", label: "Mode06応答の正規化", available: allowedReadIntents.has("read_onboard_monitor") && schemaIntents.has("read_onboard_monitor") && typeof window.ObdReadOnly?.normalizeBridgeOnboardMonitorSnapshot === "function" },
-    { id: "session_summary", label: "セッション要約", available: typeof window.ObdReadOnly?.buildBridgeSessionSummary === "function" },
-    { id: "session_export", label: "エクスポート", available: typeof window.ObdReadOnly?.buildBridgeSessionExportPayload === "function" },
-    { id: "diagnostic_import", label: "診断取込", available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function" }
+    { id: "bridge_status", label: "接続状態の表示モデル", available: hasBridgeIntentModel("bridge_status", schemaIntents, allowedReadIntents, hasBridgeConnectionStatusSupport) },
+    { id: "list_vci", label: "VCI一覧の表示モデル", available: hasBridgeIntentModel("list_vci", schemaIntents, allowedReadIntents, hasBridgeVciSupport) },
+    { id: "adapter_identity", label: "アダプター情報の表示モデル", available: hasBridgeIntentModel("adapter_identity", schemaIntents, allowedReadIntents, hasBridgeAdapterIdentitySupport) },
+    { id: "read_stored_dtc", label: "保存DTC応答の正規化", available: hasBridgeIntentModel("read_stored_dtc", schemaIntents, allowedReadIntents, hasBridgeDtcSupport) },
+    { id: "read_pending_dtc", label: "保留DTC応答の正規化", available: hasBridgeIntentModel("read_pending_dtc", schemaIntents, allowedReadIntents, hasBridgeDtcSupport) },
+    { id: "read_permanent_dtc", label: "永久DTC応答の正規化", available: hasBridgeIntentModel("read_permanent_dtc", schemaIntents, allowedReadIntents, hasBridgeDtcSupport) },
+    { id: "read_freeze_frame", label: "フリーズフレーム応答の正規化", available: hasBridgeIntentModel("read_freeze_frame", schemaIntents, allowedReadIntents, hasBridgeFreezeFrameSupport) },
+    { id: "read_supported_pids", label: "対応PID応答の正規化", available: hasBridgeIntentModel("read_supported_pids", schemaIntents, allowedReadIntents, hasBridgeSupportedPidSupport) },
+    { id: "read_live_pid_snapshot", label: "ライブPID応答の正規化", available: hasBridgeIntentModel("read_live_pid_snapshot", schemaIntents, allowedReadIntents, hasBridgeLivePidSupport) },
+    { id: "readiness_snapshot", label: "レディネス整形", available: hasBridgeReadinessSupport() },
+    { id: "read_ecu_info", label: "ECU情報応答の正規化", available: hasBridgeIntentModel("read_ecu_info", schemaIntents, allowedReadIntents, hasBridgeEcuInfoSupport) },
+    { id: "read_onboard_monitor", label: "Mode06応答の正規化", available: hasBridgeIntentModel("read_onboard_monitor", schemaIntents, allowedReadIntents, hasBridgeOnboardMonitorSupport) },
+    { id: "session_summary", label: "セッション要約", available: hasBridgeSessionSummarySupport() },
+    { id: "session_export", label: "エクスポート", available: hasBridgeSessionExportSupport() },
+    { id: "diagnostic_import", label: "診断取込", available: hasBridgeDiagnosticImportSupport() }
   ];
   const pendingDriverIds = new Set([
     "user-vci-elm327",
@@ -2283,31 +2417,31 @@ function buildBridgeBackedInterfaceSnapshot(item = {}) {
     },
     {
       label: "VCI一覧表示",
-      available: allowedReadIntents.has("list_vci") && schemaIntents.has("list_vci") && typeof window.ObdReadOnly?.normalizeBridgeVciList === "function"
+      available: hasBridgeIntentModel("list_vci", schemaIntents, allowedReadIntents, hasBridgeVciSupport)
     },
     {
       label: "アダプター識別",
-      available: allowedReadIntents.has("adapter_identity") && schemaIntents.has("adapter_identity") && typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function"
+      available: hasBridgeIntentModel("adapter_identity", schemaIntents, allowedReadIntents, hasBridgeAdapterIdentitySupport)
     },
     {
       label: "DTC読取応答",
-      available: allowedReadIntents.has("read_stored_dtc") && schemaIntents.has("read_stored_dtc") && typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function"
+      available: hasBridgeIntentModel("read_stored_dtc", schemaIntents, allowedReadIntents, hasBridgeDtcSupport)
     },
     {
       label: "ライブPID応答",
-      available: allowedReadIntents.has("read_live_pid_snapshot") && schemaIntents.has("read_live_pid_snapshot") && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function"
+      available: hasBridgeIntentModel("read_live_pid_snapshot", schemaIntents, allowedReadIntents, hasBridgeLivePidSupport)
     },
     {
       label: "フリーズフレーム応答",
-      available: allowedReadIntents.has("read_freeze_frame") && schemaIntents.has("read_freeze_frame") && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function"
+      available: hasBridgeIntentModel("read_freeze_frame", schemaIntents, allowedReadIntents, hasBridgeFreezeFrameSupport)
     },
     {
       label: "ECU情報応答",
-      available: allowedReadIntents.has("read_ecu_info") && schemaIntents.has("read_ecu_info") && typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function"
+      available: hasBridgeIntentModel("read_ecu_info", schemaIntents, allowedReadIntents, hasBridgeEcuInfoSupport)
     },
     {
       label: "診断取込",
-      available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function"
+      available: hasBridgeDiagnosticImportSupport()
     },
     {
       label: getInterfaceConnectionCheckLabel(item?.id),
@@ -2413,18 +2547,12 @@ function buildInterfaceImplementationEvidence(item) {
     },
     {
       label: "読取応答整形",
-      available:
-        typeof window.ObdReadOnly?.normalizeBridgeDtcSnapshot === "function"
-        && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function"
-        && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function"
-        && typeof window.ObdReadOnly?.normalizeBridgeEcuInfoSnapshot === "function"
+      available: hasBridgeReadNormalizationSupport()
     },
     {
       label: "診断取込",
       available:
-        typeof window.ObdReadOnly?.buildBridgeSessionSummary === "function"
-        && typeof window.ObdReadOnly?.buildBridgeSessionExportPayload === "function"
-        && typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function"
+        hasBridgeDiagnosticImportPipelineSupport()
     }
   ];
   const candidateChecks = item.id === "user-vci-elm327"
@@ -2446,62 +2574,57 @@ function isBridgeBackedInterfaceCandidate(interfaceId) {
 }
 
 function getInterfaceCandidateDisplayName(interfaceId) {
-  if (interfaceId === "user-vci-thinkcar-bluetooth") return "THINKCAR系候補";
-  if (interfaceId === "user-vci-techstream-j2534") return "J2534候補";
-  if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") return "CANable候補";
-  return "候補";
+  return INTERFACE_CANDIDATE_DISPLAY_NAMES[interfaceId] || "候補";
 }
 
+const INTERFACE_CANDIDATE_GUIDE_BUILDERS = Object.freeze({
+  "user-vci-thinkcar-bluetooth": (interfaceId) => ({
+    actionLabel: "BT経由の読取確認",
+    statusEarly: "読取器を整備中",
+    statusMid: "read-only取込あり",
+    statusReady: "実機確認待ち",
+    basisPrefix: "スマホ/BT候補の読取器",
+    basisSuffix: "ローカルブリッジ経由の read-only 取込を優先。",
+    nextBuild: "THINKCAR系の実機応答をローカルブリッジへ流し、DTC / FF / live PID / ECU情報を同じ契約で確認する。",
+    operatorNote: "スマホ側でBluetooth接続し、PC側はローカルブリッジの read-only 応答確認へ寄せます。",
+    checkSummary: "先に確認: 1.スマホBT接続 2.PC側ブリッジ応答 3.DTC/FF/live PID/ECU情報の読取",
+    startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。先にスマホ側でBluetooth接続し、その後PC側のローカルブリッジ応答を確認します。`,
+    idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。スマホ側Bluetooth接続後に、PC側のブリッジ応答を確認できます。`,
+    readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のブリッジ確認済みです。次に VCI一覧、DTC、FF、live PID、ECU情報の読取を試せます。`
+  }),
+  "user-vci-techstream-j2534": (interfaceId) => ({
+    actionLabel: "J2534読取確認",
+    statusEarly: "読取器を整備中",
+    statusMid: "read-only取込あり",
+    statusReady: "実機確認待ち",
+    basisPrefix: "J2534候補の読取器",
+    basisSuffix: "VCI列挙と識別を先に固めています。",
+    nextBuild: "J2534実機の列挙結果と read-only ECU情報/DTC応答を同じ契約へ流す。",
+    operatorNote: "PC側でVCIを列挙し、アダプター識別と read-only ECU情報/DTC 応答を同じブリッジ契約で確認します。",
+    checkSummary: "先に確認: 1.VCI列挙 2.アダプター識別 3.read-only DTC/ECU情報",
+    startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。VCI列挙とアダプター識別が読めるかを先に見ます。`,
+    idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。VCI列挙とアダプター識別の読取を先に確認できます。`,
+    readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のブリッジ確認済みです。次に VCI一覧、アダプター識別、read-only DTC/ECU情報を試せます。`
+  }),
+  "user-vci-rcmall-mks-canable-v2-pro": (interfaceId) => ({
+    actionLabel: "CAN系読取確認",
+    statusEarly: "読取器を整備中",
+    statusMid: "read-only取込あり",
+    statusReady: "実機確認待ち",
+    basisPrefix: "CANable候補の読取器",
+    basisSuffix: "read-only CAN系取込の器を先に揃えています。",
+    nextBuild: "CANable系の read-only 応答をローカルブリッジへ流し、診断取込まで同じ器で確認する。",
+    operatorNote: "PC側でCAN系VCIを列挙し、read-only 応答を診断取込まで同じ器で確認します。",
+    checkSummary: "先に確認: 1.VCI列挙 2.read-only CAN系応答 3.診断取込",
+    startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。VCI列挙とread-only CAN系応答が見えるかを先に見ます。`,
+    idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。VCI列挙とread-only CAN系応答の確認を先に進められます。`,
+    readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のブリッジ確認済みです。次に VCI一覧、read-only 応答、診断取込の確認を進められます。`
+  })
+});
+
 function getInterfaceCandidateGuide(interfaceId) {
-  if (interfaceId === "user-vci-thinkcar-bluetooth") {
-    return {
-      actionLabel: "BT経由の読取確認",
-      statusEarly: "読取器を整備中",
-      statusMid: "read-only取込あり",
-      statusReady: "実機確認待ち",
-      basisPrefix: "スマホ/BT候補の読取器",
-      basisSuffix: "ローカルブリッジ経由の read-only 取込を優先。",
-      nextBuild: "THINKCAR系の実機応答をローカルブリッジへ流し、DTC / FF / live PID / ECU情報を同じ契約で確認する。",
-      operatorNote: "スマホ側でBluetooth接続し、PC側はローカルブリッジの read-only 応答確認へ寄せます。",
-      checkSummary: "先に確認: 1.スマホBT接続 2.PC側ブリッジ応答 3.DTC/FF/live PID/ECU情報の読取",
-      startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。先にスマホ側でBluetooth接続し、その後PC側のローカルブリッジ応答を確認します。`,
-      idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。スマホ側Bluetooth接続後に、PC側のブリッジ応答を確認できます。`,
-      readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のブリッジ確認済みです。次に VCI一覧、DTC、FF、live PID、ECU情報の読取を試せます。`
-    };
-  }
-  if (interfaceId === "user-vci-techstream-j2534") {
-    return {
-      actionLabel: "J2534読取確認",
-      statusEarly: "読取器を整備中",
-      statusMid: "read-only取込あり",
-      statusReady: "実機確認待ち",
-      basisPrefix: "J2534候補の読取器",
-      basisSuffix: "VCI列挙と識別を先に固めています。",
-      nextBuild: "J2534実機の列挙結果と read-only ECU情報/DTC応答を同じ契約へ流す。",
-      operatorNote: "PC側でVCIを列挙し、アダプター識別と read-only ECU情報/DTC 応答を同じブリッジ契約で確認します。",
-      checkSummary: "先に確認: 1.VCI列挙 2.アダプター識別 3.read-only DTC/ECU情報",
-      startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。VCI列挙とアダプター識別が読めるかを先に見ます。`,
-      idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。VCI列挙とアダプター識別の読取を先に確認できます。`,
-      readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のブリッジ確認済みです。次に VCI一覧、アダプター識別、read-only DTC/ECU情報を試せます。`
-    };
-  }
-  if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") {
-    return {
-      actionLabel: "CAN系読取確認",
-      statusEarly: "読取器を整備中",
-      statusMid: "read-only取込あり",
-      statusReady: "実機確認待ち",
-      basisPrefix: "CANable候補の読取器",
-      basisSuffix: "read-only CAN系取込の器を先に揃えています。",
-      nextBuild: "CANable系の read-only 応答をローカルブリッジへ流し、診断取込まで同じ器で確認する。",
-      operatorNote: "PC側でCAN系VCIを列挙し、read-only 応答を診断取込まで同じ器で確認します。",
-      checkSummary: "先に確認: 1.VCI列挙 2.read-only CAN系応答 3.診断取込",
-      startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。VCI列挙とread-only CAN系応答が見えるかを先に見ます。`,
-      idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。VCI列挙とread-only CAN系応答の確認を先に進められます。`,
-      readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のブリッジ確認済みです。次に VCI一覧、read-only 応答、診断取込の確認を進められます。`
-    };
-  }
-  return null;
+  const builder = INTERFACE_CANDIDATE_GUIDE_BUILDERS[interfaceId];
+  return typeof builder === "function" ? builder(interfaceId) : null;
 }
 
 function getInterfaceCandidateGuideByItem(item) {
@@ -2513,72 +2636,22 @@ function getRequestedInterfaceGuide() {
 }
 
 function getBridgeBackedImplementationChecks(item) {
-  if (item?.id === "user-vci-techstream-j2534") {
-    return [
-      {
-        label: "VCI列挙表示",
-        available: typeof window.ObdReadOnly?.normalizeBridgeVciList === "function"
-      },
-      {
-        label: "アダプター識別",
-        available: typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function"
-      },
-      {
-        label: "実接続",
-        available: item.connectionEnabled === true
-      }
-    ];
-  }
-  if (item?.id === "user-vci-thinkcar-bluetooth") {
-    return [
-      {
-        label: "VCI列挙表示",
-        available: typeof window.ObdReadOnly?.normalizeBridgeVciList === "function"
-      },
-      {
-        label: "Bluetooth読取取込",
-        available:
-          typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function"
-          && typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function"
-          && typeof window.ObdReadOnly?.normalizeBridgeFreezeFrameSnapshot === "function"
-      },
-      {
-        label: "実接続",
-        available: item.connectionEnabled === true
-      }
-    ];
-  }
-  if (item?.id === "user-vci-rcmall-mks-canable-v2-pro") {
-    return [
-      {
-        label: "VCI列挙表示",
-        available: typeof window.ObdReadOnly?.normalizeBridgeVciList === "function"
-      },
-      {
-        label: "CAN系読取取込の器",
-        available: typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function"
-      },
-      {
-        label: "実接続",
-        available: item.connectionEnabled === true
-      }
-    ];
-  }
-  return [];
+  const builder = BRIDGE_BACKED_IMPLEMENTATION_CHECK_BUILDERS[item?.id];
+  return typeof builder === "function" ? builder(item) : [];
 }
 
 function getElm327ImplementationChecks(item, connectionProfile, preparedRequests) {
   return [
     {
-      label: "Web Serial準備",
+      label: ELM327_IMPLEMENTATION_CHECK_LABELS.webSerial,
       available: Boolean(connectionProfile?.interfaceType === "web-serial-obd-adapter")
     },
     {
-      label: "標準OBD読取要求",
+      label: ELM327_IMPLEMENTATION_CHECK_LABELS.standardRead,
       available: ["read_stored_dtc", "read_live_pid_snapshot", "read_freeze_frame"].every((id) => preparedRequests.some((request) => request.id === id))
     },
     {
-      label: "実接続",
+      label: ELM327_IMPLEMENTATION_CHECK_LABELS.liveConnection,
       available: item.connectionEnabled === true
     }
   ];
@@ -3913,10 +3986,11 @@ function renderObdBridgeContract(contract, schemas) {
     ["読取Intent", `${contract.allowedReadIntents.length}件`],
     ["変更系Intent", "未開放"],
     ["ログ方針", contract.logPolicy.storeRawFrames ? "原文保存あり" : "原文保存なし"],
-    ["表示モデル", window.ObdReadOnly?.normalizeBridgeConnectionStatus ? "準備済み" : "未読込"],
-    ["エクスポート", window.ObdReadOnly?.buildBridgeSessionExportPayload ? "準備済み" : "未読込"],
-    ["診断取込", window.ObdReadOnly?.buildBridgeDiagnosticImport ? "準備済み" : "未読込"],
-    ["統合入力", window.ObdReadOnly?.mergeDiagnosticInputs ? "準備済み" : "未読込"]
+    ["表示モデル", hasBridgeConnectionStatusSupport() ? "準備済み" : "未読込"],
+    ["セッション要約", hasBridgeSessionSummarySupport() ? "準備済み" : "未読込"],
+    ["エクスポート", hasBridgeSessionExportSupport() ? "準備済み" : "未読込"],
+    ["診断取込", hasBridgeDiagnosticImportPipelineSupport() ? "準備済み" : "未読込"],
+    ["統合入力", hasBridgeMergeDiagnosticInputsSupport() ? "準備済み" : "未読込"]
   ].forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
@@ -3976,7 +4050,7 @@ function analyzeObdScannerImport() {
   const scannerText = obdScannerText.value;
   const hasScannerText = scannerText.trim().length > 0;
   const currentSession = obdDevSession.lastSession;
-  const bridgeImport = currentSession && window.ObdReadOnly?.buildBridgeDiagnosticImport
+  const bridgeImport = currentSession && hasBridgeDiagnosticImportPipelineSupport()
     ? window.ObdReadOnly.buildBridgeDiagnosticImport({
       connectionStatus: currentSession.connectionStatus,
       vciList: { devices: currentSession.vciDevices || [] },
@@ -3991,7 +4065,7 @@ function analyzeObdScannerImport() {
       ecuResponseSummary: currentSession.ecuResponseSummary
     })
     : null;
-  const analysis = bridgeImport && window.ObdReadOnly?.mergeDiagnosticInputs
+  const analysis = bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
     ? window.ObdReadOnly.mergeDiagnosticInputs({ scannerText, bridgeImport })
     : window.ObdReadOnly.analyzeScannerText(scannerText);
   obdDetectedCodes.innerHTML = "";
