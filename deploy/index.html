@@ -512,6 +512,21 @@
           <button id="obdDevConnectButton" class="primary-button" type="button" disabled>開発読取を開始</button>
         </div>
 
+        <section class="obd-operation-panel" aria-labelledby="obdPreviewTitle">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">NO-CONNECTION PREVIEW</p>
+              <h3 id="obdPreviewTitle">接続なし読取プレビュー</h3>
+            </div>
+          </div>
+          <div class="obd-dev-controls">
+            <button id="obdPreviewElm327Button" class="secondary-button" type="button">ELM327サンプル</button>
+            <button id="obdPreviewThinkcarButton" class="secondary-button" type="button">THINKCARサンプル</button>
+            <button id="obdPreviewJ2534Button" class="secondary-button" type="button">J2534サンプル</button>
+          </div>
+          <p id="obdPreviewStatus" class="data-status">接続できない端末でも、DTC、データモニター、FF、ECU情報の表示確認を先に行えます。実車読取は別です。</p>
+        </section>
+
         <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdDevGateTitle">
           <div class="obd-result-heading">
             <div>
