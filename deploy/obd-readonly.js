@@ -1308,11 +1308,11 @@
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
     const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot;
     const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
-    const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot;
+    const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot || parts.supportedPidResponse || parts.supported_pid_response;
     const readinessSnapshotInput = parts.readinessSnapshot || parts.readiness_snapshot || parts.readinessResponse || parts.readiness_response || parts.livePidResponse || parts.live_pid_response;
     const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
     const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
-    const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary;
+    const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response;
     const dtcSnapshot = dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
     const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
@@ -1421,10 +1421,19 @@
     return Boolean(
       Array.isArray(parts.codes)
       || Array.isArray(parts.dtc_codes)
+      || Array.isArray(parts.dtcCodes)
       || Array.isArray(parts.monitorValues)
       || Array.isArray(parts.monitor_values)
+      || Array.isArray(parts.monitorInsights)
+      || Array.isArray(parts.monitor_insights)
+      || parts.monitorValueSummary
+      || parts.monitor_value_summary
       || parts.readoutCoverage
       || parts.readout_coverage
+      || parts.readoutCoverageResponse
+      || parts.readout_coverage_response
+      || Array.isArray(parts.warningFlags)
+      || Array.isArray(parts.warning_flags)
       || parts.capturedAt
       || parts.captured_at
     );
@@ -1434,7 +1443,7 @@
     const connectionStatusInput = parts.connectionStatus || parts.connection_status || parts.connectionStatusResponse || parts.connection_status_response || {};
     const vciDevicesInput = parts.vciDevices || parts.vci_devices || parts.vciList || parts.vci_list || parts.listVciResponse || parts.list_vci_response || [];
     const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || parts.adapterIdentityResponse || parts.adapter_identity_response || {};
-    const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot;
+    const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot || parts.supportedPidResponse || parts.supported_pid_response;
     const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
     const readinessSnapshotInput = parts.readinessSnapshot || parts.readiness_snapshot || parts.readinessResponse || parts.readiness_response || parts.livePidResponse || parts.live_pid_response;
     const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
@@ -1458,9 +1467,9 @@
       codes: Array.isArray(codesInput)
         ? codesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
         : [],
-      ecuResponseSummary: (parts.ecuResponseSummary || parts.ecu_response_summary)?.schemaVersion
-        ? (parts.ecuResponseSummary || parts.ecu_response_summary)
-        : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || { source: "local_bridge" }),
+      ecuResponseSummary: (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)?.schemaVersion
+        ? (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)
+        : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" }),
       supportedPidMatrix: supportedPidMatrixInput?.schemaVersion
         ? supportedPidMatrixInput
         : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } }),
@@ -1473,7 +1482,7 @@
       onboardMonitorSnapshot: onboardMonitorSnapshotInput?.schemaVersion
         ? onboardMonitorSnapshotInput
         : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}),
-      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || buildReadoutCoverageSnapshot(),
+      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || buildReadoutCoverageSnapshot(),
       freezeFrameSnapshot: freezeFrameSnapshotInput?.schemaVersion
         ? freezeFrameSnapshotInput
         : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}),
