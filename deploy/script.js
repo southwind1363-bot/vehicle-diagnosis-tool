@@ -2365,7 +2365,7 @@ function buildLocalBridgeImplementationSnapshot() {
     { id: "read_onboard_monitor", label: "Mode06応答の正規化", available: hasBridgeIntentModel("read_onboard_monitor", schemaIntents, allowedReadIntents, hasBridgeOnboardMonitorSupport) },
     { id: "session_summary", label: "セッション要約", available: hasBridgeSessionSummarySupport() },
     { id: "session_export", label: "エクスポート", available: hasBridgeSessionExportSupport() },
-    { id: "diagnostic_import", label: "診断取込", available: hasBridgeDiagnosticImportSupport() }
+    { id: "diagnostic_import", label: "診断取込", available: hasBridgeDiagnosticImportPipelineSupport() }
   ];
   const pendingDriverIds = new Set([
     "user-vci-elm327",
@@ -2441,7 +2441,7 @@ function buildBridgeBackedInterfaceSnapshot(item = {}) {
     },
     {
       label: "診断取込",
-      available: hasBridgeDiagnosticImportSupport()
+      available: hasBridgeDiagnosticImportPipelineSupport()
     },
     {
       label: getInterfaceConnectionCheckLabel(item?.id),
