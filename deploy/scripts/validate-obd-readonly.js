@@ -1171,6 +1171,20 @@ const mergedDiagnosticInputNestedSession = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputNestedSession.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept nested session bridge_import input");
 check(mergedDiagnosticInputNestedSession.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from nested session bridge_import input");
 check(mergedDiagnosticInputNestedSession.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not retain warnings from nested session bridge_import input");
+const mergedDiagnosticInputBridgeSessionOnlyImport = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_diagnostic_import: {
+    importType: "bridge_diagnostic_snapshot",
+    bridgeSession: bridgeDiagnosticImport.bridgeSession
+  }
+});
+check(mergedDiagnosticInputBridgeSessionOnlyImport.protocol === "ISO15765-4", "Combined diagnostic inputs did not recover protocol from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.capturedAt === "2026-06-28T00:00:00Z", "Combined diagnostic inputs did not recover capturedAt from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not recover supported_pid_matrix from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.freezeFrameSnapshot?.triggerDtc === "P0171", "Combined diagnostic inputs did not recover freeze_frame_snapshot from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Combined diagnostic inputs did not recover ecu_info_snapshot from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.monitorValues.length >= bridgePidSnapshot.monitorValues.length, "Combined diagnostic inputs did not recover monitor_values from bridgeSession-only diagnostic import");
 const mergedDiagnosticInputBridgeOnly = obd.mergeDiagnosticInputs({
   bridge_import: bridgeExportPayload
 });

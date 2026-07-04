@@ -1661,18 +1661,19 @@
         ? buildBridgeDiagnosticImport(bridgePartsInput)
         : null;
     const monitorById = new Map();
+    const bridgeSession = bridgeImport?.bridgeSession || null;
 
     scannerAnalysis.monitorValues.forEach((item) => {
       monitorById.set(item.id, { ...item, source: "scanner_text" });
     });
-    (bridgeImport?.monitorValues || []).forEach((item) => {
+    (bridgeImport?.monitorValues || bridgeSession?.monitorValues || []).forEach((item) => {
       monitorById.set(item.id, { ...item, source: "local_bridge" });
     });
 
     const monitorValues = [...monitorById.values()];
     const codes = [...new Set([
       ...scannerAnalysis.codes,
-      ...(bridgeImport?.codes || [])
+      ...(bridgeImport?.codes || bridgeSession?.codes || [])
     ])];
     const monitorInsights = analyzeMonitorValues(monitorValues);
     const hasScannerPayload = Boolean(scannerTextInput.trim() || scannerAnalysis.codes.length || scannerAnalysis.monitorValues.length || scannerAnalysis.toolHints.length);
@@ -1686,28 +1687,28 @@
       source,
       importType: "combined_diagnostic_inputs",
       toolHints: mergeUniqueStrings(scannerAnalysis.toolHints),
-      startedAt: bridgeImport?.startedAt || bridgeImport?.bridgeSession?.startedAt || null,
-      endedAt: bridgeImport?.endedAt || bridgeImport?.bridgeSession?.endedAt || null,
-      protocol: bridgeImport?.protocol || null,
-      capturedAt: bridgeImport?.capturedAt || null,
+      startedAt: bridgeImport?.startedAt || bridgeSession?.startedAt || null,
+      endedAt: bridgeImport?.endedAt || bridgeSession?.endedAt || null,
+      protocol: bridgeImport?.protocol || bridgeSession?.protocol || null,
+      capturedAt: bridgeImport?.capturedAt || bridgeSession?.capturedAt || null,
       codes,
       monitorValues,
       monitorValueSummary: buildMonitorValueSummary(monitorValues),
       monitorInsights,
-      ecuResponseSummary: bridgeImport?.ecuResponseSummary || null,
-      supportedPidMatrix: bridgeImport?.supportedPidMatrix || null,
-      readinessSnapshot: bridgeImport?.readinessSnapshot || null,
-      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || null,
-      onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || null,
-      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || null,
-      vehicleProfile: bridgeImport?.vehicleProfile || bridgeImport?.bridgeSession?.vehicleProfile || null,
-      connectionStatus: bridgeImport?.connectionStatus || bridgeImport?.bridgeSession?.connectionStatus || null,
-      vciDevices: bridgeImport?.vciDevices || bridgeImport?.bridgeSession?.vciDevices || [],
-      adapterIdentity: bridgeImport?.adapterIdentity || bridgeImport?.bridgeSession?.adapterIdentity || null,
-      bridgeSession: bridgeImport?.bridgeSession || null,
-      bridgeExportPayload: bridgeImport?.exportPayload || null,
-      warnings: [...new Set(bridgeImport?.warnings || bridgeImport?.bridgeSession?.warnings || [])],
-      hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+      ecuResponseSummary: bridgeImport?.ecuResponseSummary || bridgeSession?.ecuResponseSummary || null,
+      supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null,
+      readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
+      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
+      onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
+      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
+      vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
+      connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
+      vciDevices: bridgeImport?.vciDevices || bridgeSession?.vciDevices || [],
+      adapterIdentity: bridgeImport?.adapterIdentity || bridgeSession?.adapterIdentity || null,
+      bridgeSession,
+      bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
+      warnings: [...new Set(bridgeImport?.warnings || bridgeSession?.warnings || [])],
+      hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: scannerAnalysis.sourceLength,
       retainedRawText: false,
       wouldTransmit: false,
