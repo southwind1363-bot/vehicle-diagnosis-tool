@@ -4941,6 +4941,15 @@ function analyzeObdScannerImport() {
     }
   }
   if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
+  if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
+    notes.push(`車両 ${(analysis.vehicleProfile.maker || "").trim()} ${(analysis.vehicleProfile.model || "").trim()}`.trim());
+  }
+  if (analysis.startedAt) {
+    notes.push(`開始 ${formatDateTime(analysis.startedAt)}`);
+  }
+  if (analysis.endedAt) {
+    notes.push(`終了 ${formatDateTime(analysis.endedAt)}`);
+  }
   if (analysis.connectionStatus?.displayStatus) {
     notes.push(`状態 ${analysis.connectionStatus.displayStatus}`);
   }
@@ -5021,6 +5030,11 @@ function analyzeObdScannerImport() {
     const summary = [`統合入力で${analysis.monitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
     if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
+    if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
+      summary.push(`車両 ${(analysis.vehicleProfile.maker || "").trim()} ${(analysis.vehicleProfile.model || "").trim()}`.trim());
+    }
+    if (analysis.startedAt) summary.push(`開始 ${formatDateTime(analysis.startedAt)}`);
+    if (analysis.endedAt) summary.push(`終了 ${formatDateTime(analysis.endedAt)}`);
     if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) summary.push(`VCI ${analysis.vciDevices.length}件`);
     if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
@@ -5057,6 +5071,11 @@ function analyzeObdScannerImport() {
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
     const summary = ["計測値は0項目です。"];
+    if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
+      summary.push(`車両 ${(analysis.vehicleProfile.maker || "").trim()} ${(analysis.vehicleProfile.model || "").trim()}`.trim());
+    }
+    if (analysis.startedAt) summary.push(`開始 ${formatDateTime(analysis.startedAt)}`);
+    if (analysis.endedAt) summary.push(`終了 ${formatDateTime(analysis.endedAt)}`);
     if (analysis.readoutCoverage?.totalCategories) {
       summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
       if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
