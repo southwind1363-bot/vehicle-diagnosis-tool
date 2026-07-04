@@ -4183,11 +4183,16 @@ function renderObdBridgeReadout(parts = {}) {
     onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
     supportedPidMatrix: supportedPidMatrix || undefined,
     vehicleProfile: vehicleProfile || undefined,
-    connectionStatus: obdDevSession.bridgeStatus || undefined,
-    vciList: obdDevSession.bridgeVciList || undefined
+    connectionStatus: obdDevSession.bridgeStatus || previousSession.connectionStatus || undefined,
+    vciList: obdDevSession.bridgeVciList || (Array.isArray(previousSession.vciDevices) ? { devices: previousSession.vciDevices } : undefined),
+    adapterIdentity: obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined
   });
   const session = window.ObdReadOnly.buildDiagnosticScanSession({
     session_id: "local-bridge-dev-readout",
+    startedAt: previousSession.startedAt || importResult.startedAt || undefined,
+    endedAt: previousSession.endedAt || importResult.endedAt || undefined,
+    protocol: importResult.protocol || previousSession.protocol || undefined,
+    capturedAt: importResult.capturedAt || previousSession.capturedAt || undefined,
     dtcSnapshot: dtcSnapshot || { dtcs: [] },
     livePidSnapshot: livePidSnapshot || { values: [] },
     readinessSnapshot: readinessSnapshot || { monitors: [] },
@@ -4199,7 +4204,7 @@ function renderObdBridgeReadout(parts = {}) {
     connectionStatus: importResult.connectionStatus || importResult.bridgeSession?.connectionStatus,
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
     vehicleProfile: vehicleProfile || importResult.vehicleProfile || importResult.bridgeSession?.vehicleProfile || undefined,
-    adapterIdentity: obdDevSession.adapterIdentity || importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || undefined
+    adapterIdentity: importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined
   });
   obdDevSession.lastSession = session;
   const monitorValues = livePidSnapshot?.monitorValues || [];
@@ -4312,9 +4317,12 @@ function renderObdBridgeSessionDetails(session = null) {
   obdDevSessionDetails.innerHTML = "";
 
   const sections = [];
-  const connectionStatus = session?.connectionStatus || obdDevSession.bridgeStatus;
+  const connectionStatus = session?.connectionStatus
+    ? { ...(obdDevSession.bridgeStatus || {}), ...session.connectionStatus }
+    : obdDevSession.bridgeStatus;
   const vciDevices = session?.vciDevices || obdDevSession.bridgeVciList?.devices || [];
-  const vciDriverStatus = obdDevSession.bridgeVciList?.driverStatus || vciDevices[0]?.driverStatus || NO_DATA;
+  const selectedVci = vciDevices.find((item) => item?.selected) || vciDevices[0] || null;
+  const vciDriverStatus = selectedVci?.driverStatus || obdDevSession.bridgeVciList?.driverStatus || NO_DATA;
   if (connectionStatus?.displayStatus || vciDevices.length) {
     const lines = [
       `状態: ${connectionStatus?.displayStatus || NO_DATA}`,
@@ -4397,7 +4405,9 @@ function renderObdBridgeSessionDetails(session = null) {
     })]);
   }
 
-  const adapterIdentity = session?.adapterIdentity || obdDevSession.adapterIdentity;
+  const adapterIdentity = session?.adapterIdentity
+    ? { ...(obdDevSession.adapterIdentity || {}), ...session.adapterIdentity }
+    : obdDevSession.adapterIdentity;
   if (adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion) {
     sections.push(["アダプター", [
       `名称: ${adapterIdentity.adapterName || NO_DATA}`,
@@ -4487,7 +4497,15 @@ function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
 
 function renderObdDeveloperSessionSummary(session = null) {
   obdDevSessionSummary.innerHTML = "";
-  const bridgeDeviceCount = obdDevSession.bridgeVciList?.deviceCount ?? 0;
+  const connectionStatus = session?.connectionStatus
+    ? { ...(obdDevSession.bridgeStatus || {}), ...session.connectionStatus }
+    : obdDevSession.bridgeStatus;
+  const adapterIdentity = session?.adapterIdentity
+    ? { ...(obdDevSession.adapterIdentity || {}), ...session.adapterIdentity }
+    : obdDevSession.adapterIdentity;
+  const bridgeDeviceCount = Array.isArray(session?.vciDevices)
+    ? session.vciDevices.length
+    : (obdDevSession.bridgeVciList?.deviceCount ?? 0);
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(session?.dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
   const coverage = session?.readoutCoverage || null;
   const selectedInterface = getSelectedObdInterfaceLabel();
@@ -4498,12 +4516,20 @@ function renderObdDeveloperSessionSummary(session = null) {
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
   const endedAtLabel = session?.endedAt ? formatDateTime(session.endedAt) : NO_DATA;
   const capturedAtLabel = session?.capturedAt ? formatDateTime(session.capturedAt) : NO_DATA;
+  const hasRecoveredBridgeSession = Boolean(
+    session?.connectionStatus?.displayStatus
+    || (Array.isArray(session?.vciDevices) && session.vciDevices.length > 0)
+    || session?.adapterIdentity?.adapterFamily
+    || session?.adapterIdentity?.adapterName
+  );
   const connectionLabel = obdDevSession.port
     ? selectedInterfaceId === "user-vci-elm327"
       ? "Web Serial読取"
       : `${selectedInterface} 読取`
     : obdDevSession.bridgeEndpoint
       ? "ローカルブリッジ読取"
+      : hasRecoveredBridgeSession
+        ? "ローカルブリッジ読取"
       : obdDevSession.previewMode
         ? "読取前プレビュー"
         : "未読取";
@@ -4511,7 +4537,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["読取", connectionLabel],
     ["方式", selectedInterface],
     ["車両", vehicleLabel],
-    ["状態", session?.connectionStatus?.displayStatus || obdDevSession.bridgeStatus?.displayStatus || NO_DATA],
+    ["状態", connectionStatus?.displayStatus || NO_DATA],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
@@ -4524,9 +4550,9 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["開始", startedAtLabel],
     ["終了", endedAtLabel],
     ["取得時刻", capturedAtLabel],
-    ["ブリッジ", obdDevSession.bridgeEndpoint ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
+    ["ブリッジ", obdDevSession.bridgeEndpoint || hasRecoveredBridgeSession ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
-    ["アダプター", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
+    ["アダプター", adapterIdentity?.adapterFamily || adapterIdentity?.adapterName || NO_DATA],
     ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
     ["取得済", coverage?.capturedCategories ?? 0],
     ["空応答", coverage?.emptyCategories ?? 0],
@@ -4956,6 +4982,11 @@ function analyzeObdScannerImport() {
   const currentSession = obdDevSession.lastSession;
   const bridgeImport = currentSession && hasBridgeDiagnosticImportPipelineSupport()
     ? window.ObdReadOnly.buildBridgeDiagnosticImport({
+      startedAt: currentSession.startedAt,
+      endedAt: currentSession.endedAt,
+      protocol: currentSession.protocol,
+      capturedAt: currentSession.capturedAt,
+      vehicleProfile: currentSession.vehicleProfile,
       connectionStatus: currentSession.connectionStatus,
       vciList: { devices: currentSession.vciDevices || [] },
       adapterIdentity: currentSession.adapterIdentity,
