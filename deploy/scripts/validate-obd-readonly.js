@@ -962,6 +962,9 @@ check(bridgeDiagnosticImport.onboardMonitorSnapshot.failedCount === 1, "Bridge d
 check(bridgeDiagnosticImport.readoutCoverage.progressPercent >= 80, "Bridge diagnostic import did not carry readout coverage");
 check(bridgeDiagnosticImport.freezeFrameSnapshot.monitorValues.length === 2, "ブリッジ診断取込へフリーズフレームを引き継げません");
 check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取込へ相関ヒントを引き継げません");
+check(bridgeDiagnosticImport.connectionStatus.displayStatus === "読取準備モデル", "Bridge diagnostic import did not expose top-level connection status");
+check(bridgeDiagnosticImport.vciDevices.length === 1, "Bridge diagnostic import did not expose top-level vci devices");
+check(bridgeDiagnosticImport.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not expose top-level adapter identity");
 check(bridgeDiagnosticImport.bridgeSession.vciDevices.length === 1, "ブリッジ診断取込へVCI表示モデルを引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.adapterIdentity.adapterFamily === "elm327", "ブリッジ診断取込へアダプター情報を引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.protocol === "ISO15765-4", "ブリッジ診断取込へprotocolを引き継げません");
@@ -1011,6 +1014,9 @@ check(bridgeDiagnosticImportAliases.bridgeSession.connectionStatus.paired === tr
 check(bridgeDiagnosticImportAliases.bridgeSession.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not accept adapter_identity summary alias input");
 check(bridgeDiagnosticImportAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge diagnostic import did not accept supported_pid_snapshot summary alias input");
 check(bridgeDiagnosticImportAliases.freezeFrameSnapshot.triggerDtc === "P0171", "Bridge diagnostic import did not accept freeze_frame_response summary alias input");
+check(bridgeDiagnosticImportAliases.connectionStatus.vehicleConnected === true, "Bridge diagnostic import did not expose top-level connection_status summary alias input");
+check(bridgeDiagnosticImportAliases.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not expose top-level vci_list summary alias input");
+check(bridgeDiagnosticImportAliases.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not expose top-level adapter_identity summary alias input");
 check(bridgeDiagnosticImportAliases.bridgeSession.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not accept vci_list summary alias input");
 check(bridgeDiagnosticImportAliases.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not accept readiness_response summary alias input");
 check(bridgeDiagnosticImportAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not accept ecu_info_response summary alias input");
@@ -1107,6 +1113,9 @@ const mergedDiagnosticInputAliases = obd.mergeDiagnosticInputs({
 });
 check(mergedDiagnosticInputAliases.codes.includes("P0171"), "Combined diagnostic inputs did not accept scanner_text alias input");
 check(mergedDiagnosticInputAliases.toolHints.join(",") === "Techstream,J2534", "Combined diagnostic inputs did not retain scanner tool hints");
+check(mergedDiagnosticInputAliases.connectionStatus?.vehicleConnected === true, "Combined diagnostic inputs did not retain top-level connection status from bridge_diagnostic_import alias input");
+check(mergedDiagnosticInputAliases.vciDevices[0]?.id === "vci-1", "Combined diagnostic inputs did not retain top-level vci devices from bridge_diagnostic_import alias input");
+check(mergedDiagnosticInputAliases.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not retain top-level adapter identity from bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.monitorInsights.length > 0, "Combined diagnostic inputs did not rebuild monitor insights from bridge_import alias input");
 const mergedDiagnosticInputExportPayload = obd.mergeDiagnosticInputs({

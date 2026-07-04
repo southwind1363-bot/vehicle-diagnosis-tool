@@ -76,6 +76,33 @@ function hasBridgeDiagnosticImportSupport() {
   return typeof window.ObdReadOnly?.buildBridgeDiagnosticImport === "function";
 }
 
+function hasBridgeDiagnosticImportTopLevelSessionSupport() {
+  if (!hasBridgeDiagnosticImportSupport()) return false;
+  const snapshot = window.ObdReadOnly.buildBridgeDiagnosticImport({
+    connection_status: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    vci_list: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { items: [{ deviceId: "compat-vci", name: "Compat VCI", isConnected: true }], selectedVciId: "compat-vci" }
+    },
+    adapter_identity: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Compat Adapter", family: "elm327", version: "1.0" }
+    }
+  });
+  return snapshot?.connectionStatus?.vehicleConnected === true
+    && Array.isArray(snapshot?.vciDevices) && snapshot.vciDevices[0]?.id === "compat-vci"
+    && snapshot?.adapterIdentity?.adapterFamily === "elm327";
+}
+
 function hasBridgeLivePidSupport() {
   return typeof window.ObdReadOnly?.normalizeBridgeLivePidSnapshot === "function";
 }
@@ -2882,7 +2909,8 @@ function buildLocalBridgeImplementationSnapshot() {
     { id: "read_onboard_monitor", label: "Mode06応答の正規化", available: hasBridgeIntentModel("read_onboard_monitor", schemaIntents, allowedReadIntents, hasBridgeOnboardMonitorSupport) },
     { id: "session_summary", label: "セッション要約", available: hasBridgeSessionSummarySupport() },
     { id: "session_export", label: "エクスポート", available: hasBridgeSessionExportSupport() },
-    { id: "diagnostic_import", label: "診断取込", available: hasBridgeDiagnosticImportPipelineSupport() }
+    { id: "diagnostic_import", label: "診断取込", available: hasBridgeDiagnosticImportPipelineSupport() },
+    { id: "diagnostic_import_top_level_session", label: "診断取込トップレベル互換", available: hasBridgeDiagnosticImportTopLevelSessionSupport() }
   ];
   const pendingDriverIds = new Set([
     "user-vci-elm327",
@@ -4118,9 +4146,9 @@ function renderObdBridgeReadout(parts = {}) {
     onboardMonitorSnapshot: onboardMonitorSnapshot || { tests: [] },
     supportedPidMatrix: supportedPidMatrix || { supported_pids: [] },
     ecuResponseSummary: importResult.ecuResponseSummary,
-    connectionStatus: importResult.bridgeSession?.connectionStatus,
-    vciDevices: importResult.bridgeSession?.vciDevices,
-    adapterIdentity: obdDevSession.adapterIdentity || importResult.bridgeSession?.adapterIdentity || undefined
+    connectionStatus: importResult.connectionStatus || importResult.bridgeSession?.connectionStatus,
+    vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
+    adapterIdentity: obdDevSession.adapterIdentity || importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || undefined
   });
   obdDevSession.lastSession = session;
   const monitorValues = livePidSnapshot?.monitorValues || [];
@@ -4796,6 +4824,7 @@ function renderObdBridgeContract(contract, schemas) {
     ["セッション要約", hasBridgeSessionSummarySupport() ? "準備済み" : "未読込"],
     ["エクスポート", hasBridgeSessionExportSupport() ? "準備済み" : "未読込"],
     ["診断取込", hasBridgeDiagnosticImportPipelineSupport() ? "準備済み" : "未読込"],
+    ["取込トップレベル互換", hasBridgeDiagnosticImportTopLevelSessionSupport() ? "準備済み" : "未読込"],
     ["統合入力", hasBridgeMergeDiagnosticInputsSupport() ? "準備済み" : "未読込"]
   ].forEach(([label, value]) => {
     const item = document.createElement("span");
