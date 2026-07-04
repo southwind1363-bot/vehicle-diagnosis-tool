@@ -1040,6 +1040,21 @@ check(bridgeDiagnosticImportAliases.bridgeSession.vciDevices[0]?.id === "summary
 check(bridgeDiagnosticImportAliases.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not accept readiness_response summary alias input");
 check(bridgeDiagnosticImportAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not accept ecu_info_response summary alias input");
 check(bridgeDiagnosticImportAliases.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not accept onboard_monitor_response summary alias input");
+const bridgeDiagnosticImportAliasesDerivedCoverage = obd.buildBridgeDiagnosticImport({
+  captured_at: "2026-06-28T00:09:30Z",
+  dtc_codes: ["P0171"],
+  monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 650, unit: "rpm", valueType: "number", decoded: true }],
+  connection_status: bridgeStatus,
+  vci_list: bridgeVciList,
+  adapter_identity: bridgeAdapterIdentity,
+  supported_pid_snapshot: bridgeSupportedPidSnapshot,
+  readiness_response: bridgeReadinessSnapshot,
+  ecu_info_response: bridgeEcuInfoSnapshot,
+  onboard_monitor_response: bridgeOnboardMonitorSnapshot,
+  freeze_frame_response: bridgeFreezeFrameSnapshot
+});
+check(bridgeDiagnosticImportAliasesDerivedCoverage.readoutCoverage.progressPercent >= 80, "Bridge diagnostic import did not derive readout coverage from summary alias snapshots");
+check(bridgeDiagnosticImportAliasesDerivedCoverage.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not derive warnings from summary alias snapshots");
 const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
   session: bridgeExportPayload.session,
   exported_at: "2026-06-28T00:10:00Z"

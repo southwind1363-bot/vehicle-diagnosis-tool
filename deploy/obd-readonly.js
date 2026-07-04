@@ -1475,6 +1475,61 @@
     const monitorValuesInput = parts.monitorValues || parts.monitor_values || [];
     const monitorInsightsInput = parts.monitorInsights || parts.monitor_insights || [];
     const warningsInput = parts.warnings || parts.warning_flags || parts.warningFlags || [];
+    const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
+    const normalizedVciList = Array.isArray(vciDevicesInput)
+      ? { devices: vciDevicesInput, blocked: false }
+      : (vciDevicesInput?.devices ? { ...vciDevicesInput, blocked: false } : normalizeBridgeVciList(vciDevicesInput));
+    const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
+    const ecuResponseSummary = (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)?.schemaVersion
+      ? (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)
+      : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" });
+    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
+      ? supportedPidMatrixInput
+      : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } });
+    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+      ? readinessSnapshotInput
+      : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {});
+    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+      ? ecuInfoSnapshotInput
+      : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {});
+    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+      ? onboardMonitorSnapshotInput
+      : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {});
+    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+      ? freezeFrameSnapshotInput
+      : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
+    const monitorValues = Array.isArray(monitorValuesInput)
+      ? monitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
+      : [];
+    const monitorInsights = Array.isArray(monitorInsightsInput)
+      ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
+      : [];
+    const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
+      connectionStatus,
+      vciDevices: normalizedVciList.devices,
+      adapterIdentity,
+      dtcSnapshot: { blocked: false, codes: Array.isArray(codesInput) ? codesInput : [] },
+      livePidSnapshot: { blocked: false, monitorValues, supportedPids: supportedPidMatrix.supportedPids || [], monitorValueSummary: buildMonitorValueSummary(monitorValues) },
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
+    });
+    const derivedWarnings = [];
+    if (connectionStatus.blocked || normalizedVciList.blocked) derivedWarnings.push("local_bridge_disabled");
+    if (Array.isArray(codesInput) && codesInput.length) derivedWarnings.push("confirm_dtc_with_service_manual");
+    if (freezeFrameSnapshot.monitorValues.length) derivedWarnings.push("freeze_frame_available");
+    if (readinessSnapshot.incompleteCount > 0) derivedWarnings.push("readiness_incomplete");
+    if (onboardMonitorSnapshot.failedCount > 0) derivedWarnings.push("onboard_monitor_test_failed");
+    if (ecuInfoSnapshot.keyItemSummary?.missingCount > 0) derivedWarnings.push("mode09_key_items_missing");
+    if (ecuInfoSnapshot.supportInfoTypesCaptured === false) derivedWarnings.push("mode09_supported_types_unknown");
+    if (monitorValues.length) derivedWarnings.push("compare_values_under_same_conditions");
+    if (((buildMonitorValueSummary(monitorValues).undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
+      derivedWarnings.push("raw_pid_values_need_conversion");
+    }
+    if (derivedReadoutCoverage.missingCategories > 0) derivedWarnings.push("bridge_readout_incomplete");
+    if (derivedReadoutCoverage.emptyCategories > 0) derivedWarnings.push("bridge_readout_empty_sections");
     return {
       source: parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,
@@ -1482,41 +1537,23 @@
       capturedAt: parts.capturedAt || parts.captured_at || null,
       protocol: parts.protocol || null,
       vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
-      connectionStatus: connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput),
-      vciDevices: Array.isArray(vciDevicesInput)
-        ? vciDevicesInput
-        : (vciDevicesInput?.devices || normalizeBridgeVciList(vciDevicesInput).devices),
-      adapterIdentity: adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput),
+      connectionStatus,
+      vciDevices: normalizedVciList.devices,
+      adapterIdentity,
       codes: Array.isArray(codesInput)
         ? codesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
         : [],
-      ecuResponseSummary: (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)?.schemaVersion
-        ? (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)
-        : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" }),
-      supportedPidMatrix: supportedPidMatrixInput?.schemaVersion
-        ? supportedPidMatrixInput
-        : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } }),
-      readinessSnapshot: readinessSnapshotInput?.schemaVersion
-        ? readinessSnapshotInput
-        : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {}),
-      ecuInfoSnapshot: ecuInfoSnapshotInput?.schemaVersion
-        ? ecuInfoSnapshotInput
-        : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}),
-      onboardMonitorSnapshot: onboardMonitorSnapshotInput?.schemaVersion
-        ? onboardMonitorSnapshotInput
-        : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}),
-      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || buildReadoutCoverageSnapshot(),
-      freezeFrameSnapshot: freezeFrameSnapshotInput?.schemaVersion
-        ? freezeFrameSnapshotInput
-        : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}),
-      monitorValues: Array.isArray(monitorValuesInput)
-        ? monitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
-        : [],
-      monitorValueSummary: parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(Array.isArray(monitorValuesInput) ? monitorValuesInput : []),
-      monitorInsights: Array.isArray(monitorInsightsInput)
-        ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
-        : [],
-      warnings: [...new Set(Array.isArray(warningsInput) ? warningsInput : [])],
+      ecuResponseSummary,
+      supportedPidMatrix,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
+      freezeFrameSnapshot,
+      monitorValues,
+      monitorValueSummary: parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(monitorValues),
+      monitorInsights,
+      warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
