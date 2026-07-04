@@ -2747,8 +2747,11 @@
     const add = (label, pattern) => {
       if (pattern.test(text) && !hints.includes(label)) hints.push(label);
     };
-    add("Techstream", /\btechstream\b|\bintelligent tester\b/i);
+    add("Techstream", /\btechstream\b|\bgts\b|\bglobal techstream\b|\bintelligent tester\b/i);
     add("J2534", /\bj2534\b|\bpass[\s-]?thru\b/i);
+    add("CONSULT", /\bconsult(?:-?iii)?\b/i);
+    add("HDS", /\bhds\b|\bhonda diagnostic system\b/i);
+    add("IDS", /\bids\b|\bintegrated diagnostic system\b/i);
     add("THINKCAR", /\bthinkcar\b/i);
     add("ELM327", /\belm[\s-]?327\b|\bstn11\d*\b|\bstn21\d*\b/i);
     add("SavvyCAN", /\bsavvycan\b/i);

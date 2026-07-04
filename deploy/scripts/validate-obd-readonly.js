@@ -50,6 +50,7 @@ check(obd?.policy?.connectionPreparationEnabled === true, "接続準備レイヤ
 
 const analysis = obd.analyzeScannerText("P0171 p0300 JTDKN3DU0A0123456 P0171");
 check(obd.analyzeScannerText("Toyota Techstream J2534 health check").toolHints.join(",") === "Techstream,J2534", "Scanner text tool hints were not detected");
+check(obd.analyzeScannerText("GTS CONSULT-III HDS IDS").toolHints.join(",") === "Techstream,CONSULT,HDS,IDS", "Expanded scanner tool hints were not detected");
 check(analysis.codes.join(",") === "P0171,P0300", "DTC抽出または重複除外が不正です");
 check(analysis.hadSensitiveIdentifier === true, "車台番号候補を検出できません");
 check(analysis.retainedRawText === false, "入力原文を保持する設定になっています");
@@ -1522,6 +1523,8 @@ check(textScanSession.retainedRawText === false && textScanSession.retainedRawFr
 const techstreamTextScanSession = obd.buildScanSessionFromObdText(["Toyota Techstream", "J2534", "7E8 04 43 01 71"].join("\n"), { session_id: "techstream-log" });
 check(techstreamTextScanSession.toolHints.join(",") === "Techstream,J2534", "OBD text scan session did not retain Techstream/J2534 tool hints");
 check(techstreamTextScanSession.importClassification.toolHints.join(",") === "Techstream,J2534", "OBD text scan session import classification did not retain tool hints");
+const oemScannerTextScanSession = obd.buildScanSessionFromObdText(["GTS", "CONSULT-III", "Honda Diagnostic System", "Integrated Diagnostic System", "7E8 04 43 01 71"].join("\n"), { session_id: "oem-tool-log" });
+check(oemScannerTextScanSession.toolHints.join(",") === "Techstream,CONSULT,HDS,IDS", "OBD text scan session did not retain expanded OEM scanner tool hints");
 const textScanSessionAliasOptions = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-alias-options",
   started_at: "2026-06-28T00:14:00Z",
