@@ -3547,6 +3547,24 @@
       .trim();
   }
 
+  function normalizeMonitorLabelTokens(value) {
+    return normalizeMonitorLabel(value)
+      .replace(/[()[\]{}]/g, " ")
+      .replace(/[=,/%]/g, " ")
+      .replace(/\b(?:v|volt|volts|rpm|kpa|pa|c|f|deg|degree|degrees|percent|pct|kmh|km|h|g|s|l|min|ms)\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isMonitorLabelMatch(label, alias) {
+    const normalizedLabel = normalizeMonitorLabel(label);
+    const normalizedAlias = normalizeMonitorLabel(alias);
+    if (normalizedLabel === normalizedAlias) return true;
+    const tokenLabel = normalizeMonitorLabelTokens(label);
+    const tokenAlias = normalizeMonitorLabelTokens(alias);
+    return Boolean(tokenLabel) && tokenLabel === tokenAlias;
+  }
+
   function extractMonitorValues(value) {
     const redacted = redactSensitiveText(value);
     const values = new Map();
@@ -3559,7 +3577,7 @@
       const valuePart = line.slice(separator + 1).trim();
 
       const definition = monitorDefinitions.find((item) =>
-        item.aliases.some((alias) => labelPart === normalizeMonitorLabel(alias))
+        item.aliases.some((alias) => isMonitorLabelMatch(labelPart, alias))
       );
       if (!definition) return;
 

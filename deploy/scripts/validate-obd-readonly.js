@@ -385,6 +385,17 @@ check(monitorAnalysis.monitorValues.find((item) => item.id === "dpf_status")?.va
 check(!monitorAnalysis.monitorValues.some((item) => item.id === "unknown"), "未定義値を取り込んでいます");
 check(monitorAnalysis.retainedRawText === false, "モニター入力原文を保持する設定になっています");
 
+const monitorAliasAnalysis = obd.analyzeScannerText([
+  "Engine RPM = 780 rpm",
+  "Control Module Voltage (V): 14.2",
+  "Intake Air Temp (C) = 32",
+  "Calculated Load (%) : 21.6"
+].join("\n"));
+check(monitorAliasAnalysis.monitorValues.length === 4, "ASCII monitor label variants were not all parsed");
+check(monitorAliasAnalysis.monitorValues.find((item) => item.id === "control_module_voltage")?.value === 14.2, "Control module voltage alias variant was not parsed");
+check(monitorAliasAnalysis.monitorValues.find((item) => item.id === "intake_air_temp")?.value === 32, "Intake air temp alias variant was not parsed");
+check(monitorAliasAnalysis.monitorValues.find((item) => item.id === "calculated_load")?.value === 21.6, "Calculated load alias variant was not parsed");
+
 const bridgePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
