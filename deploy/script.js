@@ -5085,6 +5085,8 @@ function renderObdMonitorInsights(insights = []) {
 
 function loadObdMonitorSample() {
   obdScannerText.value = [
+    "Toyota Techstream",
+    "J2534",
     "P0171 P0300",
     "Engine RPM: 780 rpm",
     "Vehicle Speed: 0 km/h",

@@ -104,6 +104,7 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enha
 const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 check(indexHtml.includes("診断機全体 35% / OBD2読取 53%"), "OBD progress headline in index.html is out of date");
 check(indexHtml.includes("機能 38% / 網羅 31% / 読取 35%"), "OBD progress breakdown in index.html is out of date");
+check(indexHtml.includes("Techstream/J2534"), "OBD import helper text in index.html is out of date");
 check(diagnosticCapabilityStatus.every((item) => item.safety_gate), "診断機能完成度に安全ゲートがありません");
 check(diagnosticWorkflowsPractical.length >= 7, "実用診断フローが不足しています");
 check(diagnosticWorkflowsPractical.some((item) => item.id === "workflow-evap-leak-p0440-p0456" && item.monitor_ids.includes("commanded_evap_purge")), "EVAP診断フローにパージ指令PIDがありません");
