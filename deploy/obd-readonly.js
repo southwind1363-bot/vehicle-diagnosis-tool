@@ -2314,28 +2314,29 @@
   }
 
   function buildDecodedObdScanSession(input = {}) {
-    const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot;
-    const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot;
-    const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot;
-    const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot;
-    const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot;
-    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfo || input.ecu_info || input.ecuInfoItems || input.ecu_info_items;
-    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix;
+    const sessionInput = getDiagnosticSessionInput(input);
+    const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot;
+    const livePidSnapshotInput = sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot;
+    const freezeFrameSnapshotInput = sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot;
+    const readinessSnapshotInput = sessionInput.readinessSnapshot || sessionInput.readiness_snapshot;
+    const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot;
+    const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items;
+    const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix;
     const dtcSnapshot = dtcSnapshotInput?.schemaVersion || dtcSnapshotInput?.codes
       ? dtcSnapshotInput
-      : input.storedDtcResponse || input.stored_dtc_response || input.pendingDtcResponse || input.pending_dtc_response || input.permanentDtcResponse || input.permanent_dtc_response
+      : sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response
         ? mergeDtcSnapshots(
-            input.storedDtcResponse?.schemaVersion || input.stored_dtc_response?.schemaVersion ? (input.storedDtcResponse || input.stored_dtc_response) : decodeObdDtcResponse(input.storedDtcResponse || input.stored_dtc_response || {}),
-            input.pendingDtcResponse?.schemaVersion || input.pending_dtc_response?.schemaVersion ? (input.pendingDtcResponse || input.pending_dtc_response) : decodeObdDtcResponse(input.pendingDtcResponse || input.pending_dtc_response || {}),
-            input.permanentDtcResponse?.schemaVersion || input.permanent_dtc_response?.schemaVersion ? (input.permanentDtcResponse || input.permanent_dtc_response) : decodeObdDtcResponse(input.permanentDtcResponse || input.permanent_dtc_response || {})
+            sessionInput.storedDtcResponse?.schemaVersion || sessionInput.stored_dtc_response?.schemaVersion ? (sessionInput.storedDtcResponse || sessionInput.stored_dtc_response) : decodeObdDtcResponse(sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || {}),
+            sessionInput.pendingDtcResponse?.schemaVersion || sessionInput.pending_dtc_response?.schemaVersion ? (sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response) : decodeObdDtcResponse(sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || {}),
+            sessionInput.permanentDtcResponse?.schemaVersion || sessionInput.permanent_dtc_response?.schemaVersion ? (sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response) : decodeObdDtcResponse(sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || {})
           )
-        : input.dtcResponse?.schemaVersion ? input.dtcResponse : decodeObdDtcResponse(input.dtcResponse || input.dtc_response || {});
-    const livePidResponseInput = input.livePidResponse || input.live_pid_response || {};
-    const freezeFrameResponseInput = input.freezeFrameResponse || input.freeze_frame_response || {};
-    const readinessResponseInput = input.readinessResponse || input.readiness_response || {};
-    const onboardMonitorResponseInput = input.onboardMonitorResponse || input.onboard_monitor_response || {};
-    const ecuInfoResponseInput = input.ecuInfoResponse || input.ecu_info_response || {};
-    const supportedPidResponseInput = input.supportedPidResponse || input.supported_pid_response || {};
+        : sessionInput.dtcResponse?.schemaVersion ? sessionInput.dtcResponse : decodeObdDtcResponse(sessionInput.dtcResponse || sessionInput.dtc_response || {});
+    const livePidResponseInput = sessionInput.livePidResponse || sessionInput.live_pid_response || {};
+    const freezeFrameResponseInput = sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || {};
+    const readinessResponseInput = sessionInput.readinessResponse || sessionInput.readiness_response || {};
+    const onboardMonitorResponseInput = sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || {};
+    const ecuInfoResponseInput = sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || {};
+    const supportedPidResponseInput = sessionInput.supportedPidResponse || sessionInput.supported_pid_response || {};
     const livePidSnapshot = livePidSnapshotInput?.monitorValues
       ? livePidSnapshotInput
       : livePidResponseInput?.monitorValues
@@ -2370,10 +2371,10 @@
         : decodeSupportedPidResponse(supportedPidResponseInput);
     return buildDiagnosticScanSession({
       source: "obd_response_decoder",
-      session_id: input.session_id || input.sessionId || "decoded_obd_scan_session",
-      started_at: input.started_at || input.startedAt || null,
-      ended_at: input.ended_at || input.endedAt || null,
-      vehicleProfile: input.vehicleProfile || input.vehicle_profile || null,
+      session_id: sessionInput.session_id || sessionInput.sessionId || "decoded_obd_scan_session",
+      started_at: sessionInput.started_at || sessionInput.startedAt || null,
+      ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
+      vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
       dtcSnapshot,
       livePidSnapshot,
       freezeFrameSnapshot,
@@ -2381,7 +2382,7 @@
       onboardMonitorSnapshot,
       ecuInfoSnapshot,
       supportedPidMatrix,
-      ecus: input.ecus || input.ecu_responses || []
+      ecus: sessionInput.ecus || sessionInput.ecu_responses || []
     });
   }
 

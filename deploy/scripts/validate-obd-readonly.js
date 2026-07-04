@@ -1349,6 +1349,20 @@ check(decodedScanSessionSnapshotSet.readinessSnapshot.incompleteCount === 1, "De
 check(decodedScanSessionSnapshotSet.onboardMonitorSnapshot.failedCount === 1, "Decoded OBD session did not accept onboard_monitor_snapshot alias input");
 check(decodedScanSessionSnapshotSet.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Decoded OBD session did not accept ecu_info_snapshot alias input");
 check(decodedScanSessionSnapshotSet.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept supported_pid_matrix alias input");
+const decodedScanSessionNestedAlias = obd.buildDecodedObdScanSession({
+  scan_session: {
+    session_id: "decoded-nested-session-test",
+    vehicle_profile: { maker: "Toyota", model: "Yaris" },
+    stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+    supported_pid_response: { raw: "41 00 18 18 00 01 41 20 80 00 00 01" },
+    readiness_response: { raw: "41 01 81 07 22 00" },
+    ecu_info_response: { raw: "49 04 01 43 41 4C 2D 31 32 33 34" }
+  }
+});
+check(decodedScanSessionNestedAlias.dtcSnapshot.codes.includes("P0171"), "Decoded OBD session did not accept scan_session nested DTC alias input");
+check(decodedScanSessionNestedAlias.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept scan_session nested supported_pid alias input");
+check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept scan_session nested readiness alias input");
+check(decodedScanSessionNestedAlias.vehicleProfile?.model === "Yaris", "Decoded OBD session did not carry vehicle_profile from scan_session nested alias input");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
 const decodedScanSessionEcuInfoCamelAlias = obd.buildDecodedObdScanSession({
   session_id: "decoded-ecuinfo-camel-alias-test",
@@ -1635,6 +1649,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 425");
+  console.log("OBD read-only safety checks: 429");
   console.log("Errors: 0");
 }
