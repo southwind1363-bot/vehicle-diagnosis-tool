@@ -521,6 +521,21 @@ const bridgeAliasFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
 });
 check(bridgeAliasFreezeFrameSnapshot.triggerDtc === "P0300", "Bridge freeze frame trigger alias was not normalized");
 check(bridgeAliasFreezeFrameSnapshot.monitorValues.length === 1, "Bridge freeze frame value alias was not normalized");
+const bridgeFreezeFrameRowAliases = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    triggerCode: "P0128",
+    freezeFrameRows: [
+      { monitorName: "Engine RPM", result: "980", unit: "rpm", freezeFrameNumber: 2 },
+      { code: "05", rawValue: "72", unit: "C", freezeFrameNumber: 2 }
+    ]
+  }
+});
+check(bridgeFreezeFrameRowAliases.triggerDtc === "P0128", "Bridge freezeFrameRows trigger alias was not normalized");
+check(bridgeFreezeFrameRowAliases.monitorValues.length === 2, "Bridge freezeFrameRows aliases were not normalized");
+check(bridgeFreezeFrameRowAliases.monitorValues.find((item) => item.id === "coolant_temp")?.value === 72, "Bridge freezeFrameRows rawValue alias was not normalized");
 const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
@@ -567,6 +582,32 @@ const bridgeReadinessAliasRows = obd.normalizeBridgeReadinessSnapshot({
   }
 });
 check(bridgeReadinessAliasRows.milOn === true && bridgeReadinessAliasRows.incompleteCount === 1, "Bridge readiness row aliases were not normalized");
+const bridgeReadinessStatusByteAliases = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mil: true,
+    statusByteB: 0x07,
+    statusByteC: 0x22,
+    statusByteD: 0x00
+  }
+});
+check(bridgeReadinessStatusByteAliases.milOn === true && bridgeReadinessStatusByteAliases.incompleteCount === 1, "Bridge readiness statusByte aliases were not normalized");
+const bridgeReadinessRowNameAliases = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    readinessRows: [
+      { name: "MIL Status", result: true },
+      { label: "Readiness Status Byte B", rawValue: 0x07 },
+      { label: "Readiness Status Byte C", rawValue: 0x22 },
+      { label: "Readiness Status Byte D", rawValue: 0x00 }
+    ]
+  }
+});
+check(bridgeReadinessRowNameAliases.milOn === true && bridgeReadinessRowNameAliases.incompleteCount === 1, "Bridge readiness row name/label aliases were not normalized");
 const bridgeEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
@@ -698,6 +739,32 @@ const bridgeInfoValuesCamelAliasSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
 check(bridgeInfoValuesCamelAliasSnapshot.capturedAt === "2026-06-28T00:01:52Z", "Bridge ECU info did not accept capturedAt camelCase alias input");
 check(bridgeInfoValuesCamelAliasSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-INFOVALUES-BRIDGE", "Bridge ECU info did not retain calibration_id from infoValues camelCase alias input");
 check(bridgeInfoValuesCamelAliasSnapshot.supportInfoTypesCaptured === true, "Bridge ECU info did not mark supported info types from infoValues camelCase alias input");
+const bridgeMode09ValuesAliasSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mode09Values: [
+      { infoType: "04", decodedValue: "CAL-MODE09-VALUES" },
+      { infoType: "0A", rawValue: "Skid ECU" }
+    ]
+  }
+});
+check(bridgeMode09ValuesAliasSnapshot.itemCount === 2, "Bridge mode09Values alias was not normalized");
+check(bridgeMode09ValuesAliasSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-MODE09-VALUES", "Bridge mode09Values alias did not retain CALID");
+const bridgeEcuInfoRowsAliasSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    ecuInfoRows: [
+      { mode09Type: "06", decodedValue: "CVN-ROWS-ALIAS" },
+      { mode09Type: "0A", rawValue: "HV Control ECU" }
+    ]
+  }
+});
+check(bridgeEcuInfoRowsAliasSnapshot.itemCount === 2, "Bridge ecuInfoRows alias was not normalized");
+check(bridgeEcuInfoRowsAliasSnapshot.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-ROWS-ALIAS", "Bridge ecuInfoRows alias did not retain CVN");
 const bridgeEcuInfoItemsCamelAliasSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,

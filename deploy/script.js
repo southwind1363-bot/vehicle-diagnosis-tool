@@ -218,7 +218,7 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-thinkcar-bluetooth": "local_bridge",
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
-const APP_VERSION = "2.357.0";
+const APP_VERSION = "2.358.0";
 const APP_LAST_UPDATED = "2026-07-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

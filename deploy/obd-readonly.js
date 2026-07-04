@@ -983,10 +983,18 @@
           ? data.freeze_frame_values
           : Array.isArray(data.freezeFrameValues)
             ? data.freezeFrameValues
+          : Array.isArray(data.freeze_frame_rows)
+            ? data.freeze_frame_rows
+            : Array.isArray(data.freezeFrameRows)
+              ? data.freezeFrameRows
           : Array.isArray(data.monitor_values)
             ? data.monitor_values
             : Array.isArray(data.monitorValues)
               ? data.monitorValues
+            : Array.isArray(data.pid_values)
+              ? data.pid_values
+              : Array.isArray(data.pidValues)
+                ? data.pidValues
             : []
       }),
       intent: "read_freeze_frame",
@@ -999,6 +1007,17 @@
   function normalizeBridgeReadinessSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const safety = readBridgeResponseSafety(response);
+    const readinessRowIdAliases = {
+      milstatus: "mil_status",
+      mil: "mil_status",
+      monitorstatusmil: "monitor_status_mil",
+      readinessstatusbyteb: "readiness_status_byte_b",
+      readinessstatusbytec: "readiness_status_byte_c",
+      readinessstatusbyted: "readiness_status_byte_d",
+      statusbyteb: "readiness_status_byte_b",
+      statusbytec: "readiness_status_byte_c",
+      statusbyted: "readiness_status_byte_d"
+    };
     const rows = Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.monitor_values)
@@ -1009,17 +1028,28 @@
             ? data.readiness_values
             : Array.isArray(data.readinessValues)
               ? data.readinessValues
+              : Array.isArray(data.readiness_rows)
+                ? data.readiness_rows
+                : Array.isArray(data.readinessRows)
+                  ? data.readinessRows
               : Array.isArray(response.monitorValues)
                 ? response.monitorValues
                 : [
             data.mil_on !== undefined ? { id: "mil_status", value: data.mil_on } : null,
             data.milStatus !== undefined ? { id: "mil_status", value: data.milStatus } : null,
+            data.mil !== undefined ? { id: "mil_status", value: data.mil } : null,
             data.readiness_status_byte_b !== undefined ? { id: "readiness_status_byte_b", value: data.readiness_status_byte_b } : null,
             data.readiness_status_byte_c !== undefined ? { id: "readiness_status_byte_c", value: data.readiness_status_byte_c } : null,
             data.readiness_status_byte_d !== undefined ? { id: "readiness_status_byte_d", value: data.readiness_status_byte_d } : null,
             data.readinessStatusByteB !== undefined ? { id: "readiness_status_byte_b", value: data.readinessStatusByteB } : null,
             data.readinessStatusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.readinessStatusByteC } : null,
-            data.readinessStatusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.readinessStatusByteD } : null
+            data.readinessStatusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.readinessStatusByteD } : null,
+            data.status_byte_b !== undefined ? { id: "readiness_status_byte_b", value: data.status_byte_b } : null,
+            data.status_byte_c !== undefined ? { id: "readiness_status_byte_c", value: data.status_byte_c } : null,
+            data.status_byte_d !== undefined ? { id: "readiness_status_byte_d", value: data.status_byte_d } : null,
+            data.statusByteB !== undefined ? { id: "readiness_status_byte_b", value: data.statusByteB } : null,
+            data.statusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.statusByteC } : null,
+            data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
           ].filter(Boolean);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
@@ -1028,7 +1058,13 @@
       blocked: safety.blocked,
       wouldTransmit: safety.wouldTransmit
     });
-    const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => [row.id, row.value]));
+    const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {
+      const rowKey = String(
+        row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || ""
+      ).toLowerCase().replace(/[^a-z0-9]+/g, "");
+      const mappedId = readinessRowIdAliases[rowKey] || row.id || row.name || row.label;
+      return [mappedId, row.value ?? row.result ?? row.raw_value ?? row.rawValue ?? row.reading];
+    }));
     const b = Number(valueById.get("readiness_status_byte_b"));
     const c = Number(valueById.get("readiness_status_byte_c"));
     const d = Number(valueById.get("readiness_status_byte_d"));
@@ -1932,10 +1968,14 @@
     if (Array.isArray(input.items)) return input.items;
     if (Array.isArray(input.ecu_info)) return input.ecu_info;
     if (Array.isArray(input.ecu_info_items)) return input.ecu_info_items;
+    if (Array.isArray(input.ecu_info_rows)) return input.ecu_info_rows;
     if (Array.isArray(input.ecuInfo)) return input.ecuInfo;
     if (Array.isArray(input.ecuInfoItems)) return input.ecuInfoItems;
+    if (Array.isArray(input.ecuInfoRows)) return input.ecuInfoRows;
     if (Array.isArray(input.mode09_items)) return input.mode09_items;
     if (Array.isArray(input.mode09Items)) return input.mode09Items;
+    if (Array.isArray(input.mode09_values)) return input.mode09_values;
+    if (Array.isArray(input.mode09Values)) return input.mode09Values;
     if (Array.isArray(input.info_values)) return input.info_values;
     if (Array.isArray(input.infoValues)) return input.infoValues;
     if (!input || typeof input !== "object") return [];
