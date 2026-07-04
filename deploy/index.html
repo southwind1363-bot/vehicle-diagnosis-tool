@@ -133,7 +133,7 @@
 
             <section class="result-block obd-import-result">
               <h3>故障コード結果</h3>
-              <p id="obdImportStatus" class="empty-state">まだ解析していません。</p>
+              <p id="obdImportStatus" class="empty-state">故障コードはまだ表示していません。</p>
               <div id="obdDetectedCodes" class="obd-code-list"></div>
             </section>
 
@@ -542,35 +542,35 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">CURRENT PROGRESS</p>
-              <h3 id="obdProgressTitle">OBD2車両読取の進行状況</h3>
+              <h3 id="obdProgressTitle">進行状況</h3>
             </div>
           </div>
           <div class="obd-progress-grid">
             <article class="obd-progress-score-card">
               <strong>完成度</strong>
               <span class="obd-progress-score">診断機全体 30% / OBD2読取 68%</span>
-              <span>100%は実車接続、読取、データ解釈、複数VCI、車種適合、記録、段階的な作業機能まで含む完成状態です。</span>
+              <span>100%は実車接続、読取、記録、複数VCI対応まで入った状態です。</span>
             </article>
             <article class="obd-progress-breakdown-card">
               <strong>内訳</strong>
               <span>データ 44% / ログ解析 90% / 接続層 42% / 車種適合 12% / 記録 35% / 作業機能 0%</span>
-              <span>数字は実装済み機能だけを反映し、ロードマップ追加だけでは上げません。</span>
+              <span>数字は実装済み機能だけを反映します。</span>
             </article>
             <article>
               <strong>読取データ基盤</strong>
-              <span>DTC、フリーズフレーム、ライブPID、レディネス、Mode06、Mode09を同一セッションへ積み上げ中。</span>
+              <span>DTC、FF、ライブPID、レディネス、Mode06、Mode09を同一セッションへ積み上げ中。</span>
             </article>
             <article>
               <strong>実ログ解析</strong>
-              <span>CAN ID、ISO-TP分割応答、否定応答、未換算RAW値を保持して読取結果を捨てにくくしています。</span>
+              <span>CAN ID、分割応答、否定応答、RAW値を保持して読取結果を残します。</span>
             </article>
             <article>
               <strong>実車接続</strong>
-              <span>Web SerialとPC側ローカルブリッジの read-only 読取入口を追加。DTC種別、対応PID、ECU情報、FF、Mode06を取込できます。</span>
+              <span>Web Serialとローカルブリッジの read-only 読取入口から、DTC、対応PID、ECU情報、FF、Mode06を取込できます。</span>
             </article>
             <article>
               <strong>次の中身</strong>
-              <span>実VCIドライバ連携の前に、車種適合、記録、読取ログ比較を増やして診断機として使える土台を優先します。</span>
+              <span>次は車種適合、記録、読取ログ比較を増やして使える土台を固めます。</span>
             </article>
           </div>
         </section>
@@ -603,7 +603,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">NO-CONNECTION PREVIEW</p>
-              <h3 id="obdPreviewTitle">接続前読取プレビュー</h3>
+              <h3 id="obdPreviewTitle">接続前プレビュー</h3>
             </div>
           </div>
           <div class="obd-dev-controls">
@@ -658,7 +658,7 @@
             <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果</button>
             <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>
           </div>
-          <p id="obdDevStatus" class="data-status">この端末に詳細トークンを設定した場合だけ追加読取メニューを有効化できます。送信は read-only のみです。</p>
+          <p id="obdDevStatus" class="data-status">詳細トークンを設定した端末だけ追加読取メニューを使えます。送信は read-only のみです。</p>
           <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
           <div id="obdDevSessionDetails" class="obd-session-details" hidden></div>
         </section>
@@ -667,7 +667,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">CAPABILITY ROADMAP</p>
-              <h3 id="obdOperationTitle">拡張機能の準備状況</h3>
+              <h3 id="obdOperationTitle">拡張機能</h3>
             </div>
           </div>
           <div id="obdOperationGrid" class="obd-operation-grid"></div>
@@ -677,7 +677,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">COMMUNICATION PREP</p>
-              <h3 id="obdPreparedRequestTitle">接続機能の準備状況</h3>
+              <h3 id="obdPreparedRequestTitle">接続準備</h3>
             </div>
           </div>
           <div id="obdConnectionProfile" class="obd-profile-strip"></div>
@@ -688,7 +688,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">INTERFACE ROADMAP</p>
-              <h3 id="obdInterfaceRoadmapTitle">対応インターフェースの順番</h3>
+              <h3 id="obdInterfaceRoadmapTitle">対応インターフェース</h3>
             </div>
           </div>
           <div id="obdInterfaceRoadmapGrid" class="obd-interface-grid"></div>
@@ -698,7 +698,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">COVERAGE ROADMAP</p>
-              <h3 id="obdCoverageRoadmapTitle">診断データ網羅の充実順</h3>
+              <h3 id="obdCoverageRoadmapTitle">診断データ網羅</h3>
             </div>
           </div>
           <div id="obdCapabilityStatusGrid" class="obd-interface-grid"></div>
@@ -709,7 +709,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">LOCAL BRIDGE</p>
-              <h3 id="obdBridgeContractTitle">ローカルブリッジ契約</h3>
+              <h3 id="obdBridgeContractTitle">ローカルブリッジ</h3>
             </div>
           </div>
           <div id="obdBridgeContractGrid" class="obd-bridge-grid"></div>
@@ -717,7 +717,7 @@
         </section>
 
         <details class="obd-operation-panel obd-interlock-panel">
-          <summary class="obd-interlock-summary-title">接続保護の技術メモ</summary>
+          <summary class="obd-interlock-summary-title">接続保護メモ</summary>
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">TECHNICAL GUARD</p>
@@ -736,7 +736,7 @@
             </div>
             <span class="confidence-badge">0件</span>
           </div>
-          <p class="empty-state">車両へ接続すると、取得したDTCを日本語の内容とともに表示します。</p>
+          <p class="empty-state">車両へ接続すると、故障コードを日本語内容つきで表示します。</p>
         </section>
 
         <section class="result-block obd-monitor-result">
@@ -747,7 +747,7 @@
             </div>
             <span class="confidence-badge">0項目</span>
           </div>
-          <p class="empty-state">車両未接続です。接続後は対応PIDの値をリアルタイムで更新します。</p>
+          <p class="empty-state">車両未接続です。接続後は対応PIDの値を更新します。</p>
           <div class="obd-monitor-grid"></div>
           <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件、車種、年式、エンジン、メーカー整備書の基準値と比較してください。</p>
         </section>
