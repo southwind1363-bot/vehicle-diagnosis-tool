@@ -4358,6 +4358,14 @@ function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
   return parts.join(" / ");
 }
 
+function summarizeObdMonitorValues(values = []) {
+  if (!values.length) return null;
+  if (typeof window.ObdReadOnly?.buildMonitorValueSummary === "function") {
+    return window.ObdReadOnly.buildMonitorValueSummary(values);
+  }
+  return { totalCount: values.length, outOfRangeCount: 0, decodedCount: 0, undecodedRawCount: 0 };
+}
+
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   if (analysis.readoutCoverage?.totalCategories) {
@@ -5327,7 +5335,9 @@ function renderObdMonitorValues(values, insights = []) {
     return;
   }
 
-  obdMonitorStatus.textContent = `${values.length}項目を読取りました。スナップショット表示のみで、原文は保存していません。`;
+  const monitorSummary = summarizeObdMonitorValues(values);
+  const summaryLabel = formatObdBridgeMonitorSummary(monitorSummary);
+  obdMonitorStatus.textContent = `${summaryLabel !== NO_DATA ? summaryLabel : `${values.length}項目`}を読取りました。スナップショット表示のみで、原文は保存していません。`;
   values.forEach((item) => {
     const card = document.createElement("article");
     card.className = "obd-monitor-card";
