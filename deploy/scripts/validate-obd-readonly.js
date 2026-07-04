@@ -1159,6 +1159,11 @@ check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily
 check(mergedDiagnosticInputAliases.monitorInsights.length > 0, "Combined diagnostic inputs did not rebuild monitor insights from bridge_import alias input");
 check(mergedDiagnosticInputAliases.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.bridgeSession?.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not retain bridgeSession snapshots from bridge_diagnostic_import alias input");
+const mergedDiagnosticInputExplicitInsights = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_diagnostic_import: bridgeDiagnosticImportAliases
+});
+check(mergedDiagnosticInputExplicitInsights.monitorInsights.some((item) => item.id === "engine_speed_high"), "Combined diagnostic inputs did not retain explicit bridge_import monitor insights");
 const mergedDiagnosticInputExportPayload = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_import: bridgeExportPayload

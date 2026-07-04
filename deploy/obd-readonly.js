@@ -1712,7 +1712,18 @@
       ...scannerAnalysis.codes,
       ...(bridgeImport?.codes || bridgeSession?.codes || [])
     ])];
-    const monitorInsights = analyzeMonitorValues(monitorValues);
+    const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeImport?.monitorInsights || bridgeSession?.monitorInsights || []);
+    const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);
+    const monitorInsights = [...new Map([
+      ...bridgeMonitorInsights.map((item) => [
+        item?.id || item?.title || JSON.stringify(item),
+        item
+      ]),
+      ...recalculatedMonitorInsights.map((item) => [
+        item?.id || item?.title || JSON.stringify(item),
+        item
+      ])
+    ]).values()];
     const hasScannerPayload = Boolean(scannerTextInput.trim() || scannerAnalysis.codes.length || scannerAnalysis.monitorValues.length || scannerAnalysis.toolHints.length);
     const source = bridgeImport
       ? hasScannerPayload
