@@ -1432,6 +1432,32 @@ function selectedObdVehicleYear() {
   return year ? `${year}年式` : "";
 }
 
+function buildSelectedObdVehicleProfile() {
+  const maker = selectedVehicleValue(obdVehicleMakerSelect);
+  const model = selectedVehicleValue(obdVehicleModelSelect);
+  const modelCode = selectedVehicleValue(obdVehicleModelCodeSelect);
+  const year = selectedVehicleValue(obdVehicleYearSelect) || obdVehicleYearManualInput.value.trim();
+  const engineCode = selectedVehicleValue(obdVehicleEngineCodeSelect);
+  const freeText = obdVehicleManualInput.value.trim();
+  if (!maker && !model && !modelCode && !year && !engineCode && !freeText) return null;
+  return {
+    maker: maker || null,
+    model: model || null,
+    modelCode: modelCode || null,
+    year: year || null,
+    engineCode: engineCode || null,
+    label: obdVehicleInput.value.trim() || freeText || null,
+    notes: freeText || null
+  };
+}
+
+function formatVehicleProfileLabel(profile, fallback = "") {
+  if (profile?.maker || profile?.model) {
+    return `${profile?.maker || ""} ${profile?.model || ""}`.trim();
+  }
+  return profile?.label || fallback || "";
+}
+
 function syncObdVehicleInput() {
   const values = [
     selectedVehicleValue(obdVehicleMakerSelect),
@@ -4142,6 +4168,9 @@ function renderObdBridgeReadout(parts = {}) {
   const supportedPidMatrix = parts.supportedPidResponse
     ? window.ObdReadOnly.normalizeBridgeSupportedPidSnapshot(parts.supportedPidResponse)
     : previousSession.supportedPidMatrix || null;
+  const vehicleProfile = buildSelectedObdVehicleProfile()
+    || previousSession.vehicleProfile
+    || null;
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
@@ -4150,6 +4179,7 @@ function renderObdBridgeReadout(parts = {}) {
     ecuInfoSnapshot: ecuInfoSnapshot || undefined,
     onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
     supportedPidMatrix: supportedPidMatrix || undefined,
+    vehicleProfile: vehicleProfile || undefined,
     connectionStatus: obdDevSession.bridgeStatus || undefined,
     vciList: obdDevSession.bridgeVciList || undefined
   });
@@ -4165,6 +4195,7 @@ function renderObdBridgeReadout(parts = {}) {
     ecuResponseSummary: importResult.ecuResponseSummary,
     connectionStatus: importResult.connectionStatus || importResult.bridgeSession?.connectionStatus,
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
+    vehicleProfile: vehicleProfile || importResult.vehicleProfile || importResult.bridgeSession?.vehicleProfile || undefined,
     adapterIdentity: obdDevSession.adapterIdentity || importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || undefined
   });
   obdDevSession.lastSession = session;
@@ -4297,9 +4328,7 @@ function renderObdBridgeSessionDetails(session = null) {
   const capturedAt = session?.capturedAt || NO_DATA;
   const startedAt = session?.startedAt || NO_DATA;
   const endedAt = session?.endedAt || NO_DATA;
-  const vehicleLabel = session?.vehicleProfile?.maker || session?.vehicleProfile?.model
-    ? `${session?.vehicleProfile?.maker || ""} ${session?.vehicleProfile?.model || ""}`.trim()
-    : NO_DATA;
+  const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, NO_DATA) || NO_DATA;
   const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || warningLines.length)) {
     sections.push(["読取メタ", [
@@ -4457,9 +4486,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coverage = session?.readoutCoverage || null;
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
-  const vehicleLabel = session?.vehicleProfile?.maker || session?.vehicleProfile?.model
-    ? `${session?.vehicleProfile?.maker || ""} ${session?.vehicleProfile?.model || ""}`.trim()
-    : (obdVehicleInput.value.trim() || NO_DATA);
+  const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const startedAtLabel = session?.startedAt
     ? formatDateTime(session.startedAt)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
@@ -4959,8 +4986,9 @@ function analyzeObdScannerImport() {
     }
   }
   if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
-  if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
-    notes.push(`車両 ${(analysis.vehicleProfile.maker || "").trim()} ${(analysis.vehicleProfile.model || "").trim()}`.trim());
+  const analysisVehicleLabel = formatVehicleProfileLabel(analysis.vehicleProfile);
+  if (analysisVehicleLabel) {
+    notes.push(`車両 ${analysisVehicleLabel}`);
   }
   if (analysis.startedAt) {
     notes.push(`開始 ${formatDateTime(analysis.startedAt)}`);
@@ -5050,8 +5078,8 @@ function analyzeObdScannerImport() {
       : `統合入力で${analysis.monitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
     if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
-    if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
-      summary.push(`車両 ${(analysis.vehicleProfile.maker || "").trim()} ${(analysis.vehicleProfile.model || "").trim()}`.trim());
+    if (analysisVehicleLabel) {
+      summary.push(`車両 ${analysisVehicleLabel}`);
     }
     if (analysis.startedAt) summary.push(`開始 ${formatDateTime(analysis.startedAt)}`);
     if (analysis.endedAt) summary.push(`終了 ${formatDateTime(analysis.endedAt)}`);
@@ -5093,8 +5121,8 @@ function analyzeObdScannerImport() {
     const summary = [analysis.source === "local_bridge"
       ? "ローカルブリッジ読取の計測値は0項目です。"
       : "計測値は0項目です。"];
-    if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
-      summary.push(`車両 ${(analysis.vehicleProfile.maker || "").trim()} ${(analysis.vehicleProfile.model || "").trim()}`.trim());
+    if (analysisVehicleLabel) {
+      summary.push(`車両 ${analysisVehicleLabel}`);
     }
     if (analysis.startedAt) summary.push(`開始 ${formatDateTime(analysis.startedAt)}`);
     if (analysis.endedAt) summary.push(`終了 ${formatDateTime(analysis.endedAt)}`);
