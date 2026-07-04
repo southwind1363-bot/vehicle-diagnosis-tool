@@ -1787,6 +1787,19 @@ const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
 });
 check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
 check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
+const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
+  bridgeSession: bridgeDiagnosticImport.bridgeSession,
+  session_id: "shop-test-bridge-session-camel"
+});
+check(scanSessionBridgeSessionCamelAlias.supportedPidMatrix.supportedPids.includes("40"), "Diagnostic scan session did not accept bridgeSession camelCase alias input");
+check(scanSessionBridgeSessionCamelAlias.freezeFrameSnapshot.triggerDtc === "P0171", "Diagnostic scan session did not carry freeze frame from bridgeSession camelCase alias input");
+check(scanSessionBridgeSessionCamelAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not carry ECU info from bridgeSession camelCase alias input");
+const scanSessionBridgeSessionSnakeAlias = obd.buildDiagnosticScanSession({
+  bridge_session: bridgeDiagnosticImport.bridgeSession,
+  session_id: "shop-test-bridge-session-snake"
+});
+check(scanSessionBridgeSessionSnakeAlias.monitorValueSummary.totalCount >= bridgePidSnapshot.monitorValues.length, "Diagnostic scan session did not accept bridge_session alias input");
+check(scanSessionBridgeSessionSnakeAlias.dtcSnapshot.codes.join(",") === "P0171,P0300", "Diagnostic scan session did not carry DTCs from bridge_session alias input");
 const scanSessionNestedOuterOverride = obd.buildDiagnosticScanSession({
   session_id: "shop-test-scan-session-outer-priority",
   protocol: "ISO9141-2",

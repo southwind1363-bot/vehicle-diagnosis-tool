@@ -1529,7 +1529,7 @@
   }
 
   function getDiagnosticSessionInput(input = {}) {
-    const nested = input.session || input.scanSession || input.scan_session || null;
+    const nested = input.session || input.scanSession || input.scan_session || input.bridgeSession || input.bridge_session || null;
     if (!nested || typeof nested !== "object") return input;
     return {
       ...nested,
@@ -3205,7 +3205,20 @@
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
-    const livePidSnapshotInput = sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot || sessionInput.livePids || sessionInput.live_pids || {};
+    const livePidSnapshotInput = sessionInput.livePidSnapshot
+      || sessionInput.live_pid_snapshot
+      || sessionInput.livePids
+      || sessionInput.live_pids
+      || (Array.isArray(sessionInput.monitorValues) || Array.isArray(sessionInput.monitor_values)
+        ? {
+          source: sessionInput.source || "local_bridge",
+          captured_at: sessionInput.captured_at || sessionInput.capturedAt || null,
+          protocol: sessionInput.protocol || null,
+          monitor_values: sessionInput.monitorValues || sessionInput.monitor_values || [],
+          monitor_value_summary: sessionInput.monitorValueSummary || sessionInput.monitor_value_summary || null,
+          monitor_insights: sessionInput.monitorInsights || sessionInput.monitor_insights || []
+        }
+        : {});
     const freezeFrameSnapshotInput = sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || sessionInput.freezeFrame || sessionInput.freeze_frame || {};
     const readinessSnapshotInput = sessionInput.readinessSnapshot || sessionInput.readiness_snapshot || sessionInput.readinessResponse || sessionInput.readiness_response || sessionInput.readiness || {};
     const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot || sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || sessionInput.onboardMonitor || sessionInput.onboard_monitor || {};
