@@ -1,156 +1,158 @@
 [
-  {
-    "id": "capability-generic-obd2-dtc",
-    "label": "汎用OBD2 DTC",
-    "target_level": "ハイスペック診断機の基礎データ",
-    "current_status": "拡張中",
-    "progress_percent": 62,
-    "current_basis": "P系2923件、U系550件、個別DTC定義3473件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
-    "done": [
-      "P/U系の個別定義を大量追加",
-      "未知コードをファミリーフローへ退避",
-      "整備書確認必須と出典前提の方針を固定",
-      "ブリッジDTCを保存/保留/永久の状態別にセッションへ積み上げ"
-    ],
-    "missing": [
-      "B/C系の個別定義",
-      "メーカー固有DTC",
-      "サブコード、メーカー固有ステータス、ECU別詳細情報"
-    ],
-    "next_build": "B/C系とメーカー固有を、出典確認済みデータとして別レイヤーで追加する。",
-    "safety_gate": "コード名だけで原因断定しない",
-    "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28",
-    "eta_target": "2026-Q3 見込み"
-  },
-  {
-    "id": "capability-live-data",
-    "label": "データモニター",
-    "target_level": "症状別に見るべき値を提示し、値の相関まで見る",
-    "current_status": "基礎辞書あり",
-    "progress_percent": 42,
-    "current_basis": "データモニター辞書165項目、貼り付け解析、フリーズフレーム、対応PID、ブリッジ取込モデル、nested session alias 吸収あり",
-    "done": [
-      "主要PIDと拡張候補の辞書化",
-      "貼り付けデータから値を抽出",
-      "燃料補正、電圧、温度、MAPなどの相関ヒント生成",
-      "フリーズフレーム値と対応PIDを同一セッションへ保持",
-      "bridge/session alias を吸収してライブデータ要約へ統合"
-    ],
-    "missing": [
-      "車種別基準値",
-      "測定条件別の正常範囲",
-      "グラフ、時系列記録、症状再現時比較"
-    ],
-    "next_build": "症状別ワークフローに必要PID、観察条件、異常時の次点検を紐付ける。",
-    "safety_gate": "未対応PIDを推測補完しない",
-    "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28",
-    "eta_target": "2026-Q3 見込み"
-  },
-  {
-    "id": "capability-local-bridge",
-    "label": "ローカルブリッジ / VCI連携",
-    "target_level": "ELM327、J2534、CAN/CAN FDを安全境界越しに扱う",
-    "current_status": "読取入口あり",
-    "progress_percent": 58,
-    "current_basis": "ブリッジ契約、応答型、Web側操作、PC側サンプルブリッジ、DTC/FF/対応PID/ECU情報/Mode06/レディネス取込、status/list_vci/adapter_identity の接続確認入口、bridge/session alias 正規化あり",
-    "done": [
-      "接続状態、VCI一覧、DTC、ライブPID、フリーズフレーム、対応PID、ECU情報、Mode06、セッション要約の応答型",
-      "THINKCAR系、Techstream/J2534、ELM327、CANable候補管理",
-      "実車送信なしのデータ整形",
-      "読取結果のセッション積み上げとDTC状態別内訳表示",
-      "bridge/session/export/import の nested alias 吸収と outer 優先正規化",
-      "PC側ローカルブリッジの読取専用サンプル実装"
-    ],
-    "missing": [
-      "実VCIドライバ連携",
-      "J2534 DLL連携",
-      "THINKCAR Bluetooth VCI連携",
-      "CAN FDログ要約"
-    ],
-    "next_build": "J2534/CANable/THINKCARを実ドライバへつなぐ前に、Mode09差分、読取応答、VCI差分を同じブリッジ契約で受ける。",
-    "safety_gate": "read-only status intents有効 / vehicle_command_enabled:false",
-    "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28",
-    "eta_target": "2026-Q3 見込み"
-  },
-  {
-    "id": "capability-oem-enhanced",
-    "label": "メーカー固有診断",
-    "target_level": "Techstream級の車種別DTC、データリスト、作業サポート",
-    "current_status": "器を準備中",
-    "progress_percent": 10,
-    "current_basis": "メーカー固有DTC用ロードマップ、J2534候補、Techstream等の貼り付け解析入口を準備",
-    "done": [
-      "メーカー固有を汎用DTCと混ぜない方針",
-      "車種、年式、ECU、サブコードを分離する方針",
-      "J2534/Techstream候補管理",
-      "Techstream等の読取結果貼り付けを先行解析する方針"
-    ],
-    "missing": [
-      "車種別ECU構成",
-      "メーカー固有DTC定義",
-      "データリスト項目",
-      "メーカー診断機表示のサンプル"
-    ],
-    "next_build": "Techstream等の読取結果貼り付けを解析できる形式から先に作る。",
-    "safety_gate": "車種適合未確認なら未確認として扱う",
-    "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28",
-    "eta_target": "2026-Q4 見込み"
-  },
-  {
-    "id": "capability-bidirectional",
-    "label": "双方向制御・作業サポート",
-    "target_level": "アクティブテスト、初期化、学習、DTC消去まで段階対応",
-    "current_status": "安全ゲート中",
-    "progress_percent": 5,
-    "current_basis": "変更系Intentと危険サービスを遮断済み",
-    "done": [
-      "DTC消去、作動要求、書込み、セキュリティアクセスを遮断",
-      "有効化前条件を内部モデル化",
-      "UIでは怖く見せず準備中として表示"
-    ],
-    "missing": [
-      "車種適合",
-      "実行条件",
-      "利用者確認",
-      "ログ",
-      "失敗時復旧手順",
-      "再スキャン"
-    ],
-    "next_build": "読取、保存、比較、診断手順が安定してから、低リスクな作業サポートを個別に検証する。",
-    "safety_gate": "安全条件が揃うまで未開放",
-    "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28",
-    "eta_target": "2027 以降見込み"
-  },
-  {
-    "id": "capability-guided-diagnostics",
-    "label": "診断支援ワークフロー",
-    "target_level": "DTC、問診、ライブデータ、点検順を一つの流れで案内",
-    "current_status": "統合中",
-    "progress_percent": 49,
-    "current_basis": "問診、DTC検索、診断フロー、ライブデータヒント、外部診断機貼り付け解析、ブリッジ読取セッション要約、nested alias 正規化あり",
-    "done": [
-      "症状別問診",
-      "DTCと整備データの照合",
-      "外部診断機貼り付け解析",
-      "ブリッジ取込と貼り付け入力の統合モデル",
-      "DTC内訳、FF、ECU情報、Mode06、対応PIDのセッション要約",
-      "bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ統合"
-    ],
-    "missing": [
-      "車種別基準値との自動比較",
-      "時系列ログ",
-      "修理前後比較",
-      "診断結果から次の測定条件を自動提示"
-    ],
-    "next_build": "診断フローに必要PID、観察条件、異常解釈、次点検を構造化して追加する。",
-    "safety_gate": "推測と事実を分け、整備書確認を残す",
-    "source": "ローカル検証集計と開発ロードマップ",
-    "source_date": "2026-06-28",
-    "eta_target": "2026-Q3 見込み"
-  }
+    {
+        "id":  "capability-generic-obd2-dtc",
+        "label":  "汎用OBD2 DTC",
+        "target_level":  "ハイスペック診断機の基礎データ",
+        "current_status":  "拡張中",
+        "progress_percent":  62,
+        "current_basis":  "P系2923件、U系550件、個別DTC定義3473件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+        "done":  [
+                     "P/U系の個別定義を大量追加",
+                     "未知コードをファミリーフローへ退避",
+                     "整備書確認必須と出典前提の方針を固定",
+                     "ブリッジDTCを保存/保留/永久の状態別にセッションへ積み上げ"
+                 ],
+        "missing":  [
+                        "B/C系の個別定義",
+                        "メーカー固有DTC",
+                        "サブコード、メーカー固有ステータス、ECU別詳細情報"
+                    ],
+        "next_build":  "B/C系とメーカー固有を、出典確認済みデータとして別レイヤーで追加する。",
+        "safety_gate":  "コード名だけで原因断定しない",
+        "source":  "ローカル検証集計と開発ロードマップ",
+        "source_date":  "2026-06-28",
+        "eta_target":  "2026-Q3 見込み"
+    },
+    {
+        "id":  "capability-live-data",
+        "label":  "データモニター",
+        "target_level":  "症状別に見るべき値を提示し、値の相関まで見る",
+        "current_status":  "基礎辞書あり",
+        "progress_percent":  42,
+        "current_basis":  "データモニター辞書165項目、貼り付け解析、フリーズフレーム、対応PID、ブリッジ取込モデル、nested session alias 吸収あり",
+        "done":  [
+                     "主要PIDと拡張候補の辞書化",
+                     "貼り付けデータから値を抽出",
+                     "燃料補正、電圧、温度、MAPなどの相関ヒント生成",
+                     "フリーズフレーム値と対応PIDを同一セッションへ保持",
+                     "bridge/session alias を吸収してライブデータ要約へ統合"
+                 ],
+        "missing":  [
+                        "車種別基準値",
+                        "測定条件別の正常範囲",
+                        "グラフ、時系列記録、症状再現時比較"
+                    ],
+        "next_build":  "症状別ワークフローに必要PID、観察条件、異常時の次点検を紐付ける。",
+        "safety_gate":  "未対応PIDを推測補完しない",
+        "source":  "ローカル検証集計と開発ロードマップ",
+        "source_date":  "2026-06-28",
+        "eta_target":  "2026-Q3 見込み"
+    },
+    {
+        "id":  "capability-local-bridge",
+        "label":  "ローカルブリッジ / VCI連携",
+        "target_level":  "ELM327 / J2534 / CAN / CAN FD を段階的に読取へ統合",
+        "current_status":  "読取入口あり",
+        "progress_percent":  59,
+        "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化と bridge/session alias 吸収に加え、selected vehicle profile carry-through to bridge/session summaries を反映。",
+        "done":  [
+                     "bridge status / list_vci / adapter_identity / DTC / freeze frame / live PID / supported PID / readiness / ECU info / Mode06 の read-only 正規化",
+                     "THINKCAR / Techstream J2534 / ELM327 / CANable の候補整理",
+                     "書込み禁止のセーフティモデル",
+                     "読取セッションの積み上げと DTC 状態別表示",
+                     "bridge/session/export/import の nested alias 吸収と outer 優先正規化",
+                     "PC側ローカルブリッジの読取専用サンプル実装",
+                     "selected vehicle profile carry-through to bridge/session summaries"
+                 ],
+        "missing":  [
+                        "実VCIドライバ連携",
+                        "J2534 DLL連携",
+                        "THINKCAR Bluetooth VCI連携",
+                        "CAN FDログ読取"
+                    ],
+        "next_build":  "J2534 / CANable / THINKCAR の読取ドライバを増やしつつ、Mode09 の読取正規化と VCI 実機差分をローカルブリッジ側へ寄せる。",
+        "safety_gate":  "read-only status intents only / vehicle_command_enabled:false",
+        "source":  "ローカル読取検証と進捗データ",
+        "source_date":  "2026-07-04",
+        "eta_target":  "2026-Q3 読み込み"
+    },
+    {
+        "id":  "capability-oem-enhanced",
+        "label":  "メーカー固有診断",
+        "target_level":  "Techstream級の車種別DTC、データリスト、作業サポート",
+        "current_status":  "器を準備中",
+        "progress_percent":  10,
+        "current_basis":  "メーカー固有DTC用ロードマップ、J2534候補、Techstream等の貼り付け解析入口を準備",
+        "done":  [
+                     "メーカー固有を汎用DTCと混ぜない方針",
+                     "車種、年式、ECU、サブコードを分離する方針",
+                     "J2534/Techstream候補管理",
+                     "Techstream等の読取結果貼り付けを先行解析する方針"
+                 ],
+        "missing":  [
+                        "車種別ECU構成",
+                        "メーカー固有DTC定義",
+                        "データリスト項目",
+                        "メーカー診断機表示のサンプル"
+                    ],
+        "next_build":  "Techstream等の読取結果貼り付けを解析できる形式から先に作る。",
+        "safety_gate":  "車種適合未確認なら未確認として扱う",
+        "source":  "ローカル検証集計と開発ロードマップ",
+        "source_date":  "2026-06-28",
+        "eta_target":  "2026-Q4 見込み"
+    },
+    {
+        "id":  "capability-bidirectional",
+        "label":  "双方向制御・作業サポート",
+        "target_level":  "アクティブテスト、初期化、学習、DTC消去まで段階対応",
+        "current_status":  "安全ゲート中",
+        "progress_percent":  5,
+        "current_basis":  "変更系Intentと危険サービスを遮断済み",
+        "done":  [
+                     "DTC消去、作動要求、書込み、セキュリティアクセスを遮断",
+                     "有効化前条件を内部モデル化",
+                     "UIでは怖く見せず準備中として表示"
+                 ],
+        "missing":  [
+                        "車種適合",
+                        "実行条件",
+                        "利用者確認",
+                        "ログ",
+                        "失敗時復旧手順",
+                        "再スキャン"
+                    ],
+        "next_build":  "読取、保存、比較、診断手順が安定してから、低リスクな作業サポートを個別に検証する。",
+        "safety_gate":  "安全条件が揃うまで未開放",
+        "source":  "ローカル検証集計と開発ロードマップ",
+        "source_date":  "2026-06-28",
+        "eta_target":  "2027 以降見込み"
+    },
+    {
+        "id":  "capability-guided-diagnostics",
+        "label":  "診断支援ワークフロー",
+        "target_level":  "DTC / 症状 / ライブデータ / セッション記録を一つの流れで解釈",
+        "current_status":  "統合中",
+        "progress_percent":  50,
+        "current_basis":  "症状入力、DTC 解析、診断フロー、ライブデータヒント、貼り付け解析を統合。bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ載せ、selected vehicle label retained across analysis summaries を反映。",
+        "done":  [
+                     "症状ベース仮説",
+                     "DTC と推奨データの連携",
+                     "貼り付け解析入口",
+                     "ブリッジ取込と貼り付け取込の統合モデル",
+                     "DTC / FF / ECU情報 / Mode06 / 対応PID のセッション統合",
+                     "bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ統合",
+                     "selected vehicle label retained across analysis summaries"
+                 ],
+        "missing":  [
+                        "車両適用範囲との自動照合",
+                        "原因候補ログ",
+                        "整備後の再判定",
+                        "診断結果から次の測定候補を自動表示"
+                    ],
+        "next_build":  "診断フローへ live PID、適用範囲、複数候補の優先度付けを追加して、次の読取候補を自動提案する。",
+        "safety_gate":  "推論と表示のみ。書込み系読取は出さない",
+        "source":  "ローカル読取検証と進捗データ",
+        "source_date":  "2026-07-04",
+        "eta_target":  "2026-Q3 読み込み"
+    }
 ]
