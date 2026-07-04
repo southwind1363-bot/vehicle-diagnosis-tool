@@ -4350,6 +4350,14 @@ function formatObdBridgeEcuKeySummary(summary = null) {
   return `${summary.capturedCount}/${summary.totalCount}${missing ? ` / 未取得 ${missing}` : ""}`;
 }
 
+function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
+  if (!snapshot?.testCount) return NO_DATA;
+  const parts = [`${snapshot.testCount}件`];
+  if (snapshot.failedCount > 0) parts.push(`範囲外${snapshot.failedCount}`);
+  if (snapshot.unknownCount > 0) parts.push(`未判定${snapshot.unknownCount}`);
+  return parts.join(" / ");
+}
+
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   if (analysis.readoutCoverage?.totalCategories) {
@@ -4478,7 +4486,7 @@ function renderObdBridgeSessionDetails(session = null) {
     const keySummary = session?.ecuInfoSnapshot?.keyItemSummary;
     const supportedTypeSummary = session?.ecuInfoSnapshot?.supportInfoTypesSummary;
     const lines = [];
-    lines.push(`主要項目: ${formatObdBridgeEcuKeySummary(keySummary)}`);
+    lines.push(`主要要約: ${formatObdBridgeEcuKeySummary(keySummary)}`);
     if (supportedTypeSummary?.count) {
       lines.push(`対応タイプ00: ${supportedTypeSummary.count}件`);
       lines.push(`対応: ${supportedTypeSummary.labels.slice(0, 6).join(" / ")}${supportedTypeSummary.count > 6 ? "..." : ""}`);
@@ -4518,11 +4526,13 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const monitorTests = session?.onboardMonitorSnapshot?.tests || [];
   if (monitorTests.length) {
-    sections.push(["Mode06", monitorTests.slice(0, 6).map((item) => {
+    const lines = [`要約: ${formatObdBridgeOnboardMonitorSummary(session?.onboardMonitorSnapshot)}`];
+    lines.push(...monitorTests.slice(0, 6).map((item) => {
       const id = [item.testId || item.tid, item.componentId || item.cid].filter(Boolean).join("/");
       const status = item.status ? ` ${item.status}` : "";
       return `${id || item.id || "test"}: ${formatObdBridgeReadoutValue(item)}${status}`;
-    })]);
+    }));
+    sections.push(["Mode06", lines]);
   }
 
   const readinessMonitors = session?.readinessSnapshot?.monitors || [];
@@ -4544,14 +4554,11 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const freezeFrameValues = session?.freezeFrameSnapshot?.monitorValues || [];
   if (freezeFrameValues.length) {
-    sections.push(["フリーズフレーム", freezeFrameValues.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`)]);
-  }
-
-  if (freezeFrameValues.length && (session?.freezeFrameSnapshot?.triggerDtc || session?.freezeFrameSnapshot?.monitorValueSummary?.totalCount)) {
     const lines = [];
     if (session?.freezeFrameSnapshot?.triggerDtc) lines.push(`起点DTC: ${session.freezeFrameSnapshot.triggerDtc}`);
     lines.push(`要約: ${formatObdBridgeMonitorSummary(session?.freezeFrameSnapshot?.monitorValueSummary)}`);
-    sections.push(["FF要約", lines]);
+    lines.push(...freezeFrameValues.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`));
+    sections.push(["フリーズフレーム", lines]);
   }
 
   if (!sections.length) {
@@ -4649,10 +4656,12 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
-    ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
+    ["FF", session?.freezeFrameSnapshot?.monitorValues?.length
+      ? `${formatObdBridgeMonitorSummary(session?.freezeFrameSnapshot?.monitorValueSummary)}${session?.freezeFrameSnapshot?.triggerDtc ? ` / 起点${session.freezeFrameSnapshot.triggerDtc}` : ""}`
+      : 0],
     ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0],
     ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
-    ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
+    ["Mode06", session?.onboardMonitorSnapshot?.testCount ? formatObdBridgeOnboardMonitorSummary(session?.onboardMonitorSnapshot) : 0],
     ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0],
     ["開始", startedAtLabel],
     ["終了", endedAtLabel],
