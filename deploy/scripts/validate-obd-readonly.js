@@ -719,6 +719,18 @@ check(ecuInfoSnapshotCamelObjectAliases.itemCount === 5, "CamelCase ECU info obj
 check(ecuInfoSnapshotCamelObjectAliases.items.find((item) => item.id === "calibration_id")?.value === "CAL-CAMEL", "CamelCase ECU info object CALID was not retained");
 check(ecuInfoSnapshotCamelObjectAliases.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-CAMEL", "CamelCase ECU info object CVN was not retained");
 check(ecuInfoSnapshotCamelObjectAliases.items.find((item) => item.id === "ecu_name")?.value === "Battery Camel ECU", "CamelCase ECU info object ECU name was not retained");
+const ecuInfoSnapshotPluralAliases = obd.normalizeEcuInfoSnapshot({
+  source: "diagnostic_core",
+  vinValues: ["JTDKN3DU0A0123456", "JTDKN3DU0A0654321"],
+  calibrationIds: ["CAL-A", "CAL-B"],
+  cvns: ["CVN-A", "CVN-B"],
+  moduleNames: ["ABS ECU", "HV ECU"]
+});
+check(ecuInfoSnapshotPluralAliases.itemCount === 4, "Plural ECU info aliases were not normalized into snapshot items");
+check(Array.isArray(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "vin")?.value), "Plural VIN alias did not retain array values");
+check(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "calibration_id")?.value?.[1] === "CAL-B", "Plural CALID alias did not retain all array values");
+check(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "calibration_verification_number")?.value?.[0] === "CVN-A", "Plural CVN alias did not retain array values");
+check(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "ecu_name")?.value?.[1] === "HV ECU", "Plural ECU name alias did not retain array values");
 const ecuInfoSnapshotCamelItemsAlias = obd.normalizeEcuInfoSnapshot({
   ecuInfo: [
     { itemId: "calibration_id", infoType: "04", decodedValue: "CAL-ECUINFO-CAMEL" },

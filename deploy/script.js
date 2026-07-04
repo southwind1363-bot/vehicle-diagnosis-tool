@@ -1276,6 +1276,23 @@ function toYearOptions(range) {
   return years;
 }
 
+function formatJapaneseEraYear(yearValue) {
+  const year = Number.parseInt(yearValue, 10);
+  if (!Number.isFinite(year)) return yearValue;
+  const eras = [
+    { name: "令和", startYear: 2019 },
+    { name: "平成", startYear: 1989 },
+    { name: "昭和", startYear: 1926 },
+    { name: "大正", startYear: 1912 },
+    { name: "明治", startYear: 1868 }
+  ];
+  const era = eras.find((entry) => year >= entry.startYear);
+  if (!era) return String(year);
+  const eraYear = year - era.startYear + 1;
+  const eraYearLabel = eraYear === 1 ? "元" : String(eraYear);
+  return `${year}（${era.name}${eraYearLabel}年）`;
+}
+
 function updateVehicleYearManualVisibility() {
   const needsManualYear = !vehicleYearSelect.disabled && vehicleYearSelect.value === MANUAL_VEHICLE_VALUE;
   const hasNoRegisteredYears = Boolean(vehicleModelSelect.value) && vehicleYearSelect.disabled;
@@ -1291,7 +1308,8 @@ function replaceSelectOptions(select, placeholder, values) {
 function appendSelectOption(select, value, label) {
   const option = document.createElement("option");
   option.value = value;
-  option.textContent = label;
+  const shouldFormatYearLabel = (select === vehicleYearSelect || select === obdVehicleYearSelect) && label === value;
+  option.textContent = shouldFormatYearLabel ? formatJapaneseEraYear(label) : label;
   select.appendChild(option);
 }
 
@@ -4288,10 +4306,33 @@ function formatObdBridgeDtcStatusLabel(status = "unknown") {
   }[status] || status;
 }
 
+function formatObdBridgeCompositeValue(value, depth = 0) {
+  if (value === null || value === undefined || value === "") return NO_DATA;
+  if (Array.isArray(value)) {
+    const items = value
+      .map((item) => formatObdBridgeCompositeValue(item, depth + 1))
+      .filter((item) => item && item !== NO_DATA);
+    if (!items.length) return NO_DATA;
+    const visible = items.slice(0, 4).join(" / ");
+    return items.length > 4 ? `${visible} ... (${items.length}件)` : visible;
+  }
+  if (typeof value === "object") {
+    if (depth >= 1) return "[詳細]";
+    const entries = Object.entries(value)
+      .filter(([, item]) => item !== null && item !== undefined && item !== "")
+      .slice(0, 4)
+      .map(([key, item]) => `${key}:${formatObdBridgeCompositeValue(item, depth + 1)}`);
+    return entries.length ? entries.join(" / ") : NO_DATA;
+  }
+  return String(value);
+}
+
 function formatObdBridgeReadoutValue(item = {}) {
   const value = item.value ?? item.result ?? item.raw ?? NO_DATA;
-  const unit = item.unit ? ` ${item.unit}` : "";
-  return `${value}${unit}`;
+  const formattedValue = formatObdBridgeCompositeValue(value);
+  const isScalarValue = !Array.isArray(value) && (!value || typeof value !== "object");
+  const unit = isScalarValue && item.unit ? ` ${item.unit}` : "";
+  return `${formattedValue}${unit}`;
 }
 
 function formatObdBridgeWarningLabel(code = "") {

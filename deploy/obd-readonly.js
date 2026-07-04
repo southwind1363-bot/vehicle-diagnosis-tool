@@ -1945,22 +1945,36 @@
       ["vin", "vin", "02"],
       ["vin_value", "vin", "02"],
       ["vinValue", "vin", "02"],
+      ["vin_values", "vin", "02"],
+      ["vinValues", "vin", "02"],
       ["calibration_id", "calibration_id", "04"],
       ["calibrationId", "calibration_id", "04"],
       ["calid", "calibration_id", "04"],
       ["cal_id", "calibration_id", "04"],
       ["calibration_identification", "calibration_id", "04"],
+      ["calibration_ids", "calibration_id", "04"],
+      ["calibrationIds", "calibration_id", "04"],
+      ["cal_ids", "calibration_id", "04"],
       ["calibration_verification_number", "calibration_verification_number", "06"],
       ["calibrationVerificationNumber", "calibration_verification_number", "06"],
       ["cvn", "calibration_verification_number", "06"],
       ["cvn_value", "calibration_verification_number", "06"],
       ["cvnValue", "calibration_verification_number", "06"],
+      ["calibration_verification_numbers", "calibration_verification_number", "06"],
+      ["calibrationVerificationNumbers", "calibration_verification_number", "06"],
+      ["cvns", "calibration_verification_number", "06"],
+      ["cvn_values", "calibration_verification_number", "06"],
+      ["cvnValues", "calibration_verification_number", "06"],
       ["ecu_name", "ecu_name", "0A"],
       ["ecuName", "ecu_name", "0A"],
       ["module_name", "ecu_name", "0A"],
       ["moduleName", "ecu_name", "0A"],
       ["ecu_label", "ecu_name", "0A"],
-      ["ecuLabel", "ecu_name", "0A"]
+      ["ecuLabel", "ecu_name", "0A"],
+      ["ecu_names", "ecu_name", "0A"],
+      ["ecuNames", "ecu_name", "0A"],
+      ["module_names", "ecu_name", "0A"],
+      ["moduleNames", "ecu_name", "0A"]
     ];
     return aliases
       .filter(([key]) => input[key] !== undefined && input[key] !== null && input[key] !== "")
@@ -2143,6 +2157,16 @@
   }
 
   function maskSensitiveIdentifier(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => maskSensitiveIdentifier(item)).filter((item) => item !== null && item !== "");
+    }
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value)
+          .map(([key, item]) => [key, maskSensitiveIdentifier(item)])
+          .filter(([, item]) => item !== null && item !== "")
+      );
+    }
     const text = String(value ?? "").trim().toUpperCase();
     if (!text) return "";
     const redacted = redactSensitiveText(text);
