@@ -965,6 +965,7 @@ check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取�
 check(bridgeDiagnosticImport.connectionStatus.displayStatus === "読取準備モデル", "Bridge diagnostic import did not expose top-level connection status");
 check(bridgeDiagnosticImport.vciDevices.length === 1, "Bridge diagnostic import did not expose top-level vci devices");
 check(bridgeDiagnosticImport.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not expose top-level adapter identity");
+check(bridgeDiagnosticImport.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not expose top-level warnings");
 check(bridgeDiagnosticImport.bridgeSession.vciDevices.length === 1, "ブリッジ診断取込へVCI表示モデルを引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.adapterIdentity.adapterFamily === "elm327", "ブリッジ診断取込へアダプター情報を引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.protocol === "ISO15765-4", "ブリッジ診断取込へprotocolを引き継げません");
@@ -1017,6 +1018,7 @@ check(bridgeDiagnosticImportAliases.freezeFrameSnapshot.triggerDtc === "P0171", 
 check(bridgeDiagnosticImportAliases.connectionStatus.vehicleConnected === true, "Bridge diagnostic import did not expose top-level connection_status summary alias input");
 check(bridgeDiagnosticImportAliases.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not expose top-level vci_list summary alias input");
 check(bridgeDiagnosticImportAliases.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not expose top-level adapter_identity summary alias input");
+check(bridgeDiagnosticImportAliases.warnings.length === 1 && bridgeDiagnosticImportAliases.warnings[0] === "freeze_frame_available", "Bridge diagnostic import did not expose deduplicated top-level warnings");
 check(bridgeDiagnosticImportAliases.bridgeSession.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not accept vci_list summary alias input");
 check(bridgeDiagnosticImportAliases.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not accept readiness_response summary alias input");
 check(bridgeDiagnosticImportAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not accept ecu_info_response summary alias input");
@@ -1124,12 +1126,14 @@ const mergedDiagnosticInputExportPayload = obd.mergeDiagnosticInputs({
 });
 check(mergedDiagnosticInputExportPayload.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not carry warnings from bridge_session_export_v1 bridge_import input");
 const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_export_payload: bridgeExportPayload
 });
 check(mergedDiagnosticInputExportPayloadAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_export_payload alias input");
 check(mergedDiagnosticInputExportPayloadAlias.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_export_payload alias input");
+check(mergedDiagnosticInputExportPayloadAlias.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not carry warnings from bridge_export_payload alias input");
 const mergedDiagnosticInputNestedSession = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_import: {

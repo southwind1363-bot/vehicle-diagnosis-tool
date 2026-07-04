@@ -1612,6 +1612,7 @@
       connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
       vciDevices: cloneBridgeArrayItems(summary.vciDevices),
       adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
+      warnings: [...new Set(summary.warnings || [])],
       bridgeSession: {
         capturedAt: summary.capturedAt || null,
         protocol: summary.protocol || null,
@@ -1679,7 +1680,7 @@
       adapterIdentity: bridgeImport?.adapterIdentity || bridgeImport?.bridgeSession?.adapterIdentity || null,
       bridgeSession: bridgeImport?.bridgeSession || null,
       bridgeExportPayload: bridgeImport?.exportPayload || null,
-      warnings: [...new Set(bridgeImport?.bridgeSession?.warnings || [])],
+      warnings: [...new Set(bridgeImport?.warnings || bridgeImport?.bridgeSession?.warnings || [])],
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: scannerAnalysis.sourceLength,
       retainedRawText: false,
