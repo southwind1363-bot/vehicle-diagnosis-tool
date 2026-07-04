@@ -66,6 +66,7 @@ const ELM327_IMPLEMENTATION_CHECK_LABELS = Object.freeze({
   standardRead: "標準OBD読取要求",
   liveConnection: "実機読取"
 });
+const OEM_SCANNER_TOOL_HINTS = new Set(["Techstream", "CONSULT", "HDS", "IDS"]);
 
 function hasBridgeAdapterIdentitySupport() {
   return typeof window.ObdReadOnly?.normalizeBridgeAdapterIdentity === "function";
@@ -4885,6 +4886,9 @@ function analyzeObdScannerImport() {
   const notes = [];
   if (Array.isArray(analysis.toolHints) && analysis.toolHints.length > 0) {
     notes.push(`入力元 ${analysis.toolHints.join(" / ")}`);
+    if (analysis.toolHints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
+      notes.push("メーカー固有候補は未確認扱い");
+    }
   }
   if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
   if (analysis.connectionStatus?.displayStatus) {
