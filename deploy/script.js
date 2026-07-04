@@ -4350,6 +4350,49 @@ function formatObdBridgeEcuKeySummary(summary = null) {
   return `${summary.capturedCount}/${summary.totalCount}${missing ? ` / 未取得 ${missing}` : ""}`;
 }
 
+function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
+  const { includeReadinessCount = false } = options;
+  if (analysis.readoutCoverage?.totalCategories) {
+    parts.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
+    if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
+      const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
+      parts.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
+    }
+    if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
+      const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
+      parts.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
+    }
+  }
+  if (analysis.readinessSnapshot?.incompleteCount > 0) {
+    parts.push(`レディネス未完了${analysis.readinessSnapshot.incompleteCount}項目`);
+  } else if (includeReadinessCount && analysis.readinessSnapshot?.monitorCount > 0) {
+    parts.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
+  }
+  if (analysis.supportedPidMatrix?.supportedCount > 0) parts.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
+  if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
+    const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 2).join(" / ");
+    parts.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
+  }
+  if (analysis.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
+    parts.push("Mode09対応情報タイプ00未取得");
+  }
+  if (analysis.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
+    const missingLabels = analysis.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 2).join(" / ");
+    parts.push(`Mode09未取得${analysis.ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`);
+  }
+  if (analysis.ecuResponseSummary?.ecus?.length > 0) parts.push(`ECU応答${analysis.ecuResponseSummary.ecus.length}件`);
+  if (analysis.ecuInfoSnapshot?.itemCount > 0) parts.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
+  if (analysis.onboardMonitorSnapshot?.testCount > 0) parts.push(`Mode06 ${analysis.onboardMonitorSnapshot.testCount}件`);
+  if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) parts.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
+  if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) parts.push(`主要ECU情報${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
+  if (analysis.freezeFrameSnapshot?.triggerDtc) parts.push(`FF起点${analysis.freezeFrameSnapshot.triggerDtc}`);
+  if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) parts.push(`FF要約${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
+  if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
+    const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
+    parts.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
+  }
+}
+
 function formatObdBridgeWarningLabel(code = "") {
   return {
     local_bridge_disabled: "送信は読取モデルのまま",
@@ -5195,41 +5238,7 @@ function analyzeObdScannerImport() {
     if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
     }
-    if (analysis.readoutCoverage?.totalCategories) {
-      summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
-      if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
-        const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
-        summary.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
-      }
-      if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
-        const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
-        summary.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
-      }
-    }
-    if (analysis.readinessSnapshot?.incompleteCount > 0) summary.push(`レディネス未完了${analysis.readinessSnapshot.incompleteCount}項目`);
-    if (analysis.supportedPidMatrix?.supportedCount > 0) summary.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
-    if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
-      const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 2).join(" / ");
-      summary.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
-    }
-    if (analysis.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
-      summary.push("Mode09対応情報タイプ00未取得");
-    }
-    if (analysis.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
-      const missingLabels = analysis.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 2).join(" / ");
-      summary.push(`Mode09未取得${analysis.ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`);
-    }
-    if (analysis.ecuResponseSummary?.ecus?.length > 0) summary.push(`ECU応答${analysis.ecuResponseSummary.ecus.length}件`);
-    if (analysis.ecuInfoSnapshot?.itemCount > 0) summary.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
-    if (analysis.onboardMonitorSnapshot?.testCount > 0) summary.push(`Mode06 ${analysis.onboardMonitorSnapshot.testCount}件`);
-    if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) summary.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
-    if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) summary.push(`荳ｻ隕・ECU諠・ｱ${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
-    if (analysis.freezeFrameSnapshot?.triggerDtc) summary.push(`FF襍ｷ轤ｹ${analysis.freezeFrameSnapshot.triggerDtc}`);
-    if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) summary.push(`FF隕∫ｴ${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
-    if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
-      const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
-      summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
-    }
+    appendObdAnalysisReadoutSummary(summary, analysis);
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
     const summary = [analysis.source === "local_bridge"
@@ -5240,45 +5249,11 @@ function analyzeObdScannerImport() {
     }
     if (analysis.startedAt) summary.push(`開始 ${formatDateTime(analysis.startedAt)}`);
     if (analysis.endedAt) summary.push(`終了 ${formatDateTime(analysis.endedAt)}`);
-    if (analysis.readoutCoverage?.totalCategories) {
-      summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
-      if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
-        const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
-        summary.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
-      }
-      if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
-        const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
-        summary.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
-      }
-    }
     if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) summary.push(`VCI ${analysis.vciDevices.length}件`);
     if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
     }
-    if (analysis.readinessSnapshot?.monitorCount > 0) summary.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
-    if (analysis.supportedPidMatrix?.supportedCount > 0) summary.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
-    if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
-      const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 2).join(" / ");
-      summary.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
-    }
-    if (analysis.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
-      summary.push("Mode09対応情報タイプ00未取得");
-    }
-    if (analysis.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
-      const missingLabels = analysis.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 2).join(" / ");
-      summary.push(`Mode09未取得${analysis.ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`);
-    }
-    if (analysis.ecuResponseSummary?.ecus?.length > 0) summary.push(`ECU応答${analysis.ecuResponseSummary.ecus.length}件`);
-    if (analysis.ecuInfoSnapshot?.itemCount > 0) summary.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
-    if (analysis.onboardMonitorSnapshot?.testCount > 0) summary.push(`Mode06 ${analysis.onboardMonitorSnapshot.testCount}件`);
-    if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) summary.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
-    if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) summary.push(`荳ｻ隕・ECU諠・ｱ${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
-    if (analysis.freezeFrameSnapshot?.triggerDtc) summary.push(`FF襍ｷ轤ｹ${analysis.freezeFrameSnapshot.triggerDtc}`);
-    if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) summary.push(`FF隕∫ｴ${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
-    if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
-      const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
-      summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
-    }
+    appendObdAnalysisReadoutSummary(summary, analysis, { includeReadinessCount: true });
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   }
 }
