@@ -1654,7 +1654,7 @@
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
     const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
-      ? bridgeImportInput
+      ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgeImportInput?.schema_version === "bridge_session_export_v1" || bridgeImportInput?.session || bridgeImportInput?.bridgeSession || bridgeImportInput?.bridge_session
         ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgePartsInput

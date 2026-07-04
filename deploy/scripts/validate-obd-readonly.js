@@ -1141,6 +1141,8 @@ check(mergedDiagnosticInputAliases.vciDevices[0]?.id === "vci-1", "Combined diag
 check(mergedDiagnosticInputAliases.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not retain top-level adapter identity from bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.monitorInsights.length > 0, "Combined diagnostic inputs did not rebuild monitor insights from bridge_import alias input");
+check(mergedDiagnosticInputAliases.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridge_diagnostic_import alias input");
+check(mergedDiagnosticInputAliases.bridgeSession?.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not retain bridgeSession snapshots from bridge_diagnostic_import alias input");
 const mergedDiagnosticInputExportPayload = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_import: bridgeExportPayload
