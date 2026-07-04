@@ -1658,6 +1658,7 @@
     return {
       source: bridgeImport ? "scanner_text_and_local_bridge" : "scanner_text",
       importType: "combined_diagnostic_inputs",
+      toolHints: mergeUniqueStrings(scannerAnalysis.toolHints),
       protocol: bridgeImport?.protocol || null,
       capturedAt: bridgeImport?.capturedAt || null,
       codes,
@@ -2689,6 +2690,7 @@
   function buildScanSessionFromObdText(value, options = {}) {
     const sessionInput = getDiagnosticSessionInput(options);
     const classified = classifyObdResponseLines(value);
+    const toolHints = detectScannerToolHints(value);
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
@@ -2711,12 +2713,14 @@
     return {
       ...session,
       source: "obd_text_import",
+      toolHints,
       importClassification: {
         schemaVersion: classified.schemaVersion,
         bucketCounts: classified.bucketCounts,
         isoTpSummary: classified.isoTpSummary,
         negativeResponseSummary: classified.negativeResponseSummary,
-        lineCount: classified.lineCount
+        lineCount: classified.lineCount,
+        toolHints
       },
       warnings: mergeUniqueStrings(
         session.warnings,
@@ -2734,6 +2738,22 @@
 
   function mergeUniqueStrings(...groups) {
     return [...new Set(groups.flatMap((group) => Array.isArray(group) ? group : []).filter(Boolean))];
+  }
+
+  function detectScannerToolHints(value) {
+    const text = String(value || "");
+    if (!text) return [];
+    const hints = [];
+    const add = (label, pattern) => {
+      if (pattern.test(text) && !hints.includes(label)) hints.push(label);
+    };
+    add("Techstream", /\btechstream\b|\bintelligent tester\b/i);
+    add("J2534", /\bj2534\b|\bpass[\s-]?thru\b/i);
+    add("THINKCAR", /\bthinkcar\b/i);
+    add("ELM327", /\belm[\s-]?327\b|\bstn11\d*\b|\bstn21\d*\b/i);
+    add("SavvyCAN", /\bsavvycan\b/i);
+    add("CANable", /\bcanable\b/i);
+    return hints;
   }
 
   function trimEcuInfoPayload(payload) {
@@ -3422,6 +3442,7 @@
 
     return {
       codes: extractDtcCodes(redacted),
+      toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
       hadSensitiveIdentifier: raw !== redacted,

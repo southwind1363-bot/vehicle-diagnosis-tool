@@ -4883,6 +4883,9 @@ function analyzeObdScannerImport() {
   }
 
   const notes = [];
+  if (Array.isArray(analysis.toolHints) && analysis.toolHints.length > 0) {
+    notes.push(`入力元 ${analysis.toolHints.join(" / ")}`);
+  }
   if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
   if (analysis.connectionStatus?.displayStatus) {
     notes.push(`状態 ${analysis.connectionStatus.displayStatus}`);
