@@ -5095,8 +5095,12 @@ function loadObdMonitorSample() {
   obdScannerText.value = [
     "Toyota Techstream",
     "J2534",
-    "CONSULT-III",
+    "Current DTCs",
     "P0171 P0300",
+    "Pending Codes",
+    "P0420",
+    "Permanent DTC",
+    "P0440",
     "Engine RPM: 780 rpm",
     "Vehicle Speed: 0 km/h",
     "Coolant Temp: 88 C",
