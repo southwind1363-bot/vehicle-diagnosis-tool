@@ -1127,22 +1127,25 @@
 
   function normalizeBridgePidValue(row, index) {
     if (!row || typeof row !== "object") return null;
-    const id = String(row.id || row.monitor_id || row.monitorId || row.pid || "").trim();
-    if (!id) return null;
+    const labelAlias = row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName || null;
+    const id = String(row.id || row.monitor_id || row.monitorId || row.pid || row.code || row.pid_code || row.pidCode || "").trim();
+    const normalizedLabelAlias = labelAlias ? normalizeMonitorLabel(labelAlias) : "";
     const definition = monitorDefinitions.find((item) => item.id === id)
-      || monitorDefinitions.find((item) => item.pid === row.pid)
+      || monitorDefinitions.find((item) => item.pid === row.pid || item.pid === row.code || item.pid === row.pid_code || item.pid === row.pidCode)
+      || (normalizedLabelAlias ? monitorDefinitions.find((item) => item.aliases.some((alias) => isMonitorLabelMatch(normalizedLabelAlias, alias))) : null)
       || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
     const isUndecodedRaw = row.decoded === false;
-    const valueType = definition?.valueType || row.value_type || row.valueType || (typeof row.value === "string" && !NUMBER_PATTERN.test(row.value) ? "text" : "number");
-    const parsedValue = valueType === "boolean" ? row.value === true : valueType === "text" || isUndecodedRaw ? String(row.value ?? "").slice(0, 160) : Number(row.value);
+    const rawValue = row.value ?? row.result ?? row.reading ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null;
+    const valueType = definition?.valueType || row.value_type || row.valueType || (typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number");
+    const parsedValue = valueType === "boolean" ? rawValue === true : valueType === "text" || isUndecodedRaw ? String(rawValue ?? "").slice(0, 160) : Number(rawValue);
     if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;
     if (valueType === "text" && !parsedValue) return null;
     if (isUndecodedRaw && !parsedValue) return null;
 
     return {
       id: definition?.id || id,
-      label: definition?.label || row.label || id,
+      label: definition?.label || row.label || row.name || id,
       value: parsedValue,
       unit: definition?.unit || row.unit || "",
       category: definition?.category || row.category || "ブリッジ読取",
@@ -3260,9 +3263,25 @@
 
   function buildSupportedPidMatrix(input = {}) {
     const source = input.source || "diagnostic_core";
-    const supportedRows = Array.isArray(input) ? input : Array.isArray(input.supported_pids) ? input.supported_pids : Array.isArray(input.supportedPids) ? input.supportedPids : [];
+    const supportedRows = Array.isArray(input)
+      ? input
+      : Array.isArray(input.supported_pids)
+        ? input.supported_pids
+        : Array.isArray(input.supportedPids)
+          ? input.supportedPids
+          : Array.isArray(input.supported_pid_rows)
+            ? input.supported_pid_rows
+            : Array.isArray(input.supportedPidRows)
+              ? input.supportedPidRows
+              : [];
     const supported = new Set(supportedRows
-      .map((pid) => String(pid).toUpperCase().replace(/^0X/, "").padStart(2, "0")));
+      .map((pid) => {
+        if (pid && typeof pid === "object") {
+          return String(pid.pid || pid.code || pid.id || pid.pid_code || pid.pidCode || "").toUpperCase().replace(/^0X/, "").padStart(2, "0");
+        }
+        return String(pid).toUpperCase().replace(/^0X/, "").padStart(2, "0");
+      })
+      .filter(Boolean));
     const items = monitorDefinitions
       .filter((definition) => definition.service === "01" && definition.pid)
       .map((definition) => ({

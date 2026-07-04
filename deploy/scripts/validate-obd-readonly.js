@@ -435,6 +435,23 @@ const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
 check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05" && bridgePidAliasSnapshot.protocol === "ISO15765-4" && bridgePidAliasSnapshot.capturedAt === "2026-06-28T00:01:01Z", "Bridge live PID aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues[0]?.id === "engine_speed" && bridgePidAliasSnapshot.monitorValues[1]?.valueType === "number", "Bridge live PID row aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues.length === 2, "Bridge live PID monitor_values alias was not normalized");
+const bridgePidLabelAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol_name: "ISO15765-4",
+    monitor_values: [
+      { monitorName: "Engine RPM", result: "805", unit: "rpm" },
+      { label: "Control Module Voltage (V)", rawValue: "14.1", valueType: "number" },
+      { code: "05", raw_value: "86", unit: "C" }
+    ]
+  }
+});
+check(bridgePidLabelAliasSnapshot.monitorValues.length === 3, "Bridge live PID label aliases were not normalized");
+check(bridgePidLabelAliasSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 805, "Bridge live PID monitorName alias was not normalized");
+check(bridgePidLabelAliasSnapshot.monitorValues.find((item) => item.id === "control_module_voltage")?.value === 14.1, "Bridge live PID rawValue alias was not normalized");
+check(bridgePidLabelAliasSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 86, "Bridge live PID code/raw_value alias was not normalized");
 const bridgeSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   ok: true,
   blocked: false,
@@ -467,6 +484,10 @@ const supportedPidMatrixAliasInputs = obd.buildSupportedPidMatrix({
 });
 check(supportedPidMatrixAliasInputs.supportedPids.join(",") === "0C,05,40", "Supported PID matrix did not accept supported_pids alias input");
 check(supportedPidMatrixAliasInputs.capturedAt === "2026-06-28T00:01:30Z", "Supported PID matrix did not accept captured_at alias input");
+const supportedPidMatrixRowAliases = obd.buildSupportedPidMatrix({
+  supportedPidRows: [{ pid: "0c" }, { code: "05" }, { pidCode: "40" }]
+});
+check(supportedPidMatrixRowAliases.supportedPids.join(",") === "0C,05,40", "Supported PID matrix did not accept object row aliases");
 const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
