@@ -4295,11 +4295,19 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const readoutProtocol = session?.protocol || NO_DATA;
   const capturedAt = session?.capturedAt || NO_DATA;
+  const startedAt = session?.startedAt || NO_DATA;
+  const endedAt = session?.endedAt || NO_DATA;
+  const vehicleLabel = session?.vehicleProfile?.maker || session?.vehicleProfile?.model
+    ? `${session?.vehicleProfile?.maker || ""} ${session?.vehicleProfile?.model || ""}`.trim()
+    : NO_DATA;
   const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
-  if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || warningLines.length)) {
+  if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || warningLines.length)) {
     sections.push(["読取メタ", [
-      `Protocol: ${readoutProtocol}`,
-      `Captured: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`,
+      `車両: ${vehicleLabel}`,
+      `プロトコル: ${readoutProtocol}`,
+      `開始: ${startedAt === NO_DATA ? NO_DATA : formatDateTime(startedAt)}`,
+      `終了: ${endedAt === NO_DATA ? NO_DATA : formatDateTime(endedAt)}`,
+      `取得時刻: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`,
       ...warningLines.slice(0, 6).map((item) => `注意: ${item}`)
     ]]);
   }
