@@ -1664,9 +1664,15 @@
       ...(bridgeImport?.codes || [])
     ])];
     const monitorInsights = analyzeMonitorValues(monitorValues);
+    const hasScannerPayload = Boolean(scannerTextInput.trim() || scannerAnalysis.codes.length || scannerAnalysis.monitorValues.length || scannerAnalysis.toolHints.length);
+    const source = bridgeImport
+      ? hasScannerPayload
+        ? "scanner_text_and_local_bridge"
+        : "local_bridge"
+      : "scanner_text";
 
     return {
-      source: bridgeImport ? "scanner_text_and_local_bridge" : "scanner_text",
+      source,
       importType: "combined_diagnostic_inputs",
       toolHints: mergeUniqueStrings(scannerAnalysis.toolHints),
       startedAt: bridgeImport?.startedAt || bridgeImport?.bridgeSession?.startedAt || null,

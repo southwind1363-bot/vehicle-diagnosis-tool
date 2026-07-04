@@ -1089,6 +1089,7 @@ const mergedDiagnosticInput = obd.mergeDiagnosticInputs({
   bridgeImport: bridgeDiagnosticImport
 });
 check(mergedDiagnosticInput.importType === "combined_diagnostic_inputs", "統合診断入力の種別が不正です");
+check(mergedDiagnosticInput.source === "scanner_text_and_local_bridge", "統合診断入力のsourceが貼り付け+ブリッジになっていません");
 check(mergedDiagnosticInput.codes.join(",") === "P0171,P0300", "統合診断入力でDTCを重複除外できません");
 check(mergedDiagnosticInput.monitorValues.find((item) => item.id === "engine_speed")?.source === "local_bridge", "統合診断入力でブリッジ値を優先できません");
 check(mergedDiagnosticInput.monitorValues.find((item) => item.id === "control_module_voltage")?.source === "scanner_text", "統合診断入力で貼り付け値を保持できません");
@@ -1131,6 +1132,7 @@ const mergedDiagnosticInputExportPayload = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_import: bridgeExportPayload
 });
+check(mergedDiagnosticInputExportPayload.source === "scanner_text_and_local_bridge", "Combined diagnostic inputs did not keep mixed source for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not carry warnings from bridge_session_export_v1 bridge_import input");
@@ -1156,6 +1158,10 @@ const mergedDiagnosticInputNestedSession = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputNestedSession.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept nested session bridge_import input");
 check(mergedDiagnosticInputNestedSession.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from nested session bridge_import input");
 check(mergedDiagnosticInputNestedSession.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not retain warnings from nested session bridge_import input");
+const mergedDiagnosticInputBridgeOnly = obd.mergeDiagnosticInputs({
+  bridge_import: bridgeExportPayload
+});
+check(mergedDiagnosticInputBridgeOnly.source === "local_bridge", "Combined diagnostic inputs did not mark bridge-only source correctly");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
