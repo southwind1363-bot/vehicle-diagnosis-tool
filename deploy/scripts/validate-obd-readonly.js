@@ -1066,6 +1066,7 @@ const bridgeDiagnosticImportNestedSessionAliases = obd.buildBridgeDiagnosticImpo
 check(bridgeDiagnosticImportNestedSessionAliases.bridgeSession.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not accept bridge_session nested alias input");
 check(bridgeDiagnosticImportNestedSessionAliases.bridgeSession.vciDevices.length === 1, "Bridge diagnostic import did not carry vci devices from bridge_session nested alias input");
 check(bridgeDiagnosticImportNestedSessionAliases.codes[0] === "P0171", "Bridge diagnostic import did not retain dtc_codes with bridge_session nested alias input");
+check(bridgeDiagnosticImportNestedSessionAliases.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not retain warnings from bridge_session nested alias input");
 const bridgeDiagnosticImportNestedOuterOverride = obd.buildBridgeDiagnosticImport({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:45Z",
@@ -1142,6 +1143,7 @@ const mergedDiagnosticInputNestedSession = obd.mergeDiagnosticInputs({
 });
 check(mergedDiagnosticInputNestedSession.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept nested session bridge_import input");
 check(mergedDiagnosticInputNestedSession.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from nested session bridge_import input");
+check(mergedDiagnosticInputNestedSession.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not retain warnings from nested session bridge_import input");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
