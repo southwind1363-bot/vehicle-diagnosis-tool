@@ -4455,9 +4455,16 @@ function renderObdDeveloperSessionSummary(session = null) {
   const bridgeDeviceCount = obdDevSession.bridgeVciList?.deviceCount ?? 0;
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(session?.dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
   const coverage = session?.readoutCoverage || null;
-  const selectedVehicle = obdVehicleInput.value.trim() || NO_DATA;
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
+  const vehicleLabel = session?.vehicleProfile?.maker || session?.vehicleProfile?.model
+    ? `${session?.vehicleProfile?.maker || ""} ${session?.vehicleProfile?.model || ""}`.trim()
+    : (obdVehicleInput.value.trim() || NO_DATA);
+  const startedAtLabel = session?.startedAt
+    ? formatDateTime(session.startedAt)
+    : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
+  const endedAtLabel = session?.endedAt ? formatDateTime(session.endedAt) : NO_DATA;
+  const capturedAtLabel = session?.capturedAt ? formatDateTime(session.capturedAt) : NO_DATA;
   const connectionLabel = obdDevSession.port
     ? selectedInterfaceId === "user-vci-elm327"
       ? "Web Serial読取"
@@ -4470,6 +4477,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const values = [
     ["読取", connectionLabel],
     ["方式", selectedInterface],
+    ["車両", vehicleLabel],
     ["状態", session?.connectionStatus?.displayStatus || obdDevSession.bridgeStatus?.displayStatus || NO_DATA],
     ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
@@ -4480,7 +4488,9 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
     ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
     ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0],
-    ["開始", obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA],
+    ["開始", startedAtLabel],
+    ["終了", endedAtLabel],
+    ["取得時刻", capturedAtLabel],
     ["ブリッジ", obdDevSession.bridgeEndpoint ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ["アダプター", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
