@@ -4335,6 +4335,21 @@ function formatObdBridgeReadoutValue(item = {}) {
   return `${formattedValue}${unit}`;
 }
 
+function formatObdBridgeMonitorSummary(summary = null) {
+  if (!summary?.totalCount) return NO_DATA;
+  const parts = [`${summary.totalCount}項目`];
+  if (summary.outOfRangeCount > 0) parts.push(`範囲外${summary.outOfRangeCount}`);
+  if (summary.decodedCount > 0) parts.push(`変換済み${summary.decodedCount}`);
+  if (summary.undecodedRawCount > 0) parts.push(`未変換${summary.undecodedRawCount}`);
+  return parts.join(" / ");
+}
+
+function formatObdBridgeEcuKeySummary(summary = null) {
+  if (!summary?.totalCount) return NO_DATA;
+  const missing = summary.missingLabels?.slice(0, 3).join(" / ");
+  return `${summary.capturedCount}/${summary.totalCount}${missing ? ` / 未取得 ${missing}` : ""}`;
+}
+
 function formatObdBridgeWarningLabel(code = "") {
   return {
     local_bridge_disabled: "送信は読取モデルのまま",
@@ -4420,6 +4435,7 @@ function renderObdBridgeSessionDetails(session = null) {
     const keySummary = session?.ecuInfoSnapshot?.keyItemSummary;
     const supportedTypeSummary = session?.ecuInfoSnapshot?.supportInfoTypesSummary;
     const lines = [];
+    lines.push(`主要項目: ${formatObdBridgeEcuKeySummary(keySummary)}`);
     if (supportedTypeSummary?.count) {
       lines.push(`対応タイプ00: ${supportedTypeSummary.count}件`);
       lines.push(`対応: ${supportedTypeSummary.labels.slice(0, 6).join(" / ")}${supportedTypeSummary.count > 6 ? "..." : ""}`);
@@ -4486,6 +4502,13 @@ function renderObdBridgeSessionDetails(session = null) {
   const freezeFrameValues = session?.freezeFrameSnapshot?.monitorValues || [];
   if (freezeFrameValues.length) {
     sections.push(["フリーズフレーム", freezeFrameValues.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`)]);
+  }
+
+  if (freezeFrameValues.length && (session?.freezeFrameSnapshot?.triggerDtc || session?.freezeFrameSnapshot?.monitorValueSummary?.totalCount)) {
+    const lines = [];
+    if (session?.freezeFrameSnapshot?.triggerDtc) lines.push(`起点DTC: ${session.freezeFrameSnapshot.triggerDtc}`);
+    lines.push(`要約: ${formatObdBridgeMonitorSummary(session?.freezeFrameSnapshot?.monitorValueSummary)}`);
+    sections.push(["FF要約", lines]);
   }
 
   if (!sections.length) {
