@@ -4944,8 +4944,14 @@ function analyzeObdScannerImport() {
   }
   if (analysis.readoutCoverage?.totalCategories) {
     notes.push(`読取率${analysis.readoutCoverage.progressPercent}% (${analysis.readoutCoverage.availableCategories}/${analysis.readoutCoverage.totalCategories})`);
-    if ((analysis.readoutCoverage.missingCategories || 0) > 0) notes.push(`未取得${analysis.readoutCoverage.missingCategories}件`);
-    if ((analysis.readoutCoverage.emptyCategories || 0) > 0) notes.push(`空応答${analysis.readoutCoverage.emptyCategories}件`);
+    if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
+      const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
+      notes.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
+    }
+    if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
+      const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
+      notes.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
+    }
   }
   if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
     const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 3).join(" / ");
