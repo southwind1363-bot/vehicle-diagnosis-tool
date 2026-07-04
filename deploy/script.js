@@ -4118,8 +4118,8 @@ function renderObdBridgeReadout(parts = {}) {
     onboardMonitorSnapshot: onboardMonitorSnapshot || { tests: [] },
     supportedPidMatrix: supportedPidMatrix || { supported_pids: [] },
     ecuResponseSummary: importResult.ecuResponseSummary,
-    connectionStatus: importResult.connectionStatus,
-    vciList: importResult.vciList,
+    connectionStatus: importResult.bridgeSession?.connectionStatus,
+    vciDevices: importResult.bridgeSession?.vciDevices,
     adapterIdentity: obdDevSession.adapterIdentity || importResult.bridgeSession?.adapterIdentity || undefined
   });
   obdDevSession.lastSession = session;
