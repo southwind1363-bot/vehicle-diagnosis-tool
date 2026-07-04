@@ -5150,6 +5150,9 @@ function analyzeObdScannerImport() {
   if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) {
     notes.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
   }
+  if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) notes.push(`主要ECU情報${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
+  if (analysis.freezeFrameSnapshot?.triggerDtc) notes.push(`FF起点${analysis.freezeFrameSnapshot.triggerDtc}`);
+  if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) notes.push(`FF要約${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
   if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
     const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
     notes.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
@@ -5220,6 +5223,9 @@ function analyzeObdScannerImport() {
     if (analysis.ecuInfoSnapshot?.itemCount > 0) summary.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
     if (analysis.onboardMonitorSnapshot?.testCount > 0) summary.push(`Mode06 ${analysis.onboardMonitorSnapshot.testCount}件`);
     if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) summary.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
+    if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) summary.push(`荳ｻ隕・ECU諠・ｱ${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
+    if (analysis.freezeFrameSnapshot?.triggerDtc) summary.push(`FF襍ｷ轤ｹ${analysis.freezeFrameSnapshot.triggerDtc}`);
+    if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) summary.push(`FF隕∫ｴ${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
     if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
       const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
       summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
@@ -5266,6 +5272,9 @@ function analyzeObdScannerImport() {
     if (analysis.ecuInfoSnapshot?.itemCount > 0) summary.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
     if (analysis.onboardMonitorSnapshot?.testCount > 0) summary.push(`Mode06 ${analysis.onboardMonitorSnapshot.testCount}件`);
     if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) summary.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
+    if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) summary.push(`荳ｻ隕・ECU諠・ｱ${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
+    if (analysis.freezeFrameSnapshot?.triggerDtc) summary.push(`FF襍ｷ轤ｹ${analysis.freezeFrameSnapshot.triggerDtc}`);
+    if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) summary.push(`FF隕∫ｴ${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
     if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
       const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
       summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
