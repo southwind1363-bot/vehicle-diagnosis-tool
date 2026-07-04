@@ -4389,6 +4389,30 @@ function formatObdBridgeReadinessSummary(snapshot = null, options = {}) {
   return parts.length ? parts.join(" / ") : NO_DATA;
 }
 
+function summarizeObdExpectedItems(items = []) {
+  const expectedItems = Array.isArray(items) ? items : [];
+  const captured = expectedItems.filter((item) => item?.captured);
+  const missing = expectedItems.filter((item) => !item?.captured);
+  return {
+    totalCount: expectedItems.length,
+    capturedCount: captured.length,
+    missingCount: missing.length,
+    captured,
+    missing
+  };
+}
+
+function formatObdExpectedItemPreview(items = [], noteKey = "diagnosticUse", limit = 3) {
+  const expectedItems = Array.isArray(items) ? items : [];
+  return expectedItems
+    .slice(0, limit)
+    .map((item) => {
+      const note = item?.[noteKey];
+      return note ? `${item.label}: ${note}` : item.label;
+    })
+    .join(" / ");
+}
+
 function summarizeObdMonitorValues(values = []) {
   if (!values.length) return null;
   if (typeof window.ObdReadOnly?.buildMonitorValueSummary === "function") {
@@ -4529,8 +4553,12 @@ function renderObdBridgeSessionDetails(session = null) {
   if (ecuItems.length) {
     const keySummary = session?.ecuInfoSnapshot?.keyItemSummary;
     const supportedTypeSummary = session?.ecuInfoSnapshot?.supportInfoTypesSummary;
+    const ecuExpectedSummary = summarizeObdExpectedItems(session?.ecuInfoSnapshot?.expectedItems || []);
     const lines = [];
     lines.push(`主要要約: ${formatObdBridgeEcuKeySummary(keySummary)}`);
+    if (ecuExpectedSummary.totalCount) {
+      lines.push(`取得状況: ${ecuExpectedSummary.capturedCount}/${ecuExpectedSummary.totalCount}`);
+    }
     if (supportedTypeSummary?.count) {
       lines.push(`対応タイプ00: ${supportedTypeSummary.count}件`);
       lines.push(`対応: ${supportedTypeSummary.labels.slice(0, 6).join(" / ")}${supportedTypeSummary.count > 6 ? "..." : ""}`);
@@ -4542,6 +4570,9 @@ function renderObdBridgeSessionDetails(session = null) {
     }
     if (session?.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
       lines.push("Mode09\u5bfe\u5fdc\u60c5\u5831\u30bf\u30a4\u30d700: \u672a\u53d6\u5f97");
+    }
+    if (ecuExpectedSummary.missingCount) {
+      lines.push(`未取得用途: ${formatObdExpectedItemPreview(ecuExpectedSummary.missing, "diagnosticUse", 3)}`);
     }
     lines.push(...ecuItems.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`));
     sections.push(["ECU情報", lines]);
@@ -4610,9 +4641,16 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const freezeFrameValues = session?.freezeFrameSnapshot?.monitorValues || [];
   if (freezeFrameValues.length) {
+    const freezeExpectedSummary = summarizeObdExpectedItems(session?.freezeFrameSnapshot?.expectedItems || []);
     const lines = [];
     if (session?.freezeFrameSnapshot?.triggerDtc) lines.push(`起点DTC: ${session.freezeFrameSnapshot.triggerDtc}`);
     lines.push(`要約: ${formatObdBridgeMonitorSummary(session?.freezeFrameSnapshot?.monitorValueSummary)}`);
+    if (freezeExpectedSummary.totalCount) {
+      lines.push(`取得状況: ${freezeExpectedSummary.capturedCount}/${freezeExpectedSummary.totalCount}`);
+    }
+    if (freezeExpectedSummary.missingCount) {
+      lines.push(`未取得用途: ${formatObdExpectedItemPreview(freezeExpectedSummary.missing, "purpose", 3)}`);
+    }
     lines.push(...freezeFrameValues.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`));
     sections.push(["フリーズフレーム", lines]);
   }
