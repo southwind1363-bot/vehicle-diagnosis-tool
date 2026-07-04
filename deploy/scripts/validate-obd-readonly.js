@@ -1009,6 +1009,13 @@ const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
 check(bridgeExportNestedSessionAliases.exported_at === "2026-06-28T00:10:00Z", "Bridge export did not accept nested session alias input");
 check(bridgeExportNestedSessionAliases.session.adapter_identity.adapterFamily === "elm327", "Bridge export did not carry adapter_identity from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.vci_devices[0]?.id === bridgeExportPayload.session.vci_devices[0]?.id, "Bridge export did not carry vci_devices from nested session alias input");
+const bridgeExportNestedOuterOverride = obd.buildBridgeSessionExportPayload({
+  captured_at: "2026-06-28T00:10:15Z",
+  vehicle_profile: { maker: "Toyota", model: "Outer Roomy" },
+  session: bridgeExportPayload.session
+});
+check(bridgeExportNestedOuterOverride.session.captured_at === "2026-06-28T00:10:15Z", "Bridge export did not let outer captured_at override nested session alias input");
+check(bridgeExportNestedOuterOverride.session.vehicle_profile?.model === "Outer Roomy", "Bridge export did not let outer vehicle_profile override nested session alias input");
 const bridgeSummaryNestedSessionAliases = obd.buildBridgeSessionSummary({
   session: bridgeExportPayload.session,
   vehicle_profile: { maker: "Toyota", model: "Nested Prius" }
@@ -1040,10 +1047,12 @@ check(bridgeDiagnosticImportNestedSessionAliases.bridgeSession.vciDevices.length
 check(bridgeDiagnosticImportNestedSessionAliases.codes[0] === "P0171", "Bridge diagnostic import did not retain dtc_codes with bridge_session nested alias input");
 const bridgeDiagnosticImportNestedOuterOverride = obd.buildBridgeDiagnosticImport({
   protocol: "ISO9141-2",
+  captured_at: "2026-06-28T00:10:45Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Prius C" },
   session: bridgeExportPayload.session
 });
 check(bridgeDiagnosticImportNestedOuterOverride.protocol === "ISO9141-2", "Bridge diagnostic import did not let outer protocol override nested session alias input");
+check(bridgeDiagnosticImportNestedOuterOverride.capturedAt === "2026-06-28T00:10:45Z", "Bridge diagnostic import did not let outer captured_at override nested session alias input");
 check(bridgeDiagnosticImportNestedOuterOverride.exportPayload.session.vehicle_profile?.model === "Outer Prius C", "Bridge diagnostic import did not let outer vehicle_profile override nested session alias input");
 const mergedDiagnosticInput = obd.mergeDiagnosticInputs({
   scannerText: [
@@ -1717,6 +1726,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 448");
+  console.log("OBD read-only safety checks: 451");
   console.log("Errors: 0");
 }
