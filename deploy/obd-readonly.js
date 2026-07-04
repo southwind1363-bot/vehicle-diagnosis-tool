@@ -1144,10 +1144,18 @@
             ? data.mode06_tests
             : Array.isArray(data.mode06Tests)
               ? data.mode06Tests
+            : Array.isArray(data.mode06_rows)
+              ? data.mode06_rows
+              : Array.isArray(data.mode06Rows)
+                ? data.mode06Rows
             : Array.isArray(data.monitor_tests)
               ? data.monitor_tests
               : Array.isArray(data.monitorTests)
                 ? data.monitorTests
+                : Array.isArray(data.test_rows)
+                  ? data.test_rows
+                  : Array.isArray(data.testRows)
+                    ? data.testRows
                 : Array.isArray(data.onboard_monitor_tests)
                   ? data.onboard_monitor_tests
                   : Array.isArray(data.onboardMonitorTests)
@@ -1939,24 +1947,36 @@
 
   function normalizeEcuResponseSummary(input = {}) {
     const source = input.source || "diagnostic_core";
-    const rows = Array.isArray(input) ? input : Array.isArray(input.ecus) ? input.ecus : Array.isArray(input.ecu_responses) ? input.ecu_responses : [];
+    const rows = Array.isArray(input)
+      ? input
+      : Array.isArray(input.ecus)
+        ? input.ecus
+        : Array.isArray(input.ecu_responses)
+          ? input.ecu_responses
+          : Array.isArray(input.ecuResponses)
+            ? input.ecuResponses
+            : Array.isArray(input.ecu_response_rows)
+              ? input.ecu_response_rows
+              : Array.isArray(input.ecuResponseRows)
+                ? input.ecuResponseRows
+                : [];
     return {
       schemaVersion: "ecu_response_summary_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || null,
       ecus: rows.map((row, index) => ({
-        id: String(row?.id || row?.ecu || row?.address || `ecu_${index + 1}`).slice(0, 40),
-        name: row?.name ? String(row.name).slice(0, 120) : null,
-        address: row?.address || row?.ecu || null,
+        id: String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || `ecu_${index + 1}`).slice(0, 40),
+        name: row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : null,
+        address: row?.address || row?.ecu || row?.ecu_id || row?.ecuId || null,
         status: row?.status || "unknown",
-        dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Array.isArray(row?.dtcs) ? row.dtcs.length : null,
-        responseCount: Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : null,
-        services: Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
-        negativeResponseCount: Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : 0,
-        negativeRequestedServices: Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
-        negativeResponseLabels: Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : [],
-        responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : null
+        dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : null,
+        responseCount: Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.responses) ? row.responses : null,
+        services: Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
+        negativeResponseCount: Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negatives) ? row.negatives : 0,
+        negativeRequestedServices: Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negative_services) ? row.negative_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeServices) ? row.negativeServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
+        negativeResponseLabels: Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negative_labels) ? row.negative_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeLabels) ? row.negativeLabels.map((item) => String(item)).slice(0, 16) : [],
+        responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : null
       })),
       retainedRawText: false
     };
@@ -2093,13 +2113,21 @@
                   ? input.onboard_monitor_tests
                   : Array.isArray(input.onboardMonitorTests)
                     ? input.onboardMonitorTests
+                    : Array.isArray(input.mode06_rows)
+                      ? input.mode06_rows
+                      : Array.isArray(input.mode06Rows)
+                        ? input.mode06Rows
+                        : Array.isArray(input.test_rows)
+                          ? input.test_rows
+                          : Array.isArray(input.testRows)
+                            ? input.testRows
                     : [];
     const tests = rows
       .map((row, index) => {
         if (!row || typeof row !== "object") return null;
-        const testId = String(row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
-        const componentId = String(row.component_id || row.componentId || row.cid || row.component || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
-        const value = Number(row.value ?? row.measured ?? row.measured_value ?? row.measuredValue ?? row.result ?? row.test_value ?? row.testValue);
+        const testId = String(row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId || row.test || row.test_code || row.testCode || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const componentId = String(row.component_id || row.componentId || row.cid || row.component || row.component_code || row.componentCode || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const value = Number(row.value ?? row.measured ?? row.measured_value ?? row.measuredValue ?? row.result ?? row.test_value ?? row.testValue ?? row.raw_value ?? row.rawValue);
         const min = Number(row.min ?? row.minimum ?? row.min_value ?? row.minValue);
         const max = Number(row.max ?? row.maximum ?? row.max_value ?? row.maxValue);
         const hasLimits = Number.isFinite(min) && Number.isFinite(max);

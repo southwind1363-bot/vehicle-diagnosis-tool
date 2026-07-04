@@ -347,6 +347,24 @@ const ecuResponseSummaryAliases = obd.normalizeEcuResponseSummary({
   ]
 });
 check(ecuResponseSummaryAliases.ecus[0]?.dtcCount === 2 && ecuResponseSummaryAliases.ecus[0]?.negativeRequestedServices[0] === "09" && ecuResponseSummaryAliases.ecus[0]?.responseTimeMs === 45, "ECU response summary camelCase aliases were not normalized");
+const ecuResponseSummaryRowAliases = obd.normalizeEcuResponseSummary({
+  ecuResponseRows: [
+    {
+      ecuId: "7E9",
+      label: "Hybrid ECU",
+      codeCount: 1,
+      responses: 4,
+      requestedServices: ["01", "09"],
+      negativeServices: ["22"],
+      negativeLabels: ["conditions not correct"],
+      latencyMs: 62
+    }
+  ]
+});
+check(ecuResponseSummaryRowAliases.ecus[0]?.address === "7E9", "ECU response summary ecuId alias was not normalized");
+check(ecuResponseSummaryRowAliases.ecus[0]?.services.join(",") === "01,09", "ECU response summary requestedServices alias was not normalized");
+check(ecuResponseSummaryRowAliases.ecus[0]?.negativeRequestedServices[0] === "22", "ECU response summary negativeServices alias was not normalized");
+check(ecuResponseSummaryRowAliases.ecus[0]?.responseTimeMs === 62, "ECU response summary latencyMs alias was not normalized");
 const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_pending_dtc",
   ok: true,
@@ -887,12 +905,29 @@ const bridgeOnboardMonitorExtendedAliases = obd.normalizeBridgeOnboardMonitorSna
   }
 });
 check(bridgeOnboardMonitorExtendedAliases.testCount === 1 && bridgeOnboardMonitorExtendedAliases.failedCount === 0, "Bridge Mode 06 extended aliases were not normalized");
+const bridgeMode06RowAliases = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mode06Rows: [
+      { testCode: "05", componentCode: "03", rawValue: 88, minimum: 50, maximum: 100 }
+    ]
+  }
+});
+check(bridgeMode06RowAliases.testCount === 1 && bridgeMode06RowAliases.tests[0]?.testId === "05", "Bridge Mode 06 mode06Rows aliases were not normalized");
 const onboardMonitorSnapshotMonitorTestsAlias = obd.normalizeOnboardMonitorSnapshot({
   monitor_tests: [
     { monitorId: "04", component: "01", measuredValue: 80, minimum: 50, maximum: 100 }
   ]
 });
 check(onboardMonitorSnapshotMonitorTestsAlias.testCount === 1 && onboardMonitorSnapshotMonitorTestsAlias.failedCount === 0, "Mode 06 snapshot did not accept monitor_tests alias input");
+const onboardMonitorSnapshotRowAliases = obd.normalizeOnboardMonitorSnapshot({
+  testRows: [
+    { test: "06", componentCode: "02", rawValue: 120, minValue: 100, maxValue: 140 }
+  ]
+});
+check(onboardMonitorSnapshotRowAliases.testCount === 1 && onboardMonitorSnapshotRowAliases.tests[0]?.componentId === "02", "Mode 06 snapshot testRows aliases were not normalized");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");
