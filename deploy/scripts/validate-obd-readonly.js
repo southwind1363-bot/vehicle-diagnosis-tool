@@ -1055,6 +1055,15 @@ const bridgeDiagnosticImportAliasesDerivedCoverage = obd.buildBridgeDiagnosticIm
 });
 check(bridgeDiagnosticImportAliasesDerivedCoverage.readoutCoverage.progressPercent >= 80, "Bridge diagnostic import did not derive readout coverage from summary alias snapshots");
 check(bridgeDiagnosticImportAliasesDerivedCoverage.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not derive warnings from summary alias snapshots");
+const bridgeDiagnosticImportSummaryOnlyRawWarning = obd.buildBridgeDiagnosticImport({
+  dtc_codes: ["P0171"],
+  monitor_value_summary: { totalCount: 2, decodedCount: 0, undecodedRawCount: 2, numericCount: 2, textCount: 0 },
+  connection_status: bridgeStatus,
+  vci_list: bridgeVciList,
+  adapter_identity: bridgeAdapterIdentity
+});
+check(bridgeDiagnosticImportSummaryOnlyRawWarning.monitorValueSummary.undecodedRawCount === 2, "Bridge diagnostic import did not retain monitor_value_summary without monitor_values");
+check(bridgeDiagnosticImportSummaryOnlyRawWarning.warnings.includes("raw_pid_values_need_conversion"), "Bridge diagnostic import did not derive raw PID warning from monitor_value_summary-only input");
 const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
   session: bridgeExportPayload.session,
   exported_at: "2026-06-28T00:10:00Z"

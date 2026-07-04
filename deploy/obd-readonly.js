@@ -1501,6 +1501,7 @@
     const monitorValues = Array.isArray(monitorValuesInput)
       ? monitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
+    const monitorValueSummary = parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(monitorValues);
     const monitorInsights = Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
@@ -1509,7 +1510,7 @@
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
       dtcSnapshot: { blocked: false, codes: Array.isArray(codesInput) ? codesInput : [] },
-      livePidSnapshot: { blocked: false, monitorValues, supportedPids: supportedPidMatrix.supportedPids || [], monitorValueSummary: buildMonitorValueSummary(monitorValues) },
+      livePidSnapshot: { blocked: false, monitorValues, supportedPids: supportedPidMatrix.supportedPids || [], monitorValueSummary },
       freezeFrameSnapshot,
       readinessSnapshot,
       ecuInfoSnapshot,
@@ -1524,8 +1525,8 @@
     if (onboardMonitorSnapshot.failedCount > 0) derivedWarnings.push("onboard_monitor_test_failed");
     if (ecuInfoSnapshot.keyItemSummary?.missingCount > 0) derivedWarnings.push("mode09_key_items_missing");
     if (ecuInfoSnapshot.supportInfoTypesCaptured === false) derivedWarnings.push("mode09_supported_types_unknown");
-    if (monitorValues.length) derivedWarnings.push("compare_values_under_same_conditions");
-    if (((buildMonitorValueSummary(monitorValues).undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
+    if ((monitorValueSummary?.totalCount || 0) > 0) derivedWarnings.push("compare_values_under_same_conditions");
+    if (((monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
       derivedWarnings.push("raw_pid_values_need_conversion");
     }
     if (derivedReadoutCoverage.missingCategories > 0) derivedWarnings.push("bridge_readout_incomplete");
@@ -1551,7 +1552,7 @@
       readoutCoverage: parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
       freezeFrameSnapshot,
       monitorValues,
-      monitorValueSummary: parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(monitorValues),
+      monitorValueSummary,
       monitorInsights,
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
       exportRequired: true,
@@ -1641,6 +1642,7 @@
       vehicleProfile: summary.vehicleProfile || null,
       codes,
       monitorValues,
+      monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
       monitorInsights,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
