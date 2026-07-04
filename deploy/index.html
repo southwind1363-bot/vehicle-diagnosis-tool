@@ -121,9 +121,9 @@
             <summary>外部診断機データを取り込む</summary>
             <label class="obd-import-label">
               診断機の読取結果
-              <textarea id="obdScannerText" rows="8" placeholder="例:&#10;Toyota Techstream&#10;J2534&#10;P0171 P0300&#10;Engine RPM: 780 rpm&#10;Coolant Temp: 88 C&#10;STFT B1: 3.1 %&#10;Control Module Voltage: 14.2 V"></textarea>
+              <textarea id="obdScannerText" rows="8" placeholder="例:&#10;Toyota Techstream&#10;J2534&#10;CONSULT-III&#10;P0171 P0300&#10;Engine RPM: 780 rpm&#10;Coolant Temp: 88 C&#10;STFT B1: 3.1 %&#10;Control Module Voltage: 14.2 V"></textarea>
             </label>
-            <p class="case-note">DTCと「項目名: 数値 単位」のログを解析します。Techstream/J2534 などの読取元ヒントも表示します。入力原文は保存・外部送信しません。</p>
+            <p class="case-note">DTCと「項目名: 数値 単位」のログを解析します。Techstream/J2534、CONSULT、HDS、IDS などの読取元ヒントも表示します。入力原文は保存・外部送信しません。</p>
 
             <div class="button-row">
               <button id="obdAnalyzeButton" class="primary-button" type="button">診断機データを解析</button>
