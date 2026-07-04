@@ -29,12 +29,13 @@
     "target_level": "症状別に見るべき値を提示し、値の相関まで見る",
     "current_status": "基礎辞書あり",
     "progress_percent": 42,
-    "current_basis": "データモニター辞書165項目、貼り付け解析、フリーズフレーム、対応PID、ブリッジ取込モデルあり",
+    "current_basis": "データモニター辞書165項目、貼り付け解析、フリーズフレーム、対応PID、ブリッジ取込モデル、nested session alias 吸収あり",
     "done": [
       "主要PIDと拡張候補の辞書化",
       "貼り付けデータから値を抽出",
       "燃料補正、電圧、温度、MAPなどの相関ヒント生成",
-      "フリーズフレーム値と対応PIDを同一セッションへ保持"
+      "フリーズフレーム値と対応PIDを同一セッションへ保持",
+      "bridge/session alias を吸収してライブデータ要約へ統合"
     ],
     "missing": [
       "車種別基準値",
@@ -130,13 +131,14 @@
     "target_level": "DTC、問診、ライブデータ、点検順を一つの流れで案内",
     "current_status": "統合中",
     "progress_percent": 49,
-    "current_basis": "問診、DTC検索、診断フロー、ライブデータヒント、外部診断機貼り付け解析、ブリッジ読取セッション要約あり",
+    "current_basis": "問診、DTC検索、診断フロー、ライブデータヒント、外部診断機貼り付け解析、ブリッジ読取セッション要約、nested alias 正規化あり",
     "done": [
       "症状別問診",
       "DTCと整備データの照合",
       "外部診断機貼り付け解析",
       "ブリッジ取込と貼り付け入力の統合モデル",
-      "DTC内訳、FF、ECU情報、Mode06、対応PIDのセッション要約"
+      "DTC内訳、FF、ECU情報、Mode06、対応PIDのセッション要約",
+      "bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ統合"
     ],
     "missing": [
       "車種別基準値との自動比較",
