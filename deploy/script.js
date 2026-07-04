@@ -285,6 +285,7 @@ const obdVehicleYearSelect = document.querySelector("#obdVehicleYear");
 const obdVehicleYearManualInput = document.querySelector("#obdVehicleYearManual");
 const obdVehicleManualInput = document.querySelector("#obdVehicleManual");
 const obdVehicleSelectionSummary = document.querySelector("#obdVehicleSelectionSummary");
+const obdAvailableReadoutSummary = document.querySelector("#obdAvailableReadoutSummary");
 const obdInterfaceSelect = document.querySelector("#obdInterfaceSelect");
 const obdUseDiagnosisVehicleButton = document.querySelector("#obdUseDiagnosisVehicleButton");
 const obdPreviewSelectedButton = document.querySelector("#obdPreviewSelectedButton");
@@ -354,6 +355,7 @@ const obdAccessLockButton = document.querySelector("#obdAccessLockButton");
 const obdAccessModeBadge = document.querySelector("#obdAccessModeBadge");
 const obdAccessStatus = document.querySelector("#obdAccessStatus");
 const obdProgressGrid = document.querySelector(".obd-progress-grid");
+const obdWorkflowGuide = document.querySelector("#obdWorkflowGuide");
 const obdOperationGrid = document.querySelector("#obdOperationGrid");
 const obdConnectionProfile = document.querySelector("#obdConnectionProfile");
 const obdPreparedRequestGrid = document.querySelector("#obdPreparedRequestGrid");
@@ -369,6 +371,7 @@ const obdDevConnectButton = document.querySelector("#obdDevConnectButton");
 const obdPreviewElm327Button = document.querySelector("#obdPreviewElm327Button");
 const obdPreviewThinkcarButton = document.querySelector("#obdPreviewThinkcarButton");
 const obdPreviewJ2534Button = document.querySelector("#obdPreviewJ2534Button");
+const obdScrollTargetButtons = document.querySelectorAll("[data-obd-scroll-target]");
 const obdPreviewStatus = document.querySelector("#obdPreviewStatus");
 const obdPreviewGuide = document.querySelector("#obdPreviewGuide");
 const obdDevPasswordInput = document.querySelector("#obdDevPasswordInput");
@@ -547,7 +550,7 @@ obdAccessPasswordInput.addEventListener("keydown", (event) => {
 });
 obdDevUnlockButton.addEventListener("click", unlockObdDeveloperMode);
 obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
-obdDevConnectButton.addEventListener("click", connectObdDeveloperVci);
+obdDevConnectButton.addEventListener("click", handleObdPrimaryAction);
 obdDevIdentifyButton.addEventListener("click", identifyObdDeveloperVci);
 obdDevReadDtcButton.addEventListener("click", readObdDeveloperDtc);
 obdDevSnapshotButton.addEventListener("click", readObdDeveloperLiveSnapshot);
@@ -565,6 +568,7 @@ obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
 obdPreviewElm327Button?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-elm327"));
 obdPreviewThinkcarButton?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-thinkcar-bluetooth"));
 obdPreviewJ2534Button?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-techstream-j2534"));
+obdScrollTargetButtons.forEach((button) => button.addEventListener("click", () => scrollToObdSection(button.dataset.obdScrollTarget)));
 noticeCloseButton.addEventListener("click", () => {
   localStorage.setItem(NOTICE_KEY, "accepted");
   noticeModal.close();
@@ -1451,6 +1455,77 @@ function getObdDevelopmentOperationNote(interfaceId) {
   return "運用: 接続前プレビュー確認 -> 接続準備 -> read-onlyで取れる項目だけ確認 -> OBD側で保存と確認";
 }
 
+function getObdAvailableReadoutNote(interfaceId) {
+  return {
+    "user-vci-elm327": "現在使える読取: DTC / データモニター / フリーズフレーム / 対応PIDの接続前確認、PCではWeb Serial実読取へ移行。",
+    "user-vci-thinkcar-bluetooth": "現在使える読取: DTC / ライブデータ / ECU情報の接続前確認、実読取はスマホBT後にPCブリッジ経由。",
+    "user-vci-techstream-j2534": "現在使える読取: DTC / ECU情報 / Mode06 / 対応PIDの接続前確認、実読取はPC J2534経由。",
+    "user-vci-rcmall-mks-canable-v2-pro": "現在使える読取: CAN系 read-only 応答、対応PID、診断取込の接続前確認。"
+  }[interfaceId] || "現在使える読取項目を表示します。";
+}
+
+function getObdPrimaryActionLabel(interfaceId, state = {}) {
+  if (state.connected) return "車両接続中";
+  if (!state.unlocked) return "追加読取を有効化";
+  if (interfaceId === "user-vci-elm327") {
+    return state.serialReady ? "ELM327接続を開始" : "PCでELM327接続";
+  }
+  if (interfaceId === "user-vci-techstream-j2534") return "J2534接続を確認";
+  if (interfaceId === "user-vci-thinkcar-bluetooth") return "BT/Bridge確認を開始";
+  if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") return "CAN接続を確認";
+  return "車両接続を開始";
+}
+
+function getObdAccessStatusMessage(unlocked, capability = window.ObdReadOnly?.getCapability?.()) {
+  const interfaceId = obdInterfaceSelect.value || "user-vci-elm327";
+  if (!unlocked) {
+    return "パスワードを知っている端末だけ、この診断機画面を開けます。";
+  }
+  if (interfaceId === "user-vci-elm327") {
+    return capability?.webSerialSupported
+      ? "ELM327 を選んでいます。PC Chrome系ブラウザから実読取を開始できます。"
+      : "ELM327 を選んでいます。実読取は PC Chrome系ブラウザから開始します。";
+  }
+  if (interfaceId === "user-vci-techstream-j2534") {
+    return "J2534 を選んでいます。PC側ドライバと Bridge 確認から進めます。";
+  }
+  if (interfaceId === "user-vci-thinkcar-bluetooth") {
+    return "THINKCAR Bluetooth を選んでいます。スマホBT接続後に Bridge 確認へ進めます。";
+  }
+  if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") {
+    return "CANable 候補を選んでいます。CAN系 read-only 応答確認から進めます。";
+  }
+  return "このセッションでは OBD2 読取画面を開いています。";
+}
+
+function renderObdSetupActionButtons() {
+  if (!obdPreviewSelectedButton || !obdPrepareSelectedButton) return;
+  const interfaceId = obdInterfaceSelect.value || "user-vci-elm327";
+  const labels = {
+    "user-vci-elm327": {
+      preview: "ELM327で接続前プレビュー",
+      prepare: "ELM327接続を準備"
+    },
+    "user-vci-thinkcar-bluetooth": {
+      preview: "BT/Bridgeで接続前プレビュー",
+      prepare: "BT/Bridge確認を準備"
+    },
+    "user-vci-techstream-j2534": {
+      preview: "J2534で接続前プレビュー",
+      prepare: "J2534接続を準備"
+    },
+    "user-vci-rcmall-mks-canable-v2-pro": {
+      preview: "CANで接続前プレビュー",
+      prepare: "CAN接続を準備"
+    }
+  }[interfaceId] || {
+    preview: "この設定で接続前プレビュー",
+    prepare: "この設定で接続準備"
+  };
+  obdPreviewSelectedButton.textContent = labels.preview;
+  obdPrepareSelectedButton.textContent = labels.prepare;
+}
+
 function renderObdConnectionGuide() {
   if (!obdConnectionGuide) return;
   const interfaceId = obdInterfaceSelect.value || "user-vci-elm327";
@@ -1502,6 +1577,85 @@ function renderObdConnectionGuide() {
   operationLabel.textContent = "現場運用";
   operationItem.append(operationLabel, document.createTextNode(getObdDevelopmentOperationNote(interfaceId)));
   obdConnectionGuide.appendChild(operationItem);
+  renderObdAccessGate();
+  renderObdSetupActionButtons();
+  if (obdAvailableReadoutSummary) obdAvailableReadoutSummary.textContent = getObdAvailableReadoutNote(interfaceId);
+  renderObdPreviewButtons();
+  renderObdWorkflowGuide();
+}
+
+function scrollToObdSection(targetId) {
+  if (!targetId) return;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderObdPreviewButtons() {
+  const selectedInterfaceId = obdInterfaceSelect.value || "user-vci-elm327";
+  const previewInterfaceId = obdDevSession.previewMode || "";
+  [
+    [obdPreviewElm327Button, "user-vci-elm327"],
+    [obdPreviewThinkcarButton, "user-vci-thinkcar-bluetooth"],
+    [obdPreviewJ2534Button, "user-vci-techstream-j2534"]
+  ].forEach(([button, interfaceId]) => {
+    if (!button) return;
+    const selected = selectedInterfaceId === interfaceId;
+    const active = previewInterfaceId === interfaceId;
+    button.classList.toggle("is-selected", selected);
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.()) {
+  if (!obdWorkflowGuide) return;
+  const selectedVehicle = obdVehicleInput.value.trim() || "OBD側で車両選択";
+  const selectedInterface = getSelectedObdInterfaceLabel();
+  const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
+  const previewActive = Boolean(obdDevSession.previewMode);
+  const connected = Boolean(obdDevSession.port);
+  const bridgeReady = Boolean(obdDevSession.bridgeEndpoint);
+  const detailUnlocked = obdDevModeUnlocked === true;
+  const currentState = connected
+    ? "実車接続中"
+    : bridgeReady
+      ? "接続基盤確認済み"
+      : previewActive
+        ? "接続前プレビュー確認中"
+        : "接続前設定済み";
+  let nextAction = "接続前プレビューか車両接続を開始";
+  if (!obdVehicleInput.value.trim()) {
+    nextAction = "OBD側で車両情報を選択";
+  } else if (connected) {
+    nextAction = "故障コード、データモニター、フリーズフレームを順に確認";
+  } else if (bridgeReady) {
+    nextAction = "VCI一覧、ECU情報、ライブデータを確認";
+  } else if (!serialReady && selectedInterface.includes("ELM327")) {
+    nextAction = "PC Chrome系ブラウザでWeb Serial接続";
+  } else if (!detailUnlocked) {
+    nextAction = "必要なら詳細トークンで追加読取を有効化";
+  }
+  const readoutPath = connected
+    ? "Web Serial実読取"
+    : bridgeReady
+      ? "Local Bridge読取"
+      : selectedInterface;
+  obdWorkflowGuide.innerHTML = "";
+  [
+    ["車両", selectedVehicle],
+    ["方式", selectedInterface],
+    ["現在", currentState],
+    ["次の操作", nextAction],
+    ["実読取経路", readoutPath],
+    ["安全", "read-onlyのみ。有効化していない送信は開かない"]
+  ].forEach(([label, value]) => {
+    const item = document.createElement("span");
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    item.append(strong, document.createTextNode(value));
+    obdWorkflowGuide.appendChild(item);
+  });
 }
 
 function applyDiagnosisVehicleToObdSetup() {
@@ -1545,15 +1699,15 @@ function prepareSelectedObdInterface() {
   const catalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
   const item = catalog.find((entry) => entry.id === interfaceId);
   if (item && isBridgeBackedInterfaceCandidate(interfaceId)) {
-    obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle} の接続準備を開始します。`;
+    obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle}: 接続準備を開始。次は Bridge 確認です。`;
     startInterfaceCandidateCheck(item);
     return;
   }
   obdDevSession.previewMode = null;
   clearRequestedInterfaceSelection();
   obdDevStatus.textContent = interfaceId === "user-vci-elm327"
-    ? `${selectedVehicle} / ELM327はPCのChrome系ブラウザでWeb Serial接続を開始してください。スマホでは接続前プレビューまでです。`
-    : `${getSelectedObdInterfaceLabel()} / ${selectedVehicle} の接続前設定を保存しました。次に接続前プレビューかブリッジ確認へ進めます。`;
+    ? `${selectedVehicle} / ELM327: PC Chrome系ブラウザで Web Serial 接続を開始。`
+    : `${getSelectedObdInterfaceLabel()} / ${selectedVehicle}: 設定を保存。次は接続前プレビューか Bridge 確認です。`;
   renderObdDeveloperGate();
 }
 
@@ -2522,6 +2676,8 @@ function initializeObdReadOnlyPanel() {
   obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} 接続、DTC読取、データモニター、DTC消去は機能単位で準備し、安全検証が終わるまで車両への送信は無効にしています。`;
   renderObdAccessGate();
   renderObdProgressOverview(capability);
+  renderObdPreviewButtons();
+  renderObdWorkflowGuide(capability);
   renderObdDeveloperGate(capability);
   renderObdOperationPlan(window.ObdReadOnly.getVehicleOperationPlan?.() || []);
   renderObdPreparedRequests(
@@ -2548,7 +2704,7 @@ async function hashObdAccessPassword(value) {
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function renderObdAccessGate() {
+function renderObdAccessGate(capability = window.ObdReadOnly?.getCapability?.()) {
   const unlocked = obdAccessUnlocked === true;
 
   obdAccessModeBadge.textContent = unlocked ? "解除済み" : "ロック中";
@@ -2558,11 +2714,11 @@ function renderObdAccessGate() {
   obdAccessProtected.hidden = !unlocked;
 
   if (!unlocked) {
-    obdAccessStatus.textContent = "実車テスト中は、パスワードを知っている端末だけ OBD2 読取画面を開けます。";
+    obdAccessStatus.textContent = getObdAccessStatusMessage(false, capability);
     return;
   }
 
-  obdAccessStatus.textContent = "このセッションでは OBD2 読取画面を開いています。タブを閉じるかロックで再び隠せます。";
+  obdAccessStatus.textContent = getObdAccessStatusMessage(true, capability);
 }
 
 function normalizeProgressPercent(value) {
@@ -3133,12 +3289,12 @@ function getObdInterfacePreviewConfig(interfaceId) {
   const selected = table[interfaceId] || table["user-vci-elm327"];
   return {
     label: selected.label,
-    statusText: `${selected.label}の接続前プレビューを表示しています。${selected.operatorNote}`,
-    previewStatus: `接続前プレビュー中: ${selected.operatorNote}`,
+    statusText: `${selected.label}の接続前プレビューです。今見える項目を確認し、実読取は ${selected.connectionStatus.nextAction}。`,
+    previewStatus: `接続前プレビュー中: 今見える項目を確認。実読取は ${selected.connectionStatus.nextAction}`,
     previewGuide: [
-      `スマホ単体: ${interfaceId === "user-vci-thinkcar-bluetooth" ? "表示確認のみ。実読取は不可" : "表示確認のみ"}`,
-      `実読取経路: ${selected.connectionStatus.nextAction}`,
-      `今見える内容: DTC / ライブ値 / FF / ECU情報 / Mode06 / 対応PID`
+      `スマホ単体: ${interfaceId === "user-vci-thinkcar-bluetooth" ? "表示確認のみ" : "表示確認のみ"}`,
+      `実読取入口: ${selected.connectionStatus.nextAction.replace(/^実読取は/, "").replace(/で確認$/, "")}`,
+      "表示項目: DTC / FF / ライブ値 / ECU情報 / Mode06 / 対応PID"
     ],
     bridgeVciList: {
       deviceCount: 1,
@@ -3293,7 +3449,7 @@ function renderObdProgressOverview() {
     {
       title: "開発優先方針",
       primary: "パスワード内の統合OBD診断機を最優先",
-      detail: "一般公開の診断補助は外部診断機ベースの補助として維持し、先にOBD読取、VCI接続、診断補助、保存、レポートを統合する。"
+      detail: "先に OBD読取、VCI接続、保存、レポートを診断機側で固める。"
     },
     {
       title: "完成度",
@@ -3303,27 +3459,27 @@ function renderObdProgressOverview() {
     {
       title: "完了見込み",
       primary: `Q3目標 ${q3Targets}系統 / Q4目標 ${q4Targets}系統`,
-      detail: `先行候補: ${upcomingInterfaces || upcomingCapabilities || summarizeEtaTargets(allEtas, 3)}`
+      detail: `先に進む候補: ${upcomingInterfaces || upcomingCapabilities || summarizeEtaTargets(allEtas, 3)}`
     },
     {
       title: "対応インターフェース",
       primary: `候補 ${interfaceCatalogStates.length}件 / 平均 ${candidateProgress}%`,
-      detail: `先に使える候補: ${upcomingInterfaces || "集計中"} / 遅い所: ${weakestInterfaces || "集計中"}`
+      detail: `先に使う候補: ${upcomingInterfaces || "集計中"} / 遅れ: ${weakestInterfaces || "集計中"}`
     },
     {
       title: "読取機能",
       primary: `DTC / PID / FF / ECU情報 / Mode06 平均 ${readoutProgress}%`,
-      detail: `先行機能: ${upcomingCapabilities || "集計中"} / 弱い所: ${weakestCapabilities || "集計中"}`
+      detail: `先に使う機能: ${upcomingCapabilities || "集計中"} / 遅れ: ${weakestCapabilities || "集計中"}`
     },
     {
       title: "データ網羅",
       primary: `P/U/B/C/OEM/作業支援 平均 ${coverageProgress}%`,
-      detail: `弱い所: ${weakestCoverage || "集計中"} / 目標: ${coverageEtas}`
+      detail: `遅れ: ${weakestCoverage || "集計中"} / 目標: ${coverageEtas}`
     },
     {
       title: "判定基準",
       primary: "数字は実装済みだけを反映",
-      detail: "ロードマップ追加だけでは上げず、読取、整形、取込、比較、保存の実装で更新する。"
+      detail: "読取、整形、取込、比較、保存まで入った分だけ更新する。"
     }
   ];
 
@@ -3356,11 +3512,14 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const selectedVehicle = obdVehicleInput.value.trim();
   const selectedInterface = getSelectedObdInterfaceLabel();
+  const selectedInterfaceId = obdInterfaceSelect.value || "user-vci-elm327";
+  const primaryActionNeedsSerial = selectedInterfaceId === "user-vci-elm327";
 
   obdDevModeBadge.textContent = unlocked ? "詳細有効" : "ロック中";
   obdDevControls.hidden = !unlocked;
   obdDevLockButton.disabled = !unlocked;
-  obdDevConnectButton.disabled = !unlocked || !serialReady || connected;
+  obdDevConnectButton.disabled = !unlocked || connected || (primaryActionNeedsSerial && !serialReady);
+  obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady });
   obdDevIdentifyButton.disabled = !unlocked || !connected;
   obdDevReadDtcButton.disabled = !unlocked || !connected;
   obdDevSnapshotButton.disabled = !unlocked || !connected;
@@ -3381,10 +3540,10 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
       ? "ブリッジ確認済み"
       : previewActive
         ? "接続前プレビュー表示中"
-        : "車両未接続";
+        : "接続待機中";
 
   if (!unlocked) {
-    obdDevStatus.textContent = "この端末に詳細トークンを設定した場合だけ追加読取を有効化できます。送信は read-only のみです。";
+    obdDevStatus.textContent = "この端末に詳細トークンを設定した場合だけ追加読取メニューを有効化できます。送信は read-only のみです。";
   } else if (!serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
   } else if (!connected) {
@@ -3398,6 +3557,8 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
         : requestedStatus || `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。Web SerialのELM327/STN、またはローカルブリッジ経由の読取を試せます。`;
   }
 
+  renderObdPreviewButtons();
+  renderObdWorkflowGuide(capability);
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
 }
 
@@ -3440,7 +3601,7 @@ function unlockObdDeveloperMode() {
   obdDevModeUnlocked = true;
   sessionStorage.setItem(OBD_DEV_MODE_KEY, "enabled");
   obdDevPasswordInput.value = "";
-  obdDevStatus.textContent = "詳細機能を有効化しました。読取系コマンドだけ使用できます。";
+  obdDevStatus.textContent = "追加読取メニューを有効化しました。読取系コマンドだけ使用できます。";
   renderObdDeveloperGate();
 }
 
@@ -3449,8 +3610,17 @@ function lockObdDeveloperMode() {
   sessionStorage.removeItem(OBD_DEV_MODE_KEY);
   obdDevSession.previewMode = null;
   clearRequestedInterfaceSelection();
-  obdDevStatus.textContent = "詳細機能をロックしました。";
+  obdDevStatus.textContent = "追加読取メニューをロックしました。";
   renderObdDeveloperGate();
+}
+
+function handleObdPrimaryAction() {
+  const interfaceId = obdInterfaceSelect.value || "user-vci-elm327";
+  if (interfaceId === "user-vci-elm327") {
+    void connectObdDeveloperVci();
+    return;
+  }
+  prepareSelectedObdInterface();
 }
 
 async function connectObdDeveloperVci() {
@@ -4150,27 +4320,27 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedVehicle = obdVehicleInput.value.trim() || NO_DATA;
   const selectedInterface = getSelectedObdInterfaceLabel();
   const values = [
-    ["接続", obdDevSession.port ? "Web Serial" : obdDevSession.bridgeEndpoint ? "Local Bridge" : obdDevSession.previewMode ? "接続前プレビュー" : "未接続"],
+    ["接続", obdDevSession.port ? "Web Serial接続" : obdDevSession.bridgeEndpoint ? "ローカルブリッジ接続" : obdDevSession.previewMode ? "接続前プレビュー" : "未接続"],
     ["状態", session?.connectionStatus?.displayStatus || obdDevSession.bridgeStatus?.displayStatus || NO_DATA],
+    ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
+    ["DTC内訳", dtcStatusSummary || NO_DATA],
+    ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
+    ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
+    ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
+    ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0],
+    ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
+    ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
+    ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0],
     ["開始", obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA],
-    ["Bridge", obdDevSession.bridgeEndpoint ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
+    ["ブリッジ", obdDevSession.bridgeEndpoint ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
-    ["Adapter", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
+    ["アダプター", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
     ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
     ["取得済", coverage?.capturedCategories ?? 0],
     ["空応答", coverage?.emptyCategories ?? 0],
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"],
-    ["DTC", session?.dtcSnapshot?.dtcs?.length ?? 0],
-    ["DTC内訳", dtcStatusSummary || NO_DATA],
-    ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
-    ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0],
-    ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
-    ["FF", session?.freezeFrameSnapshot?.monitorValues?.length ?? 0],
-    ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
     ["主要ECU情報", session?.ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${session.ecuInfoSnapshot.keyItemSummary.capturedCount}/${session.ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
-    ["Mode09対応", session?.ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],
-    ["Mode06", session?.onboardMonitorSnapshot?.testCount ?? 0],
-    ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0]
+    ["Mode09対応", session?.ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0]
   ];
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
@@ -4615,7 +4785,7 @@ function analyzeObdScannerImport() {
 
   if (!hasScannerText && !bridgeImport) {
     obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
-    obdMonitorStatus.textContent = "計測値はまだ解析していません。";
+    obdMonitorStatus.textContent = "読取値はまだ表示していません。";
     obdMonitorCount.textContent = "0項目";
     return;
   }
@@ -4843,7 +5013,7 @@ function clearObdScannerImport() {
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
   obdImportStatus.textContent = "まだ解析していません。";
-  obdMonitorStatus.textContent = "計測値はまだ解析していません。";
+  obdMonitorStatus.textContent = "読取値はまだ表示していません。";
   obdMonitorCount.textContent = "0項目";
 }
 
