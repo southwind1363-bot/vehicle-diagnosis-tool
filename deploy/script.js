@@ -4968,8 +4968,8 @@ function analyzeObdScannerImport() {
   }
   const sourcePrefix = bridgeImport
     ? hasScannerText
-      ? "貼り付け結果とブリッジ読取を統合し、"
-      : "ブリッジ読取結果を反映し、"
+      ? "貼り付け結果とローカルブリッジ読取を統合し、"
+      : "ローカルブリッジ読取結果を反映し、"
     : "";
   const detailNote = notes.length ? ` ${notes.join(" / ")}。` : "";
 
@@ -4977,7 +4977,7 @@ function analyzeObdScannerImport() {
     obdImportStatus.textContent = analysis.hadSensitiveIdentifier
       ? `識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。${detailNote}`
       : bridgeImport
-        ? `${hasScannerText ? "ブリッジ読取と統合しましたが" : "ブリッジ読取結果では"}、標準形式のDTCは検出できませんでした。${detailNote}`
+        ? `${hasScannerText ? "ローカルブリッジ読取と統合しましたが" : "ローカルブリッジ読取結果では"}、標準形式のDTCは検出できませんでした。${detailNote}`
         : "標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。";
   } else {
     obdImportStatus.textContent = `${sourcePrefix}${analysis.codes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
