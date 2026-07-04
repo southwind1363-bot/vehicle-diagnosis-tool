@@ -5029,6 +5029,9 @@ function analyzeObdScannerImport() {
     const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 3).join(" / ");
     notes.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
   }
+  if (analysis.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
+    notes.push("Mode09対応情報タイプ00未取得");
+  }
   if (analysis.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
     const missingLabels = analysis.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 3).join(" / ");
     notes.push(`Mode09未取得${analysis.ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`);
@@ -5104,6 +5107,9 @@ function analyzeObdScannerImport() {
       const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 2).join(" / ");
       summary.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
     }
+    if (analysis.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
+      summary.push("Mode09対応情報タイプ00未取得");
+    }
     if (analysis.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
       const missingLabels = analysis.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 2).join(" / ");
       summary.push(`Mode09未取得${analysis.ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`);
@@ -5146,6 +5152,9 @@ function analyzeObdScannerImport() {
     if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
       const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 2).join(" / ");
       summary.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
+    }
+    if (analysis.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
+      summary.push("Mode09対応情報タイプ00未取得");
     }
     if (analysis.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
       const missingLabels = analysis.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 2).join(" / ");
