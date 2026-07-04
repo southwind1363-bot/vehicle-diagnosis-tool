@@ -1314,6 +1314,28 @@ check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily
 check(mergedDiagnosticInputAliases.monitorInsights.length > 0, "Combined diagnostic inputs did not rebuild monitor insights from bridge_import alias input");
 check(mergedDiagnosticInputAliases.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.bridgeSession?.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not retain bridgeSession snapshots from bridge_diagnostic_import alias input");
+const mergedDiagnosticInputRawBridgePreference = obd.mergeDiagnosticInputs({
+  scanner_text: "Engine RPM: 650 rpm",
+  bridge_diagnostic_import: {
+    importType: "bridge_diagnostic_snapshot",
+    monitorValues: [
+      { id: "engine_speed", value: "01 90", valueType: "raw_hex", decoded: false, pid: "0C" }
+    ]
+  }
+});
+check(mergedDiagnosticInputRawBridgePreference.monitorValues.find((item) => item.id === "engine_speed")?.source === "scanner_text", "Combined diagnostic inputs did not keep scanner value over undecoded bridge raw value");
+check(mergedDiagnosticInputRawBridgePreference.monitorValues.find((item) => item.id === "engine_speed")?.value === 650, "Combined diagnostic inputs did not keep parsed scanner value over undecoded bridge raw value");
+const mergedDiagnosticInputDecodedBridgePreference = obd.mergeDiagnosticInputs({
+  scanner_text: "Engine RPM: 650 rpm",
+  bridge_diagnostic_import: {
+    importType: "bridge_diagnostic_snapshot",
+    monitorValues: [
+      { id: "engine_speed", value: 805, valueType: "number", pid: "0C", service: "01", decoded: true }
+    ]
+  }
+});
+check(mergedDiagnosticInputDecodedBridgePreference.monitorValues.find((item) => item.id === "engine_speed")?.source === "local_bridge", "Combined diagnostic inputs did not keep decoded bridge value over scanner value");
+check(mergedDiagnosticInputDecodedBridgePreference.monitorValues.find((item) => item.id === "engine_speed")?.value === 805, "Combined diagnostic inputs did not keep decoded bridge value over scanner value");
 const mergedDiagnosticInputExplicitInsights = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_diagnostic_import: bridgeDiagnosticImportAliases

@@ -1748,12 +1748,34 @@
         : null;
     const monitorById = new Map();
     const bridgeSession = bridgeImport?.bridgeSession || null;
+    const selectPreferredMonitorValue = (current, candidate) => {
+      if (!current) return candidate;
+      if (!candidate) return current;
+      const score = (item) => {
+        let value = 0;
+        if (item.source === "local_bridge") value += 40;
+        if (item.source === "scanner_text") value += 20;
+        if (item.decoded === false || item.valueType === "raw_hex") value -= 25;
+        if (item.valueType === "number") value += 12;
+        else if (item.valueType === "text") value += 8;
+        if (item.pid) value += 6;
+        if (item.service) value += 4;
+        if (typeof item.value === "string" && !item.value.trim()) value -= 10;
+        return value;
+      };
+      const currentScore = score(current);
+      const candidateScore = score(candidate);
+      if (candidateScore !== currentScore) return candidateScore > currentScore ? candidate : current;
+      return candidate.source === "local_bridge" ? candidate : current;
+    };
 
     scannerAnalysis.monitorValues.forEach((item) => {
-      monitorById.set(item.id, { ...item, source: "scanner_text" });
+      const candidate = { ...item, source: "scanner_text" };
+      monitorById.set(item.id, selectPreferredMonitorValue(monitorById.get(item.id), candidate));
     });
     (bridgeImport?.monitorValues || bridgeSession?.monitorValues || []).forEach((item) => {
-      monitorById.set(item.id, { ...item, source: "local_bridge" });
+      const candidate = { ...item, source: "local_bridge" };
+      monitorById.set(item.id, selectPreferredMonitorValue(monitorById.get(item.id), candidate));
     });
 
     const monitorValues = [...monitorById.values()];
