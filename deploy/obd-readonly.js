@@ -1715,6 +1715,8 @@
       ...(bridgeImport?.codes || bridgeSession?.codes || [])
     ])];
     const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeImport?.monitorInsights || bridgeSession?.monitorInsights || []);
+    const bridgeMonitorValueSummary = bridgeImport?.monitorValueSummary || bridgeSession?.monitorValueSummary || null;
+    const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);
     const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);
     const monitorInsights = [...new Map([
       ...bridgeMonitorInsights.map((item) => [
@@ -1726,6 +1728,15 @@
         item
       ])
     ]).values()];
+    const monitorValueSummary = bridgeMonitorValueSummary
+      ? {
+        totalCount: Math.max(recalculatedMonitorValueSummary.totalCount || 0, bridgeMonitorValueSummary.totalCount || 0),
+        decodedCount: Math.max(recalculatedMonitorValueSummary.decodedCount || 0, bridgeMonitorValueSummary.decodedCount || 0),
+        undecodedRawCount: Math.max(recalculatedMonitorValueSummary.undecodedRawCount || 0, bridgeMonitorValueSummary.undecodedRawCount || 0),
+        numericCount: Math.max(recalculatedMonitorValueSummary.numericCount || 0, bridgeMonitorValueSummary.numericCount || 0),
+        textCount: Math.max(recalculatedMonitorValueSummary.textCount || 0, bridgeMonitorValueSummary.textCount || 0)
+      }
+      : recalculatedMonitorValueSummary;
     const hasScannerPayload = Boolean(scannerTextInput.trim() || scannerAnalysis.codes.length || scannerAnalysis.monitorValues.length || scannerAnalysis.toolHints.length);
     const source = bridgeImport
       ? hasScannerPayload
@@ -1743,7 +1754,7 @@
       capturedAt: bridgeImport?.capturedAt || bridgeSession?.capturedAt || null,
       codes,
       monitorValues,
-      monitorValueSummary: buildMonitorValueSummary(monitorValues),
+      monitorValueSummary,
       monitorInsights,
       ecuResponseSummary: bridgeImport?.ecuResponseSummary || bridgeSession?.ecuResponseSummary || null,
       supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null,

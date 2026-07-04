@@ -1218,6 +1218,11 @@ check(mergedDiagnosticInputBridgeSessionOnlyImport.freezeFrameSnapshot?.triggerD
 check(mergedDiagnosticInputBridgeSessionOnlyImport.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Combined diagnostic inputs did not recover ecu_info_snapshot from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.monitorValues.length >= bridgePidSnapshot.monitorValues.length, "Combined diagnostic inputs did not recover monitor_values from bridgeSession-only diagnostic import");
+const mergedDiagnosticInputSummaryOnlyMonitorCounts = obd.mergeDiagnosticInputs({
+  bridge_diagnostic_import: bridgeDiagnosticImportSummaryOnlyRawWarning
+});
+check(mergedDiagnosticInputSummaryOnlyMonitorCounts.monitorValueSummary.totalCount === 2, "Combined diagnostic inputs did not retain monitor_value_summary without monitor_values");
+check(mergedDiagnosticInputSummaryOnlyMonitorCounts.monitorValueSummary.undecodedRawCount === 2, "Combined diagnostic inputs did not retain undecoded raw count from monitor_value_summary-only input");
 const mergedDiagnosticInputBridgeOnly = obd.mergeDiagnosticInputs({
   bridge_import: bridgeExportPayload
 });
