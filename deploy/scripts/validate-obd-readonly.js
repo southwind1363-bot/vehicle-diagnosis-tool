@@ -1380,14 +1380,17 @@ check(decodedScanSessionNestedAlias.supportedPidMatrix.supportedPids.includes("4
 check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept scan_session nested readiness alias input");
 check(decodedScanSessionNestedAlias.vehicleProfile?.model === "Yaris", "Decoded OBD session did not carry vehicle_profile from scan_session nested alias input");
 const decodedScanSessionNestedOuterOverride = obd.buildDecodedObdScanSession({
+  session_id: "decoded-outer-override",
   protocol: "ISO9141-2",
   vehicle_profile: { maker: "Toyota", model: "Auris" },
   scan_session: {
+    session_id: "decoded-nested-session-test",
     protocol: "ISO15765-4",
     vehicle_profile: { maker: "Toyota", model: "Yaris" },
     stored_dtc_response: { raw: "43 01 71 03 00 00 00" }
   }
 });
+check(decodedScanSessionNestedOuterOverride.sessionId === "decoded-outer-override", "Decoded OBD session did not let outer session_id override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.protocol === "ISO9141-2", "Decoded OBD session did not let outer protocol override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.vehicleProfile?.model === "Auris", "Decoded OBD session did not let outer vehicle_profile override scan_session nested alias input");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
@@ -1516,6 +1519,7 @@ check(textScanSessionNestedOptions.vehicleProfile?.model === "Vitz", "OBD text s
 check(textScanSessionNestedOptions.sessionId === "obd-text-nested-options", "OBD text scan session did not carry session_id from scan_session nested options");
 check(textScanSessionNestedOptions.protocol === "ISO15765-4", "OBD text scan session did not carry protocol from scan_session nested options");
 const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-outer-override",
   protocol: "ISO9141-2",
   vehicle_profile: { maker: "Toyota", model: "Ractis" },
   scan_session: {
@@ -1524,6 +1528,7 @@ const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTe
     vehicle_profile: { maker: "Toyota", model: "Vitz" }
   }
 });
+check(textScanSessionNestedOuterOverride.sessionId === "obd-text-outer-override", "OBD text scan session did not let outer session_id override scan_session nested options");
 check(textScanSessionNestedOuterOverride.protocol === "ISO9141-2", "OBD text scan session did not let outer protocol override scan_session nested options");
 check(textScanSessionNestedOuterOverride.vehicleProfile?.model === "Ractis", "OBD text scan session did not let outer vehicle_profile override scan_session nested options");
 const compactCanLog = [
@@ -1696,12 +1701,14 @@ const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
 check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
 check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
 const scanSessionNestedOuterOverride = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-scan-session-outer-priority",
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:18:00Z",
   vehicle_profile: { maker: "Toyota", model: "Allion" },
   scan_session: bridgeExportPayload.session,
-  session_id: "shop-test-scan-session-outer-override"
+  sessionId: "shop-test-scan-session-outer-override"
 });
+check(scanSessionNestedOuterOverride.sessionId === "shop-test-scan-session-outer-priority", "Diagnostic scan session did not let outer session_id override scan_session alias input");
 check(scanSessionNestedOuterOverride.protocol === "ISO9141-2", "Diagnostic scan session did not let outer protocol override scan_session alias input");
 check(scanSessionNestedOuterOverride.capturedAt === "2026-06-28T00:18:00Z", "Diagnostic scan session did not let outer captured_at override scan_session alias input");
 check(scanSessionNestedOuterOverride.vehicleProfile?.model === "Allion", "Diagnostic scan session did not let outer vehicle_profile override scan_session alias input");
@@ -1710,6 +1717,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 445");
+  console.log("OBD read-only safety checks: 448");
   console.log("Errors: 0");
 }
