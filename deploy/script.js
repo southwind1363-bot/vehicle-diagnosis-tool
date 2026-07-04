@@ -4377,6 +4377,9 @@ function renderObdBridgeSessionDetails(session = null) {
       lines.push(`取得: ${keySummary.capturedLabels?.length ? keySummary.capturedLabels.join(" / ") : "なし"}`);
       lines.push(`未取得: ${keySummary.missingLabels?.length ? keySummary.missingLabels.join(" / ") : "なし"}`);
     }
+    if (session?.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
+      lines.push("Mode09 type 00: missing");
+    }
     lines.push(...ecuItems.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`));
     sections.push(["ECU情報", lines]);
   }
@@ -4524,6 +4527,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
     ["取得済", coverage?.capturedCategories ?? 0],
     ["空応答", coverage?.emptyCategories ?? 0],
+    ["Mode09 type 00", session?.ecuInfoSnapshot?.supportInfoTypesCaptured === false ? "missing" : "captured"],
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"],
     ["主要ECU情報", session?.ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${session.ecuInfoSnapshot.keyItemSummary.capturedCount}/${session.ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
     ["Mode09対応", session?.ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0]
