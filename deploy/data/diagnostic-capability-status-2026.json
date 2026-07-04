@@ -53,12 +53,13 @@
     "target_level": "ELM327、J2534、CAN/CAN FDを安全境界越しに扱う",
     "current_status": "読取入口あり",
     "progress_percent": 58,
-    "current_basis": "ブリッジ契約、応答型、Web側操作、PC側サンプルブリッジ、DTC/FF/対応PID/ECU情報/Mode06/レディネス取込、status/list_vci/adapter_identity の接続確認入口あり",
+    "current_basis": "ブリッジ契約、応答型、Web側操作、PC側サンプルブリッジ、DTC/FF/対応PID/ECU情報/Mode06/レディネス取込、status/list_vci/adapter_identity の接続確認入口、bridge/session alias 正規化あり",
     "done": [
       "接続状態、VCI一覧、DTC、ライブPID、フリーズフレーム、対応PID、ECU情報、Mode06、セッション要約の応答型",
       "THINKCAR系、Techstream/J2534、ELM327、CANable候補管理",
       "実車送信なしのデータ整形",
       "読取結果のセッション積み上げとDTC状態別内訳表示",
+      "bridge/session/export/import の nested alias 吸収と outer 優先正規化",
       "PC側ローカルブリッジの読取専用サンプル実装"
     ],
     "missing": [
@@ -67,7 +68,7 @@
       "THINKCAR Bluetooth VCI連携",
       "CAN FDログ要約"
     ],
-    "next_build": "J2534/CANable/THINKCARを実ドライバへつなぐ前に、Mode09差分と読取応答を同じブリッジ契約で受ける。",
+    "next_build": "J2534/CANable/THINKCARを実ドライバへつなぐ前に、Mode09差分、読取応答、VCI差分を同じブリッジ契約で受ける。",
     "safety_gate": "read-only status intents有効 / vehicle_command_enabled:false",
     "source": "ローカル検証集計と開発ロードマップ",
     "source_date": "2026-06-28",

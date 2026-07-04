@@ -93,6 +93,7 @@ check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "str
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent <= 5), "双方向制御の安全ゲート状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent >= 58), "ローカルブリッジの読取入口進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.missing.includes("実VCIドライバ連携")), "ローカルブリッジ実VCI未連携状態が不足しています");
 const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 check(indexHtml.includes("診断機全体 35% / OBD2読取 53%"), "OBD progress headline in index.html is out of date");
