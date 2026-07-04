@@ -91,9 +91,12 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断機能完成度マトリクスの進捗率が不正です");
 check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断機能完成度マトリクスの目標時期が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent <= 5), "双方向制御の安全ゲート状態が不足しています");
-check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent >= 50), "ローカルブリッジの読取入口進捗が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent >= 58), "ローカルブリッジの読取入口進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.missing.includes("実VCIドライバ連携")), "ローカルブリッジ実VCI未連携状態が不足しています");
+const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+check(indexHtml.includes("診断機全体 35% / OBD2読取 53%"), "OBD progress headline in index.html is out of date");
+check(indexHtml.includes("機能 38% / 網羅 31% / 読取 35%"), "OBD progress breakdown in index.html is out of date");
 check(diagnosticCapabilityStatus.every((item) => item.safety_gate), "診断機能完成度に安全ゲートがありません");
 check(diagnosticWorkflowsPractical.length >= 7, "実用診断フローが不足しています");
 check(diagnosticWorkflowsPractical.some((item) => item.id === "workflow-evap-leak-p0440-p0456" && item.monitor_ids.includes("commanded_evap_purge")), "EVAP診断フローにパージ指令PIDがありません");
