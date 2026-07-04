@@ -4376,6 +4376,9 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   } else if (includeReadinessCount && analysis.readinessSnapshot?.monitorCount > 0) {
     parts.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
   }
+  if (analysis.monitorValueSummary?.totalCount > 0) {
+    parts.push(`ライブ要約${formatObdBridgeMonitorSummary(analysis.monitorValueSummary)}`);
+  }
   if (analysis.supportedPidMatrix?.supportedCount > 0) parts.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
   if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
     const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 2).join(" / ");
@@ -4656,10 +4659,15 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["ECU情報", session?.ecuInfoSnapshot?.itemCount ?? 0],
+    ["主要ECU情報", session?.ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${session.ecuInfoSnapshot.keyItemSummary.capturedCount}/${session.ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
+    ["Mode09対応", session?.ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],
+    ["Mode09対応タイプ00", session?.ecuInfoSnapshot?.supportInfoTypesCaptured === false ? "未取得" : "取得済み"],
     ["FF", session?.freezeFrameSnapshot?.monitorValues?.length
       ? `${formatObdBridgeMonitorSummary(session?.freezeFrameSnapshot?.monitorValueSummary)}${session?.freezeFrameSnapshot?.triggerDtc ? ` / 起点${session.freezeFrameSnapshot.triggerDtc}` : ""}`
       : 0],
-    ["ライブ値", session?.livePidSnapshot?.monitorValues?.length ?? 0],
+    ["ライブ値", session?.livePidSnapshot?.monitorValues?.length
+      ? formatObdBridgeMonitorSummary(session?.livePidSnapshot?.monitorValueSummary)
+      : 0],
     ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
     ["Mode06", session?.onboardMonitorSnapshot?.testCount ? formatObdBridgeOnboardMonitorSummary(session?.onboardMonitorSnapshot) : 0],
     ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0],
@@ -4672,10 +4680,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
     ["取得済", coverage?.capturedCategories ?? 0],
     ["空応答", coverage?.emptyCategories ?? 0],
-    ["Mode09\u5bfe\u5fdc\u30bf\u30a4\u30d700", session?.ecuInfoSnapshot?.supportInfoTypesCaptured === false ? "\u672a\u53d6\u5f97" : "\u53d6\u5f97\u6e08\u307f"],
-    ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"],
-    ["主要ECU情報", session?.ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${session.ecuInfoSnapshot.keyItemSummary.capturedCount}/${session.ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
-    ["Mode09対応", session?.ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0]
+    ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"]
   ];
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
