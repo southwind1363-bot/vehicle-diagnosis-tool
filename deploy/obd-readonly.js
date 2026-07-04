@@ -1239,6 +1239,14 @@
     const hasEcuInfoSnapshotInput = Object.keys(ecuInfoSnapshotInput).length > 0;
     const hasOnboardMonitorSnapshotInput = Object.keys(onboardMonitorSnapshotInput).length > 0;
     const hasSupportedPidMatrixInput = Object.keys(supportedPidMatrixInput).length > 0;
+    const includeInfrastructure = input.includeInfrastructure === true
+      ? true
+      : input.includeInfrastructure === false
+        ? false
+        : hasConnectionStatusInput
+          || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
+          || Boolean(vciDevicesInput?.devices?.length)
+          || hasAdapterIdentityInput;
     const connectionStatus = hasConnectionStatusInput
       ? (connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput))
       : null;
@@ -1270,6 +1278,7 @@
       ? (supportedPidMatrixInput?.schemaVersion ? supportedPidMatrixInput : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput))
       : null;
     const items = [
+      ...(includeInfrastructure ? [
       {
         id: "connection_status",
         label: "接続状態",
@@ -1288,6 +1297,7 @@
         available: Boolean(adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion),
         count: adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion ? 1 : 0
       },
+      ] : []),
       {
         id: "dtc_snapshot",
         label: "DTC",
@@ -1341,6 +1351,7 @@
 
     return {
       schemaVersion: "readout_coverage_v1",
+      includeInfrastructure,
       totalCategories: items.length,
       availableCategories: availableCount,
       capturedCategories: capturedItems.length,
@@ -1401,6 +1412,11 @@
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
     const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
+    const hasBridgeInfrastructureContext = Object.keys(connectionStatusInput).length > 0
+      || Object.keys(adapterIdentityInput).length > 0
+      || (Array.isArray(vciListInput) && vciListInput.length > 0)
+      || Boolean(vciListInput?.devices?.length)
+      || Boolean(parts.bridgeSession || parts.bridge_session);
     const warnings = [];
     if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
@@ -1430,6 +1446,7 @@
       || ecuResponseSummary.capturedAt
       || null;
     const readoutCoverage = buildReadoutCoverageSnapshot({
+      includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
@@ -1441,8 +1458,8 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    if (readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
-    if (readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
+    if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
+    if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
 
     return {
       source: "local_bridge",
@@ -3439,6 +3456,11 @@
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
     const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
+    const hasBridgeInfrastructureContext = Object.keys(connectionStatusInput).length > 0
+      || Object.keys(adapterIdentityInput).length > 0
+      || (Array.isArray(vciListInput) && vciListInput.length > 0)
+      || Boolean(vciListInput?.devices?.length)
+      || Boolean(sessionInput.bridgeSession || sessionInput.bridge_session);
     const warnings = [];
     if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
@@ -3470,6 +3492,7 @@
       || ecuResponseSummary.capturedAt
       || null;
     const readoutCoverage = buildReadoutCoverageSnapshot({
+      includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
@@ -3481,8 +3504,8 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    if (readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
-    if (readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
+    if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
+    if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
 
     return {
       schemaVersion: "scan_session_v1",
