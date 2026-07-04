@@ -5004,6 +5004,7 @@ function analyzeObdScannerImport() {
     const summary = [`統合入力で${analysis.monitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
     if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
+    if (analysis.readoutCoverage?.totalCategories) summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
     if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
       const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
       summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
@@ -5011,6 +5012,7 @@ function analyzeObdScannerImport() {
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
     const summary = ["計測値は0項目です。"];
+    if (analysis.readoutCoverage?.totalCategories) summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
     if (analysis.readinessSnapshot?.monitorCount > 0) summary.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
     if (analysis.supportedPidMatrix?.supportedCount > 0) summary.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
     if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
