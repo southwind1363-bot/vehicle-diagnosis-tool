@@ -5341,6 +5341,8 @@ function renderObdMonitorValues(values, insights = []) {
   values.forEach((item) => {
     const card = document.createElement("article");
     card.className = "obd-monitor-card";
+    if (item.outOfRange === true || item.status === "fail") card.classList.add("is-caution");
+    if (item.undecodedRaw === true) card.classList.add("is-raw");
 
     const category = document.createElement("span");
     category.className = "obd-monitor-category";

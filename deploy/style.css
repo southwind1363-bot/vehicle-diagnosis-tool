@@ -1437,9 +1437,19 @@ body.dark .flow-node-measure .flow-step {
   gap: 7px;
   min-height: 116px;
   border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
   border-radius: 7px;
   background: var(--panel-subtle);
   padding: 14px;
+}
+
+.obd-monitor-card.is-caution {
+  border-left-color: #d97706;
+  background: color-mix(in srgb, var(--panel-subtle) 88%, #f59e0b 12%);
+}
+
+.obd-monitor-card.is-raw {
+  border-left-color: #2563eb;
 }
 
 .obd-monitor-reading {
