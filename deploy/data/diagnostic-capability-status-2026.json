@@ -73,7 +73,7 @@
         "next_build":  "J2534 / CANable / THINKCAR の読取ドライバを増やしつつ、Mode09 の読取正規化と VCI 実機差分をローカルブリッジ側へ寄せる。",
         "safety_gate":  "read-only status intents only / vehicle_command_enabled:false",
         "source":  "ローカル読取検証と進捗データ",
-        "source_date":  "2026-07-04",
+        "source_date":  "2026-07-05",
         "eta_target":  "2026-Q3 読み込み"
     },
     {
@@ -152,7 +152,7 @@
         "next_build":  "診断フローへ live PID、適用範囲、複数候補の優先度付けを追加して、次の読取候補を自動提案する。",
         "safety_gate":  "推論と表示のみ。書込み系読取は出さない",
         "source":  "ローカル読取検証と進捗データ",
-        "source_date":  "2026-07-04",
+        "source_date":  "2026-07-05",
         "eta_target":  "2026-Q3 読み込み"
     }
 ]
