@@ -2677,23 +2677,24 @@
   }
 
   function buildScanSessionFromObdText(value, options = {}) {
+    const sessionInput = getDiagnosticSessionInput(options);
     const classified = classifyObdResponseLines(value);
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
-      session_id: options.session_id || options.sessionId || "obd_text_scan_session",
-      started_at: options.started_at || options.startedAt || null,
-      ended_at: options.ended_at || options.endedAt || null,
-      vehicleProfile: options.vehicleProfile || options.vehicle_profile || null,
-      storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: options.protocol || null },
-      pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: options.protocol || null },
-      permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: options.protocol || null },
-      supportedPidResponse: { raw: firstOrEmpty("supportedPidResponses"), protocol: options.protocol || null },
-      livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: options.protocol || null },
-      freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: options.protocol || null },
-      readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: options.protocol || null },
-      onboardMonitorResponse: { raw: firstOrEmpty("onboardMonitorResponses"), protocol: options.protocol || null },
-      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: options.protocol || null },
+      session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
+      started_at: sessionInput.started_at || sessionInput.startedAt || null,
+      ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
+      vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
+      storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: sessionInput.protocol || null },
+      pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: sessionInput.protocol || null },
+      permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: sessionInput.protocol || null },
+      supportedPidResponse: { raw: firstOrEmpty("supportedPidResponses"), protocol: sessionInput.protocol || null },
+      livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: sessionInput.protocol || null },
+      freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: sessionInput.protocol || null },
+      readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: sessionInput.protocol || null },
+      onboardMonitorResponse: { raw: firstOrEmpty("onboardMonitorResponses"), protocol: sessionInput.protocol || null },
+      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: sessionInput.protocol || null },
       ecus: ecuResponses
     });
 

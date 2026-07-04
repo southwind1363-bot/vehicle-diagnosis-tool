@@ -1475,6 +1475,18 @@ const textScanSessionAliasOptions = obd.buildScanSessionFromObdText(obdTextLog, 
 });
 check(textScanSessionAliasOptions.startedAt === "2026-06-28T00:14:00Z" && textScanSessionAliasOptions.endedAt === "2026-06-28T00:15:00Z", "OBD text scan session did not accept started_at or ended_at option alias input");
 check(textScanSessionAliasOptions.vehicleProfile?.model === "Corolla", "OBD text scan session did not accept vehicle_profile option alias input");
+const textScanSessionNestedOptions = obd.buildScanSessionFromObdText(obdTextLog, {
+  scan_session: {
+    session_id: "obd-text-nested-options",
+    started_at: "2026-06-28T00:16:00Z",
+    ended_at: "2026-06-28T00:17:00Z",
+    vehicle_profile: { maker: "Toyota", model: "Vitz" },
+    protocol: "ISO15765-4"
+  }
+});
+check(textScanSessionNestedOptions.startedAt === "2026-06-28T00:16:00Z" && textScanSessionNestedOptions.endedAt === "2026-06-28T00:17:00Z", "OBD text scan session did not accept scan_session nested option timestamps");
+check(textScanSessionNestedOptions.vehicleProfile?.model === "Vitz", "OBD text scan session did not carry vehicle_profile from scan_session nested options");
+check(textScanSessionNestedOptions.sessionId === "obd-text-nested-options", "OBD text scan session did not carry session_id from scan_session nested options");
 const compactCanLog = [
   "can0 7E8#04410C1AF8",
   "(171234.123456) can0 7E8#0341057B"
@@ -1649,6 +1661,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 429");
+  console.log("OBD read-only safety checks: 432");
   console.log("Errors: 0");
 }
