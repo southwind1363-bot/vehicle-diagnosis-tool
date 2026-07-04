@@ -4963,7 +4963,8 @@ function analyzeObdScannerImport() {
     notes.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
   }
   if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
-    notes.push(`注意${analysis.warnings.length}件`);
+    const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
+    notes.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
   }
   const sourcePrefix = bridgeImport
     ? hasScannerText
