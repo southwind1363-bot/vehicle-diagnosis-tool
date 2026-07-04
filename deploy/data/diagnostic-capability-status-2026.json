@@ -52,7 +52,7 @@
     "label": "ローカルブリッジ / VCI連携",
     "target_level": "ELM327、J2534、CAN/CAN FDを安全境界越しに扱う",
     "current_status": "読取入口あり",
-    "progress_percent": 52,
+    "progress_percent": 58,
     "current_basis": "ブリッジ契約、応答型、Web側操作、PC側サンプルブリッジ、DTC/FF/対応PID/ECU情報/Mode06/レディネス取込、status/list_vci/adapter_identity の接続確認入口あり",
     "done": [
       "接続状態、VCI一覧、DTC、ライブPID、フリーズフレーム、対応PID、ECU情報、Mode06、セッション要約の応答型",

@@ -549,17 +549,17 @@
           <div class="obd-progress-grid">
             <article class="obd-progress-score-card">
               <strong>完成度</strong>
-              <span class="obd-progress-score">診断機全体 30% / OBD2読取 68%</span>
-              <span>100%は実車読取、記録、複数VCI対応まで入った状態です。</span>
+              <span class="obd-progress-score">診断機全体 35% / OBD2読取 53%</span>
+              <span>100%は実車読取、記録、複数VCI対応、セッション整合確認まで入った状態です。</span>
             </article>
             <article class="obd-progress-breakdown-card">
               <strong>内訳</strong>
-              <span>データ 44% / ログ解析 90% / 読取層 42% / 車種適合 12% / 記録 35% / 作業機能 0%</span>
+              <span>機能 38% / 網羅 31% / 読取 35% / 車種適合 12% / 記録 35% / 作業機能 0%</span>
               <span>数字は実装済み機能だけを反映します。</span>
             </article>
             <article>
               <strong>読取データ基盤</strong>
-              <span>DTC、フリーズフレーム、ライブデータ、レディネス、Mode06、Mode09を同一セッションへ積み上げ中。</span>
+              <span>DTC、フリーズフレーム、ライブデータ、レディネス、Mode06、Mode09を同一セッションへ積み上げ、alias 正規化を継続中。</span>
             </article>
             <article>
               <strong>実ログ解析</strong>
@@ -567,11 +567,11 @@
             </article>
             <article>
               <strong>読取</strong>
-              <span>自動判定または手動選択した読取専用入口から、DTC、対応PID、ECU情報、フリーズフレーム、Mode06を読取できます。</span>
+              <span>自動判定または手動選択した読取専用入口から、DTC、対応PID、ECU情報、フリーズフレーム、Mode06を読取でき、bridge/session alias も統一中です。</span>
             </article>
             <article>
               <strong>次の中身</strong>
-              <span>次は車種適合、記録、読取ログ比較を増やして使える土台を固めます。</span>
+              <span>次は VCI ドライバー連携、車種適合、読取ログ比較を優先して土台を固めます。</span>
             </article>
           </div>
         </section>
