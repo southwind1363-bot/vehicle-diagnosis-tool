@@ -4234,7 +4234,7 @@ function renderObdBridgeReadout(parts = {}) {
       : "";
     const unsupportedSummary = ecuInfoSnapshot.supportInfoTypesCaptured === false ? " / Mode09対応情報タイプ00は未取得" : "";
     obdImportStatus.textContent = ecuInfoSnapshot.itemCount
-      ? `ブリッジECU情報を${ecuInfoSnapshot.itemCount || 0}項目読取りました。${keySummary}${missingKeySummary}${supportedTypeSummary}`.trim()
+      ? `ブリッジECU情報を${ecuInfoSnapshot.itemCount || 0}項目読取りました。${keySummary}${missingKeySummary}${supportedTypeSummary}${unsupportedSummary}`.trim()
       : `ブリッジECU情報応答を受け取りました。項目は0件です。${unsupportedSummary}`.trim();
   } else if (parts.onboardMonitorResponse && onboardMonitorSnapshot) {
     const failedSummary = onboardMonitorSnapshot.failedCount > 0
