@@ -5035,7 +5035,9 @@ function analyzeObdScannerImport() {
   if (bridgeImport && analysis.monitorValues.length) {
     const bridgeValueCount = analysis.monitorValues.filter((item) => item.source === "local_bridge").length;
     const scannerValueCount = analysis.monitorValues.filter((item) => item.source === "scanner_text").length;
-    const summary = [`統合入力で${analysis.monitorValues.length}項目を表示しています。`];
+    const summary = [analysis.source === "local_bridge"
+      ? `ローカルブリッジ読取で${analysis.monitorValues.length}項目を表示しています。`
+      : `統合入力で${analysis.monitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
     if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
     if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
@@ -5078,7 +5080,9 @@ function analyzeObdScannerImport() {
     }
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
-    const summary = ["計測値は0項目です。"];
+    const summary = [analysis.source === "local_bridge"
+      ? "ローカルブリッジ読取の計測値は0項目です。"
+      : "計測値は0項目です。"];
     if (analysis.vehicleProfile?.maker || analysis.vehicleProfile?.model) {
       summary.push(`車両 ${(analysis.vehicleProfile.maker || "").trim()} ${(analysis.vehicleProfile.model || "").trim()}`.trim());
     }
