@@ -1531,13 +1531,13 @@
     return {
       ...nested,
       ...input,
-      source: nested.source || input.source || "diagnostic_core",
-      session_id: nested.session_id || nested.sessionId || input.session_id || input.sessionId || "local_scan_session",
-      started_at: nested.started_at || nested.startedAt || input.started_at || input.startedAt || null,
-      ended_at: nested.ended_at || nested.endedAt || input.ended_at || input.endedAt || null,
-      captured_at: nested.captured_at || nested.capturedAt || input.captured_at || input.capturedAt || null,
-      protocol: nested.protocol || input.protocol || null,
-      vehicle_profile: nested.vehicle_profile || nested.vehicleProfile || input.vehicle_profile || input.vehicleProfile || null
+      source: input.source || nested.source || "diagnostic_core",
+      session_id: input.session_id || input.sessionId || nested.session_id || nested.sessionId || "local_scan_session",
+      started_at: input.started_at || input.startedAt || nested.started_at || nested.startedAt || null,
+      ended_at: input.ended_at || input.endedAt || nested.ended_at || nested.endedAt || null,
+      captured_at: input.captured_at || input.capturedAt || nested.captured_at || nested.capturedAt || null,
+      protocol: input.protocol || nested.protocol || null,
+      vehicle_profile: input.vehicle_profile || input.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null
     };
   }
 
@@ -2316,6 +2316,12 @@
 
   function buildDecodedObdScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
+    const sessionProtocol = sessionInput.protocol || null;
+    const withSessionProtocol = (value) => {
+      if (!sessionProtocol || !value || typeof value !== "object" || Array.isArray(value)) return value;
+      if (value.protocol || value.protocol_name || value.protocolName) return value;
+      return { ...value, protocol: sessionProtocol };
+    };
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot;
     const livePidSnapshotInput = sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot;
     const freezeFrameSnapshotInput = sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot;
@@ -2327,17 +2333,17 @@
       ? dtcSnapshotInput
       : sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response
         ? mergeDtcSnapshots(
-            sessionInput.storedDtcResponse?.schemaVersion || sessionInput.stored_dtc_response?.schemaVersion ? (sessionInput.storedDtcResponse || sessionInput.stored_dtc_response) : decodeObdDtcResponse(sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || {}),
-            sessionInput.pendingDtcResponse?.schemaVersion || sessionInput.pending_dtc_response?.schemaVersion ? (sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response) : decodeObdDtcResponse(sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || {}),
-            sessionInput.permanentDtcResponse?.schemaVersion || sessionInput.permanent_dtc_response?.schemaVersion ? (sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response) : decodeObdDtcResponse(sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || {})
+            sessionInput.storedDtcResponse?.schemaVersion || sessionInput.stored_dtc_response?.schemaVersion ? (sessionInput.storedDtcResponse || sessionInput.stored_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || {})),
+            sessionInput.pendingDtcResponse?.schemaVersion || sessionInput.pending_dtc_response?.schemaVersion ? (sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || {})),
+            sessionInput.permanentDtcResponse?.schemaVersion || sessionInput.permanent_dtc_response?.schemaVersion ? (sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || {}))
           )
-        : sessionInput.dtcResponse?.schemaVersion ? sessionInput.dtcResponse : decodeObdDtcResponse(sessionInput.dtcResponse || sessionInput.dtc_response || {});
-    const livePidResponseInput = sessionInput.livePidResponse || sessionInput.live_pid_response || {};
-    const freezeFrameResponseInput = sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || {};
-    const readinessResponseInput = sessionInput.readinessResponse || sessionInput.readiness_response || {};
-    const onboardMonitorResponseInput = sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || {};
-    const ecuInfoResponseInput = sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || {};
-    const supportedPidResponseInput = sessionInput.supportedPidResponse || sessionInput.supported_pid_response || {};
+        : sessionInput.dtcResponse?.schemaVersion ? sessionInput.dtcResponse : decodeObdDtcResponse(withSessionProtocol(sessionInput.dtcResponse || sessionInput.dtc_response || {}));
+    const livePidResponseInput = withSessionProtocol(sessionInput.livePidResponse || sessionInput.live_pid_response || {});
+    const freezeFrameResponseInput = withSessionProtocol(sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || {});
+    const readinessResponseInput = withSessionProtocol(sessionInput.readinessResponse || sessionInput.readiness_response || {});
+    const onboardMonitorResponseInput = withSessionProtocol(sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || {});
+    const ecuInfoResponseInput = withSessionProtocol(sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || {});
+    const supportedPidResponseInput = withSessionProtocol(sessionInput.supportedPidResponse || sessionInput.supported_pid_response || {});
     const livePidSnapshot = livePidSnapshotInput?.monitorValues
       ? livePidSnapshotInput
       : livePidResponseInput?.monitorValues

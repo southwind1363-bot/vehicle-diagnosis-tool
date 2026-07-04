@@ -1363,6 +1363,17 @@ check(decodedScanSessionNestedAlias.dtcSnapshot.codes.includes("P0171"), "Decode
 check(decodedScanSessionNestedAlias.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept scan_session nested supported_pid alias input");
 check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept scan_session nested readiness alias input");
 check(decodedScanSessionNestedAlias.vehicleProfile?.model === "Yaris", "Decoded OBD session did not carry vehicle_profile from scan_session nested alias input");
+const decodedScanSessionNestedOuterOverride = obd.buildDecodedObdScanSession({
+  protocol: "ISO9141-2",
+  vehicle_profile: { maker: "Toyota", model: "Auris" },
+  scan_session: {
+    protocol: "ISO15765-4",
+    vehicle_profile: { maker: "Toyota", model: "Yaris" },
+    stored_dtc_response: { raw: "43 01 71 03 00 00 00" }
+  }
+});
+check(decodedScanSessionNestedOuterOverride.protocol === "ISO9141-2", "Decoded OBD session did not let outer protocol override scan_session nested alias input");
+check(decodedScanSessionNestedOuterOverride.vehicleProfile?.model === "Auris", "Decoded OBD session did not let outer vehicle_profile override scan_session nested alias input");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
 const decodedScanSessionEcuInfoCamelAlias = obd.buildDecodedObdScanSession({
   session_id: "decoded-ecuinfo-camel-alias-test",
@@ -1488,6 +1499,17 @@ check(textScanSessionNestedOptions.startedAt === "2026-06-28T00:16:00Z" && textS
 check(textScanSessionNestedOptions.vehicleProfile?.model === "Vitz", "OBD text scan session did not carry vehicle_profile from scan_session nested options");
 check(textScanSessionNestedOptions.sessionId === "obd-text-nested-options", "OBD text scan session did not carry session_id from scan_session nested options");
 check(textScanSessionNestedOptions.protocol === "ISO15765-4", "OBD text scan session did not carry protocol from scan_session nested options");
+const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTextLog, {
+  protocol: "ISO9141-2",
+  vehicle_profile: { maker: "Toyota", model: "Ractis" },
+  scan_session: {
+    session_id: "obd-text-nested-options-outer-override",
+    protocol: "ISO15765-4",
+    vehicle_profile: { maker: "Toyota", model: "Vitz" }
+  }
+});
+check(textScanSessionNestedOuterOverride.protocol === "ISO9141-2", "OBD text scan session did not let outer protocol override scan_session nested options");
+check(textScanSessionNestedOuterOverride.vehicleProfile?.model === "Ractis", "OBD text scan session did not let outer vehicle_profile override scan_session nested options");
 const compactCanLog = [
   "can0 7E8#04410C1AF8",
   "(171234.123456) can0 7E8#0341057B"
@@ -1662,6 +1684,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 433");
+  console.log("OBD read-only safety checks: 437");
   console.log("Errors: 0");
 }
