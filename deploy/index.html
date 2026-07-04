@@ -132,8 +132,8 @@
             </div>
 
             <section class="result-block obd-import-result">
-              <h3>故障コード結果</h3>
-              <p id="obdImportStatus" class="empty-state">故障コードはまだ表示していません。</p>
+              <h3>DTC結果</h3>
+              <p id="obdImportStatus" class="empty-state">読取後にDTCを表示します。</p>
               <div id="obdDetectedCodes" class="obd-code-list"></div>
             </section>
 
@@ -141,11 +141,11 @@
               <div class="obd-result-heading">
                 <div>
                   <p class="eyebrow obd-eyebrow">READOUT SNAPSHOT</p>
-                  <h3>読取データモニター</h3>
+                  <h3>ライブデータ</h3>
                 </div>
                 <span id="obdMonitorCount" class="confidence-badge">0項目</span>
               </div>
-              <p id="obdMonitorStatus" class="empty-state">読取値はまだ表示していません。</p>
+              <p id="obdMonitorStatus" class="empty-state">読取後にライブデータを表示します。</p>
               <div id="obdMonitorGrid" class="obd-monitor-grid"></div>
               <div id="obdMonitorInsightList" class="obd-monitor-insights" hidden></div>
               <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件とメーカー整備書の基準値を確認してください。</p>
@@ -420,8 +420,8 @@
         <div class="section-head">
           <div>
             <p class="eyebrow obd-eyebrow">READ-ONLY DIAGNOSTICS</p>
-            <h2 id="obdReadTitle">OBD2車両読取・リアルタイムモニター</h2>
-            <p class="case-note">車両接続後のDTC・フリーズフレーム・ライブデータを表示する専用画面です。</p>
+            <h2 id="obdReadTitle">OBD2車両読取・ライブデータモニター</h2>
+            <p class="case-note">車両読取後のDTC・フリーズフレーム・ライブデータを表示する専用画面です。</p>
           </div>
           <span id="obdCapabilityBadge" class="confidence-badge">対応状況を確認中</span>
         </div>
@@ -445,17 +445,17 @@
           </article>
         </div>
 
-        <p id="obdCapabilityText" class="data-status">車両接続機能の対応状況を確認しています。</p>
+        <p id="obdCapabilityText" class="data-status">車両読取機能の対応状況を確認しています。</p>
         <section id="obdSetupPanel" class="obd-operation-panel" aria-labelledby="obdSetupTitle" hidden>
           <div class="obd-result-heading">
             <div>
-              <p class="eyebrow obd-eyebrow">PRE-CONNECTION SETUP</p>
-              <h3 id="obdSetupTitle">接続前設定</h3>
+              <p class="eyebrow obd-eyebrow">PRE-READOUT SETUP</p>
+              <h3 id="obdSetupTitle">読取設定</h3>
             </div>
           </div>
           <fieldset class="vehicle-selector full-width">
             <legend>OBD読取の車両情報</legend>
-            <p class="vehicle-note">接続前に、車種と接続方法をここで選びます。読取、保存、確認はまずOBD側で進めます。</p>
+            <p class="vehicle-note">読取前に、車種と読取方法をここで選びます。読取、保存、確認はまずOBD側で進めます。</p>
             <div class="vehicle-selector-grid">
               <label>
                 メーカー
@@ -492,9 +492,10 @@
                 </select>
               </label>
               <label>
-                接続方式
+                読取方式
                 <select id="obdInterfaceSelect">
-                  <option value="user-vci-elm327">ELM327 / Web Serial（必須）</option>
+                  <option value="auto">自動判定</option>
+                  <option value="user-vci-elm327">Web Serial / ELM327（必須）</option>
                   <option value="user-vci-thinkcar-bluetooth">THINKCAR Bluetooth</option>
                   <option value="user-vci-techstream-j2534">J2534 Pass-Thru（必須）</option>
                   <option value="user-vci-rcmall-mks-canable-v2-pro">CANable候補</option>
@@ -507,11 +508,11 @@
             </div>
             <div class="button-row full-width">
               <button id="obdUseDiagnosisVehicleButton" class="secondary-button" type="button">診断補助の車両情報をコピー</button>
-              <button id="obdPreviewSelectedButton" class="secondary-button" type="button">この設定で接続前プレビュー</button>
-              <button id="obdPrepareSelectedButton" class="secondary-button" type="button">この設定で接続準備</button>
+              <button id="obdPreviewSelectedButton" class="secondary-button" type="button">この設定で読取前プレビュー</button>
+              <button id="obdPrepareSelectedButton" class="secondary-button" type="button">この設定で読取準備</button>
             </div>
             <p id="obdVehicleSelectionSummary" class="vehicle-summary">OBD車両情報: 未選択</p>
-            <p id="obdAvailableReadoutSummary" class="vehicle-note">この方式で使える読取項目を表示します。</p>
+            <p id="obdAvailableReadoutSummary" class="vehicle-note">選択中の方式で使える読取項目を表示します。</p>
             <div id="obdConnectionGuide" class="obd-profile-strip"></div>
             <input id="obdVehicle" type="hidden">
           </fieldset>
@@ -549,24 +550,24 @@
             <article class="obd-progress-score-card">
               <strong>完成度</strong>
               <span class="obd-progress-score">診断機全体 30% / OBD2読取 68%</span>
-              <span>100%は実車接続、読取、記録、複数VCI対応まで入った状態です。</span>
+              <span>100%は実車読取、記録、複数VCI対応まで入った状態です。</span>
             </article>
             <article class="obd-progress-breakdown-card">
               <strong>内訳</strong>
-              <span>データ 44% / ログ解析 90% / 接続層 42% / 車種適合 12% / 記録 35% / 作業機能 0%</span>
+              <span>データ 44% / ログ解析 90% / 読取層 42% / 車種適合 12% / 記録 35% / 作業機能 0%</span>
               <span>数字は実装済み機能だけを反映します。</span>
             </article>
             <article>
               <strong>読取データ基盤</strong>
-              <span>DTC、FF、ライブPID、レディネス、Mode06、Mode09を同一セッションへ積み上げ中。</span>
+              <span>DTC、フリーズフレーム、ライブデータ、レディネス、Mode06、Mode09を同一セッションへ積み上げ中。</span>
             </article>
             <article>
               <strong>実ログ解析</strong>
               <span>CAN ID、分割応答、否定応答、RAW値を保持して読取結果を残します。</span>
             </article>
             <article>
-              <strong>実車接続</strong>
-              <span>Web Serialとローカルブリッジの read-only 読取入口から、DTC、対応PID、ECU情報、FF、Mode06を取込できます。</span>
+              <strong>読取</strong>
+              <span>自動判定または手動選択した読取専用入口から、DTC、対応PID、ECU情報、フリーズフレーム、Mode06を読取できます。</span>
             </article>
             <article>
               <strong>次の中身</strong>
@@ -585,25 +586,25 @@
           <div id="obdWorkflowGuide" class="obd-profile-strip"></div>
           <div class="button-row full-width">
             <button class="secondary-button" type="button" data-obd-scroll-target="obdImportStatus">DTC結果へ</button>
-            <button class="secondary-button" type="button" data-obd-scroll-target="obdMonitorGrid">データモニターへ</button>
-            <button class="secondary-button" type="button" data-obd-scroll-target="obdDevSessionSummary">接続要約へ</button>
-            <button class="secondary-button" type="button" data-obd-scroll-target="obdConnectionProfile">接続準備へ</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdMonitorGrid">ライブデータへ</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdDevSessionSummary">読取要約へ</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdConnectionProfile">読取準備へ</button>
           </div>
         </section>
 
         <div class="obd-connection-bar">
           <div>
             <span class="obd-connection-label">診断機状態</span>
-            <strong id="obdDevConnectionState">接続待機中</strong>
+            <strong id="obdDevConnectionState">読取待機中</strong>
           </div>
-          <button id="obdDevConnectButton" class="primary-button" type="button" disabled>車両接続を開始</button>
+          <button id="obdDevConnectButton" class="primary-button" type="button" disabled>読取確認を開始</button>
         </div>
 
         <section class="obd-operation-panel" aria-labelledby="obdPreviewTitle">
           <div class="obd-result-heading">
             <div>
-              <p class="eyebrow obd-eyebrow">NO-CONNECTION PREVIEW</p>
-              <h3 id="obdPreviewTitle">接続前プレビュー</h3>
+              <p class="eyebrow obd-eyebrow">PRE-READOUT PREVIEW</p>
+              <h3 id="obdPreviewTitle">読取前プレビュー</h3>
             </div>
           </div>
           <div class="obd-dev-controls">
@@ -611,7 +612,7 @@
             <button id="obdPreviewThinkcarButton" class="secondary-button obd-preview-button" type="button">THINKCARプレビュー</button>
             <button id="obdPreviewJ2534Button" class="secondary-button obd-preview-button" type="button">J2534プレビュー</button>
           </div>
-          <p id="obdPreviewStatus" class="data-status">今見える項目を先に確認し、実読取は方式ごとの入口から開始します。</p>
+          <p id="obdPreviewStatus" class="data-status">今見える項目を先に確認し、読取は自動判定または手動選択した方式から開始します。</p>
           <div id="obdPreviewGuide" class="obd-profile-strip"></div>
         </section>
 
@@ -619,7 +620,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">ADVANCED READOUT</p>
-              <h3 id="obdDevGateTitle">追加読取メニュー</h3>
+              <h3 id="obdDevGateTitle">詳細読取メニュー</h3>
             </div>
             <span id="obdDevModeBadge" class="confidence-badge">ロック中</span>
           </div>
@@ -640,25 +641,25 @@
             <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
           </div>
           <div id="obdDevControls" class="obd-dev-controls" hidden>
-            <span class="obd-dev-group-label">接続確認</span>
-            <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>接続基盤確認</button>
+            <span class="obd-dev-group-label">読取確認</span>
+            <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>読取基盤確認</button>
             <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>アダプター確認</button>
             <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧</button>
             <button id="obdDevBridgeEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(ローカルブリッジ)</button>
             <button id="obdDevBridgeSupportedPidButton" class="secondary-button" type="button" disabled>対応PID(ローカルブリッジ)</button>
             <span class="obd-dev-group-label">故障コード</span>
-            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>故障コード読取</button>
+            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>DTC読取</button>
             <button id="obdDevBridgeDtcButton" class="secondary-button" type="button" disabled>故障コード(ローカルブリッジ)</button>
             <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>保留DTC(ローカルブリッジ)</button>
             <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC(ローカルブリッジ)</button>
             <span class="obd-dev-group-label">ライブデータ</span>
             <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
-            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>データモニター</button>
+            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>ライブデータ</button>
             <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ(ローカルブリッジ)</button>
             <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果</button>
             <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>
           </div>
-          <p id="obdDevStatus" class="data-status">詳細トークンを設定した端末だけ追加読取メニューを使えます。送信は read-only のみです。</p>
+          <p id="obdDevStatus" class="data-status">詳細トークンを設定した端末だけ詳細読取メニューを使えます。送信は読取専用のみです。</p>
           <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
           <div id="obdDevSessionDetails" class="obd-session-details" hidden></div>
         </section>
@@ -677,7 +678,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">COMMUNICATION PREP</p>
-              <h3 id="obdPreparedRequestTitle">接続準備</h3>
+              <h3 id="obdPreparedRequestTitle">読取準備</h3>
             </div>
           </div>
           <div id="obdConnectionProfile" class="obd-profile-strip"></div>
@@ -717,11 +718,11 @@
         </section>
 
         <details class="obd-operation-panel obd-interlock-panel">
-          <summary class="obd-interlock-summary-title">接続保護メモ</summary>
+          <summary class="obd-interlock-summary-title">読取保護メモ</summary>
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">TECHNICAL GUARD</p>
-              <h3 id="obdInterlockTitle">接続保護の内部条件</h3>
+              <h3 id="obdInterlockTitle">読取保護の内部条件</h3>
             </div>
           </div>
           <div id="obdInterlockSummary" class="obd-interlock-summary"></div>
@@ -736,26 +737,26 @@
             </div>
             <span class="confidence-badge">0件</span>
           </div>
-          <p class="empty-state">車両へ接続すると、故障コードを日本語内容つきで表示します。</p>
+          <p class="empty-state">車両を読取すると、故障コードを日本語内容つきで表示します。</p>
         </section>
 
         <section class="result-block obd-monitor-result">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">REAL-TIME LIVE DATA</p>
-              <h3>リアルタイムデータモニター</h3>
+              <h3>ライブデータモニター</h3>
             </div>
             <span class="confidence-badge">0項目</span>
           </div>
-          <p class="empty-state">車両未接続です。接続後は対応PIDの値を更新します。</p>
+          <p class="empty-state">車両未読取です。読取後は対応PIDの値を更新します。</p>
           <div class="obd-monitor-grid"></div>
           <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件、車種、年式、エンジン、メーカー整備書の基準値と比較してください。</p>
         </section>
 
         <details class="result-block">
-          <summary>実機接続の安全方針</summary>
+          <summary>実機読取の安全方針</summary>
           <ul class="obd-policy-list">
-            <li>接続はHTTPS上で、利用者がボタン操作して選んだ機器だけを対象にする</li>
+            <li>読取はHTTPS上で、利用者がボタン操作して選んだ機器だけを対象にする</li>
             <li>対応アダプターと通信速度を確認してから有効化する</li>
             <li>読取コマンドを許可リスト方式にし、それ以外は送信前に拒否する</li>
             <li>切断、通信停止、タイムアウト時は自動的に安全終了する</li>

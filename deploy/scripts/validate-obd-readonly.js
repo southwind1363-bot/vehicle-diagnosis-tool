@@ -1002,6 +1002,33 @@ check(bridgeDiagnosticImportAliases.bridgeSession.vciDevices[0]?.id === "summary
 check(bridgeDiagnosticImportAliases.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not accept readiness_response summary alias input");
 check(bridgeDiagnosticImportAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not accept ecu_info_response summary alias input");
 check(bridgeDiagnosticImportAliases.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not accept onboard_monitor_response summary alias input");
+const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
+  session: bridgeExportPayload.session,
+  exported_at: "2026-06-28T00:10:00Z"
+});
+check(bridgeExportNestedSessionAliases.exported_at === "2026-06-28T00:10:00Z", "Bridge export did not accept nested session alias input");
+check(bridgeExportNestedSessionAliases.session.adapter_identity.adapterFamily === "elm327", "Bridge export did not carry adapter_identity from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.vci_devices[0]?.id === bridgeExportPayload.session.vci_devices[0]?.id, "Bridge export did not carry vci_devices from nested session alias input");
+const bridgeSummaryNestedSessionAliases = obd.buildBridgeSessionSummary({
+  session: bridgeExportPayload.session,
+  vehicle_profile: { maker: "Toyota", model: "Nested Prius" }
+});
+check(bridgeSummaryNestedSessionAliases.adapterIdentity.adapterFamily === "elm327", "Bridge session summary did not accept nested session alias input");
+check(bridgeSummaryNestedSessionAliases.vciDevices[0]?.id === bridgeExportPayload.session.vci_devices[0]?.id, "Bridge session summary did not carry vci_devices from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge session summary did not carry supported_pid_matrix from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.readinessSnapshot.incompleteCount === 1, "Bridge session summary did not carry readiness from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.vehicleProfile?.model === "Nested Prius", "Bridge session summary did not allow outer vehicle_profile to override nested session alias input");
+const bridgeDiagnosticImportNestedSessionAliases = obd.buildBridgeDiagnosticImport({
+  bridge_session: bridgeDiagnosticImport.bridgeSession,
+  monitor_values: bridgeDiagnosticImport.monitorValues,
+  monitor_insights: bridgeDiagnosticImport.monitorInsights,
+  dtc_codes: bridgeDiagnosticImport.codes,
+  protocol: bridgeDiagnosticImport.protocol,
+  captured_at: bridgeDiagnosticImport.capturedAt
+});
+check(bridgeDiagnosticImportNestedSessionAliases.bridgeSession.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not accept bridge_session nested alias input");
+check(bridgeDiagnosticImportNestedSessionAliases.bridgeSession.vciDevices.length === 1, "Bridge diagnostic import did not carry vci devices from bridge_session nested alias input");
+check(bridgeDiagnosticImportNestedSessionAliases.codes[0] === "P0171", "Bridge diagnostic import did not retain dtc_codes with bridge_session nested alias input");
 const mergedDiagnosticInput = obd.mergeDiagnosticInputs({
   scannerText: [
     "P0171 JTDKN3DU0A0123456",
@@ -1036,11 +1063,31 @@ const mergedDiagnosticInputAliases = obd.mergeDiagnosticInputs({
     "P0171 JTDKN3DU0A0123456",
     "Engine RPM: 650 rpm"
   ].join("\n"),
-  bridge_import: bridgeDiagnosticImport
+  bridge_diagnostic_import: bridgeDiagnosticImport
 });
 check(mergedDiagnosticInputAliases.codes.includes("P0171"), "Combined diagnostic inputs did not accept scanner_text alias input");
-check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_import alias input");
+check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.monitorInsights.length > 0, "Combined diagnostic inputs did not rebuild monitor insights from bridge_import alias input");
+const mergedDiagnosticInputExportPayload = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_import: bridgeExportPayload
+});
+check(mergedDiagnosticInputExportPayload.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_session_export_v1 bridge_import input");
+const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_export_payload: bridgeExportPayload
+});
+check(mergedDiagnosticInputExportPayloadAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_export_payload alias input");
+check(mergedDiagnosticInputExportPayloadAlias.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_export_payload alias input");
+const mergedDiagnosticInputNestedSession = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_import: {
+    session: bridgeExportPayload.session
+  }
+});
+check(mergedDiagnosticInputNestedSession.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept nested session bridge_import input");
+check(mergedDiagnosticInputNestedSession.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from nested session bridge_import input");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
@@ -1569,11 +1616,25 @@ const scanSessionEcuResponseAlias = obd.buildDiagnosticScanSession({
   ecu_responses: [{ ecu: "7E8", status: "ok", dtcs: ["P0171"] }]
 });
 check(scanSessionEcuResponseAlias.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Diagnostic scan session did not accept ecu_responses alias input");
+const scanSessionNestedSessionAlias = obd.buildDiagnosticScanSession({
+  session: bridgeExportPayload.session,
+  session_id: "shop-test-nested-session"
+});
+check(scanSessionNestedSessionAlias.adapterIdentity.adapterFamily === "elm327", "Diagnostic scan session did not accept nested session alias input");
+check(scanSessionNestedSessionAlias.vciDevices[0]?.id === bridgeExportPayload.session.vci_devices[0]?.id, "Diagnostic scan session did not carry vci_devices from nested session alias input");
+check(scanSessionNestedSessionAlias.supportedPidMatrix.supportedPids.includes("40"), "Diagnostic scan session did not carry supported_pid_matrix from nested session alias input");
+check(scanSessionNestedSessionAlias.vehicleProfile?.make === bridgeExportPayload.session.vehicle_profile?.make, "Diagnostic scan session did not carry vehicle_profile from nested session alias input");
+const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
+  scan_session: bridgeExportPayload.session,
+  session_id: "shop-test-scan-session-alias"
+});
+check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
+check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 418");
+  console.log("OBD read-only safety checks: 425");
   console.log("Errors: 0");
 }

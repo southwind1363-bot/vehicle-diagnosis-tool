@@ -818,7 +818,7 @@
       displayStatus = "VCI確認待ち";
       nextAction = "VCI一覧とドライバー状態を確認します。";
     } else if (!vehicleConnected) {
-      displayStatus = "車両接続確認待ち";
+      displayStatus = "車両読取確認待ち";
       nextAction = "車両応答を取得する前に対応プロトコルと停止条件を確認します。";
     } else {
       displayStatus = "読取準備モデル";
@@ -849,7 +849,11 @@
   function normalizeBridgeVciList(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const safety = readBridgeResponseSafety(response);
-    const devices = Array.isArray(data.devices)
+    const devices = Array.isArray(response)
+      ? response
+      : Array.isArray(data)
+        ? data
+        : Array.isArray(data.devices)
       ? data.devices
       : Array.isArray(data.vci_devices)
         ? data.vci_devices
@@ -1305,6 +1309,7 @@
   }
 
   function buildBridgeSessionSummary(parts = {}) {
+    parts = getBridgeSummaryInput(parts);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
     const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot;
     const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
@@ -1439,6 +1444,21 @@
     );
   }
 
+  function getBridgeSummaryInput(parts = {}) {
+    const nested = parts.bridgeSession || parts.bridge_session || parts.session || null;
+    if (!nested || typeof nested !== "object") return parts;
+    return {
+      ...nested,
+      ...parts,
+      source: nested.source || parts.source || "local_bridge",
+      startedAt: nested.startedAt || nested.started_at || parts.startedAt || parts.started_at || null,
+      endedAt: nested.endedAt || nested.ended_at || parts.endedAt || parts.ended_at || null,
+      capturedAt: nested.capturedAt || nested.captured_at || parts.capturedAt || parts.captured_at || null,
+      protocol: nested.protocol || parts.protocol || null,
+      vehicleProfile: nested.vehicleProfile || nested.vehicle_profile || parts.vehicleProfile || parts.vehicle_profile || null
+    };
+  }
+
   function normalizeBridgeSummaryAliases(parts = {}) {
     const connectionStatusInput = parts.connectionStatus || parts.connection_status || parts.connectionStatusResponse || parts.connection_status_response || {};
     const vciDevicesInput = parts.vciDevices || parts.vci_devices || parts.vciList || parts.vci_list || parts.listVciResponse || parts.list_vci_response || [];
@@ -1505,8 +1525,24 @@
     return items.map((item) => (item && typeof item === "object" ? { ...item } : item));
   }
 
+  function getDiagnosticSessionInput(input = {}) {
+    const nested = input.session || input.scanSession || input.scan_session || null;
+    if (!nested || typeof nested !== "object") return input;
+    return {
+      ...nested,
+      ...input,
+      source: nested.source || input.source || "diagnostic_core",
+      session_id: nested.session_id || nested.sessionId || input.session_id || input.sessionId || "local_scan_session",
+      started_at: nested.started_at || nested.startedAt || input.started_at || input.startedAt || null,
+      ended_at: nested.ended_at || nested.endedAt || input.ended_at || input.endedAt || null,
+      captured_at: nested.captured_at || nested.capturedAt || input.captured_at || input.capturedAt || null,
+      vehicle_profile: nested.vehicle_profile || nested.vehicleProfile || input.vehicle_profile || input.vehicleProfile || null
+    };
+  }
+
   function buildBridgeSessionExportPayload(parts = {}) {
-    const summary = hasBridgeSummaryContent(parts) ? normalizeBridgeSummaryAliases(parts) : buildBridgeSessionSummary(parts);
+    const summaryInput = getBridgeSummaryInput(parts);
+    const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
     return {
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
@@ -1547,7 +1583,8 @@
   }
 
   function buildBridgeDiagnosticImport(parts = {}) {
-    const summary = hasBridgeSummaryContent(parts) ? normalizeBridgeSummaryAliases(parts) : buildBridgeSessionSummary(parts);
+    const summaryInput = getBridgeSummaryInput(parts);
+    const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
     const exportPayload = buildBridgeSessionExportPayload(summary);
     const codes = cloneBridgeArrayItems(summary.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
@@ -1588,11 +1625,13 @@
 
   function mergeDiagnosticInputs(input = {}) {
     const scannerTextInput = input.scannerText || input.scanner_text || "";
-    const bridgeImportInput = input.bridgeImport || input.bridge_import;
+    const bridgeImportInput = input.bridgeImport || input.bridge_import || input.bridgeDiagnosticImport || input.bridge_diagnostic_import || input.bridgeExportPayload || input.bridge_export_payload;
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
     const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
       ? bridgeImportInput
+      : bridgeImportInput?.schema_version === "bridge_session_export_v1" || bridgeImportInput?.session || bridgeImportInput?.bridgeSession || bridgeImportInput?.bridge_session
+        ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgePartsInput
         ? buildBridgeDiagnosticImport(bridgePartsInput)
         : null;
@@ -3075,14 +3114,15 @@
   }
 
   function buildDiagnosticScanSession(input = {}) {
-    const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot || input;
-    const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot || input.livePids || input.live_pids || {};
-    const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot || input.freezeFrameResponse || input.freeze_frame_response || input.freezeFrame || input.freeze_frame || {};
-    const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot || input.readinessResponse || input.readiness_response || input.readiness || {};
-    const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitorResponse || input.onboard_monitor_response || input.onboardMonitor || input.onboard_monitor || {};
-    const ecuResponseSummaryInput = input.ecuResponseSummary || input.ecu_response_summary || input.ecus || input.ecu_responses || {};
-    const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfoResponse || input.ecu_info_response || input.ecuInfo || input.ecu_info || input.ecuInfoItems || input.ecu_info_items || {};
-    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPidSnapshot || input.supported_pid_snapshot || input.supportedPidResponse || input.supported_pid_response || input.supportedPids || input.supported_pids || {};
+    const sessionInput = getDiagnosticSessionInput(input);
+    const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
+    const livePidSnapshotInput = sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot || sessionInput.livePids || sessionInput.live_pids || {};
+    const freezeFrameSnapshotInput = sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || sessionInput.freezeFrame || sessionInput.freeze_frame || {};
+    const readinessSnapshotInput = sessionInput.readinessSnapshot || sessionInput.readiness_snapshot || sessionInput.readinessResponse || sessionInput.readiness_response || sessionInput.readiness || {};
+    const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot || sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || sessionInput.onboardMonitor || sessionInput.onboard_monitor || {};
+    const ecuResponseSummaryInput = sessionInput.ecuResponseSummary || sessionInput.ecu_response_summary || sessionInput.ecus || sessionInput.ecu_responses || {};
+    const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
+    const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const dtcSnapshot = dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput);
     const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
@@ -3095,9 +3135,9 @@
       : (supportedPidMatrixInput?.data || Array.isArray(supportedPidMatrixInput?.supported_pids) || Array.isArray(supportedPidMatrixInput?.supportedPids))
         ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
         : buildSupportedPidMatrix(supportedPidMatrixInput);
-    const connectionStatusInput = input.connectionStatus || input.connection_status || input.connectionStatusResponse || input.connection_status_response || {};
-    const vciListInput = input.vciList || input.vci_list || input.vciDevices || input.vci_devices || input.listVciResponse || input.list_vci_response || {};
-    const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || input.adapterIdentityResponse || input.adapter_identity_response || {};
+    const connectionStatusInput = sessionInput.connectionStatus || sessionInput.connection_status || sessionInput.connectionStatusResponse || sessionInput.connection_status_response || {};
+    const vciListInput = sessionInput.vciList || sessionInput.vci_list || sessionInput.vciDevices || sessionInput.vci_devices || sessionInput.listVciResponse || sessionInput.list_vci_response || {};
+    const adapterIdentityInput = sessionInput.adapterIdentity || sessionInput.adapter_identity || sessionInput.adapterIdentityResponse || sessionInput.adapter_identity_response || {};
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
     const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
@@ -3145,13 +3185,13 @@
 
     return {
       schemaVersion: "scan_session_v1",
-      source: input.source || "diagnostic_core",
-      sessionId: String(input.session_id || input.sessionId || "local_scan_session").slice(0, 80),
-      startedAt: input.started_at || input.startedAt || null,
-      endedAt: input.ended_at || input.endedAt || null,
+      source: sessionInput.source || "diagnostic_core",
+      sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80),
+      startedAt: sessionInput.started_at || sessionInput.startedAt || null,
+      endedAt: sessionInput.ended_at || sessionInput.endedAt || null,
       capturedAt,
       protocol,
-      vehicleProfile: input.vehicleProfile || input.vehicle_profile || null,
+      vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || input.vehicleProfile || input.vehicle_profile || null,
       connectionStatus,
       vciDevices: vciList.devices || [],
       adapterIdentity,
