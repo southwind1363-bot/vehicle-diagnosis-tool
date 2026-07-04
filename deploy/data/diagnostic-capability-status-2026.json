@@ -5,7 +5,7 @@
     "target_level": "ハイスペック診断機の基礎データ",
     "current_status": "拡張中",
     "progress_percent": 62,
-    "current_basis": "P系2923件、U系550件、個別DTC定義3473件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持",
+    "current_basis": "P系2923件、U系550件、個別DTC定義3473件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
     "done": [
       "P/U系の個別定義を大量追加",
       "未知コードをファミリーフローへ退避",
@@ -81,11 +81,12 @@
     "target_level": "Techstream級の車種別DTC、データリスト、作業サポート",
     "current_status": "器を準備中",
     "progress_percent": 10,
-    "current_basis": "メーカー固有DTC用ロードマップとJ2534候補を登録",
+    "current_basis": "メーカー固有DTC用ロードマップ、J2534候補、Techstream等の貼り付け解析入口を準備",
     "done": [
       "メーカー固有を汎用DTCと混ぜない方針",
       "車種、年式、ECU、サブコードを分離する方針",
-      "J2534/Techstream候補管理"
+      "J2534/Techstream候補管理",
+      "Techstream等の読取結果貼り付けを先行解析する方針"
     ],
     "missing": [
       "車種別ECU構成",

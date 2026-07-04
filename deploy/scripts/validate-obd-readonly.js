@@ -97,6 +97,9 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-br
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.missing.includes("実VCIドライバ連携")), "ローカルブリッジ実VCI未連携状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-guided-diagnostics" && item.done.includes("bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ統合")), "診断支援ワークフロー alias 統合の進捗根拠が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.current_basis.includes("ブリッジDTC統合あり")), "汎用OBD2 DTCのブリッジ統合根拠が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.current_basis.includes("貼り付け解析入口")), "メーカー固有DTCの貼り付け解析入口が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.done.includes("Techstream等の読取結果貼り付けを先行解析する方針")), "メーカー固有DTCの貼り付け解析方針が不足しています");
 const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 check(indexHtml.includes("診断機全体 35% / OBD2読取 53%"), "OBD progress headline in index.html is out of date");
 check(indexHtml.includes("機能 38% / 網羅 31% / 読取 35%"), "OBD progress breakdown in index.html is out of date");
