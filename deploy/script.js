@@ -3581,14 +3581,17 @@ function renderObdProgressOverview() {
 
   const cards = [
     {
-      title: "開発優先方針",
-      primary: "パスワード内の統合OBD診断機を最優先",
-      detail: "先に OBD読取、VCI読取、保存、レポートを診断機側で固める。"
-    },
-    {
+      tone: "score",
+      highlight: true,
       title: "完成度",
       primary: `診断機全体 ${overallProgress}% / OBD2読取 ${readoutProgress}%`,
       detail: `機能 ${capabilityProgress}% / 網羅 ${coverageProgress}% / 読取 ${interfaceProgress}%`
+    },
+    {
+      tone: "breakdown",
+      title: "開発優先方針",
+      primary: "アプリ内の統合OBD診断機を最優先",
+      detail: "先に OBD読取、VCI読取、保存、レポートを診断機側で固める。"
     },
     {
       title: "完了見込み",
@@ -3602,7 +3605,7 @@ function renderObdProgressOverview() {
     },
     {
       title: "読取機能",
-      primary: `DTC / PID / FF / ECU情報 / Mode06 平均 ${readoutProgress}%`,
+      primary: `DTC / PID / FF / ECU情報 / Mode06 / Mode09 平均 ${readoutProgress}%`,
       detail: `先に使う機能: ${upcomingCapabilities || "集計中"} / 遅れ: ${weakestCapabilities || "集計中"}`
     },
     {
@@ -3618,18 +3621,18 @@ function renderObdProgressOverview() {
   ];
 
   obdProgressGrid.innerHTML = "";
-  cards.forEach((card, index) => {
+  cards.forEach((card) => {
     const article = document.createElement("article");
-    article.className = index === 0
+    article.className = card.tone === "score"
       ? "obd-progress-score-card"
-      : index === 1
+      : card.tone === "breakdown"
         ? "obd-progress-breakdown-card"
         : "";
 
     const title = document.createElement("strong");
     title.textContent = card.title;
     const primary = document.createElement("span");
-    if (index === 0) primary.className = "obd-progress-score";
+    if (card.highlight === true) primary.className = "obd-progress-score";
     primary.textContent = card.primary;
     const detail = document.createElement("span");
     detail.textContent = card.detail;
