@@ -446,6 +446,76 @@
         </div>
 
         <p id="obdCapabilityText" class="data-status">車両接続機能の対応状況を確認しています。</p>
+        <section id="obdSetupPanel" class="obd-operation-panel" aria-labelledby="obdSetupTitle" hidden>
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">PRE-CONNECTION SETUP</p>
+              <h3 id="obdSetupTitle">接続前設定</h3>
+            </div>
+          </div>
+          <fieldset class="vehicle-selector full-width">
+            <legend>OBD読取の車両情報</legend>
+            <p class="vehicle-note">他社診断機の入口に寄せるため、接続前に車種と接続方法をここで選びます。読取、保存、確認はまずOBD側で進めます。</p>
+            <div class="vehicle-selector-grid">
+              <label>
+                メーカー
+                <select id="obdVehicleMaker">
+                  <option value="">選択してください</option>
+                </select>
+              </label>
+              <label>
+                車種
+                <select id="obdVehicleModel" disabled>
+                  <option value="">先にメーカーを選択</option>
+                </select>
+              </label>
+              <label>
+                型式
+                <select id="obdVehicleModelCode" disabled>
+                  <option value="">先に車種を選択</option>
+                </select>
+              </label>
+              <label>
+                年式
+                <select id="obdVehicleYear" disabled>
+                  <option value="">先に車種を選択</option>
+                </select>
+              </label>
+              <label>
+                年式入力
+                <input id="obdVehicleYearManual" type="text" inputmode="numeric" maxlength="4" placeholder="例: 2018" hidden>
+              </label>
+              <label>
+                エンジン型式
+                <select id="obdVehicleEngineCode" disabled>
+                  <option value="">先に車種を選択</option>
+                </select>
+              </label>
+              <label>
+                接続方式
+                <select id="obdInterfaceSelect">
+                  <option value="user-vci-elm327">ELM327 / Web Serial（必須）</option>
+                  <option value="user-vci-thinkcar-bluetooth">THINKCAR Bluetooth</option>
+                  <option value="user-vci-techstream-j2534">J2534 Pass-Thru（必須）</option>
+                  <option value="user-vci-rcmall-mks-canable-v2-pro">CANable候補</option>
+                </select>
+              </label>
+              <label>
+                補足
+                <input id="obdVehicleManual" type="text" placeholder="例: 6AA-MXPL10G、M15A-FXE">
+              </label>
+            </div>
+            <div class="button-row full-width">
+              <button id="obdUseDiagnosisVehicleButton" class="secondary-button" type="button">診断補助の車両情報をコピー</button>
+              <button id="obdPreviewSelectedButton" class="secondary-button" type="button">この設定で接続前プレビュー</button>
+              <button id="obdPrepareSelectedButton" class="secondary-button" type="button">この設定で接続準備</button>
+            </div>
+            <p id="obdVehicleSelectionSummary" class="vehicle-summary">OBD車両情報: 未選択</p>
+            <div id="obdConnectionGuide" class="obd-profile-strip"></div>
+            <input id="obdVehicle" type="hidden">
+          </fieldset>
+        </section>
+
         <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdAccessGateTitle">
           <div class="obd-result-heading">
             <div>
@@ -495,7 +565,7 @@
             </article>
             <article>
               <strong>実車接続</strong>
-              <span>Web SerialとPC側ローカルブリッジの開発者限定読取入口を追加。DTC種別、対応PID、ECU情報、FF、Mode06を取込できます。</span>
+              <span>Web SerialとPC側ローカルブリッジの read-only 読取入口を追加。DTC種別、対応PID、ECU情報、FF、Mode06を取込できます。</span>
             </article>
             <article>
               <strong>次の中身</strong>
@@ -509,35 +579,36 @@
             <span class="obd-connection-label">接続状態</span>
             <strong id="obdDevConnectionState">車両未接続</strong>
           </div>
-          <button id="obdDevConnectButton" class="primary-button" type="button" disabled>開発読取を開始</button>
+          <button id="obdDevConnectButton" class="primary-button" type="button" disabled>車両接続を開始</button>
         </div>
 
         <section class="obd-operation-panel" aria-labelledby="obdPreviewTitle">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">NO-CONNECTION PREVIEW</p>
-              <h3 id="obdPreviewTitle">接続なし読取プレビュー</h3>
+              <h3 id="obdPreviewTitle">接続前読取プレビュー</h3>
             </div>
           </div>
           <div class="obd-dev-controls">
-            <button id="obdPreviewElm327Button" class="secondary-button" type="button">ELM327サンプル</button>
-            <button id="obdPreviewThinkcarButton" class="secondary-button" type="button">THINKCARサンプル</button>
-            <button id="obdPreviewJ2534Button" class="secondary-button" type="button">J2534サンプル</button>
+            <button id="obdPreviewElm327Button" class="secondary-button" type="button">ELM327プレビュー</button>
+            <button id="obdPreviewThinkcarButton" class="secondary-button" type="button">THINKCARプレビュー</button>
+            <button id="obdPreviewJ2534Button" class="secondary-button" type="button">J2534プレビュー</button>
           </div>
           <p id="obdPreviewStatus" class="data-status">接続できない端末でも、DTC、データモニター、FF、ECU情報の表示確認を先に行えます。実車読取は別です。</p>
+          <div id="obdPreviewGuide" class="obd-profile-strip"></div>
         </section>
 
         <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdDevGateTitle">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">DEVELOPER READOUT</p>
-              <h3 id="obdDevGateTitle">開発専用VCI読取テスト</h3>
+              <h3 id="obdDevGateTitle">VCI接続と詳細読取</h3>
             </div>
             <span id="obdDevModeBadge" class="confidence-badge">ロック中</span>
           </div>
           <div class="obd-dev-gate">
             <label>
-              開発トークン
+              詳細トークン
               <input id="obdDevPasswordInput" type="password" autocomplete="off" placeholder="この端末に設定した値">
             </label>
             <label>
@@ -548,26 +619,26 @@
                 <option value="9600">9600</option>
               </select>
             </label>
-            <button id="obdDevUnlockButton" class="secondary-button" type="button">開発モード解除</button>
+            <button id="obdDevUnlockButton" class="secondary-button" type="button">詳細機能を有効化</button>
             <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
           </div>
           <div id="obdDevControls" class="obd-dev-controls" hidden>
-            <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>VCI確認</button>
-            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>DTC読取</button>
-            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>データモニター読取</button>
-            <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>ブリッジ確認</button>
+            <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>アダプター確認</button>
+            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>故障コード読取</button>
+            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>データモニター</button>
+            <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>接続基盤確認</button>
             <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧</button>
-            <button id="obdDevBridgeDtcButton" class="secondary-button" type="button" disabled>ブリッジDTC</button>
-            <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>ブリッジ保留DTC</button>
-            <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>ブリッジ永久DTC</button>
-            <button id="obdDevBridgeEcuInfoButton" class="secondary-button" type="button" disabled>ブリッジECU情報</button>
-            <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>ブリッジ監視結果</button>
-            <button id="obdDevBridgeSupportedPidButton" class="secondary-button" type="button" disabled>ブリッジ対応PID</button>
-            <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>ブリッジFF</button>
-            <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ブリッジライブ</button>
+            <button id="obdDevBridgeDtcButton" class="secondary-button" type="button" disabled>故障コード(Bridge)</button>
+            <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>保留DTC(Bridge)</button>
+            <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC(Bridge)</button>
+            <button id="obdDevBridgeEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(Bridge)</button>
+            <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果</button>
+            <button id="obdDevBridgeSupportedPidButton" class="secondary-button" type="button" disabled>対応PID(Bridge)</button>
+            <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
+            <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ(Bridge)</button>
             <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>
           </div>
-          <p id="obdDevStatus" class="data-status">この端末に開発トークンを設定した場合だけ解除できます。読取系コマンドのみ送信します。</p>
+          <p id="obdDevStatus" class="data-status">この端末に詳細トークンを設定した場合だけ追加読取を有効化できます。送信は read-only のみです。</p>
           <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
           <div id="obdDevSessionDetails" class="obd-session-details" hidden></div>
         </section>
@@ -576,7 +647,7 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">CAPABILITY ROADMAP</p>
-              <h3 id="obdOperationTitle">接続後に使う機能の準備状況</h3>
+              <h3 id="obdOperationTitle">拡張機能の準備状況</h3>
             </div>
           </div>
           <div id="obdOperationGrid" class="obd-operation-grid"></div>

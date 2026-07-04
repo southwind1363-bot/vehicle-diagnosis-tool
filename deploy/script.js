@@ -276,6 +276,20 @@ const vehicleYearSelect = document.querySelector("#vehicleYear");
 const vehicleYearManualInput = document.querySelector("#vehicleYearManual");
 const vehicleManualInput = document.querySelector("#vehicleManual");
 const vehicleSelectionSummary = document.querySelector("#vehicleSelectionSummary");
+const obdVehicleInput = document.querySelector("#obdVehicle");
+const obdVehicleMakerSelect = document.querySelector("#obdVehicleMaker");
+const obdVehicleModelSelect = document.querySelector("#obdVehicleModel");
+const obdVehicleModelCodeSelect = document.querySelector("#obdVehicleModelCode");
+const obdVehicleEngineCodeSelect = document.querySelector("#obdVehicleEngineCode");
+const obdVehicleYearSelect = document.querySelector("#obdVehicleYear");
+const obdVehicleYearManualInput = document.querySelector("#obdVehicleYearManual");
+const obdVehicleManualInput = document.querySelector("#obdVehicleManual");
+const obdVehicleSelectionSummary = document.querySelector("#obdVehicleSelectionSummary");
+const obdInterfaceSelect = document.querySelector("#obdInterfaceSelect");
+const obdUseDiagnosisVehicleButton = document.querySelector("#obdUseDiagnosisVehicleButton");
+const obdPreviewSelectedButton = document.querySelector("#obdPreviewSelectedButton");
+const obdPrepareSelectedButton = document.querySelector("#obdPrepareSelectedButton");
+const obdConnectionGuide = document.querySelector("#obdConnectionGuide");
 const emptyState = document.querySelector("#emptyState");
 const resultContent = document.querySelector("#resultContent");
 const flowView = document.querySelector("#flowView");
@@ -332,6 +346,7 @@ const clearStorageButton = document.querySelector("#clearStorageButton");
 const opsResultList = document.querySelector("#opsResultList");
 const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
+const obdSetupPanel = document.querySelector("#obdSetupPanel");
 const obdAccessProtected = document.querySelector("#obdAccessProtected");
 const obdAccessPasswordInput = document.querySelector("#obdAccessPasswordInput");
 const obdAccessUnlockButton = document.querySelector("#obdAccessUnlockButton");
@@ -355,6 +370,7 @@ const obdPreviewElm327Button = document.querySelector("#obdPreviewElm327Button")
 const obdPreviewThinkcarButton = document.querySelector("#obdPreviewThinkcarButton");
 const obdPreviewJ2534Button = document.querySelector("#obdPreviewJ2534Button");
 const obdPreviewStatus = document.querySelector("#obdPreviewStatus");
+const obdPreviewGuide = document.querySelector("#obdPreviewGuide");
 const obdDevPasswordInput = document.querySelector("#obdDevPasswordInput");
 const obdDevBaudRate = document.querySelector("#obdDevBaudRate");
 const obdDevUnlockButton = document.querySelector("#obdDevUnlockButton");
@@ -476,6 +492,27 @@ vehicleYearManualInput.addEventListener("input", () => {
   vehicleYearManualInput.value = vehicleYearManualInput.value.replace(/\D/g, "").slice(0, 4);
   renderVehicleEngineOptions();
 });
+obdVehicleMakerSelect?.addEventListener("change", renderObdVehicleModelOptions);
+obdVehicleModelSelect?.addEventListener("change", renderObdVehicleDetailOptions);
+obdVehicleModelCodeSelect?.addEventListener("change", () => {
+  obdVehicleYearManualInput.value = "";
+  renderObdVehicleYearOptions();
+});
+obdVehicleYearSelect?.addEventListener("change", () => {
+  updateObdVehicleYearManualVisibility();
+  renderObdVehicleEngineOptions();
+});
+[obdVehicleEngineCodeSelect, obdVehicleManualInput, obdInterfaceSelect].forEach((element) => {
+  element?.addEventListener("change", syncObdVehicleInput);
+  element?.addEventListener("input", syncObdVehicleInput);
+});
+obdVehicleYearManualInput?.addEventListener("input", () => {
+  obdVehicleYearManualInput.value = obdVehicleYearManualInput.value.replace(/\D/g, "").slice(0, 4);
+  renderObdVehicleEngineOptions();
+});
+obdUseDiagnosisVehicleButton?.addEventListener("click", applyDiagnosisVehicleToObdSetup);
+obdPreviewSelectedButton?.addEventListener("click", previewSelectedObdInterface);
+obdPrepareSelectedButton?.addEventListener("click", prepareSelectedObdInterface);
 
 caseForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1227,6 +1264,8 @@ function appendSelectOption(select, value, label) {
 
 function syncVehicleInput() {
   const values = [
+    ["車両", selectedVehicle],
+    ["方式", selectedInterface],
     selectedVehicleValue(vehicleMakerSelect),
     selectedVehicleValue(vehicleModelSelect),
     selectedVehicleValue(vehicleModelCodeSelect),
@@ -1258,6 +1297,264 @@ function resetVehicleSelector() {
   replaceSelectOptions(vehicleEngineCodeSelect, "先に車種を選択", []);
   vehicleYearManualInput.hidden = true;
   syncVehicleInput();
+}
+
+function getVehicleMakers() {
+  return collectUnique(dataStore.vehicleInputOptions.map((item) => item.maker)).sort((a, b) => a.localeCompare(b, "ja"));
+}
+
+function findVehicleOption(maker, model) {
+  return dataStore.vehicleInputOptions.find((item) => item.maker === maker && item.model === model) || null;
+}
+
+function findVehicleYearRanges(maker, model, selectedCode = "") {
+  return dataStore.vehicleYearRangesDomestic2026.filter((item) => {
+    if (item.maker !== maker || item.model !== model) return false;
+    return !selectedCode || item.model_codes.includes(selectedCode);
+  });
+}
+
+function findApplicableVehicleYearRanges(maker, model, selectedCode = "", selectedYear = "") {
+  const numericYear = Number(selectedYear);
+  return findVehicleYearRanges(maker, model, selectedCode).filter((item) => {
+    if (!numericYear) return true;
+    const yearTo = item.year_to || item.verified_through_year;
+    return item.year_from <= numericYear && numericYear <= yearTo;
+  });
+}
+
+function syncVehicleSelectionSummary(targetInput, targetSummary, values, prefix) {
+  targetInput.value = collectUnique(values).join(" ");
+  targetSummary.textContent = targetInput.value ? `${prefix}: ${targetInput.value}` : `${prefix}: 未選択`;
+}
+
+function renderObdVehicleMakerOptions() {
+  const currentValue = obdVehicleMakerSelect.value;
+  const makers = getVehicleMakers();
+  replaceSelectOptions(obdVehicleMakerSelect, "選択してください", makers);
+  appendSelectOption(obdVehicleMakerSelect, MANUAL_VEHICLE_VALUE, "その他 / 手入力");
+  obdVehicleMakerSelect.value = makers.includes(currentValue) || currentValue === MANUAL_VEHICLE_VALUE ? currentValue : "";
+  renderObdVehicleModelOptions();
+}
+
+function renderObdVehicleModelOptions() {
+  const maker = obdVehicleMakerSelect.value;
+  const rows = dataStore.vehicleInputOptions.filter((item) => item.maker === maker && item.model);
+  const models = collectUnique(rows.map((item) => item.model)).sort((a, b) => a.localeCompare(b, "ja"));
+  replaceSelectOptions(obdVehicleModelSelect, maker ? "選択してください" : "先にメーカーを選択", models);
+  if (maker) appendSelectOption(obdVehicleModelSelect, MANUAL_VEHICLE_VALUE, "一覧にない車種 / 手入力");
+  obdVehicleModelSelect.disabled = !maker || maker === MANUAL_VEHICLE_VALUE;
+  renderObdVehicleDetailOptions();
+}
+
+function renderObdVehicleDetailOptions() {
+  const row = findVehicleOption(obdVehicleMakerSelect.value, obdVehicleModelSelect.value);
+  const hasSelectedModel = Boolean(obdVehicleModelSelect.value);
+  const modelCodes = row?.model_codes || [];
+  obdVehicleYearManualInput.value = "";
+  replaceSelectOptions(obdVehicleModelCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", modelCodes);
+  if (hasSelectedModel) appendSelectOption(obdVehicleModelCodeSelect, MANUAL_VEHICLE_VALUE, "一覧にない型式 / 手入力");
+  obdVehicleModelCodeSelect.disabled = !hasSelectedModel;
+  renderObdVehicleYearOptions();
+}
+
+function renderObdVehicleYearOptions() {
+  const hasSelectedModel = Boolean(obdVehicleModelSelect.value);
+  const selectedCode = selectedVehicleValue(obdVehicleModelCodeSelect);
+  const years = collectUnique(findVehicleYearRanges(obdVehicleMakerSelect.value, obdVehicleModelSelect.value, selectedCode).flatMap(toYearOptions))
+    .sort((a, b) => Number(b) - Number(a));
+  replaceSelectOptions(obdVehicleYearSelect, years.length ? "選択してください" : "登録期間なし / 手入力してください", years);
+  if (years.length) appendSelectOption(obdVehicleYearSelect, MANUAL_VEHICLE_VALUE, "一覧にない年式 / 手入力");
+  obdVehicleYearSelect.disabled = !hasSelectedModel || !years.length;
+  updateObdVehicleYearManualVisibility();
+  renderObdVehicleEngineOptions();
+}
+
+function updateObdVehicleYearManualVisibility() {
+  const needsManualYear = !obdVehicleYearSelect.disabled && obdVehicleYearSelect.value === MANUAL_VEHICLE_VALUE;
+  const hasNoRegisteredYears = Boolean(obdVehicleModelSelect.value) && obdVehicleYearSelect.disabled;
+  obdVehicleYearManualInput.hidden = !(needsManualYear || hasNoRegisteredYears);
+}
+
+function renderObdVehicleEngineOptions() {
+  const row = findVehicleOption(obdVehicleMakerSelect.value, obdVehicleModelSelect.value);
+  const hasSelectedModel = Boolean(obdVehicleModelSelect.value);
+  const narrowedEngineCodes = collectUnique(
+    findApplicableVehicleYearRanges(
+      obdVehicleMakerSelect.value,
+      obdVehicleModelSelect.value,
+      selectedVehicleValue(obdVehicleModelCodeSelect),
+      selectedVehicleValue(obdVehicleYearSelect) || obdVehicleYearManualInput.value
+    ).flatMap((item) => item.engine_codes || [])
+  );
+  const engineCodes = narrowedEngineCodes.length ? narrowedEngineCodes : (row?.engine_codes || []);
+  replaceSelectOptions(obdVehicleEngineCodeSelect, hasSelectedModel ? "選択してください" : "先に車種を選択", engineCodes);
+  if (hasSelectedModel) appendSelectOption(obdVehicleEngineCodeSelect, MANUAL_VEHICLE_VALUE, "一覧にないエンジン型式 / 手入力");
+  obdVehicleEngineCodeSelect.disabled = !hasSelectedModel;
+  syncObdVehicleInput();
+}
+
+function selectedObdVehicleYear() {
+  const year = selectedVehicleValue(obdVehicleYearSelect) || obdVehicleYearManualInput.value.trim();
+  return year ? `${year}年式` : "";
+}
+
+function syncObdVehicleInput() {
+  const values = [
+    selectedVehicleValue(obdVehicleMakerSelect),
+    selectedVehicleValue(obdVehicleModelSelect),
+    selectedVehicleValue(obdVehicleModelCodeSelect),
+    selectedObdVehicleYear(),
+    selectedVehicleValue(obdVehicleEngineCodeSelect),
+    obdVehicleManualInput.value.trim()
+  ];
+  syncVehicleSelectionSummary(obdVehicleInput, obdVehicleSelectionSummary, values, "OBD車両情報");
+  renderObdConnectionGuide();
+}
+
+function resetObdVehicleSelector() {
+  obdVehicleModelSelect.disabled = true;
+  obdVehicleModelCodeSelect.disabled = true;
+  obdVehicleYearSelect.disabled = true;
+  obdVehicleEngineCodeSelect.disabled = true;
+  replaceSelectOptions(obdVehicleModelSelect, "先にメーカーを選択", []);
+  replaceSelectOptions(obdVehicleModelCodeSelect, "先に車種を選択", []);
+  replaceSelectOptions(obdVehicleYearSelect, "先に車種を選択", []);
+  replaceSelectOptions(obdVehicleEngineCodeSelect, "先に車種を選択", []);
+  obdVehicleYearManualInput.hidden = true;
+  syncObdVehicleInput();
+}
+
+function getSelectedObdInterfaceLabel() {
+  return {
+    "user-vci-elm327": "ELM327 / Web Serial（必須）",
+    "user-vci-thinkcar-bluetooth": "THINKCAR Bluetooth",
+    "user-vci-techstream-j2534": "J2534 Pass-Thru（必須）",
+    "user-vci-rcmall-mks-canable-v2-pro": "CANable候補"
+  }[obdInterfaceSelect.value] || "未選択";
+}
+
+function getObdInterfaceStrategyNote(interfaceId) {
+  if (interfaceId === "user-vci-elm327") return "必須ルート。最小構成の実車読取入口で、複数VCI対応の基準動作として使います。";
+  if (interfaceId === "user-vci-techstream-j2534") return "必須ルート。G-scan/AUTEL級に近づけるためPC系VCIの主経路として優先します。";
+  return {
+    "user-vci-elm327": "最小構成の実車読取入口。複数VCI対応の基準動作として使います。",
+    "user-vci-thinkcar-bluetooth": "スマホBT系候補。単体読取ではなくPCブリッジ連携を前提に育てます。",
+    "user-vci-techstream-j2534": "重要ルート。G-scan/AUTEL級に近づけるためPC系VCIの主経路として優先します。",
+    "user-vci-rcmall-mks-canable-v2-pro": "CAN系候補。J2534後にread-only取込の幅を広げる用途です。"
+  }[interfaceId] || "複数VCIを選べる前提で、read-onlyの安全範囲から順に増やします。";
+}
+
+function getObdDevelopmentOperationNote(interfaceId) {
+  if (interfaceId === "user-vci-elm327") return "運用: 接続前プレビュー確認 -> PC Web Serial接続 -> DTC/データモニター読取 -> OBD側で保存と確認";
+  if (interfaceId === "user-vci-techstream-j2534") return "運用: 接続前プレビュー確認 -> J2534ドライバ確認 -> ブリッジ確認 -> read-only DTC/ECU情報から実測";
+  return "運用: 接続前プレビュー確認 -> 接続準備 -> read-onlyで取れる項目だけ確認 -> OBD側で保存と確認";
+}
+
+function renderObdConnectionGuide() {
+  if (!obdConnectionGuide) return;
+  const interfaceId = obdInterfaceSelect.value || "user-vci-elm327";
+  const selectedVehicle = obdVehicleInput.value.trim() || "未選択";
+  const lines = {
+    "user-vci-elm327": [
+      "端末: 実読取はPCのChrome系ブラウザが必要",
+      "接続: Web SerialでELM327/STNを選択",
+      "安全: DTC / ライブデータ / FFのread-onlyのみ"
+    ],
+    "user-vci-thinkcar-bluetooth": [
+      "端末: スマホ単体では表示確認のみ",
+      "接続: スマホBT接続後にPCローカルブリッジへ流す",
+      "安全: DTC / ライブデータ / ECU情報のread-only確認"
+    ],
+    "user-vci-techstream-j2534": [
+      "端末: PC側ドライバ前提",
+      "接続: J2534ドライバとローカルブリッジで確認",
+      "安全: read-only ECU情報 / DTCから開始"
+    ],
+    "user-vci-rcmall-mks-canable-v2-pro": [
+      "端末: PC側設定前提",
+      "接続: CANable系をローカルブリッジへ接続",
+      "安全: read-only診断取込の確認段階"
+    ]
+  }[interfaceId];
+  obdConnectionGuide.innerHTML = "";
+  const interfaceStrategyNote = getObdInterfaceStrategyNote(interfaceId);
+  [
+    ["車両", selectedVehicle],
+    ["方式", getSelectedObdInterfaceLabel()],
+    ["使用", lines[0]],
+    ["経路", lines[1]],
+    ["安全", lines[2]]
+  ].forEach(([label, value]) => {
+    const item = document.createElement("span");
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    item.append(strong, document.createTextNode(value));
+    obdConnectionGuide.appendChild(item);
+  });
+  const strategyItem = document.createElement("span");
+  const strategyLabel = document.createElement("strong");
+  strategyLabel.textContent = "VCI方針";
+  strategyItem.append(strategyLabel, document.createTextNode(interfaceStrategyNote));
+  obdConnectionGuide.appendChild(strategyItem);
+  const operationItem = document.createElement("span");
+  const operationLabel = document.createElement("strong");
+  operationLabel.textContent = "現場運用";
+  operationItem.append(operationLabel, document.createTextNode(getObdDevelopmentOperationNote(interfaceId)));
+  obdConnectionGuide.appendChild(operationItem);
+}
+
+function applyDiagnosisVehicleToObdSetup() {
+  obdVehicleMakerSelect.value = vehicleMakerSelect.value;
+  renderObdVehicleModelOptions();
+  obdVehicleModelSelect.value = vehicleModelSelect.value;
+  renderObdVehicleDetailOptions();
+  obdVehicleModelCodeSelect.value = vehicleModelCodeSelect.value;
+  renderObdVehicleYearOptions();
+  obdVehicleYearSelect.value = vehicleYearSelect.value;
+  obdVehicleYearManualInput.value = vehicleYearManualInput.value;
+  updateObdVehicleYearManualVisibility();
+  renderObdVehicleEngineOptions();
+  obdVehicleEngineCodeSelect.value = vehicleEngineCodeSelect.value;
+  obdVehicleManualInput.value = vehicleManualInput.value;
+  syncObdVehicleInput();
+  if (obdPreviewStatus) obdPreviewStatus.textContent = "診断補助側の車両情報をOBD側へコピーしました。必要ならOBD側で調整してください。";
+}
+
+function ensureObdVehicleSelection() {
+  if (obdVehicleInput.value.trim()) return true;
+  obdVehicleSelectionSummary.textContent = "OBD車両情報: 未選択。OBD車両読み取り側で車両を選択してください。";
+  if (obdPreviewStatus) obdPreviewStatus.textContent = "OBD車両読み取りは独立画面です。先にOBD側の車両情報を選択してください。";
+  return false;
+}
+
+function previewSelectedObdInterface() {
+  if (!ensureObdVehicleSelection()) return;
+  clearRequestedInterfaceSelection();
+  loadObdInterfacePreviewSample(obdInterfaceSelect.value || "user-vci-elm327");
+  const selectedVehicle = obdVehicleInput.value.trim();
+  if (selectedVehicle && obdPreviewStatus) {
+    obdPreviewStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle} の接続前プレビュー表示中です。`;
+  }
+}
+
+function prepareSelectedObdInterface() {
+  if (!ensureObdVehicleSelection()) return;
+  const interfaceId = obdInterfaceSelect.value || "user-vci-elm327";
+  const selectedVehicle = obdVehicleInput.value.trim() || "車両未選択";
+  const catalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
+  const item = catalog.find((entry) => entry.id === interfaceId);
+  if (item && isBridgeBackedInterfaceCandidate(interfaceId)) {
+    obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle} の接続準備を開始します。`;
+    startInterfaceCandidateCheck(item);
+    return;
+  }
+  obdDevSession.previewMode = null;
+  clearRequestedInterfaceSelection();
+  obdDevStatus.textContent = interfaceId === "user-vci-elm327"
+    ? `${selectedVehicle} / ELM327はPCのChrome系ブラウザでWeb Serial接続を開始してください。スマホでは接続前プレビューまでです。`
+    : `${getSelectedObdInterfaceLabel()} / ${selectedVehicle} の接続前設定を保存しました。次に接続前プレビューかブリッジ確認へ進めます。`;
+  renderObdDeveloperGate();
 }
 
 function getInput() {
@@ -2203,6 +2500,8 @@ function renderDiagnosis(result) {
 
 function initializeObdReadOnlyPanel() {
   const capability = window.ObdReadOnly?.getCapability();
+  renderObdVehicleMakerOptions();
+  renderObdConnectionGuide();
   if (!capability) {
     obdCapabilityBadge.textContent = "準備機能を読込できません";
     obdCapabilityText.textContent = "OBD2読取準備モジュールを読み込めませんでした。";
@@ -2255,6 +2554,7 @@ function renderObdAccessGate() {
   obdAccessModeBadge.textContent = unlocked ? "解除済み" : "ロック中";
   obdAccessUnlockButton.disabled = unlocked;
   obdAccessLockButton.disabled = !unlocked;
+  if (obdSetupPanel) obdSetupPanel.hidden = !unlocked;
   obdAccessProtected.hidden = !unlocked;
 
   if (!unlocked) {
@@ -2693,7 +2993,9 @@ function getInterfaceCandidateCheckSummary(item) {
 function startInterfaceCandidateCheck(item) {
   obdDevSession.requestedInterfaceId = item?.id || null;
   const guide = getInterfaceCandidateGuideByItem(item);
-  if (guide?.startStatus) obdDevStatus.textContent = guide.startStatus;
+  const selectedVehicle = obdVehicleInput.value.trim();
+  const selectedInterface = getSelectedObdInterfaceLabel();
+  if (guide?.startStatus) obdDevStatus.textContent = `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} ${guide.startStatus}`;
   probeObdLocalBridge(getInterfaceCandidateProbeLabel(item));
 }
 
@@ -2797,7 +3099,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
     "user-vci-elm327": {
       label: "ELM327",
       adapterIdentity: { adapterName: "ELM327 Sample", adapterFamily: "ELM327", firmwareVersion: "v1.5-sim" },
-      connectionStatus: { displayStatus: "サンプル表示中", nextAction: "実読取はPC Chrome系ブラウザのWeb Serialで確認" },
+      connectionStatus: { displayStatus: "接続前プレビュー表示中", nextAction: "実読取はPC Chrome系ブラウザのWeb Serialで確認" },
       dtcs: [
         { code: "P0171", status: "stored" },
         { code: "P0300", status: "pending" }
@@ -2808,7 +3110,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
     "user-vci-thinkcar-bluetooth": {
       label: "THINKCAR Bluetooth",
       adapterIdentity: { adapterName: "THINKCAR Sample", adapterFamily: "THINKCAR", firmwareVersion: "bt-sim" },
-      connectionStatus: { displayStatus: "Bluetooth取込サンプル表示中", nextAction: "実読取はスマホBT接続後にPCローカルブリッジで確認" },
+      connectionStatus: { displayStatus: "Bluetooth取込プレビュー表示中", nextAction: "実読取はスマホBT接続後にPCローカルブリッジで確認" },
       dtcs: [
         { code: "P0420", status: "stored" },
         { code: "P0133", status: "pending" }
@@ -2819,7 +3121,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
     "user-vci-techstream-j2534": {
       label: "J2534",
       adapterIdentity: { adapterName: "J2534 Sample", adapterFamily: "J2534 Pass-Thru", firmwareVersion: "drv-sim" },
-      connectionStatus: { displayStatus: "J2534読取サンプル表示中", nextAction: "実読取はPCドライバとローカルブリッジで確認" },
+      connectionStatus: { displayStatus: "J2534読取プレビュー表示中", nextAction: "実読取はPCドライバとローカルブリッジで確認" },
       dtcs: [
         { code: "U0100", status: "stored" },
         { code: "P0606", status: "permanent" }
@@ -2831,8 +3133,13 @@ function getObdInterfacePreviewConfig(interfaceId) {
   const selected = table[interfaceId] || table["user-vci-elm327"];
   return {
     label: selected.label,
-    statusText: `${selected.label}の接続なしサンプルを表示しています。${selected.operatorNote}`,
-    previewStatus: `サンプル中: ${selected.operatorNote}`,
+    statusText: `${selected.label}の接続前プレビューを表示しています。${selected.operatorNote}`,
+    previewStatus: `接続前プレビュー中: ${selected.operatorNote}`,
+    previewGuide: [
+      `スマホ単体: ${interfaceId === "user-vci-thinkcar-bluetooth" ? "表示確認のみ。実読取は不可" : "表示確認のみ"}`,
+      `実読取経路: ${selected.connectionStatus.nextAction}`,
+      `今見える内容: DTC / ライブ値 / FF / ECU情報 / Mode06 / 対応PID`
+    ],
     bridgeVciList: {
       deviceCount: 1,
       driverStatus: interfaceId === "user-vci-elm327" ? "not_required" : "sample_ready",
@@ -2869,7 +3176,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
       livePidSnapshot: {
         monitorValues: sharedMonitorValues,
         monitorInsights: [
-          { level: "caution", title: "サンプル表示", detail: "実車値ではありません。表示確認用です。", nextStep: "実車では同条件で再測定する" }
+          { level: "caution", title: "接続前プレビュー", detail: "実車値ではありません。表示確認用です。", nextStep: "実車では同条件で再測定する" }
         ]
       },
       readinessSnapshot: sharedReadiness,
@@ -2905,9 +3212,19 @@ function loadObdInterfacePreviewSample(interfaceId) {
     if (item?.code) obdDetectedCodes.appendChild(createObdDtcCard(item.code));
   });
   obdImportStatus.textContent = dtcs.length
-    ? `${preview.label}サンプルのDTC ${dtcs.length}件を表示しています。`
-    : `${preview.label}サンプルでDTCは0件です。`;
+    ? `${preview.label}プレビューのDTC ${dtcs.length}件を表示しています。`
+    : `${preview.label}プレビューでDTCは0件です。`;
   if (obdPreviewStatus) obdPreviewStatus.textContent = preview.previewStatus;
+  if (obdPreviewGuide) {
+    obdPreviewGuide.innerHTML = "";
+    preview.previewGuide.forEach((line, index) => {
+      const item = document.createElement("span");
+      const strong = document.createElement("strong");
+      strong.textContent = index === 0 ? "端末" : index === 1 ? "実経路" : "内容";
+      item.append(strong, document.createTextNode(line));
+      obdPreviewGuide.appendChild(item);
+    });
+  }
   obdDevStatus.textContent = preview.statusText;
   renderObdDeveloperGate();
   renderObdDeveloperSessionSummary(preview.session);
@@ -2974,6 +3291,11 @@ function renderObdProgressOverview() {
 
   const cards = [
     {
+      title: "開発優先方針",
+      primary: "パスワード内の統合OBD診断機を最優先",
+      detail: "一般公開の診断補助は外部診断機ベースの補助として維持し、先にOBD読取、VCI接続、診断補助、保存、レポートを統合する。"
+    },
+    {
       title: "完成度",
       primary: `診断機全体 ${overallProgress}% / OBD2読取 ${readoutProgress}%`,
       detail: `機能 ${capabilityProgress}% / 網羅 ${coverageProgress}% / 接続 ${interfaceProgress}%`
@@ -3032,8 +3354,10 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   const connected = Boolean(obdDevSession.port);
   const previewActive = Boolean(obdDevSession.previewMode);
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
+  const selectedVehicle = obdVehicleInput.value.trim();
+  const selectedInterface = getSelectedObdInterfaceLabel();
 
-  obdDevModeBadge.textContent = unlocked ? "開発モード" : "ロック中";
+  obdDevModeBadge.textContent = unlocked ? "詳細有効" : "ロック中";
   obdDevControls.hidden = !unlocked;
   obdDevLockButton.disabled = !unlocked;
   obdDevConnectButton.disabled = !unlocked || !serialReady || connected;
@@ -3056,11 +3380,11 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
     : obdDevSession.bridgeEndpoint
       ? "ブリッジ確認済み"
       : previewActive
-        ? "サンプル表示中"
+        ? "接続前プレビュー表示中"
         : "車両未接続";
 
   if (!unlocked) {
-    obdDevStatus.textContent = "この端末に開発トークンを設定した場合だけ解除できます。読取系コマンドのみ送信します。";
+    obdDevStatus.textContent = "この端末に詳細トークンを設定した場合だけ追加読取を有効化できます。送信は read-only のみです。";
   } else if (!serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
   } else if (!connected) {
@@ -3068,10 +3392,10 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
       ? getRequestedInterfaceReadyStatus()
       : getRequestedInterfaceIdleStatus();
     obdDevStatus.textContent = obdDevSession.bridgeEndpoint
-      ? requestedStatus || "ローカルブリッジ確認済みです。VCI一覧、DTC、ライブデータ読取を試せます。"
+      ? requestedStatus || "ローカルブリッジ確認済みです。VCI一覧、故障コード、ライブデータ読取を試せます。"
       : previewActive
         ? obdDevStatus.textContent
-        : requestedStatus || "Web SerialのELM327/STN、またはローカルブリッジ経由のJ2534/CANable系読取を試せます。";
+        : requestedStatus || `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。Web SerialのELM327/STN、またはローカルブリッジ経由の読取を試せます。`;
   }
 
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
@@ -3106,17 +3430,17 @@ function lockObdAccess() {
 function unlockObdDeveloperMode() {
   const configuredToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
   if (configuredToken.length < 12) {
-    obdDevStatus.textContent = "この端末に開発トークンが未設定です。";
+    obdDevStatus.textContent = "この端末に詳細トークンが未設定です。";
     return;
   }
   if (obdDevPasswordInput.value !== configuredToken) {
-    obdDevStatus.textContent = "開発トークンが違います。";
+    obdDevStatus.textContent = "詳細トークンが違います。";
     return;
   }
   obdDevModeUnlocked = true;
   sessionStorage.setItem(OBD_DEV_MODE_KEY, "enabled");
   obdDevPasswordInput.value = "";
-  obdDevStatus.textContent = "開発モードを解除しました。読取系コマンドだけ使用できます。";
+  obdDevStatus.textContent = "詳細機能を有効化しました。読取系コマンドだけ使用できます。";
   renderObdDeveloperGate();
 }
 
@@ -3125,7 +3449,7 @@ function lockObdDeveloperMode() {
   sessionStorage.removeItem(OBD_DEV_MODE_KEY);
   obdDevSession.previewMode = null;
   clearRequestedInterfaceSelection();
-  obdDevStatus.textContent = "開発モードをロックしました。";
+  obdDevStatus.textContent = "詳細機能をロックしました。";
   renderObdDeveloperGate();
 }
 
@@ -3315,7 +3639,7 @@ async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
 async function sendObdLocalBridgeIntent(intent, payload = {}, options = {}) {
   if (!isAllowedLocalBridgeIntent(intent)) throw new Error(`許可していないIntentです: ${intent}`);
   const pairingToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
-  if (pairingToken.length < 12) throw new Error("開発トークンが未設定です。");
+  if (pairingToken.length < 12) throw new Error("詳細トークンが未設定です。");
   const request = {
     request_id: generateId(),
     api_version: "v1",
@@ -3823,11 +4147,13 @@ function renderObdDeveloperSessionSummary(session = null) {
   const bridgeDeviceCount = obdDevSession.bridgeVciList?.deviceCount ?? 0;
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(session?.dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
   const coverage = session?.readoutCoverage || null;
+  const selectedVehicle = obdVehicleInput.value.trim() || NO_DATA;
+  const selectedInterface = getSelectedObdInterfaceLabel();
   const values = [
-    ["接続", obdDevSession.port ? "Web Serial" : obdDevSession.bridgeEndpoint ? "Local Bridge" : "未接続"],
+    ["接続", obdDevSession.port ? "Web Serial" : obdDevSession.bridgeEndpoint ? "Local Bridge" : obdDevSession.previewMode ? "接続前プレビュー" : "未接続"],
     ["状態", session?.connectionStatus?.displayStatus || obdDevSession.bridgeStatus?.displayStatus || NO_DATA],
     ["開始", obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA],
-    ["Bridge", obdDevSession.bridgeEndpoint ? "確認済み" : "未確認"],
+    ["Bridge", obdDevSession.bridgeEndpoint ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ["Adapter", session?.adapterIdentity?.adapterFamily || obdDevSession.adapterIdentity?.adapterFamily || NO_DATA],
     ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
