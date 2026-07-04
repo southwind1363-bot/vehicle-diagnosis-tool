@@ -4276,7 +4276,7 @@ function renderObdBridgeReadout(parts = {}) {
       : "ブリッジ対応PID応答を受け取りました。対応PIDは0件です。";
   } else if (parts.livePidResponse && readinessSnapshot?.monitorCount) {
     const valueSummary = monitorValues.length ? ` ライブ値${monitorValues.length}項目` : "";
-    obdImportStatus.textContent = `ブリッジライブ値とレディネス${readinessSnapshot.monitorCount}項目を読取りました。${valueSummary} / 未完了${readinessSnapshot.incompleteCount}項目`.trim();
+    obdImportStatus.textContent = `ブリッジライブ値とレディネス${readinessSnapshot.monitorCount}項目を読取りました。${valueSummary} / ${formatObdBridgeReadinessSummary(readinessSnapshot, { includeObservedCount: true })}`.trim();
   } else if (parts.livePidResponse && readinessSnapshot) {
     obdImportStatus.textContent = monitorValues.length
       ? `ブリッジライブ値を${monitorValues.length}項目読取りました。レディネス項目は0件です。`
@@ -4358,6 +4358,37 @@ function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
   return parts.join(" / ");
 }
 
+function summarizeObdBridgeReadiness(snapshot = null) {
+  const monitors = Array.isArray(snapshot?.monitors) ? snapshot.monitors : [];
+  const knownMonitors = Array.isArray(snapshot?.knownMonitors) ? snapshot.knownMonitors : [];
+  const supportedCount = monitors.filter((item) => item?.supported !== false).length;
+  const completeCount = monitors.filter((item) => item?.supported !== false && item?.complete === true).length;
+  const incompleteCount = monitors.filter((item) => item?.supported !== false && item?.complete !== true).length;
+  const unsupportedCount = monitors.filter((item) => item?.supported === false).length;
+  const unknownCount = knownMonitors.filter((item) => item?.observed === false).length;
+  return {
+    monitorCount: monitors.length,
+    supportedCount,
+    completeCount,
+    incompleteCount,
+    unsupportedCount,
+    unknownCount
+  };
+}
+
+function formatObdBridgeReadinessSummary(snapshot = null, options = {}) {
+  const { includeObservedCount = false } = options;
+  const summary = summarizeObdBridgeReadiness(snapshot);
+  if (!summary.monitorCount && !summary.unknownCount) return NO_DATA;
+  const parts = [];
+  if (includeObservedCount && summary.monitorCount > 0) parts.push(`${summary.monitorCount}項目`);
+  if (summary.incompleteCount > 0) parts.push(`未完了${summary.incompleteCount}`);
+  if (summary.completeCount > 0) parts.push(`完了${summary.completeCount}`);
+  if (summary.unsupportedCount > 0) parts.push(`非対応${summary.unsupportedCount}`);
+  if (summary.unknownCount > 0) parts.push(`未取得${summary.unknownCount}`);
+  return parts.length ? parts.join(" / ") : NO_DATA;
+}
+
 function summarizeObdMonitorValues(values = []) {
   if (!values.length) return null;
   if (typeof window.ObdReadOnly?.buildMonitorValueSummary === "function") {
@@ -4379,10 +4410,12 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
       parts.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
     }
   }
-  if (analysis.readinessSnapshot?.incompleteCount > 0) {
-    parts.push(`レディネス未完了${analysis.readinessSnapshot.incompleteCount}項目`);
-  } else if (includeReadinessCount && analysis.readinessSnapshot?.monitorCount > 0) {
-    parts.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
+  const readinessSummary = formatObdBridgeReadinessSummary(
+    analysis.readinessSnapshot,
+    { includeObservedCount: includeReadinessCount }
+  );
+  if (readinessSummary !== NO_DATA) {
+    parts.push(`レディネス${readinessSummary}`);
   }
   if (analysis.monitorValueSummary?.totalCount > 0) {
     parts.push(`ライブ要約${formatObdBridgeMonitorSummary(analysis.monitorValueSummary)}`);
@@ -4549,11 +4582,23 @@ function renderObdBridgeSessionDetails(session = null) {
   const readinessMonitors = session?.readinessSnapshot?.monitors || [];
   if (readinessMonitors.length) {
     const incomplete = readinessMonitors.filter((item) => item.supported && !item.complete);
-    const visible = (incomplete.length ? incomplete : readinessMonitors.filter((item) => item.supported)).slice(0, 6);
+    const supported = readinessMonitors.filter((item) => item.supported);
+    const unsupported = readinessMonitors.filter((item) => item.supported === false);
+    const visible = (incomplete.length ? incomplete : supported).slice(0, 6);
+    const unknownLabels = (session?.readinessSnapshot?.knownMonitors || [])
+      .filter((item) => item?.observed === false)
+      .slice(0, 4)
+      .map((item) => item.label || item.id);
     const lines = [
-      `MIL: ${session.readinessSnapshot.milOn ? "ON" : "OFF"} / 未完了 ${session.readinessSnapshot.incompleteCount}項目`,
-      ...visible.map((item) => `${item.label || item.id}: ${item.complete ? "完了" : "未完了"}`)
+      `MIL: ${session.readinessSnapshot.milOn ? "ON" : "OFF"} / ${formatObdBridgeReadinessSummary(session.readinessSnapshot, { includeObservedCount: true })}`,
+      ...visible.map((item) => `${item.label || item.id}: ${item.complete ? "完了" : "未完了"}${item.diagnosticUse ? ` / ${item.diagnosticUse}` : ""}`)
     ];
+    if (unsupported.length) {
+      lines.push(`非対応: ${unsupported.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
+    }
+    if (unknownLabels.length) {
+      lines.push(`未取得: ${unknownLabels.join(" / ")}`);
+    }
     sections.push(["レディネス", lines]);
   }
 
@@ -4676,7 +4721,9 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["ライブ値", session?.livePidSnapshot?.monitorValues?.length
       ? formatObdBridgeMonitorSummary(session?.livePidSnapshot?.monitorValueSummary)
       : 0],
-    ["レディネス", session?.readinessSnapshot?.monitorCount ? `未完了${session.readinessSnapshot.incompleteCount}` : 0],
+    ["レディネス", session?.readinessSnapshot?.monitorCount || session?.readinessSnapshot?.knownMonitorCount
+      ? formatObdBridgeReadinessSummary(session?.readinessSnapshot)
+      : 0],
     ["Mode06", session?.onboardMonitorSnapshot?.testCount ? formatObdBridgeOnboardMonitorSummary(session?.onboardMonitorSnapshot) : 0],
     ["対応PID", session?.supportedPidMatrix?.supportedCount ?? 0],
     ["開始", startedAtLabel],
@@ -5172,8 +5219,9 @@ function analyzeObdScannerImport() {
   if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) {
     notes.push(`VCI ${analysis.vciDevices.length}件`);
   }
-  if (analysis.readinessSnapshot?.incompleteCount > 0) {
-    notes.push(`レディネス未完了${analysis.readinessSnapshot.incompleteCount}項目`);
+  const readinessNoteSummary = formatObdBridgeReadinessSummary(analysis.readinessSnapshot);
+  if (readinessNoteSummary !== NO_DATA) {
+    notes.push(`レディネス${readinessNoteSummary}`);
   }
   if (analysis.monitorValueSummary?.totalCount > 0) {
     notes.push(`ライブデータ${analysis.monitorValueSummary.totalCount}項目`);
