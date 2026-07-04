@@ -4942,6 +4942,11 @@ function analyzeObdScannerImport() {
   if (analysis.supportedPidMatrix?.supportedCount > 0) {
     notes.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
   }
+  if (analysis.readoutCoverage?.totalCategories) {
+    notes.push(`読取率${analysis.readoutCoverage.progressPercent}% (${analysis.readoutCoverage.availableCategories}/${analysis.readoutCoverage.totalCategories})`);
+    if ((analysis.readoutCoverage.missingCategories || 0) > 0) notes.push(`未取得${analysis.readoutCoverage.missingCategories}件`);
+    if ((analysis.readoutCoverage.emptyCategories || 0) > 0) notes.push(`空応答${analysis.readoutCoverage.emptyCategories}件`);
+  }
   if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
     const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 3).join(" / ");
     notes.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
