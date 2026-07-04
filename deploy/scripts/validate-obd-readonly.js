@@ -1116,6 +1116,7 @@ check(mergedDiagnosticInput.warnings.includes("freeze_frame_available"), "統合
 check(mergedDiagnosticInput.monitorValueSummary.totalCount >= 4, "統合診断入力へ値要約を引き継げません");
 check(mergedDiagnosticInput.ecuResponseSummary?.ecus[0]?.dtcCount === 1, "統合診断入力へECU応答サマリーを引き継げません");
 check(mergedDiagnosticInput.supportedPidMatrix?.supportedPids.includes("05"), "統合診断入力へ対応PIDを引き継げません");
+check(mergedDiagnosticInput.readoutCoverage?.progressPercent >= 80, "統合診断入力へ読取カバレッジを引き継げません");
 check(mergedDiagnosticInput.readinessSnapshot?.incompleteCount === 1, "統合診断入力へレディネスを引き継げません");
 check(mergedDiagnosticInput.freezeFrameSnapshot?.triggerDtc === "P0171", "統合診断入力へフリーズフレームを引き継げません");
 check(mergedDiagnosticInput.vehicleProfile?.model === "Prius", "統合診断入力へ車両プロフィールを引き継げません");
@@ -1183,6 +1184,7 @@ const mergedDiagnosticInputBridgeSessionOnlyImport = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputBridgeSessionOnlyImport.protocol === "ISO15765-4", "Combined diagnostic inputs did not recover protocol from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.capturedAt === "2026-06-28T00:00:00Z", "Combined diagnostic inputs did not recover capturedAt from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not recover supported_pid_matrix from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.readoutCoverage?.progressPercent >= 80, "Combined diagnostic inputs did not recover readoutCoverage from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.freezeFrameSnapshot?.triggerDtc === "P0171", "Combined diagnostic inputs did not recover freeze_frame_snapshot from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Combined diagnostic inputs did not recover ecu_info_snapshot from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridgeSession-only diagnostic import");

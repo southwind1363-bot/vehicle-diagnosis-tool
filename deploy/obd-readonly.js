@@ -1700,6 +1700,7 @@
       readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
       ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
       onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
+      readoutCoverage: bridgeImport?.readoutCoverage || bridgeSession?.readoutCoverage || null,
       freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
       vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
       connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
