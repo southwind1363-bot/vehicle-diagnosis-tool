@@ -1487,6 +1487,7 @@ const textScanSessionNestedOptions = obd.buildScanSessionFromObdText(obdTextLog,
 check(textScanSessionNestedOptions.startedAt === "2026-06-28T00:16:00Z" && textScanSessionNestedOptions.endedAt === "2026-06-28T00:17:00Z", "OBD text scan session did not accept scan_session nested option timestamps");
 check(textScanSessionNestedOptions.vehicleProfile?.model === "Vitz", "OBD text scan session did not carry vehicle_profile from scan_session nested options");
 check(textScanSessionNestedOptions.sessionId === "obd-text-nested-options", "OBD text scan session did not carry session_id from scan_session nested options");
+check(textScanSessionNestedOptions.protocol === "ISO15765-4", "OBD text scan session did not carry protocol from scan_session nested options");
 const compactCanLog = [
   "can0 7E8#04410C1AF8",
   "(171234.123456) can0 7E8#0341057B"
@@ -1661,6 +1662,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 432");
+  console.log("OBD read-only safety checks: 433");
   console.log("Errors: 0");
 }

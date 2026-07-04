@@ -1536,6 +1536,7 @@
       started_at: nested.started_at || nested.startedAt || input.started_at || input.startedAt || null,
       ended_at: nested.ended_at || nested.endedAt || input.ended_at || input.endedAt || null,
       captured_at: nested.captured_at || nested.capturedAt || input.captured_at || input.capturedAt || null,
+      protocol: nested.protocol || input.protocol || null,
       vehicle_profile: nested.vehicle_profile || nested.vehicleProfile || input.vehicle_profile || input.vehicleProfile || null
     };
   }
