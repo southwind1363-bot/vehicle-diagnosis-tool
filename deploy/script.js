@@ -5004,7 +5004,17 @@ function analyzeObdScannerImport() {
     const summary = [`統合入力で${analysis.monitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
     if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
-    if (analysis.readoutCoverage?.totalCategories) summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
+    if (analysis.readoutCoverage?.totalCategories) {
+      summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
+      if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
+        const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
+        summary.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
+      }
+      if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
+        const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
+        summary.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
+      }
+    }
     if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
       const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
       summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
@@ -5012,7 +5022,17 @@ function analyzeObdScannerImport() {
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
     const summary = ["計測値は0項目です。"];
-    if (analysis.readoutCoverage?.totalCategories) summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
+    if (analysis.readoutCoverage?.totalCategories) {
+      summary.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
+      if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
+        const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
+        summary.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
+      }
+      if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
+        const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
+        summary.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
+      }
+    }
     if (analysis.readinessSnapshot?.monitorCount > 0) summary.push(`レディネス${analysis.readinessSnapshot.monitorCount}項目`);
     if (analysis.supportedPidMatrix?.supportedCount > 0) summary.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
     if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
