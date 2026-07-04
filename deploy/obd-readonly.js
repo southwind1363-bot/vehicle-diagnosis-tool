@@ -3163,7 +3163,8 @@
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
       warnings.push("raw_pid_values_need_conversion");
     }
-    const protocol = dtcSnapshot.protocol
+    const protocol = sessionInput.protocol
+      || dtcSnapshot.protocol
       || livePidSnapshot.protocol
       || freezeFrameSnapshot.protocol
       || ecuInfoSnapshot.protocol

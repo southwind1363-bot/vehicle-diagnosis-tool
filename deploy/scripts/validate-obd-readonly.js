@@ -1693,11 +1693,19 @@ const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
 });
 check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
 check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
+const scanSessionNestedOuterOverride = obd.buildDiagnosticScanSession({
+  protocol: "ISO9141-2",
+  vehicle_profile: { maker: "Toyota", model: "Allion" },
+  scan_session: bridgeExportPayload.session,
+  session_id: "shop-test-scan-session-outer-override"
+});
+check(scanSessionNestedOuterOverride.protocol === "ISO9141-2", "Diagnostic scan session did not let outer protocol override scan_session alias input");
+check(scanSessionNestedOuterOverride.vehicleProfile?.model === "Allion", "Diagnostic scan session did not let outer vehicle_profile override scan_session alias input");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 441");
+  console.log("OBD read-only safety checks: 443");
   console.log("Errors: 0");
 }
