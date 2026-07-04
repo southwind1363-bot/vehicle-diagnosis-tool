@@ -1372,7 +1372,9 @@
       || onboardMonitorSnapshot.protocol
       || ecuResponseSummary.protocol
       || null;
-    const capturedAt = dtcSnapshot.capturedAt
+    const capturedAt = parts.capturedAt
+      || parts.captured_at
+      || dtcSnapshot.capturedAt
       || livePidSnapshot.capturedAt
       || freezeFrameSnapshot.capturedAt
       || readinessSnapshot.capturedAt
@@ -3171,7 +3173,9 @@
       || onboardMonitorSnapshot.protocol
       || ecuResponseSummary.protocol
       || null;
-    const capturedAt = dtcSnapshot.capturedAt
+    const capturedAt = sessionInput.captured_at
+      || sessionInput.capturedAt
+      || dtcSnapshot.capturedAt
       || livePidSnapshot.capturedAt
       || freezeFrameSnapshot.capturedAt
       || readinessSnapshot.capturedAt
