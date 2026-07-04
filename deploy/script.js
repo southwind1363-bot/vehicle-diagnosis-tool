@@ -4993,6 +4993,10 @@ function analyzeObdScannerImport() {
     const summary = [`統合入力で${analysis.monitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
     if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
+    if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
+      const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
+      summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
+    }
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
     const summary = ["計測値は0項目です。"];
@@ -5008,6 +5012,10 @@ function analyzeObdScannerImport() {
     }
     if (analysis.ecuInfoSnapshot?.itemCount > 0) summary.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
     if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) summary.push(`フリーズフレーム${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
+    if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
+      const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
+      summary.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
+    }
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   }
 }
