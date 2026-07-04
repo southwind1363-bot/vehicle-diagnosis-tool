@@ -1330,7 +1330,7 @@ function syncVehicleInput() {
 
 function selectedVehicleYear() {
   const year = selectedVehicleValue(vehicleYearSelect) || vehicleYearManualInput.value.trim();
-  return year ? `${year}年式` : "";
+  return year ? `${formatJapaneseEraYear(year)}年式` : "";
 }
 
 function selectedVehicleValue(select) {
@@ -1447,7 +1447,7 @@ function renderObdVehicleEngineOptions() {
 
 function selectedObdVehicleYear() {
   const year = selectedVehicleValue(obdVehicleYearSelect) || obdVehicleYearManualInput.value.trim();
-  return year ? `${year}年式` : "";
+  return year ? `${formatJapaneseEraYear(year)}年式` : "";
 }
 
 function buildSelectedObdVehicleProfile() {
