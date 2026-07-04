@@ -1364,7 +1364,8 @@
     if (ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
-    const protocol = dtcSnapshot.protocol
+    const protocol = parts.protocol
+      || dtcSnapshot.protocol
       || livePidSnapshot.protocol
       || freezeFrameSnapshot.protocol
       || ecuInfoSnapshot.protocol
@@ -1450,12 +1451,12 @@
     return {
       ...nested,
       ...parts,
-      source: nested.source || parts.source || "local_bridge",
-      startedAt: nested.startedAt || nested.started_at || parts.startedAt || parts.started_at || null,
-      endedAt: nested.endedAt || nested.ended_at || parts.endedAt || parts.ended_at || null,
-      capturedAt: nested.capturedAt || nested.captured_at || parts.capturedAt || parts.captured_at || null,
-      protocol: nested.protocol || parts.protocol || null,
-      vehicleProfile: nested.vehicleProfile || nested.vehicle_profile || parts.vehicleProfile || parts.vehicle_profile || null
+      source: parts.source || nested.source || "local_bridge",
+      startedAt: parts.startedAt || parts.started_at || nested.startedAt || nested.started_at || null,
+      endedAt: parts.endedAt || parts.ended_at || nested.endedAt || nested.ended_at || null,
+      capturedAt: parts.capturedAt || parts.captured_at || nested.capturedAt || nested.captured_at || null,
+      protocol: parts.protocol || nested.protocol || null,
+      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null
     };
   }
 
