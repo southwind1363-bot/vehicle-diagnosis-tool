@@ -2691,6 +2691,7 @@
     const sessionInput = getDiagnosticSessionInput(options);
     const classified = classifyObdResponseLines(value);
     const toolHints = detectScannerToolHints(value);
+    const textDtcSnapshot = extractTextDtcSnapshot(value);
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
@@ -2709,9 +2710,11 @@
       ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: sessionInput.protocol || null },
       ecus: ecuResponses
     });
+    const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);
 
     return {
       ...session,
+      dtcSnapshot: mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot,
       source: "obd_text_import",
       toolHints,
       importClassification: {
@@ -2738,6 +2741,27 @@
 
   function mergeUniqueStrings(...groups) {
     return [...new Set(groups.flatMap((group) => Array.isArray(group) ? group : []).filter(Boolean))];
+  }
+
+  function extractTextDtcSnapshot(value) {
+    const lines = String(value || "").split(/\r?\n/);
+    const rows = [];
+    let currentStatus = "stored";
+    lines.forEach((line) => {
+      const text = String(line || "").trim();
+      if (!text) return;
+      const normalized = text.toLowerCase();
+      if (/\bpending\b/.test(normalized)) currentStatus = "pending";
+      else if (/\bpermanent\b/.test(normalized)) currentStatus = "permanent";
+      else if (/\bcurrent\b|\bstored\b|\bconfirmed\b|\bhistory\b|\bdtc(?:s)?\b|\bcodes?\b/.test(normalized)) currentStatus = "stored";
+      const codes = extractDtcCodes(text);
+      if (!codes.length) return;
+      codes.forEach((code) => rows.push({ code, status: currentStatus }));
+    });
+    return normalizeDtcSnapshot({
+      source: "obd_text_status_headings",
+      dtcs: rows
+    });
   }
 
   function detectScannerToolHints(value) {

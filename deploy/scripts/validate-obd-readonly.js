@@ -1526,6 +1526,17 @@ check(techstreamTextScanSession.toolHints.join(",") === "Techstream,J2534", "OBD
 check(techstreamTextScanSession.importClassification.toolHints.join(",") === "Techstream,J2534", "OBD text scan session import classification did not retain tool hints");
 const oemScannerTextScanSession = obd.buildScanSessionFromObdText(["GTS", "CONSULT-III", "Honda Diagnostic System", "Integrated Diagnostic System", "7E8 04 43 01 71"].join("\n"), { session_id: "oem-tool-log" });
 check(oemScannerTextScanSession.toolHints.join(",") === "Techstream,CONSULT,HDS,IDS", "OBD text scan session did not retain expanded OEM scanner tool hints");
+const headingOnlyDtcSession = obd.buildScanSessionFromObdText([
+  "Current DTCs",
+  "P0171 P0300",
+  "Pending Codes",
+  "P0420",
+  "Permanent DTC",
+  "P0440"
+].join("\n"), { session_id: "heading-only-dtcs" });
+check(headingOnlyDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored"), "OBD text scan session did not infer stored DTC status from headings");
+check(headingOnlyDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "P0420" && item.status === "pending"), "OBD text scan session did not infer pending DTC status from headings");
+check(headingOnlyDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "P0440" && item.status === "permanent"), "OBD text scan session did not infer permanent DTC status from headings");
 const textScanSessionAliasOptions = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-alias-options",
   started_at: "2026-06-28T00:14:00Z",
