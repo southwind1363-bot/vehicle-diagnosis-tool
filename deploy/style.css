@@ -1344,6 +1344,18 @@ body.dark .flow-node-measure .flow-step {
   margin-top: 18px;
 }
 
+.obd-import-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.obd-import-hint-oem {
+  border-left-color: var(--manual);
+  background: var(--manual-bg);
+}
+
 .obd-code-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

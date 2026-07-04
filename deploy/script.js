@@ -403,6 +403,7 @@ const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdSampleButton = document.querySelector("#obdSampleButton");
 const obdImportClearButton = document.querySelector("#obdImportClearButton");
 const obdImportStatus = document.querySelector("#obdImportStatus");
+const obdImportToolHints = document.querySelector("#obdImportToolHints");
 const obdDetectedCodes = document.querySelector("#obdDetectedCodes");
 const obdMonitorStatus = document.querySelector("#obdMonitorStatus");
 const obdMonitorCount = document.querySelector("#obdMonitorCount");
@@ -4057,6 +4058,7 @@ function appendObdDeveloperLog(text) {
 }
 
 function renderObdDeveloperReadout(session) {
+  renderObdImportToolHints();
   const monitorValues = session.livePidSnapshot?.monitorValues || [];
   const codes = session.dtcSnapshot?.dtcs?.map((item) => item.code).filter(Boolean) || [];
   obdScannerText.value = obdDevSession.lastRawText;
@@ -4071,6 +4073,7 @@ function renderObdDeveloperReadout(session) {
 }
 
 function renderObdBridgeReadout(parts = {}) {
+  renderObdImportToolHints();
   const previousSession = obdDevSession.lastSession || {};
   const currentDtcSnapshot = parts.dtcResponse
     ? window.ObdReadOnly.normalizeBridgeDtcSnapshot(parts.dtcResponse)
@@ -4875,6 +4878,7 @@ function analyzeObdScannerImport() {
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
+  renderObdImportToolHints(analysis.toolHints);
 
   if (!hasScannerText && !bridgeImport) {
     obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
@@ -5113,9 +5117,35 @@ function clearObdScannerImport() {
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
+  renderObdImportToolHints();
   obdImportStatus.textContent = "まだ解析していません。";
   obdMonitorStatus.textContent = "読取後にライブデータを表示します。";
   obdMonitorCount.textContent = "0項目";
+}
+
+function renderObdImportToolHints(toolHints = []) {
+  if (!obdImportToolHints) return;
+  obdImportToolHints.innerHTML = "";
+  const hints = Array.isArray(toolHints) ? toolHints.filter(Boolean) : [];
+  if (!hints.length) {
+    obdImportToolHints.hidden = true;
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  hints.forEach((hint) => {
+    const badge = document.createElement("span");
+    badge.className = "obd-operation-state";
+    badge.textContent = hint;
+    fragment.appendChild(badge);
+  });
+  if (hints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
+    const oemBadge = document.createElement("span");
+    oemBadge.className = "obd-operation-state obd-import-hint-oem";
+    oemBadge.textContent = "メーカー固有候補は未確認";
+    fragment.appendChild(oemBadge);
+  }
+  obdImportToolHints.appendChild(fragment);
+  obdImportToolHints.hidden = false;
 }
 
 function handleDetectedDtcClick(event) {
