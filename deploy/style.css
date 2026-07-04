@@ -1040,6 +1040,33 @@ body.dark .flow-node-measure .flow-step {
   margin: 18px 0;
 }
 
+.obd-stage-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.obd-stage-tab {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.obd-stage-tab.is-active {
+  border-color: var(--accent);
+  background: var(--panel-subtle);
+  color: var(--ink);
+}
+
+.obd-stage-view[hidden] {
+  display: none;
+}
+
 .obd-operation-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1523,6 +1550,11 @@ body.dark .flow-node-measure .flow-step {
   line-height: 1.6;
 }
 
+#obdStageDetailsView > .obd-import-result,
+#obdStageDetailsView > .obd-monitor-result {
+  display: none;
+}
+
 .obd-policy-list {
   line-height: 1.8;
 }
@@ -1710,6 +1742,7 @@ body.dark .flow-node-measure .flow-step {
   }
 
   .obd-operation-grid,
+  .obd-stage-tabs,
   .obd-profile-strip,
   .obd-session-details,
   .obd-request-grid,
@@ -1799,6 +1832,7 @@ body.dark .flow-node-measure .flow-step {
   }
 
   .obd-operation-grid,
+  .obd-stage-tabs,
   .obd-profile-strip,
   .obd-session-details,
   .obd-request-grid,
@@ -1813,6 +1847,10 @@ body.dark .flow-node-measure .flow-step {
   .obd-connection-bar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .obd-stage-tabs {
+    grid-template-columns: 1fr;
   }
 
   .obd-code-list,

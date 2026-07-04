@@ -375,6 +375,13 @@ const clearStorageButton = document.querySelector("#clearStorageButton");
 const opsResultList = document.querySelector("#opsResultList");
 const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
+const obdStagePanel = document.querySelector("#obdStagePanel");
+const obdStageBadge = document.querySelector("#obdStageBadge");
+const obdStageStatus = document.querySelector("#obdStageStatus");
+const obdStageTabs = document.querySelectorAll("[data-obd-stage]");
+const obdStageSetupView = document.querySelector("#obdStageSetupView");
+const obdStageResultsView = document.querySelector("#obdStageResultsView");
+const obdStageDetailsView = document.querySelector("#obdStageDetailsView");
 const obdSetupPanel = document.querySelector("#obdSetupPanel");
 const obdAccessProtected = document.querySelector("#obdAccessProtected");
 const obdAccessPasswordInput = document.querySelector("#obdAccessPasswordInput");
@@ -450,6 +457,7 @@ let copyToastTimer = null;
 let activeResultView = "flow";
 let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled";
 let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
+let activeObdStage = "setup";
 const obdDevSession = {
   port: null,
   reader: null,
@@ -490,6 +498,10 @@ form.addEventListener("submit", (event) => {
 
 resultViewButtons.forEach((button) => {
   button.addEventListener("click", () => setResultView(button.dataset.resultView));
+});
+
+obdStageTabs.forEach((button) => {
+  button.addEventListener("click", () => setObdStage(button.dataset.obdStage || "setup"));
 });
 
 aiButton.addEventListener("click", sendToExternalGpt);
@@ -2819,6 +2831,62 @@ function initializeObdReadOnlyPanel() {
     window.ObdReadOnly.getLocalBridgeResponseSchemas?.() || []
   );
   renderObdSafetyInterlock(window.ObdReadOnly.getVehicleDamagePreventionInterlock?.());
+  renderObdStageView();
+}
+
+function getObdAutoStage() {
+  const hasReadout = Boolean(
+    obdDevSession.lastSession?.dtcSnapshot?.dtcs?.length
+    || obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.length
+    || obdDevSession.lastSession?.freezeFrameSnapshot?.monitorValues?.length
+    || obdDevSession.lastSession?.ecuInfoSnapshot?.itemCount
+    || obdDevSession.lastSession?.readinessSnapshot?.monitorCount
+    || obdDevSession.lastSession?.onboardMonitorSnapshot?.testCount
+  );
+  if (obdDevModeUnlocked) return "details";
+  if (hasReadout) return "results";
+  return "setup";
+}
+
+function renderObdStageView(preferredStage = activeObdStage) {
+  if (!obdStagePanel) return;
+  const unlocked = obdAccessUnlocked === true;
+  obdStagePanel.hidden = !unlocked;
+  if (!unlocked) return;
+  const allowedStages = new Set(["setup", "results", "details"]);
+  const nextStage = allowedStages.has(preferredStage) ? preferredStage : getObdAutoStage();
+  activeObdStage = nextStage;
+
+  const stageMeta = {
+    setup: {
+      badge: "車両選択 / 接続",
+      status: "車両選択、接続準備、プレビュー確認を先に進めます。"
+    },
+    results: {
+      badge: "読取結果",
+      status: "DTC、フリーズフレーム、ライブデータをまとめて確認する段階です。"
+    },
+    details: {
+      badge: "詳細",
+      status: "ブリッジ契約、詳細読取、検証情報を確認する段階です。"
+    }
+  };
+  const meta = stageMeta[nextStage] || stageMeta.setup;
+  obdStageBadge.textContent = meta.badge;
+  obdStageStatus.textContent = meta.status;
+
+  obdStageTabs.forEach((button) => {
+    const active = button.dataset.obdStage === nextStage;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  if (obdStageSetupView) obdStageSetupView.hidden = nextStage !== "setup";
+  if (obdStageResultsView) obdStageResultsView.hidden = nextStage !== "results";
+  if (obdStageDetailsView) obdStageDetailsView.hidden = nextStage !== "details";
+}
+
+function setObdStage(stage = "setup") {
+  renderObdStageView(stage);
 }
 
 async function hashObdAccessPassword(value) {
@@ -2839,10 +2907,12 @@ function renderObdAccessGate(capability = window.ObdReadOnly?.getCapability?.())
 
   if (!unlocked) {
     obdAccessStatus.textContent = getObdAccessStatusMessage(false, capability);
+    renderObdStageView("setup");
     return;
   }
 
   obdAccessStatus.textContent = getObdAccessStatusMessage(true, capability);
+  renderObdStageView(getObdAutoStage());
 }
 
 function normalizeProgressPercent(value) {
@@ -3532,6 +3602,7 @@ function loadObdInterfacePreviewSample(interfaceId) {
   obdDevStatus.textContent = preview.statusText;
   renderObdDeveloperGate();
   renderObdDeveloperSessionSummary(preview.session);
+  renderObdStageView("setup");
 }
 
 function startGeneralBridgeCheck() {
@@ -3735,6 +3806,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   renderObdPreviewButtons();
   renderObdWorkflowGuide(capability);
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
+  renderObdStageView(getObdAutoStage());
 }
 
 async function unlockObdAccess() {
@@ -4162,6 +4234,7 @@ function renderObdDeveloperReadout(session) {
     obdImportStatus.textContent = `${codes.length}件の車両DTCを読取りました。`;
   }
   renderObdDeveloperSessionSummary(session);
+  renderObdStageView("results");
 }
 
 function renderObdBridgeReadout(parts = {}) {
@@ -4283,6 +4356,7 @@ function renderObdBridgeReadout(parts = {}) {
       : "ブリッジライブ値応答を受け取りました。項目は0件です。";
   }
   renderObdDeveloperSessionSummary(session);
+  renderObdStageView("results");
 }
 
 function formatObdBridgeDtcStatusSummary(dtcs = []) {

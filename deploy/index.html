@@ -447,6 +447,21 @@
         </div>
 
         <p id="obdCapabilityText" class="data-status">車両読取機能の対応状況を確認しています。</p>
+        <section id="obdStagePanel" class="obd-operation-panel" aria-labelledby="obdStageTitle" hidden>
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">SCAN NAVIGATION</p>
+              <h3 id="obdStageTitle">診断機画面</h3>
+            </div>
+            <span id="obdStageBadge" class="confidence-badge">車両選択 / 接続</span>
+          </div>
+          <div id="obdStageTabs" class="obd-stage-tabs" role="tablist" aria-label="OBD読取画面">
+            <button class="obd-stage-tab is-active" type="button" data-obd-stage="setup" aria-pressed="true">1. 車両選択 / 接続</button>
+            <button class="obd-stage-tab" type="button" data-obd-stage="results" aria-pressed="false">2. 読取結果</button>
+            <button class="obd-stage-tab" type="button" data-obd-stage="details" aria-pressed="false">3. 詳細</button>
+          </div>
+          <p id="obdStageStatus" class="data-status">車両選択と接続準備を先に進めます。</p>
+        </section>
         <section id="obdSetupPanel" class="obd-operation-panel" aria-labelledby="obdSetupTitle" hidden>
           <div class="obd-result-heading">
             <div>
@@ -539,6 +554,7 @@
         </section>
 
         <div id="obdAccessProtected" hidden>
+        <div id="obdStageSetupView" class="obd-stage-view">
 
         <section class="obd-operation-panel" aria-labelledby="obdProgressTitle">
           <div class="obd-result-heading">
@@ -616,6 +632,38 @@
           <p id="obdPreviewStatus" class="data-status">今見える項目を先に確認し、読取は自動判定または手動選択した方式から開始します。</p>
           <div id="obdPreviewGuide" class="obd-profile-strip"></div>
         </section>
+
+        </div>
+
+        <div id="obdStageResultsView" class="obd-stage-view" hidden>
+
+        <section class="result-block obd-import-result">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">VEHICLE DTC</p>
+              <h3>車両DTC / フリーズフレーム</h3>
+            </div>
+            <span class="confidence-badge">読取結果</span>
+          </div>
+          <p class="empty-state">車両を読取すると、故障コードと関連情報をここにまとめて表示します。</p>
+        </section>
+
+        <section class="result-block obd-monitor-result">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">REAL-TIME LIVE DATA</p>
+              <h3>ライブデータモニター</h3>
+            </div>
+            <span class="confidence-badge">0項目</span>
+          </div>
+          <p class="empty-state">車両未読取です。読取後に対応PIDの値を更新します。</p>
+          <div class="obd-monitor-grid"></div>
+          <p class="obd-monitor-caution">表示値だけで確定せず、条件とメーカー資料を並べて確認してください。</p>
+        </section>
+
+        </div>
+
+        <div id="obdStageDetailsView" class="obd-stage-view" hidden>
 
         <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdDevGateTitle">
           <div class="obd-result-heading">
@@ -765,6 +813,7 @@
             <li>初期段階は標準ライブデータの読取だけを先行し、消去、学習、作動要求、書込みは確認操作、前提条件、ログ、失敗時復旧を揃えてから有効化する</li>
           </ul>
         </details>
+        </div>
         </div>
       </section>
     </section>
