@@ -1604,6 +1604,7 @@
       rawPidUndecodedCount: (livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0),
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
+    const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });
     const { protocol, capturedAt } = resolveSessionTemporalContext({
       input: parts,
       dtcSnapshot,
@@ -1637,8 +1638,8 @@
       endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt,
       protocol,
-      vehicleProfile: metadataOverrides.vehicleProfile,
-      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
+      vehicleProfile: resolvedMetadata.vehicleProfile,
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
@@ -1652,7 +1653,7 @@
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
-      toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
+      toolHints: resolvedMetadata.toolHints,
       freezeFrameSnapshot,
       warnings,
       nextReadoutCandidates: resolveNextReadoutCandidates({
@@ -1660,11 +1661,8 @@
         readoutCoverage,
         vehicleApplicability: metadataOverrides.vehicleApplicability || {}
       }),
-      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
-        || metadataOverrides.hadSensitiveIdentifier === true,
-      sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
-        ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
-        : 0,
+      hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
+      sourceLength: resolvedMetadata.sourceLength,
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
@@ -1801,14 +1799,15 @@
       hasBridgeInfrastructureContext,
       readoutCoverage: derivedReadoutCoverage
     });
+    const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });
     return {
       source: parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,
       endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt: parts.capturedAt || parts.captured_at || null,
       protocol: parts.protocol || null,
-      vehicleProfile: metadataOverrides.vehicleProfile,
-      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
+      vehicleProfile: resolvedMetadata.vehicleProfile,
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
@@ -1831,7 +1830,7 @@
       importClassification: importClassificationInput && typeof importClassificationInput === "object"
         ? { ...importClassificationInput }
         : null,
-      toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
+      toolHints: resolvedMetadata.toolHints,
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
       nextReadoutCandidates: normalizeNextReadoutCandidates(
         Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
@@ -1841,11 +1840,8 @@
             metadataOverrides.vehicleApplicability || {}
           )
       ),
-      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
-        || metadataOverrides.hadSensitiveIdentifier === true,
-      sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
-        ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
-        : 0,
+      hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
+      sourceLength: resolvedMetadata.sourceLength,
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
@@ -2010,6 +2006,22 @@
     if (liveDataWarning && hasLiveData) warnings.push(liveDataWarning);
     if (rawPidUndecodedCount > 0) warnings.push("raw_pid_values_need_conversion");
     appendVehicleApplicabilityWarnings(warnings, vehicleApplicability || {});
+  }
+
+  function buildResolvedSessionMetadata({
+    metadataOverrides = {},
+    ecuInfoSnapshot = {}
+  } = {}) {
+    return {
+      vehicleProfile: metadataOverrides.vehicleProfile,
+      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
+      toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
+      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
+        || metadataOverrides.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
+        ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
+        : 0
+    };
   }
 
   function mergeNestedSessionMetadata(base = {}, nested = {}) {
@@ -4171,6 +4183,7 @@
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
+    const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });
     const { protocol, capturedAt } = resolveSessionTemporalContext({
       input: sessionInput,
       dtcSnapshot,
@@ -4208,8 +4221,8 @@
       endedAt: sessionInput.ended_at || sessionInput.endedAt || null,
       capturedAt,
       protocol,
-      vehicleProfile: metadataOverrides.vehicleProfile,
-      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
+      vehicleProfile: resolvedMetadata.vehicleProfile,
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
       connectionStatus,
       vciDevices: vciList.devices || [],
       adapterIdentity,
@@ -4234,13 +4247,10 @@
       importClassification: importClassification && typeof importClassification === "object"
         ? { ...importClassification }
         : null,
-      toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
+      toolHints: resolvedMetadata.toolHints,
       warnings: mergeUniqueStrings(warnings, explicitWarnings),
-      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
-        || metadataOverrides.hadSensitiveIdentifier === true,
-      sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
-        ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
-        : 0,
+      hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
+      sourceLength: resolvedMetadata.sourceLength,
       retainedRawText: false,
       retainedRawFrames: false,
       wouldTransmit: false,
