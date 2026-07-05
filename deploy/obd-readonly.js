@@ -1528,6 +1528,13 @@
           && dtcSnapshot.codes.length > 0
         ) {
           reason = "判定状態確認のため再確認候補";
+        } else if (
+          item.id === "supported_pid_matrix"
+          && applicability.status !== "partial"
+          && applicability.status !== "manual"
+          && applicability.status !== "unlisted"
+        ) {
+          reason = "対応PID確認のため再確認候補";
         }
         return {
           id: item.id || "",
