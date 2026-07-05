@@ -1909,6 +1909,27 @@ const mergedDiagnosticInputBridgeApplicabilityOnly = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputBridgeApplicabilityOnly.source === "local_bridge", "Combined diagnostic inputs did not treat vehicle_applicability-only bridge_import as bridge input");
 check(mergedDiagnosticInputBridgeApplicabilityOnly.vehicleProfile?.model === "Prius", "Combined diagnostic inputs did not preserve vehicle_profile from vehicle_applicability-only bridge_import");
 check(mergedDiagnosticInputBridgeApplicabilityOnly.vehicleApplicability?.status === "matched", "Combined diagnostic inputs did not normalize vehicle_applicability-only bridge_import metadata");
+const mergedDiagnosticInputBridgeInfrastructureOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    connection_status: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+    },
+    vci_devices: [{ id: "meta-vci", name: "Metadata VCI", connected: true }],
+    adapter_identity: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Metadata Adapter", family: "elm327", version: "5.0" }
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeInfrastructureOnly.source === "local_bridge", "Combined diagnostic inputs did not treat infrastructure-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeInfrastructureOnly.connectionStatus?.vehicleConnected === false, "Combined diagnostic inputs did not preserve connection_status from infrastructure-only bridge_import");
+check(mergedDiagnosticInputBridgeInfrastructureOnly.vciDevices[0]?.id === "meta-vci", "Combined diagnostic inputs did not preserve vci_devices from infrastructure-only bridge_import");
+check(mergedDiagnosticInputBridgeInfrastructureOnly.adapterIdentity?.adapterName === "Metadata Adapter", "Combined diagnostic inputs did not preserve adapter_identity from infrastructure-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {

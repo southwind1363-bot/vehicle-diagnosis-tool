@@ -1701,6 +1701,14 @@
       || parts.vehicle_profile
       || parts.vehicleApplicability
       || parts.vehicle_applicability
+      || parts.connectionStatus
+      || parts.connection_status
+      || parts.adapterIdentity
+      || parts.adapter_identity
+      || Array.isArray(parts.vciDevices)
+      || Array.isArray(parts.vci_devices)
+      || parts.vciList
+      || parts.vci_list
       ||
       Array.isArray(parts.nextReadoutCandidates)
       || Array.isArray(parts.next_readout_candidates)
