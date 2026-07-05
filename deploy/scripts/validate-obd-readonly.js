@@ -1407,6 +1407,11 @@ const outerOverrideReadinessSnapshot = {
     ? bridgeReadinessSnapshot.monitors.map((item) => ({ ...item, complete: true, status: "complete" }))
     : []
 };
+const outerOverrideSupportedPidSnapshot = {
+  ...bridgeSupportedPidSnapshot,
+  supportedPids: ["0C", "0D"],
+  supportedCount: 2
+};
 const bridgeExportNestedOuterOverride = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:10:15Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Roomy" },
@@ -1706,6 +1711,9 @@ const mergedDiagnosticInputNestedOuterOverride = obd.mergeDiagnosticInputs({
     },
     readout_coverage: legacyReadoutCoverage,
     next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
+    freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
+    readiness_snapshot: outerOverrideReadinessSnapshot,
+    supported_pid_matrix: outerOverrideSupportedPidSnapshot,
     ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
     session: bridgeExportPayload.session
   }
@@ -1717,6 +1725,9 @@ check(mergedDiagnosticInputNestedOuterOverride.vehicleApplicability?.status === 
 check(mergedDiagnosticInputNestedOuterOverride.connectionStatus?.vehicleConnected === false, "Combined diagnostic inputs did not let outer connection_status override nested session alias input");
 check(mergedDiagnosticInputNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Combined diagnostic inputs did not let outer readout_coverage override nested session alias input");
 check(mergedDiagnosticInputNestedOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Combined diagnostic inputs did not let outer next_readout_candidates override nested session alias input");
+check(mergedDiagnosticInputNestedOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Combined diagnostic inputs did not let outer freeze_frame_snapshot override nested session alias input");
+check(mergedDiagnosticInputNestedOuterOverride.readinessSnapshot?.incompleteCount === 0, "Combined diagnostic inputs did not let outer readiness_snapshot override nested session alias input");
+check(mergedDiagnosticInputNestedOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Combined diagnostic inputs did not let outer supported_pid_matrix override nested session alias input");
 check(mergedDiagnosticInputNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Combined diagnostic inputs did not let outer ecu_info_snapshot override nested session alias input");
 const mergedDiagnosticInputExportNestedOuterOverride = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
@@ -1735,6 +1746,9 @@ const mergedDiagnosticInputExportNestedOuterOverride = obd.mergeDiagnosticInputs
     },
     readout_coverage: legacyReadoutCoverage,
     next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
+    freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
+    readiness_snapshot: outerOverrideReadinessSnapshot,
+    supported_pid_matrix: outerOverrideSupportedPidSnapshot,
     ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
     session: bridgeExportPayload.session
   }
@@ -1746,6 +1760,9 @@ check(mergedDiagnosticInputExportNestedOuterOverride.vehicleApplicability?.statu
 check(mergedDiagnosticInputExportNestedOuterOverride.connectionStatus?.vehicleConnected === false, "Combined diagnostic inputs did not let outer connection_status override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Combined diagnostic inputs did not let outer readout_coverage override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Combined diagnostic inputs did not let outer next_readout_candidates override nested bridge_export_payload session input");
+check(mergedDiagnosticInputExportNestedOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Combined diagnostic inputs did not let outer freeze_frame_snapshot override nested bridge_export_payload session input");
+check(mergedDiagnosticInputExportNestedOuterOverride.readinessSnapshot?.incompleteCount === 0, "Combined diagnostic inputs did not let outer readiness_snapshot override nested bridge_export_payload session input");
+check(mergedDiagnosticInputExportNestedOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Combined diagnostic inputs did not let outer supported_pid_matrix override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Combined diagnostic inputs did not let outer ecu_info_snapshot override nested bridge_export_payload session input");
 const mergedDiagnosticInputSummaryOnlyMonitorCounts = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportSummaryOnlyRawWarning
@@ -1784,6 +1801,9 @@ check(scanSessionFromMergedDiagnosticInput.vehicleProfile?.model === "Outer Port
 check(scanSessionFromMergedDiagnosticInput.vehicleApplicability?.status === "partial", "Diagnostic scan session did not preserve vehicle_applicability from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.connectionStatus?.vehicleConnected === false, "Diagnostic scan session did not preserve connection_status override from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not preserve readout_coverage from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.freezeFrameSnapshot?.triggerDtc === "P0420", "Diagnostic scan session did not preserve freeze_frame_snapshot override from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not preserve readiness_snapshot override from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not preserve supported_pid_matrix override from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not preserve ecu_info_snapshot from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.nextReadoutCandidates?.[0]?.id === mergedDiagnosticInputExportNestedOuterOverride.nextReadoutCandidates?.[0]?.id, "Diagnostic scan session did not preserve next_readout_candidates from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not preserve warnings from merged diagnostic input");
