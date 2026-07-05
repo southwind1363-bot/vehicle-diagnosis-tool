@@ -3453,6 +3453,7 @@
     const ecuResponseSummaryInput = sessionInput.ecuResponseSummary || sessionInput.ecu_response_summary || sessionInput.ecus || sessionInput.ecu_responses || {};
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
+    const readoutCoverageInput = sessionInput.readoutCoverage || sessionInput.readout_coverage || sessionInput.readoutCoverageResponse || sessionInput.readout_coverage_response || null;
     const dtcSnapshot = dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput);
     const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
@@ -3471,11 +3472,14 @@
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
     const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
-    const hasBridgeInfrastructureContext = Object.keys(connectionStatusInput).length > 0
-      || Object.keys(adapterIdentityInput).length > 0
-      || (Array.isArray(vciListInput) && vciListInput.length > 0)
-      || Boolean(vciListInput?.devices?.length)
-      || Boolean(sessionInput.bridgeSession || sessionInput.bridge_session);
+    const explicitIncludeInfrastructure = typeof readoutCoverageInput?.includeInfrastructure === "boolean" ? readoutCoverageInput.includeInfrastructure : null;
+    const hasBridgeInfrastructureContext = explicitIncludeInfrastructure !== null
+      ? explicitIncludeInfrastructure
+      : Object.keys(connectionStatusInput).length > 0
+        || Object.keys(adapterIdentityInput).length > 0
+        || (Array.isArray(vciListInput) && vciListInput.length > 0)
+        || Boolean(vciListInput?.devices?.length)
+        || Boolean(sessionInput.bridgeSession || sessionInput.bridge_session);
     const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
     const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
     const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
@@ -3509,7 +3513,7 @@
       || onboardMonitorSnapshot.capturedAt
       || ecuResponseSummary.capturedAt
       || null;
-    const readoutCoverage = buildReadoutCoverageSnapshot({
+    const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: vciList.devices,
@@ -3522,6 +3526,7 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
+    const readoutCoverage = readoutCoverageInput?.schemaVersion ? readoutCoverageInput : derivedReadoutCoverage;
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
 

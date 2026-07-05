@@ -2058,6 +2058,18 @@ const scanSessionBridgeSessionSnakeAlias = obd.buildDiagnosticScanSession({
 });
 check(scanSessionBridgeSessionSnakeAlias.monitorValueSummary.totalCount >= bridgePidSnapshot.monitorValues.length, "Diagnostic scan session did not accept bridge_session alias input");
 check(scanSessionBridgeSessionSnakeAlias.dtcSnapshot.codes.join(",") === "P0171,P0300", "Diagnostic scan session did not carry DTCs from bridge_session alias input");
+const scanSessionNonInfrastructureBridgeImport = obd.buildDiagnosticScanSession({
+  scan_session: bridgeDiagnosticImportNonInfrastructureAliases,
+  session_id: "shop-test-non-infra-import"
+});
+check(scanSessionNonInfrastructureBridgeImport.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve non-infrastructure readoutCoverage from bridge diagnostic import");
+check(!scanSessionNonInfrastructureBridgeImport.warnings.includes("bridge_readout_incomplete") && !scanSessionNonInfrastructureBridgeImport.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings for non-infrastructure bridge diagnostic import");
+const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
+  bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
+  session_id: "shop-test-non-infra-bridge-session"
+});
+check(scanSessionNonInfrastructureBridgeSession.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve non-infrastructure readoutCoverage from bridge session input");
+check(!scanSessionNonInfrastructureBridgeSession.warnings.includes("bridge_readout_incomplete") && !scanSessionNonInfrastructureBridgeSession.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings for non-infrastructure bridge session input");
 const scanSessionNestedOuterOverride = obd.buildDiagnosticScanSession({
   session_id: "shop-test-scan-session-outer-priority",
   protocol: "ISO9141-2",
