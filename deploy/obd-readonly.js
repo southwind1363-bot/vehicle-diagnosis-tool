@@ -4302,6 +4302,8 @@
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
+      || sessionInput.livePidResponse
+      || sessionInput.live_pid_response
       || sessionInput.livePids
       || sessionInput.live_pids
       || (Array.isArray(sessionInput.monitorValues) || Array.isArray(sessionInput.monitor_values)
@@ -4317,12 +4319,25 @@
     const freezeFrameSnapshotInput = sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || sessionInput.freezeFrame || sessionInput.freeze_frame || {};
     const readinessSnapshotInput = sessionInput.readinessSnapshot || sessionInput.readiness_snapshot || sessionInput.readinessResponse || sessionInput.readiness_response || sessionInput.readiness || {};
     const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot || sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || sessionInput.onboardMonitor || sessionInput.onboard_monitor || {};
-    const ecuResponseSummaryInput = sessionInput.ecuResponseSummary || sessionInput.ecu_response_summary || sessionInput.ecus || sessionInput.ecu_responses || {};
+    const ecuResponseSummaryInput = sessionInput.ecuResponseSummary || sessionInput.ecu_response_summary || sessionInput.ecuResponseSummaryResponse || sessionInput.ecu_response_summary_response || sessionInput.ecus || sessionInput.ecu_responses || {};
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
     const dtcSnapshot = dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput);
-    const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
+      ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
+          ? {
+            ...livePidSnapshotInput.data,
+            protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.protocol || sessionInput.protocol || null,
+            captured_at: livePidSnapshotInput.data.captured_at || livePidSnapshotInput.data.capturedAt || livePidSnapshotInput.captured_at || livePidSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
+          }
+          : livePidSnapshotInput)
+      : livePidSnapshotInput;
+    const livePidSnapshot = livePidSnapshotInput?.monitorValues
+      ? livePidSnapshotInput
+      : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
+        ? decodeLivePidResponse(livePidResponseInput)
+        : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
     const readinessSnapshot = readinessSnapshotInput?.schemaVersion ? readinessSnapshotInput : normalizeReadinessSnapshot(readinessSnapshotInput);
     const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput);
