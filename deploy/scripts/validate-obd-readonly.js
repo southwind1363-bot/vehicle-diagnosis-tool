@@ -2752,6 +2752,32 @@ check(scanSessionBridgeExportPayloadAlias.connectionStatus.vehicleConnected === 
 check(scanSessionBridgeExportPayloadAlias.vehicleProfile?.model === bridgeExportPayload.session.vehicle_profile?.model, "Diagnostic scan session did not carry vehicle_profile from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not carry warnings from bridge_export_payload alias input");
+const scanSessionBridgeDiagnosticImportOuterOverride = obd.buildDiagnosticScanSession({
+  bridge_diagnostic_import: bridgeDiagnosticImport,
+  session_id: "shop-test-bridge-import-outer-override",
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 9 }
+  }
+});
+check(scanSessionBridgeDiagnosticImportOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicle_applicability override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Diagnostic scan session did not let outer next_readout_candidates override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 9, "Diagnostic scan session did not let outer import_classification override bridge_diagnostic_import alias input");
+const scanSessionBridgeExportPayloadOuterOverride = obd.buildDiagnosticScanSession({
+  bridge_export_payload: bridgeExportPayload,
+  session_id: "shop-test-bridge-export-outer-override",
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 11 }
+  }
+});
+check(scanSessionBridgeExportPayloadOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicle_applicability override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Diagnostic scan session did not let outer next_readout_candidates override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 11, "Diagnostic scan session did not let outer import_classification override bridge_export_payload alias input");
 const scanSessionSensitiveIdentifierSnakeAlias = obd.buildDiagnosticScanSession({
   session_id: "shop-test-sensitive-identifier-snake",
   had_sensitive_identifier: true
