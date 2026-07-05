@@ -1556,11 +1556,12 @@
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
     const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
-    const hasBridgeInfrastructureContext = Object.keys(connectionStatusInput).length > 0
-      || Object.keys(adapterIdentityInput).length > 0
-      || (Array.isArray(vciListInput) && vciListInput.length > 0)
-      || Boolean(vciListInput?.devices?.length)
-      || Boolean(parts.bridgeSession || parts.bridge_session);
+    const hasBridgeInfrastructureContext = detectBridgeInfrastructureContext({
+      connectionStatusInput,
+      vciDevicesInput: vciListInput,
+      adapterIdentityInput,
+      nestedSession: parts.bridgeSession || parts.bridge_session
+    });
     const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
     const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
     const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
@@ -1748,11 +1749,12 @@
     const monitorInsights = Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
-    const hasBridgeInfrastructureContext = Object.keys(connectionStatusInput).length > 0
-      || Object.keys(adapterIdentityInput).length > 0
-      || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
-      || Boolean(vciDevicesInput?.devices?.length)
-      || Boolean(parts.bridgeSession || parts.bridge_session || parts.session);
+    const hasBridgeInfrastructureContext = detectBridgeInfrastructureContext({
+      connectionStatusInput,
+      vciDevicesInput,
+      adapterIdentityInput,
+      nestedSession: parts.bridgeSession || parts.bridge_session || parts.session
+    });
     const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
     const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
     const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
@@ -1866,6 +1868,28 @@
       if (value !== undefined) return value;
     }
     return undefined;
+  }
+
+  function detectBridgeInfrastructureContext({
+    connectionStatusInput = {},
+    vciDevicesInput = {},
+    adapterIdentityInput = {},
+    nestedSession = null,
+    readoutCoverageInput = null,
+    honorCoverageOverride = false
+  } = {}) {
+    const explicitIncludeInfrastructureValue = pickDefined(
+      readoutCoverageInput?.includeInfrastructure,
+      readoutCoverageInput?.include_infrastructure
+    );
+    if (honorCoverageOverride && typeof explicitIncludeInfrastructureValue === "boolean") {
+      return explicitIncludeInfrastructureValue;
+    }
+    return Object.keys(connectionStatusInput).length > 0
+      || Object.keys(adapterIdentityInput).length > 0
+      || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
+      || Boolean(vciDevicesInput?.devices?.length)
+      || Boolean(nestedSession);
   }
 
   function getDiagnosticSessionInput(input = {}) {
@@ -3878,15 +3902,14 @@
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
     const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
-    const explicitIncludeInfrastructureValue = pickDefined(readoutCoverageInput?.includeInfrastructure, readoutCoverageInput?.include_infrastructure);
-    const explicitIncludeInfrastructure = typeof explicitIncludeInfrastructureValue === "boolean" ? explicitIncludeInfrastructureValue : null;
-    const hasBridgeInfrastructureContext = explicitIncludeInfrastructure !== null
-      ? explicitIncludeInfrastructure
-      : Object.keys(connectionStatusInput).length > 0
-        || Object.keys(adapterIdentityInput).length > 0
-        || (Array.isArray(vciListInput) && vciListInput.length > 0)
-        || Boolean(vciListInput?.devices?.length)
-        || Boolean(sessionInput.bridgeSession || sessionInput.bridge_session);
+    const hasBridgeInfrastructureContext = detectBridgeInfrastructureContext({
+      connectionStatusInput,
+      vciDevicesInput: vciListInput,
+      adapterIdentityInput,
+      nestedSession: sessionInput.bridgeSession || sessionInput.bridge_session,
+      readoutCoverageInput,
+      honorCoverageOverride: true
+    });
     const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
     const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
     const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
