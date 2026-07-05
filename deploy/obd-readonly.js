@@ -3761,6 +3761,10 @@
         ...freezeFrameSnapshot.monitorValues
       ]),
       warnings,
+      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true || sessionInput.hadSensitiveIdentifier === true || input.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(sessionInput.sourceLength || sessionInput.source_length || input.sourceLength || input.source_length))
+        ? Math.max(0, Math.round(Number(sessionInput.sourceLength || sessionInput.source_length || input.sourceLength || input.source_length)))
+        : 0,
       retainedRawText: false,
       retainedRawFrames: false,
       wouldTransmit: false,
