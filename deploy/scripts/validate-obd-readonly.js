@@ -1564,6 +1564,19 @@ check(bridgeExportNestedSessionAliases.session.warnings.includes("freeze_frame_a
 check(bridgeExportNestedSessionAliases.session.next_readout_candidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge export did not carry next_readout_candidates from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export did not carry tool_hints from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.source_length === 128, "Bridge export did not carry source_length from nested session alias input");
+const bridgeExportNestedCamelSessionAliases = obd.buildBridgeSessionExportPayload({
+  session: {
+    ...bridgeExportPayload.session,
+    sessionId: "bridge-export-camel-nested",
+    startedAt: "2026-06-28T00:10:30Z",
+    endedAt: "2026-06-28T00:11:30Z",
+    capturedAt: "2026-06-28T00:10:45Z"
+  },
+  exportedAt: "2026-06-28T00:10:59Z"
+});
+check(bridgeExportNestedCamelSessionAliases.exported_at === "2026-06-28T00:10:59Z", "Bridge export did not accept exportedAt camelCase input for nested session alias");
+check(bridgeExportNestedCamelSessionAliases.session.started_at === "2026-06-28T00:10:30Z" && bridgeExportNestedCamelSessionAliases.session.ended_at === "2026-06-28T00:11:30Z", "Bridge export did not accept camelCase nested session timestamps");
+check(bridgeExportNestedCamelSessionAliases.session.captured_at === "2026-06-28T00:10:45Z", "Bridge export did not accept camelCase nested session capturedAt");
 const bridgeExportNestedSessionResponseAliases = obd.buildBridgeSessionExportPayload({
   session: {
     live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
@@ -1975,6 +1988,21 @@ check(mergedDiagnosticInputExportPayloadNestedResponseAliases.ecuResponseSummary
 check(mergedDiagnosticInputExportPayloadNestedResponseAliases.connectionStatus?.vehicleConnected === true, "Combined diagnostic inputs did not accept connection_status_response from bridge_export_payload nested session input");
 check(mergedDiagnosticInputExportPayloadNestedResponseAliases.vciDevices[0]?.id === "export-merge-response-vci", "Combined diagnostic inputs did not accept list_vci_response from bridge_export_payload nested session input");
 check(mergedDiagnosticInputExportPayloadNestedResponseAliases.adapterIdentity?.adapterFamily === "stn", "Combined diagnostic inputs did not accept adapter_identity_response from bridge_export_payload nested session input");
+const mergedDiagnosticInputCamelExportPayloadAlias = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridgeExportPayload: {
+    schema_version: "bridge_session_export_v1",
+    exportedAt: "2026-06-28T00:12:30Z",
+    session: {
+      ...bridgeExportPayload.session,
+      capturedAt: "2026-06-28T00:12:15Z",
+      startedAt: "2026-06-28T00:05:15Z",
+      endedAt: "2026-06-28T00:06:15Z"
+    }
+  }
+});
+check(mergedDiagnosticInputCamelExportPayloadAlias.capturedAt === "2026-06-28T00:12:15Z", "Combined diagnostic inputs did not accept camelCase bridgeExportPayload session capturedAt");
+check(mergedDiagnosticInputCamelExportPayloadAlias.startedAt === "2026-06-28T00:05:15Z" && mergedDiagnosticInputCamelExportPayloadAlias.endedAt === "2026-06-28T00:06:15Z", "Combined diagnostic inputs did not accept camelCase bridgeExportPayload session timestamps");
 const mergedDiagnosticInputExportPayloadVehicleProfile = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_export_payload: bridgeExportAliasInputs
