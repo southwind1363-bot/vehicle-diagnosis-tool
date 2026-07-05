@@ -1631,6 +1631,7 @@
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
+      toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints),
       freezeFrameSnapshot,
       warnings,
       nextReadoutCandidates: normalizeNextReadoutCandidates(
@@ -1638,6 +1639,12 @@
           ? explicitNextReadoutCandidates
           : buildNextReadoutCandidates(readoutCoverage, parts.vehicleApplicability || parts.vehicle_applicability || {})
       ),
+      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
+        || parts.hadSensitiveIdentifier === true
+        || parts.had_sensitive_identifier === true,
+      sourceLength: Number.isFinite(Number(parts.sourceLength || parts.source_length))
+        ? Math.max(0, Math.round(Number(parts.sourceLength || parts.source_length)))
+        : 0,
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
@@ -1681,7 +1688,10 @@
       vehicleApplicability: parts.vehicleApplicability || parts.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
       readoutCoverage: parts.readoutCoverage || parts.readout_coverage || nested.readoutCoverage || nested.readout_coverage || null,
       readout_coverage: parts.readout_coverage || parts.readoutCoverage || nested.readout_coverage || nested.readoutCoverage || null,
-      nextReadoutCandidates: parts.nextReadoutCandidates || parts.next_readout_candidates || nested.nextReadoutCandidates || nested.next_readout_candidates || null
+      nextReadoutCandidates: parts.nextReadoutCandidates || parts.next_readout_candidates || nested.nextReadoutCandidates || nested.next_readout_candidates || null,
+      toolHints: parts.toolHints || parts.tool_hints || nested.toolHints || nested.tool_hints || null,
+      sourceLength: parts.sourceLength || parts.source_length || nested.sourceLength || nested.source_length || null,
+      hadSensitiveIdentifier: parts.hadSensitiveIdentifier || parts.had_sensitive_identifier || nested.hadSensitiveIdentifier || nested.had_sensitive_identifier || null
     };
   }
 
@@ -1789,6 +1799,7 @@
       monitorValues,
       monitorValueSummary,
       monitorInsights,
+      toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints),
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
       nextReadoutCandidates: normalizeNextReadoutCandidates(
         Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
@@ -1798,6 +1809,12 @@
             parts.vehicleApplicability || parts.vehicle_applicability || {}
           )
       ),
+      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
+        || parts.hadSensitiveIdentifier === true
+        || parts.had_sensitive_identifier === true,
+      sourceLength: Number.isFinite(Number(parts.sourceLength || parts.source_length))
+        ? Math.max(0, Math.round(Number(parts.sourceLength || parts.source_length)))
+        : 0,
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
@@ -1872,8 +1889,11 @@
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(cloneBridgeArrayItems(summary.monitorValues)),
         monitor_insights: cloneBridgeArrayItems(summary.monitorInsights),
+        tool_hints: mergeUniqueStrings(summary.toolHints),
         warnings: [...new Set(summary.warnings || [])],
-        next_readout_candidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates)
+        next_readout_candidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
+        had_sensitive_identifier: summary.hadSensitiveIdentifier === true,
+        source_length: Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0
       },
       safety: {
         read_only_phase: true,
@@ -1914,6 +1934,7 @@
       connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
       vciDevices: cloneBridgeArrayItems(summary.vciDevices),
       adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
+      toolHints: mergeUniqueStrings(summary.toolHints),
       warnings: [...new Set(summary.warnings || [])],
       nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
       bridgeSession: {
@@ -1937,14 +1958,16 @@
         monitorValues,
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
+        toolHints: mergeUniqueStrings(summary.toolHints),
         warnings: [...new Set(summary.warnings || [])],
         nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
-        hadSensitiveIdentifier: summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+        hadSensitiveIdentifier: summary.hadSensitiveIdentifier === true || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+        sourceLength: Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0,
         exportRequired: true
       },
       exportPayload,
-      hadSensitiveIdentifier: summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
-      sourceLength: 0,
+      hadSensitiveIdentifier: summary.hadSensitiveIdentifier === true || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0,
       retainedRawText: false,
       wouldTransmit: false,
       vehicleCommandEnabled: false
@@ -2033,7 +2056,7 @@
     return {
       source,
       importType: "combined_diagnostic_inputs",
-      toolHints: mergeUniqueStrings(scannerAnalysis.toolHints),
+      toolHints: mergeUniqueStrings(scannerAnalysis.toolHints, bridgeImport?.toolHints, bridgeSession?.toolHints),
       startedAt: bridgeImport?.startedAt || bridgeSession?.startedAt || null,
       endedAt: bridgeImport?.endedAt || bridgeSession?.endedAt || null,
       protocol: bridgeImport?.protocol || bridgeSession?.protocol || null,
@@ -2066,7 +2089,11 @@
           )
       ),
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
-      sourceLength: scannerAnalysis.sourceLength,
+      sourceLength: Math.max(
+        scannerAnalysis.sourceLength || 0,
+        Number.isFinite(Number(bridgeImport?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeImport.sourceLength))) : 0,
+        Number.isFinite(Number(bridgeSession?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeSession.sourceLength))) : 0
+      ),
       retainedRawText: false,
       wouldTransmit: false,
       vehicleCommandEnabled: false

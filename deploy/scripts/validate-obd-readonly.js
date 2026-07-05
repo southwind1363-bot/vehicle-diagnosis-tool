@@ -1070,6 +1070,8 @@ check(!bridgeSummaryNonInfrastructureAliases.warnings.includes("bridge_readout_i
 check(!bridgeSummaryNonInfrastructureAliases.warnings.includes("local_bridge_disabled"), "Bridge session summary emitted local_bridge_disabled without bridge context");
 check(!bridgeSummaryNonInfrastructureAliases.warnings.includes("mode09_supported_types_unknown"), "Bridge session summary emitted mode09_supported_types_unknown without ECU info input");
 const bridgeExportPayload = obd.buildBridgeSessionExportPayload({
+  tool_hints: ["Techstream", "J2534"],
+  source_length: 128,
   connectionStatus: bridgeStatus,
   vciList: bridgeVciList,
   dtcSnapshot: bridgeDtcSnapshot,
@@ -1098,6 +1100,8 @@ check(bridgeExportPayload.session.onboard_monitor_snapshot.failedCount === 1, "B
 check(bridgeExportPayload.session.readout_coverage.progressPercent >= 80, "Bridge export did not carry readout coverage");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
+check(bridgeExportPayload.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export did not carry tool_hints");
+check(bridgeExportPayload.session.source_length === 128, "Bridge export did not carry source_length");
 check(bridgeExportPayload.safety.blocked_write_intents.includes("clear_dtc"), "ブリッジエクスポートの安全メタ情報が不足しています");
 const bridgeExportAliasInputs = obd.buildBridgeSessionExportPayload({
   started_at: "2026-06-28T00:05:00Z",
@@ -1159,6 +1163,8 @@ check(bridgeExportSummaryAliases.session.next_readout_candidates[0]?.id === "cus
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",
+  source_length: 128,
+  tool_hints: ["Techstream", "J2534"],
   vehicle_profile: { maker: "Toyota", model: "Prius" },
   vehicle_applicability: vehicleApplicabilitySample,
   connectionStatus: bridgeStatus,
@@ -1193,6 +1199,8 @@ check(bridgeDiagnosticImport.vciDevices.length === 1, "Bridge diagnostic import 
 check(bridgeDiagnosticImport.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not expose top-level adapter identity");
 check(bridgeDiagnosticImport.vehicleProfile?.model === "Prius", "Bridge diagnostic import did not expose top-level vehicle profile");
 check(bridgeDiagnosticImport.vehicleApplicability?.status === "matched", "Bridge diagnostic import did not expose top-level vehicle applicability");
+check(bridgeDiagnosticImport.toolHints.join(",") === "Techstream,J2534", "Bridge diagnostic import did not expose top-level toolHints");
+check(bridgeDiagnosticImport.sourceLength === 128, "Bridge diagnostic import did not expose top-level sourceLength");
 check(Array.isArray(bridgeDiagnosticImportApplicabilityPartial.nextReadoutCandidates) && bridgeDiagnosticImportApplicabilityPartial.nextReadoutCandidates.length > 0, "Bridge diagnostic import did not expose next readout candidates");
 check(bridgeDiagnosticImport.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not expose top-level warnings");
 check(bridgeDiagnosticImport.bridgeSession.vciDevices.length === 1, "ブリッジ診断取込へVCI表示モデルを引き継げません");
@@ -1203,6 +1211,8 @@ check(bridgeDiagnosticImport.bridgeSession.vehicleApplicability?.status === "mat
 check(bridgeDiagnosticImport.bridgeSession.supportedPidMatrix?.supportedPids.includes("40"), "ブリッジ診断取込のbridgeSessionへ対応PIDを保持できません");
 check(bridgeDiagnosticImport.bridgeSession.freezeFrameSnapshot?.triggerDtc === "P0171", "ブリッジ診断取込のbridgeSessionへフリーズフレームを保持できません");
 check(bridgeDiagnosticImport.bridgeSession.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "ブリッジ診断取込のbridgeSessionへECU情報を保持できません");
+check(bridgeDiagnosticImport.bridgeSession.toolHints.join(",") === "Techstream,J2534", "Bridge diagnostic import did not retain toolHints on bridgeSession");
+check(bridgeDiagnosticImport.bridgeSession.sourceLength === 128, "Bridge diagnostic import did not retain sourceLength on bridgeSession");
 const bridgeDiagnosticImportSessionOnly = obd.buildBridgeDiagnosticImport({
   bridge_session: bridgeDiagnosticImport.bridgeSession
 });
@@ -1216,11 +1226,16 @@ check(bridgeDiagnosticImportSessionOnly.connectionStatus?.vehicleConnected === t
 check(bridgeDiagnosticImportSessionOnly.adapterIdentity?.adapterFamily === "elm327", "Bridge diagnostic import did not rebuild adapterIdentity from bridgeSession-only input");
 check(bridgeDiagnosticImportSessionOnly.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not rebuild warnings from bridgeSession-only input");
 check(bridgeDiagnosticImportSessionOnly.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.bridgeSession.nextReadoutCandidates[0]?.id, "Bridge diagnostic import did not rebuild nextReadoutCandidates from bridgeSession-only input");
+check(bridgeDiagnosticImportSessionOnly.toolHints.join(",") === "Techstream,J2534", "Bridge diagnostic import did not rebuild toolHints from bridgeSession-only input");
+check(bridgeDiagnosticImportSessionOnly.sourceLength === 128, "Bridge diagnostic import did not rebuild sourceLength from bridgeSession-only input");
 check(bridgeDiagnosticImport.protocol === "ISO15765-4", "ブリッジ診断取込トップレベルへprotocolを引き継げません");
 check(bridgeDiagnosticImport.capturedAt === "2026-06-28T00:00:00Z", "ブリッジ診断取込トップレベルへcapturedAtを引き継げません");
 check(bridgeDiagnosticImport.exportPayload.schema_version === "bridge_session_export_v1", "ブリッジ診断取込のエクスポート形式が不正です");
 check(bridgeDiagnosticImport.hadSensitiveIdentifier === true, "ブリッジ診断取込がECU情報の識別情報検出を保持できません");
 check(bridgeDiagnosticImport.bridgeSession.hadSensitiveIdentifier === true, "ブリッジ診断取込のbridgeSessionが識別情報検出を保持できません");
+check(bridgeDiagnosticImport.exportPayload.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export payload did not retain tool_hints");
+check(bridgeDiagnosticImport.exportPayload.session.source_length === 128, "Bridge export payload did not retain source_length");
+check(bridgeDiagnosticImport.exportPayload.session.had_sensitive_identifier === true, "Bridge export payload did not retain had_sensitive_identifier");
 check(bridgeDiagnosticImport.retainedRawText === false, "ブリッジ診断取込が原文保持になっています");
 check(bridgeDiagnosticImport.wouldTransmit === false && bridgeDiagnosticImport.vehicleCommandEnabled === false, "ブリッジ診断取込が送信可能扱いになっています");
 const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
@@ -1339,6 +1354,8 @@ check(bridgeExportNestedSessionAliases.session.readout_coverage?.progressPercent
 check(bridgeExportNestedSessionAliases.session.ecu_info_snapshot?.itemCount === bridgeExportPayload.session.ecu_info_snapshot?.itemCount, "Bridge export did not carry ecu_info_snapshot from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.warnings.includes("freeze_frame_available"), "Bridge export did not carry warnings from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.next_readout_candidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge export did not carry next_readout_candidates from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export did not carry tool_hints from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.source_length === 128, "Bridge export did not carry source_length from nested session alias input");
 const outerOverrideEcuInfoSnapshot = {
   ...bridgeEcuInfoSnapshot,
   itemCount: 1,
@@ -1383,6 +1400,8 @@ check(bridgeSummaryNestedSessionAliases.readoutCoverage?.progressPercent === bri
 check(bridgeSummaryNestedSessionAliases.ecuInfoSnapshot?.itemCount === bridgeExportPayload.session.ecu_info_snapshot?.itemCount, "Bridge session summary did not carry ecu_info_snapshot from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.warnings.includes("freeze_frame_available"), "Bridge session summary did not carry warnings from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge session summary did not carry next_readout_candidates from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.toolHints.join(",") === "Techstream,J2534", "Bridge session summary did not carry tool_hints from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.sourceLength === 128, "Bridge session summary did not carry source_length from nested session alias input");
 const bridgeSummaryNestedOuterOverride = obd.buildBridgeSessionSummary({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:30Z",
@@ -1477,7 +1496,8 @@ check(mergedDiagnosticInput.adapterIdentity?.adapterFamily === "elm327", "統合
 check(mergedDiagnosticInput.hadSensitiveIdentifier === true, "統合診断入力が貼り付け側の識別情報候補を引き継げません");
 check(mergedDiagnosticInput.retainedRawText === false, "統合診断入力が原文保持になっています");
 check(mergedDiagnosticInput.wouldTransmit === false && mergedDiagnosticInput.vehicleCommandEnabled === false, "統合診断入力が送信可能扱いになっています");
-check(Array.isArray(mergedDiagnosticInput.toolHints) && mergedDiagnosticInput.toolHints.length === 0, "Combined diagnostic inputs unexpectedly inferred a tool hint");
+check(mergedDiagnosticInput.toolHints.join(",") === "Techstream,J2534", "Combined diagnostic inputs did not retain bridge tool hints");
+check(mergedDiagnosticInput.sourceLength === 128, "Combined diagnostic inputs did not retain bridge sourceLength");
 const mergedDiagnosticInputAliases = obd.mergeDiagnosticInputs({
   scanner_text: [
     "Toyota Techstream J2534",
@@ -1579,6 +1599,8 @@ check(mergedDiagnosticInputBridgeSessionOnlyImport.connectionStatus?.vehicleConn
 check(mergedDiagnosticInputBridgeSessionOnlyImport.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not recover adapterIdentity from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not recover warnings from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.bridgeSession.nextReadoutCandidates[0]?.id, "Combined diagnostic inputs did not recover nextReadoutCandidates from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.toolHints.join(",") === "Techstream,J2534", "Combined diagnostic inputs did not recover toolHints from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.sourceLength === 128, "Combined diagnostic inputs did not recover sourceLength from bridgeSession-only diagnostic import");
 const mergedDiagnosticInputNestedOuterOverride = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_diagnostic_import: {
