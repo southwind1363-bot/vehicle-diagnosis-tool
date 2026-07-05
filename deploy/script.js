@@ -5553,6 +5553,8 @@ function analyzeObdScannerImport() {
     });
   }
   const mergedSession = bridgeImport ? (obdDevSession.lastSession || null) : null;
+  const mergedCodes = mergedSession?.dtcSnapshot?.codes || analysis.codes;
+  const mergedMonitorValues = mergedSession?.livePidSnapshot?.monitorValues || analysis.monitorValues;
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
@@ -5663,21 +5665,21 @@ function analyzeObdScannerImport() {
     : "";
   const detailNote = notes.length ? ` ${notes.join(" / ")}。` : "";
 
-  if (!analysis.codes.length) {
+  if (!mergedCodes.length) {
     obdImportStatus.textContent = analysis.hadSensitiveIdentifier
       ? `識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。${detailNote}`
       : bridgeImport
         ? `${hasScannerText ? "ローカルブリッジ読取と統合しましたが" : "ローカルブリッジ読取結果では"}、標準形式のDTCは検出できませんでした。${detailNote}`
         : "標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。";
   } else {
-    obdImportStatus.textContent = `${sourcePrefix}${analysis.codes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
-    analysis.codes.forEach((code) => {
+    obdImportStatus.textContent = `${sourcePrefix}${mergedCodes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
+    mergedCodes.forEach((code) => {
       obdDetectedCodes.appendChild(createObdDtcCard(code));
     });
   }
 
   renderObdMonitorValues(analysis.monitorValues, analysis.monitorInsights);
-  if (bridgeImport && analysis.monitorValues.length) {
+  if (bridgeImport && mergedMonitorValues.length) {
     const bridgeValueCount = analysis.monitorValues.filter((item) => item.source === "local_bridge").length;
     const scannerValueCount = analysis.monitorValues.filter((item) => item.source === "scanner_text").length;
     const summary = [(mergedSession?.source || analysis.source) === "local_bridge"
