@@ -1586,6 +1586,28 @@ check(bridgeExportNestedOuterOverride.session.connection_status?.vehicleConnecte
 check(bridgeExportNestedOuterOverride.session.readout_coverage?.capturedPercent === 29, "Bridge export did not let outer readout_coverage override nested session alias input");
 check(bridgeExportNestedOuterOverride.session.next_readout_candidates[0]?.id === "custom_outer_snapshot", "Bridge export did not let outer next_readout_candidates override nested session alias input");
 check(bridgeExportNestedOuterOverride.session.ecu_info_snapshot?.items?.[0]?.value === "Outer Override ECU", "Bridge export did not let outer ecu_info_snapshot override nested session alias input");
+const bridgeExportNestedCamelOuterOverride = obd.buildBridgeSessionExportPayload({
+  capturedAt: "2026-06-28T00:10:16Z",
+  vehicleProfile: { maker: "Toyota", model: "Outer Roomy Camel" },
+  vehicleApplicability: vehicleApplicabilityPartialSample,
+  connectionStatus: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+  },
+  readoutCoverage: legacyReadoutCoverage,
+  nextReadoutCandidates: [{ id: "custom_camel_outer_snapshot", label: "Camel Outer Snapshot", priority: 1, reason: "camel outer override" }],
+  ecuInfoSnapshot: outerOverrideEcuInfoSnapshot,
+  session: bridgeExportPayload.session
+});
+check(bridgeExportNestedCamelOuterOverride.session.captured_at === "2026-06-28T00:10:16Z", "Bridge export did not let outer capturedAt override nested session alias input");
+check(bridgeExportNestedCamelOuterOverride.session.vehicle_profile?.model === "Outer Roomy Camel", "Bridge export did not let outer vehicleProfile override nested session alias input");
+check(bridgeExportNestedCamelOuterOverride.session.vehicle_applicability?.status === "partial", "Bridge export did not let outer vehicleApplicability override nested session alias input");
+check(bridgeExportNestedCamelOuterOverride.session.connection_status?.vehicleConnected === false, "Bridge export did not let outer connectionStatus override nested session alias input");
+check(bridgeExportNestedCamelOuterOverride.session.readout_coverage?.capturedPercent === 29, "Bridge export did not let outer readoutCoverage override nested session alias input");
+check(bridgeExportNestedCamelOuterOverride.session.next_readout_candidates[0]?.id === "custom_camel_outer_snapshot", "Bridge export did not let outer nextReadoutCandidates override nested session alias input");
+check(bridgeExportNestedCamelOuterOverride.session.ecu_info_snapshot?.items?.[0]?.value === "Outer Override ECU", "Bridge export did not let outer ecuInfoSnapshot override nested session alias input");
 const bridgeSummaryNestedSessionAliases = obd.buildBridgeSessionSummary({
   session: bridgeExportPayload.session,
   vehicle_profile: { maker: "Toyota", model: "Nested Prius" }
@@ -2147,6 +2169,27 @@ check(bridgeDiagnosticImportDirectNestedMetadataPreservation.nextReadoutCandidat
 check(bridgeDiagnosticImportDirectNestedMetadataPreservation.importClassification?.bucketCounts?.storedDtcResponses === 12, "Bridge diagnostic import did not let direct bridge_diagnostic_import outer import_classification drive top-level metadata");
 check(bridgeDiagnosticImportDirectNestedMetadataPreservation.bridgeSession.nextReadoutCandidates[0]?.id === "nested_snapshot", "Bridge diagnostic import did not preserve nested bridgeSession next_readout_candidates for direct bridge_diagnostic_import input");
 check(bridgeDiagnosticImportDirectNestedMetadataPreservation.bridgeSession.importClassification?.bucketCounts?.storedDtcResponses === 3, "Bridge diagnostic import did not preserve nested bridgeSession import_classification for direct bridge_diagnostic_import input");
+const bridgeDiagnosticImportDirectCamelNestedMetadataPreservation = obd.buildBridgeDiagnosticImport({
+  importType: "bridge_diagnostic_snapshot",
+  source: "local_bridge",
+  nextReadoutCandidates: [{ id: "outer_camel_snapshot", label: "Outer Camel Snapshot", priority: 1, reason: "outer camel override" }],
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 14 }
+  },
+  bridgeSession: {
+    codes: ["P0171"],
+    next_readout_candidates: [{ id: "nested_snapshot", label: "Nested Snapshot", priority: 8, reason: "nested retained" }],
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 4 }
+    }
+  }
+});
+check(bridgeDiagnosticImportDirectCamelNestedMetadataPreservation.nextReadoutCandidates[0]?.id === "outer_camel_snapshot", "Bridge diagnostic import did not let direct bridgeDiagnosticImport outer nextReadoutCandidates drive top-level metadata");
+check(bridgeDiagnosticImportDirectCamelNestedMetadataPreservation.importClassification?.bucketCounts?.storedDtcResponses === 14, "Bridge diagnostic import did not let direct bridgeDiagnosticImport outer importClassification drive top-level metadata");
+check(bridgeDiagnosticImportDirectCamelNestedMetadataPreservation.bridgeSession.nextReadoutCandidates[0]?.id === "nested_snapshot", "Bridge diagnostic import did not preserve nested bridgeSession next_readout_candidates for direct bridgeDiagnosticImport input");
+check(bridgeDiagnosticImportDirectCamelNestedMetadataPreservation.bridgeSession.importClassification?.bucketCounts?.storedDtcResponses === 4, "Bridge diagnostic import did not preserve nested bridgeSession import_classification for direct bridgeDiagnosticImport input");
 const mergedDiagnosticInputSummaryOnlyMonitorCounts = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportSummaryOnlyRawWarning
 });
