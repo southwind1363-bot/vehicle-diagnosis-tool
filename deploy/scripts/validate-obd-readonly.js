@@ -1327,6 +1327,9 @@ const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
 check(bridgeExportNestedSessionAliases.exported_at === "2026-06-28T00:10:00Z", "Bridge export did not accept nested session alias input");
 check(bridgeExportNestedSessionAliases.session.adapter_identity.adapterFamily === "elm327", "Bridge export did not carry adapter_identity from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.vci_devices[0]?.id === bridgeExportPayload.session.vci_devices[0]?.id, "Bridge export did not carry vci_devices from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.vehicle_applicability?.status === bridgeExportPayload.session.vehicle_applicability?.status, "Bridge export did not carry vehicle_applicability from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.readout_coverage?.progressPercent === bridgeExportPayload.session.readout_coverage?.progressPercent, "Bridge export did not carry readout_coverage from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.ecu_info_snapshot?.itemCount === bridgeExportPayload.session.ecu_info_snapshot?.itemCount, "Bridge export did not carry ecu_info_snapshot from nested session alias input");
 const bridgeExportNestedOuterOverride = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:10:15Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Roomy" },
@@ -1343,6 +1346,9 @@ check(bridgeSummaryNestedSessionAliases.vciDevices[0]?.id === bridgeExportPayloa
 check(bridgeSummaryNestedSessionAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge session summary did not carry supported_pid_matrix from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.readinessSnapshot.incompleteCount === 1, "Bridge session summary did not carry readiness from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.vehicleProfile?.model === "Nested Prius", "Bridge session summary did not allow outer vehicle_profile to override nested session alias input");
+check(bridgeSummaryNestedSessionAliases.vehicleApplicability?.status === bridgeExportPayload.session.vehicle_applicability?.status, "Bridge session summary did not carry vehicle_applicability from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.readoutCoverage?.progressPercent === bridgeExportPayload.session.readout_coverage?.progressPercent, "Bridge session summary did not carry readout_coverage from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.ecuInfoSnapshot?.itemCount === bridgeExportPayload.session.ecu_info_snapshot?.itemCount, "Bridge session summary did not carry ecu_info_snapshot from nested session alias input");
 const bridgeSummaryNestedOuterOverride = obd.buildBridgeSessionSummary({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:30Z",
@@ -2195,6 +2201,8 @@ const scanSessionExplicitUnsortedCandidates = obd.buildDiagnosticScanSession({
 check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
 check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
 check(scanSessionScanSessionAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from scan_session alias input");
+check(scanSessionScanSessionAlias.vehicleApplicability?.status === bridgeExportPayload.session.vehicle_applicability?.status, "Diagnostic scan session did not carry vehicle_applicability from scan_session alias input");
+check(scanSessionScanSessionAlias.readoutCoverage?.progressPercent === bridgeExportPayload.session.readout_coverage?.progressPercent, "Diagnostic scan session did not carry readout_coverage from scan_session alias input");
 check(scanSessionExplicitUnsortedCandidates.nextReadoutCandidates[0]?.id === "dtc_snapshot", "Diagnostic scan session did not sort explicit next_readout_candidates by priority");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
