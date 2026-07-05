@@ -2547,6 +2547,29 @@ const normalizedSnakeCoverageFields = obd.normalizeReadoutCoverageSnapshot({
 check(normalizedSnakeCoverageFields.totalCategories === 7 && normalizedSnakeCoverageFields.availableCategories === 3, "Readout coverage normalization did not accept snake_case category counts");
 check(normalizedSnakeCoverageFields.capturedPercent === 29 && normalizedSnakeCoverageFields.progressPercent === 43, "Readout coverage normalization did not accept snake_case progress aliases");
 check(normalizedSnakeCoverageFields.emptyIds[0] === "freeze_frame_snapshot" && normalizedSnakeCoverageFields.missingIds[0] === "readiness_snapshot", "Readout coverage normalization did not accept snake_case id aliases");
+const normalizedNextReadoutCandidatesAliases = obd.normalizeNextReadoutCandidates([
+  {
+    readout_id: "ecu_info_snapshot",
+    display_label: "ECU Info",
+    status: "empty",
+    sort_order: "92",
+    reason_label: "Need ECU info refresh",
+    applicability_status: "partial"
+  },
+  {
+    id: "dtc_snapshot",
+    label: "DTC",
+    status: "missing",
+    priority: 100,
+    reason: "Need DTC"
+  }
+]);
+check(normalizedNextReadoutCandidatesAliases[0]?.id === "dtc_snapshot", "Next readout candidates did not sort alias input by normalized priority");
+check(normalizedNextReadoutCandidatesAliases[1]?.id === "ecu_info_snapshot", "Next readout candidates did not preserve readout_id alias input");
+check(normalizedNextReadoutCandidatesAliases[1]?.label === "ECU Info", "Next readout candidates did not preserve display_label alias input");
+check(normalizedNextReadoutCandidatesAliases[1]?.priority === 92, "Next readout candidates did not normalize sort_order alias input");
+check(normalizedNextReadoutCandidatesAliases[1]?.reason === "Need ECU info refresh", "Next readout candidates did not normalize reason_label alias input");
+check(normalizedNextReadoutCandidatesAliases[1]?.applicabilityStatus === "partial", "Next readout candidates did not normalize applicability_status alias input");
 const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
   session_id: "shop-test-non-infra-bridge-session"

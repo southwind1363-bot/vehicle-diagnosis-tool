@@ -1830,6 +1830,17 @@
   function normalizeNextReadoutCandidates(items) {
     return cloneBridgeArrayItems(items)
       .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        ...item,
+        id: String(pickDefined(item.id, item.readout_id, item.readoutId, "") || ""),
+        label: pickDefined(item.label, item.displayLabel, item.display_label, item.name, item.id, item.readout_id, item.readoutId, "") || "",
+        status: typeof item.status === "string" ? item.status : "missing",
+        priority: Number.isFinite(Number(pickDefined(item.priority, item.sort_order, item.sortOrder)))
+          ? Math.round(Number(pickDefined(item.priority, item.sort_order, item.sortOrder)))
+          : 0,
+        reason: pickDefined(item.reason, item.reason_label, item.reasonLabel, "") || "",
+        applicabilityStatus: pickDefined(item.applicabilityStatus, item.applicability_status, item.vehicleApplicabilityStatus, item.vehicle_applicability_status, null)
+      }))
       .sort((left, right) => {
         const rightPriority = Number.isFinite(right?.priority) ? right.priority : 0;
         const leftPriority = Number.isFinite(left?.priority) ? left.priority : 0;
