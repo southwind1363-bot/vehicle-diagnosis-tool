@@ -1960,6 +1960,15 @@ const mergedDiagnosticInputBridgeCoreSnapshotOnly = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputBridgeCoreSnapshotOnly.source === "local_bridge", "Combined diagnostic inputs did not treat core-snapshot-only bridge_import as bridge input");
 check(mergedDiagnosticInputBridgeCoreSnapshotOnly.codes.join(",") === bridgeDtcSnapshot.codes.join(","), "Combined diagnostic inputs did not preserve dtc_snapshot from core-snapshot-only bridge_import");
 check(mergedDiagnosticInputBridgeCoreSnapshotOnly.monitorValues.length === bridgePidSnapshot.monitorValues.length, "Combined diagnostic inputs did not preserve live_pid_snapshot from core-snapshot-only bridge_import");
+const mergedDiagnosticInputBridgeResponseAliasOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    supported_pid_snapshot: bridgeSupportedPidSnapshot,
+    ecu_info_response: bridgeEcuInfoSnapshot
+  }
+});
+check(mergedDiagnosticInputBridgeResponseAliasOnly.source === "local_bridge", "Combined diagnostic inputs did not treat response-alias-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeResponseAliasOnly.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not preserve supported_pid_snapshot from response-alias-only bridge_import");
+check(mergedDiagnosticInputBridgeResponseAliasOnly.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Combined diagnostic inputs did not preserve ecu_info_response from response-alias-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {

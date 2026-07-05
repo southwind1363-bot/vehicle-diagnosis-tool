@@ -1713,14 +1713,26 @@
       || parts.live_pid_snapshot
       || parts.supportedPidMatrix
       || parts.supported_pid_matrix
+      || parts.supportedPidSnapshot
+      || parts.supported_pid_snapshot
+      || parts.supportedPidResponse
+      || parts.supported_pid_response
       || parts.freezeFrameSnapshot
       || parts.freeze_frame_snapshot
+      || parts.freezeFrameResponse
+      || parts.freeze_frame_response
       || parts.readinessSnapshot
       || parts.readiness_snapshot
+      || parts.readinessResponse
+      || parts.readiness_response
       || parts.ecuInfoSnapshot
       || parts.ecu_info_snapshot
+      || parts.ecuInfoResponse
+      || parts.ecu_info_response
       || parts.onboardMonitorSnapshot
       || parts.onboard_monitor_snapshot
+      || parts.onboardMonitorResponse
+      || parts.onboard_monitor_response
       || Array.isArray(parts.vciDevices)
       || Array.isArray(parts.vci_devices)
       || parts.vciList
