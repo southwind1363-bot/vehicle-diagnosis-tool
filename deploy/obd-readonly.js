@@ -1697,6 +1697,11 @@
 
   function hasBridgeSummaryMetadata(parts = {}) {
     return Boolean(
+      parts.vehicleProfile
+      || parts.vehicle_profile
+      || parts.vehicleApplicability
+      || parts.vehicle_applicability
+      ||
       Array.isArray(parts.nextReadoutCandidates)
       || Array.isArray(parts.next_readout_candidates)
       || Array.isArray(parts.toolHints)

@@ -1890,6 +1890,25 @@ check(mergedDiagnosticInputBridgeMetadataOnly.toolHints.includes("CONSULT"), "Co
 check(mergedDiagnosticInputBridgeMetadataOnly.warnings.includes("negative_obd_response_present"), "Combined diagnostic inputs did not preserve warning_flags from metadata-only bridge_import");
 check(mergedDiagnosticInputBridgeMetadataOnly.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve had_sensitive_identifier from metadata-only bridge_import");
 check(mergedDiagnosticInputBridgeMetadataOnly.sourceLength === 12, "Combined diagnostic inputs did not preserve source_length from metadata-only bridge_import");
+const mergedDiagnosticInputBridgeApplicabilityOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    vehicle_profile: { maker: "Toyota", model: "Prius" },
+    vehicle_applicability: {
+      make: "Toyota",
+      model: "Prius",
+      model_code: "ZVW30",
+      year: "2012",
+      engine_code: "2ZR-FXE",
+      catalog_matched: true,
+      year_matched: true,
+      engine_matched: true,
+      model_code_matched: true
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeApplicabilityOnly.source === "local_bridge", "Combined diagnostic inputs did not treat vehicle_applicability-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeApplicabilityOnly.vehicleProfile?.model === "Prius", "Combined diagnostic inputs did not preserve vehicle_profile from vehicle_applicability-only bridge_import");
+check(mergedDiagnosticInputBridgeApplicabilityOnly.vehicleApplicability?.status === "matched", "Combined diagnostic inputs did not normalize vehicle_applicability-only bridge_import metadata");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
