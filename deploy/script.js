@@ -4711,6 +4711,20 @@ function triggerObdNextReadoutCandidate(candidate = null) {
   targetButton.click();
 }
 
+function formatObdNextReadoutCandidateReason(candidate = null) {
+  if (!candidate) return "次に確認する候補です。";
+  const parts = [];
+  parts.push(candidate.status === "missing" ? "まだ読取っていません。" : "空応答だったため再確認します。");
+  if (candidate.applicabilityStatus === "partial") {
+    parts.push("車両適用候補を確認しながら判断します。");
+  } else if (candidate.applicabilityStatus === "unlisted") {
+    parts.push("適用データ未登録のため実車照合を優先します。");
+  } else if (candidate.applicabilityStatus === "manual") {
+    parts.push("手入力車両情報のため実車照合を優先します。");
+  }
+  return parts.join(" ");
+}
+
 function renderObdNextReadoutActions(session = null) {
   if (!obdNextReadoutPanel || !obdNextReadoutList) return;
   obdNextReadoutList.innerHTML = "";
@@ -4732,13 +4746,16 @@ function renderObdNextReadoutActions(session = null) {
     status.textContent = candidate.status === "missing" ? "未読取" : "空応答";
 
     const reason = document.createElement("p");
-    reason.textContent = candidate.reason || "次に確認する候補です。";
+    reason.textContent = formatObdNextReadoutCandidateReason(candidate);
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-button";
-    button.textContent = action?.label || "詳細へ";
+    button.textContent = action ? (buttonTarget ? action.label : "準備条件待ち") : "詳細へ";
     button.disabled = !buttonTarget;
+    if (action && !buttonTarget) {
+      button.title = "接続状態または詳細機能の条件が整うと実行できます。";
+    }
     button.addEventListener("click", () => triggerObdNextReadoutCandidate(candidate));
 
     card.append(head, status, reason, button);
