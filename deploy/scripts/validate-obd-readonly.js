@@ -1079,6 +1079,23 @@ check(bridgeSummaryApplicabilityPartial.warnings.includes("vehicle_applicability
 check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Bridge session summary did not prioritize freeze_frame_snapshot as the next readout candidate");
 check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Bridge session summary did not prioritize ecu_info_snapshot after freeze_frame for partial applicability");
 check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[0]?.reason === "読取応答が空のため再確認候補", "Bridge session summary next readout reason should stay concise for partial applicability");
+const manualApplicabilityReadoutCoverage = {
+  items: [
+    { id: "freeze_frame_snapshot", label: "Freeze Frame", status: "missing", available: false, count: 0 },
+    { id: "ecu_info_snapshot", label: "ECU Info", status: "missing", available: false, count: 0 },
+    { id: "readiness_snapshot", label: "Readiness", status: "missing", available: false, count: 0 }
+  ]
+};
+const bridgeSummaryApplicabilityManualCandidates = obd.buildNextReadoutCandidates(manualApplicabilityReadoutCoverage, {
+  status: "manual",
+  summaryLabel: "Manual vehicle confirmation required"
+});
+check(bridgeSummaryApplicabilityManualCandidates[0]?.id === "ecu_info_snapshot", "Next readout candidates did not prioritize ecu_info_snapshot for manual applicability");
+const bridgeSummaryApplicabilityUnlistedCandidates = obd.buildNextReadoutCandidates(manualApplicabilityReadoutCoverage, {
+  status: "unlisted",
+  summaryLabel: "Vehicle not listed"
+});
+check(bridgeSummaryApplicabilityUnlistedCandidates[0]?.id === "ecu_info_snapshot", "Next readout candidates did not prioritize ecu_info_snapshot for unlisted applicability");
 const bridgeSummarySnapshotAliases = obd.buildBridgeSessionSummary({
   dtc_snapshot: bridgeDtcSnapshot,
   live_pid_snapshot: bridgePidSnapshot,

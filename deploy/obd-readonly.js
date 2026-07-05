@@ -1514,6 +1514,10 @@
         };
       })
       .sort((left, right) => {
+        if ((applicability.status === "manual" || applicability.status === "unlisted") && left.id !== right.id) {
+          if (left.id === "ecu_info_snapshot") return -1;
+          if (right.id === "ecu_info_snapshot") return 1;
+        }
         if ((right.priority || 0) !== (left.priority || 0)) return (right.priority || 0) - (left.priority || 0);
         if (left.status !== right.status) return left.status === "missing" ? -1 : 1;
         return String(left.label || "").localeCompare(String(right.label || ""), "ja");
