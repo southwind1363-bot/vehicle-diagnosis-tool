@@ -2063,6 +2063,17 @@ check(decodedScanSessionNestedAlias.dtcSnapshot.codes.includes("P0171"), "Decode
 check(decodedScanSessionNestedAlias.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept scan_session nested supported_pid alias input");
 check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept scan_session nested readiness alias input");
 check(decodedScanSessionNestedAlias.vehicleProfile?.model === "Yaris", "Decoded OBD session did not carry vehicle_profile from scan_session nested alias input");
+const decodedScanSessionNestedImportClassification = obd.buildDecodedObdScanSession({
+  scan_session: {
+    session_id: "decoded-nested-import-classification",
+    stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 5 }
+    }
+  }
+});
+check(decodedScanSessionNestedImportClassification.importClassification?.bucketCounts?.storedDtcResponses === 5, "Decoded OBD session did not carry import_classification from scan_session nested alias input");
 const decodedScanSessionNestedOuterOverride = obd.buildDecodedObdScanSession({
   session_id: "decoded-outer-override",
   protocol: "ISO9141-2",
@@ -2077,6 +2088,21 @@ const decodedScanSessionNestedOuterOverride = obd.buildDecodedObdScanSession({
 check(decodedScanSessionNestedOuterOverride.sessionId === "decoded-outer-override", "Decoded OBD session did not let outer session_id override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.protocol === "ISO9141-2", "Decoded OBD session did not let outer protocol override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.vehicleProfile?.model === "Auris", "Decoded OBD session did not let outer vehicle_profile override scan_session nested alias input");
+const decodedScanSessionNestedOuterImportClassificationOverride = obd.buildDecodedObdScanSession({
+  session_id: "decoded-outer-import-classification-override",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 9 }
+  },
+  scan_session: {
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 2 }
+    }
+  }
+});
+check(decodedScanSessionNestedOuterImportClassificationOverride.importClassification?.bucketCounts?.storedDtcResponses === 9, "Decoded OBD session did not let outer import_classification override scan_session nested alias input");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
 const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-coverage-candidates",
@@ -2247,6 +2273,16 @@ check(textScanSessionNestedOptions.startedAt === "2026-06-28T00:16:00Z" && textS
 check(textScanSessionNestedOptions.vehicleProfile?.model === "Vitz", "OBD text scan session did not carry vehicle_profile from scan_session nested options");
 check(textScanSessionNestedOptions.sessionId === "obd-text-nested-options", "OBD text scan session did not carry session_id from scan_session nested options");
 check(textScanSessionNestedOptions.protocol === "ISO15765-4", "OBD text scan session did not carry protocol from scan_session nested options");
+const textScanSessionNestedImportClassification = obd.buildScanSessionFromObdText(obdTextLog, {
+  scan_session: {
+    session_id: "obd-text-nested-import-classification",
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { freezeFrameResponses: 8 }
+    }
+  }
+});
+check(textScanSessionNestedImportClassification.importClassification?.bucketCounts?.freezeFrameResponses === 8, "OBD text scan session did not carry import_classification from scan_session nested options");
 const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-outer-override",
   protocol: "ISO9141-2",
@@ -2260,6 +2296,20 @@ const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTe
 check(textScanSessionNestedOuterOverride.sessionId === "obd-text-outer-override", "OBD text scan session did not let outer session_id override scan_session nested options");
 check(textScanSessionNestedOuterOverride.protocol === "ISO9141-2", "OBD text scan session did not let outer protocol override scan_session nested options");
 check(textScanSessionNestedOuterOverride.vehicleProfile?.model === "Ractis", "OBD text scan session did not let outer vehicle_profile override scan_session nested options");
+const textScanSessionNestedOuterImportClassificationOverride = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-outer-import-classification-override",
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { livePidResponses: 11 }
+  },
+  scan_session: {
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { livePidResponses: 3 }
+    }
+  }
+});
+check(textScanSessionNestedOuterImportClassificationOverride.importClassification?.bucketCounts?.livePidResponses === 11, "OBD text scan session did not let outer import_classification override scan_session nested options");
 const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-coverage-candidates",
   readout_coverage: legacyReadoutCoverage,
