@@ -1424,7 +1424,14 @@ const bridgeDiagnosticImportNestedOuterOverride = obd.buildBridgeDiagnosticImpor
   captured_at: "2026-06-28T00:10:45Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Prius C" },
   vehicle_applicability: vehicleApplicabilityPartialSample,
+  connection_status: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+  },
   readout_coverage: legacyReadoutCoverage,
+  next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
   ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
   session: bridgeExportPayload.session
 });
@@ -1432,7 +1439,9 @@ check(bridgeDiagnosticImportNestedOuterOverride.protocol === "ISO9141-2", "Bridg
 check(bridgeDiagnosticImportNestedOuterOverride.capturedAt === "2026-06-28T00:10:45Z", "Bridge diagnostic import did not let outer captured_at override nested session alias input");
 check(bridgeDiagnosticImportNestedOuterOverride.exportPayload.session.vehicle_profile?.model === "Outer Prius C", "Bridge diagnostic import did not let outer vehicle_profile override nested session alias input");
 check(bridgeDiagnosticImportNestedOuterOverride.vehicleApplicability?.status === "partial", "Bridge diagnostic import did not let outer vehicle_applicability override nested session alias input");
+check(bridgeDiagnosticImportNestedOuterOverride.connectionStatus?.vehicleConnected === false, "Bridge diagnostic import did not let outer connection_status override nested session alias input");
 check(bridgeDiagnosticImportNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Bridge diagnostic import did not let outer readout_coverage override nested session alias input");
+check(bridgeDiagnosticImportNestedOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Bridge diagnostic import did not let outer next_readout_candidates override nested session alias input");
 check(bridgeDiagnosticImportNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Bridge diagnostic import did not let outer ecu_info_snapshot override nested session alias input");
 const mergedDiagnosticInput = obd.mergeDiagnosticInputs({
   scannerText: [
