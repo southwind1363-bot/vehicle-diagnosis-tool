@@ -1466,6 +1466,10 @@
     }
   }
 
+  function hasObjectContent(value) {
+    return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
+  }
+
   function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null) {
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
@@ -1507,6 +1511,18 @@
         return String(left.label || "").localeCompare(String(right.label || ""), "ja");
       })
       .slice(0, 5);
+  }
+
+  function resolveNextReadoutCandidates({
+    explicitCandidates = [],
+    readoutCoverage = null,
+    vehicleApplicability = null
+  } = {}) {
+    return normalizeNextReadoutCandidates(
+      Array.isArray(explicitCandidates) && explicitCandidates.length
+        ? explicitCandidates
+        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {})
+    );
   }
 
   function buildBridgeSessionSummary(parts = {}) {
@@ -1565,12 +1581,12 @@
       adapterIdentityInput,
       nestedSession: parts.bridgeSession || parts.bridge_session
     });
-    const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
-    const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
-    const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
+    const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
+    const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
+    const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
     const hasBridgeSnapshotContext = hasBridgeInfrastructureContext
-      || Boolean(dtcSnapshotInput && typeof dtcSnapshotInput === "object" && Object.keys(dtcSnapshotInput).length > 0)
-      || Boolean(livePidSnapshotInput && typeof livePidSnapshotInput === "object" && Object.keys(livePidSnapshotInput).length > 0);
+      || hasObjectContent(dtcSnapshotInput)
+      || hasObjectContent(livePidSnapshotInput);
     const warnings = [];
     if (hasBridgeSnapshotContext && (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked)) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
@@ -1633,11 +1649,11 @@
       toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       freezeFrameSnapshot,
       warnings,
-      nextReadoutCandidates: normalizeNextReadoutCandidates(
-        Array.isArray(explicitNextReadoutCandidates) && explicitNextReadoutCandidates.length
-          ? explicitNextReadoutCandidates
-          : buildNextReadoutCandidates(readoutCoverage, metadataOverrides.vehicleApplicability || {})
-      ),
+      nextReadoutCandidates: resolveNextReadoutCandidates({
+        explicitCandidates: explicitNextReadoutCandidates,
+        readoutCoverage,
+        vehicleApplicability: metadataOverrides.vehicleApplicability || {}
+      }),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
         || metadataOverrides.hadSensitiveIdentifier === true,
       sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
@@ -1742,9 +1758,9 @@
     const monitorInsights = Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
-    const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
-    const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
-    const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
+    const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
+    const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
+    const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
@@ -4166,14 +4182,11 @@
       livePidSnapshot,
       supportedPidMatrix,
       readoutCoverage,
-      nextReadoutCandidates: normalizeNextReadoutCandidates(
-        Array.isArray(explicitNextReadoutCandidates) && explicitNextReadoutCandidates.length
-          ? explicitNextReadoutCandidates
-          : buildNextReadoutCandidates(
-            readoutCoverage,
-            metadataOverrides.vehicleApplicability || {}
-          )
-      ),
+      nextReadoutCandidates: resolveNextReadoutCandidates({
+        explicitCandidates: explicitNextReadoutCandidates,
+        readoutCoverage,
+        vehicleApplicability: metadataOverrides.vehicleApplicability || {}
+      }),
       monitorValueSummary: buildMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
