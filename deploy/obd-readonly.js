@@ -1569,7 +1569,13 @@
     const monitorInsights = Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
+    const hasBridgeInfrastructureContext = Object.keys(connectionStatusInput).length > 0
+      || Object.keys(adapterIdentityInput).length > 0
+      || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
+      || Boolean(vciDevicesInput?.devices?.length)
+      || Boolean(parts.bridgeSession || parts.bridge_session || parts.session);
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
+      includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
@@ -1593,8 +1599,8 @@
     if (((monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
       derivedWarnings.push("raw_pid_values_need_conversion");
     }
-    if (derivedReadoutCoverage.missingCategories > 0) derivedWarnings.push("bridge_readout_incomplete");
-    if (derivedReadoutCoverage.emptyCategories > 0) derivedWarnings.push("bridge_readout_empty_sections");
+    if (hasBridgeInfrastructureContext && derivedReadoutCoverage.missingCategories > 0) derivedWarnings.push("bridge_readout_incomplete");
+    if (hasBridgeInfrastructureContext && derivedReadoutCoverage.emptyCategories > 0) derivedWarnings.push("bridge_readout_empty_sections");
     return {
       source: parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,

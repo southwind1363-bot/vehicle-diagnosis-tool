@@ -1004,6 +1004,12 @@ const bridgeSummaryResponseAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryResponseAliases.freezeFrameSnapshot.triggerDtc === "P0171", "Bridge session summary did not accept freeze_frame_response alias input");
 check(bridgeSummaryResponseAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge session summary did not accept supported_pid_snapshot alias input");
+const bridgeSummaryNonInfrastructureAliases = obd.buildBridgeSessionSummary({
+  dtc_codes: ["P0300"],
+  supported_pid_snapshot: bridgeSupportedPidSnapshot
+});
+check(bridgeSummaryNonInfrastructureAliases.readoutCoverage.includeInfrastructure === false, "Bridge session summary incorrectly counted bridge infrastructure for summary-only alias input");
+check(!bridgeSummaryNonInfrastructureAliases.warnings.includes("bridge_readout_incomplete") && !bridgeSummaryNonInfrastructureAliases.warnings.includes("bridge_readout_empty_sections"), "Bridge session summary emitted bridge readout warnings without bridge infrastructure context");
 const bridgeExportPayload = obd.buildBridgeSessionExportPayload({
   connectionStatus: bridgeStatus,
   vciList: bridgeVciList,
@@ -1210,6 +1216,13 @@ const bridgeDiagnosticImportSummaryOnlyRawWarning = obd.buildBridgeDiagnosticImp
 });
 check(bridgeDiagnosticImportSummaryOnlyRawWarning.monitorValueSummary.undecodedRawCount === 2, "Bridge diagnostic import did not retain monitor_value_summary without monitor_values");
 check(bridgeDiagnosticImportSummaryOnlyRawWarning.warnings.includes("raw_pid_values_need_conversion"), "Bridge diagnostic import did not derive raw PID warning from monitor_value_summary-only input");
+const bridgeDiagnosticImportNonInfrastructureAliases = obd.buildBridgeDiagnosticImport({
+  dtc_codes: ["P0300"],
+  supported_pid_snapshot: bridgeSupportedPidSnapshot
+});
+check(bridgeDiagnosticImportNonInfrastructureAliases.readoutCoverage.includeInfrastructure === false, "Bridge diagnostic import incorrectly counted bridge infrastructure for summary-only alias input");
+check(!bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("bridge_readout_incomplete") && !bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("bridge_readout_empty_sections"), "Bridge diagnostic import emitted bridge readout warnings without bridge infrastructure context");
+check(bridgeDiagnosticImportNonInfrastructureAliases.exportPayload.session.readout_coverage.includeInfrastructure === false, "Bridge diagnostic export payload did not preserve non-infrastructure readout coverage");
 const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
   session: bridgeExportPayload.session,
   exported_at: "2026-06-28T00:10:00Z"
