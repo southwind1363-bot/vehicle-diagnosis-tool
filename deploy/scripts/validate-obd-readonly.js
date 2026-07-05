@@ -1350,14 +1350,23 @@ const bridgeExportNestedOuterOverride = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:10:15Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Roomy" },
   vehicle_applicability: vehicleApplicabilityPartialSample,
+  connection_status: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+  },
   readout_coverage: legacyReadoutCoverage,
+  next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
   ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
   session: bridgeExportPayload.session
 });
 check(bridgeExportNestedOuterOverride.session.captured_at === "2026-06-28T00:10:15Z", "Bridge export did not let outer captured_at override nested session alias input");
 check(bridgeExportNestedOuterOverride.session.vehicle_profile?.model === "Outer Roomy", "Bridge export did not let outer vehicle_profile override nested session alias input");
 check(bridgeExportNestedOuterOverride.session.vehicle_applicability?.status === "partial", "Bridge export did not let outer vehicle_applicability override nested session alias input");
+check(bridgeExportNestedOuterOverride.session.connection_status?.vehicleConnected === false, "Bridge export did not let outer connection_status override nested session alias input");
 check(bridgeExportNestedOuterOverride.session.readout_coverage?.capturedPercent === 29, "Bridge export did not let outer readout_coverage override nested session alias input");
+check(bridgeExportNestedOuterOverride.session.next_readout_candidates[0]?.id === "custom_outer_snapshot", "Bridge export did not let outer next_readout_candidates override nested session alias input");
 check(bridgeExportNestedOuterOverride.session.ecu_info_snapshot?.items?.[0]?.value === "Outer Override ECU", "Bridge export did not let outer ecu_info_snapshot override nested session alias input");
 const bridgeSummaryNestedSessionAliases = obd.buildBridgeSessionSummary({
   session: bridgeExportPayload.session,
@@ -1379,7 +1388,14 @@ const bridgeSummaryNestedOuterOverride = obd.buildBridgeSessionSummary({
   captured_at: "2026-06-28T00:10:30Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Aqua" },
   vehicle_applicability: vehicleApplicabilityPartialSample,
+  connection_status: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+  },
   readout_coverage: legacyReadoutCoverage,
+  next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
   ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
   session: bridgeExportPayload.session
 });
@@ -1387,7 +1403,9 @@ check(bridgeSummaryNestedOuterOverride.protocol === "ISO9141-2", "Bridge session
 check(bridgeSummaryNestedOuterOverride.capturedAt === "2026-06-28T00:10:30Z", "Bridge session summary did not let outer captured_at override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.vehicleProfile?.model === "Outer Aqua", "Bridge session summary did not let outer vehicle_profile override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.vehicleApplicability?.status === "partial", "Bridge session summary did not let outer vehicle_applicability override nested session alias input");
+check(bridgeSummaryNestedOuterOverride.connectionStatus?.vehicleConnected === false, "Bridge session summary did not let outer connection_status override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Bridge session summary did not let outer readout_coverage override nested session alias input");
+check(bridgeSummaryNestedOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Bridge session summary did not let outer next_readout_candidates override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Bridge session summary did not let outer ecu_info_snapshot override nested session alias input");
 const bridgeDiagnosticImportNestedSessionAliases = obd.buildBridgeDiagnosticImport({
   bridge_session: bridgeDiagnosticImport.bridgeSession,

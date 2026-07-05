@@ -1608,6 +1608,7 @@
     const readoutCoverage = normalizeReadoutCoverageSnapshot(readoutCoverageInput?.schemaVersion ? readoutCoverageInput : (readoutCoverageInput || derivedReadoutCoverage));
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
+    const explicitNextReadoutCandidates = parts.nextReadoutCandidates || parts.next_readout_candidates || [];
 
     return {
       source: "local_bridge",
@@ -1632,7 +1633,11 @@
       monitorInsights: livePidSnapshot.monitorInsights,
       freezeFrameSnapshot,
       warnings,
-      nextReadoutCandidates: buildNextReadoutCandidates(readoutCoverage, parts.vehicleApplicability || parts.vehicle_applicability || {}),
+      nextReadoutCandidates: normalizeNextReadoutCandidates(
+        Array.isArray(explicitNextReadoutCandidates) && explicitNextReadoutCandidates.length
+          ? explicitNextReadoutCandidates
+          : buildNextReadoutCandidates(readoutCoverage, parts.vehicleApplicability || parts.vehicle_applicability || {})
+      ),
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
