@@ -1705,6 +1705,18 @@
       || parts.connection_status
       || parts.adapterIdentity
       || parts.adapter_identity
+      || parts.ecuResponseSummary
+      || parts.ecu_response_summary
+      || parts.supportedPidMatrix
+      || parts.supported_pid_matrix
+      || parts.freezeFrameSnapshot
+      || parts.freeze_frame_snapshot
+      || parts.readinessSnapshot
+      || parts.readiness_snapshot
+      || parts.ecuInfoSnapshot
+      || parts.ecu_info_snapshot
+      || parts.onboardMonitorSnapshot
+      || parts.onboard_monitor_snapshot
       || Array.isArray(parts.vciDevices)
       || Array.isArray(parts.vci_devices)
       || parts.vciList

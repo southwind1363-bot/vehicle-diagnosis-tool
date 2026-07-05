@@ -1942,6 +1942,15 @@ check(mergedDiagnosticInputBridgeTemporalOnly.source === "local_bridge", "Combin
 check(mergedDiagnosticInputBridgeTemporalOnly.startedAt === "2026-06-28T00:01:00Z" && mergedDiagnosticInputBridgeTemporalOnly.endedAt === "2026-06-28T00:02:00Z", "Combined diagnostic inputs did not preserve started_at or ended_at from temporal-only bridge_import");
 check(mergedDiagnosticInputBridgeTemporalOnly.capturedAt === "2026-06-28T00:01:30Z", "Combined diagnostic inputs did not preserve captured_at from temporal-only bridge_import");
 check(mergedDiagnosticInputBridgeTemporalOnly.protocol === "ISO15765-4", "Combined diagnostic inputs did not preserve protocol from temporal-only bridge_import");
+const mergedDiagnosticInputBridgeSnapshotOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    ecu_info_snapshot: bridgeEcuInfoSnapshot,
+    supported_pid_matrix: bridgeSupportedPidSnapshot
+  }
+});
+check(mergedDiagnosticInputBridgeSnapshotOnly.source === "local_bridge", "Combined diagnostic inputs did not treat snapshot-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeSnapshotOnly.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Combined diagnostic inputs did not preserve ecu_info_snapshot from snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeSnapshotOnly.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not preserve supported_pid_matrix from snapshot-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
