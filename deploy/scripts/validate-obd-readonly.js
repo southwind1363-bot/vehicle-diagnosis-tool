@@ -2317,6 +2317,18 @@ const scanSessionBridgeSessionSnakeAlias = obd.buildDiagnosticScanSession({
 });
 check(scanSessionBridgeSessionSnakeAlias.monitorValueSummary.totalCount >= bridgePidSnapshot.monitorValues.length, "Diagnostic scan session did not accept bridge_session alias input");
 check(scanSessionBridgeSessionSnakeAlias.dtcSnapshot.codes.join(",") === "P0171,P0300", "Diagnostic scan session did not carry DTCs from bridge_session alias input");
+const scanSessionSensitiveIdentifierSnakeAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-sensitive-identifier-snake",
+  had_sensitive_identifier: true
+});
+check(scanSessionSensitiveIdentifierSnakeAlias.hadSensitiveIdentifier === true, "Diagnostic scan session did not accept had_sensitive_identifier outer alias input");
+const scanSessionNestedSensitiveIdentifierSnakeAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-sensitive-identifier-nested-snake",
+  scan_session: {
+    had_sensitive_identifier: true
+  }
+});
+check(scanSessionNestedSensitiveIdentifierSnakeAlias.hadSensitiveIdentifier === true, "Diagnostic scan session did not accept had_sensitive_identifier nested alias input");
 const scanSessionNonInfrastructureBridgeImport = obd.buildDiagnosticScanSession({
   scan_session: bridgeDiagnosticImportNonInfrastructureAliases,
   session_id: "shop-test-non-infra-import"

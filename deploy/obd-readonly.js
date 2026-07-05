@@ -3767,7 +3767,11 @@
         input.tool_hints
       ),
       warnings,
-      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true || sessionInput.hadSensitiveIdentifier === true || input.hadSensitiveIdentifier === true,
+      hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
+        || sessionInput.hadSensitiveIdentifier === true
+        || sessionInput.had_sensitive_identifier === true
+        || input.hadSensitiveIdentifier === true
+        || input.had_sensitive_identifier === true,
       sourceLength: Number.isFinite(Number(sessionInput.sourceLength || sessionInput.source_length || input.sourceLength || input.source_length))
         ? Math.max(0, Math.round(Number(sessionInput.sourceLength || sessionInput.source_length || input.sourceLength || input.source_length)))
         : 0,
