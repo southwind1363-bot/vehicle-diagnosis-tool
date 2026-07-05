@@ -1220,16 +1220,16 @@
   }
 
   function buildReadoutCoverageSnapshot(input = {}) {
-    const connectionStatusInput = input.connectionStatus || input.connection_status || {};
-    const vciDevicesInput = input.vciDevices || input.vci_devices || input.vciList || input.vci_list || [];
-    const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || {};
+    const connectionStatusInput = input.connectionStatus || input.connection_status || input.connectionStatusResponse || input.connection_status_response || {};
+    const vciDevicesInput = input.vciDevices || input.vci_devices || input.vciList || input.vci_list || input.listVciResponse || input.list_vci_response || [];
+    const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || input.adapterIdentityResponse || input.adapter_identity_response || {};
     const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot || {};
-    const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot || {};
+    const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot || input.livePidResponse || input.live_pid_response || {};
     const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot || input.freezeFrameResponse || input.freeze_frame_response || {};
     const readinessSnapshotInput = input.readinessSnapshot || input.readiness_snapshot || input.readinessResponse || input.readiness_response || {};
     const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfoResponse || input.ecu_info_response || {};
     const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitorResponse || input.onboard_monitor_response || {};
-    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPidSnapshot || input.supported_pid_snapshot || {};
+    const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPidSnapshot || input.supported_pid_snapshot || input.supportedPidResponse || input.supported_pid_response || {};
     const hasConnectionStatusInput = hasObjectContent(connectionStatusInput);
     const hasAdapterIdentityInput = hasObjectContent(adapterIdentityInput);
     const hasDtcSnapshotInput = hasObjectContent(dtcSnapshotInput);
@@ -1261,7 +1261,11 @@
       ? (dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput))
       : null;
     const livePidSnapshot = hasLivePidSnapshotInput
-      ? (livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput))
+      ? (livePidSnapshotInput?.monitorValues
+          ? livePidSnapshotInput
+          : (livePidSnapshotInput?.raw || livePidSnapshotInput?.response || Array.isArray(livePidSnapshotInput?.bytes))
+            ? decodeLivePidResponse(livePidSnapshotInput)
+            : normalizeBridgeLivePidSnapshot(livePidSnapshotInput))
       : null;
     const freezeFrameSnapshot = hasFreezeFrameSnapshotInput
       ? (freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput))
@@ -1276,7 +1280,11 @@
       ? (onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput))
       : null;
     const supportedPidMatrix = hasSupportedPidMatrixInput
-      ? (supportedPidMatrixInput?.schemaVersion ? supportedPidMatrixInput : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput))
+      ? (supportedPidMatrixInput?.schemaVersion
+          ? supportedPidMatrixInput
+          : (supportedPidMatrixInput?.raw || supportedPidMatrixInput?.response || Array.isArray(supportedPidMatrixInput?.bytes))
+            ? decodeSupportedPidResponse(supportedPidMatrixInput)
+            : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput))
       : null;
     const items = [
       ...(includeInfrastructure ? [

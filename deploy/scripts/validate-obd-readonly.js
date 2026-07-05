@@ -1087,6 +1087,34 @@ const bridgeSummaryLivePidResponseAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryLivePidResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode live_pid_response alias input");
 check(bridgeSummaryLivePidResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge session summary did not accept ecu_response_summary_response alias input");
+const bridgeSummaryCamelResponseAliases = obd.buildBridgeSessionSummary({
+  dtcSnapshot: bridgeDtcSnapshot,
+  livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
+  ecuResponseSummaryResponse: bridgeSummary.ecuResponseSummary,
+  connectionStatusResponse: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+  },
+  listVciResponse: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { items: [{ deviceId: "summary-camel-vci", name: "Summary Camel VCI", isConnected: true }], selectedVciId: "summary-camel-vci" }
+  },
+  adapterIdentityResponse: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { adapter: "Summary Camel Adapter", family: "stn", version: "7.6" }
+  }
+});
+check(bridgeSummaryCamelResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode livePidResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge session summary did not accept ecuResponseSummaryResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Bridge session summary did not accept connectionStatusResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.vciDevices[0]?.id === "summary-camel-vci", "Bridge session summary did not accept listVciResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.adapterIdentity?.adapterFamily === "stn", "Bridge session summary did not accept adapterIdentityResponse camelCase alias input");
 const bridgeSummaryNonInfrastructureAliases = obd.buildBridgeSessionSummary({
   dtc_codes: ["P0300"],
   supported_pid_snapshot: bridgeSupportedPidSnapshot
@@ -2217,6 +2245,36 @@ check(aliasReadoutCoverage.progressPercent >= 80, "Readout coverage did not acce
 check(aliasReadoutCoverage.items.some((item) => item.id === "vci_devices" && item.count === 1), "Readout coverage did not count vci_list alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "freeze_frame_snapshot" && item.count === 2), "Readout coverage did not accept freeze_frame_response alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "supported_pid_matrix" && item.count >= 2), "Readout coverage did not accept supported_pid_snapshot alias input");
+const camelResponseReadoutCoverage = obd.buildReadoutCoverageSnapshot({
+  connectionStatusResponse: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+  },
+  listVciResponse: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { items: [{ deviceId: "coverage-camel-vci", name: "Coverage Camel VCI", isConnected: true }], selectedVciId: "coverage-camel-vci" }
+  },
+  adapterIdentityResponse: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { adapter: "Coverage Camel Adapter", family: "stn", version: "7.7" }
+  },
+  freezeFrameResponse: bridgeFreezeFrameSnapshot,
+  readinessResponse: bridgeReadinessSnapshot,
+  ecuInfoResponse: bridgeEcuInfoSnapshot,
+  onboardMonitorResponse: bridgeOnboardMonitorSnapshot,
+  supportedPidSnapshot: bridgeSupportedPidSnapshot
+});
+check(camelResponseReadoutCoverage.includeInfrastructure === true, "Readout coverage did not infer infrastructure from camelCase response aliases");
+check(camelResponseReadoutCoverage.items.some((item) => item.id === "connection_status" && item.count === 1), "Readout coverage did not count connectionStatusResponse camelCase alias input");
+check(camelResponseReadoutCoverage.items.some((item) => item.id === "vci_devices" && item.count === 1), "Readout coverage did not count listVciResponse camelCase alias input");
+check(camelResponseReadoutCoverage.items.some((item) => item.id === "adapter_identity" && item.count === 1), "Readout coverage did not count adapterIdentityResponse camelCase alias input");
+check(camelResponseReadoutCoverage.items.some((item) => item.id === "freeze_frame_snapshot" && item.count === 2), "Readout coverage did not accept freezeFrameResponse camelCase alias input");
 const infrastructureHeavyReadoutCoverage = obd.buildReadoutCoverageSnapshot({
   includeInfrastructure: true,
   connectionStatus: { displayStatus: "ready" },
