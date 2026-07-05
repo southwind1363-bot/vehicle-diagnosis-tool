@@ -2131,6 +2131,54 @@ check(mergedDiagnosticInputMetadataOuterOverride.toolHints.join(",") === "CONSUL
 check(mergedDiagnosticInputMetadataOuterOverride.warnings.includes("negative_obd_response_present") && mergedDiagnosticInputMetadataOuterOverride.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not merge outer warning_flags with nested bridgeSession input");
 check(mergedDiagnosticInputMetadataOuterOverride.sourceLength === 5, "Combined diagnostic inputs did not preserve merged sourceLength behavior after outer bridge source_length override");
 check(mergedDiagnosticInputMetadataOuterOverride.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve hadSensitiveIdentifier when nested bridgeSession remained true");
+const mergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_diagnostic_import: {
+    toolHints: ["CONSULT"],
+    warningFlags: ["negative_obd_response_present"],
+    sourceLength: 7,
+    hadSensitiveIdentifier: false,
+    importClassification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 16 }
+    },
+    bridgeSession: {
+      tool_hints: ["Techstream", "J2534"],
+      warning_flags: ["freeze_frame_available"],
+      source_length: 19,
+      had_sensitive_identifier: true
+    }
+  }
+});
+check(mergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.toolHints.join(",") === "CONSULT,Techstream,J2534", "Combined diagnostic inputs did not merge camelCase outer toolHints with nested snake_case bridgeSession input");
+check(mergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.warnings.includes("negative_obd_response_present") && mergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not merge camelCase outer warningFlags with nested snake_case bridgeSession input");
+check(mergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.sourceLength === 7, "Combined diagnostic inputs did not preserve camelCase outer sourceLength over nested snake_case bridgeSession input");
+check(mergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve nested snake_case sensitive identifier when outer camelCase value was false");
+check(mergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 16, "Combined diagnostic inputs did not preserve camelCase outer importClassification over nested snake_case bridgeSession input");
+const mergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_diagnostic_import: {
+    tool_hints: ["CONSULT"],
+    warning_flags: ["negative_obd_response_present"],
+    source_length: 8,
+    had_sensitive_identifier: false,
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 17 }
+    },
+    bridgeSession: {
+      toolHints: ["Techstream", "J2534"],
+      warningFlags: ["freeze_frame_available"],
+      sourceLength: 23,
+      hadSensitiveIdentifier: true
+    }
+  }
+});
+check(mergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.toolHints.join(",") === "CONSULT,Techstream,J2534", "Combined diagnostic inputs did not merge snake_case outer tool_hints with nested camelCase bridgeSession input");
+check(mergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.warnings.includes("negative_obd_response_present") && mergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not merge snake_case outer warning_flags with nested camelCase bridgeSession input");
+check(mergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "Combined diagnostic inputs did not preserve snake_case outer source_length over nested camelCase bridgeSession input");
+check(mergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve nested camelCase sensitive identifier when outer snake_case value was false");
+check(mergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 17, "Combined diagnostic inputs did not preserve snake_case outer import_classification over nested camelCase bridgeSession input");
 const mergedDiagnosticInputDirectBridgeImportNestedSourceLength = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: {
     importType: "bridge_diagnostic_snapshot",
