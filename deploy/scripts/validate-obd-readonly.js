@@ -2268,6 +2268,13 @@ check(scanSessionNestedSessionAlias.vehicleProfile?.maker === bridgeDiagnosticIm
 check(scanSessionNestedSessionAlias.vehicleProfile?.model === bridgeDiagnosticImport.exportPayload.session.vehicle_profile?.model, "Diagnostic scan session did not carry vehicle_profile model from nested session alias input");
 check(scanSessionNestedSessionAlias.vehicleApplicability?.status === "matched", "Diagnostic scan session did not carry vehicle_applicability from nested session alias input");
 check(scanSessionNestedSessionAlias.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.exportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from nested session alias input");
+const scanSessionNestedToolHintsAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-nested-tool-hints",
+  session: {
+    tool_hints: ["Techstream", "J2534"]
+  }
+});
+check(scanSessionNestedToolHintsAlias.toolHints.join(",") === "Techstream,J2534", "Diagnostic scan session did not carry tool_hints from nested session alias input");
 const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
   scan_session: bridgeExportPayload.session,
   session_id: "shop-test-scan-session-alias"
@@ -2281,6 +2288,13 @@ check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diag
 check(scanSessionScanSessionAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from scan_session alias input");
 check(scanSessionScanSessionAlias.vehicleApplicability?.status === bridgeExportPayload.session.vehicle_applicability?.status, "Diagnostic scan session did not carry vehicle_applicability from scan_session alias input");
 check(scanSessionScanSessionAlias.readoutCoverage?.progressPercent === bridgeExportPayload.session.readout_coverage?.progressPercent, "Diagnostic scan session did not carry readout_coverage from scan_session alias input");
+const scanSessionScanSessionToolHintsAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-scan-session-tool-hints",
+  scan_session: {
+    toolHints: ["CONSULT", "IDS"]
+  }
+});
+check(scanSessionScanSessionToolHintsAlias.toolHints.join(",") === "CONSULT,IDS", "Diagnostic scan session did not carry toolHints from scan_session alias input");
 check(scanSessionExplicitUnsortedCandidates.nextReadoutCandidates[0]?.id === "dtc_snapshot", "Diagnostic scan session did not sort explicit next_readout_candidates by priority");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
@@ -2289,6 +2303,14 @@ const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
 check(scanSessionBridgeSessionCamelAlias.supportedPidMatrix.supportedPids.includes("40"), "Diagnostic scan session did not accept bridgeSession camelCase alias input");
 check(scanSessionBridgeSessionCamelAlias.freezeFrameSnapshot.triggerDtc === "P0171", "Diagnostic scan session did not carry freeze frame from bridgeSession camelCase alias input");
 check(scanSessionBridgeSessionCamelAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not carry ECU info from bridgeSession camelCase alias input");
+const scanSessionBridgeSessionToolHintsMerge = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-bridge-session-tool-hints",
+  bridgeSession: {
+    tool_hints: ["Techstream"]
+  },
+  toolHints: ["J2534"]
+});
+check(scanSessionBridgeSessionToolHintsMerge.toolHints.length === 2 && scanSessionBridgeSessionToolHintsMerge.toolHints.includes("Techstream") && scanSessionBridgeSessionToolHintsMerge.toolHints.includes("J2534"), "Diagnostic scan session did not merge outer and bridgeSession tool hints");
 const scanSessionBridgeSessionSnakeAlias = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-snake"
