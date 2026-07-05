@@ -1432,6 +1432,35 @@ check(bridgeExportNestedSessionAliases.session.warnings.includes("freeze_frame_a
 check(bridgeExportNestedSessionAliases.session.next_readout_candidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge export did not carry next_readout_candidates from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export did not carry tool_hints from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.source_length === 128, "Bridge export did not carry source_length from nested session alias input");
+const bridgeExportNestedSessionResponseAliases = obd.buildBridgeSessionExportPayload({
+  session: {
+    live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
+    ecu_response_summary_response: bridgeSummary.ecuResponseSummary,
+    connection_status_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    list_vci_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { items: [{ deviceId: "export-response-vci", name: "Export Response VCI", isConnected: true }], selectedVciId: "export-response-vci" }
+    },
+    adapter_identity_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Export Response Adapter", family: "stn", version: "7.1" }
+    }
+  }
+});
+check(bridgeExportNestedSessionResponseAliases.session.monitor_values.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge export did not decode live_pid_response from nested session alias input");
+check(bridgeExportNestedSessionResponseAliases.session.ecu_response_summary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge export did not accept ecu_response_summary_response from nested session alias input");
+check(bridgeExportNestedSessionResponseAliases.session.connection_status?.vehicleConnected === true, "Bridge export did not accept connection_status_response from nested session alias input");
+check(bridgeExportNestedSessionResponseAliases.session.vci_devices[0]?.id === "export-response-vci", "Bridge export did not accept list_vci_response from nested session alias input");
+check(bridgeExportNestedSessionResponseAliases.session.adapter_identity?.adapterFamily === "stn", "Bridge export did not accept adapter_identity_response from nested session alias input");
 const outerOverrideEcuInfoSnapshot = {
   ...bridgeEcuInfoSnapshot,
   itemCount: 1,
@@ -1537,6 +1566,35 @@ check(bridgeDiagnosticImportNestedSessionAliases.bridgeSession.adapterIdentity.a
 check(bridgeDiagnosticImportNestedSessionAliases.bridgeSession.vciDevices.length === 1, "Bridge diagnostic import did not carry vci devices from bridge_session nested alias input");
 check(bridgeDiagnosticImportNestedSessionAliases.codes[0] === "P0171", "Bridge diagnostic import did not retain dtc_codes with bridge_session nested alias input");
 check(bridgeDiagnosticImportNestedSessionAliases.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not retain warnings from bridge_session nested alias input");
+const bridgeDiagnosticImportNestedSessionResponseAliases = obd.buildBridgeDiagnosticImport({
+  bridge_session: {
+    live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
+    ecu_response_summary_response: bridgeSummary.ecuResponseSummary,
+    connection_status_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    list_vci_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { items: [{ deviceId: "import-response-vci", name: "Import Response VCI", isConnected: true }], selectedVciId: "import-response-vci" }
+    },
+    adapter_identity_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Import Response Adapter", family: "stn", version: "7.2" }
+    }
+  }
+});
+check(bridgeDiagnosticImportNestedSessionResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge diagnostic import did not decode live_pid_response from bridge_session nested alias input");
+check(bridgeDiagnosticImportNestedSessionResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge diagnostic import did not accept ecu_response_summary_response from bridge_session nested alias input");
+check(bridgeDiagnosticImportNestedSessionResponseAliases.connectionStatus?.vehicleConnected === true, "Bridge diagnostic import did not accept connection_status_response from bridge_session nested alias input");
+check(bridgeDiagnosticImportNestedSessionResponseAliases.vciDevices[0]?.id === "import-response-vci", "Bridge diagnostic import did not accept list_vci_response from bridge_session nested alias input");
+check(bridgeDiagnosticImportNestedSessionResponseAliases.adapterIdentity?.adapterFamily === "stn", "Bridge diagnostic import did not accept adapter_identity_response from bridge_session nested alias input");
 const bridgeDiagnosticImportNestedOuterOverride = obd.buildBridgeDiagnosticImport({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:45Z",
