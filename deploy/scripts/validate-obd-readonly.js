@@ -1600,6 +1600,17 @@ const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
 });
 check(mergedDiagnosticInputBridgeParts.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_parts alias input");
 check(mergedDiagnosticInputBridgeParts.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from bridge_parts alias input");
+const scanSessionFromMergedDiagnosticInput = obd.buildDiagnosticScanSession({
+  session_id: "merged-diagnostic-input-scan-session",
+  scan_session: mergedDiagnosticInputExportNestedOuterOverride
+});
+check(scanSessionFromMergedDiagnosticInput.sessionId === "merged-diagnostic-input-scan-session", "Diagnostic scan session did not let outer session_id override merged diagnostic input nested alias");
+check(scanSessionFromMergedDiagnosticInput.protocol === "ISO9141-2", "Diagnostic scan session did not preserve protocol from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.vehicleProfile?.model === "Outer Porte", "Diagnostic scan session did not preserve vehicle_profile from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.vehicleApplicability?.status === "partial", "Diagnostic scan session did not preserve vehicle_applicability from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not preserve readout_coverage from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not preserve ecu_info_snapshot from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.nextReadoutCandidates?.[0]?.id === mergedDiagnosticInputExportNestedOuterOverride.nextReadoutCandidates?.[0]?.id, "Diagnostic scan session did not preserve next_readout_candidates from merged diagnostic input");
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
 check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
 check(emptyReadoutCoverage.capturedPercent === 0, "Empty readout coverage did not keep capturedPercent at zero");
