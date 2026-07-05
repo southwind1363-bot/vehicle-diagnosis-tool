@@ -1179,6 +1179,24 @@ check(bridgeExportSummaryAliases.session.readiness_snapshot.incompleteCount === 
 check(bridgeExportSummaryAliases.session.ecu_info_snapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge export did not accept ecu_info_response summary alias input");
 check(bridgeExportSummaryAliases.session.onboard_monitor_snapshot.failedCount === 1, "Bridge export did not accept onboard_monitor_response summary alias input");
 check(bridgeExportSummaryAliases.session.next_readout_candidates[0]?.id === "custom_snapshot", "Bridge export did not preserve explicit next_readout_candidates summary alias input");
+const bridgeExportDirectSnakeMetadataSummary = obd.buildBridgeSessionExportPayload({
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 2 }
+  },
+  next_readout_candidates: [{ id: "direct_snake_snapshot", label: "Direct Snake Snapshot", priority: 4, reason: "summary alias" }],
+  had_sensitive_identifier: true,
+  source_length: 77,
+  ecu_info_snapshot: {
+    itemCount: 1,
+    hadSensitiveIdentifier: true,
+    items: [{ id: "vin", value: "JT123456789012345", privacyClass: "sensitive_identifier" }]
+  }
+});
+check(bridgeExportDirectSnakeMetadataSummary.session.import_classification?.bucketCounts?.storedDtcResponses === 2, "Bridge export did not preserve direct snake_case import_classification summary input");
+check(bridgeExportDirectSnakeMetadataSummary.session.next_readout_candidates[0]?.id === "direct_snake_snapshot", "Bridge export did not preserve direct snake_case next_readout_candidates summary input");
+check(bridgeExportDirectSnakeMetadataSummary.session.had_sensitive_identifier === true, "Bridge export did not preserve direct snake_case had_sensitive_identifier summary input");
+check(bridgeExportDirectSnakeMetadataSummary.session.source_length === 77, "Bridge export did not preserve direct snake_case source_length summary input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",

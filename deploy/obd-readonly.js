@@ -2197,15 +2197,20 @@
   }
 
   function buildSummaryMetadataFields(summary = {}, { snakeCase = false } = {}) {
-    const vehicleApplicability = summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot();
-    const importClassification = summary.importClassification && typeof summary.importClassification === "object"
-      ? { ...summary.importClassification }
+    const vehicleApplicability = summary.vehicleApplicability || summary.vehicle_applicability || normalizeVehicleApplicabilitySnapshot();
+    const importClassificationInput = summary.importClassification || summary.import_classification;
+    const importClassification = importClassificationInput && typeof importClassificationInput === "object"
+      ? { ...importClassificationInput }
       : null;
     const toolHints = mergeUniqueStrings(summary.toolHints);
     const warnings = [...new Set(summary.warnings || [])];
-    const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates);
-    const hadSensitiveIdentifier = summary.hadSensitiveIdentifier === true || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true;
-    const sourceLength = Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0;
+    const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);
+    const hadSensitiveIdentifier = summary.hadSensitiveIdentifier === true
+      || summary.had_sensitive_identifier === true
+      || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true
+      || summary.ecu_info_snapshot?.hadSensitiveIdentifier === true;
+    const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, 0);
+    const sourceLength = Number.isFinite(Number(sourceLengthValue)) ? Math.max(0, Math.round(Number(sourceLengthValue))) : 0;
     return snakeCase
       ? {
         vehicle_applicability: vehicleApplicability,
