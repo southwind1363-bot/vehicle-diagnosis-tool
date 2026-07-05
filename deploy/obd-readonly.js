@@ -1239,9 +1239,10 @@
     const hasEcuInfoSnapshotInput = Object.keys(ecuInfoSnapshotInput).length > 0;
     const hasOnboardMonitorSnapshotInput = Object.keys(onboardMonitorSnapshotInput).length > 0;
     const hasSupportedPidMatrixInput = Object.keys(supportedPidMatrixInput).length > 0;
-    const includeInfrastructure = input.includeInfrastructure === true
+    const includeInfrastructureInput = pickDefined(input.includeInfrastructure, input.include_infrastructure);
+    const includeInfrastructure = includeInfrastructureInput === true
       ? true
-      : input.includeInfrastructure === false
+      : includeInfrastructureInput === false
         ? false
         : hasConnectionStatusInput
           || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
@@ -1379,7 +1380,7 @@
     return {
       ...input,
       schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",
-      includeInfrastructure: input.includeInfrastructure === true,
+      includeInfrastructure: pickDefined(input.includeInfrastructure, input.include_infrastructure) === true,
       totalCategories,
       availableCategories,
       capturedCategories,
@@ -3707,7 +3708,8 @@
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = vciListInput?.devices ? vciListInput : normalizeBridgeVciList(vciListInput);
     const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput);
-    const explicitIncludeInfrastructure = typeof readoutCoverageInput?.includeInfrastructure === "boolean" ? readoutCoverageInput.includeInfrastructure : null;
+    const explicitIncludeInfrastructureValue = pickDefined(readoutCoverageInput?.includeInfrastructure, readoutCoverageInput?.include_infrastructure);
+    const explicitIncludeInfrastructure = typeof explicitIncludeInfrastructureValue === "boolean" ? explicitIncludeInfrastructureValue : null;
     const hasBridgeInfrastructureContext = explicitIncludeInfrastructure !== null
       ? explicitIncludeInfrastructure
       : Object.keys(connectionStatusInput).length > 0

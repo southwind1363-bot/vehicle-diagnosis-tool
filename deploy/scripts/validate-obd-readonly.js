@@ -2503,6 +2503,32 @@ const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
 check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve plain-object capturedPercent override");
 check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
+const scanSessionSnakeCoverageOverride = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-snake-coverage-override",
+  readout_coverage: {
+    include_infrastructure: false,
+    totalCategories: 7,
+    availableCategories: 3,
+    capturedCategories: 2,
+    emptyCategories: 1,
+    missingCategories: 4
+  },
+  bridge_session: {
+    connection_status: { displayStatus: "connected", vehicleConnected: true },
+    dtc_codes: [{ code: "P0300", status: "stored" }]
+  }
+});
+check(scanSessionSnakeCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not accept include_infrastructure readout coverage alias");
+check(!scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when include_infrastructure alias disabled infrastructure");
+const normalizedSnakeCoverage = obd.normalizeReadoutCoverageSnapshot({
+  include_infrastructure: true,
+  totalCategories: 10,
+  availableCategories: 4,
+  capturedCategories: 3,
+  emptyCategories: 1,
+  missingCategories: 6
+});
+check(normalizedSnakeCoverage.includeInfrastructure === true, "Readout coverage normalization did not accept include_infrastructure alias");
 const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
   session_id: "shop-test-non-infra-bridge-session"
