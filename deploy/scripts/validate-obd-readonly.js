@@ -2853,6 +2853,52 @@ check(decodedScanSessionNestedOuterMetadataOverride.warnings.includes("negative_
 check(decodedScanSessionNestedOuterMetadataOverride.sourceLength === 0, "Decoded OBD session did not let outer source_length override scan_session nested alias input");
 check(decodedScanSessionNestedOuterMetadataOverride.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve nested sensitive identifier when outer scan_session nested alias input set false");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
+const decodedScanSessionMixedCamelOuterSnakeNestedMetadata = obd.buildDecodedObdScanSession({
+  sessionId: "decoded-mixed-camel-outer-snake-nested",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  toolHints: ["CONSULT"],
+  warningFlags: ["negative_obd_response_present"],
+  sourceLength: 7,
+  hadSensitiveIdentifier: false,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 18 }
+  },
+  scan_session: {
+    tool_hints: ["Techstream"],
+    warning_flags: ["freeze_frame_available"],
+    source_length: 128,
+    had_sensitive_identifier: true
+  }
+});
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("CONSULT") && decodedScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("Techstream"), "Decoded OBD session did not merge camelCase outer toolHints with nested snake_case scan_session input");
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("negative_obd_response_present") && decodedScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("freeze_frame_available"), "Decoded OBD session did not merge camelCase outer warningFlags with nested snake_case scan_session input");
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.sourceLength === 7, "Decoded OBD session did not preserve camelCase outer sourceLength over nested snake_case scan_session input");
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve nested snake_case sensitive identifier when outer camelCase value was false");
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 18, "Decoded OBD session did not preserve camelCase outer importClassification over nested snake_case scan_session input");
+const decodedScanSessionMixedSnakeOuterCamelNestedMetadata = obd.buildDecodedObdScanSession({
+  session_id: "decoded-mixed-snake-outer-camel-nested",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  tool_hints: ["CONSULT"],
+  warning_flags: ["negative_obd_response_present"],
+  source_length: 8,
+  had_sensitive_identifier: false,
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 19 }
+  },
+  scanSession: {
+    toolHints: ["Techstream"],
+    warningFlags: ["freeze_frame_available"],
+    sourceLength: 128,
+    hadSensitiveIdentifier: true
+  }
+});
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("CONSULT") && decodedScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("Techstream"), "Decoded OBD session did not merge snake_case outer tool_hints with nested camelCase scanSession input");
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("negative_obd_response_present") && decodedScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("freeze_frame_available"), "Decoded OBD session did not merge snake_case outer warning_flags with nested camelCase scanSession input");
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "Decoded OBD session did not preserve snake_case outer source_length over nested camelCase scanSession input");
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve nested camelCase sensitive identifier when outer snake_case value was false");
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 19, "Decoded OBD session did not preserve snake_case outer import_classification over nested camelCase scanSession input");
 const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-coverage-candidates",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3124,6 +3170,50 @@ check(textScanSessionNestedOuterMetadataOverride.toolHints.includes("CONSULT") &
 check(textScanSessionNestedOuterMetadataOverride.warnings.includes("negative_obd_response_present") && textScanSessionNestedOuterMetadataOverride.warnings.includes("freeze_frame_available"), "OBD text scan session did not merge outer warning_flags with scan_session nested options");
 check(textScanSessionNestedOuterMetadataOverride.sourceLength === 0, "OBD text scan session did not let outer source_length override scan_session nested options");
 check(textScanSessionNestedOuterMetadataOverride.hadSensitiveIdentifier === true, "OBD text scan session did not preserve nested sensitive identifier when outer scan_session nested options set false");
+const textScanSessionMixedCamelOuterSnakeNestedMetadata = obd.buildScanSessionFromObdText(obdTextLog, {
+  sessionId: "obd-text-mixed-camel-outer-snake-nested",
+  toolHints: ["CONSULT"],
+  warningFlags: ["negative_obd_response_present"],
+  sourceLength: 7,
+  hadSensitiveIdentifier: false,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { livePidResponses: 18 }
+  },
+  scan_session: {
+    tool_hints: ["Techstream"],
+    warning_flags: ["freeze_frame_available"],
+    source_length: 128,
+    had_sensitive_identifier: true
+  }
+});
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("CONSULT") && textScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("Techstream"), "OBD text scan session did not merge camelCase outer toolHints with nested snake_case scan_session options");
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("negative_obd_response_present") && textScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("freeze_frame_available"), "OBD text scan session did not merge camelCase outer warningFlags with nested snake_case scan_session options");
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.sourceLength === 7, "OBD text scan session did not preserve camelCase outer sourceLength over nested snake_case scan_session options");
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.hadSensitiveIdentifier === true, "OBD text scan session did not preserve nested snake_case sensitive identifier when outer camelCase value was false");
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.importClassification?.bucketCounts?.livePidResponses === 18, "OBD text scan session did not preserve camelCase outer importClassification over nested snake_case scan_session options");
+const textScanSessionMixedSnakeOuterCamelNestedMetadata = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-mixed-snake-outer-camel-nested",
+  tool_hints: ["CONSULT"],
+  warning_flags: ["negative_obd_response_present"],
+  source_length: 8,
+  had_sensitive_identifier: false,
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { livePidResponses: 19 }
+  },
+  scanSession: {
+    toolHints: ["Techstream"],
+    warningFlags: ["freeze_frame_available"],
+    sourceLength: 128,
+    hadSensitiveIdentifier: true
+  }
+});
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("CONSULT") && textScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("Techstream"), "OBD text scan session did not merge snake_case outer tool_hints with nested camelCase scanSession options");
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("negative_obd_response_present") && textScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("freeze_frame_available"), "OBD text scan session did not merge snake_case outer warning_flags with nested camelCase scanSession options");
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "OBD text scan session did not preserve snake_case outer source_length over nested camelCase scanSession options");
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.hadSensitiveIdentifier === true, "OBD text scan session did not preserve nested camelCase sensitive identifier when outer snake_case value was false");
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.importClassification?.bucketCounts?.livePidResponses === 19, "OBD text scan session did not preserve snake_case outer import_classification over nested camelCase scanSession options");
 const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-coverage-candidates",
   readout_coverage: legacyReadoutCoverage,
