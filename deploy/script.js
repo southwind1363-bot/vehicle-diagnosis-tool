@@ -1799,6 +1799,10 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const selectedVehicle = obdVehicleInput.value.trim() || "OBD側で車両選択";
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId(capability);
+  const currentSession = obdDevSession.lastSession || null;
+  const nextReadoutLabels = Array.isArray(currentSession?.nextReadoutCandidates)
+    ? currentSession.nextReadoutCandidates.slice(0, 2).map((item) => item?.label).filter(Boolean)
+    : [];
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const previewActive = Boolean(obdDevSession.previewMode);
   const connected = Boolean(obdDevSession.port);
@@ -1834,6 +1838,11 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
       : "必要なら詳細トークンを入れてJ2534確認を有効化";
   } else if (!detailUnlocked) {
     nextAction = "必要なら詳細トークンで詳細読取を有効化";
+  }
+  if ((connected || bridgeReady) && nextReadoutLabels.length) {
+    nextAction = connected
+      ? `${nextReadoutLabels.join(" / ")} 繧帝・↓遒ｺ隱・`
+      : `${nextReadoutLabels.join(" / ")} 繧堤｢ｺ隱・`;
   }
   const readoutPath = connected
     ? "Web Serial読取"
