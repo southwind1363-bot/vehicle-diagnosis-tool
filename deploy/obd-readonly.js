@@ -1480,13 +1480,6 @@
     const applicabilityNeedsVehicleConfirmation = applicability.status === "partial"
       || applicability.status === "unlisted"
       || applicability.status === "manual";
-    const applicabilityNote = applicability.status === "partial"
-      ? "車両適用候補の確認と並行して判断"
-      : applicability.status === "unlisted"
-        ? "車両適用未登録のため実車確認を優先"
-        : applicability.status === "manual"
-          ? "手入力車両情報のため実車照合を優先"
-          : "";
     return (normalizedCoverage.items || [])
       .filter((item) => item && typeof item === "object" && (item.status === "missing" || item.status === "empty"))
       .map((item) => {
@@ -1500,7 +1493,7 @@
           priority: item.id === "ecu_info_snapshot" && applicabilityNeedsVehicleConfirmation
             ? 92
             : (priorityById[item.id] || 10),
-          reason: applicabilityNote ? `${reason} / ${applicabilityNote}` : reason,
+          reason,
           applicabilityStatus: applicability.status || null
         };
       })
