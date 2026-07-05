@@ -1673,7 +1673,8 @@
       capturedAt: parts.capturedAt || parts.captured_at || nested.capturedAt || nested.captured_at || null,
       protocol: parts.protocol || nested.protocol || null,
       vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
-      vehicleApplicability: parts.vehicleApplicability || parts.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null
+      vehicleApplicability: parts.vehicleApplicability || parts.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
+      nextReadoutCandidates: parts.nextReadoutCandidates || parts.next_readout_candidates || nested.nextReadoutCandidates || nested.next_readout_candidates || null
     };
   }
 
@@ -1689,6 +1690,7 @@
     const codesInput = parts.codes || parts.dtc_codes || parts.dtcCodes || [];
     const monitorValuesInput = parts.monitorValues || parts.monitor_values || [];
     const monitorInsightsInput = parts.monitorInsights || parts.monitor_insights || [];
+    const nextReadoutCandidatesInput = parts.nextReadoutCandidates || parts.next_readout_candidates || [];
     const warningsInput = parts.warnings || parts.warning_flags || parts.warningFlags || [];
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const normalizedVciList = Array.isArray(vciDevicesInput)
@@ -1781,9 +1783,13 @@
       monitorValueSummary,
       monitorInsights,
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
-      nextReadoutCandidates: buildNextReadoutCandidates(
-        parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
-        parts.vehicleApplicability || parts.vehicle_applicability || {}
+      nextReadoutCandidates: cloneBridgeArrayItems(
+        Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
+          ? nextReadoutCandidatesInput
+          : buildNextReadoutCandidates(
+            parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
+            parts.vehicleApplicability || parts.vehicle_applicability || {}
+          )
       ),
       exportRequired: true,
       retainedRawText: false,
@@ -1809,7 +1815,8 @@
       captured_at: input.captured_at || input.capturedAt || nested.captured_at || nested.capturedAt || null,
       protocol: input.protocol || nested.protocol || null,
       vehicle_profile: input.vehicle_profile || input.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
-      vehicle_applicability: input.vehicle_applicability || input.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null
+      vehicle_applicability: input.vehicle_applicability || input.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
+      next_readout_candidates: input.next_readout_candidates || input.nextReadoutCandidates || nested.next_readout_candidates || nested.nextReadoutCandidates || null
     };
   }
 
@@ -3699,6 +3706,11 @@
     const readoutCoverage = normalizeReadoutCoverageSnapshot(readoutCoverageInput?.schemaVersion ? readoutCoverageInput : derivedReadoutCoverage);
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
+    const explicitNextReadoutCandidates = sessionInput.next_readout_candidates
+      || sessionInput.nextReadoutCandidates
+      || input.nextReadoutCandidates
+      || input.next_readout_candidates
+      || [];
 
     return {
       schemaVersion: "scan_session_v1",
@@ -3722,9 +3734,13 @@
       livePidSnapshot,
       supportedPidMatrix,
       readoutCoverage,
-      nextReadoutCandidates: buildNextReadoutCandidates(
-        readoutCoverage,
-        sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {}
+      nextReadoutCandidates: cloneBridgeArrayItems(
+        Array.isArray(explicitNextReadoutCandidates) && explicitNextReadoutCandidates.length
+          ? explicitNextReadoutCandidates
+          : buildNextReadoutCandidates(
+            readoutCoverage,
+            sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {}
+          )
       ),
       monitorValueSummary: buildMonitorValueSummary([
         ...livePidSnapshot.monitorValues,

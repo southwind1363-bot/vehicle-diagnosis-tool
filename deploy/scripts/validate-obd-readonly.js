@@ -1008,6 +1008,15 @@ const vehicleApplicabilityPartialSample = {
   status: "partial",
   summaryLabel: "Toyota Prius / Candidate needs review"
 };
+const explicitNextReadoutCandidatesSample = [
+  {
+    id: "custom_snapshot",
+    label: "Custom Snapshot",
+    status: "missing",
+    priority: 999,
+    reason: "Explicit candidate sample"
+  }
+];
 const bridgeSummaryApplicabilityAliases = obd.buildBridgeSessionSummary({
   vehicle_profile: { maker: "Toyota", model: "Prius" },
   vehicle_applicability: vehicleApplicabilitySample,
@@ -1122,7 +1131,8 @@ const bridgeExportSummaryAliases = obd.buildBridgeSessionExportPayload({
   onboard_monitor_response: bridgeOnboardMonitorSnapshot,
   readout_coverage: bridgeSummary.readoutCoverage,
   freeze_frame_response: bridgeFreezeFrameSnapshot,
-  ecu_response_summary: bridgeSummary.ecuResponseSummary
+  ecu_response_summary: bridgeSummary.ecuResponseSummary,
+  next_readout_candidates: explicitNextReadoutCandidatesSample
 });
 check(bridgeExportSummaryAliases.session.captured_at === "2026-06-28T00:08:00Z", "Bridge export did not accept captured_at summary alias input");
 check(bridgeExportSummaryAliases.session.dtc_codes[0] === "P0171", "Bridge export did not accept dtc_codes summary alias input");
@@ -1226,7 +1236,8 @@ const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
   onboard_monitor_response: bridgeOnboardMonitorSnapshot,
   readout_coverage: bridgeSummary.readoutCoverage,
   freeze_frame_response: bridgeFreezeFrameSnapshot,
-  ecu_response_summary: bridgeSummary.ecuResponseSummary
+  ecu_response_summary: bridgeSummary.ecuResponseSummary,
+  next_readout_candidates: explicitNextReadoutCandidatesSample
 });
 check(bridgeDiagnosticImportAliases.capturedAt === "2026-06-28T00:09:00Z", "Bridge diagnostic import did not accept captured_at summary alias input");
 check(bridgeDiagnosticImportAliases.codes[0] === "P0171", "Bridge diagnostic import did not accept dtc_codes summary alias input");
@@ -1242,7 +1253,9 @@ check(bridgeDiagnosticImportAliases.connectionStatus.vehicleConnected === true, 
 check(bridgeDiagnosticImportAliases.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not expose top-level vci_list summary alias input");
 check(bridgeDiagnosticImportAliases.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not expose top-level adapter_identity summary alias input");
 check(bridgeDiagnosticImportAliases.warnings.length === 1 && bridgeDiagnosticImportAliases.warnings[0] === "freeze_frame_available", "Bridge diagnostic import did not expose deduplicated top-level warnings");
+check(bridgeDiagnosticImportAliases.nextReadoutCandidates[0]?.id === "custom_snapshot", "Bridge diagnostic import did not preserve explicit next_readout_candidates summary alias input");
 check(bridgeDiagnosticImportAliases.bridgeSession.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not accept vci_list summary alias input");
+check(bridgeDiagnosticImportAliases.bridgeSession.nextReadoutCandidates[0]?.id === "custom_snapshot", "Bridge diagnostic import did not preserve explicit next_readout_candidates on bridgeSession");
 check(bridgeDiagnosticImportAliases.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not accept readiness_response summary alias input");
 check(bridgeDiagnosticImportAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not accept ecu_info_response summary alias input");
 check(bridgeDiagnosticImportAliases.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not accept onboard_monitor_response summary alias input");
@@ -1434,6 +1447,7 @@ check(mergedDiagnosticInputExportPayload.source === "scanner_text_and_local_brid
 check(mergedDiagnosticInputExportPayload.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not carry warnings from bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Combined diagnostic inputs did not carry next_readout_candidates from bridge_session_export_v1 bridge_import input");
 const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_export_payload: bridgeExportPayload
@@ -2137,6 +2151,7 @@ check(scanSessionNestedSessionAlias.vciDevices[0]?.id === bridgeDiagnosticImport
 check(scanSessionNestedSessionAlias.supportedPidMatrix.supportedPids.includes("40"), "Diagnostic scan session did not carry supported_pid_matrix from nested session alias input");
 check(scanSessionNestedSessionAlias.vehicleProfile?.make === bridgeDiagnosticImport.exportPayload.session.vehicle_profile?.make, "Diagnostic scan session did not carry vehicle_profile from nested session alias input");
 check(scanSessionNestedSessionAlias.vehicleApplicability?.status === "matched", "Diagnostic scan session did not carry vehicle_applicability from nested session alias input");
+check(scanSessionNestedSessionAlias.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.exportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from nested session alias input");
 const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
   scan_session: bridgeExportPayload.session,
   session_id: "shop-test-scan-session-alias"
