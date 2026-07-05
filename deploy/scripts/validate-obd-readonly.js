@@ -3477,6 +3477,47 @@ check(scanSessionBridgeDiagnosticImportOuterOverride.readinessSnapshot?.incomple
 check(scanSessionBridgeDiagnosticImportOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not let outer supported_pid_matrix override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not let outer ecu_info_snapshot override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 9, "Diagnostic scan session did not let outer import_classification override bridge_diagnostic_import alias input");
+const scanSessionBridgeDiagnosticImportCamelOuterOverride = obd.buildDiagnosticScanSession({
+  bridgeDiagnosticImport,
+  sessionId: "shop-test-bridge-import-camel-outer-override",
+  vehicleApplicability: vehicleApplicabilityPartialSample,
+  connectionStatus: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+  },
+  adapterIdentity: { data: { adapter_family: "stn", firmware_version: "9.9", serial_number: "OVERRIDE-101" } },
+  readoutCoverage: legacyReadoutCoverage,
+  toolHints: ["CONSULT"],
+  warningFlags: ["negative_obd_response_present"],
+  sourceLength: 0,
+  hadSensitiveIdentifier: false,
+  nextReadoutCandidates: [{ id: "custom_camel_outer_snapshot", label: "Camel Outer Snapshot", priority: 1, reason: "camel outer override" }],
+  freezeFrameSnapshot: outerOverrideFreezeFrameSnapshot,
+  readinessSnapshot: outerOverrideReadinessSnapshot,
+  supportedPidMatrix: outerOverrideSupportedPidSnapshot,
+  ecuInfoSnapshot: outerOverrideEcuInfoSnapshot,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 13 }
+  }
+});
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.sessionId === "shop-test-bridge-import-camel-outer-override", "Diagnostic scan session did not accept sessionId camelCase override for bridgeDiagnosticImport input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicleApplicability override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.connectionStatus?.vehicleConnected === false, "Diagnostic scan session did not let outer connectionStatus override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not let outer adapterIdentity override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not let outer readoutCoverage override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.toolHints.includes("CONSULT") && scanSessionBridgeDiagnosticImportCamelOuterOverride.toolHints.includes("Techstream"), "Diagnostic scan session did not merge outer toolHints with bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.warnings.includes("negative_obd_response_present") && scanSessionBridgeDiagnosticImportCamelOuterOverride.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge outer warningFlags with bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.sourceLength === 0, "Diagnostic scan session did not let outer sourceLength override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested sensitive identifier when outer bridgeDiagnosticImport alias input set false");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.nextReadoutCandidates[0]?.id === "custom_camel_outer_snapshot", "Diagnostic scan session did not let outer nextReadoutCandidates override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Diagnostic scan session did not let outer freezeFrameSnapshot override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not let outer readinessSnapshot override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not let outer supportedPidMatrix override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not let outer ecuInfoSnapshot override bridgeDiagnosticImport alias input");
+check(scanSessionBridgeDiagnosticImportCamelOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 13, "Diagnostic scan session did not let outer importClassification override bridgeDiagnosticImport alias input");
 const scanSessionBridgeExportPayloadOuterOverride = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeExportPayload,
   session_id: "shop-test-bridge-export-outer-override",
@@ -3517,6 +3558,47 @@ check(scanSessionBridgeExportPayloadOuterOverride.readinessSnapshot?.incompleteC
 check(scanSessionBridgeExportPayloadOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not let outer supported_pid_matrix override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not let outer ecu_info_snapshot override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 11, "Diagnostic scan session did not let outer import_classification override bridge_export_payload alias input");
+const scanSessionBridgeExportPayloadCamelOuterOverride = obd.buildDiagnosticScanSession({
+  bridgeExportPayload,
+  sessionId: "shop-test-bridge-export-camel-outer-override",
+  vehicleApplicability: vehicleApplicabilityPartialSample,
+  connectionStatus: {
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+  },
+  adapterIdentity: { data: { adapter_family: "stn", firmware_version: "9.9", serial_number: "OVERRIDE-102" } },
+  readoutCoverage: legacyReadoutCoverage,
+  toolHints: ["CONSULT"],
+  warningFlags: ["negative_obd_response_present"],
+  sourceLength: 0,
+  hadSensitiveIdentifier: false,
+  nextReadoutCandidates: [{ id: "custom_camel_outer_snapshot", label: "Camel Outer Snapshot", priority: 1, reason: "camel outer override" }],
+  freezeFrameSnapshot: outerOverrideFreezeFrameSnapshot,
+  readinessSnapshot: outerOverrideReadinessSnapshot,
+  supportedPidMatrix: outerOverrideSupportedPidSnapshot,
+  ecuInfoSnapshot: outerOverrideEcuInfoSnapshot,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 15 }
+  }
+});
+check(scanSessionBridgeExportPayloadCamelOuterOverride.sessionId === "shop-test-bridge-export-camel-outer-override", "Diagnostic scan session did not accept sessionId camelCase override for bridgeExportPayload input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicleApplicability override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.connectionStatus?.vehicleConnected === false, "Diagnostic scan session did not let outer connectionStatus override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not let outer adapterIdentity override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not let outer readoutCoverage override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.toolHints.includes("CONSULT") && scanSessionBridgeExportPayloadCamelOuterOverride.toolHints.includes("Techstream"), "Diagnostic scan session did not merge outer toolHints with bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.warnings.includes("negative_obd_response_present") && scanSessionBridgeExportPayloadCamelOuterOverride.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge outer warningFlags with bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.sourceLength === 0, "Diagnostic scan session did not let outer sourceLength override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested sensitive identifier when outer bridgeExportPayload alias input set false");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.nextReadoutCandidates[0]?.id === "custom_camel_outer_snapshot", "Diagnostic scan session did not let outer nextReadoutCandidates override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Diagnostic scan session did not let outer freezeFrameSnapshot override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not let outer readinessSnapshot override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not let outer supportedPidMatrix override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not let outer ecuInfoSnapshot override bridgeExportPayload alias input");
+check(scanSessionBridgeExportPayloadCamelOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 15, "Diagnostic scan session did not let outer importClassification override bridgeExportPayload alias input");
 const scanSessionSensitiveIdentifierSnakeAlias = obd.buildDiagnosticScanSession({
   session_id: "shop-test-sensitive-identifier-snake",
   had_sensitive_identifier: true
