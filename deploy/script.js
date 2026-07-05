@@ -1531,6 +1531,23 @@ function buildSelectedObdVehicleApplicability(profile = null) {
   };
 }
 
+function formatVehicleApplicabilitySummary(applicability, fallback = "") {
+  if (!applicability || typeof applicability !== "object") return fallback || "";
+  const statusLabel = {
+    matched: "適合候補あり",
+    partial: "候補要確認",
+    unlisted: "未登録",
+    manual: "手入力"
+  }[applicability.status] || applicability.status || "";
+  const detailParts = [];
+  if (Number.isFinite(applicability.applicableRangeCount) && applicability.applicableRangeCount > 0) detailParts.push(`適合 ${applicability.applicableRangeCount}件`);
+  if (Number.isFinite(applicability.candidateRangeCount) && applicability.candidateRangeCount > 0) detailParts.push(`候補 ${applicability.candidateRangeCount}件`);
+  if (applicability.engineCode && applicability.engineMatched === false) detailParts.push(`EG ${applicability.engineCode} 要確認`);
+  if (applicability.year && applicability.yearMatched === false) detailParts.push(`年式 ${applicability.year} 要確認`);
+  if (applicability.modelCode && applicability.modelCodeMatched === false) detailParts.push(`型式 ${applicability.modelCode} 要確認`);
+  return [statusLabel, ...detailParts].filter(Boolean).join(" / ") || applicability.summaryLabel || fallback || "";
+}
+
 function formatVehicleProfileLabel(profile, fallback = "") {
   if (profile?.maker || profile?.model) {
     return `${profile?.maker || ""} ${profile?.model || ""}`.trim();
@@ -4874,6 +4891,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
+  const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const startedAtLabel = session?.startedAt
     ? formatDateTime(session.startedAt)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
@@ -4931,6 +4949,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["空応答", coverage?.emptyCategories ?? 0],
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"]
   ];
+  values.splice(3, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
@@ -5396,8 +5415,12 @@ function analyzeObdScannerImport() {
   }
   if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
   const analysisVehicleLabel = formatVehicleProfileLabel(analysis.vehicleProfile);
+  const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
+  }
+  if (analysisApplicabilityLabel) {
+    notes.push(`適用 ${analysisApplicabilityLabel}`);
   }
   if (analysis.startedAt) {
     notes.push(`開始 ${formatDateTime(analysis.startedAt)}`);

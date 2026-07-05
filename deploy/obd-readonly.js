@@ -1449,6 +1449,19 @@
     };
   }
 
+  function appendVehicleApplicabilityWarnings(warnings, applicability = {}) {
+    const normalized = applicability?.schemaVersion === "vehicle_applicability_v1"
+      ? applicability
+      : normalizeVehicleApplicabilitySnapshot(applicability || {});
+    if (normalized.status === "partial") {
+      warnings.push("vehicle_applicability_partial");
+    } else if (normalized.status === "unlisted") {
+      warnings.push("vehicle_applicability_unlisted");
+    } else if (normalized.status === "manual") {
+      warnings.push("vehicle_profile_manual");
+    }
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
@@ -1516,6 +1529,7 @@
     if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
+    appendVehicleApplicabilityWarnings(warnings, parts.vehicleApplicability || parts.vehicle_applicability || {});
     const protocol = parts.protocol
       || dtcSnapshot.protocol
       || livePidSnapshot.protocol
@@ -1693,6 +1707,7 @@
     if (((monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
       derivedWarnings.push("raw_pid_values_need_conversion");
     }
+    appendVehicleApplicabilityWarnings(derivedWarnings, parts.vehicleApplicability || parts.vehicle_applicability || {});
     if (hasBridgeInfrastructureContext && derivedReadoutCoverage.missingCategories > 0) derivedWarnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && derivedReadoutCoverage.emptyCategories > 0) derivedWarnings.push("bridge_readout_empty_sections");
     return {
@@ -3588,6 +3603,7 @@
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
       warnings.push("raw_pid_values_need_conversion");
     }
+    appendVehicleApplicabilityWarnings(warnings, sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {});
     const protocol = sessionInput.protocol
       || dtcSnapshot.protocol
       || livePidSnapshot.protocol

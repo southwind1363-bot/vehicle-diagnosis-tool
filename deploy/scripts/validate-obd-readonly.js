@@ -1000,6 +1000,14 @@ const vehicleApplicabilitySample = {
   status: "matched",
   summaryLabel: "Toyota Prius / Applicable candidate found"
 };
+const vehicleApplicabilityPartialSample = {
+  ...vehicleApplicabilitySample,
+  year: "2018",
+  yearMatched: false,
+  applicableRangeCount: 0,
+  status: "partial",
+  summaryLabel: "Toyota Prius / Candidate needs review"
+};
 const bridgeSummaryApplicabilityAliases = obd.buildBridgeSessionSummary({
   vehicle_profile: { maker: "Toyota", model: "Prius" },
   vehicle_applicability: vehicleApplicabilitySample,
@@ -1007,6 +1015,13 @@ const bridgeSummaryApplicabilityAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryApplicabilityAliases.vehicleApplicability?.status === "matched", "Bridge session summary did not accept vehicle_applicability alias input");
 check(bridgeSummaryApplicabilityAliases.vehicleApplicability?.applicableRangeCount === 1, "Bridge session summary did not retain vehicle_applicability counts");
+check(!bridgeSummaryApplicabilityAliases.warnings.includes("vehicle_applicability_partial"), "Bridge session summary emitted partial applicability warning for matched vehicle_applicability");
+const bridgeSummaryApplicabilityPartial = obd.buildBridgeSessionSummary({
+  vehicle_profile: { maker: "Toyota", model: "Prius" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(bridgeSummaryApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Bridge session summary did not emit partial applicability warning");
 const bridgeSummarySnapshotAliases = obd.buildBridgeSessionSummary({
   dtc_snapshot: bridgeDtcSnapshot,
   live_pid_snapshot: bridgePidSnapshot,
@@ -2038,6 +2053,14 @@ check(scanSessionAliasInputs.readoutCoverage.includeInfrastructure === true, "Di
 check(scanSessionAliasInputs.startedAt === "2026-06-28T00:10:00Z" && scanSessionAliasInputs.endedAt === "2026-06-28T00:11:00Z", "Diagnostic scan session did not accept started_at or ended_at alias input");
 check(scanSessionAliasInputs.vehicleProfile?.model === "Aqua", "Diagnostic scan session did not accept vehicle_profile alias input");
 check(scanSessionAliasInputs.vehicleApplicability?.status === "matched", "Diagnostic scan session did not accept vehicle_applicability alias input");
+check(!scanSessionAliasInputs.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session emitted partial applicability warning for matched vehicle_applicability");
+const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-applicability-partial",
+  vehicle_profile: { maker: "Toyota", model: "Prius" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(scanSessionApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session did not emit partial applicability warning");
 const scanSessionAdapterOnly = obd.buildDiagnosticScanSession({
   session_id: "shop-test-adapter-only",
   adapter_identity: {
@@ -2153,6 +2176,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 461");
+  console.log("OBD read-only safety checks: 465");
   console.log("Errors: 0");
 }
