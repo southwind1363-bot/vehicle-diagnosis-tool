@@ -1010,6 +1010,8 @@ const bridgeSummaryNonInfrastructureAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryNonInfrastructureAliases.readoutCoverage.includeInfrastructure === false, "Bridge session summary incorrectly counted bridge infrastructure for summary-only alias input");
 check(!bridgeSummaryNonInfrastructureAliases.warnings.includes("bridge_readout_incomplete") && !bridgeSummaryNonInfrastructureAliases.warnings.includes("bridge_readout_empty_sections"), "Bridge session summary emitted bridge readout warnings without bridge infrastructure context");
+check(!bridgeSummaryNonInfrastructureAliases.warnings.includes("local_bridge_disabled"), "Bridge session summary emitted local_bridge_disabled without bridge context");
+check(!bridgeSummaryNonInfrastructureAliases.warnings.includes("mode09_supported_types_unknown"), "Bridge session summary emitted mode09_supported_types_unknown without ECU info input");
 const bridgeExportPayload = obd.buildBridgeSessionExportPayload({
   connectionStatus: bridgeStatus,
   vciList: bridgeVciList,
@@ -1222,6 +1224,8 @@ const bridgeDiagnosticImportNonInfrastructureAliases = obd.buildBridgeDiagnostic
 });
 check(bridgeDiagnosticImportNonInfrastructureAliases.readoutCoverage.includeInfrastructure === false, "Bridge diagnostic import incorrectly counted bridge infrastructure for summary-only alias input");
 check(!bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("bridge_readout_incomplete") && !bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("bridge_readout_empty_sections"), "Bridge diagnostic import emitted bridge readout warnings without bridge infrastructure context");
+check(!bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("local_bridge_disabled"), "Bridge diagnostic import emitted local_bridge_disabled without bridge context");
+check(!bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("mode09_supported_types_unknown"), "Bridge diagnostic import emitted mode09_supported_types_unknown without ECU info input");
 check(bridgeDiagnosticImportNonInfrastructureAliases.exportPayload.session.readout_coverage.includeInfrastructure === false, "Bridge diagnostic export payload did not preserve non-infrastructure readout coverage");
 const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
   session: bridgeExportPayload.session,
@@ -1941,6 +1945,7 @@ const nonBridgeScanSession = obd.buildDiagnosticScanSession({
 });
 check(nonBridgeScanSession.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session incorrectly counted bridge infrastructure without infrastructure inputs");
 check(!nonBridgeScanSession.warnings.includes("bridge_readout_incomplete") && !nonBridgeScanSession.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings without bridge infrastructure context");
+check(!nonBridgeScanSession.warnings.includes("mode09_supported_types_unknown"), "Diagnostic scan session emitted mode09_supported_types_unknown without ECU info input");
 const scanSessionAliasInputs = obd.buildDiagnosticScanSession({
   session_id: "shop-test-alias",
   started_at: "2026-06-28T00:10:00Z",

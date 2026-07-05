@@ -1417,14 +1417,20 @@
       || (Array.isArray(vciListInput) && vciListInput.length > 0)
       || Boolean(vciListInput?.devices?.length)
       || Boolean(parts.bridgeSession || parts.bridge_session);
+    const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
+    const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
+    const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
+    const hasBridgeSnapshotContext = hasBridgeInfrastructureContext
+      || Boolean(dtcSnapshotInput && typeof dtcSnapshotInput === "object" && Object.keys(dtcSnapshotInput).length > 0)
+      || Boolean(livePidSnapshotInput && typeof livePidSnapshotInput === "object" && Object.keys(livePidSnapshotInput).length > 0);
     const warnings = [];
-    if (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked) warnings.push("local_bridge_disabled");
+    if (hasBridgeSnapshotContext && (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked)) warnings.push("local_bridge_disabled");
     if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
-    if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
-    if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
-    if (ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
-    if (ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
+    if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
+    if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
     const protocol = parts.protocol
@@ -1574,6 +1580,9 @@
       || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
       || Boolean(vciDevicesInput?.devices?.length)
       || Boolean(parts.bridgeSession || parts.bridge_session || parts.session);
+    const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
+    const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
+    const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
@@ -1588,13 +1597,13 @@
       supportedPidMatrix
     });
     const derivedWarnings = [];
-    if (connectionStatus.blocked || normalizedVciList.blocked) derivedWarnings.push("local_bridge_disabled");
+    if (hasBridgeInfrastructureContext && (connectionStatus.blocked || normalizedVciList.blocked)) derivedWarnings.push("local_bridge_disabled");
     if (Array.isArray(codesInput) && codesInput.length) derivedWarnings.push("confirm_dtc_with_service_manual");
     if (freezeFrameSnapshot.monitorValues.length) derivedWarnings.push("freeze_frame_available");
-    if (readinessSnapshot.incompleteCount > 0) derivedWarnings.push("readiness_incomplete");
-    if (onboardMonitorSnapshot.failedCount > 0) derivedWarnings.push("onboard_monitor_test_failed");
-    if (ecuInfoSnapshot.keyItemSummary?.missingCount > 0) derivedWarnings.push("mode09_key_items_missing");
-    if (ecuInfoSnapshot.supportInfoTypesCaptured === false) derivedWarnings.push("mode09_supported_types_unknown");
+    if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) derivedWarnings.push("readiness_incomplete");
+    if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) derivedWarnings.push("onboard_monitor_test_failed");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) derivedWarnings.push("mode09_key_items_missing");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) derivedWarnings.push("mode09_supported_types_unknown");
     if ((monitorValueSummary?.totalCount || 0) > 0) derivedWarnings.push("compare_values_under_same_conditions");
     if (((monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
       derivedWarnings.push("raw_pid_values_need_conversion");
@@ -3467,14 +3476,17 @@
       || (Array.isArray(vciListInput) && vciListInput.length > 0)
       || Boolean(vciListInput?.devices?.length)
       || Boolean(sessionInput.bridgeSession || sessionInput.bridge_session);
+    const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
+    const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
+    const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
     const warnings = [];
     if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
     if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
-    if (readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
-    if (onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
+    if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
+    if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
-    if (ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
-    if (ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_live_data_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
       warnings.push("raw_pid_values_need_conversion");
