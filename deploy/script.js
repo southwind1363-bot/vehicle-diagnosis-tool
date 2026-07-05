@@ -1579,6 +1579,11 @@ function getTopNextReadoutLabels(candidates, limit = 2) {
   return getTopNextReadoutCandidates(candidates, limit).map((item) => item?.label).filter(Boolean);
 }
 
+function formatTopNextReadoutLabel(candidates, limit = 2, fallback = "") {
+  const labels = getTopNextReadoutLabels(candidates, limit);
+  return labels.length ? labels.join(" / ") : fallback;
+}
+
 function syncObdVehicleInput() {
   const values = [
     selectedVehicleValue(obdVehicleMakerSelect),
@@ -1825,6 +1830,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const selectedInterfaceId = resolveObdInterfaceId(capability);
   const currentSession = obdDevSession.lastSession || null;
   const nextReadoutLabels = getTopNextReadoutLabels(currentSession?.nextReadoutCandidates, 2);
+  const nextReadoutLabel = formatTopNextReadoutLabel(currentSession?.nextReadoutCandidates, 2);
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const previewActive = Boolean(obdDevSession.previewMode);
   const connected = Boolean(obdDevSession.port);
@@ -1863,8 +1869,8 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   }
   if ((connected || bridgeReady) && nextReadoutLabels.length) {
     nextAction = connected
-      ? `${nextReadoutLabels.join(" / ")} 繧帝・↓遒ｺ隱・`
-      : `${nextReadoutLabels.join(" / ")} 繧堤｢ｺ隱・`;
+      ? `${nextReadoutLabel} 繧帝・↓遒ｺ隱・`
+      : `${nextReadoutLabel} 繧堤｢ｺ隱・`;
   }
   const readoutPath = connected
     ? "Web Serial読取"
@@ -4627,7 +4633,7 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
-  const nextReadoutLabels = getTopNextReadoutLabels(analysis.nextReadoutCandidates, 2);
+  const nextReadoutLabel = formatTopNextReadoutLabel(analysis.nextReadoutCandidates, 2);
   if (coverage?.totalCategories) {
     parts.push(`取得率${coverage.capturedPercent || 0}%`);
     parts.push(`応答率${coverage.progressPercent}%`);
@@ -4643,8 +4649,8 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   if (applicabilitySummary) {
     parts.push(`適用 ${applicabilitySummary}`);
   }
-  if (nextReadoutLabels.length) {
-    parts.push(`谺｡讀取 ${nextReadoutLabels.join(" / ")}`);
+  if (nextReadoutLabel) {
+    parts.push(`谺｡讀取 ${nextReadoutLabel}`);
   }
   const readinessSummary = formatObdBridgeReadinessSummary(
     analysis.readinessSnapshot,
@@ -5005,7 +5011,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
-  const nextReadoutLabel = getTopNextReadoutLabels(session?.nextReadoutCandidates, 2).join(" / ") || NO_DATA;
+  const nextReadoutLabel = formatTopNextReadoutLabel(session?.nextReadoutCandidates, 2, NO_DATA);
   const startedAtLabel = session?.startedAt
     ? formatDateTime(session.startedAt)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
