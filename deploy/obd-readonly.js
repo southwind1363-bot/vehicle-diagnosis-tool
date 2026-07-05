@@ -1478,7 +1478,7 @@
     return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
   }
 
-  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null, ecuInfoSnapshot = null, dtcSnapshot = null) {
+  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null, ecuInfoSnapshot = null, dtcSnapshot = null, supportedPidMatrix = null) {
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const priorityById = {
@@ -1535,6 +1535,15 @@
           && applicability.status !== "unlisted"
         ) {
           reason = "対応PID確認のため再確認候補";
+        } else if (
+          item.id === "live_pid_snapshot"
+          && applicability.status !== "partial"
+          && applicability.status !== "manual"
+          && applicability.status !== "unlisted"
+          && Array.isArray(supportedPidMatrix?.supportedPids)
+          && supportedPidMatrix.supportedPids.length > 0
+        ) {
+          reason = "対応PID実測確認のため再確認候補";
         }
         return {
           id: item.id || "",
@@ -1564,12 +1573,13 @@
     readoutCoverage = null,
     vehicleApplicability = null,
     ecuInfoSnapshot = null,
-    dtcSnapshot = null
+    dtcSnapshot = null,
+    supportedPidMatrix = null
   } = {}) {
     return normalizeNextReadoutCandidates(
       Array.isArray(explicitCandidates) && explicitCandidates.length
         ? explicitCandidates
-        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot)
+        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix)
     );
   }
 
@@ -1777,7 +1787,8 @@
         readoutCoverage,
         vehicleApplicability: metadataOverrides.vehicleApplicability || {},
         ecuInfoSnapshot,
-        dtcSnapshot
+        dtcSnapshot,
+        supportedPidMatrix
       }),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
@@ -1975,12 +1986,13 @@
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
+    const dtcSnapshot = { blocked: false, codes: Array.isArray(codesInput) ? codesInput : [] };
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
-      dtcSnapshot: { blocked: false, codes: Array.isArray(codesInput) ? codesInput : [] },
+      dtcSnapshot,
       livePidSnapshot: { blocked: false, monitorValues, supportedPids: supportedPidMatrix.supportedPids || [], monitorValueSummary },
       freezeFrameSnapshot,
       readinessSnapshot,
@@ -2046,7 +2058,9 @@
           : buildNextReadoutCandidates(
             getReadoutCoverageInput(parts) || derivedReadoutCoverage,
             metadataOverrides.vehicleApplicability || {},
-            ecuInfoSnapshot
+            ecuInfoSnapshot,
+            dtcSnapshot,
+            supportedPidMatrix
           )
       ),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
@@ -2622,7 +2636,8 @@
           readoutCoverage: summary.readoutCoverage,
           vehicleApplicability: summary.vehicleApplicability,
           ecuInfoSnapshot: summary.ecuInfoSnapshot,
-          dtcSnapshot: summary.dtcSnapshot
+          dtcSnapshot: summary.dtcSnapshot,
+          supportedPidMatrix: summary.supportedPidMatrix
         })
         : metadataFields.nextReadoutCandidates,
       importClassification: preserveNestedBridgeSessionMetadata
@@ -2834,7 +2849,8 @@
             mergedBridgeMetadata.readoutCoverageInput,
             mergedBridgeMetadata.vehicleApplicability,
             bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null,
-            bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot || bridgeSession?.dtcSnapshot || bridgeSession?.dtc_snapshot || null
+            bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot || bridgeSession?.dtcSnapshot || bridgeSession?.dtc_snapshot || null,
+            bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null
           )
       ),
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
@@ -4618,7 +4634,8 @@
         readoutCoverage,
         vehicleApplicability: metadataOverrides.vehicleApplicability || {},
         ecuInfoSnapshot,
-        dtcSnapshot
+        dtcSnapshot,
+        supportedPidMatrix
       }),
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
