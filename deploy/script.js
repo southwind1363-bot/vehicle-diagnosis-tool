@@ -4593,6 +4593,7 @@ function getReadoutCoverageDisplay(coverage = null) {
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
+  const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
   if (coverage?.totalCategories) {
     parts.push(`取得率${coverage.capturedPercent || 0}%`);
     parts.push(`応答率${coverage.progressPercent}%`);
@@ -4604,6 +4605,9 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
       const emptyLabels = coverage.emptyLabels?.slice(0, 2).join(" / ");
       parts.push(`空応答${coverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
     }
+  }
+  if (applicabilitySummary) {
+    parts.push(`適用 ${applicabilitySummary}`);
   }
   const readinessSummary = formatObdBridgeReadinessSummary(
     analysis.readinessSnapshot,
@@ -4686,6 +4690,7 @@ function renderObdBridgeSessionDetails(session = null) {
   const startedAt = session?.startedAt || NO_DATA;
   const endedAt = session?.endedAt || NO_DATA;
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, NO_DATA) || NO_DATA;
+  const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || warningLines.length)) {
     sections.push(["読取メタ", [
