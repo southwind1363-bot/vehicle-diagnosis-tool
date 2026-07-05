@@ -4787,6 +4787,17 @@ function renderObdNextReadoutActions(session = null) {
   obdNextReadoutPanel.hidden = false;
 }
 
+function formatObdSessionSourceLabel(source, fallback = NO_DATA) {
+  return {
+    local_bridge: "ローカルブリッジ",
+    scanner_text: "スキャナーテキスト",
+    scanner_text_and_local_bridge: "統合入力",
+    diagnostic_core: "診断コア",
+    obd_text_import: "OBDテキスト取込",
+    obd_response_decoder: "OBD応答デコード"
+  }[source] || source || fallback;
+}
+
 function renderObdBridgeSessionDetails(session = null) {
   if (!obdDevSessionDetails) return;
   obdDevSessionDetails.innerHTML = "";
@@ -4816,13 +4827,16 @@ function renderObdBridgeSessionDetails(session = null) {
   const endedAt = session?.endedAt || NO_DATA;
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, NO_DATA) || NO_DATA;
   const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
+  const nextReadoutSummary = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA }) || NO_DATA;
   const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || warningLines.length)) {
     sections.push(["読取メタ", [
+      `適用: ${vehicleApplicabilitySummary}`,
       `車両: ${vehicleLabel}`,
       `プロトコル: ${readoutProtocol}`,
       `開始: ${startedAt === NO_DATA ? NO_DATA : formatDateTime(startedAt)}`,
       `終了: ${endedAt === NO_DATA ? NO_DATA : formatDateTime(endedAt)}`,
+      `次読取: ${nextReadoutSummary}`,
       `取得時刻: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`,
       ...warningLines.slice(0, 6).map((item) => `注意: ${item}`)
     ]]);
@@ -5023,6 +5037,9 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA });
+  const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
+  const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
+  const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
   const startedAtLabel = session?.startedAt
     ? formatDateTime(session.startedAt)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
@@ -5080,8 +5097,9 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["空応答", coverage?.emptyCategories ?? 0],
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"]
   ];
-  values.splice(3, 0, ["適用範囲", vehicleApplicabilityLabel]);
-  values.splice(values.length - 1, 0, ["谺｡讀取", nextReadoutLabel]);
+  values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
+  values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
+  values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel], ["谺｡讀取", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
