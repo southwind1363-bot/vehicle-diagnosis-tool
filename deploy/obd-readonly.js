@@ -1934,10 +1934,11 @@
         monitorInsights,
         warnings: [...new Set(summary.warnings || [])],
         nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
+        hadSensitiveIdentifier: summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
         exportRequired: true
       },
       exportPayload,
-      hadSensitiveIdentifier: false,
+      hadSensitiveIdentifier: summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: 0,
       retainedRawText: false,
       wouldTransmit: false,

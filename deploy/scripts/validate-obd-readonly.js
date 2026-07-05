@@ -1214,7 +1214,8 @@ check(bridgeDiagnosticImportSessionOnly.codes.join(",") === "P0171,P0300", "Brid
 check(bridgeDiagnosticImport.protocol === "ISO15765-4", "ブリッジ診断取込トップレベルへprotocolを引き継げません");
 check(bridgeDiagnosticImport.capturedAt === "2026-06-28T00:00:00Z", "ブリッジ診断取込トップレベルへcapturedAtを引き継げません");
 check(bridgeDiagnosticImport.exportPayload.schema_version === "bridge_session_export_v1", "ブリッジ診断取込のエクスポート形式が不正です");
-check(bridgeDiagnosticImport.hadSensitiveIdentifier === false, "ブリッジ診断取込が識別情報検出扱いになっています");
+check(bridgeDiagnosticImport.hadSensitiveIdentifier === true, "ブリッジ診断取込がECU情報の識別情報検出を保持できません");
+check(bridgeDiagnosticImport.bridgeSession.hadSensitiveIdentifier === true, "ブリッジ診断取込のbridgeSessionが識別情報検出を保持できません");
 check(bridgeDiagnosticImport.retainedRawText === false, "ブリッジ診断取込が原文保持になっています");
 check(bridgeDiagnosticImport.wouldTransmit === false && bridgeDiagnosticImport.vehicleCommandEnabled === false, "ブリッジ診断取込が送信可能扱いになっています");
 const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
