@@ -2427,6 +2427,52 @@ check(scanSessionFromMergedDiagnosticInputMetadataOverride.warnings.includes("is
 check(scanSessionFromMergedDiagnosticInputMetadataOverride.toolHints.includes("IDS") && scanSessionFromMergedDiagnosticInputMetadataOverride.toolHints.includes("Techstream"), "Diagnostic scan session did not merge outer toolHints with merged diagnostic input metadata");
 check(scanSessionFromMergedDiagnosticInputMetadataOverride.sourceLength === 0, "Diagnostic scan session did not let outer sourceLength=0 override merged diagnostic input metadata");
 check(scanSessionFromMergedDiagnosticInputMetadataOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested hadSensitiveIdentifier when outer override was false");
+const scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata = obd.buildDiagnosticScanSession({
+  sessionId: "merged-diagnostic-input-mixed-camel-outer-snake-nested",
+  warnings: ["isotp_reassembly_issue"],
+  toolHints: ["IDS"],
+  sourceLength: 7,
+  hadSensitiveIdentifier: false,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 20 }
+  },
+  scan_session: {
+    ...mergedDiagnosticInputExportNestedOuterOverride,
+    tool_hints: ["Techstream"],
+    warning_flags: ["freeze_frame_available"],
+    source_length: 128,
+    had_sensitive_identifier: true
+  }
+});
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.warnings.includes("isotp_reassembly_issue") && scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge camelCase outer warnings with nested snake_case merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.toolHints.includes("IDS") && scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.toolHints.includes("Techstream"), "Diagnostic scan session did not merge camelCase outer toolHints with nested snake_case merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.sourceLength === 7, "Diagnostic scan session did not preserve camelCase outer sourceLength over nested snake_case merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested snake_case hadSensitiveIdentifier when outer camelCase override was false");
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 20, "Diagnostic scan session did not preserve camelCase outer importClassification over nested snake_case merged diagnostic input metadata");
+const scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata = obd.buildDiagnosticScanSession({
+  session_id: "merged-diagnostic-input-mixed-snake-outer-camel-nested",
+  warnings: ["isotp_reassembly_issue"],
+  tool_hints: ["IDS"],
+  source_length: 8,
+  had_sensitive_identifier: false,
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 21 }
+  },
+  scanSession: {
+    ...mergedDiagnosticInputExportNestedOuterOverride,
+    toolHints: ["Techstream"],
+    warningFlags: ["freeze_frame_available"],
+    sourceLength: 128,
+    hadSensitiveIdentifier: true
+  }
+});
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.warnings.includes("isotp_reassembly_issue") && scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge snake_case outer warnings with nested camelCase merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.toolHints.includes("IDS") && scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.toolHints.includes("Techstream"), "Diagnostic scan session did not merge snake_case outer tool_hints with nested camelCase merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "Diagnostic scan session did not preserve snake_case outer source_length over nested camelCase merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested camelCase hadSensitiveIdentifier when outer snake_case override was false");
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 21, "Diagnostic scan session did not preserve snake_case outer import_classification over nested camelCase merged diagnostic input metadata");
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
 check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
 check(emptyReadoutCoverage.capturedPercent === 0, "Empty readout coverage did not keep capturedPercent at zero");
