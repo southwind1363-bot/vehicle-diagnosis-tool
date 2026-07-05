@@ -1570,9 +1570,13 @@ function formatVehicleProfileLabel(profile, fallback = "") {
   return profile?.label || fallback || "";
 }
 
-function getTopNextReadoutLabels(candidates, limit = 2) {
+function getTopNextReadoutCandidates(candidates, limit = 4) {
   if (!Array.isArray(candidates) || limit <= 0) return [];
-  return candidates.slice(0, limit).map((item) => item?.label).filter(Boolean);
+  return candidates.filter(Boolean).slice(0, limit);
+}
+
+function getTopNextReadoutLabels(candidates, limit = 2) {
+  return getTopNextReadoutCandidates(candidates, limit).map((item) => item?.label).filter(Boolean);
 }
 
 function syncObdVehicleInput() {
@@ -4730,7 +4734,7 @@ function formatObdNextReadoutCandidateReason(candidate = null) {
 function renderObdNextReadoutActions(session = null) {
   if (!obdNextReadoutPanel || !obdNextReadoutList) return;
   obdNextReadoutList.innerHTML = "";
-  const candidates = Array.isArray(session?.nextReadoutCandidates) ? session.nextReadoutCandidates.filter(Boolean).slice(0, 4) : [];
+  const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates, 4);
   if (!candidates.length) {
     obdNextReadoutPanel.hidden = true;
     return;
