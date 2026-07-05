@@ -1536,7 +1536,7 @@
     const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
     const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
     const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response;
-    const readoutCoverageInput = parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || null;
+    const readoutCoverageInput = getReadoutCoverageInput(parts);
     const dtcSnapshot = dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
     const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
@@ -1820,7 +1820,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       readoutCoverage: resolveReadoutCoverageSnapshot(
-        parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || null,
+        getReadoutCoverageInput(parts),
         derivedReadoutCoverage
       ),
       freezeFrameSnapshot,
@@ -1834,7 +1834,7 @@
         Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
           ? nextReadoutCandidatesInput
           : buildNextReadoutCandidates(
-            parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
+            getReadoutCoverageInput(parts) || derivedReadoutCoverage,
             metadataOverrides.vehicleApplicability || {}
           )
       ),
@@ -2028,6 +2028,10 @@
 
   function resolveWarningList(...warningSets) {
     return mergeUniqueStrings(...warningSets);
+  }
+
+  function getReadoutCoverageInput(input = {}) {
+    return input.readoutCoverage || input.readout_coverage || input.readoutCoverageResponse || input.readout_coverage_response || null;
   }
 
   function mergeNestedSessionMetadata(base = {}, nested = {}) {
@@ -4140,7 +4144,7 @@
     const ecuResponseSummaryInput = sessionInput.ecuResponseSummary || sessionInput.ecu_response_summary || sessionInput.ecus || sessionInput.ecu_responses || {};
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
-    const readoutCoverageInput = sessionInput.readoutCoverage || sessionInput.readout_coverage || sessionInput.readoutCoverageResponse || sessionInput.readout_coverage_response || null;
+    const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
     const dtcSnapshot = dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput);
     const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
