@@ -1707,6 +1707,10 @@
       || parts.adapter_identity
       || parts.ecuResponseSummary
       || parts.ecu_response_summary
+      || parts.dtcSnapshot
+      || parts.dtc_snapshot
+      || parts.livePidSnapshot
+      || parts.live_pid_snapshot
       || parts.supportedPidMatrix
       || parts.supported_pid_matrix
       || parts.freezeFrameSnapshot
