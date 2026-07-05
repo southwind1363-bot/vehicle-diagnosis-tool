@@ -2053,6 +2053,7 @@ check(mergedDiagnosticInputExportPayload.bridgeSession?.adapterIdentity?.adapter
 check(mergedDiagnosticInputExportPayload.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not carry warnings from bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Combined diagnostic inputs did not carry next_readout_candidates from bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.coreSessionStatus?.stage === "diagnostic_core" && Number(mergedDiagnosticInputExportPayload.coreSessionStatus?.completionPercent) > 0, "Combined diagnostic inputs did not expose coreSessionStatus for bridge_session_export_v1 bridge_import input");
 const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_export_payload: bridgeExportPayload
@@ -2793,6 +2794,9 @@ check(populatedScanSession.readoutCoverage.progressPercent >= 90, "Diagnostic sc
 check(populatedScanSession.readoutCoverage.missingCategories === 0, "Diagnostic scan session readout coverage marked populated data as missing");
 check(populatedScanSession.readoutCoverage.emptyCategories === 0, "Diagnostic scan session counted missing readout sections as empty");
 check(!populatedScanSession.warnings.includes("bridge_readout_incomplete"), "Diagnostic scan session warned about incomplete readout sections despite complete inputs");
+check(populatedScanSession.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not report full coreSessionStatus completion for populated inputs");
+check(populatedScanSession.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not mark populated inputs as ready for analysis");
+check(Array.isArray(populatedScanSession.coreSessionStatus?.remainingReadoutIds) && populatedScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session did not clear remaining core readouts for populated inputs");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
@@ -3811,6 +3815,8 @@ check(Array.isArray(scanSessionApplicabilityPartial.nextReadoutCandidates) && sc
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot as the next readout candidate");
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot after freeze_frame for partial applicability");
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.reason === "読取応答が空のため再確認候補", "Diagnostic scan session next readout reason should stay concise for partial applicability");
+check(scanSessionApplicabilityPartial.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Diagnostic scan session did not expose nextRecommendedReadoutId in coreSessionStatus");
+check(scanSessionApplicabilityPartial.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly marked partial readout inputs as analysis-ready");
 const scanSessionAdapterOnly = obd.buildDiagnosticScanSession({
   session_id: "shop-test-adapter-only",
   adapter_identity: {

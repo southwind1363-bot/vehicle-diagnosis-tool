@@ -1757,6 +1757,26 @@
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
+    const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
+      explicitCandidates: explicitNextReadoutCandidates,
+      readoutCoverage,
+      vehicleApplicability: metadataOverrides.vehicleApplicability || {},
+      ecuInfoSnapshot,
+      dtcSnapshot,
+      supportedPidMatrix
+    });
+    const coreSessionStatus = buildCoreSessionStatus({
+      readoutCoverage,
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix,
+      warnings,
+      nextReadoutCandidates: resolvedNextReadoutCandidates
+    });
 
     return {
       source: "local_bridge",
@@ -1782,14 +1802,8 @@
       toolHints: resolvedMetadata.toolHints,
       freezeFrameSnapshot,
       warnings,
-      nextReadoutCandidates: resolveNextReadoutCandidates({
-        explicitCandidates: explicitNextReadoutCandidates,
-        readoutCoverage,
-        vehicleApplicability: metadataOverrides.vehicleApplicability || {},
-        ecuInfoSnapshot,
-        dtcSnapshot,
-        supportedPidMatrix
-      }),
+      nextReadoutCandidates: resolvedNextReadoutCandidates,
+      coreSessionStatus,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
@@ -2246,6 +2260,51 @@
       sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
         ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
         : 0
+    };
+  }
+
+  function buildCoreSessionStatus({
+    readoutCoverage = null,
+    vehicleApplicability = null,
+    dtcSnapshot = null,
+    freezeFrameSnapshot = null,
+    readinessSnapshot = null,
+    ecuInfoSnapshot = null,
+    livePidSnapshot = null,
+    supportedPidMatrix = null,
+    warnings = [],
+    nextReadoutCandidates = []
+  } = {}) {
+    const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const requiredReadouts = [
+      { id: "dtc_snapshot", captured: Array.isArray(dtcSnapshot?.codes) && dtcSnapshot.codes.length > 0 },
+      { id: "freeze_frame_snapshot", captured: Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0 },
+      { id: "readiness_snapshot", captured: Number(readinessSnapshot?.monitorCount || 0) > 0 },
+      { id: "ecu_info_snapshot", captured: Number(ecuInfoSnapshot?.itemCount || 0) > 0 },
+      { id: "supported_pid_matrix", captured: Array.isArray(supportedPidMatrix?.supportedPids) && supportedPidMatrix.supportedPids.length > 0 },
+      { id: "live_pid_snapshot", captured: Array.isArray(livePidSnapshot?.monitorValues) && livePidSnapshot.monitorValues.length > 0 }
+    ];
+    const capturedReadoutIds = requiredReadouts.filter((item) => item.captured).map((item) => item.id);
+    const remainingReadoutIds = requiredReadouts.filter((item) => !item.captured).map((item) => item.id);
+    const blockingWarningIds = resolveWarningList(warnings).filter((warning) => (
+      warning === "bridge_readout_incomplete"
+      || warning === "bridge_readout_empty_sections"
+      || warning === "vehicle_applicability_manual_confirmation"
+      || warning === "vehicle_unlisted_confirm_vehicle_profile"
+    ));
+    const completionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
+    const readyForAnalysis = remainingReadoutIds.length === 0 && blockingWarningIds.length === 0;
+    return {
+      stage: "diagnostic_core",
+      status: readyForAnalysis ? "analysis_ready" : capturedReadoutIds.length ? "collecting_readouts" : "not_started",
+      completionPercent,
+      applicabilityStatus: applicability.status || "unknown",
+      includeInfrastructure: normalizeReadoutCoverageSnapshot(readoutCoverage || {}).includeInfrastructure === true,
+      capturedReadoutIds,
+      remainingReadoutIds,
+      nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || null,
+      blockingWarningIds,
+      readyForAnalysis
     };
   }
 
@@ -2813,6 +2872,29 @@
         : "local_bridge"
       : "scanner_text";
     const mergedBridgeMetadata = buildMergedBridgeMetadata({ bridgeImport, bridgeSession });
+    const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
+      Array.isArray(mergedBridgeMetadata.nextReadoutCandidatesInput) && mergedBridgeMetadata.nextReadoutCandidatesInput.length
+        ? mergedBridgeMetadata.nextReadoutCandidatesInput
+        : buildNextReadoutCandidates(
+          mergedBridgeMetadata.readoutCoverageInput,
+          mergedBridgeMetadata.vehicleApplicability,
+          bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null,
+          bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot || bridgeSession?.dtcSnapshot || bridgeSession?.dtc_snapshot || null,
+          bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null
+        )
+    );
+    const coreSessionStatus = buildCoreSessionStatus({
+      readoutCoverage: mergedBridgeMetadata.readoutCoverage,
+      vehicleApplicability: mergedBridgeMetadata.vehicleApplicability,
+      dtcSnapshot: { codes },
+      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
+      readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
+      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
+      livePidSnapshot: { monitorValues },
+      supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null,
+      warnings: mergedBridgeMetadata.warnings,
+      nextReadoutCandidates: resolvedNextReadoutCandidates
+    });
 
     return {
       source,
@@ -2842,17 +2924,8 @@
       bridgeSession,
       bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
       warnings: mergedBridgeMetadata.warnings,
-      nextReadoutCandidates: normalizeNextReadoutCandidates(
-        Array.isArray(mergedBridgeMetadata.nextReadoutCandidatesInput) && mergedBridgeMetadata.nextReadoutCandidatesInput.length
-          ? mergedBridgeMetadata.nextReadoutCandidatesInput
-          : buildNextReadoutCandidates(
-            mergedBridgeMetadata.readoutCoverageInput,
-            mergedBridgeMetadata.vehicleApplicability,
-            bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null,
-            bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot || bridgeSession?.dtcSnapshot || bridgeSession?.dtc_snapshot || null,
-            bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null
-          )
-      ),
+      nextReadoutCandidates: resolvedNextReadoutCandidates,
+      coreSessionStatus,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
@@ -4606,6 +4679,27 @@
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const explicitWarnings = resolveWarningList(metadataOverrides.warnings);
     const importClassification = metadataOverrides.importClassification;
+    const resolvedWarnings = resolveWarningList(warnings, explicitWarnings);
+    const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
+      explicitCandidates: explicitNextReadoutCandidates,
+      readoutCoverage,
+      vehicleApplicability: metadataOverrides.vehicleApplicability || {},
+      ecuInfoSnapshot,
+      dtcSnapshot,
+      supportedPidMatrix
+    });
+    const coreSessionStatus = buildCoreSessionStatus({
+      readoutCoverage,
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix,
+      warnings: resolvedWarnings,
+      nextReadoutCandidates: resolvedNextReadoutCandidates
+    });
 
     return {
       schemaVersion: "scan_session_v1",
@@ -4629,21 +4723,15 @@
       livePidSnapshot,
       supportedPidMatrix,
       readoutCoverage,
-      nextReadoutCandidates: resolveNextReadoutCandidates({
-        explicitCandidates: explicitNextReadoutCandidates,
-        readoutCoverage,
-        vehicleApplicability: metadataOverrides.vehicleApplicability || {},
-        ecuInfoSnapshot,
-        dtcSnapshot,
-        supportedPidMatrix
-      }),
+      nextReadoutCandidates: resolvedNextReadoutCandidates,
+      coreSessionStatus,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
       ]),
       importClassification: resolveImportClassification(importClassification),
       toolHints: resolvedMetadata.toolHints,
-      warnings: resolveWarningList(warnings, explicitWarnings),
+      warnings: resolvedWarnings,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
