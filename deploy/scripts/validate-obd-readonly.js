@@ -1212,6 +1212,10 @@ check(bridgeDiagnosticImportSessionOnly.ecuInfoSnapshot?.itemCount === bridgeEcu
 check(bridgeDiagnosticImportSessionOnly.monitorValues.length === bridgePidSnapshot.monitorValues.length, "Bridge diagnostic import did not rebuild monitor_values from bridgeSession-only input");
 check(bridgeDiagnosticImportSessionOnly.codes.join(",") === "P0171,P0300", "Bridge diagnostic import did not rebuild dtc_codes from bridgeSession-only input");
 check(bridgeDiagnosticImportSessionOnly.hadSensitiveIdentifier === true, "Bridge diagnostic import did not rebuild hadSensitiveIdentifier from bridgeSession-only input");
+check(bridgeDiagnosticImportSessionOnly.connectionStatus?.vehicleConnected === true, "Bridge diagnostic import did not rebuild connectionStatus from bridgeSession-only input");
+check(bridgeDiagnosticImportSessionOnly.adapterIdentity?.adapterFamily === "elm327", "Bridge diagnostic import did not rebuild adapterIdentity from bridgeSession-only input");
+check(bridgeDiagnosticImportSessionOnly.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not rebuild warnings from bridgeSession-only input");
+check(bridgeDiagnosticImportSessionOnly.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.bridgeSession.nextReadoutCandidates[0]?.id, "Bridge diagnostic import did not rebuild nextReadoutCandidates from bridgeSession-only input");
 check(bridgeDiagnosticImport.protocol === "ISO15765-4", "ブリッジ診断取込トップレベルへprotocolを引き継げません");
 check(bridgeDiagnosticImport.capturedAt === "2026-06-28T00:00:00Z", "ブリッジ診断取込トップレベルへcapturedAtを引き継げません");
 check(bridgeDiagnosticImport.exportPayload.schema_version === "bridge_session_export_v1", "ブリッジ診断取込のエクスポート形式が不正です");
@@ -1538,6 +1542,10 @@ check(mergedDiagnosticInputBridgeSessionOnlyImport.ecuInfoSnapshot?.itemCount ==
 check(mergedDiagnosticInputBridgeSessionOnlyImport.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.monitorValues.length >= bridgePidSnapshot.monitorValues.length, "Combined diagnostic inputs did not recover monitor_values from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not recover hadSensitiveIdentifier from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.connectionStatus?.vehicleConnected === true, "Combined diagnostic inputs did not recover connectionStatus from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not recover adapterIdentity from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not recover warnings from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.bridgeSession.nextReadoutCandidates[0]?.id, "Combined diagnostic inputs did not recover nextReadoutCandidates from bridgeSession-only diagnostic import");
 const mergedDiagnosticInputNestedOuterOverride = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_diagnostic_import: {
