@@ -1976,16 +1976,20 @@
   }
 
   function getSessionMetadataOverrides(sessionInput = {}) {
+    const hadSensitiveIdentifier = sessionInput.hadSensitiveIdentifier === true
+      || sessionInput.had_sensitive_identifier === true
+      ? true
+      : pickDefined(sessionInput.had_sensitive_identifier, sessionInput.hadSensitiveIdentifier, null);
     return {
-      vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
-      vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
-      readoutCoverage: sessionInput.readoutCoverage || sessionInput.readout_coverage || null,
-      nextReadoutCandidates: sessionInput.nextReadoutCandidates || sessionInput.next_readout_candidates || null,
-      importClassification: sessionInput.importClassification || sessionInput.import_classification || null,
-      toolHints: sessionInput.toolHints || sessionInput.tool_hints || null,
-      warnings: sessionInput.warnings || sessionInput.warning_flags || sessionInput.warningFlags || null,
-      sourceLength: pickDefined(sessionInput.sourceLength, sessionInput.source_length, null),
-      hadSensitiveIdentifier: pickDefined(sessionInput.hadSensitiveIdentifier, sessionInput.had_sensitive_identifier, null)
+      vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,
+      vehicleApplicability: sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || null,
+      readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
+      nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,
+      importClassification: sessionInput.import_classification || sessionInput.importClassification || null,
+      toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints),
+      warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_flags, sessionInput.warningFlags),
+      sourceLength: pickDefined(sessionInput.source_length, sessionInput.sourceLength, null),
+      hadSensitiveIdentifier
     };
   }
 
@@ -3862,6 +3866,7 @@
 
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
+    const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
@@ -3925,7 +3930,7 @@
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
       warnings.push("raw_pid_values_need_conversion");
     }
-    appendVehicleApplicabilityWarnings(warnings, sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {});
+    appendVehicleApplicabilityWarnings(warnings, metadataOverrides.vehicleApplicability || {});
     const protocol = sessionInput.protocol
       || dtcSnapshot.protocol
       || livePidSnapshot.protocol
@@ -3964,26 +3969,9 @@
     );
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
-    const explicitNextReadoutCandidates = sessionInput.next_readout_candidates
-      || sessionInput.nextReadoutCandidates
-      || input.nextReadoutCandidates
-      || input.next_readout_candidates
-      || [];
-    const explicitWarnings = mergeUniqueStrings(
-      sessionInput.warnings,
-      sessionInput.warning_flags,
-      sessionInput.warningFlags,
-      input.warnings,
-      input.warning_flags,
-      input.warningFlags
-    );
-    const importClassification = pickDefined(
-      input.importClassification,
-      input.import_classification,
-      sessionInput.importClassification,
-      sessionInput.import_classification,
-      null
-    );
+    const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
+    const explicitWarnings = mergeUniqueStrings(metadataOverrides.warnings);
+    const importClassification = metadataOverrides.importClassification;
 
     return {
       schemaVersion: "scan_session_v1",
@@ -3993,8 +3981,8 @@
       endedAt: sessionInput.ended_at || sessionInput.endedAt || null,
       capturedAt,
       protocol,
-      vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || input.vehicleProfile || input.vehicle_profile || null,
-      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {}),
+      vehicleProfile: metadataOverrides.vehicleProfile,
+      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
       connectionStatus,
       vciDevices: vciList.devices || [],
       adapterIdentity,
@@ -4012,7 +4000,7 @@
           ? explicitNextReadoutCandidates
           : buildNextReadoutCandidates(
             readoutCoverage,
-            sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {}
+            metadataOverrides.vehicleApplicability || {}
           )
       ),
       monitorValueSummary: buildMonitorValueSummary([
@@ -4022,20 +4010,12 @@
       importClassification: importClassification && typeof importClassification === "object"
         ? { ...importClassification }
         : null,
-      toolHints: mergeUniqueStrings(
-        sessionInput.toolHints,
-        sessionInput.tool_hints,
-        input.toolHints,
-        input.tool_hints
-      ),
+      toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       warnings: mergeUniqueStrings(warnings, explicitWarnings),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
-        || sessionInput.hadSensitiveIdentifier === true
-        || sessionInput.had_sensitive_identifier === true
-        || input.hadSensitiveIdentifier === true
-        || input.had_sensitive_identifier === true,
-      sourceLength: Number.isFinite(Number(pickDefined(sessionInput.sourceLength, sessionInput.source_length, input.sourceLength, input.source_length)))
-        ? Math.max(0, Math.round(Number(pickDefined(sessionInput.sourceLength, sessionInput.source_length, input.sourceLength, input.source_length))))
+        || metadataOverrides.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
+        ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
         : 0,
       retainedRawText: false,
       retainedRawFrames: false,
