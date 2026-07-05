@@ -455,13 +455,13 @@ const tabButtons = document.querySelectorAll("[data-tab-target]");
 const OBD_NEXT_READOUT_ACTIONS = Object.freeze({
   dtc_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeDtcButton : obdDevReadDtcButton), label: "DTC読取" }),
   freeze_frame_snapshot: Object.freeze({ button: () => obdDevBridgeFreezeFrameButton, label: "フリーズフレーム読取" }),
-  readiness_snapshot: Object.freeze({ button: () => obdDevBridgeLiveButton, label: "レディネス再読取" }),
+  readiness_snapshot: Object.freeze({ button: () => obdDevBridgeLiveButton, label: "ライブデータ/レディネス読取" }),
   ecu_info_snapshot: Object.freeze({ button: () => obdDevBridgeEcuInfoButton, label: "ECU情報読取" }),
   live_pid_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeLiveButton : obdDevSnapshotButton), label: "ライブデータ読取" }),
   supported_pid_matrix: Object.freeze({ button: () => obdDevBridgeSupportedPidButton, label: "対応PID読取" }),
-  onboard_monitor_snapshot: Object.freeze({ button: () => obdDevBridgeMonitorButton, label: "Mode06読取" }),
-  connection_status: Object.freeze({ button: () => obdDevBridgeStatusButton, label: "読取基盤確認" }),
-  vci_devices: Object.freeze({ button: () => obdDevBridgeVciButton, label: "VCI一覧確認" }),
+  onboard_monitor_snapshot: Object.freeze({ button: () => obdDevBridgeMonitorButton, label: "Mode06/監視結果読取" }),
+  connection_status: Object.freeze({ button: () => obdDevBridgeStatusButton, label: "接続状態確認" }),
+  vci_devices: Object.freeze({ button: () => obdDevBridgeVciButton, label: "VCI一覧読取" }),
   adapter_identity: Object.freeze({ button: () => obdDevIdentifyButton, label: "アダプター確認" })
 });
 const tabPanels = document.querySelectorAll("[data-tab-panel]");
