@@ -1478,7 +1478,7 @@
     return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
   }
 
-  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null, ecuInfoSnapshot = null) {
+  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null, ecuInfoSnapshot = null, dtcSnapshot = null) {
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const priorityById = {
@@ -1510,6 +1510,15 @@
           reason = "主要ECU情報不足のため再確認候補";
         } else if (item.id === "ecu_info_snapshot" && ecuInfoSnapshot && ecuInfoSnapshot.supportInfoTypesCaptured === false) {
           reason = "対応ECU情報不足のため再確認候補";
+        } else if (
+          item.id === "freeze_frame_snapshot"
+          && applicability.status !== "partial"
+          && applicability.status !== "manual"
+          && applicability.status !== "unlisted"
+          && Array.isArray(dtcSnapshot?.codes)
+          && dtcSnapshot.codes.length > 0
+        ) {
+          reason = "DTC確定のため再確認候補";
         }
         return {
           id: item.id || "",
@@ -1538,12 +1547,13 @@
     explicitCandidates = [],
     readoutCoverage = null,
     vehicleApplicability = null,
-    ecuInfoSnapshot = null
+    ecuInfoSnapshot = null,
+    dtcSnapshot = null
   } = {}) {
     return normalizeNextReadoutCandidates(
       Array.isArray(explicitCandidates) && explicitCandidates.length
         ? explicitCandidates
-        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot)
+        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot)
     );
   }
 
@@ -1750,7 +1760,8 @@
         explicitCandidates: explicitNextReadoutCandidates,
         readoutCoverage,
         vehicleApplicability: metadataOverrides.vehicleApplicability || {},
-        ecuInfoSnapshot
+        ecuInfoSnapshot,
+        dtcSnapshot
       }),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
@@ -2594,7 +2605,8 @@
           explicitCandidates: nestedSessionMetadata.nextReadoutCandidates,
           readoutCoverage: summary.readoutCoverage,
           vehicleApplicability: summary.vehicleApplicability,
-          ecuInfoSnapshot: summary.ecuInfoSnapshot
+          ecuInfoSnapshot: summary.ecuInfoSnapshot,
+          dtcSnapshot: summary.dtcSnapshot
         })
         : metadataFields.nextReadoutCandidates,
       importClassification: preserveNestedBridgeSessionMetadata
@@ -2805,7 +2817,8 @@
           : buildNextReadoutCandidates(
             mergedBridgeMetadata.readoutCoverageInput,
             mergedBridgeMetadata.vehicleApplicability,
-            bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null
+            bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null,
+            bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot || bridgeSession?.dtcSnapshot || bridgeSession?.dtc_snapshot || null
           )
       ),
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
@@ -4588,7 +4601,8 @@
         explicitCandidates: explicitNextReadoutCandidates,
         readoutCoverage,
         vehicleApplicability: metadataOverrides.vehicleApplicability || {},
-        ecuInfoSnapshot
+        ecuInfoSnapshot,
+        dtcSnapshot
       }),
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,

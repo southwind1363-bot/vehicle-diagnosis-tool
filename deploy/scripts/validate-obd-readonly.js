@@ -1098,6 +1098,13 @@ const bridgeSummaryApplicabilityUnlistedCandidates = obd.buildNextReadoutCandida
 });
 check(bridgeSummaryApplicabilityUnlistedCandidates[0]?.id === "ecu_info_snapshot", "Next readout candidates did not prioritize ecu_info_snapshot for unlisted applicability");
 check(bridgeSummaryApplicabilityUnlistedCandidates[0]?.reason === "車種未掲載確認のため再確認候補", "Next readout candidates did not explain ecu_info_snapshot priority for unlisted applicability");
+const bridgeSummaryFreezeFrameDtcCandidates = obd.buildNextReadoutCandidates(
+  manualApplicabilityReadoutCoverage,
+  { status: "matched" },
+  null,
+  { codes: ["P0171"] }
+);
+check(bridgeSummaryFreezeFrameDtcCandidates.find((item) => item.id === "freeze_frame_snapshot")?.reason === "DTC確定のため再確認候補", "Next readout candidates did not explain freeze_frame_snapshot priority when DTCs are present");
 const bridgeSummaryMissingKeyItemCandidates = obd.buildNextReadoutCandidates(
   manualApplicabilityReadoutCoverage,
   { status: "matched" },
