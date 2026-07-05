@@ -2197,11 +2197,11 @@
   }
 
   function buildSummaryMetadataFields(summary = {}, { snakeCase = false } = {}) {
-    const vehicleApplicability = summary.vehicleApplicability || summary.vehicle_applicability || normalizeVehicleApplicabilitySnapshot();
+    const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(
+      summary.vehicleApplicability || summary.vehicle_applicability || {}
+    );
     const importClassificationInput = summary.importClassification || summary.import_classification;
-    const importClassification = importClassificationInput && typeof importClassificationInput === "object"
-      ? { ...importClassificationInput }
-      : null;
+    const importClassification = resolveImportClassification(importClassificationInput);
     const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints);
     const warnings = resolveWarningList(summary.warnings, summary.warning_flags, summary.warningFlags);
     const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);

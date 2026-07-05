@@ -1180,6 +1180,21 @@ check(bridgeExportSummaryAliases.session.ecu_info_snapshot.itemCount === bridgeE
 check(bridgeExportSummaryAliases.session.onboard_monitor_snapshot.failedCount === 1, "Bridge export did not accept onboard_monitor_response summary alias input");
 check(bridgeExportSummaryAliases.session.next_readout_candidates[0]?.id === "custom_snapshot", "Bridge export did not preserve explicit next_readout_candidates summary alias input");
 const bridgeExportDirectSnakeMetadataSummary = obd.buildBridgeSessionExportPayload({
+  vehicle_applicability: {
+    make: "Toyota",
+    model: "Prius",
+    model_code: "ZVW30",
+    year: "2012",
+    engine_code: "2ZR-FXE",
+    catalog_matched: true,
+    year_matched: true,
+    engine_matched: true,
+    model_code_matched: true,
+    candidate_ranges: [{ start: "2009" }, { start: "2012" }],
+    applicable_ranges: [{ start: "2012" }],
+    supported_engine_codes: ["2ZR-FXE"],
+    summary_label: "Toyota Prius / Applicable candidate found"
+  },
   import_classification: {
     schemaVersion: "obd_response_line_classification_v1",
     bucketCounts: { storedDtcResponses: 2 }
@@ -1201,6 +1216,7 @@ check(bridgeExportDirectSnakeMetadataSummary.session.had_sensitive_identifier ==
 check(bridgeExportDirectSnakeMetadataSummary.session.source_length === 77, "Bridge export did not preserve direct snake_case source_length summary input");
 check(bridgeExportDirectSnakeMetadataSummary.session.tool_hints.join(",") === "Techstream,CONSULT", "Bridge export did not preserve direct snake_case tool_hints summary input");
 check(bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("negative_obd_response_present") && bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("freeze_frame_available"), "Bridge export did not preserve direct snake_case warning_flags summary input");
+check(bridgeExportDirectSnakeMetadataSummary.session.vehicle_applicability?.candidateRangeCount === 2 && bridgeExportDirectSnakeMetadataSummary.session.vehicle_applicability?.supportedEngineCodeCount === 1, "Bridge export did not normalize direct snake_case vehicle_applicability summary input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",
