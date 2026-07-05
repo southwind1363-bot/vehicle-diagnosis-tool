@@ -1252,6 +1252,28 @@ check(bridgeExportDirectSnakeMetadataSummary.session.source_length === 77, "Brid
 check(bridgeExportDirectSnakeMetadataSummary.session.tool_hints.join(",") === "Techstream,CONSULT", "Bridge export did not preserve direct snake_case tool_hints summary input");
 check(bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("negative_obd_response_present") && bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("freeze_frame_available"), "Bridge export did not preserve direct snake_case warning_flags summary input");
 check(bridgeExportDirectSnakeMetadataSummary.session.vehicle_applicability?.candidateRangeCount === 2 && bridgeExportDirectSnakeMetadataSummary.session.vehicle_applicability?.supportedEngineCodeCount === 1, "Bridge export did not normalize direct snake_case vehicle_applicability summary input");
+const bridgeExportDirectCamelMetadataSummary = obd.buildBridgeSessionExportPayload({
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 4 }
+  },
+  nextReadoutCandidates: [{ id: "direct_camel_snapshot", label: "Direct Camel Snapshot", priority: 4, reason: "summary camel" }],
+  toolHints: ["Techstream", "CONSULT"],
+  warningFlags: ["negative_obd_response_present", "freeze_frame_available"],
+  hadSensitiveIdentifier: true,
+  sourceLength: 66,
+  ecuInfoSnapshot: {
+    itemCount: 1,
+    hadSensitiveIdentifier: true,
+    items: [{ id: "vin", value: "JT123456789012345", privacyClass: "sensitive_identifier" }]
+  }
+});
+check(bridgeExportDirectCamelMetadataSummary.session.import_classification?.bucketCounts?.storedDtcResponses === 4, "Bridge export did not preserve direct camelCase importClassification summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.next_readout_candidates[0]?.id === "direct_camel_snapshot", "Bridge export did not preserve direct camelCase nextReadoutCandidates summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.had_sensitive_identifier === true, "Bridge export did not preserve direct camelCase hadSensitiveIdentifier summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.source_length === 66, "Bridge export did not preserve direct camelCase sourceLength summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.tool_hints.join(",") === "Techstream,CONSULT", "Bridge export did not preserve direct camelCase toolHints summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.warnings.includes("negative_obd_response_present") && bridgeExportDirectCamelMetadataSummary.session.warnings.includes("freeze_frame_available"), "Bridge export did not preserve direct camelCase warningFlags summary input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",
@@ -1340,6 +1362,24 @@ const bridgeDiagnosticImportExplicitImportClassification = obd.buildBridgeDiagno
 check(bridgeDiagnosticImportExplicitImportClassification.importClassification?.bucketCounts?.storedDtcResponses === 1, "Bridge diagnostic import did not expose import_classification");
 check(bridgeDiagnosticImportExplicitImportClassification.bridgeSession.importClassification?.bucketCounts?.storedDtcResponses === 1, "Bridge diagnostic import did not retain import_classification on bridgeSession");
 check(bridgeDiagnosticImportExplicitImportClassification.exportPayload.session.import_classification?.bucketCounts?.storedDtcResponses === 1, "Bridge export payload did not retain import_classification");
+const bridgeDiagnosticImportDirectCamelMetadata = obd.buildBridgeDiagnosticImport({
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 5 }
+  },
+  nextReadoutCandidates: [{ id: "direct_camel_import_snapshot", label: "Direct Camel Import Snapshot", priority: 4, reason: "direct camel import" }],
+  toolHints: ["Techstream", "CONSULT"],
+  warningFlags: ["negative_obd_response_present", "freeze_frame_available"],
+  hadSensitiveIdentifier: true,
+  sourceLength: 65,
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(bridgeDiagnosticImportDirectCamelMetadata.importClassification?.bucketCounts?.storedDtcResponses === 5, "Bridge diagnostic import did not preserve direct camelCase importClassification");
+check(bridgeDiagnosticImportDirectCamelMetadata.nextReadoutCandidates[0]?.id === "direct_camel_import_snapshot", "Bridge diagnostic import did not preserve direct camelCase nextReadoutCandidates");
+check(bridgeDiagnosticImportDirectCamelMetadata.hadSensitiveIdentifier === true, "Bridge diagnostic import did not preserve direct camelCase hadSensitiveIdentifier");
+check(bridgeDiagnosticImportDirectCamelMetadata.sourceLength === 65, "Bridge diagnostic import did not preserve direct camelCase sourceLength");
+check(bridgeDiagnosticImportDirectCamelMetadata.toolHints.join(",") === "Techstream,CONSULT", "Bridge diagnostic import did not preserve direct camelCase toolHints");
+check(bridgeDiagnosticImportDirectCamelMetadata.warnings.includes("negative_obd_response_present") && bridgeDiagnosticImportDirectCamelMetadata.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not preserve direct camelCase warningFlags");
 check(bridgeDiagnosticImport.retainedRawText === false, "ブリッジ診断取込が原文保持になっています");
 check(bridgeDiagnosticImport.wouldTransmit === false && bridgeDiagnosticImport.vehicleCommandEnabled === false, "ブリッジ診断取込が送信可能扱いになっています");
 const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
