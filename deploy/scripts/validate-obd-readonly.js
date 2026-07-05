@@ -2064,6 +2064,18 @@ const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanS
 });
 check(decodedScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not preserve explicit readout_coverage input");
 check(decodedScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates input");
+const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
+  session_id: "decoded-explicit-meta-overrides",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  tool_hints: ["Techstream", "J2534"],
+  warning_flags: ["negative_obd_response_present"],
+  source_length: 128,
+  had_sensitive_identifier: true
+});
+check(decodedScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J2534", "Decoded OBD session did not preserve explicit tool_hints input");
+check(decodedScanSessionExplicitMetaOverrides.warnings.includes("negative_obd_response_present"), "Decoded OBD session did not preserve explicit warning_flags input");
+check(decodedScanSessionExplicitMetaOverrides.sourceLength === 128, "Decoded OBD session did not preserve explicit source_length input");
+check(decodedScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve explicit had_sensitive_identifier input");
 const decodedScanSessionEcuInfoCamelAlias = obd.buildDecodedObdScanSession({
   session_id: "decoded-ecuinfo-camel-alias-test",
   ecuInfo: [
@@ -2224,6 +2236,17 @@ const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObd
 });
 check(textScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve explicit readout_coverage option input");
 check(textScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates option input");
+const textScanSessionExplicitMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-explicit-meta-overrides",
+  tool_hints: ["Techstream", "J2534"],
+  warning_flags: ["isotp_reassembly_issue"],
+  source_length: 128,
+  had_sensitive_identifier: true
+});
+check(textScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J2534", "OBD text scan session did not preserve explicit tool_hints option input");
+check(textScanSessionExplicitMetaOverrides.warnings.includes("isotp_reassembly_issue"), "OBD text scan session did not preserve explicit warning_flags option input");
+check(textScanSessionExplicitMetaOverrides.sourceLength === 128, "OBD text scan session did not preserve explicit source_length option input");
+check(textScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "OBD text scan session did not preserve explicit had_sensitive_identifier option input");
 const textScanSessionRebuilt = obd.buildDiagnosticScanSession({
   session_id: "obd-text-rebuilt",
   scan_session: textScanSession

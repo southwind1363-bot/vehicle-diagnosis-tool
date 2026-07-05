@@ -2900,6 +2900,10 @@
       vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
       readoutCoverage: sessionInput.readoutCoverage || sessionInput.readout_coverage || null,
       nextReadoutCandidates: sessionInput.nextReadoutCandidates || sessionInput.next_readout_candidates || null,
+      toolHints: sessionInput.toolHints || sessionInput.tool_hints || null,
+      warnings: sessionInput.warnings || sessionInput.warning_flags || sessionInput.warningFlags || null,
+      sourceLength: pickDefined(sessionInput.sourceLength, sessionInput.source_length, null),
+      hadSensitiveIdentifier: pickDefined(sessionInput.hadSensitiveIdentifier, sessionInput.had_sensitive_identifier, null),
       dtcSnapshot,
       livePidSnapshot,
       freezeFrameSnapshot,
@@ -3216,6 +3220,10 @@
       vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
       readoutCoverage: sessionInput.readoutCoverage || sessionInput.readout_coverage || null,
       nextReadoutCandidates: sessionInput.nextReadoutCandidates || sessionInput.next_readout_candidates || null,
+      toolHints: sessionInput.toolHints || sessionInput.tool_hints || null,
+      warnings: sessionInput.warnings || sessionInput.warning_flags || sessionInput.warningFlags || null,
+      sourceLength: pickDefined(sessionInput.sourceLength, sessionInput.source_length, null),
+      hadSensitiveIdentifier: pickDefined(sessionInput.hadSensitiveIdentifier, sessionInput.had_sensitive_identifier, null),
       storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: sessionInput.protocol || null },
       pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: sessionInput.protocol || null },
       permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: sessionInput.protocol || null },
@@ -3233,22 +3241,24 @@
       ...session,
       dtcSnapshot: mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot,
       source: "obd_text_import",
-      toolHints,
+      toolHints: mergeUniqueStrings(session.toolHints, toolHints),
       importClassification: {
         schemaVersion: classified.schemaVersion,
         bucketCounts: classified.bucketCounts,
         isoTpSummary: classified.isoTpSummary,
         negativeResponseSummary: classified.negativeResponseSummary,
         lineCount: classified.lineCount,
-        toolHints
+        toolHints: mergeUniqueStrings(session.toolHints, toolHints)
       },
       warnings: mergeUniqueStrings(
         session.warnings,
         classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : [],
         classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
       ),
-      hadSensitiveIdentifier: classified.hadSensitiveIdentifier || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
-      sourceLength: classified.sourceLength,
+      hadSensitiveIdentifier: session.hadSensitiveIdentifier === true || classified.hadSensitiveIdentifier || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(pickDefined(session.sourceLength, classified.sourceLength)))
+        ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
+        : 0,
       retainedRawText: false,
       retainedRawFrames: false,
       wouldTransmit: false,
