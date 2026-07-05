@@ -1582,24 +1582,16 @@
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
     appendVehicleApplicabilityWarnings(warnings, metadataOverrides.vehicleApplicability || {});
-    const protocol = parts.protocol
-      || dtcSnapshot.protocol
-      || livePidSnapshot.protocol
-      || freezeFrameSnapshot.protocol
-      || ecuInfoSnapshot.protocol
-      || onboardMonitorSnapshot.protocol
-      || ecuResponseSummary.protocol
-      || null;
-    const capturedAt = parts.capturedAt
-      || parts.captured_at
-      || dtcSnapshot.capturedAt
-      || livePidSnapshot.capturedAt
-      || freezeFrameSnapshot.capturedAt
-      || readinessSnapshot.capturedAt
-      || ecuInfoSnapshot.capturedAt
-      || onboardMonitorSnapshot.capturedAt
-      || ecuResponseSummary.capturedAt
-      || null;
+    const { protocol, capturedAt } = resolveSessionTemporalContext({
+      input: parts,
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      ecuResponseSummary
+    });
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
@@ -1614,8 +1606,7 @@
       supportedPidMatrix
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
-    if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
-    if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
+    appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
 
     return {
@@ -1780,8 +1771,10 @@
       derivedWarnings.push("raw_pid_values_need_conversion");
     }
     appendVehicleApplicabilityWarnings(derivedWarnings, metadataOverrides.vehicleApplicability || {});
-    if (hasBridgeInfrastructureContext && derivedReadoutCoverage.missingCategories > 0) derivedWarnings.push("bridge_readout_incomplete");
-    if (hasBridgeInfrastructureContext && derivedReadoutCoverage.emptyCategories > 0) derivedWarnings.push("bridge_readout_empty_sections");
+    appendBridgeReadoutCoverageWarnings(derivedWarnings, {
+      hasBridgeInfrastructureContext,
+      readoutCoverage: derivedReadoutCoverage
+    });
     return {
       source: parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,
@@ -1924,6 +1917,47 @@
         honorCoverageOverride
       })
     };
+  }
+
+  function resolveSessionTemporalContext({
+    input = {},
+    dtcSnapshot = {},
+    livePidSnapshot = {},
+    freezeFrameSnapshot = {},
+    readinessSnapshot = {},
+    ecuInfoSnapshot = {},
+    onboardMonitorSnapshot = {},
+    ecuResponseSummary = {}
+  } = {}) {
+    return {
+      protocol: input.protocol
+        || dtcSnapshot.protocol
+        || livePidSnapshot.protocol
+        || freezeFrameSnapshot.protocol
+        || ecuInfoSnapshot.protocol
+        || onboardMonitorSnapshot.protocol
+        || ecuResponseSummary.protocol
+        || null,
+      capturedAt: input.capturedAt
+        || input.captured_at
+        || dtcSnapshot.capturedAt
+        || livePidSnapshot.capturedAt
+        || freezeFrameSnapshot.capturedAt
+        || readinessSnapshot.capturedAt
+        || ecuInfoSnapshot.capturedAt
+        || onboardMonitorSnapshot.capturedAt
+        || ecuResponseSummary.capturedAt
+        || null
+    };
+  }
+
+  function appendBridgeReadoutCoverageWarnings(warnings, {
+    hasBridgeInfrastructureContext = false,
+    readoutCoverage = null
+  } = {}) {
+    if (!hasBridgeInfrastructureContext || !readoutCoverage) return;
+    if (readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
+    if (readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
   }
 
   function mergeNestedSessionMetadata(base = {}, nested = {}) {
@@ -4081,24 +4115,16 @@
       warnings.push("raw_pid_values_need_conversion");
     }
     appendVehicleApplicabilityWarnings(warnings, metadataOverrides.vehicleApplicability || {});
-    const protocol = sessionInput.protocol
-      || dtcSnapshot.protocol
-      || livePidSnapshot.protocol
-      || freezeFrameSnapshot.protocol
-      || ecuInfoSnapshot.protocol
-      || onboardMonitorSnapshot.protocol
-      || ecuResponseSummary.protocol
-      || null;
-    const capturedAt = sessionInput.captured_at
-      || sessionInput.capturedAt
-      || dtcSnapshot.capturedAt
-      || livePidSnapshot.capturedAt
-      || freezeFrameSnapshot.capturedAt
-      || readinessSnapshot.capturedAt
-      || ecuInfoSnapshot.capturedAt
-      || onboardMonitorSnapshot.capturedAt
-      || ecuResponseSummary.capturedAt
-      || null;
+    const { protocol, capturedAt } = resolveSessionTemporalContext({
+      input: sessionInput,
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      ecuResponseSummary
+    });
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
@@ -4113,8 +4139,7 @@
       supportedPidMatrix
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
-    if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
-    if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
+    appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const explicitWarnings = mergeUniqueStrings(metadataOverrides.warnings);
     const importClassification = metadataOverrides.importClassification;
