@@ -1764,6 +1764,20 @@ check(mergedDiagnosticInputExportNestedOuterOverride.freezeFrameSnapshot?.trigge
 check(mergedDiagnosticInputExportNestedOuterOverride.readinessSnapshot?.incompleteCount === 0, "Combined diagnostic inputs did not let outer readiness_snapshot override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Combined diagnostic inputs did not let outer supported_pid_matrix override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Combined diagnostic inputs did not let outer ecu_info_snapshot override nested bridge_export_payload session input");
+const mergedDiagnosticInputMetadataOuterOverride = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_diagnostic_import: {
+    tool_hints: ["CONSULT"],
+    warning_flags: ["negative_obd_response_present"],
+    source_length: 0,
+    had_sensitive_identifier: false,
+    bridgeSession: bridgeDiagnosticImport.bridgeSession
+  }
+});
+check(mergedDiagnosticInputMetadataOuterOverride.toolHints.join(",") === "CONSULT,Techstream,J2534", "Combined diagnostic inputs did not merge outer tool_hints with nested bridgeSession input");
+check(mergedDiagnosticInputMetadataOuterOverride.warnings.includes("negative_obd_response_present") && mergedDiagnosticInputMetadataOuterOverride.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not merge outer warning_flags with nested bridgeSession input");
+check(mergedDiagnosticInputMetadataOuterOverride.sourceLength === 5, "Combined diagnostic inputs did not preserve merged sourceLength behavior after outer bridge source_length override");
+check(mergedDiagnosticInputMetadataOuterOverride.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve hadSensitiveIdentifier when nested bridgeSession remained true");
 const mergedDiagnosticInputSummaryOnlyMonitorCounts = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportSummaryOnlyRawWarning
 });
@@ -1812,6 +1826,18 @@ check(scanSessionFromMergedDiagnosticInput.toolHints.join(",") === mergedDiagnos
 check(scanSessionFromMergedDiagnosticInput.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve hadSensitiveIdentifier from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.sourceLength === mergedDiagnosticInputExportNestedOuterOverride.sourceLength, "Diagnostic scan session did not preserve sourceLength from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.importClassification?.bucketCounts?.storedDtcResponses === mergedDiagnosticInputExportNestedOuterOverride.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not preserve importClassification from merged diagnostic input");
+const scanSessionFromMergedDiagnosticInputMetadataOverride = obd.buildDiagnosticScanSession({
+  session_id: "merged-diagnostic-input-metadata-override",
+  warnings: ["isotp_reassembly_issue"],
+  toolHints: ["IDS"],
+  sourceLength: 0,
+  hadSensitiveIdentifier: false,
+  scan_session: mergedDiagnosticInputExportNestedOuterOverride
+});
+check(scanSessionFromMergedDiagnosticInputMetadataOverride.warnings.includes("isotp_reassembly_issue") && scanSessionFromMergedDiagnosticInputMetadataOverride.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge outer warnings with merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMetadataOverride.toolHints.includes("IDS") && scanSessionFromMergedDiagnosticInputMetadataOverride.toolHints.includes("Techstream"), "Diagnostic scan session did not merge outer toolHints with merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMetadataOverride.sourceLength === 0, "Diagnostic scan session did not let outer sourceLength=0 override merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMetadataOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested hadSensitiveIdentifier when outer override was false");
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
 check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
 check(emptyReadoutCoverage.capturedPercent === 0, "Empty readout coverage did not keep capturedPercent at zero");

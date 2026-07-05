@@ -1697,6 +1697,7 @@
       nextReadoutCandidates: pickDefined(parts.nextReadoutCandidates, parts.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
       importClassification: pickDefined(parts.importClassification, parts.import_classification, nested.importClassification, nested.import_classification, null),
       toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints, nested.toolHints, nested.tool_hints),
+      warnings: mergeUniqueStrings(parts.warnings, parts.warning_flags, parts.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
       sourceLength: pickDefined(parts.sourceLength, parts.source_length, nested.sourceLength, nested.source_length, null),
       hadSensitiveIdentifier: pickDefined(parts.hadSensitiveIdentifier, parts.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, null)
     };
