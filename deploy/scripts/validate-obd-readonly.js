@@ -2757,6 +2757,10 @@ const scanSessionBridgeDiagnosticImportOuterOverride = obd.buildDiagnosticScanSe
   session_id: "shop-test-bridge-import-outer-override",
   vehicle_applicability: vehicleApplicabilityPartialSample,
   next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
+  freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
+  readiness_snapshot: outerOverrideReadinessSnapshot,
+  supported_pid_matrix: outerOverrideSupportedPidSnapshot,
+  ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
   import_classification: {
     schemaVersion: "obd_response_line_classification_v1",
     bucketCounts: { storedDtcResponses: 9 }
@@ -2764,12 +2768,20 @@ const scanSessionBridgeDiagnosticImportOuterOverride = obd.buildDiagnosticScanSe
 });
 check(scanSessionBridgeDiagnosticImportOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicle_applicability override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Diagnostic scan session did not let outer next_readout_candidates override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Diagnostic scan session did not let outer freeze_frame_snapshot override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not let outer readiness_snapshot override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not let outer supported_pid_matrix override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not let outer ecu_info_snapshot override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 9, "Diagnostic scan session did not let outer import_classification override bridge_diagnostic_import alias input");
 const scanSessionBridgeExportPayloadOuterOverride = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeExportPayload,
   session_id: "shop-test-bridge-export-outer-override",
   vehicle_applicability: vehicleApplicabilityPartialSample,
   next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
+  freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
+  readiness_snapshot: outerOverrideReadinessSnapshot,
+  supported_pid_matrix: outerOverrideSupportedPidSnapshot,
+  ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
   import_classification: {
     schemaVersion: "obd_response_line_classification_v1",
     bucketCounts: { storedDtcResponses: 11 }
@@ -2777,6 +2789,10 @@ const scanSessionBridgeExportPayloadOuterOverride = obd.buildDiagnosticScanSessi
 });
 check(scanSessionBridgeExportPayloadOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicle_applicability override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Diagnostic scan session did not let outer next_readout_candidates override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Diagnostic scan session did not let outer freeze_frame_snapshot override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not let outer readiness_snapshot override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.supportedPidMatrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not let outer supported_pid_matrix override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not let outer ecu_info_snapshot override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.importClassification?.bucketCounts?.storedDtcResponses === 11, "Diagnostic scan session did not let outer import_classification override bridge_export_payload alias input");
 const scanSessionSensitiveIdentifierSnakeAlias = obd.buildDiagnosticScanSession({
   session_id: "shop-test-sensitive-identifier-snake",
