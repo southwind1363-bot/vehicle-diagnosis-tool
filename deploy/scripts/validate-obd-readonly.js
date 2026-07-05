@@ -1124,6 +1124,21 @@ const bridgeSummaryMissingSupportedTypeCandidates = obd.buildNextReadoutCandidat
   }
 );
 check(bridgeSummaryMissingSupportedTypeCandidates.find((item) => item.id === "ecu_info_snapshot")?.reason === "対応ECU情報不足のため再確認候補", "Next readout candidates did not explain missing supported ECU info types");
+const supportedPidReasonReadoutCoverage = {
+  items: [
+    { id: "supported_pid_matrix", label: "Supported PID", status: "missing", available: false, count: 0 },
+    { id: "live_pid_snapshot", label: "Live PID", status: "missing", available: false, count: 0 }
+  ]
+};
+const bridgeSummarySupportedPidCandidates = obd.buildNextReadoutCandidates(
+  supportedPidReasonReadoutCoverage,
+  { status: "matched" },
+  null,
+  null,
+  { supportedPids: ["0C", "0D"] }
+);
+check(bridgeSummarySupportedPidCandidates.find((item) => item.id === "supported_pid_matrix")?.reason === "対応PID確認のため再確認候補", "Next readout candidates did not explain supported_pid_matrix priority for matched applicability");
+check(bridgeSummarySupportedPidCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "Next readout candidates did not explain live_pid_snapshot priority when supported PID data is present");
 const bridgeSummarySnapshotAliases = obd.buildBridgeSessionSummary({
   dtc_snapshot: bridgeDtcSnapshot,
   live_pid_snapshot: bridgePidSnapshot,
@@ -3763,6 +3778,16 @@ check(scanSessionSnapshotAliases.readinessSnapshot.incompleteCount === 1, "Diagn
 check(scanSessionSnapshotAliases.onboardMonitorSnapshot.failedCount === 1, "Diagnostic scan session did not accept onboard_monitor_snapshot alias input");
 check(scanSessionSnapshotAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept ecu_info_snapshot alias input");
 check(scanSessionSnapshotAliases.supportedPidMatrix.supportedPids.includes("05"), "Diagnostic scan session did not accept supported_pid_matrix alias input");
+const scanSessionSupportedPidReason = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-pid-reason",
+  vehicle_applicability: vehicleApplicabilitySample,
+  dtc_snapshot: bridgeDtcSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(scanSessionSupportedPidReason.nextReadoutCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "Diagnostic scan session did not derive live_pid_snapshot reason from supported_pid_matrix");
 const scanSessionEcuInfoCamelAliases = obd.buildDiagnosticScanSession({
   session_id: "shop-test-ecuinfo-camel",
   ecuInfo: [
