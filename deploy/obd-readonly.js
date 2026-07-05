@@ -1695,6 +1695,20 @@
     );
   }
 
+  function hasBridgeSummaryMetadata(parts = {}) {
+    return Boolean(
+      Array.isArray(parts.nextReadoutCandidates)
+      || Array.isArray(parts.next_readout_candidates)
+      || Array.isArray(parts.toolHints)
+      || Array.isArray(parts.tool_hints)
+      || Array.isArray(parts.warnings)
+      || parts.hadSensitiveIdentifier === true
+      || parts.had_sensitive_identifier === true
+      || Number.isFinite(Number(parts.sourceLength))
+      || Number.isFinite(Number(parts.source_length))
+    );
+  }
+
   function getBridgeSummaryInput(parts = {}) {
     const nested = parts.bridgeSession || parts.bridge_session || parts.session || null;
     if (!nested || typeof nested !== "object") return parts;
@@ -2511,8 +2525,10 @@
     const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
       ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgeImportInput?.schema_version === "bridge_session_export_v1" || bridgeImportInput?.session || bridgeImportInput?.bridgeSession || bridgeImportInput?.bridge_session
-        ? buildBridgeDiagnosticImport(bridgeImportInput)
+      ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgeImportInput && hasBridgeSummaryContent(getBridgeSummaryInput(bridgeImportInput))
+        ? buildBridgeDiagnosticImport(bridgeImportInput)
+      : bridgeImportInput && hasBridgeSummaryMetadata(getBridgeSummaryInput(bridgeImportInput))
         ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgePartsInput
         ? buildBridgeDiagnosticImport(bridgePartsInput)

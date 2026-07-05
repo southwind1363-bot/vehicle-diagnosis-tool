@@ -1875,6 +1875,21 @@ const mergedDiagnosticInputBridgeOnly = obd.mergeDiagnosticInputs({
   bridge_import: bridgeExportPayload
 });
 check(mergedDiagnosticInputBridgeOnly.source === "local_bridge", "Combined diagnostic inputs did not mark bridge-only source correctly");
+const mergedDiagnosticInputBridgeMetadataOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    next_readout_candidates: [{ id: "metadata_only_snapshot", label: "Metadata Only Snapshot", priority: 3, reason: "metadata-only bridge import" }],
+    tool_hints: ["CONSULT"],
+    warning_flags: ["negative_obd_response_present"],
+    had_sensitive_identifier: true,
+    source_length: 12
+  }
+});
+check(mergedDiagnosticInputBridgeMetadataOnly.source === "local_bridge", "Combined diagnostic inputs did not treat metadata-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeMetadataOnly.nextReadoutCandidates[0]?.id === "metadata_only_snapshot", "Combined diagnostic inputs did not preserve next_readout_candidates from metadata-only bridge_import");
+check(mergedDiagnosticInputBridgeMetadataOnly.toolHints.includes("CONSULT"), "Combined diagnostic inputs did not preserve tool_hints from metadata-only bridge_import");
+check(mergedDiagnosticInputBridgeMetadataOnly.warnings.includes("negative_obd_response_present"), "Combined diagnostic inputs did not preserve warning_flags from metadata-only bridge_import");
+check(mergedDiagnosticInputBridgeMetadataOnly.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve had_sensitive_identifier from metadata-only bridge_import");
+check(mergedDiagnosticInputBridgeMetadataOnly.sourceLength === 12, "Combined diagnostic inputs did not preserve source_length from metadata-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
