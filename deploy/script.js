@@ -1481,6 +1481,56 @@ function buildSelectedObdVehicleProfile() {
   };
 }
 
+function buildSelectedObdVehicleApplicability(profile = null) {
+  const selectedProfile = profile || buildSelectedObdVehicleProfile();
+  if (!selectedProfile) return null;
+  const maker = selectedProfile.maker || null;
+  const model = selectedProfile.model || null;
+  const modelCode = selectedProfile.modelCode || null;
+  const year = selectedProfile.year || null;
+  const engineCode = selectedProfile.engineCode || null;
+  const hasCatalogSelection = Boolean(maker && model);
+  const vehicleOption = hasCatalogSelection ? findVehicleOption(maker, model) : null;
+  const candidateRanges = hasCatalogSelection ? findVehicleYearRanges(maker, model, modelCode || "") : [];
+  const applicableRanges = hasCatalogSelection ? findApplicableVehicleYearRanges(maker, model, modelCode || "", year || "") : [];
+  const supportedEngineCodes = collectUnique(applicableRanges.flatMap((item) => item.engine_codes || []));
+  const catalogMatched = Boolean(vehicleOption);
+  const modelCodeMatched = !modelCode || candidateRanges.some((item) => (item.model_codes || []).includes(modelCode));
+  const yearMatched = !year || applicableRanges.length > 0;
+  const engineMatched = !engineCode || supportedEngineCodes.includes(engineCode);
+  let status = "manual";
+  if (hasCatalogSelection) {
+    if (!catalogMatched) {
+      status = "unlisted";
+    } else if (modelCodeMatched && yearMatched && engineMatched) {
+      status = "matched";
+    } else {
+      status = "partial";
+    }
+  }
+  const summaryParts = [
+    selectedProfile.label || formatVehicleProfileLabel(selectedProfile, ""),
+    status === "matched" ? "適合候補あり" : status === "partial" ? "候補要確認" : status === "unlisted" ? "未登録" : "手入力"
+  ].filter(Boolean);
+  return {
+    schemaVersion: "vehicle_applicability_v1",
+    maker,
+    model,
+    modelCode,
+    year,
+    engineCode,
+    catalogMatched,
+    yearMatched,
+    engineMatched,
+    modelCodeMatched,
+    candidateRangeCount: candidateRanges.length,
+    applicableRangeCount: applicableRanges.length,
+    supportedEngineCodeCount: supportedEngineCodes.length,
+    status,
+    summaryLabel: summaryParts.join(" / ")
+  };
+}
+
 function formatVehicleProfileLabel(profile, fallback = "") {
   if (profile?.maker || profile?.model) {
     return `${profile?.maker || ""} ${profile?.model || ""}`.trim();
@@ -4266,6 +4316,9 @@ function renderObdBridgeReadout(parts = {}) {
   const vehicleProfile = buildSelectedObdVehicleProfile()
     || previousSession.vehicleProfile
     || null;
+  const vehicleApplicability = buildSelectedObdVehicleApplicability(vehicleProfile)
+    || previousSession.vehicleApplicability
+    || null;
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
@@ -4275,6 +4328,7 @@ function renderObdBridgeReadout(parts = {}) {
     onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
     supportedPidMatrix: supportedPidMatrix || undefined,
     vehicleProfile: vehicleProfile || undefined,
+    vehicleApplicability: vehicleApplicability || undefined,
     connectionStatus: obdDevSession.bridgeStatus || previousSession.connectionStatus || undefined,
     vciList: obdDevSession.bridgeVciList || (Array.isArray(previousSession.vciDevices) ? { devices: previousSession.vciDevices } : undefined),
     adapterIdentity: obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined
@@ -4296,6 +4350,7 @@ function renderObdBridgeReadout(parts = {}) {
     connectionStatus: importResult.connectionStatus || importResult.bridgeSession?.connectionStatus,
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
     vehicleProfile: vehicleProfile || importResult.vehicleProfile || importResult.bridgeSession?.vehicleProfile || undefined,
+    vehicleApplicability: vehicleApplicability || importResult.vehicleApplicability || importResult.bridgeSession?.vehicleApplicability || undefined,
     adapterIdentity: importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined
   });
   obdDevSession.lastSession = session;
@@ -5302,6 +5357,7 @@ function analyzeObdScannerImport() {
       protocol: currentSession.protocol,
       capturedAt: currentSession.capturedAt,
       vehicleProfile: currentSession.vehicleProfile,
+      vehicleApplicability: currentSession.vehicleApplicability,
       connectionStatus: currentSession.connectionStatus,
       vciList: { devices: currentSession.vciDevices || [] },
       adapterIdentity: currentSession.adapterIdentity,

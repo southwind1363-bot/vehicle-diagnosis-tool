@@ -1395,6 +1395,60 @@
     };
   }
 
+  function normalizeVehicleApplicabilitySnapshot(input = {}) {
+    const source = input && typeof input === "object" ? input : {};
+    const toCount = (...values) => {
+      for (const value of values) {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric) && numeric >= 0) return numeric;
+      }
+      return 0;
+    };
+    const maker = source.maker || source.make || null;
+    const model = source.model || null;
+    const modelCode = source.modelCode || source.model_code || null;
+    const year = source.year || null;
+    const engineCode = source.engineCode || source.engine_code || null;
+    const catalogMatched = source.catalogMatched === true || source.catalog_matched === true;
+    const yearMatched = source.yearMatched === true || source.year_matched === true;
+    const engineMatched = source.engineMatched === true || source.engine_matched === true;
+    const modelCodeMatched = source.modelCodeMatched === true || source.model_code_matched === true;
+    const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, source.candidateRanges?.length);
+    const applicableRangeCount = toCount(source.applicableRangeCount, source.applicable_range_count, source.applicableRanges?.length);
+    const supportedEngineCodeCount = toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, source.supportedEngineCodes?.length);
+    const providedStatus = typeof source.status === "string" ? source.status.trim() : "";
+    const summaryLabel = source.summaryLabel || source.summary_label || source.label || null;
+    let status = providedStatus;
+    if (!status) {
+      if (!maker && !model && !modelCode && !year && !engineCode) {
+        status = "manual";
+      } else if (!catalogMatched) {
+        status = "unlisted";
+      } else if ((!year || yearMatched) && (!engineCode || engineMatched) && (!modelCode || modelCodeMatched)) {
+        status = "matched";
+      } else {
+        status = "partial";
+      }
+    }
+    return {
+      schemaVersion: "vehicle_applicability_v1",
+      maker,
+      model,
+      modelCode,
+      year,
+      engineCode,
+      catalogMatched,
+      yearMatched,
+      engineMatched,
+      modelCodeMatched,
+      candidateRangeCount,
+      applicableRangeCount,
+      supportedEngineCodeCount,
+      status,
+      summaryLabel
+    };
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
@@ -1503,6 +1557,7 @@
       capturedAt,
       protocol,
       vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
+      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(parts.vehicleApplicability || parts.vehicle_applicability || {}),
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
@@ -1557,7 +1612,8 @@
       endedAt: parts.endedAt || parts.ended_at || nested.endedAt || nested.ended_at || null,
       capturedAt: parts.capturedAt || parts.captured_at || nested.capturedAt || nested.captured_at || null,
       protocol: parts.protocol || nested.protocol || null,
-      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null
+      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
+      vehicleApplicability: parts.vehicleApplicability || parts.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null
     };
   }
 
@@ -1646,6 +1702,7 @@
       capturedAt: parts.capturedAt || parts.captured_at || null,
       protocol: parts.protocol || null,
       vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
+      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(parts.vehicleApplicability || parts.vehicle_applicability || {}),
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
@@ -1686,7 +1743,8 @@
       ended_at: input.ended_at || input.endedAt || nested.ended_at || nested.endedAt || null,
       captured_at: input.captured_at || input.capturedAt || nested.captured_at || nested.capturedAt || null,
       protocol: input.protocol || nested.protocol || null,
-      vehicle_profile: input.vehicle_profile || input.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null
+      vehicle_profile: input.vehicle_profile || input.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
+      vehicle_applicability: input.vehicle_applicability || input.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null
     };
   }
 
@@ -1708,6 +1766,7 @@
         captured_at: summary.capturedAt || null,
         protocol: summary.protocol || null,
         vehicle_profile: summary.vehicleProfile || null,
+        vehicle_applicability: summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot(),
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: cloneBridgeArrayItems(summary.vciDevices),
         adapter_identity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
@@ -1748,6 +1807,7 @@
       protocol: summary.protocol || null,
       capturedAt: summary.capturedAt || null,
       vehicleProfile: summary.vehicleProfile || null,
+      vehicleApplicability: summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot(),
       codes,
       monitorValues,
       monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
@@ -1769,6 +1829,7 @@
         capturedAt: summary.capturedAt || null,
         protocol: summary.protocol || null,
         vehicleProfile: summary.vehicleProfile || null,
+        vehicleApplicability: summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot(),
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: cloneBridgeArrayItems(summary.vciDevices),
         adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
@@ -1894,6 +1955,7 @@
       readoutCoverage: normalizeReadoutCoverageSnapshot(bridgeImport?.readoutCoverage || bridgeSession?.readoutCoverage || null),
       freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
       vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
+      vehicleApplicability: bridgeImport?.vehicleApplicability || bridgeSession?.vehicleApplicability || null,
       connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
       vciDevices: bridgeImport?.vciDevices || bridgeSession?.vciDevices || [],
       adapterIdentity: bridgeImport?.adapterIdentity || bridgeSession?.adapterIdentity || null,
@@ -2657,6 +2719,7 @@
       started_at: sessionInput.started_at || sessionInput.startedAt || null,
       ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
       vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
+      vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
       dtcSnapshot,
       livePidSnapshot,
       freezeFrameSnapshot,
@@ -2970,6 +3033,7 @@
       started_at: sessionInput.started_at || sessionInput.startedAt || null,
       ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
       vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
+      vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
       storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: sessionInput.protocol || null },
       pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: sessionInput.protocol || null },
       permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: sessionInput.protocol || null },
@@ -3568,6 +3632,7 @@
       capturedAt,
       protocol,
       vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || input.vehicleProfile || input.vehicle_profile || null,
+      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {}),
       connectionStatus,
       vciDevices: vciList.devices || [],
       adapterIdentity,
@@ -3972,6 +4037,7 @@
     buildBridgeDiagnosticImport,
     buildReadoutCoverageSnapshot,
     normalizeReadoutCoverageSnapshot,
+    normalizeVehicleApplicabilitySnapshot,
     mergeDiagnosticInputs,
     normalizeDtcSnapshot,
     normalizeFreezeFrameSnapshot,
