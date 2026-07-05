@@ -1570,6 +1570,11 @@ function formatVehicleProfileLabel(profile, fallback = "") {
   return profile?.label || fallback || "";
 }
 
+function getTopNextReadoutLabels(candidates, limit = 2) {
+  if (!Array.isArray(candidates) || limit <= 0) return [];
+  return candidates.slice(0, limit).map((item) => item?.label).filter(Boolean);
+}
+
 function syncObdVehicleInput() {
   const values = [
     selectedVehicleValue(obdVehicleMakerSelect),
@@ -1815,9 +1820,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId(capability);
   const currentSession = obdDevSession.lastSession || null;
-  const nextReadoutLabels = Array.isArray(currentSession?.nextReadoutCandidates)
-    ? currentSession.nextReadoutCandidates.slice(0, 2).map((item) => item?.label).filter(Boolean)
-    : [];
+  const nextReadoutLabels = getTopNextReadoutLabels(currentSession?.nextReadoutCandidates, 2);
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const previewActive = Boolean(obdDevSession.previewMode);
   const connected = Boolean(obdDevSession.port);
@@ -4620,9 +4623,7 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
-  const nextReadoutLabels = Array.isArray(analysis.nextReadoutCandidates)
-    ? analysis.nextReadoutCandidates.slice(0, 2).map((item) => item?.label).filter(Boolean)
-    : [];
+  const nextReadoutLabels = getTopNextReadoutLabels(analysis.nextReadoutCandidates, 2);
   if (coverage?.totalCategories) {
     parts.push(`取得率${coverage.capturedPercent || 0}%`);
     parts.push(`応答率${coverage.progressPercent}%`);
@@ -5000,9 +5001,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
-  const nextReadoutLabel = Array.isArray(session?.nextReadoutCandidates) && session.nextReadoutCandidates.length
-    ? session.nextReadoutCandidates.slice(0, 2).map((item) => item?.label).filter(Boolean).join(" / ")
-    : NO_DATA;
+  const nextReadoutLabel = getTopNextReadoutLabels(session?.nextReadoutCandidates, 2).join(" / ") || NO_DATA;
   const startedAtLabel = session?.startedAt
     ? formatDateTime(session.startedAt)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
