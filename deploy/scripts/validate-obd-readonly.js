@@ -2199,6 +2199,24 @@ const decodedScanSessionNestedOuterImportClassificationOverride = obd.buildDecod
   }
 });
 check(decodedScanSessionNestedOuterImportClassificationOverride.importClassification?.bucketCounts?.storedDtcResponses === 9, "Decoded OBD session did not let outer import_classification override scan_session nested alias input");
+const decodedScanSessionNestedOuterMetadataOverride = obd.buildDecodedObdScanSession({
+  session_id: "decoded-outer-metadata-override",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  tool_hints: ["CONSULT"],
+  warning_flags: ["negative_obd_response_present"],
+  source_length: 0,
+  had_sensitive_identifier: false,
+  scan_session: {
+    tool_hints: ["Techstream"],
+    warning_flags: ["freeze_frame_available"],
+    source_length: 128,
+    had_sensitive_identifier: true
+  }
+});
+check(decodedScanSessionNestedOuterMetadataOverride.toolHints.includes("CONSULT") && decodedScanSessionNestedOuterMetadataOverride.toolHints.includes("Techstream"), "Decoded OBD session did not merge outer tool_hints with scan_session nested alias input");
+check(decodedScanSessionNestedOuterMetadataOverride.warnings.includes("negative_obd_response_present") && decodedScanSessionNestedOuterMetadataOverride.warnings.includes("freeze_frame_available"), "Decoded OBD session did not merge outer warning_flags with scan_session nested alias input");
+check(decodedScanSessionNestedOuterMetadataOverride.sourceLength === 0, "Decoded OBD session did not let outer source_length override scan_session nested alias input");
+check(decodedScanSessionNestedOuterMetadataOverride.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve nested sensitive identifier when outer scan_session nested alias input set false");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
 const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-coverage-candidates",
@@ -2441,6 +2459,23 @@ const textScanSessionNestedOuterImportClassificationOverride = obd.buildScanSess
   }
 });
 check(textScanSessionNestedOuterImportClassificationOverride.importClassification?.bucketCounts?.livePidResponses === 11, "OBD text scan session did not let outer import_classification override scan_session nested options");
+const textScanSessionNestedOuterMetadataOverride = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-outer-metadata-override",
+  tool_hints: ["CONSULT"],
+  warning_flags: ["negative_obd_response_present"],
+  source_length: 0,
+  had_sensitive_identifier: false,
+  scan_session: {
+    tool_hints: ["Techstream"],
+    warning_flags: ["freeze_frame_available"],
+    source_length: 128,
+    had_sensitive_identifier: true
+  }
+});
+check(textScanSessionNestedOuterMetadataOverride.toolHints.includes("CONSULT") && textScanSessionNestedOuterMetadataOverride.toolHints.includes("Techstream"), "OBD text scan session did not merge outer tool_hints with scan_session nested options");
+check(textScanSessionNestedOuterMetadataOverride.warnings.includes("negative_obd_response_present") && textScanSessionNestedOuterMetadataOverride.warnings.includes("freeze_frame_available"), "OBD text scan session did not merge outer warning_flags with scan_session nested options");
+check(textScanSessionNestedOuterMetadataOverride.sourceLength === 0, "OBD text scan session did not let outer source_length override scan_session nested options");
+check(textScanSessionNestedOuterMetadataOverride.hadSensitiveIdentifier === true, "OBD text scan session did not preserve nested sensitive identifier when outer scan_session nested options set false");
 const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-coverage-candidates",
   readout_coverage: legacyReadoutCoverage,
