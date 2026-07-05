@@ -5688,6 +5688,7 @@ function analyzeObdScannerImport() {
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   }
   if (bridgeImport && obdDevSession.lastSession) {
+    renderObdWorkflowGuide();
     renderObdDeveloperSessionSummary(obdDevSession.lastSession);
   }
 }
