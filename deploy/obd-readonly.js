@@ -1611,7 +1611,7 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    const readoutCoverage = normalizeReadoutCoverageSnapshot(readoutCoverageInput?.schemaVersion ? readoutCoverageInput : (readoutCoverageInput || derivedReadoutCoverage));
+    const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
@@ -1798,7 +1798,10 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
-      readoutCoverage: normalizeReadoutCoverageSnapshot(parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage),
+      readoutCoverage: resolveReadoutCoverageSnapshot(
+        parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || null,
+        derivedReadoutCoverage
+      ),
       freezeFrameSnapshot,
       monitorValues,
       monitorValueSummary,
@@ -2139,6 +2142,13 @@
         ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
         : 0
     };
+  }
+
+  function resolveReadoutCoverageSnapshot(input = null, derived = null) {
+    if (input && typeof input === "object") {
+      return normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);
+    }
+    return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());
   }
 
   function buildBridgeSessionExportPayload(parts = {}) {
@@ -4058,11 +4068,7 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    const readoutCoverage = normalizeReadoutCoverageSnapshot(
-      readoutCoverageInput && typeof readoutCoverageInput === "object"
-        ? readoutCoverageInput
-        : derivedReadoutCoverage
-    );
+    const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
