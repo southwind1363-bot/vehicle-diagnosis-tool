@@ -3012,6 +3012,48 @@ const scanSessionBridgeResponseAliases = obd.buildDiagnosticScanSession({
 });
 check(scanSessionBridgeResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode live_pid_response from bridge_session alias input");
 check(scanSessionBridgeResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecu_response_summary_response from bridge_session alias input");
+const scanSessionBridgeInfrastructureResponseAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-bridge-infrastructure-response-aliases",
+  bridge_session: {
+    connection_status_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    list_vci_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { items: [{ deviceId: "nested-response-vci", name: "Nested Response VCI", isConnected: true }], selectedVciId: "nested-response-vci" }
+    },
+    adapter_identity_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Nested Response Adapter", family: "stn", version: "7.0" }
+    }
+  }
+});
+check(scanSessionBridgeInfrastructureResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connection_status_response from bridge_session alias input");
+check(scanSessionBridgeInfrastructureResponseAliases.vciDevices[0]?.id === "nested-response-vci", "Diagnostic scan session did not accept list_vci_response from bridge_session alias input");
+check(scanSessionBridgeInfrastructureResponseAliases.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not accept adapter_identity_response from bridge_session alias input");
+const scanSessionNestedResponseAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-scan-session-response-aliases",
+  scan_session: {
+    live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
+    ecu_response_summary_response: bridgeSummary.ecuResponseSummary,
+    connection_status_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    }
+  }
+});
+check(scanSessionNestedResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode live_pid_response from scan_session alias input");
+check(scanSessionNestedResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecu_response_summary_response from scan_session alias input");
+check(scanSessionNestedResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connection_status_response from scan_session alias input");
 const scanSessionBridgeExportPayloadAlias = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeExportPayload,
   session_id: "shop-test-bridge-export-alias"
