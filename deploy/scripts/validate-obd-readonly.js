@@ -1715,6 +1715,40 @@ const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputExportPayloadAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_export_payload alias input");
 check(mergedDiagnosticInputExportPayloadAlias.vciDevices.length === 1, "Combined diagnostic inputs did not carry vci devices from bridge_export_payload alias input");
 check(mergedDiagnosticInputExportPayloadAlias.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not carry warnings from bridge_export_payload alias input");
+const mergedDiagnosticInputExportPayloadNestedResponseAliases = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_export_payload: {
+    schema_version: "bridge_session_export_v1",
+    exported_at: "2026-06-28T00:12:00Z",
+    session: {
+      live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
+      ecu_response_summary_response: bridgeSummary.ecuResponseSummary,
+      connection_status_response: {
+        ok: true,
+        blocked: false,
+        would_transmit: false,
+        data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+      },
+      list_vci_response: {
+        ok: true,
+        blocked: false,
+        would_transmit: false,
+        data: { items: [{ deviceId: "export-merge-response-vci", name: "Export Merge Response VCI", isConnected: true }], selectedVciId: "export-merge-response-vci" }
+      },
+      adapter_identity_response: {
+        ok: true,
+        blocked: false,
+        would_transmit: false,
+        data: { adapter: "Export Merge Response Adapter", family: "stn", version: "7.4" }
+      }
+    }
+  }
+});
+check(mergedDiagnosticInputExportPayloadNestedResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Combined diagnostic inputs did not decode live_pid_response from bridge_export_payload nested session input");
+check(mergedDiagnosticInputExportPayloadNestedResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Combined diagnostic inputs did not accept ecu_response_summary_response from bridge_export_payload nested session input");
+check(mergedDiagnosticInputExportPayloadNestedResponseAliases.connectionStatus?.vehicleConnected === true, "Combined diagnostic inputs did not accept connection_status_response from bridge_export_payload nested session input");
+check(mergedDiagnosticInputExportPayloadNestedResponseAliases.vciDevices[0]?.id === "export-merge-response-vci", "Combined diagnostic inputs did not accept list_vci_response from bridge_export_payload nested session input");
+check(mergedDiagnosticInputExportPayloadNestedResponseAliases.adapterIdentity?.adapterFamily === "stn", "Combined diagnostic inputs did not accept adapter_identity_response from bridge_export_payload nested session input");
 const mergedDiagnosticInputExportPayloadVehicleProfile = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_export_payload: bridgeExportAliasInputs
@@ -1763,6 +1797,38 @@ const mergedDiagnosticInputNestedSession = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputNestedSession.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept nested session bridge_import input");
 check(mergedDiagnosticInputNestedSession.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from nested session bridge_import input");
 check(mergedDiagnosticInputNestedSession.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not retain warnings from nested session bridge_import input");
+const mergedDiagnosticInputNestedSessionResponseAliases = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_import: {
+    session: {
+      live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
+      ecu_response_summary_response: bridgeSummary.ecuResponseSummary,
+      connection_status_response: {
+        ok: true,
+        blocked: false,
+        would_transmit: false,
+        data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+      },
+      list_vci_response: {
+        ok: true,
+        blocked: false,
+        would_transmit: false,
+        data: { items: [{ deviceId: "merge-response-vci", name: "Merge Response VCI", isConnected: true }], selectedVciId: "merge-response-vci" }
+      },
+      adapter_identity_response: {
+        ok: true,
+        blocked: false,
+        would_transmit: false,
+        data: { adapter: "Merge Response Adapter", family: "stn", version: "7.3" }
+      }
+    }
+  }
+});
+check(mergedDiagnosticInputNestedSessionResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Combined diagnostic inputs did not decode live_pid_response from nested session bridge_import input");
+check(mergedDiagnosticInputNestedSessionResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Combined diagnostic inputs did not accept ecu_response_summary_response from nested session bridge_import input");
+check(mergedDiagnosticInputNestedSessionResponseAliases.connectionStatus?.vehicleConnected === true, "Combined diagnostic inputs did not accept connection_status_response from nested session bridge_import input");
+check(mergedDiagnosticInputNestedSessionResponseAliases.vciDevices[0]?.id === "merge-response-vci", "Combined diagnostic inputs did not accept list_vci_response from nested session bridge_import input");
+check(mergedDiagnosticInputNestedSessionResponseAliases.adapterIdentity?.adapterFamily === "stn", "Combined diagnostic inputs did not accept adapter_identity_response from nested session bridge_import input");
 const mergedDiagnosticInputBridgeSessionOnlyImport = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_diagnostic_import: {
