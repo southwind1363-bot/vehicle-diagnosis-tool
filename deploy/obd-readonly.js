@@ -1589,15 +1589,21 @@
       || hasObjectContent(livePidSnapshotInput);
     const warnings = [];
     if (hasBridgeSnapshotContext && (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked)) warnings.push("local_bridge_disabled");
-    if (dtcSnapshot.codes.length) warnings.push("confirm_dtc_with_service_manual");
-    if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
-    if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
-    if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
-    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
-    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
-    if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
-    if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
-    appendVehicleApplicabilityWarnings(warnings, metadataOverrides.vehicleApplicability || {});
+    appendCommonCoreWarnings(warnings, {
+      dtcWarning: "confirm_dtc_with_service_manual",
+      hasDtcCodes: dtcSnapshot.codes.length > 0,
+      freezeFrameSnapshot,
+      hasReadinessSnapshotInput,
+      readinessSnapshot,
+      hasOnboardMonitorSnapshotInput,
+      onboardMonitorSnapshot,
+      hasEcuInfoSnapshotInput,
+      ecuInfoSnapshot,
+      liveDataWarning: "compare_values_under_same_conditions",
+      hasLiveData: livePidSnapshot.monitorValues.length > 0,
+      rawPidUndecodedCount: (livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0),
+      vehicleApplicability: metadataOverrides.vehicleApplicability || {}
+    });
     const { protocol, capturedAt } = resolveSessionTemporalContext({
       input: parts,
       dtcSnapshot,
@@ -1776,17 +1782,21 @@
     });
     const derivedWarnings = [];
     if (hasBridgeInfrastructureContext && (connectionStatus.blocked || normalizedVciList.blocked)) derivedWarnings.push("local_bridge_disabled");
-    if (Array.isArray(codesInput) && codesInput.length) derivedWarnings.push("confirm_dtc_with_service_manual");
-    if (freezeFrameSnapshot.monitorValues.length) derivedWarnings.push("freeze_frame_available");
-    if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) derivedWarnings.push("readiness_incomplete");
-    if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) derivedWarnings.push("onboard_monitor_test_failed");
-    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) derivedWarnings.push("mode09_key_items_missing");
-    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) derivedWarnings.push("mode09_supported_types_unknown");
-    if ((monitorValueSummary?.totalCount || 0) > 0) derivedWarnings.push("compare_values_under_same_conditions");
-    if (((monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
-      derivedWarnings.push("raw_pid_values_need_conversion");
-    }
-    appendVehicleApplicabilityWarnings(derivedWarnings, metadataOverrides.vehicleApplicability || {});
+    appendCommonCoreWarnings(derivedWarnings, {
+      dtcWarning: "confirm_dtc_with_service_manual",
+      hasDtcCodes: Array.isArray(codesInput) && codesInput.length > 0,
+      freezeFrameSnapshot,
+      hasReadinessSnapshotInput,
+      readinessSnapshot,
+      hasOnboardMonitorSnapshotInput,
+      onboardMonitorSnapshot,
+      hasEcuInfoSnapshotInput,
+      ecuInfoSnapshot,
+      liveDataWarning: "compare_values_under_same_conditions",
+      hasLiveData: (monitorValueSummary?.totalCount || 0) > 0,
+      rawPidUndecodedCount: (monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0),
+      vehicleApplicability: metadataOverrides.vehicleApplicability || {}
+    });
     appendBridgeReadoutCoverageWarnings(derivedWarnings, {
       hasBridgeInfrastructureContext,
       readoutCoverage: derivedReadoutCoverage
@@ -1974,6 +1984,32 @@
     if (!hasBridgeInfrastructureContext || !readoutCoverage) return;
     if (readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
+  }
+
+  function appendCommonCoreWarnings(warnings, {
+    dtcWarning = null,
+    hasDtcCodes = false,
+    freezeFrameSnapshot = {},
+    hasReadinessSnapshotInput = false,
+    readinessSnapshot = {},
+    hasOnboardMonitorSnapshotInput = false,
+    onboardMonitorSnapshot = {},
+    hasEcuInfoSnapshotInput = false,
+    ecuInfoSnapshot = {},
+    liveDataWarning = null,
+    hasLiveData = false,
+    rawPidUndecodedCount = 0,
+    vehicleApplicability = {}
+  } = {}) {
+    if (dtcWarning && hasDtcCodes) warnings.push(dtcWarning);
+    if ((freezeFrameSnapshot.monitorValues || []).length) warnings.push("freeze_frame_available");
+    if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
+    if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
+    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
+    if (liveDataWarning && hasLiveData) warnings.push(liveDataWarning);
+    if (rawPidUndecodedCount > 0) warnings.push("raw_pid_values_need_conversion");
+    appendVehicleApplicabilityWarnings(warnings, vehicleApplicability || {});
   }
 
   function mergeNestedSessionMetadata(base = {}, nested = {}) {
@@ -4115,22 +4151,26 @@
       readoutCoverageInput,
       honorCoverageOverride: true
     });
-    const hasReadinessSnapshotInput = Boolean(readinessSnapshotInput && typeof readinessSnapshotInput === "object" && Object.keys(readinessSnapshotInput).length > 0);
-    const hasEcuInfoSnapshotInput = Boolean(ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0);
-    const hasOnboardMonitorSnapshotInput = Boolean(onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && Object.keys(onboardMonitorSnapshotInput).length > 0);
+    const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
+    const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
+    const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
     const warnings = [];
-    if (dtcSnapshot.codes.length) warnings.push("save_before_clear");
-    if (freezeFrameSnapshot.monitorValues.length) warnings.push("freeze_frame_available");
-    if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");
-    if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");
+    appendCommonCoreWarnings(warnings, {
+      dtcWarning: "save_before_clear",
+      hasDtcCodes: dtcSnapshot.codes.length > 0,
+      freezeFrameSnapshot,
+      hasReadinessSnapshotInput,
+      readinessSnapshot,
+      hasOnboardMonitorSnapshotInput,
+      onboardMonitorSnapshot,
+      hasEcuInfoSnapshotInput,
+      ecuInfoSnapshot,
+      liveDataWarning: "compare_live_data_conditions",
+      hasLiveData: livePidSnapshot.monitorValues.length > 0,
+      rawPidUndecodedCount: (livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0),
+      vehicleApplicability: metadataOverrides.vehicleApplicability || {}
+    });
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
-    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");
-    if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
-    if (livePidSnapshot.monitorValues.length) warnings.push("compare_live_data_conditions");
-    if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) {
-      warnings.push("raw_pid_values_need_conversion");
-    }
-    appendVehicleApplicabilityWarnings(warnings, metadataOverrides.vehicleApplicability || {});
     const { protocol, capturedAt } = resolveSessionTemporalContext({
       input: sessionInput,
       dtcSnapshot,
