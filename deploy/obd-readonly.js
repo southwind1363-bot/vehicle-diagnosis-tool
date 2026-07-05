@@ -1827,11 +1827,9 @@
       monitorValues,
       monitorValueSummary,
       monitorInsights,
-      importClassification: importClassificationInput && typeof importClassificationInput === "object"
-        ? { ...importClassificationInput }
-        : null,
+      importClassification: resolveImportClassification(importClassificationInput),
       toolHints: resolvedMetadata.toolHints,
-      warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
+      warnings: resolveWarningList(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings),
       nextReadoutCandidates: normalizeNextReadoutCandidates(
         Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
           ? nextReadoutCandidatesInput
@@ -2022,6 +2020,14 @@
         ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
         : 0
     };
+  }
+
+  function resolveImportClassification(input = null) {
+    return input && typeof input === "object" ? { ...input } : null;
+  }
+
+  function resolveWarningList(...warningSets) {
+    return mergeUniqueStrings(...warningSets);
   }
 
   function mergeNestedSessionMetadata(base = {}, nested = {}) {
@@ -4210,7 +4216,7 @@
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
-    const explicitWarnings = mergeUniqueStrings(metadataOverrides.warnings);
+    const explicitWarnings = resolveWarningList(metadataOverrides.warnings);
     const importClassification = metadataOverrides.importClassification;
 
     return {
@@ -4244,11 +4250,9 @@
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
       ]),
-      importClassification: importClassification && typeof importClassification === "object"
-        ? { ...importClassification }
-        : null,
+      importClassification: resolveImportClassification(importClassification),
       toolHints: resolvedMetadata.toolHints,
-      warnings: mergeUniqueStrings(warnings, explicitWarnings),
+      warnings: resolveWarningList(warnings, explicitWarnings),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       retainedRawText: false,
