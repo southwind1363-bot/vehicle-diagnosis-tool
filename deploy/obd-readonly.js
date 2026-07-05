@@ -1478,7 +1478,7 @@
     return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
   }
 
-  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null) {
+  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null, ecuInfoSnapshot = null) {
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const priorityById = {
@@ -1499,9 +1499,18 @@
     return (normalizedCoverage.items || [])
       .filter((item) => item && typeof item === "object" && (item.status === "missing" || item.status === "empty"))
       .map((item) => {
-        const reason = item.status === "missing"
+        let reason = item.status === "missing"
           ? "未読取のため次候補"
           : "読取応答が空のため再確認候補";
+        if (item.id === "ecu_info_snapshot" && applicability.status === "manual") {
+          reason = "車両適合確認のため再確認候補";
+        } else if (item.id === "ecu_info_snapshot" && applicability.status === "unlisted") {
+          reason = "車種未掲載確認のため再確認候補";
+        } else if (item.id === "ecu_info_snapshot" && Number(ecuInfoSnapshot?.keyItemSummary?.missingCount || 0) > 0) {
+          reason = "主要ECU情報不足のため再確認候補";
+        } else if (item.id === "ecu_info_snapshot" && ecuInfoSnapshot && ecuInfoSnapshot.supportInfoTypesCaptured === false) {
+          reason = "対応ECU情報不足のため再確認候補";
+        }
         return {
           id: item.id || "",
           label: item.label || item.id || "",
@@ -1528,12 +1537,13 @@
   function resolveNextReadoutCandidates({
     explicitCandidates = [],
     readoutCoverage = null,
-    vehicleApplicability = null
+    vehicleApplicability = null,
+    ecuInfoSnapshot = null
   } = {}) {
     return normalizeNextReadoutCandidates(
       Array.isArray(explicitCandidates) && explicitCandidates.length
         ? explicitCandidates
-        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {})
+        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot)
     );
   }
 
@@ -1739,7 +1749,8 @@
       nextReadoutCandidates: resolveNextReadoutCandidates({
         explicitCandidates: explicitNextReadoutCandidates,
         readoutCoverage,
-        vehicleApplicability: metadataOverrides.vehicleApplicability || {}
+        vehicleApplicability: metadataOverrides.vehicleApplicability || {},
+        ecuInfoSnapshot
       }),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
@@ -2007,7 +2018,8 @@
           ? nextReadoutCandidatesInput
           : buildNextReadoutCandidates(
             getReadoutCoverageInput(parts) || derivedReadoutCoverage,
-            metadataOverrides.vehicleApplicability || {}
+            metadataOverrides.vehicleApplicability || {},
+            ecuInfoSnapshot
           )
       ),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
@@ -2581,7 +2593,8 @@
         ? resolveNextReadoutCandidates({
           explicitCandidates: nestedSessionMetadata.nextReadoutCandidates,
           readoutCoverage: summary.readoutCoverage,
-          vehicleApplicability: summary.vehicleApplicability
+          vehicleApplicability: summary.vehicleApplicability,
+          ecuInfoSnapshot: summary.ecuInfoSnapshot
         })
         : metadataFields.nextReadoutCandidates,
       importClassification: preserveNestedBridgeSessionMetadata
@@ -2791,7 +2804,8 @@
           ? mergedBridgeMetadata.nextReadoutCandidatesInput
           : buildNextReadoutCandidates(
             mergedBridgeMetadata.readoutCoverageInput,
-            mergedBridgeMetadata.vehicleApplicability
+            mergedBridgeMetadata.vehicleApplicability,
+            bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null
           )
       ),
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
@@ -4573,7 +4587,8 @@
       nextReadoutCandidates: resolveNextReadoutCandidates({
         explicitCandidates: explicitNextReadoutCandidates,
         readoutCoverage,
-        vehicleApplicability: metadataOverrides.vehicleApplicability || {}
+        vehicleApplicability: metadataOverrides.vehicleApplicability || {},
+        ecuInfoSnapshot
       }),
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,

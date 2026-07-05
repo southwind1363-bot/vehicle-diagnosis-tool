@@ -1091,11 +1091,31 @@ const bridgeSummaryApplicabilityManualCandidates = obd.buildNextReadoutCandidate
   summaryLabel: "Manual vehicle confirmation required"
 });
 check(bridgeSummaryApplicabilityManualCandidates[0]?.id === "ecu_info_snapshot", "Next readout candidates did not prioritize ecu_info_snapshot for manual applicability");
+check(bridgeSummaryApplicabilityManualCandidates[0]?.reason === "車両適合確認のため再確認候補", "Next readout candidates did not explain ecu_info_snapshot priority for manual applicability");
 const bridgeSummaryApplicabilityUnlistedCandidates = obd.buildNextReadoutCandidates(manualApplicabilityReadoutCoverage, {
   status: "unlisted",
   summaryLabel: "Vehicle not listed"
 });
 check(bridgeSummaryApplicabilityUnlistedCandidates[0]?.id === "ecu_info_snapshot", "Next readout candidates did not prioritize ecu_info_snapshot for unlisted applicability");
+check(bridgeSummaryApplicabilityUnlistedCandidates[0]?.reason === "車種未掲載確認のため再確認候補", "Next readout candidates did not explain ecu_info_snapshot priority for unlisted applicability");
+const bridgeSummaryMissingKeyItemCandidates = obd.buildNextReadoutCandidates(
+  manualApplicabilityReadoutCoverage,
+  { status: "matched" },
+  {
+    keyItemSummary: { missingCount: 2, missingLabels: ["キャリブレーション確認番号 CVN"] },
+    supportInfoTypesCaptured: true
+  }
+);
+check(bridgeSummaryMissingKeyItemCandidates.find((item) => item.id === "ecu_info_snapshot")?.reason === "主要ECU情報不足のため再確認候補", "Next readout candidates did not explain missing ECU key items");
+const bridgeSummaryMissingSupportedTypeCandidates = obd.buildNextReadoutCandidates(
+  manualApplicabilityReadoutCoverage,
+  { status: "matched" },
+  {
+    keyItemSummary: { missingCount: 0, missingLabels: [] },
+    supportInfoTypesCaptured: false
+  }
+);
+check(bridgeSummaryMissingSupportedTypeCandidates.find((item) => item.id === "ecu_info_snapshot")?.reason === "対応ECU情報不足のため再確認候補", "Next readout candidates did not explain missing supported ECU info types");
 const bridgeSummarySnapshotAliases = obd.buildBridgeSessionSummary({
   dtc_snapshot: bridgeDtcSnapshot,
   live_pid_snapshot: bridgePidSnapshot,
