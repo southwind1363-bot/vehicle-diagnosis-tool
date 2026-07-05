@@ -4396,7 +4396,10 @@ function renderObdBridgeReadout(parts = {}) {
     vehicleApplicability: vehicleApplicability || undefined,
     connectionStatus: obdDevSession.bridgeStatus || previousSession.connectionStatus || undefined,
     vciList: obdDevSession.bridgeVciList || (Array.isArray(previousSession.vciDevices) ? { devices: previousSession.vciDevices } : undefined),
-    adapterIdentity: obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined
+    adapterIdentity: obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined,
+    toolHints: previousSession.toolHints || undefined,
+    sourceLength: previousSession.sourceLength || undefined,
+    hadSensitiveIdentifier: previousSession.hadSensitiveIdentifier === true
   });
   const session = window.ObdReadOnly.buildDiagnosticScanSession({
     session_id: "local-bridge-dev-readout",
@@ -4418,7 +4421,11 @@ function renderObdBridgeReadout(parts = {}) {
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
     vehicleProfile: vehicleProfile || importResult.vehicleProfile || importResult.bridgeSession?.vehicleProfile || undefined,
     vehicleApplicability: vehicleApplicability || importResult.vehicleApplicability || importResult.bridgeSession?.vehicleApplicability || undefined,
-    adapterIdentity: importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined
+    adapterIdentity: importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined,
+    toolHints: importResult.toolHints || importResult.bridgeSession?.toolHints || previousSession.toolHints || undefined,
+    sourceLength: importResult.sourceLength || importResult.bridgeSession?.sourceLength || previousSession.sourceLength || undefined,
+    hadSensitiveIdentifier: importResult.hadSensitiveIdentifier === true || importResult.bridgeSession?.hadSensitiveIdentifier === true || previousSession.hadSensitiveIdentifier === true,
+    warnings: importResult.warnings || importResult.bridgeSession?.warnings || previousSession.warnings || undefined
   });
   obdDevSession.lastSession = session;
   const monitorValues = livePidSnapshot?.monitorValues || [];
@@ -5541,7 +5548,10 @@ function analyzeObdScannerImport() {
       ecuResponseSummary: currentSession.ecuResponseSummary,
       readoutCoverage: currentSession.readoutCoverage,
       nextReadoutCandidates: currentSession.nextReadoutCandidates,
-      warnings: currentSession.warnings
+      warnings: currentSession.warnings,
+      toolHints: currentSession.toolHints,
+      sourceLength: currentSession.sourceLength,
+      hadSensitiveIdentifier: currentSession.hadSensitiveIdentifier === true
     })
     : null;
   const analysis = bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
