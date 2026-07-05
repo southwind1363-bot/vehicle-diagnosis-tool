@@ -2216,6 +2216,16 @@ check(mergedDiagnosticInputBridgeSessionOnlyImport.warnings.includes("freeze_fra
 check(mergedDiagnosticInputBridgeSessionOnlyImport.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.bridgeSession.nextReadoutCandidates[0]?.id, "Combined diagnostic inputs did not recover nextReadoutCandidates from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.toolHints.join(",") === "Techstream,J2534", "Combined diagnostic inputs did not recover toolHints from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.sourceLength === 128, "Combined diagnostic inputs did not recover sourceLength from bridgeSession-only diagnostic import");
+const mergedDiagnosticInputNonInfrastructureBridgeImport = obd.mergeDiagnosticInputs({
+  bridge_diagnostic_import: bridgeDiagnosticImportNonInfrastructureAliases
+});
+check(mergedDiagnosticInputNonInfrastructureBridgeImport.readoutCoverage?.includeInfrastructure === false, "Combined diagnostic inputs did not preserve non-infrastructure readoutCoverage from bridge diagnostic import");
+check(!mergedDiagnosticInputNonInfrastructureBridgeImport.warnings.includes("bridge_readout_incomplete") && !mergedDiagnosticInputNonInfrastructureBridgeImport.warnings.includes("bridge_readout_empty_sections"), "Combined diagnostic inputs emitted bridge readout warnings for non-infrastructure bridge diagnostic import");
+const mergedDiagnosticInputNonInfrastructureBridgeExportPayload = obd.mergeDiagnosticInputs({
+  bridge_export_payload: bridgeDiagnosticImportNonInfrastructureAliases.exportPayload
+});
+check(mergedDiagnosticInputNonInfrastructureBridgeExportPayload.readoutCoverage?.includeInfrastructure === false, "Combined diagnostic inputs did not preserve non-infrastructure readoutCoverage from bridge_export_payload input");
+check(!mergedDiagnosticInputNonInfrastructureBridgeExportPayload.warnings.includes("bridge_readout_incomplete") && !mergedDiagnosticInputNonInfrastructureBridgeExportPayload.warnings.includes("bridge_readout_empty_sections"), "Combined diagnostic inputs emitted bridge readout warnings for non-infrastructure bridge_export_payload input");
 const mergedDiagnosticInputBridgeSessionSnakeSensitiveIdentifier = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: {
     importType: "bridge_diagnostic_snapshot",
@@ -2582,6 +2592,22 @@ const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
 });
 check(mergedDiagnosticInputBridgeParts.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Combined diagnostic inputs did not accept bridge_parts alias input");
 check(mergedDiagnosticInputBridgeParts.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from bridge_parts alias input");
+const mergedDiagnosticInputSupportedPidReason = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    vehicle_profile: { maker: "Toyota", model: "Prius" },
+    vehicle_applicability: vehicleApplicabilitySample,
+    dtc_snapshot: bridgeDtcSnapshot,
+    freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+    readiness_snapshot: bridgeReadinessSnapshot,
+    ecu_info_snapshot: bridgeEcuInfoSnapshot,
+    supported_pid_matrix: bridgeSupportedPidSnapshot
+  }
+});
+const scanSessionFromMergedSupportedPidReason = obd.buildDiagnosticScanSession({
+  session_id: "merged-supported-pid-reason",
+  scan_session: mergedDiagnosticInputSupportedPidReason
+});
+check(scanSessionFromMergedSupportedPidReason.nextReadoutCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "Diagnostic scan session did not preserve live_pid_snapshot reason from merged diagnostic input");
 const scanSessionFromMergedDiagnosticInput = obd.buildDiagnosticScanSession({
   session_id: "merged-diagnostic-input-scan-session",
   scan_session: mergedDiagnosticInputExportNestedOuterOverride
