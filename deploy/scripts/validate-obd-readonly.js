@@ -1333,9 +1333,12 @@ const bridgeExportNestedSessionAliases = obd.buildBridgeSessionExportPayload({
 check(bridgeExportNestedSessionAliases.exported_at === "2026-06-28T00:10:00Z", "Bridge export did not accept nested session alias input");
 check(bridgeExportNestedSessionAliases.session.adapter_identity.adapterFamily === "elm327", "Bridge export did not carry adapter_identity from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.vci_devices[0]?.id === bridgeExportPayload.session.vci_devices[0]?.id, "Bridge export did not carry vci_devices from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.connection_status?.vehicleConnected === bridgeExportPayload.session.connection_status?.vehicleConnected, "Bridge export did not carry connection_status from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.vehicle_applicability?.status === bridgeExportPayload.session.vehicle_applicability?.status, "Bridge export did not carry vehicle_applicability from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.readout_coverage?.progressPercent === bridgeExportPayload.session.readout_coverage?.progressPercent, "Bridge export did not carry readout_coverage from nested session alias input");
 check(bridgeExportNestedSessionAliases.session.ecu_info_snapshot?.itemCount === bridgeExportPayload.session.ecu_info_snapshot?.itemCount, "Bridge export did not carry ecu_info_snapshot from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.warnings.includes("freeze_frame_available"), "Bridge export did not carry warnings from nested session alias input");
+check(bridgeExportNestedSessionAliases.session.next_readout_candidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge export did not carry next_readout_candidates from nested session alias input");
 const outerOverrideEcuInfoSnapshot = {
   ...bridgeEcuInfoSnapshot,
   itemCount: 1,
@@ -1362,12 +1365,15 @@ const bridgeSummaryNestedSessionAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryNestedSessionAliases.adapterIdentity.adapterFamily === "elm327", "Bridge session summary did not accept nested session alias input");
 check(bridgeSummaryNestedSessionAliases.vciDevices[0]?.id === bridgeExportPayload.session.vci_devices[0]?.id, "Bridge session summary did not carry vci_devices from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.connectionStatus?.vehicleConnected === bridgeExportPayload.session.connection_status?.vehicleConnected, "Bridge session summary did not carry connection_status from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge session summary did not carry supported_pid_matrix from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.readinessSnapshot.incompleteCount === 1, "Bridge session summary did not carry readiness from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.vehicleProfile?.model === "Nested Prius", "Bridge session summary did not allow outer vehicle_profile to override nested session alias input");
 check(bridgeSummaryNestedSessionAliases.vehicleApplicability?.status === bridgeExportPayload.session.vehicle_applicability?.status, "Bridge session summary did not carry vehicle_applicability from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.readoutCoverage?.progressPercent === bridgeExportPayload.session.readout_coverage?.progressPercent, "Bridge session summary did not carry readout_coverage from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.ecuInfoSnapshot?.itemCount === bridgeExportPayload.session.ecu_info_snapshot?.itemCount, "Bridge session summary did not carry ecu_info_snapshot from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.warnings.includes("freeze_frame_available"), "Bridge session summary did not carry warnings from nested session alias input");
+check(bridgeSummaryNestedSessionAliases.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge session summary did not carry next_readout_candidates from nested session alias input");
 const bridgeSummaryNestedOuterOverride = obd.buildBridgeSessionSummary({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:30Z",
