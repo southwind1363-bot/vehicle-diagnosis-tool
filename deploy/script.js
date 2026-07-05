@@ -4647,11 +4647,48 @@ function getReadoutCoverageDisplay(coverage = null) {
   };
 }
 
+function formatCoreSessionStatusSummary(coreSessionStatus, fallback = NO_DATA) {
+  if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
+  const completionPercent = Number.isFinite(Number(coreSessionStatus.completionPercent))
+    ? Math.max(0, Math.min(100, Math.round(Number(coreSessionStatus.completionPercent))))
+    : null;
+  const statusLabel = {
+    analysis_ready: "解析へ進行可能",
+    collecting_readouts: "コア読取を継続",
+    not_started: "読取待ち"
+  }[coreSessionStatus.status] || coreSessionStatus.status || "";
+  const remainingCount = Array.isArray(coreSessionStatus.remainingReadoutIds) ? coreSessionStatus.remainingReadoutIds.length : 0;
+  const parts = [];
+  if (completionPercent !== null) parts.push(`${completionPercent}%`);
+  if (statusLabel) parts.push(statusLabel);
+  if (remainingCount > 0) parts.push(`残り${remainingCount}項目`);
+  if (coreSessionStatus.readyForAnalysis === true) parts.push("解析準備完了");
+  return parts.join(" / ") || fallback;
+}
+
+function buildCoreSessionStatusLines(coreSessionStatus) {
+  if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
+  const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
+  if (coreSessionStatus.applicabilityStatus) lines.push(`適用判定: ${coreSessionStatus.applicabilityStatus}`);
+  if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次の読取: ${coreSessionStatus.nextRecommendedReadoutId}`);
+  if (Array.isArray(coreSessionStatus.remainingReadoutIds) && coreSessionStatus.remainingReadoutIds.length) {
+    lines.push(`残件: ${coreSessionStatus.remainingReadoutIds.slice(0, 4).join(" / ")}`);
+  }
+  if (Array.isArray(coreSessionStatus.blockingWarningIds) && coreSessionStatus.blockingWarningIds.length) {
+    lines.push(`保留要因: ${coreSessionStatus.blockingWarningIds.slice(0, 4).join(" / ")}`);
+  }
+  return lines;
+}
+
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
   const nextReadoutLabel = formatNextReadoutSummary(analysis.nextReadoutCandidates, { limit: 2, fallback: "" });
+  const coreSessionSummary = formatCoreSessionStatusSummary(analysis.coreSessionStatus, "");
+  if (coreSessionSummary) {
+    parts.push(`コア進捗 ${coreSessionSummary}`);
+  }
   if (coverage?.totalCategories) {
     parts.push(`取得率${coverage.capturedPercent || 0}%`);
     parts.push(`応答率${coverage.progressPercent}%`);
@@ -4835,7 +4872,11 @@ function renderObdBridgeSessionDetails(session = null) {
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, NO_DATA) || NO_DATA;
   const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutSummary = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA }) || NO_DATA;
-  const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
+  const coreSessionLines = buildCoreSessionStatusLines(session?.coreSessionStatus);
+  const warningLines = [
+    ...coreSessionLines,
+    ...(Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [])
+  ];
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || warningLines.length)) {
     sections.push(["読取メタ", [
       `適用: ${vehicleApplicabilitySummary}`,
@@ -5044,6 +5085,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA });
+  const coreSessionStatusLabel = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -5107,6 +5149,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel], ["谺｡讀取", nextReadoutLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
