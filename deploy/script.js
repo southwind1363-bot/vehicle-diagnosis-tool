@@ -1840,6 +1840,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const currentSession = obdDevSession.lastSession || null;
   const nextReadoutLabels = getTopNextReadoutLabels(currentSession?.nextReadoutCandidates, 2);
   const nextReadoutLabel = formatTopNextReadoutLabel(currentSession?.nextReadoutCandidates, 2);
+  const coreSessionStatus = currentSession?.coreSessionStatus || null;
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const previewActive = Boolean(obdDevSession.previewMode);
   const connected = Boolean(obdDevSession.port);
@@ -1880,6 +1881,9 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
     nextAction = connected
       ? `${nextReadoutLabel} 繧帝・↓遒ｺ隱・`
       : `${nextReadoutLabel} 繧堤｢ｺ隱・`;
+  }
+  if (coreSessionStatus?.readyForAnalysis === true && !nextReadoutLabels.length) {
+    nextAction = "コア読取が揃ったため解析結果の確認へ進行可能";
   }
   const readoutPath = connected
     ? "Web Serial読取"
@@ -4797,6 +4801,20 @@ function renderObdNextReadoutActions(session = null) {
   obdNextReadoutList.innerHTML = "";
   const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates, 4);
   if (!candidates.length) {
+    if (session?.coreSessionStatus?.readyForAnalysis === true) {
+      const card = document.createElement("article");
+      card.className = "obd-operation-card";
+      const head = document.createElement("strong");
+      head.textContent = "解析へ進行可能";
+      const status = document.createElement("p");
+      status.textContent = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+      const reason = document.createElement("p");
+      reason.textContent = "コア読取が揃っています。次読取候補がない場合は解析結果の確認へ進めます。";
+      card.append(head, status, reason);
+      obdNextReadoutList.appendChild(card);
+      obdNextReadoutPanel.hidden = false;
+      return;
+    }
     obdNextReadoutPanel.hidden = true;
     return;
   }
