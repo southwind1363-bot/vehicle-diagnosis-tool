@@ -432,6 +432,8 @@ const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton")
 const obdDevStatus = document.querySelector("#obdDevStatus");
 const obdDevSessionSummary = document.querySelector("#obdDevSessionSummary");
 const obdDevSessionDetails = document.querySelector("#obdDevSessionDetails");
+const obdNextReadoutPanel = document.querySelector("#obdNextReadoutPanel");
+const obdNextReadoutList = document.querySelector("#obdNextReadoutList");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdSampleButton = document.querySelector("#obdSampleButton");
@@ -449,6 +451,19 @@ const mobileGptModal = document.querySelector("#mobileGptModal");
 const mobileGptOpenButton = document.querySelector("#mobileGptOpenButton");
 const mobileGptCloseButton = document.querySelector("#mobileGptCloseButton");
 const tabButtons = document.querySelectorAll("[data-tab-target]");
+
+const OBD_NEXT_READOUT_ACTIONS = Object.freeze({
+  dtc_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeDtcButton : obdDevReadDtcButton), label: "DTC読取" }),
+  freeze_frame_snapshot: Object.freeze({ button: () => obdDevBridgeFreezeFrameButton, label: "フリーズフレーム読取" }),
+  readiness_snapshot: Object.freeze({ button: () => obdDevBridgeLiveButton, label: "レディネス再読取" }),
+  ecu_info_snapshot: Object.freeze({ button: () => obdDevBridgeEcuInfoButton, label: "ECU情報読取" }),
+  live_pid_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeLiveButton : obdDevSnapshotButton), label: "ライブデータ読取" }),
+  supported_pid_matrix: Object.freeze({ button: () => obdDevBridgeSupportedPidButton, label: "対応PID読取" }),
+  onboard_monitor_snapshot: Object.freeze({ button: () => obdDevBridgeMonitorButton, label: "Mode06読取" }),
+  connection_status: Object.freeze({ button: () => obdDevBridgeStatusButton, label: "読取基盤確認" }),
+  vci_devices: Object.freeze({ button: () => obdDevBridgeVciButton, label: "VCI一覧確認" }),
+  adapter_identity: Object.freeze({ button: () => obdDevIdentifyButton, label: "アダプター確認" })
+});
 const tabPanels = document.querySelectorAll("[data-tab-panel]");
 
 let dataStore = fallbackData;
@@ -4678,6 +4693,60 @@ function formatObdBridgeWarningLabel(code = "") {
   }[code] || code;
 }
 
+function triggerObdNextReadoutCandidate(candidate = null) {
+  if (!candidate) return;
+  const action = OBD_NEXT_READOUT_ACTIONS[candidate.id];
+  const targetButton = action?.button?.() || null;
+  renderObdStageView("details");
+  if (!targetButton) {
+    obdDevStatus.textContent = `${candidate.label || "次読取候補"} に対応する読取ボタンをまだ割り当てていません。`;
+    return;
+  }
+  targetButton.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (targetButton.disabled) {
+    obdDevStatus.textContent = `${action.label || candidate.label} はまだ実行条件を満たしていません。接続状態と詳細機能を確認してください。`;
+    targetButton.focus();
+    return;
+  }
+  targetButton.click();
+}
+
+function renderObdNextReadoutActions(session = null) {
+  if (!obdNextReadoutPanel || !obdNextReadoutList) return;
+  obdNextReadoutList.innerHTML = "";
+  const candidates = Array.isArray(session?.nextReadoutCandidates) ? session.nextReadoutCandidates.filter(Boolean).slice(0, 4) : [];
+  if (!candidates.length) {
+    obdNextReadoutPanel.hidden = true;
+    return;
+  }
+  candidates.forEach((candidate) => {
+    const action = OBD_NEXT_READOUT_ACTIONS[candidate.id] || null;
+    const buttonTarget = action?.button?.() || null;
+    const card = document.createElement("article");
+    card.className = "obd-operation-card";
+
+    const head = document.createElement("strong");
+    head.textContent = candidate.label || candidate.id || "次読取候補";
+
+    const status = document.createElement("p");
+    status.textContent = candidate.status === "missing" ? "未読取" : "空応答";
+
+    const reason = document.createElement("p");
+    reason.textContent = candidate.reason || "次に確認する候補です。";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.textContent = action?.label || "詳細へ";
+    button.disabled = !buttonTarget;
+    button.addEventListener("click", () => triggerObdNextReadoutCandidate(candidate));
+
+    card.append(head, status, reason, button);
+    obdNextReadoutList.appendChild(card);
+  });
+  obdNextReadoutPanel.hidden = false;
+}
+
 function renderObdBridgeSessionDetails(session = null) {
   if (!obdDevSessionDetails) return;
   obdDevSessionDetails.innerHTML = "";
@@ -4982,6 +5051,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     item.append(strong, document.createTextNode(String(value)));
     obdDevSessionSummary.appendChild(item);
   });
+  renderObdNextReadoutActions(session);
   renderObdBridgeSessionDetails(session);
 }
 
