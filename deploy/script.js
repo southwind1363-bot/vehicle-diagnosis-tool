@@ -5569,6 +5569,7 @@ function analyzeObdScannerImport() {
   }
 
   const notes = [];
+  const summarySource = mergedSession || analysis;
   if (Array.isArray(analysis.toolHints) && analysis.toolHints.length > 0) {
     notes.push(`入力元 ${analysis.toolHints.join(" / ")}`);
     if (analysis.toolHints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
@@ -5576,8 +5577,8 @@ function analyzeObdScannerImport() {
     }
   }
   if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
-  const analysisVehicleLabel = formatVehicleProfileLabel(analysis.vehicleProfile);
-  const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
+  const analysisVehicleLabel = formatVehicleProfileLabel(summarySource.vehicleProfile);
+  const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summarySource.vehicleApplicability);
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
   }
@@ -5703,7 +5704,7 @@ function analyzeObdScannerImport() {
     } else if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
     }
-    appendObdAnalysisReadoutSummary(summary, analysis);
+    appendObdAnalysisReadoutSummary(summary, summarySource);
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
     const summary = [(mergedSession?.source || analysis.source) === "local_bridge"
@@ -5721,7 +5722,7 @@ function analyzeObdScannerImport() {
     } else if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
     }
-    appendObdAnalysisReadoutSummary(summary, analysis, { includeReadinessCount: true });
+    appendObdAnalysisReadoutSummary(summary, summarySource, { includeReadinessCount: true });
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   }
   if (bridgeImport && obdDevSession.lastSession) {
