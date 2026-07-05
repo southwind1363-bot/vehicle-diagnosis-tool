@@ -5560,7 +5560,7 @@ function analyzeObdScannerImport() {
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
-  renderObdImportToolHints(summarySource.toolHints || analysis.toolHints);
+  renderObdImportToolHints(summarySource.toolHints);
 
   if (!hasScannerText && !bridgeImport) {
     obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
@@ -5683,7 +5683,10 @@ function analyzeObdScannerImport() {
     });
   }
 
-  renderObdMonitorValues(mergedMonitorValues, summarySource?.livePidSnapshot?.monitorInsights || analysis.monitorInsights);
+  renderObdMonitorValues(
+    mergedMonitorValues,
+    summarySource?.livePidSnapshot?.monitorInsights || summarySource?.monitorInsights || analysis.monitorInsights
+  );
   if (bridgeImport && mergedMonitorValues.length) {
     const bridgeValueCount = mergedMonitorValues.filter((item) => item.source === "local_bridge").length;
     const scannerValueCount = mergedMonitorValues.filter((item) => item.source === "scanner_text").length;
