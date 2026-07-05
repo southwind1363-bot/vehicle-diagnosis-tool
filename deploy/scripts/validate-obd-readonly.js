@@ -1670,6 +1670,7 @@ check(scanSessionFromMergedDiagnosticInput.sessionId === "merged-diagnostic-inpu
 check(scanSessionFromMergedDiagnosticInput.protocol === "ISO9141-2", "Diagnostic scan session did not preserve protocol from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.vehicleProfile?.model === "Outer Porte", "Diagnostic scan session did not preserve vehicle_profile from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.vehicleApplicability?.status === "partial", "Diagnostic scan session did not preserve vehicle_applicability from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.connectionStatus?.vehicleConnected === false, "Diagnostic scan session did not preserve connection_status override from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not preserve readout_coverage from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not preserve ecu_info_snapshot from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.nextReadoutCandidates?.[0]?.id === mergedDiagnosticInputExportNestedOuterOverride.nextReadoutCandidates?.[0]?.id, "Diagnostic scan session did not preserve next_readout_candidates from merged diagnostic input");
