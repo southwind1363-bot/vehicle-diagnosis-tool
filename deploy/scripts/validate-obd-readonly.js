@@ -2063,6 +2063,18 @@ check(decodedScanSessionNestedAlias.dtcSnapshot.codes.includes("P0171"), "Decode
 check(decodedScanSessionNestedAlias.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept scan_session nested supported_pid alias input");
 check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept scan_session nested readiness alias input");
 check(decodedScanSessionNestedAlias.vehicleProfile?.model === "Yaris", "Decoded OBD session did not carry vehicle_profile from scan_session nested alias input");
+const decodedScanSessionNestedCoreOverrides = obd.buildDecodedObdScanSession({
+  scan_session: {
+    session_id: "decoded-nested-core-overrides",
+    stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+    vehicle_applicability: vehicleApplicabilitySample,
+    readout_coverage: legacyReadoutCoverage,
+    ecu_info_snapshot: bridgeEcuInfoSnapshot
+  }
+});
+check(decodedScanSessionNestedCoreOverrides.vehicleApplicability?.status === "matched", "Decoded OBD session did not carry vehicle_applicability from scan_session nested alias input");
+check(decodedScanSessionNestedCoreOverrides.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not carry readout_coverage from scan_session nested alias input");
+check(decodedScanSessionNestedCoreOverrides.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Decoded OBD session did not carry ecu_info_snapshot from scan_session nested alias input");
 const decodedScanSessionNestedImportClassification = obd.buildDecodedObdScanSession({
   scan_session: {
     session_id: "decoded-nested-import-classification",
@@ -2088,6 +2100,21 @@ const decodedScanSessionNestedOuterOverride = obd.buildDecodedObdScanSession({
 check(decodedScanSessionNestedOuterOverride.sessionId === "decoded-outer-override", "Decoded OBD session did not let outer session_id override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.protocol === "ISO9141-2", "Decoded OBD session did not let outer protocol override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.vehicleProfile?.model === "Auris", "Decoded OBD session did not let outer vehicle_profile override scan_session nested alias input");
+const decodedScanSessionNestedOuterCoreOverride = obd.buildDecodedObdScanSession({
+  session_id: "decoded-outer-core-override",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  readout_coverage: legacyReadoutCoverage,
+  ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
+  scan_session: {
+    vehicle_applicability: vehicleApplicabilitySample,
+    readout_coverage: bridgeSummary.readoutCoverage,
+    ecu_info_snapshot: bridgeEcuInfoSnapshot
+  }
+});
+check(decodedScanSessionNestedOuterCoreOverride.vehicleApplicability?.status === "partial", "Decoded OBD session did not let outer vehicle_applicability override scan_session nested alias input");
+check(decodedScanSessionNestedOuterCoreOverride.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not let outer readout_coverage override scan_session nested alias input");
+check(decodedScanSessionNestedOuterCoreOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Decoded OBD session did not let outer ecu_info_snapshot override scan_session nested alias input");
 const decodedScanSessionNestedOuterImportClassificationOverride = obd.buildDecodedObdScanSession({
   session_id: "decoded-outer-import-classification-override",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -2273,6 +2300,17 @@ check(textScanSessionNestedOptions.startedAt === "2026-06-28T00:16:00Z" && textS
 check(textScanSessionNestedOptions.vehicleProfile?.model === "Vitz", "OBD text scan session did not carry vehicle_profile from scan_session nested options");
 check(textScanSessionNestedOptions.sessionId === "obd-text-nested-options", "OBD text scan session did not carry session_id from scan_session nested options");
 check(textScanSessionNestedOptions.protocol === "ISO15765-4", "OBD text scan session did not carry protocol from scan_session nested options");
+const textScanSessionNestedCoreOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
+  scan_session: {
+    session_id: "obd-text-nested-core-overrides",
+    vehicle_applicability: vehicleApplicabilitySample,
+    readout_coverage: legacyReadoutCoverage,
+    ecu_info_snapshot: bridgeEcuInfoSnapshot
+  }
+});
+check(textScanSessionNestedCoreOverrides.vehicleApplicability?.status === "matched", "OBD text scan session did not carry vehicle_applicability from scan_session nested options");
+check(textScanSessionNestedCoreOverrides.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not carry readout_coverage from scan_session nested options");
+check(textScanSessionNestedCoreOverrides.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "OBD text scan session did not carry ecu_info_snapshot from scan_session nested options");
 const textScanSessionNestedImportClassification = obd.buildScanSessionFromObdText(obdTextLog, {
   scan_session: {
     session_id: "obd-text-nested-import-classification",
@@ -2296,6 +2334,20 @@ const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTe
 check(textScanSessionNestedOuterOverride.sessionId === "obd-text-outer-override", "OBD text scan session did not let outer session_id override scan_session nested options");
 check(textScanSessionNestedOuterOverride.protocol === "ISO9141-2", "OBD text scan session did not let outer protocol override scan_session nested options");
 check(textScanSessionNestedOuterOverride.vehicleProfile?.model === "Ractis", "OBD text scan session did not let outer vehicle_profile override scan_session nested options");
+const textScanSessionNestedOuterCoreOverride = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-outer-core-override",
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  readout_coverage: legacyReadoutCoverage,
+  ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
+  scan_session: {
+    vehicle_applicability: vehicleApplicabilitySample,
+    readout_coverage: bridgeSummary.readoutCoverage,
+    ecu_info_snapshot: bridgeEcuInfoSnapshot
+  }
+});
+check(textScanSessionNestedOuterCoreOverride.vehicleApplicability?.status === "partial", "OBD text scan session did not let outer vehicle_applicability override scan_session nested options");
+check(textScanSessionNestedOuterCoreOverride.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not let outer readout_coverage override scan_session nested options");
+check(textScanSessionNestedOuterCoreOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "OBD text scan session did not let outer ecu_info_snapshot override scan_session nested options");
 const textScanSessionNestedOuterImportClassificationOverride = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-outer-import-classification-override",
   import_classification: {
