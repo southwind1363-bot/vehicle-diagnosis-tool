@@ -2056,6 +2056,14 @@ check(decodedScanSessionNestedOuterOverride.sessionId === "decoded-outer-overrid
 check(decodedScanSessionNestedOuterOverride.protocol === "ISO9141-2", "Decoded OBD session did not let outer protocol override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.vehicleProfile?.model === "Auris", "Decoded OBD session did not let outer vehicle_profile override scan_session nested alias input");
 check(decodedScanSession.wouldTransmit === false && decodedScanSession.retainedRawFrames === false, "デコード済みOBDセッションが送信または生フレーム保持扱いです");
+const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanSession({
+  session_id: "decoded-explicit-coverage-candidates",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  readout_coverage: legacyReadoutCoverage,
+  next_readout_candidates: [{ id: "custom_decoded_snapshot", label: "Decoded Snapshot", priority: 1, reason: "outer override" }]
+});
+check(decodedScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not preserve explicit readout_coverage input");
+check(decodedScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates input");
 const decodedScanSessionEcuInfoCamelAlias = obd.buildDecodedObdScanSession({
   session_id: "decoded-ecuinfo-camel-alias-test",
   ecuInfo: [
@@ -2209,6 +2217,13 @@ const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTe
 check(textScanSessionNestedOuterOverride.sessionId === "obd-text-outer-override", "OBD text scan session did not let outer session_id override scan_session nested options");
 check(textScanSessionNestedOuterOverride.protocol === "ISO9141-2", "OBD text scan session did not let outer protocol override scan_session nested options");
 check(textScanSessionNestedOuterOverride.vehicleProfile?.model === "Ractis", "OBD text scan session did not let outer vehicle_profile override scan_session nested options");
+const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-explicit-coverage-candidates",
+  readout_coverage: legacyReadoutCoverage,
+  next_readout_candidates: [{ id: "custom_text_snapshot", label: "Text Snapshot", priority: 1, reason: "outer override" }]
+});
+check(textScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve explicit readout_coverage option input");
+check(textScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates option input");
 const textScanSessionRebuilt = obd.buildDiagnosticScanSession({
   session_id: "obd-text-rebuilt",
   scan_session: textScanSession
