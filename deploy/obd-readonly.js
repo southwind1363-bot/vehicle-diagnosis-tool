@@ -1462,6 +1462,51 @@
     }
   }
 
+  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null) {
+    const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
+    const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const priorityById = {
+      dtc_snapshot: 100,
+      freeze_frame_snapshot: 95,
+      readiness_snapshot: 90,
+      ecu_info_snapshot: 85,
+      live_pid_snapshot: 80,
+      supported_pid_matrix: 75,
+      onboard_monitor_snapshot: 70,
+      connection_status: 40,
+      vci_devices: 35,
+      adapter_identity: 30
+    };
+    const applicabilityNote = applicability.status === "partial"
+      ? "車両適用候補の確認と並行して判断"
+      : applicability.status === "unlisted"
+        ? "車両適用未登録のため実車確認を優先"
+        : applicability.status === "manual"
+          ? "手入力車両情報のため実車照合を優先"
+          : "";
+    return (normalizedCoverage.items || [])
+      .filter((item) => item && typeof item === "object" && (item.status === "missing" || item.status === "empty"))
+      .map((item) => {
+        const reason = item.status === "missing"
+          ? "未読取のため次候補"
+          : "読取応答が空のため再確認候補";
+        return {
+          id: item.id || "",
+          label: item.label || item.id || "",
+          status: item.status,
+          priority: priorityById[item.id] || 10,
+          reason: applicabilityNote ? `${reason} / ${applicabilityNote}` : reason,
+          applicabilityStatus: applicability.status || null
+        };
+      })
+      .sort((left, right) => {
+        if ((right.priority || 0) !== (left.priority || 0)) return (right.priority || 0) - (left.priority || 0);
+        if (left.status !== right.status) return left.status === "missing" ? -1 : 1;
+        return String(left.label || "").localeCompare(String(right.label || ""), "ja");
+      })
+      .slice(0, 5);
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
@@ -1587,6 +1632,7 @@
       monitorInsights: livePidSnapshot.monitorInsights,
       freezeFrameSnapshot,
       warnings,
+      nextReadoutCandidates: buildNextReadoutCandidates(readoutCoverage, parts.vehicleApplicability || parts.vehicle_applicability || {}),
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
@@ -1735,6 +1781,10 @@
       monitorValueSummary,
       monitorInsights,
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
+      nextReadoutCandidates: buildNextReadoutCandidates(
+        parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
+        parts.vehicleApplicability || parts.vehicle_applicability || {}
+      ),
       exportRequired: true,
       retainedRawText: false,
       wouldTransmit: false
@@ -1796,7 +1846,8 @@
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(cloneBridgeArrayItems(summary.monitorValues)),
         monitor_insights: cloneBridgeArrayItems(summary.monitorInsights),
-        warnings: [...new Set(summary.warnings || [])]
+        warnings: [...new Set(summary.warnings || [])],
+        next_readout_candidates: cloneBridgeArrayItems(summary.nextReadoutCandidates)
       },
       safety: {
         read_only_phase: true,
@@ -1838,6 +1889,7 @@
       vciDevices: cloneBridgeArrayItems(summary.vciDevices),
       adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
       warnings: [...new Set(summary.warnings || [])],
+      nextReadoutCandidates: cloneBridgeArrayItems(summary.nextReadoutCandidates),
       bridgeSession: {
         startedAt: summary.startedAt || null,
         endedAt: summary.endedAt || null,
@@ -1860,6 +1912,7 @@
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
         warnings: [...new Set(summary.warnings || [])],
+        nextReadoutCandidates: cloneBridgeArrayItems(summary.nextReadoutCandidates),
         exportRequired: true
       },
       exportPayload,
@@ -1977,6 +2030,14 @@
       bridgeSession,
       bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
       warnings: [...new Set(bridgeImport?.warnings || bridgeSession?.warnings || [])],
+      nextReadoutCandidates: cloneBridgeArrayItems(
+        (bridgeImport?.nextReadoutCandidates || bridgeSession?.nextReadoutCandidates || []).length
+          ? (bridgeImport?.nextReadoutCandidates || bridgeSession?.nextReadoutCandidates || [])
+          : buildNextReadoutCandidates(
+            bridgeImport?.readoutCoverage || bridgeSession?.readoutCoverage || null,
+            bridgeImport?.vehicleApplicability || bridgeSession?.vehicleApplicability || null
+          )
+      ),
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: scannerAnalysis.sourceLength,
       retainedRawText: false,
@@ -3661,6 +3722,10 @@
       livePidSnapshot,
       supportedPidMatrix,
       readoutCoverage,
+      nextReadoutCandidates: buildNextReadoutCandidates(
+        readoutCoverage,
+        sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || input.vehicleApplicability || input.vehicle_applicability || {}
+      ),
       monitorValueSummary: buildMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
@@ -4054,6 +4119,7 @@
     buildReadoutCoverageSnapshot,
     normalizeReadoutCoverageSnapshot,
     normalizeVehicleApplicabilitySnapshot,
+    buildNextReadoutCandidates,
     mergeDiagnosticInputs,
     normalizeDtcSnapshot,
     normalizeFreezeFrameSnapshot,

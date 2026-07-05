@@ -1022,6 +1022,7 @@ const bridgeSummaryApplicabilityPartial = obd.buildBridgeSessionSummary({
   dtcSnapshot: bridgeDtcSnapshot
 });
 check(bridgeSummaryApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Bridge session summary did not emit partial applicability warning");
+check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Bridge session summary did not prioritize freeze_frame_snapshot as the next readout candidate");
 const bridgeSummarySnapshotAliases = obd.buildBridgeSessionSummary({
   dtc_snapshot: bridgeDtcSnapshot,
   live_pid_snapshot: bridgePidSnapshot,
@@ -1153,6 +1154,11 @@ const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   adapterIdentity: bridgeAdapterIdentity,
   supportedPidMatrix: bridgeSupportedPidSnapshot
 });
+const bridgeDiagnosticImportApplicabilityPartial = obd.buildBridgeDiagnosticImport({
+  vehicle_profile: { maker: "Toyota", model: "Prius" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  dtcSnapshot: bridgeDtcSnapshot
+});
 check(bridgeDiagnosticImport.importType === "bridge_diagnostic_snapshot", "ブリッジ診断取込の種別が不正です");
 check(bridgeDiagnosticImport.codes.join(",") === "P0171,P0300", "ブリッジ診断取込へDTCを引き継げません");
 check(bridgeDiagnosticImport.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge diagnostic import did not carry ECU response summary");
@@ -1169,6 +1175,7 @@ check(bridgeDiagnosticImport.vciDevices.length === 1, "Bridge diagnostic import 
 check(bridgeDiagnosticImport.adapterIdentity.adapterFamily === "elm327", "Bridge diagnostic import did not expose top-level adapter identity");
 check(bridgeDiagnosticImport.vehicleProfile?.model === "Prius", "Bridge diagnostic import did not expose top-level vehicle profile");
 check(bridgeDiagnosticImport.vehicleApplicability?.status === "matched", "Bridge diagnostic import did not expose top-level vehicle applicability");
+check(Array.isArray(bridgeDiagnosticImportApplicabilityPartial.nextReadoutCandidates) && bridgeDiagnosticImportApplicabilityPartial.nextReadoutCandidates.length > 0, "Bridge diagnostic import did not expose next readout candidates");
 check(bridgeDiagnosticImport.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not expose top-level warnings");
 check(bridgeDiagnosticImport.bridgeSession.vciDevices.length === 1, "ブリッジ診断取込へVCI表示モデルを引き継げません");
 check(bridgeDiagnosticImport.bridgeSession.adapterIdentity.adapterFamily === "elm327", "ブリッジ診断取込へアダプター情報を引き継げません");
@@ -1457,6 +1464,11 @@ const mergedDiagnosticInputBridgeSessionOnlyImport = obd.mergeDiagnosticInputs({
     bridgeSession: bridgeDiagnosticImport.bridgeSession
   }
 });
+const mergedDiagnosticInputApplicabilityPartial = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_diagnostic_import: bridgeDiagnosticImportApplicabilityPartial
+});
+check(Array.isArray(mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates) && mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates.length > 0, "統合診断入力へ次の読取候補を引き継げません");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.protocol === "ISO15765-4", "Combined diagnostic inputs did not recover protocol from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.capturedAt === "2026-06-28T00:00:00Z", "Combined diagnostic inputs did not recover capturedAt from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not recover supported_pid_matrix from bridgeSession-only diagnostic import");
@@ -2061,6 +2073,8 @@ const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
   dtcSnapshot: bridgeDtcSnapshot
 });
 check(scanSessionApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session did not emit partial applicability warning");
+check(Array.isArray(scanSessionApplicabilityPartial.nextReadoutCandidates) && scanSessionApplicabilityPartial.nextReadoutCandidates.length > 0, "Diagnostic scan session did not derive next readout candidates");
+check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot as the next readout candidate");
 const scanSessionAdapterOnly = obd.buildDiagnosticScanSession({
   session_id: "shop-test-adapter-only",
   adapter_identity: {
@@ -2176,6 +2190,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 465");
+  console.log("OBD read-only safety checks: 470");
   console.log("Errors: 0");
 }

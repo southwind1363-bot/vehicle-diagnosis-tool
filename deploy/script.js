@@ -4594,6 +4594,9 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
+  const nextReadoutLabels = Array.isArray(analysis.nextReadoutCandidates)
+    ? analysis.nextReadoutCandidates.slice(0, 2).map((item) => item?.label).filter(Boolean)
+    : [];
   if (coverage?.totalCategories) {
     parts.push(`取得率${coverage.capturedPercent || 0}%`);
     parts.push(`応答率${coverage.progressPercent}%`);
@@ -4608,6 +4611,9 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   }
   if (applicabilitySummary) {
     parts.push(`適用 ${applicabilitySummary}`);
+  }
+  if (nextReadoutLabels.length) {
+    parts.push(`谺｡讀取 ${nextReadoutLabels.join(" / ")}`);
   }
   const readinessSummary = formatObdBridgeReadinessSummary(
     analysis.readinessSnapshot,
@@ -4897,6 +4903,9 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
+  const nextReadoutLabel = Array.isArray(session?.nextReadoutCandidates) && session.nextReadoutCandidates.length
+    ? session.nextReadoutCandidates.slice(0, 2).map((item) => item?.label).filter(Boolean).join(" / ")
+    : NO_DATA;
   const startedAtLabel = session?.startedAt
     ? formatDateTime(session.startedAt)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
@@ -4955,6 +4964,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"]
   ];
   values.splice(3, 0, ["適用範囲", vehicleApplicabilityLabel]);
+  values.splice(values.length - 1, 0, ["谺｡讀取", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
