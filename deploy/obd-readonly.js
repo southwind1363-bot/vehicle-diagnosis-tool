@@ -1861,6 +1861,7 @@
       vehicle_applicability: input.vehicle_applicability || input.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
       next_readout_candidates: pickDefined(input.next_readout_candidates, input.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       tool_hints: mergeUniqueStrings(input.tool_hints, input.toolHints, nested.tool_hints, nested.toolHints),
+      warnings: mergeUniqueStrings(input.warnings, input.warning_flags, input.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
       source_length: pickDefined(input.source_length, input.sourceLength, nested.source_length, nested.sourceLength, null),
       had_sensitive_identifier: pickDefined(input.had_sensitive_identifier, input.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
     };
@@ -3768,6 +3769,14 @@
       || input.nextReadoutCandidates
       || input.next_readout_candidates
       || [];
+    const explicitWarnings = mergeUniqueStrings(
+      sessionInput.warnings,
+      sessionInput.warning_flags,
+      sessionInput.warningFlags,
+      input.warnings,
+      input.warning_flags,
+      input.warningFlags
+    );
 
     return {
       schemaVersion: "scan_session_v1",
@@ -3809,7 +3818,7 @@
         input.toolHints,
         input.tool_hints
       ),
-      warnings,
+      warnings: mergeUniqueStrings(warnings, explicitWarnings),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
         || sessionInput.hadSensitiveIdentifier === true
         || sessionInput.had_sensitive_identifier === true

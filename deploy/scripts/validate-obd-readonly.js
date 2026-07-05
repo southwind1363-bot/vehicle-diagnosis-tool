@@ -2427,6 +2427,21 @@ const scanSessionNestedSourceLengthAlias = obd.buildDiagnosticScanSession({
   }
 });
 check(scanSessionNestedSourceLengthAlias.sourceLength === 128, "Diagnostic scan session did not accept source_length from nested scan_session alias input");
+const scanSessionNestedWarningsAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-warnings-nested",
+  scan_session: {
+    warnings: ["negative_obd_response_present", "freeze_frame_available"]
+  }
+});
+check(scanSessionNestedWarningsAlias.warnings.includes("negative_obd_response_present"), "Diagnostic scan session did not preserve nested warnings from scan_session alias input");
+const scanSessionOuterWarningsMerge = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-warnings-outer-merge",
+  warnings: ["isotp_reassembly_issue"],
+  scan_session: {
+    warning_flags: ["negative_obd_response_present"]
+  }
+});
+check(scanSessionOuterWarningsMerge.warnings.includes("isotp_reassembly_issue") && scanSessionOuterWarningsMerge.warnings.includes("negative_obd_response_present"), "Diagnostic scan session did not merge outer and nested warning flags");
 const scanSessionNestedOuterZeroSourceLengthOverride = obd.buildDiagnosticScanSession({
   session_id: "shop-test-source-length-zero-override",
   sourceLength: 0,
