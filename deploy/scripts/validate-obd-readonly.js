@@ -1008,6 +1008,25 @@ const vehicleApplicabilityPartialSample = {
   status: "partial",
   summaryLabel: "Toyota Prius / Candidate needs review"
 };
+const normalizedVehicleApplicabilitySnakeArrays = obd.normalizeVehicleApplicabilitySnapshot({
+  make: "Toyota",
+  model: "Prius",
+  model_code: "ZVW30",
+  year: "2012",
+  engine_code: "2ZR-FXE",
+  catalog_matched: true,
+  year_matched: true,
+  engine_matched: true,
+  model_code_matched: true,
+  candidate_ranges: [{ start: "2009" }, { start: "2012" }],
+  applicable_ranges: [{ start: "2012" }],
+  supported_engine_codes: ["2ZR-FXE"],
+  summary_label: "Toyota Prius / Applicable candidate found"
+});
+check(normalizedVehicleApplicabilitySnakeArrays.maker === "Toyota" && normalizedVehicleApplicabilitySnakeArrays.modelCode === "ZVW30", "Vehicle applicability normalization did not accept snake_case base aliases");
+check(normalizedVehicleApplicabilitySnakeArrays.candidateRangeCount === 2 && normalizedVehicleApplicabilitySnakeArrays.applicableRangeCount === 1, "Vehicle applicability normalization did not derive counts from snake_case range aliases");
+check(normalizedVehicleApplicabilitySnakeArrays.supportedEngineCodeCount === 1, "Vehicle applicability normalization did not derive supported engine count from snake_case aliases");
+check(normalizedVehicleApplicabilitySnakeArrays.status === "matched" && normalizedVehicleApplicabilitySnakeArrays.summaryLabel === "Toyota Prius / Applicable candidate found", "Vehicle applicability normalization did not preserve snake_case status inputs");
 const explicitNextReadoutCandidatesSample = [
   {
     id: "custom_snapshot",

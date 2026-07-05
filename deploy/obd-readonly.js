@@ -1398,6 +1398,9 @@
 
   function normalizeVehicleApplicabilitySnapshot(input = {}) {
     const source = input && typeof input === "object" ? input : {};
+    const candidateRanges = Array.isArray(source.candidateRanges) ? source.candidateRanges : Array.isArray(source.candidate_ranges) ? source.candidate_ranges : [];
+    const applicableRanges = Array.isArray(source.applicableRanges) ? source.applicableRanges : Array.isArray(source.applicable_ranges) ? source.applicable_ranges : [];
+    const supportedEngineCodes = Array.isArray(source.supportedEngineCodes) ? source.supportedEngineCodes : Array.isArray(source.supported_engine_codes) ? source.supported_engine_codes : [];
     const toCount = (...values) => {
       for (const value of values) {
         const numeric = Number(value);
@@ -1414,9 +1417,9 @@
     const yearMatched = source.yearMatched === true || source.year_matched === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true;
     const modelCodeMatched = source.modelCodeMatched === true || source.model_code_matched === true;
-    const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, source.candidateRanges?.length);
-    const applicableRangeCount = toCount(source.applicableRangeCount, source.applicable_range_count, source.applicableRanges?.length);
-    const supportedEngineCodeCount = toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, source.supportedEngineCodes?.length);
+    const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);
+    const applicableRangeCount = toCount(source.applicableRangeCount, source.applicable_range_count, applicableRanges.length);
+    const supportedEngineCodeCount = toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, supportedEngineCodes.length);
     const providedStatus = typeof source.status === "string" ? source.status.trim() : "";
     const summaryLabel = source.summaryLabel || source.summary_label || source.label || null;
     let status = providedStatus;
