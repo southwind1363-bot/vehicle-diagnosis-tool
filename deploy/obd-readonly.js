@@ -1642,8 +1642,8 @@
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
         || parts.hadSensitiveIdentifier === true
         || parts.had_sensitive_identifier === true,
-      sourceLength: Number.isFinite(Number(parts.sourceLength || parts.source_length))
-        ? Math.max(0, Math.round(Number(parts.sourceLength || parts.source_length)))
+      sourceLength: Number.isFinite(Number(pickDefined(parts.sourceLength, parts.source_length)))
+        ? Math.max(0, Math.round(Number(pickDefined(parts.sourceLength, parts.source_length))))
         : 0,
       exportRequired: true,
       retainedRawText: false,
@@ -1688,10 +1688,10 @@
       vehicleApplicability: parts.vehicleApplicability || parts.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
       readoutCoverage: parts.readoutCoverage || parts.readout_coverage || nested.readoutCoverage || nested.readout_coverage || null,
       readout_coverage: parts.readout_coverage || parts.readoutCoverage || nested.readout_coverage || nested.readoutCoverage || null,
-      nextReadoutCandidates: parts.nextReadoutCandidates || parts.next_readout_candidates || nested.nextReadoutCandidates || nested.next_readout_candidates || null,
-      toolHints: parts.toolHints || parts.tool_hints || nested.toolHints || nested.tool_hints || null,
-      sourceLength: parts.sourceLength || parts.source_length || nested.sourceLength || nested.source_length || null,
-      hadSensitiveIdentifier: parts.hadSensitiveIdentifier || parts.had_sensitive_identifier || nested.hadSensitiveIdentifier || nested.had_sensitive_identifier || null
+      nextReadoutCandidates: pickDefined(parts.nextReadoutCandidates, parts.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
+      toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints, nested.toolHints, nested.tool_hints),
+      sourceLength: pickDefined(parts.sourceLength, parts.source_length, nested.sourceLength, nested.source_length, null),
+      hadSensitiveIdentifier: pickDefined(parts.hadSensitiveIdentifier, parts.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, null)
     };
   }
 
@@ -1812,8 +1812,8 @@
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
         || parts.hadSensitiveIdentifier === true
         || parts.had_sensitive_identifier === true,
-      sourceLength: Number.isFinite(Number(parts.sourceLength || parts.source_length))
-        ? Math.max(0, Math.round(Number(parts.sourceLength || parts.source_length)))
+      sourceLength: Number.isFinite(Number(pickDefined(parts.sourceLength, parts.source_length)))
+        ? Math.max(0, Math.round(Number(pickDefined(parts.sourceLength, parts.source_length))))
         : 0,
       exportRequired: true,
       retainedRawText: false,
@@ -1838,6 +1838,13 @@
       });
   }
 
+  function pickDefined(...values) {
+    for (const value of values) {
+      if (value !== undefined) return value;
+    }
+    return undefined;
+  }
+
   function getDiagnosticSessionInput(input = {}) {
     const nested = input.session || input.scanSession || input.scan_session || input.bridgeSession || input.bridge_session || null;
     if (!nested || typeof nested !== "object") return input;
@@ -1852,7 +1859,10 @@
       protocol: input.protocol || nested.protocol || null,
       vehicle_profile: input.vehicle_profile || input.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
       vehicle_applicability: input.vehicle_applicability || input.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
-      next_readout_candidates: input.next_readout_candidates || input.nextReadoutCandidates || nested.next_readout_candidates || nested.nextReadoutCandidates || null
+      next_readout_candidates: pickDefined(input.next_readout_candidates, input.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
+      tool_hints: mergeUniqueStrings(input.tool_hints, input.toolHints, nested.tool_hints, nested.toolHints),
+      source_length: pickDefined(input.source_length, input.sourceLength, nested.source_length, nested.sourceLength, null),
+      had_sensitive_identifier: pickDefined(input.had_sensitive_identifier, input.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
     };
   }
 
@@ -3805,8 +3815,8 @@
         || sessionInput.had_sensitive_identifier === true
         || input.hadSensitiveIdentifier === true
         || input.had_sensitive_identifier === true,
-      sourceLength: Number.isFinite(Number(sessionInput.sourceLength || sessionInput.source_length || input.sourceLength || input.source_length))
-        ? Math.max(0, Math.round(Number(sessionInput.sourceLength || sessionInput.source_length || input.sourceLength || input.source_length)))
+      sourceLength: Number.isFinite(Number(pickDefined(sessionInput.sourceLength, sessionInput.source_length, input.sourceLength, input.source_length)))
+        ? Math.max(0, Math.round(Number(pickDefined(sessionInput.sourceLength, sessionInput.source_length, input.sourceLength, input.source_length))))
         : 0,
       retainedRawText: false,
       retainedRawFrames: false,

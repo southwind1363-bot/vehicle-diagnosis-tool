@@ -1426,6 +1426,11 @@ check(bridgeSummaryNestedOuterOverride.connectionStatus?.vehicleConnected === fa
 check(bridgeSummaryNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Bridge session summary did not let outer readout_coverage override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Bridge session summary did not let outer next_readout_candidates override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Bridge session summary did not let outer ecu_info_snapshot override nested session alias input");
+const bridgeSummaryNestedOuterZeroSourceLengthOverride = obd.buildBridgeSessionSummary({
+  source_length: 0,
+  session: bridgeExportPayload.session
+});
+check(bridgeSummaryNestedOuterZeroSourceLengthOverride.sourceLength === 0, "Bridge session summary did not let outer source_length=0 override nested session alias input");
 const bridgeDiagnosticImportNestedSessionAliases = obd.buildBridgeDiagnosticImport({
   bridge_session: bridgeDiagnosticImport.bridgeSession,
   monitor_values: bridgeDiagnosticImport.monitorValues,
@@ -2415,6 +2420,21 @@ const scanSessionNestedSensitiveIdentifierSnakeAlias = obd.buildDiagnosticScanSe
   }
 });
 check(scanSessionNestedSensitiveIdentifierSnakeAlias.hadSensitiveIdentifier === true, "Diagnostic scan session did not accept had_sensitive_identifier nested alias input");
+const scanSessionNestedSourceLengthAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-source-length-nested-snake",
+  scan_session: {
+    source_length: 128
+  }
+});
+check(scanSessionNestedSourceLengthAlias.sourceLength === 128, "Diagnostic scan session did not accept source_length from nested scan_session alias input");
+const scanSessionNestedOuterZeroSourceLengthOverride = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-source-length-zero-override",
+  sourceLength: 0,
+  scan_session: {
+    source_length: 128
+  }
+});
+check(scanSessionNestedOuterZeroSourceLengthOverride.sourceLength === 0, "Diagnostic scan session did not let outer sourceLength=0 override nested scan_session alias input");
 const scanSessionNonInfrastructureBridgeImport = obd.buildDiagnosticScanSession({
   scan_session: bridgeDiagnosticImportNonInfrastructureAliases,
   session_id: "shop-test-non-infra-import"
