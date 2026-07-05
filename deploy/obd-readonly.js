@@ -2900,6 +2900,7 @@
       vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
       readoutCoverage: sessionInput.readoutCoverage || sessionInput.readout_coverage || null,
       nextReadoutCandidates: sessionInput.nextReadoutCandidates || sessionInput.next_readout_candidates || null,
+      importClassification: sessionInput.importClassification || sessionInput.import_classification || null,
       toolHints: sessionInput.toolHints || sessionInput.tool_hints || null,
       warnings: sessionInput.warnings || sessionInput.warning_flags || sessionInput.warningFlags || null,
       sourceLength: pickDefined(sessionInput.sourceLength, sessionInput.source_length, null),
@@ -3210,6 +3211,7 @@
     const classified = classifyObdResponseLines(value);
     const toolHints = detectScannerToolHints(value);
     const textDtcSnapshot = extractTextDtcSnapshot(value);
+    const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
@@ -3243,11 +3245,19 @@
       source: "obd_text_import",
       toolHints: mergeUniqueStrings(session.toolHints, toolHints),
       importClassification: {
-        schemaVersion: classified.schemaVersion,
-        bucketCounts: classified.bucketCounts,
-        isoTpSummary: classified.isoTpSummary,
-        negativeResponseSummary: classified.negativeResponseSummary,
-        lineCount: classified.lineCount,
+        schemaVersion: explicitImportClassification?.schemaVersion || classified.schemaVersion,
+        bucketCounts: explicitImportClassification?.bucketCounts && typeof explicitImportClassification.bucketCounts === "object"
+          ? { ...classified.bucketCounts, ...explicitImportClassification.bucketCounts }
+          : classified.bucketCounts,
+        isoTpSummary: explicitImportClassification?.isoTpSummary && typeof explicitImportClassification.isoTpSummary === "object"
+          ? { ...classified.isoTpSummary, ...explicitImportClassification.isoTpSummary }
+          : classified.isoTpSummary,
+        negativeResponseSummary: explicitImportClassification?.negativeResponseSummary && typeof explicitImportClassification.negativeResponseSummary === "object"
+          ? { ...classified.negativeResponseSummary, ...explicitImportClassification.negativeResponseSummary }
+          : classified.negativeResponseSummary,
+        lineCount: Number.isFinite(Number(explicitImportClassification?.lineCount))
+          ? Math.max(0, Math.round(Number(explicitImportClassification.lineCount)))
+          : classified.lineCount,
         toolHints: mergeUniqueStrings(session.toolHints, toolHints)
       },
       warnings: mergeUniqueStrings(

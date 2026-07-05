@@ -2076,6 +2076,15 @@ check(decodedScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstrea
 check(decodedScanSessionExplicitMetaOverrides.warnings.includes("negative_obd_response_present"), "Decoded OBD session did not preserve explicit warning_flags input");
 check(decodedScanSessionExplicitMetaOverrides.sourceLength === 128, "Decoded OBD session did not preserve explicit source_length input");
 check(decodedScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve explicit had_sensitive_identifier input");
+const decodedScanSessionExplicitImportClassification = obd.buildDecodedObdScanSession({
+  session_id: "decoded-explicit-import-classification",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 1 }
+  }
+});
+check(decodedScanSessionExplicitImportClassification.importClassification?.bucketCounts?.storedDtcResponses === 1, "Decoded OBD session did not preserve explicit import_classification input");
 const decodedScanSessionEcuInfoCamelAlias = obd.buildDecodedObdScanSession({
   session_id: "decoded-ecuinfo-camel-alias-test",
   ecuInfo: [
@@ -2247,6 +2256,17 @@ check(textScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J
 check(textScanSessionExplicitMetaOverrides.warnings.includes("isotp_reassembly_issue"), "OBD text scan session did not preserve explicit warning_flags option input");
 check(textScanSessionExplicitMetaOverrides.sourceLength === 128, "OBD text scan session did not preserve explicit source_length option input");
 check(textScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "OBD text scan session did not preserve explicit had_sensitive_identifier option input");
+const textScanSessionExplicitImportClassification = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-explicit-import-classification",
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { livePidResponses: 99 },
+    negativeResponseSummary: { totalCount: 7 }
+  }
+});
+check(textScanSessionExplicitImportClassification.importClassification?.bucketCounts?.livePidResponses === 99, "OBD text scan session did not preserve explicit import_classification bucket count override");
+check(textScanSessionExplicitImportClassification.importClassification?.negativeResponseSummary?.totalCount === 7, "OBD text scan session did not preserve explicit import_classification negative response override");
+check(textScanSessionExplicitImportClassification.importClassification?.bucketCounts?.freezeFrameResponses === 2, "OBD text scan session did not retain derived import_classification bucket counts when applying explicit override");
 const textScanSessionRebuilt = obd.buildDiagnosticScanSession({
   session_id: "obd-text-rebuilt",
   scan_session: textScanSession
