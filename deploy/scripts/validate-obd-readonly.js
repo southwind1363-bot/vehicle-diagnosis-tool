@@ -1930,6 +1930,18 @@ check(mergedDiagnosticInputBridgeInfrastructureOnly.source === "local_bridge", "
 check(mergedDiagnosticInputBridgeInfrastructureOnly.connectionStatus?.vehicleConnected === false, "Combined diagnostic inputs did not preserve connection_status from infrastructure-only bridge_import");
 check(mergedDiagnosticInputBridgeInfrastructureOnly.vciDevices[0]?.id === "meta-vci", "Combined diagnostic inputs did not preserve vci_devices from infrastructure-only bridge_import");
 check(mergedDiagnosticInputBridgeInfrastructureOnly.adapterIdentity?.adapterName === "Metadata Adapter", "Combined diagnostic inputs did not preserve adapter_identity from infrastructure-only bridge_import");
+const mergedDiagnosticInputBridgeTemporalOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    started_at: "2026-06-28T00:01:00Z",
+    ended_at: "2026-06-28T00:02:00Z",
+    captured_at: "2026-06-28T00:01:30Z",
+    protocol: "ISO15765-4"
+  }
+});
+check(mergedDiagnosticInputBridgeTemporalOnly.source === "local_bridge", "Combined diagnostic inputs did not treat temporal-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeTemporalOnly.startedAt === "2026-06-28T00:01:00Z" && mergedDiagnosticInputBridgeTemporalOnly.endedAt === "2026-06-28T00:02:00Z", "Combined diagnostic inputs did not preserve started_at or ended_at from temporal-only bridge_import");
+check(mergedDiagnosticInputBridgeTemporalOnly.capturedAt === "2026-06-28T00:01:30Z", "Combined diagnostic inputs did not preserve captured_at from temporal-only bridge_import");
+check(mergedDiagnosticInputBridgeTemporalOnly.protocol === "ISO15765-4", "Combined diagnostic inputs did not preserve protocol from temporal-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {

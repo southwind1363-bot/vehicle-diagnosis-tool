@@ -1709,6 +1709,13 @@
       || Array.isArray(parts.vci_devices)
       || parts.vciList
       || parts.vci_list
+      || parts.startedAt
+      || parts.started_at
+      || parts.endedAt
+      || parts.ended_at
+      || parts.capturedAt
+      || parts.captured_at
+      || parts.protocol
       ||
       Array.isArray(parts.nextReadoutCandidates)
       || Array.isArray(parts.next_readout_candidates)
