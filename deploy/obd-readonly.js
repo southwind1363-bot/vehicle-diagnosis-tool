@@ -1926,7 +1926,9 @@
       tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
       warnings: mergeUniqueStrings(base.warnings, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
       import_classification: pickDefined(base.import_classification, base.importClassification, nested.import_classification, nested.importClassification, null),
+      sourceLength: pickDefined(input.sourceLength, input.source_length, payload?.sourceLength, payload?.source_length, nested.sourceLength, nested.source_length, null),
       source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
+      hadSensitiveIdentifier: pickDefined(input.hadSensitiveIdentifier, input.had_sensitive_identifier, payload?.hadSensitiveIdentifier, payload?.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, null),
       had_sensitive_identifier: pickDefined(base.had_sensitive_identifier, base.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
     };
   }

@@ -2764,6 +2764,10 @@ const scanSessionBridgeDiagnosticImportOuterOverride = obd.buildDiagnosticScanSe
   },
   adapter_identity: { data: { adapter_family: "stn", firmware_version: "9.9", serial_number: "OVERRIDE-001" } },
   readout_coverage: legacyReadoutCoverage,
+  tool_hints: ["CONSULT"],
+  warning_flags: ["negative_obd_response_present"],
+  source_length: 0,
+  had_sensitive_identifier: false,
   next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
   freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
   readiness_snapshot: outerOverrideReadinessSnapshot,
@@ -2778,6 +2782,10 @@ check(scanSessionBridgeDiagnosticImportOuterOverride.vehicleApplicability?.statu
 check(scanSessionBridgeDiagnosticImportOuterOverride.connectionStatus?.vehicleConnected === false, "Diagnostic scan session did not let outer connection_status override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not let outer adapter_identity override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not let outer readout_coverage override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.toolHints.includes("CONSULT") && scanSessionBridgeDiagnosticImportOuterOverride.toolHints.includes("Techstream"), "Diagnostic scan session did not merge outer tool_hints with bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.warnings.includes("negative_obd_response_present") && scanSessionBridgeDiagnosticImportOuterOverride.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge outer warning_flags with bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.sourceLength === 0, "Diagnostic scan session did not let outer source_length override bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportOuterOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested sensitive identifier when outer bridge_diagnostic_import alias input set false");
 check(scanSessionBridgeDiagnosticImportOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Diagnostic scan session did not let outer next_readout_candidates override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Diagnostic scan session did not let outer freeze_frame_snapshot override bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportOuterOverride.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not let outer readiness_snapshot override bridge_diagnostic_import alias input");
@@ -2796,6 +2804,10 @@ const scanSessionBridgeExportPayloadOuterOverride = obd.buildDiagnosticScanSessi
   },
   adapter_identity: { data: { adapter_family: "stn", firmware_version: "9.9", serial_number: "OVERRIDE-002" } },
   readout_coverage: legacyReadoutCoverage,
+  tool_hints: ["CONSULT"],
+  warning_flags: ["negative_obd_response_present"],
+  source_length: 0,
+  had_sensitive_identifier: false,
   next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
   freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
   readiness_snapshot: outerOverrideReadinessSnapshot,
@@ -2810,6 +2822,10 @@ check(scanSessionBridgeExportPayloadOuterOverride.vehicleApplicability?.status =
 check(scanSessionBridgeExportPayloadOuterOverride.connectionStatus?.vehicleConnected === false, "Diagnostic scan session did not let outer connection_status override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not let outer adapter_identity override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not let outer readout_coverage override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.toolHints.includes("CONSULT") && scanSessionBridgeExportPayloadOuterOverride.toolHints.includes("Techstream"), "Diagnostic scan session did not merge outer tool_hints with bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.warnings.includes("negative_obd_response_present") && scanSessionBridgeExportPayloadOuterOverride.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge outer warning_flags with bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.sourceLength === 0, "Diagnostic scan session did not let outer source_length override bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadOuterOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve nested sensitive identifier when outer bridge_export_payload alias input set false");
 check(scanSessionBridgeExportPayloadOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Diagnostic scan session did not let outer next_readout_candidates override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Diagnostic scan session did not let outer freeze_frame_snapshot override bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadOuterOverride.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not let outer readiness_snapshot override bridge_export_payload alias input");
