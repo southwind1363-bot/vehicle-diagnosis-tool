@@ -4644,7 +4644,7 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
-  const nextReadoutLabel = formatTopNextReadoutLabel(analysis.nextReadoutCandidates, 2);
+  const nextReadoutLabel = formatNextReadoutSummary(analysis.nextReadoutCandidates, { limit: 2, fallback: "" });
   if (coverage?.totalCategories) {
     parts.push(`取得率${coverage.capturedPercent || 0}%`);
     parts.push(`応答率${coverage.progressPercent}%`);
