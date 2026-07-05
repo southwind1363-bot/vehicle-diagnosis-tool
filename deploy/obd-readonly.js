@@ -1477,6 +1477,9 @@
       vci_devices: 35,
       adapter_identity: 30
     };
+    const applicabilityNeedsVehicleConfirmation = applicability.status === "partial"
+      || applicability.status === "unlisted"
+      || applicability.status === "manual";
     const applicabilityNote = applicability.status === "partial"
       ? "車両適用候補の確認と並行して判断"
       : applicability.status === "unlisted"
@@ -1494,7 +1497,9 @@
           id: item.id || "",
           label: item.label || item.id || "",
           status: item.status,
-          priority: priorityById[item.id] || 10,
+          priority: item.id === "ecu_info_snapshot" && applicabilityNeedsVehicleConfirmation
+            ? 92
+            : (priorityById[item.id] || 10),
           reason: applicabilityNote ? `${reason} / ${applicabilityNote}` : reason,
           applicabilityStatus: applicability.status || null
         };

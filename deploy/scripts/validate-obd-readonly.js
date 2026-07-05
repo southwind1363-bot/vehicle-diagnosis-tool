@@ -1032,6 +1032,7 @@ const bridgeSummaryApplicabilityPartial = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Bridge session summary did not emit partial applicability warning");
 check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Bridge session summary did not prioritize freeze_frame_snapshot as the next readout candidate");
+check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Bridge session summary did not prioritize ecu_info_snapshot after freeze_frame for partial applicability");
 const bridgeSummarySnapshotAliases = obd.buildBridgeSessionSummary({
   dtc_snapshot: bridgeDtcSnapshot,
   live_pid_snapshot: bridgePidSnapshot,
@@ -2090,6 +2091,7 @@ const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
 check(scanSessionApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session did not emit partial applicability warning");
 check(Array.isArray(scanSessionApplicabilityPartial.nextReadoutCandidates) && scanSessionApplicabilityPartial.nextReadoutCandidates.length > 0, "Diagnostic scan session did not derive next readout candidates");
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot as the next readout candidate");
+check(scanSessionApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot after freeze_frame for partial applicability");
 const scanSessionAdapterOnly = obd.buildDiagnosticScanSession({
   session_id: "shop-test-adapter-only",
   adapter_identity: {
