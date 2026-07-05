@@ -1333,10 +1333,14 @@ check(bridgeExportNestedSessionAliases.session.ecu_info_snapshot?.itemCount === 
 const bridgeExportNestedOuterOverride = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:10:15Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Roomy" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  readout_coverage: legacyReadoutCoverage,
   session: bridgeExportPayload.session
 });
 check(bridgeExportNestedOuterOverride.session.captured_at === "2026-06-28T00:10:15Z", "Bridge export did not let outer captured_at override nested session alias input");
 check(bridgeExportNestedOuterOverride.session.vehicle_profile?.model === "Outer Roomy", "Bridge export did not let outer vehicle_profile override nested session alias input");
+check(bridgeExportNestedOuterOverride.session.vehicle_applicability?.status === "partial", "Bridge export did not let outer vehicle_applicability override nested session alias input");
+check(bridgeExportNestedOuterOverride.session.readout_coverage?.capturedPercent === 29, "Bridge export did not let outer readout_coverage override nested session alias input");
 const bridgeSummaryNestedSessionAliases = obd.buildBridgeSessionSummary({
   session: bridgeExportPayload.session,
   vehicle_profile: { maker: "Toyota", model: "Nested Prius" }
@@ -1353,11 +1357,15 @@ const bridgeSummaryNestedOuterOverride = obd.buildBridgeSessionSummary({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:30Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Aqua" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  readout_coverage: legacyReadoutCoverage,
   session: bridgeExportPayload.session
 });
 check(bridgeSummaryNestedOuterOverride.protocol === "ISO9141-2", "Bridge session summary did not let outer protocol override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.capturedAt === "2026-06-28T00:10:30Z", "Bridge session summary did not let outer captured_at override nested session alias input");
 check(bridgeSummaryNestedOuterOverride.vehicleProfile?.model === "Outer Aqua", "Bridge session summary did not let outer vehicle_profile override nested session alias input");
+check(bridgeSummaryNestedOuterOverride.vehicleApplicability?.status === "partial", "Bridge session summary did not let outer vehicle_applicability override nested session alias input");
+check(bridgeSummaryNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Bridge session summary did not let outer readout_coverage override nested session alias input");
 const bridgeDiagnosticImportNestedSessionAliases = obd.buildBridgeDiagnosticImport({
   bridge_session: bridgeDiagnosticImport.bridgeSession,
   monitor_values: bridgeDiagnosticImport.monitorValues,
@@ -1374,11 +1382,15 @@ const bridgeDiagnosticImportNestedOuterOverride = obd.buildBridgeDiagnosticImpor
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:45Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Prius C" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  readout_coverage: legacyReadoutCoverage,
   session: bridgeExportPayload.session
 });
 check(bridgeDiagnosticImportNestedOuterOverride.protocol === "ISO9141-2", "Bridge diagnostic import did not let outer protocol override nested session alias input");
 check(bridgeDiagnosticImportNestedOuterOverride.capturedAt === "2026-06-28T00:10:45Z", "Bridge diagnostic import did not let outer captured_at override nested session alias input");
 check(bridgeDiagnosticImportNestedOuterOverride.exportPayload.session.vehicle_profile?.model === "Outer Prius C", "Bridge diagnostic import did not let outer vehicle_profile override nested session alias input");
+check(bridgeDiagnosticImportNestedOuterOverride.vehicleApplicability?.status === "partial", "Bridge diagnostic import did not let outer vehicle_applicability override nested session alias input");
+check(bridgeDiagnosticImportNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Bridge diagnostic import did not let outer readout_coverage override nested session alias input");
 const mergedDiagnosticInput = obd.mergeDiagnosticInputs({
   scannerText: [
     "P0171 JTDKN3DU0A0123456",
@@ -2239,6 +2251,8 @@ const scanSessionNestedOuterOverride = obd.buildDiagnosticScanSession({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:18:00Z",
   vehicle_profile: { maker: "Toyota", model: "Allion" },
+  vehicle_applicability: vehicleApplicabilityPartialSample,
+  readout_coverage: legacyReadoutCoverage,
   scan_session: bridgeExportPayload.session,
   sessionId: "shop-test-scan-session-outer-override"
 });
@@ -2246,6 +2260,8 @@ check(scanSessionNestedOuterOverride.sessionId === "shop-test-scan-session-outer
 check(scanSessionNestedOuterOverride.protocol === "ISO9141-2", "Diagnostic scan session did not let outer protocol override scan_session alias input");
 check(scanSessionNestedOuterOverride.capturedAt === "2026-06-28T00:18:00Z", "Diagnostic scan session did not let outer captured_at override scan_session alias input");
 check(scanSessionNestedOuterOverride.vehicleProfile?.model === "Allion", "Diagnostic scan session did not let outer vehicle_profile override scan_session alias input");
+check(scanSessionNestedOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicle_applicability override scan_session alias input");
+check(scanSessionNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not let outer readout_coverage override scan_session alias input");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));

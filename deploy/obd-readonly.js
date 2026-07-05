@@ -1515,6 +1515,7 @@
     const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
     const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
     const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response;
+    const readoutCoverageInput = parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || null;
     const dtcSnapshot = dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
     const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
@@ -1591,7 +1592,7 @@
       || onboardMonitorSnapshot.capturedAt
       || ecuResponseSummary.capturedAt
       || null;
-    const readoutCoverage = buildReadoutCoverageSnapshot({
+    const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: vciList.devices,
@@ -1604,6 +1605,7 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
+    const readoutCoverage = normalizeReadoutCoverageSnapshot(readoutCoverageInput?.schemaVersion ? readoutCoverageInput : (readoutCoverageInput || derivedReadoutCoverage));
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
 
@@ -1624,7 +1626,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
-      readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverage),
+      readoutCoverage,
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -1672,6 +1674,8 @@
       protocol: parts.protocol || nested.protocol || null,
       vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
       vehicleApplicability: parts.vehicleApplicability || parts.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
+      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || nested.readoutCoverage || nested.readout_coverage || null,
+      readout_coverage: parts.readout_coverage || parts.readoutCoverage || nested.readout_coverage || nested.readoutCoverage || null,
       nextReadoutCandidates: parts.nextReadoutCandidates || parts.next_readout_candidates || nested.nextReadoutCandidates || nested.next_readout_candidates || null
     };
   }
