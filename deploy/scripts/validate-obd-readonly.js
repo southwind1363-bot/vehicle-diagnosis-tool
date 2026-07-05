@@ -1080,6 +1080,13 @@ const bridgeSummaryResponseAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryResponseAliases.freezeFrameSnapshot.triggerDtc === "P0171", "Bridge session summary did not accept freeze_frame_response alias input");
 check(bridgeSummaryResponseAliases.supportedPidMatrix.supportedPids.includes("40"), "Bridge session summary did not accept supported_pid_snapshot alias input");
+const bridgeSummaryLivePidResponseAliases = obd.buildBridgeSessionSummary({
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
+  ecu_response_summary_response: bridgeSummary.ecuResponseSummary
+});
+check(bridgeSummaryLivePidResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode live_pid_response alias input");
+check(bridgeSummaryLivePidResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge session summary did not accept ecu_response_summary_response alias input");
 const bridgeSummaryNonInfrastructureAliases = obd.buildBridgeSessionSummary({
   dtc_codes: ["P0300"],
   supported_pid_snapshot: bridgeSupportedPidSnapshot
@@ -1995,6 +2002,15 @@ const mergedDiagnosticInputBridgeResponseAliasOnly = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputBridgeResponseAliasOnly.source === "local_bridge", "Combined diagnostic inputs did not treat response-alias-only bridge_import as bridge input");
 check(mergedDiagnosticInputBridgeResponseAliasOnly.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not preserve supported_pid_snapshot from response-alias-only bridge_import");
 check(mergedDiagnosticInputBridgeResponseAliasOnly.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Combined diagnostic inputs did not preserve ecu_info_response from response-alias-only bridge_import");
+const mergedDiagnosticInputBridgeLivePidResponseOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    live_pid_response: { raw: "41 0C 1A F8 41 05 7B" },
+    ecu_response_summary_response: bridgeSummary.ecuResponseSummary
+  }
+});
+check(mergedDiagnosticInputBridgeLivePidResponseOnly.source === "local_bridge", "Combined diagnostic inputs did not treat live_pid_response-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeLivePidResponseOnly.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Combined diagnostic inputs did not decode live_pid_response-only bridge_import");
+check(mergedDiagnosticInputBridgeLivePidResponseOnly.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Combined diagnostic inputs did not preserve ecu_response_summary_response from live_pid_response-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {

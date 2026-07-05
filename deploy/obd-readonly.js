@@ -1529,7 +1529,7 @@
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
-    const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot;
+    const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot || parts.livePidResponse || parts.live_pid_response;
     const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
     const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot || parts.supportedPidResponse || parts.supported_pid_response;
     const readinessSnapshotInput = parts.readinessSnapshot || parts.readiness_snapshot || parts.readinessResponse || parts.readiness_response || parts.livePidResponse || parts.live_pid_response;
@@ -1538,7 +1538,20 @@
     const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response;
     const readoutCoverageInput = getReadoutCoverageInput(parts);
     const dtcSnapshot = dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
-    const livePidSnapshot = livePidSnapshotInput?.monitorValues ? livePidSnapshotInput : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
+      ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
+          ? {
+            ...livePidSnapshotInput.data,
+            protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.protocol || null,
+            captured_at: livePidSnapshotInput.data.captured_at || livePidSnapshotInput.data.capturedAt || livePidSnapshotInput.captured_at || livePidSnapshotInput.capturedAt || null
+          }
+          : livePidSnapshotInput)
+      : livePidSnapshotInput;
+    const livePidSnapshot = livePidSnapshotInput?.monitorValues
+      ? livePidSnapshotInput
+      : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
+        ? decodeLivePidResponse(livePidResponseInput)
+        : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
@@ -1711,10 +1724,14 @@
       || parts.adapter_identity_response
       || parts.ecuResponseSummary
       || parts.ecu_response_summary
+      || parts.ecuResponseSummaryResponse
+      || parts.ecu_response_summary_response
       || parts.dtcSnapshot
       || parts.dtc_snapshot
       || parts.livePidSnapshot
       || parts.live_pid_snapshot
+      || parts.livePidResponse
+      || parts.live_pid_response
       || parts.supportedPidMatrix
       || parts.supported_pid_matrix
       || parts.supportedPidSnapshot
@@ -1784,6 +1801,7 @@
     const connectionStatusInput = parts.connectionStatus || parts.connection_status || parts.connectionStatusResponse || parts.connection_status_response || {};
     const vciDevicesInput = parts.vciDevices || parts.vci_devices || parts.vciList || parts.vci_list || parts.listVciResponse || parts.list_vci_response || [];
     const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || parts.adapterIdentityResponse || parts.adapter_identity_response || {};
+    const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot || parts.livePidResponse || parts.live_pid_response;
     const supportedPidMatrixInput = parts.supportedPidMatrix || parts.supported_pid_matrix || parts.supportedPidSnapshot || parts.supported_pid_snapshot || parts.supportedPidResponse || parts.supported_pid_response;
     const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
     const readinessSnapshotInput = parts.readinessSnapshot || parts.readiness_snapshot || parts.readinessResponse || parts.readiness_response || parts.livePidResponse || parts.live_pid_response;
@@ -1825,10 +1843,26 @@
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
-    const monitorValues = Array.isArray(monitorValuesInput)
+    const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
+      ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
+          ? {
+            ...livePidSnapshotInput.data,
+            protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.protocol || null,
+            captured_at: livePidSnapshotInput.data.captured_at || livePidSnapshotInput.data.capturedAt || livePidSnapshotInput.captured_at || livePidSnapshotInput.capturedAt || null
+          }
+          : livePidSnapshotInput)
+      : livePidSnapshotInput;
+    const livePidSnapshot = livePidSnapshotInput?.monitorValues
+      ? livePidSnapshotInput
+      : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
+        ? decodeLivePidResponse(livePidResponseInput)
+        : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const monitorValues = Array.isArray(monitorValuesInput) && monitorValuesInput.length
       ? monitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
-      : [];
-    const monitorValueSummary = parts.monitorValueSummary || parts.monitor_value_summary || buildMonitorValueSummary(monitorValues);
+      : Array.isArray(livePidSnapshot.monitorValues)
+        ? livePidSnapshot.monitorValues.map((item) => (item && typeof item === "object" ? { ...item } : item))
+        : [];
+    const monitorValueSummary = parts.monitorValueSummary || parts.monitor_value_summary || livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(monitorValues);
     const monitorInsights = Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
