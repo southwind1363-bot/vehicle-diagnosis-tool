@@ -1869,25 +1869,43 @@
   }
 
   function getDiagnosticSessionInput(input = {}) {
-    const nested = input.session || input.scanSession || input.scan_session || input.bridgeSession || input.bridge_session || null;
-    if (!nested || typeof nested !== "object") return input;
+    const payload = input.bridgeDiagnosticImport
+      || input.bridge_diagnostic_import
+      || input.bridgeImport
+      || input.bridge_import
+      || input.bridgeExportPayload
+      || input.bridge_export_payload
+      || null;
+    const base = payload && typeof payload === "object"
+      ? { ...payload, ...input }
+      : input;
+    const nested = input.session
+      || input.scanSession
+      || input.scan_session
+      || input.bridgeSession
+      || input.bridge_session
+      || payload?.bridgeSession
+      || payload?.bridge_session
+      || payload?.session
+      || null;
+    if (!nested || typeof nested !== "object") return base;
     return {
       ...nested,
-      ...input,
-      source: input.source || nested.source || "diagnostic_core",
-      session_id: input.session_id || input.sessionId || nested.session_id || nested.sessionId || "local_scan_session",
-      started_at: input.started_at || input.startedAt || nested.started_at || nested.startedAt || null,
-      ended_at: input.ended_at || input.endedAt || nested.ended_at || nested.endedAt || null,
-      captured_at: input.captured_at || input.capturedAt || nested.captured_at || nested.capturedAt || null,
-      protocol: input.protocol || nested.protocol || null,
-      vehicle_profile: input.vehicle_profile || input.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
-      vehicle_applicability: input.vehicle_applicability || input.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
-      next_readout_candidates: pickDefined(input.next_readout_candidates, input.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
-      tool_hints: mergeUniqueStrings(input.tool_hints, input.toolHints, nested.tool_hints, nested.toolHints),
-      warnings: mergeUniqueStrings(input.warnings, input.warning_flags, input.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
-      import_classification: pickDefined(input.import_classification, input.importClassification, nested.import_classification, nested.importClassification, null),
-      source_length: pickDefined(input.source_length, input.sourceLength, nested.source_length, nested.sourceLength, null),
-      had_sensitive_identifier: pickDefined(input.had_sensitive_identifier, input.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
+      ...base,
+      source: base.source || nested.source || "diagnostic_core",
+      session_id: base.session_id || base.sessionId || nested.session_id || nested.sessionId || "local_scan_session",
+      started_at: base.started_at || base.startedAt || nested.started_at || nested.startedAt || null,
+      ended_at: base.ended_at || base.endedAt || nested.ended_at || nested.endedAt || null,
+      captured_at: base.captured_at || base.capturedAt || nested.captured_at || nested.capturedAt || null,
+      protocol: base.protocol || nested.protocol || null,
+      vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
+      vehicle_applicability: base.vehicle_applicability || base.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
+      next_readout_candidates: pickDefined(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
+      tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
+      warnings: mergeUniqueStrings(base.warnings, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
+      import_classification: pickDefined(base.import_classification, base.importClassification, nested.import_classification, nested.importClassification, null),
+      source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
+      had_sensitive_identifier: pickDefined(base.had_sensitive_identifier, base.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
     };
   }
 
