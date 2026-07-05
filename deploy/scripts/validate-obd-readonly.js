@@ -1394,6 +1394,19 @@ const outerOverrideEcuInfoSnapshot = {
     { id: "ecu_name", type: "0A", value: "Outer Override ECU", label: "ECU Name" }
   ]
 };
+const outerOverrideFreezeFrameSnapshot = {
+  ...bridgeFreezeFrameSnapshot,
+  triggerDtc: "P0420",
+  dtcCode: "P0420"
+};
+const outerOverrideReadinessSnapshot = {
+  ...bridgeReadinessSnapshot,
+  incompleteCount: 0,
+  completedCount: bridgeReadinessSnapshot.monitorCount || bridgeReadinessSnapshot.completedCount || 0,
+  monitors: Array.isArray(bridgeReadinessSnapshot.monitors)
+    ? bridgeReadinessSnapshot.monitors.map((item) => ({ ...item, complete: true, status: "complete" }))
+    : []
+};
 const bridgeExportNestedOuterOverride = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:10:15Z",
   vehicle_profile: { maker: "Toyota", model: "Outer Roomy" },
@@ -2069,11 +2082,15 @@ const decodedScanSessionNestedCoreOverrides = obd.buildDecodedObdScanSession({
     stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
     vehicle_applicability: vehicleApplicabilitySample,
     readout_coverage: legacyReadoutCoverage,
+    freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+    readiness_snapshot: bridgeReadinessSnapshot,
     ecu_info_snapshot: bridgeEcuInfoSnapshot
   }
 });
 check(decodedScanSessionNestedCoreOverrides.vehicleApplicability?.status === "matched", "Decoded OBD session did not carry vehicle_applicability from scan_session nested alias input");
 check(decodedScanSessionNestedCoreOverrides.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not carry readout_coverage from scan_session nested alias input");
+check(decodedScanSessionNestedCoreOverrides.freezeFrameSnapshot?.triggerDtc === "P0171", "Decoded OBD session did not carry freeze_frame_snapshot from scan_session nested alias input");
+check(decodedScanSessionNestedCoreOverrides.readinessSnapshot?.incompleteCount === 1, "Decoded OBD session did not carry readiness_snapshot from scan_session nested alias input");
 check(decodedScanSessionNestedCoreOverrides.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Decoded OBD session did not carry ecu_info_snapshot from scan_session nested alias input");
 const decodedScanSessionNestedImportClassification = obd.buildDecodedObdScanSession({
   scan_session: {
@@ -2105,15 +2122,21 @@ const decodedScanSessionNestedOuterCoreOverride = obd.buildDecodedObdScanSession
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
   vehicle_applicability: vehicleApplicabilityPartialSample,
   readout_coverage: legacyReadoutCoverage,
+  freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
+  readiness_snapshot: outerOverrideReadinessSnapshot,
   ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
   scan_session: {
     vehicle_applicability: vehicleApplicabilitySample,
     readout_coverage: bridgeSummary.readoutCoverage,
+    freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+    readiness_snapshot: bridgeReadinessSnapshot,
     ecu_info_snapshot: bridgeEcuInfoSnapshot
   }
 });
 check(decodedScanSessionNestedOuterCoreOverride.vehicleApplicability?.status === "partial", "Decoded OBD session did not let outer vehicle_applicability override scan_session nested alias input");
 check(decodedScanSessionNestedOuterCoreOverride.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not let outer readout_coverage override scan_session nested alias input");
+check(decodedScanSessionNestedOuterCoreOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "Decoded OBD session did not let outer freeze_frame_snapshot override scan_session nested alias input");
+check(decodedScanSessionNestedOuterCoreOverride.readinessSnapshot?.incompleteCount === 0, "Decoded OBD session did not let outer readiness_snapshot override scan_session nested alias input");
 check(decodedScanSessionNestedOuterCoreOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Decoded OBD session did not let outer ecu_info_snapshot override scan_session nested alias input");
 const decodedScanSessionNestedOuterImportClassificationOverride = obd.buildDecodedObdScanSession({
   session_id: "decoded-outer-import-classification-override",
@@ -2305,11 +2328,15 @@ const textScanSessionNestedCoreOverrides = obd.buildScanSessionFromObdText(obdTe
     session_id: "obd-text-nested-core-overrides",
     vehicle_applicability: vehicleApplicabilitySample,
     readout_coverage: legacyReadoutCoverage,
+    freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+    readiness_snapshot: bridgeReadinessSnapshot,
     ecu_info_snapshot: bridgeEcuInfoSnapshot
   }
 });
 check(textScanSessionNestedCoreOverrides.vehicleApplicability?.status === "matched", "OBD text scan session did not carry vehicle_applicability from scan_session nested options");
 check(textScanSessionNestedCoreOverrides.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not carry readout_coverage from scan_session nested options");
+check(textScanSessionNestedCoreOverrides.freezeFrameSnapshot?.triggerDtc === "P0171", "OBD text scan session did not carry freeze_frame_snapshot from scan_session nested options");
+check(textScanSessionNestedCoreOverrides.readinessSnapshot?.incompleteCount === 1, "OBD text scan session did not carry readiness_snapshot from scan_session nested options");
 check(textScanSessionNestedCoreOverrides.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "OBD text scan session did not carry ecu_info_snapshot from scan_session nested options");
 const textScanSessionNestedImportClassification = obd.buildScanSessionFromObdText(obdTextLog, {
   scan_session: {
@@ -2338,15 +2365,21 @@ const textScanSessionNestedOuterCoreOverride = obd.buildScanSessionFromObdText(o
   session_id: "obd-text-outer-core-override",
   vehicle_applicability: vehicleApplicabilityPartialSample,
   readout_coverage: legacyReadoutCoverage,
+  freeze_frame_snapshot: outerOverrideFreezeFrameSnapshot,
+  readiness_snapshot: outerOverrideReadinessSnapshot,
   ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
   scan_session: {
     vehicle_applicability: vehicleApplicabilitySample,
     readout_coverage: bridgeSummary.readoutCoverage,
+    freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+    readiness_snapshot: bridgeReadinessSnapshot,
     ecu_info_snapshot: bridgeEcuInfoSnapshot
   }
 });
 check(textScanSessionNestedOuterCoreOverride.vehicleApplicability?.status === "partial", "OBD text scan session did not let outer vehicle_applicability override scan_session nested options");
 check(textScanSessionNestedOuterCoreOverride.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not let outer readout_coverage override scan_session nested options");
+check(textScanSessionNestedOuterCoreOverride.freezeFrameSnapshot?.triggerDtc === "P0420", "OBD text scan session did not let outer freeze_frame_snapshot override scan_session nested options");
+check(textScanSessionNestedOuterCoreOverride.readinessSnapshot?.incompleteCount === 0, "OBD text scan session did not let outer readiness_snapshot override scan_session nested options");
 check(textScanSessionNestedOuterCoreOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "OBD text scan session did not let outer ecu_info_snapshot override scan_session nested options");
 const textScanSessionNestedOuterImportClassificationOverride = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-outer-import-classification-override",
