@@ -1091,7 +1091,10 @@ const bridgeSummaryCamelResponseAliases = obd.buildBridgeSessionSummary({
   dtcSnapshot: bridgeDtcSnapshot,
   livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
   supportedPidResponse: { raw: "41 00 18 18 00 01 41 20 80 00 00 01" },
+  freezeFrameResponse: { raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 05 00 7B" },
   readinessResponse: { raw: "41 01 81 07 22 00" },
+  onboardMonitorResponse: { raw: "46 01 01 00 64 00 32 00 C8" },
+  ecuInfoResponse: { raw: "49 04 01 43 41 4C 2D 31 32 33 34" },
   ecuResponseSummaryResponse: bridgeSummary.ecuResponseSummary,
   connectionStatusResponse: {
     ok: true,
@@ -1114,7 +1117,10 @@ const bridgeSummaryCamelResponseAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryCamelResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode livePidResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.supportedPidMatrix?.supportedPids.includes("40"), "Bridge session summary did not decode supportedPidResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode freezeFrameResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.readinessSnapshot?.incompleteCount === 1, "Bridge session summary did not decode readinessResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Bridge session summary did not decode onboardMonitorResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Bridge session summary did not decode ecuInfoResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge session summary did not accept ecuResponseSummaryResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Bridge session summary did not accept connectionStatusResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.vciDevices[0]?.id === "summary-camel-vci", "Bridge session summary did not accept listVciResponse camelCase alias input");
@@ -3346,7 +3352,10 @@ const scanSessionBridgeCamelResponseAliases = obd.buildDiagnosticScanSession({
   bridgeSession: {
     livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
     supportedPidResponse: { raw: "41 00 18 18 00 01 41 20 80 00 00 01" },
+    freezeFrameResponse: { raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 05 00 7B" },
     readinessResponse: { raw: "41 01 81 07 22 00" },
+    onboardMonitorResponse: { raw: "46 01 01 00 64 00 32 00 C8" },
+    ecuInfoResponse: { raw: "49 04 01 43 41 4C 2D 31 32 33 34" },
     ecuResponseSummaryResponse: bridgeSummary.ecuResponseSummary,
     connectionStatusResponse: {
       ok: true,
@@ -3370,7 +3379,10 @@ const scanSessionBridgeCamelResponseAliases = obd.buildDiagnosticScanSession({
 });
 check(scanSessionBridgeCamelResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode livePidResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.supportedPidMatrix?.supportedPids.includes("40"), "Diagnostic scan session did not decode supportedPidResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode freezeFrameResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.readinessSnapshot?.incompleteCount === 1, "Diagnostic scan session did not decode readinessResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Diagnostic scan session did not decode onboardMonitorResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Diagnostic scan session did not decode ecuInfoResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecuResponseSummaryResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connectionStatusResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.vciDevices[0]?.id === "camel-response-vci", "Diagnostic scan session did not accept listVciResponse from bridgeSession camelCase alias input");
@@ -3396,7 +3408,10 @@ const scanSessionNestedCamelResponseAliases = obd.buildDiagnosticScanSession({
   scanSession: {
     livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
     supportedPidResponse: { raw: "41 00 18 18 00 01 41 20 80 00 00 01" },
+    freezeFrameResponse: { raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 05 00 7B" },
     readinessResponse: { raw: "41 01 81 07 22 00" },
+    onboardMonitorResponse: { raw: "46 01 01 00 64 00 32 00 C8" },
+    ecuInfoResponse: { raw: "49 04 01 43 41 4C 2D 31 32 33 34" },
     ecuResponseSummaryResponse: bridgeSummary.ecuResponseSummary,
     connectionStatusResponse: {
       ok: true,
@@ -3408,7 +3423,10 @@ const scanSessionNestedCamelResponseAliases = obd.buildDiagnosticScanSession({
 });
 check(scanSessionNestedCamelResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode livePidResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.supportedPidMatrix?.supportedPids.includes("40"), "Diagnostic scan session did not decode supportedPidResponse from scanSession camelCase alias input");
+check(scanSessionNestedCamelResponseAliases.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode freezeFrameResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.readinessSnapshot?.incompleteCount === 1, "Diagnostic scan session did not decode readinessResponse from scanSession camelCase alias input");
+check(scanSessionNestedCamelResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Diagnostic scan session did not decode onboardMonitorResponse from scanSession camelCase alias input");
+check(scanSessionNestedCamelResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Diagnostic scan session did not decode ecuInfoResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecuResponseSummaryResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connectionStatusResponse from scanSession camelCase alias input");
 const scanSessionBridgeExportPayloadAlias = obd.buildDiagnosticScanSession({

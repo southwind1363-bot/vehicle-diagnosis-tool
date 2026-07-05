@@ -1578,9 +1578,38 @@
           }
           : readinessSnapshotInput)
       : readinessSnapshotInput;
+    const freezeFrameResponseInput = freezeFrameSnapshotInput && typeof freezeFrameSnapshotInput === "object" && !Array.isArray(freezeFrameSnapshotInput)
+      ? (freezeFrameSnapshotInput.data && typeof freezeFrameSnapshotInput.data === "object"
+          ? {
+            ...freezeFrameSnapshotInput.data,
+            protocol: freezeFrameSnapshotInput.data.protocol || freezeFrameSnapshotInput.protocol || null,
+            captured_at: freezeFrameSnapshotInput.data.captured_at || freezeFrameSnapshotInput.data.capturedAt || freezeFrameSnapshotInput.captured_at || freezeFrameSnapshotInput.capturedAt || null
+          }
+          : freezeFrameSnapshotInput)
+      : freezeFrameSnapshotInput;
+    const onboardMonitorResponseInput = onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && !Array.isArray(onboardMonitorSnapshotInput)
+      ? (onboardMonitorSnapshotInput.data && typeof onboardMonitorSnapshotInput.data === "object"
+          ? {
+            ...onboardMonitorSnapshotInput.data,
+            protocol: onboardMonitorSnapshotInput.data.protocol || onboardMonitorSnapshotInput.protocol || null,
+            captured_at: onboardMonitorSnapshotInput.data.captured_at || onboardMonitorSnapshotInput.data.capturedAt || onboardMonitorSnapshotInput.captured_at || onboardMonitorSnapshotInput.capturedAt || null
+          }
+          : onboardMonitorSnapshotInput)
+      : onboardMonitorSnapshotInput;
+    const ecuInfoResponseInput = ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && !Array.isArray(ecuInfoSnapshotInput)
+      ? (ecuInfoSnapshotInput.data && typeof ecuInfoSnapshotInput.data === "object"
+          ? {
+            ...ecuInfoSnapshotInput.data,
+            protocol: ecuInfoSnapshotInput.data.protocol || ecuInfoSnapshotInput.protocol || null,
+            captured_at: ecuInfoSnapshotInput.data.captured_at || ecuInfoSnapshotInput.data.capturedAt || ecuInfoSnapshotInput.captured_at || ecuInfoSnapshotInput.capturedAt || null
+          }
+          : ecuInfoSnapshotInput)
+      : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
-      : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
+      : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
+        ? decodeFreezeFrameResponse(freezeFrameResponseInput)
+        : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
     const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
@@ -1593,10 +1622,14 @@
         : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || livePidSnapshot);
     const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
-      : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {});
+      : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
+        ? decodeEcuInfoResponse(ecuInfoResponseInput)
+        : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {});
     const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
-      : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {});
+      : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
+        ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
+        : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {});
     const ecuResponseSummary = ecuResponseSummaryInput?.schemaVersion
       ? ecuResponseSummaryInput
       : normalizeEcuResponseSummary(ecuResponseSummaryInput || {
@@ -4386,15 +4419,54 @@
           }
           : readinessSnapshotInput)
       : readinessSnapshotInput;
-    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
+    const freezeFrameResponseInput = freezeFrameSnapshotInput && typeof freezeFrameSnapshotInput === "object" && !Array.isArray(freezeFrameSnapshotInput)
+      ? (freezeFrameSnapshotInput.data && typeof freezeFrameSnapshotInput.data === "object"
+          ? {
+            ...freezeFrameSnapshotInput.data,
+            protocol: freezeFrameSnapshotInput.data.protocol || freezeFrameSnapshotInput.protocol || sessionInput.protocol || null,
+            captured_at: freezeFrameSnapshotInput.data.captured_at || freezeFrameSnapshotInput.data.capturedAt || freezeFrameSnapshotInput.captured_at || freezeFrameSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
+          }
+          : freezeFrameSnapshotInput)
+      : freezeFrameSnapshotInput;
+    const onboardMonitorResponseInput = onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && !Array.isArray(onboardMonitorSnapshotInput)
+      ? (onboardMonitorSnapshotInput.data && typeof onboardMonitorSnapshotInput.data === "object"
+          ? {
+            ...onboardMonitorSnapshotInput.data,
+            protocol: onboardMonitorSnapshotInput.data.protocol || onboardMonitorSnapshotInput.protocol || sessionInput.protocol || null,
+            captured_at: onboardMonitorSnapshotInput.data.captured_at || onboardMonitorSnapshotInput.data.capturedAt || onboardMonitorSnapshotInput.captured_at || onboardMonitorSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
+          }
+          : onboardMonitorSnapshotInput)
+      : onboardMonitorSnapshotInput;
+    const ecuInfoResponseInput = ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && !Array.isArray(ecuInfoSnapshotInput)
+      ? (ecuInfoSnapshotInput.data && typeof ecuInfoSnapshotInput.data === "object"
+          ? {
+            ...ecuInfoSnapshotInput.data,
+            protocol: ecuInfoSnapshotInput.data.protocol || ecuInfoSnapshotInput.protocol || sessionInput.protocol || null,
+            captured_at: ecuInfoSnapshotInput.data.captured_at || ecuInfoSnapshotInput.data.capturedAt || ecuInfoSnapshotInput.captured_at || ecuInfoSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
+          }
+          : ecuInfoSnapshotInput)
+      : ecuInfoSnapshotInput;
+    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+      ? freezeFrameSnapshotInput
+      : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
+        ? decodeFreezeFrameResponse(freezeFrameResponseInput)
+        : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
     const readinessSnapshot = readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput);
-    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput);
+    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+      ? onboardMonitorSnapshotInput
+      : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
+        ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
+        : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput);
     const ecuResponseSummary = ecuResponseSummaryInput?.schemaVersion ? ecuResponseSummaryInput : normalizeEcuResponseSummary(ecuResponseSummaryInput);
-    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion ? ecuInfoSnapshotInput : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput);
+    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+      ? ecuInfoSnapshotInput
+      : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
+        ? decodeEcuInfoResponse(ecuInfoResponseInput)
+        : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput);
     const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
