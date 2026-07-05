@@ -1586,7 +1586,14 @@ const mergedDiagnosticInputNestedOuterOverride = obd.mergeDiagnosticInputs({
     captured_at: "2026-06-28T00:11:00Z",
     vehicle_profile: { maker: "Toyota", model: "Outer Sienta" },
     vehicle_applicability: vehicleApplicabilityPartialSample,
+    connection_status: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+    },
     readout_coverage: legacyReadoutCoverage,
+    next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
     ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
     session: bridgeExportPayload.session
   }
@@ -1595,7 +1602,9 @@ check(mergedDiagnosticInputNestedOuterOverride.protocol === "ISO9141-2", "Combin
 check(mergedDiagnosticInputNestedOuterOverride.capturedAt === "2026-06-28T00:11:00Z", "Combined diagnostic inputs did not let outer captured_at override nested session alias input");
 check(mergedDiagnosticInputNestedOuterOverride.vehicleProfile?.model === "Outer Sienta", "Combined diagnostic inputs did not let outer vehicle_profile override nested session alias input");
 check(mergedDiagnosticInputNestedOuterOverride.vehicleApplicability?.status === "partial", "Combined diagnostic inputs did not let outer vehicle_applicability override nested session alias input");
+check(mergedDiagnosticInputNestedOuterOverride.connectionStatus?.vehicleConnected === false, "Combined diagnostic inputs did not let outer connection_status override nested session alias input");
 check(mergedDiagnosticInputNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Combined diagnostic inputs did not let outer readout_coverage override nested session alias input");
+check(mergedDiagnosticInputNestedOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Combined diagnostic inputs did not let outer next_readout_candidates override nested session alias input");
 check(mergedDiagnosticInputNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Combined diagnostic inputs did not let outer ecu_info_snapshot override nested session alias input");
 const mergedDiagnosticInputExportNestedOuterOverride = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
@@ -1606,7 +1615,14 @@ const mergedDiagnosticInputExportNestedOuterOverride = obd.mergeDiagnosticInputs
     captured_at: "2026-06-28T00:11:15Z",
     vehicle_profile: { maker: "Toyota", model: "Outer Porte" },
     vehicle_applicability: vehicleApplicabilityPartialSample,
+    connection_status: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: false, vci_ready: true, car_connected: false }
+    },
     readout_coverage: legacyReadoutCoverage,
+    next_readout_candidates: [{ id: "custom_outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
     ecu_info_snapshot: outerOverrideEcuInfoSnapshot,
     session: bridgeExportPayload.session
   }
@@ -1615,7 +1631,9 @@ check(mergedDiagnosticInputExportNestedOuterOverride.protocol === "ISO9141-2", "
 check(mergedDiagnosticInputExportNestedOuterOverride.capturedAt === "2026-06-28T00:11:15Z", "Combined diagnostic inputs did not let outer captured_at override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.vehicleProfile?.model === "Outer Porte", "Combined diagnostic inputs did not let outer vehicle_profile override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.vehicleApplicability?.status === "partial", "Combined diagnostic inputs did not let outer vehicle_applicability override nested bridge_export_payload session input");
+check(mergedDiagnosticInputExportNestedOuterOverride.connectionStatus?.vehicleConnected === false, "Combined diagnostic inputs did not let outer connection_status override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Combined diagnostic inputs did not let outer readout_coverage override nested bridge_export_payload session input");
+check(mergedDiagnosticInputExportNestedOuterOverride.nextReadoutCandidates[0]?.id === "custom_outer_snapshot", "Combined diagnostic inputs did not let outer next_readout_candidates override nested bridge_export_payload session input");
 check(mergedDiagnosticInputExportNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Combined diagnostic inputs did not let outer ecu_info_snapshot override nested bridge_export_payload session input");
 const mergedDiagnosticInputSummaryOnlyMonitorCounts = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportSummaryOnlyRawWarning
