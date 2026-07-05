@@ -1230,15 +1230,15 @@
     const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfoResponse || input.ecu_info_response || {};
     const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitorResponse || input.onboard_monitor_response || {};
     const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPidSnapshot || input.supported_pid_snapshot || {};
-    const hasConnectionStatusInput = Object.keys(connectionStatusInput).length > 0;
-    const hasAdapterIdentityInput = Object.keys(adapterIdentityInput).length > 0;
-    const hasDtcSnapshotInput = Object.keys(dtcSnapshotInput).length > 0;
-    const hasLivePidSnapshotInput = Object.keys(livePidSnapshotInput).length > 0;
-    const hasFreezeFrameSnapshotInput = Object.keys(freezeFrameSnapshotInput).length > 0;
-    const hasReadinessSnapshotInput = Object.keys(readinessSnapshotInput).length > 0;
-    const hasEcuInfoSnapshotInput = Object.keys(ecuInfoSnapshotInput).length > 0;
-    const hasOnboardMonitorSnapshotInput = Object.keys(onboardMonitorSnapshotInput).length > 0;
-    const hasSupportedPidMatrixInput = Object.keys(supportedPidMatrixInput).length > 0;
+    const hasConnectionStatusInput = hasObjectContent(connectionStatusInput);
+    const hasAdapterIdentityInput = hasObjectContent(adapterIdentityInput);
+    const hasDtcSnapshotInput = hasObjectContent(dtcSnapshotInput);
+    const hasLivePidSnapshotInput = hasObjectContent(livePidSnapshotInput);
+    const hasFreezeFrameSnapshotInput = hasObjectContent(freezeFrameSnapshotInput);
+    const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
+    const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
+    const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
+    const hasSupportedPidMatrixInput = hasObjectContent(supportedPidMatrixInput);
     const includeInfrastructureInput = pickDefined(input.includeInfrastructure, input.include_infrastructure);
     const includeInfrastructure = includeInfrastructureInput === true
       ? true
@@ -1900,8 +1900,8 @@
     if (honorCoverageOverride && typeof explicitIncludeInfrastructureValue === "boolean") {
       return explicitIncludeInfrastructureValue;
     }
-    return Object.keys(connectionStatusInput).length > 0
-      || Object.keys(adapterIdentityInput).length > 0
+    return hasObjectContent(connectionStatusInput)
+      || hasObjectContent(adapterIdentityInput)
       || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
       || Boolean(vciDevicesInput?.devices?.length)
       || Boolean(nestedSession);
@@ -3316,7 +3316,7 @@
         : decodeOnboardMonitorResponse(onboardMonitorResponseInput);
     const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
-      : (Array.isArray(ecuInfoSnapshotInput) || (ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && Object.keys(ecuInfoSnapshotInput).length > 0))
+      : (Array.isArray(ecuInfoSnapshotInput) || hasObjectContent(ecuInfoSnapshotInput))
         ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
         : ecuInfoResponseInput?.schemaVersion
           ? ecuInfoResponseInput
