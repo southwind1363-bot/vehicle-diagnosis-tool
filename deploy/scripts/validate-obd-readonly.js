@@ -1589,6 +1589,38 @@ const mergedDiagnosticInputExportPayloadVehicleProfile = obd.mergeDiagnosticInpu
 check(mergedDiagnosticInputExportPayloadVehicleProfile.startedAt === "2026-06-28T00:05:00Z" && mergedDiagnosticInputExportPayloadVehicleProfile.endedAt === "2026-06-28T00:06:00Z", "Combined diagnostic inputs did not carry started_at or ended_at from bridge_export_payload alias input");
 check(mergedDiagnosticInputExportPayloadVehicleProfile.vehicleProfile?.model === "Aqua", "Combined diagnostic inputs did not carry vehicle_profile from bridge_export_payload alias input");
 check(mergedDiagnosticInputExportPayloadVehicleProfile.vehicleApplicability?.status === "matched", "Combined diagnostic inputs did not carry vehicle_applicability from bridge_export_payload alias input");
+const mergedDiagnosticInputSnakeTopLevelAliases = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_diagnostic_import: {
+    importType: "bridge_diagnostic_snapshot",
+    readout_coverage: {
+      include_infrastructure: false,
+      total_categories: 7,
+      available_categories: 3,
+      captured_categories: 2,
+      empty_categories: 1,
+      missing_categories: 4
+    },
+    vehicle_applicability: {
+      make: "Toyota",
+      model: "Prius",
+      model_code: "ZVW30",
+      year: "2012",
+      engine_code: "2ZR-FXE",
+      catalog_matched: true,
+      year_matched: true,
+      engine_matched: true,
+      model_code_matched: true
+    },
+    next_readout_candidates: [
+      { readout_id: "ecu_info_snapshot", display_label: "ECU Info", status: "empty", sort_order: 92, applicability_status: "partial" }
+    ],
+    bridgeSession: bridgeDiagnosticImport.bridgeSession
+  }
+});
+check(mergedDiagnosticInputSnakeTopLevelAliases.readoutCoverage.includeInfrastructure === false, "Combined diagnostic inputs did not accept top-level readout_coverage alias input");
+check(mergedDiagnosticInputSnakeTopLevelAliases.vehicleApplicability?.status === "matched", "Combined diagnostic inputs did not accept top-level vehicle_applicability alias input");
+check(mergedDiagnosticInputSnakeTopLevelAliases.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Combined diagnostic inputs did not accept top-level next_readout_candidates alias input");
 const mergedDiagnosticInputNestedSession = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_import: {

@@ -2079,6 +2079,27 @@
         ? "scanner_text_and_local_bridge"
         : "local_bridge"
       : "scanner_text";
+    const mergedReadoutCoverageInput = pickDefined(
+      bridgeImport?.readoutCoverage,
+      bridgeImport?.readout_coverage,
+      bridgeSession?.readoutCoverage,
+      bridgeSession?.readout_coverage,
+      null
+    );
+    const mergedVehicleApplicabilityInput = pickDefined(
+      bridgeImport?.vehicleApplicability,
+      bridgeImport?.vehicle_applicability,
+      bridgeSession?.vehicleApplicability,
+      bridgeSession?.vehicle_applicability,
+      null
+    );
+    const mergedNextReadoutCandidates = pickDefined(
+      bridgeImport?.nextReadoutCandidates,
+      bridgeImport?.next_readout_candidates,
+      bridgeSession?.nextReadoutCandidates,
+      bridgeSession?.next_readout_candidates,
+      []
+    );
 
     return {
       source,
@@ -2097,10 +2118,10 @@
       readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
       ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
       onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
-      readoutCoverage: normalizeReadoutCoverageSnapshot(bridgeImport?.readoutCoverage || bridgeSession?.readoutCoverage || null),
+      readoutCoverage: normalizeReadoutCoverageSnapshot(mergedReadoutCoverageInput),
       freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
       vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
-      vehicleApplicability: bridgeImport?.vehicleApplicability || bridgeSession?.vehicleApplicability || null,
+      vehicleApplicability: mergedVehicleApplicabilityInput,
       connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
       vciDevices: bridgeImport?.vciDevices || bridgeSession?.vciDevices || [],
       adapterIdentity: bridgeImport?.adapterIdentity || bridgeSession?.adapterIdentity || null,
@@ -2108,11 +2129,11 @@
       bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
       warnings: [...new Set(bridgeImport?.warnings || bridgeSession?.warnings || [])],
       nextReadoutCandidates: normalizeNextReadoutCandidates(
-        (bridgeImport?.nextReadoutCandidates || bridgeSession?.nextReadoutCandidates || []).length
-          ? (bridgeImport?.nextReadoutCandidates || bridgeSession?.nextReadoutCandidates || [])
+        Array.isArray(mergedNextReadoutCandidates) && mergedNextReadoutCandidates.length
+          ? mergedNextReadoutCandidates
           : buildNextReadoutCandidates(
-            bridgeImport?.readoutCoverage || bridgeSession?.readoutCoverage || null,
-            bridgeImport?.vehicleApplicability || bridgeSession?.vehicleApplicability || null
+            mergedReadoutCoverageInput,
+            mergedVehicleApplicabilityInput
           )
       ),
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
