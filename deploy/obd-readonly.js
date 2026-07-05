@@ -1670,6 +1670,8 @@
       || parts.readout_coverage
       || parts.readoutCoverageResponse
       || parts.readout_coverage_response
+      || parts.importClassification
+      || parts.import_classification
       || Array.isArray(parts.warningFlags)
       || Array.isArray(parts.warning_flags)
       || parts.capturedAt
@@ -1693,6 +1695,7 @@
       readoutCoverage: parts.readoutCoverage || parts.readout_coverage || nested.readoutCoverage || nested.readout_coverage || null,
       readout_coverage: parts.readout_coverage || parts.readoutCoverage || nested.readout_coverage || nested.readoutCoverage || null,
       nextReadoutCandidates: pickDefined(parts.nextReadoutCandidates, parts.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
+      importClassification: pickDefined(parts.importClassification, parts.import_classification, nested.importClassification, nested.import_classification, null),
       toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints, nested.toolHints, nested.tool_hints),
       sourceLength: pickDefined(parts.sourceLength, parts.source_length, nested.sourceLength, nested.source_length, null),
       hadSensitiveIdentifier: pickDefined(parts.hadSensitiveIdentifier, parts.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, null)
@@ -1713,6 +1716,7 @@
     const monitorInsightsInput = parts.monitorInsights || parts.monitor_insights || [];
     const nextReadoutCandidatesInput = parts.nextReadoutCandidates || parts.next_readout_candidates || [];
     const warningsInput = parts.warnings || parts.warning_flags || parts.warningFlags || [];
+    const importClassificationInput = parts.importClassification || parts.import_classification || null;
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const normalizedVciList = Array.isArray(vciDevicesInput)
       ? { devices: vciDevicesInput, blocked: false }
@@ -1803,6 +1807,9 @@
       monitorValues,
       monitorValueSummary,
       monitorInsights,
+      importClassification: importClassificationInput && typeof importClassificationInput === "object"
+        ? { ...importClassificationInput }
+        : null,
       toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints),
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
       nextReadoutCandidates: normalizeNextReadoutCandidates(
@@ -1916,6 +1923,9 @@
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(cloneBridgeArrayItems(summary.monitorValues)),
         monitor_insights: cloneBridgeArrayItems(summary.monitorInsights),
+        import_classification: summary.importClassification && typeof summary.importClassification === "object"
+          ? { ...summary.importClassification }
+          : null,
         tool_hints: mergeUniqueStrings(summary.toolHints),
         warnings: [...new Set(summary.warnings || [])],
         next_readout_candidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
@@ -1951,6 +1961,9 @@
       monitorValues,
       monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
       monitorInsights,
+      importClassification: summary.importClassification && typeof summary.importClassification === "object"
+        ? { ...summary.importClassification }
+        : null,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
       readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
@@ -1985,6 +1998,9 @@
         monitorValues,
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
+        importClassification: summary.importClassification && typeof summary.importClassification === "object"
+          ? { ...summary.importClassification }
+          : null,
         toolHints: mergeUniqueStrings(summary.toolHints),
         warnings: [...new Set(summary.warnings || [])],
         nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
@@ -2003,12 +2019,21 @@
 
   function mergeDiagnosticInputs(input = {}) {
     const scannerTextInput = input.scannerText || input.scanner_text || "";
-    const bridgeImportInput = input.bridgeImport || input.bridge_import || input.bridgeDiagnosticImport || input.bridge_diagnostic_import || input.bridgeExportPayload || input.bridge_export_payload;
+    const bridgeImportInput = input.bridgeImport
+      || input.bridge_import
+      || input.bridgeDiagnosticImport
+      || input.bridge_diagnostic_import
+      || input.bridgeExportPayload
+      || input.bridge_export_payload
+      || input.bridgeSession
+      || input.bridge_session;
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
     const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
       ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgeImportInput?.schema_version === "bridge_session_export_v1" || bridgeImportInput?.session || bridgeImportInput?.bridgeSession || bridgeImportInput?.bridge_session
+        ? buildBridgeDiagnosticImport(bridgeImportInput)
+      : bridgeImportInput && hasBridgeSummaryContent(getBridgeSummaryInput(bridgeImportInput))
         ? buildBridgeDiagnosticImport(bridgeImportInput)
       : bridgePartsInput
         ? buildBridgeDiagnosticImport(bridgePartsInput)
@@ -2100,6 +2125,13 @@
       bridgeSession?.next_readout_candidates,
       []
     );
+    const mergedImportClassification = pickDefined(
+      bridgeImport?.importClassification,
+      bridgeImport?.import_classification,
+      bridgeSession?.importClassification,
+      bridgeSession?.import_classification,
+      null
+    );
 
     return {
       source,
@@ -2122,6 +2154,9 @@
       freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
       vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
       vehicleApplicability: mergedVehicleApplicabilityInput,
+      importClassification: mergedImportClassification && typeof mergedImportClassification === "object"
+        ? { ...mergedImportClassification }
+        : null,
       connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
       vciDevices: bridgeImport?.vciDevices || bridgeSession?.vciDevices || [],
       adapterIdentity: bridgeImport?.adapterIdentity || bridgeSession?.adapterIdentity || null,

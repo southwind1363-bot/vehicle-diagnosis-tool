@@ -1255,6 +1255,18 @@ check(bridgeDiagnosticImport.bridgeSession.hadSensitiveIdentifier === true, "ブ
 check(bridgeDiagnosticImport.exportPayload.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export payload did not retain tool_hints");
 check(bridgeDiagnosticImport.exportPayload.session.source_length === 128, "Bridge export payload did not retain source_length");
 check(bridgeDiagnosticImport.exportPayload.session.had_sensitive_identifier === true, "Bridge export payload did not retain had_sensitive_identifier");
+const bridgeDiagnosticImportExplicitImportClassification = obd.buildBridgeDiagnosticImport({
+  bridge_session: {
+    codes: ["P0171"],
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 1 }
+    }
+  }
+});
+check(bridgeDiagnosticImportExplicitImportClassification.importClassification?.bucketCounts?.storedDtcResponses === 1, "Bridge diagnostic import did not expose import_classification");
+check(bridgeDiagnosticImportExplicitImportClassification.bridgeSession.importClassification?.bucketCounts?.storedDtcResponses === 1, "Bridge diagnostic import did not retain import_classification on bridgeSession");
+check(bridgeDiagnosticImportExplicitImportClassification.exportPayload.session.import_classification?.bucketCounts?.storedDtcResponses === 1, "Bridge export payload did not retain import_classification");
 check(bridgeDiagnosticImport.retainedRawText === false, "ブリッジ診断取込が原文保持になっています");
 check(bridgeDiagnosticImport.wouldTransmit === false && bridgeDiagnosticImport.vehicleCommandEnabled === false, "ブリッジ診断取込が送信可能扱いになっています");
 const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
@@ -1657,6 +1669,15 @@ check(mergedDiagnosticInputBridgeSessionOnlyImport.warnings.includes("freeze_fra
 check(mergedDiagnosticInputBridgeSessionOnlyImport.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.bridgeSession.nextReadoutCandidates[0]?.id, "Combined diagnostic inputs did not recover nextReadoutCandidates from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.toolHints.join(",") === "Techstream,J2534", "Combined diagnostic inputs did not recover toolHints from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.sourceLength === 128, "Combined diagnostic inputs did not recover sourceLength from bridgeSession-only diagnostic import");
+const mergedDiagnosticInputImportClassification = obd.mergeDiagnosticInputs({
+  bridge_session: {
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { livePidResponses: 4 }
+    }
+  }
+});
+check(mergedDiagnosticInputImportClassification.importClassification?.bucketCounts?.livePidResponses === 4, "Combined diagnostic inputs did not recover import_classification from bridge_session input");
 const mergedDiagnosticInputNestedOuterOverride = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_diagnostic_import: {
@@ -1757,6 +1778,7 @@ check(scanSessionFromMergedDiagnosticInput.source === "scanner_text_and_local_br
 check(scanSessionFromMergedDiagnosticInput.toolHints.join(",") === mergedDiagnosticInputExportNestedOuterOverride.toolHints.join(","), "Diagnostic scan session did not preserve toolHints from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve hadSensitiveIdentifier from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.sourceLength === mergedDiagnosticInputExportNestedOuterOverride.sourceLength, "Diagnostic scan session did not preserve sourceLength from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.importClassification?.bucketCounts?.storedDtcResponses === mergedDiagnosticInputExportNestedOuterOverride.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not preserve importClassification from merged diagnostic input");
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
 check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
 check(emptyReadoutCoverage.capturedPercent === 0, "Empty readout coverage did not keep capturedPercent at zero");
