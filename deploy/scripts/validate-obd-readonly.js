@@ -1612,6 +1612,7 @@ check(scanSessionFromMergedDiagnosticInput.readoutCoverage?.capturedPercent === 
 check(scanSessionFromMergedDiagnosticInput.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not preserve ecu_info_snapshot from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.nextReadoutCandidates?.[0]?.id === mergedDiagnosticInputExportNestedOuterOverride.nextReadoutCandidates?.[0]?.id, "Diagnostic scan session did not preserve next_readout_candidates from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.source === "scanner_text_and_local_bridge", "Diagnostic scan session did not preserve source from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.toolHints.join(",") === mergedDiagnosticInputExportNestedOuterOverride.toolHints.join(","), "Diagnostic scan session did not preserve toolHints from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve hadSensitiveIdentifier from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.sourceLength === mergedDiagnosticInputExportNestedOuterOverride.sourceLength, "Diagnostic scan session did not preserve sourceLength from merged diagnostic input");
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();

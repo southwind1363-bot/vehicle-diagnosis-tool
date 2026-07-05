@@ -3760,6 +3760,12 @@
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
       ]),
+      toolHints: mergeUniqueStrings(
+        sessionInput.toolHints,
+        sessionInput.tool_hints,
+        input.toolHints,
+        input.tool_hints
+      ),
       warnings,
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true || sessionInput.hadSensitiveIdentifier === true || input.hadSensitiveIdentifier === true,
       sourceLength: Number.isFinite(Number(sessionInput.sourceLength || sessionInput.source_length || input.sourceLength || input.source_length))
