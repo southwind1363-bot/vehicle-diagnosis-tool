@@ -2151,9 +2151,13 @@
     return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());
   }
 
-  function buildBridgeSessionExportPayload(parts = {}) {
+  function resolveBridgeSummary(parts = {}) {
     const summaryInput = getBridgeSummaryInput(parts);
-    const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
+    return hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
+  }
+
+  function buildBridgeSessionExportPayload(parts = {}) {
+    const summary = resolveBridgeSummary(parts);
     const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });
     return {
       schema_version: "bridge_session_export_v1",
@@ -2201,8 +2205,7 @@
   }
 
   function buildBridgeDiagnosticImport(parts = {}) {
-    const summaryInput = getBridgeSummaryInput(parts);
-    const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
+    const summary = resolveBridgeSummary(parts);
     const metadataFields = buildSummaryMetadataFields(summary);
     const exportPayload = buildBridgeSessionExportPayload(summary);
     const codes = cloneBridgeArrayItems(summary.codes);
