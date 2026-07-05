@@ -1370,11 +1370,11 @@
 
   function normalizeReadoutCoverageSnapshot(input = {}) {
     if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();
-    const totalCategories = Number.isFinite(Number(input.totalCategories)) ? Math.max(0, Math.round(Number(input.totalCategories))) : 0;
-    const availableCategories = Number.isFinite(Number(input.availableCategories)) ? Math.max(0, Math.round(Number(input.availableCategories))) : 0;
-    const capturedCategories = Number.isFinite(Number(input.capturedCategories)) ? Math.max(0, Math.round(Number(input.capturedCategories))) : 0;
-    const emptyCategories = Number.isFinite(Number(input.emptyCategories)) ? Math.max(0, Math.round(Number(input.emptyCategories))) : 0;
-    const missingCategories = Number.isFinite(Number(input.missingCategories)) ? Math.max(0, Math.round(Number(input.missingCategories))) : 0;
+    const totalCategories = Number.isFinite(Number(pickDefined(input.totalCategories, input.total_categories))) ? Math.max(0, Math.round(Number(pickDefined(input.totalCategories, input.total_categories)))) : 0;
+    const availableCategories = Number.isFinite(Number(pickDefined(input.availableCategories, input.available_categories))) ? Math.max(0, Math.round(Number(pickDefined(input.availableCategories, input.available_categories)))) : 0;
+    const capturedCategories = Number.isFinite(Number(pickDefined(input.capturedCategories, input.captured_categories))) ? Math.max(0, Math.round(Number(pickDefined(input.capturedCategories, input.captured_categories)))) : 0;
+    const emptyCategories = Number.isFinite(Number(pickDefined(input.emptyCategories, input.empty_categories))) ? Math.max(0, Math.round(Number(pickDefined(input.emptyCategories, input.empty_categories)))) : 0;
+    const missingCategories = Number.isFinite(Number(pickDefined(input.missingCategories, input.missing_categories))) ? Math.max(0, Math.round(Number(pickDefined(input.missingCategories, input.missing_categories)))) : 0;
     const computedCapturedPercent = totalCategories > 0 ? Math.round((capturedCategories / totalCategories) * 100) : 0;
     const computedProgressPercent = totalCategories > 0 ? Math.round((availableCategories / totalCategories) * 100) : 0;
     return {
@@ -1386,13 +1386,13 @@
       capturedCategories,
       emptyCategories,
       missingCategories,
-      capturedPercent: Number.isFinite(Number(input.capturedPercent)) ? Math.max(0, Math.min(100, Math.round(Number(input.capturedPercent)))) : computedCapturedPercent,
-      progressPercent: Number.isFinite(Number(input.progressPercent)) ? Math.max(0, Math.min(100, Math.round(Number(input.progressPercent)))) : computedProgressPercent,
+      capturedPercent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent))) ? Math.max(0, Math.min(100, Math.round(Number(pickDefined(input.capturedPercent, input.captured_percent))))) : computedCapturedPercent,
+      progressPercent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent))) ? Math.max(0, Math.min(100, Math.round(Number(pickDefined(input.progressPercent, input.progress_percent))))) : computedProgressPercent,
       items: Array.isArray(input.items) ? input.items.map((item) => (item && typeof item === "object" ? { ...item } : item)) : [],
-      emptyIds: Array.isArray(input.emptyIds) ? [...input.emptyIds] : [],
-      emptyLabels: Array.isArray(input.emptyLabels) ? [...input.emptyLabels] : [],
-      missingIds: Array.isArray(input.missingIds) ? [...input.missingIds] : [],
-      missingLabels: Array.isArray(input.missingLabels) ? [...input.missingLabels] : []
+      emptyIds: Array.isArray(pickDefined(input.emptyIds, input.empty_ids)) ? [...pickDefined(input.emptyIds, input.empty_ids)] : [],
+      emptyLabels: Array.isArray(pickDefined(input.emptyLabels, input.empty_labels)) ? [...pickDefined(input.emptyLabels, input.empty_labels)] : [],
+      missingIds: Array.isArray(pickDefined(input.missingIds, input.missing_ids)) ? [...pickDefined(input.missingIds, input.missing_ids)] : [],
+      missingLabels: Array.isArray(pickDefined(input.missingLabels, input.missing_labels)) ? [...pickDefined(input.missingLabels, input.missing_labels)] : []
     };
   }
 

@@ -2529,6 +2529,24 @@ const normalizedSnakeCoverage = obd.normalizeReadoutCoverageSnapshot({
   missingCategories: 6
 });
 check(normalizedSnakeCoverage.includeInfrastructure === true, "Readout coverage normalization did not accept include_infrastructure alias");
+const normalizedSnakeCoverageFields = obd.normalizeReadoutCoverageSnapshot({
+  schema_version: "readout_coverage_v1",
+  include_infrastructure: false,
+  total_categories: 7,
+  available_categories: 3,
+  captured_categories: 2,
+  empty_categories: 1,
+  missing_categories: 4,
+  captured_percent: 29,
+  progress_percent: 43,
+  empty_ids: ["freeze_frame_snapshot"],
+  empty_labels: ["Freeze Frame"],
+  missing_ids: ["readiness_snapshot"],
+  missing_labels: ["Readiness"]
+});
+check(normalizedSnakeCoverageFields.totalCategories === 7 && normalizedSnakeCoverageFields.availableCategories === 3, "Readout coverage normalization did not accept snake_case category counts");
+check(normalizedSnakeCoverageFields.capturedPercent === 29 && normalizedSnakeCoverageFields.progressPercent === 43, "Readout coverage normalization did not accept snake_case progress aliases");
+check(normalizedSnakeCoverageFields.emptyIds[0] === "freeze_frame_snapshot" && normalizedSnakeCoverageFields.missingIds[0] === "readiness_snapshot", "Readout coverage normalization did not accept snake_case id aliases");
 const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
   session_id: "shop-test-non-infra-bridge-session"
