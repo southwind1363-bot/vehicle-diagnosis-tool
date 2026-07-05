@@ -1993,9 +1993,41 @@
     };
   }
 
+  function buildSummaryMetadataFields(summary = {}, { snakeCase = false } = {}) {
+    const vehicleApplicability = summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot();
+    const importClassification = summary.importClassification && typeof summary.importClassification === "object"
+      ? { ...summary.importClassification }
+      : null;
+    const toolHints = mergeUniqueStrings(summary.toolHints);
+    const warnings = [...new Set(summary.warnings || [])];
+    const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates);
+    const hadSensitiveIdentifier = summary.hadSensitiveIdentifier === true || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true;
+    const sourceLength = Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0;
+    return snakeCase
+      ? {
+        vehicle_applicability: vehicleApplicability,
+        import_classification: importClassification,
+        tool_hints: toolHints,
+        warnings,
+        next_readout_candidates: nextReadoutCandidates,
+        had_sensitive_identifier: hadSensitiveIdentifier,
+        source_length: sourceLength
+      }
+      : {
+        vehicleApplicability,
+        importClassification,
+        toolHints,
+        warnings,
+        nextReadoutCandidates,
+        hadSensitiveIdentifier,
+        sourceLength
+      };
+  }
+
   function buildBridgeSessionExportPayload(parts = {}) {
     const summaryInput = getBridgeSummaryInput(parts);
     const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
+    const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });
     return {
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
@@ -2011,7 +2043,7 @@
         captured_at: summary.capturedAt || null,
         protocol: summary.protocol || null,
         vehicle_profile: summary.vehicleProfile || null,
-        vehicle_applicability: summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot(),
+        vehicle_applicability: metadataFields.vehicle_applicability,
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: cloneBridgeArrayItems(summary.vciDevices),
         adapter_identity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
@@ -2026,14 +2058,12 @@
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(cloneBridgeArrayItems(summary.monitorValues)),
         monitor_insights: cloneBridgeArrayItems(summary.monitorInsights),
-        import_classification: summary.importClassification && typeof summary.importClassification === "object"
-          ? { ...summary.importClassification }
-          : null,
-        tool_hints: mergeUniqueStrings(summary.toolHints),
-        warnings: [...new Set(summary.warnings || [])],
-        next_readout_candidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
-        had_sensitive_identifier: summary.hadSensitiveIdentifier === true,
-        source_length: Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0
+        import_classification: metadataFields.import_classification,
+        tool_hints: metadataFields.tool_hints,
+        warnings: metadataFields.warnings,
+        next_readout_candidates: metadataFields.next_readout_candidates,
+        had_sensitive_identifier: metadataFields.had_sensitive_identifier,
+        source_length: metadataFields.source_length
       },
       safety: {
         read_only_phase: true,
@@ -2046,6 +2076,7 @@
   function buildBridgeDiagnosticImport(parts = {}) {
     const summaryInput = getBridgeSummaryInput(parts);
     const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
+    const metadataFields = buildSummaryMetadataFields(summary);
     const exportPayload = buildBridgeSessionExportPayload(summary);
     const codes = cloneBridgeArrayItems(summary.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
@@ -2059,14 +2090,12 @@
       protocol: summary.protocol || null,
       capturedAt: summary.capturedAt || null,
       vehicleProfile: summary.vehicleProfile || null,
-      vehicleApplicability: summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot(),
+      vehicleApplicability: metadataFields.vehicleApplicability,
       codes,
       monitorValues,
       monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
       monitorInsights,
-      importClassification: summary.importClassification && typeof summary.importClassification === "object"
-        ? { ...summary.importClassification }
-        : null,
+      importClassification: metadataFields.importClassification,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
       readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
@@ -2077,16 +2106,16 @@
       connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
       vciDevices: cloneBridgeArrayItems(summary.vciDevices),
       adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
-      toolHints: mergeUniqueStrings(summary.toolHints),
-      warnings: [...new Set(summary.warnings || [])],
-      nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
+      toolHints: metadataFields.toolHints,
+      warnings: metadataFields.warnings,
+      nextReadoutCandidates: metadataFields.nextReadoutCandidates,
       bridgeSession: {
         startedAt: summary.startedAt || null,
         endedAt: summary.endedAt || null,
         capturedAt: summary.capturedAt || null,
         protocol: summary.protocol || null,
         vehicleProfile: summary.vehicleProfile || null,
-        vehicleApplicability: summary.vehicleApplicability || normalizeVehicleApplicabilitySnapshot(),
+        vehicleApplicability: metadataFields.vehicleApplicability,
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: cloneBridgeArrayItems(summary.vciDevices),
         adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
@@ -2101,19 +2130,17 @@
         monitorValues,
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
-        importClassification: summary.importClassification && typeof summary.importClassification === "object"
-          ? { ...summary.importClassification }
-          : null,
-        toolHints: mergeUniqueStrings(summary.toolHints),
-        warnings: [...new Set(summary.warnings || [])],
-        nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
-        hadSensitiveIdentifier: summary.hadSensitiveIdentifier === true || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
-        sourceLength: Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0,
+        importClassification: metadataFields.importClassification,
+        toolHints: metadataFields.toolHints,
+        warnings: metadataFields.warnings,
+        nextReadoutCandidates: metadataFields.nextReadoutCandidates,
+        hadSensitiveIdentifier: metadataFields.hadSensitiveIdentifier,
+        sourceLength: metadataFields.sourceLength,
         exportRequired: true
       },
       exportPayload,
-      hadSensitiveIdentifier: summary.hadSensitiveIdentifier === true || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
-      sourceLength: Number.isFinite(Number(summary.sourceLength)) ? Math.max(0, Math.round(Number(summary.sourceLength))) : 0,
+      hadSensitiveIdentifier: metadataFields.hadSensitiveIdentifier,
+      sourceLength: metadataFields.sourceLength,
       retainedRawText: false,
       wouldTransmit: false,
       vehicleCommandEnabled: false
