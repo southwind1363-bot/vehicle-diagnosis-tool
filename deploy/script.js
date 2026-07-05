@@ -5584,19 +5584,23 @@ function analyzeObdScannerImport() {
   if (analysisApplicabilityLabel) {
     notes.push(`適用 ${analysisApplicabilityLabel}`);
   }
-  if (analysis.startedAt) {
-    notes.push(`開始 ${formatDateTime(analysis.startedAt)}`);
+  if (mergedSession?.startedAt || analysis.startedAt) {
+    notes.push(`開始 ${formatDateTime(mergedSession?.startedAt || analysis.startedAt)}`);
   }
-  if (analysis.endedAt) {
-    notes.push(`終了 ${formatDateTime(analysis.endedAt)}`);
+  if (mergedSession?.endedAt || analysis.endedAt) {
+    notes.push(`終了 ${formatDateTime(mergedSession?.endedAt || analysis.endedAt)}`);
   }
   if (analysis.connectionStatus?.displayStatus) {
     notes.push(`状態 ${analysis.connectionStatus.displayStatus}`);
   }
-  if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
+  if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
+    notes.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
+  } else if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
     notes.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
   }
-  if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) {
+  if (Array.isArray(mergedSession?.vciDevices) && mergedSession.vciDevices.length > 0) {
+    notes.push(`VCI ${mergedSession.vciDevices.length}件`);
+  } else if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) {
     notes.push(`VCI ${analysis.vciDevices.length}件`);
   }
   if (mergedSession?.sourceLength > 0) {
@@ -5690,10 +5694,13 @@ function analyzeObdScannerImport() {
     if (analysisVehicleLabel) {
       summary.push(`車両 ${analysisVehicleLabel}`);
     }
-    if (analysis.startedAt) summary.push(`開始 ${formatDateTime(analysis.startedAt)}`);
-    if (analysis.endedAt) summary.push(`終了 ${formatDateTime(analysis.endedAt)}`);
-    if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) summary.push(`VCI ${analysis.vciDevices.length}件`);
-    if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
+    if (mergedSession?.startedAt || analysis.startedAt) summary.push(`開始 ${formatDateTime(mergedSession?.startedAt || analysis.startedAt)}`);
+    if (mergedSession?.endedAt || analysis.endedAt) summary.push(`終了 ${formatDateTime(mergedSession?.endedAt || analysis.endedAt)}`);
+    if (Array.isArray(mergedSession?.vciDevices) && mergedSession.vciDevices.length > 0) summary.push(`VCI ${mergedSession.vciDevices.length}件`);
+    else if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) summary.push(`VCI ${analysis.vciDevices.length}件`);
+    if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
+      summary.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
+    } else if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
     }
     appendObdAnalysisReadoutSummary(summary, analysis);
@@ -5705,10 +5712,13 @@ function analyzeObdScannerImport() {
     if (analysisVehicleLabel) {
       summary.push(`車両 ${analysisVehicleLabel}`);
     }
-    if (analysis.startedAt) summary.push(`開始 ${formatDateTime(analysis.startedAt)}`);
-    if (analysis.endedAt) summary.push(`終了 ${formatDateTime(analysis.endedAt)}`);
-    if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) summary.push(`VCI ${analysis.vciDevices.length}件`);
-    if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
+    if (mergedSession?.startedAt || analysis.startedAt) summary.push(`開始 ${formatDateTime(mergedSession?.startedAt || analysis.startedAt)}`);
+    if (mergedSession?.endedAt || analysis.endedAt) summary.push(`終了 ${formatDateTime(mergedSession?.endedAt || analysis.endedAt)}`);
+    if (Array.isArray(mergedSession?.vciDevices) && mergedSession.vciDevices.length > 0) summary.push(`VCI ${mergedSession.vciDevices.length}件`);
+    else if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) summary.push(`VCI ${analysis.vciDevices.length}件`);
+    if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
+      summary.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
+    } else if (analysis.adapterIdentity?.adapterFamily || analysis.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${analysis.adapterIdentity.adapterFamily || analysis.adapterIdentity.adapterName}`);
     }
     appendObdAnalysisReadoutSummary(summary, analysis, { includeReadinessCount: true });
