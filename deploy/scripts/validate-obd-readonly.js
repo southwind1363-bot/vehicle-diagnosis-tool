@@ -1562,6 +1562,22 @@ check(aliasReadoutCoverage.progressPercent >= 80, "Readout coverage did not acce
 check(aliasReadoutCoverage.items.some((item) => item.id === "vci_devices" && item.count === 1), "Readout coverage did not count vci_list alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "freeze_frame_snapshot" && item.count === 2), "Readout coverage did not accept freeze_frame_response alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "supported_pid_matrix" && item.count >= 2), "Readout coverage did not accept supported_pid_snapshot alias input");
+const infrastructureHeavyReadoutCoverage = obd.buildReadoutCoverageSnapshot({
+  includeInfrastructure: true,
+  connectionStatus: { displayStatus: "ready" },
+  vciDevices: [{ id: "vci-1" }],
+  adapterIdentity: { adapterFamily: "elm327" },
+  dtcSnapshot: { blocked: false, codes: [] },
+  livePidSnapshot: { blocked: false, monitorValues: [], supportedPids: [], monitorValueSummary: { totalCount: 0, decodedCount: 0, undecodedRawCount: 0, numericCount: 0, textCount: 0 } },
+  freezeFrameSnapshot: { monitorValues: [], monitorValueSummary: { totalCount: 0, decodedCount: 0, undecodedRawCount: 0, numericCount: 0, textCount: 0 } },
+  readinessSnapshot: { monitors: [], incompleteCount: 0 },
+  ecuInfoSnapshot: { itemCount: 0, keyItemSummary: { missingCount: 0 } },
+  onboardMonitorSnapshot: { tests: [], failedCount: 0 },
+  supportedPidMatrix: { supportedPids: [], supportedCount: 0 }
+});
+const infrastructureHeavyNextReadoutCandidates = obd.buildNextReadoutCandidates(infrastructureHeavyReadoutCoverage, {});
+check(infrastructureHeavyNextReadoutCandidates.length === 5, "Next readout candidates should keep the top five prioritized items");
+check(!infrastructureHeavyNextReadoutCandidates.some((item) => item.id === "connection_status" || item.id === "vci_devices" || item.id === "adapter_identity"), "Next readout candidates let bridge infrastructure displace core readouts");
 const populatedScanSession = obd.buildDiagnosticScanSession({
   session_id: "coverage-check",
   dtcSnapshot: bridgeDtcSnapshot,
