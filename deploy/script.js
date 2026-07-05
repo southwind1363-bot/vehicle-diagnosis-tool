@@ -1589,6 +1589,7 @@ function formatNextReadoutSummary(candidates, options = {}) {
   const topLabel = formatTopNextReadoutLabel(candidates, limit, "");
   const count = Array.isArray(candidates) ? candidates.filter(Boolean).length : 0;
   if (!count) return fallback;
+  if (count === 1) return topLabel || "1件";
   return topLabel ? `${count}件 / ${topLabel}` : `${count}件`;
 }
 
