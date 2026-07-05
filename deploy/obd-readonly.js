@@ -1651,7 +1651,7 @@
       onboardMonitorSnapshot,
       readoutCoverage,
       monitorValues: livePidSnapshot.monitorValues,
-      monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
+      monitorValueSummary: resolveMonitorValueSummary(livePidSnapshot.monitorValues, livePidSnapshot.monitorValueSummary),
       monitorInsights: livePidSnapshot.monitorInsights,
       toolHints: resolvedMetadata.toolHints,
       freezeFrameSnapshot,
@@ -1663,9 +1663,11 @@
       }),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
-      exportRequired: true,
-      retainedRawText: false,
-      wouldTransmit: false
+      ...buildReadOnlyFlags({
+        exportRequired: true,
+        retainedRawText: false,
+        wouldTransmit: false
+      })
     };
   }
 
@@ -1840,9 +1842,11 @@
       ),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
-      exportRequired: true,
-      retainedRawText: false,
-      wouldTransmit: false
+      ...buildReadOnlyFlags({
+        exportRequired: true,
+        retainedRawText: false,
+        wouldTransmit: false
+      })
     };
   }
 
@@ -2032,6 +2036,27 @@
 
   function getReadoutCoverageInput(input = {}) {
     return input.readoutCoverage || input.readout_coverage || input.readoutCoverageResponse || input.readout_coverage_response || null;
+  }
+
+  function resolveMonitorValueSummary(monitorValues = [], explicitSummary = null) {
+    return explicitSummary || buildMonitorValueSummary(monitorValues);
+  }
+
+  function buildReadOnlyFlags({
+    retainedRawText = false,
+    retainedRawFrames = undefined,
+    wouldTransmit = false,
+    vehicleCommandEnabled = undefined,
+    exportRequired = undefined
+  } = {}) {
+    const flags = {
+      retainedRawText,
+      wouldTransmit
+    };
+    if (retainedRawFrames !== undefined) flags.retainedRawFrames = retainedRawFrames;
+    if (vehicleCommandEnabled !== undefined) flags.vehicleCommandEnabled = vehicleCommandEnabled;
+    if (exportRequired !== undefined) flags.exportRequired = exportRequired;
+    return flags;
   }
 
   function mergeNestedSessionMetadata(base = {}, nested = {}) {
@@ -4250,7 +4275,7 @@
         readoutCoverage,
         vehicleApplicability: metadataOverrides.vehicleApplicability || {}
       }),
-      monitorValueSummary: buildMonitorValueSummary([
+      monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
       ]),
@@ -4259,10 +4284,12 @@
       warnings: resolveWarningList(warnings, explicitWarnings),
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
-      retainedRawText: false,
-      retainedRawFrames: false,
-      wouldTransmit: false,
-      vehicleCommandEnabled: false
+      ...buildReadOnlyFlags({
+        retainedRawText: false,
+        retainedRawFrames: false,
+        wouldTransmit: false,
+        vehicleCommandEnabled: false
+      })
     };
   }
 
