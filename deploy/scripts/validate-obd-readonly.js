@@ -1211,6 +1211,7 @@ check(bridgeDiagnosticImportSessionOnly.freezeFrameSnapshot?.triggerDtc === "P01
 check(bridgeDiagnosticImportSessionOnly.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not rebuild ecu_info_snapshot from bridgeSession-only input");
 check(bridgeDiagnosticImportSessionOnly.monitorValues.length === bridgePidSnapshot.monitorValues.length, "Bridge diagnostic import did not rebuild monitor_values from bridgeSession-only input");
 check(bridgeDiagnosticImportSessionOnly.codes.join(",") === "P0171,P0300", "Bridge diagnostic import did not rebuild dtc_codes from bridgeSession-only input");
+check(bridgeDiagnosticImportSessionOnly.hadSensitiveIdentifier === true, "Bridge diagnostic import did not rebuild hadSensitiveIdentifier from bridgeSession-only input");
 check(bridgeDiagnosticImport.protocol === "ISO15765-4", "ブリッジ診断取込トップレベルへprotocolを引き継げません");
 check(bridgeDiagnosticImport.capturedAt === "2026-06-28T00:00:00Z", "ブリッジ診断取込トップレベルへcapturedAtを引き継げません");
 check(bridgeDiagnosticImport.exportPayload.schema_version === "bridge_session_export_v1", "ブリッジ診断取込のエクスポート形式が不正です");
@@ -1536,6 +1537,7 @@ check(mergedDiagnosticInputBridgeSessionOnlyImport.freezeFrameSnapshot?.triggerD
 check(mergedDiagnosticInputBridgeSessionOnlyImport.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Combined diagnostic inputs did not recover ecu_info_snapshot from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.monitorValues.length >= bridgePidSnapshot.monitorValues.length, "Combined diagnostic inputs did not recover monitor_values from bridgeSession-only diagnostic import");
+check(mergedDiagnosticInputBridgeSessionOnlyImport.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not recover hadSensitiveIdentifier from bridgeSession-only diagnostic import");
 const mergedDiagnosticInputNestedOuterOverride = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_diagnostic_import: {
