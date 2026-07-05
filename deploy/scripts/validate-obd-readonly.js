@@ -1017,6 +1017,11 @@ const explicitNextReadoutCandidatesSample = [
     reason: "Explicit candidate sample"
   }
 ];
+const explicitNextReadoutCandidatesUnsortedSample = [
+  { id: "live_pid_snapshot", label: "Live PID", status: "missing", priority: 80, reason: "Live PID candidate" },
+  { id: "freeze_frame_snapshot", label: "Freeze Frame", status: "missing", priority: 95, reason: "Freeze frame candidate" },
+  { id: "dtc_snapshot", label: "DTC", status: "missing", priority: 100, reason: "DTC candidate" }
+];
 const bridgeSummaryApplicabilityAliases = obd.buildBridgeSessionSummary({
   vehicle_profile: { maker: "Toyota", model: "Prius" },
   vehicle_applicability: vehicleApplicabilitySample,
@@ -1242,6 +1247,10 @@ const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
   ecu_response_summary: bridgeSummary.ecuResponseSummary,
   next_readout_candidates: explicitNextReadoutCandidatesSample
 });
+const bridgeDiagnosticImportExplicitUnsortedCandidates = obd.buildBridgeDiagnosticImport({
+  dtc_codes: ["P0171"],
+  next_readout_candidates: explicitNextReadoutCandidatesUnsortedSample
+});
 check(bridgeDiagnosticImportAliases.capturedAt === "2026-06-28T00:09:00Z", "Bridge diagnostic import did not accept captured_at summary alias input");
 check(bridgeDiagnosticImportAliases.codes[0] === "P0171", "Bridge diagnostic import did not accept dtc_codes summary alias input");
 check(bridgeDiagnosticImportAliases.monitorValues[0]?.id === "engine_speed", "Bridge diagnostic import did not accept monitor_values summary alias input");
@@ -1259,6 +1268,7 @@ check(bridgeDiagnosticImportAliases.warnings.length === 1 && bridgeDiagnosticImp
 check(bridgeDiagnosticImportAliases.nextReadoutCandidates[0]?.id === "custom_snapshot", "Bridge diagnostic import did not preserve explicit next_readout_candidates summary alias input");
 check(bridgeDiagnosticImportAliases.bridgeSession.vciDevices[0]?.id === "summary-import-vci", "Bridge diagnostic import did not accept vci_list summary alias input");
 check(bridgeDiagnosticImportAliases.bridgeSession.nextReadoutCandidates[0]?.id === "custom_snapshot", "Bridge diagnostic import did not preserve explicit next_readout_candidates on bridgeSession");
+check(bridgeDiagnosticImportExplicitUnsortedCandidates.nextReadoutCandidates[0]?.id === "dtc_snapshot", "Bridge diagnostic import did not sort explicit next_readout_candidates by priority");
 check(bridgeDiagnosticImportAliases.readinessSnapshot.incompleteCount === 1, "Bridge diagnostic import did not accept readiness_response summary alias input");
 check(bridgeDiagnosticImportAliases.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge diagnostic import did not accept ecu_info_response summary alias input");
 check(bridgeDiagnosticImportAliases.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not accept onboard_monitor_response summary alias input");
@@ -2162,9 +2172,14 @@ const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
   scan_session: bridgeExportPayload.session,
   session_id: "shop-test-scan-session-alias"
 });
+const scanSessionExplicitUnsortedCandidates = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-explicit-candidates",
+  next_readout_candidates: explicitNextReadoutCandidatesUnsortedSample
+});
 check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
 check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
 check(scanSessionScanSessionAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from scan_session alias input");
+check(scanSessionExplicitUnsortedCandidates.nextReadoutCandidates[0]?.id === "dtc_snapshot", "Diagnostic scan session did not sort explicit next_readout_candidates by priority");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"

@@ -1781,7 +1781,7 @@
       monitorValueSummary,
       monitorInsights,
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
-      nextReadoutCandidates: cloneBridgeArrayItems(
+      nextReadoutCandidates: normalizeNextReadoutCandidates(
         Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
           ? nextReadoutCandidatesInput
           : buildNextReadoutCandidates(
@@ -1798,6 +1798,18 @@
   function cloneBridgeArrayItems(items) {
     if (!Array.isArray(items)) return [];
     return items.map((item) => (item && typeof item === "object" ? { ...item } : item));
+  }
+
+  function normalizeNextReadoutCandidates(items) {
+    return cloneBridgeArrayItems(items)
+      .filter((item) => item && typeof item === "object")
+      .sort((left, right) => {
+        const rightPriority = Number.isFinite(right?.priority) ? right.priority : 0;
+        const leftPriority = Number.isFinite(left?.priority) ? left.priority : 0;
+        if (rightPriority !== leftPriority) return rightPriority - leftPriority;
+        if (left?.status !== right?.status) return left?.status === "missing" ? -1 : 1;
+        return String(left?.label || left?.id || "").localeCompare(String(right?.label || right?.id || ""), "ja");
+      });
   }
 
   function getDiagnosticSessionInput(input = {}) {
@@ -1852,7 +1864,7 @@
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(cloneBridgeArrayItems(summary.monitorValues)),
         monitor_insights: cloneBridgeArrayItems(summary.monitorInsights),
         warnings: [...new Set(summary.warnings || [])],
-        next_readout_candidates: cloneBridgeArrayItems(summary.nextReadoutCandidates)
+        next_readout_candidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates)
       },
       safety: {
         read_only_phase: true,
@@ -1894,7 +1906,7 @@
       vciDevices: cloneBridgeArrayItems(summary.vciDevices),
       adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
       warnings: [...new Set(summary.warnings || [])],
-      nextReadoutCandidates: cloneBridgeArrayItems(summary.nextReadoutCandidates),
+      nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
       bridgeSession: {
         startedAt: summary.startedAt || null,
         endedAt: summary.endedAt || null,
@@ -1917,7 +1929,7 @@
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
         warnings: [...new Set(summary.warnings || [])],
-        nextReadoutCandidates: cloneBridgeArrayItems(summary.nextReadoutCandidates),
+        nextReadoutCandidates: normalizeNextReadoutCandidates(summary.nextReadoutCandidates),
         exportRequired: true
       },
       exportPayload,
@@ -2035,7 +2047,7 @@
       bridgeSession,
       bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
       warnings: [...new Set(bridgeImport?.warnings || bridgeSession?.warnings || [])],
-      nextReadoutCandidates: cloneBridgeArrayItems(
+      nextReadoutCandidates: normalizeNextReadoutCandidates(
         (bridgeImport?.nextReadoutCandidates || bridgeSession?.nextReadoutCandidates || []).length
           ? (bridgeImport?.nextReadoutCandidates || bridgeSession?.nextReadoutCandidates || [])
           : buildNextReadoutCandidates(
@@ -3732,7 +3744,7 @@
       livePidSnapshot,
       supportedPidMatrix,
       readoutCoverage,
-      nextReadoutCandidates: cloneBridgeArrayItems(
+      nextReadoutCandidates: normalizeNextReadoutCandidates(
         Array.isArray(explicitNextReadoutCandidates) && explicitNextReadoutCandidates.length
           ? explicitNextReadoutCandidates
           : buildNextReadoutCandidates(
@@ -4134,6 +4146,7 @@
     normalizeReadoutCoverageSnapshot,
     normalizeVehicleApplicabilitySnapshot,
     buildNextReadoutCandidates,
+    normalizeNextReadoutCandidates,
     mergeDiagnosticInputs,
     normalizeDtcSnapshot,
     normalizeFreezeFrameSnapshot,
