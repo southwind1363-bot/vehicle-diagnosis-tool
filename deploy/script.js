@@ -4412,6 +4412,8 @@ function renderObdBridgeReadout(parts = {}) {
     onboardMonitorSnapshot: onboardMonitorSnapshot || { tests: [] },
     supportedPidMatrix: supportedPidMatrix || { supported_pids: [] },
     ecuResponseSummary: importResult.ecuResponseSummary,
+    readoutCoverage: importResult.readoutCoverage || importResult.bridgeSession?.readoutCoverage,
+    nextReadoutCandidates: importResult.nextReadoutCandidates || importResult.bridgeSession?.nextReadoutCandidates,
     connectionStatus: importResult.connectionStatus || importResult.bridgeSession?.connectionStatus,
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
     vehicleProfile: vehicleProfile || importResult.vehicleProfile || importResult.bridgeSession?.vehicleProfile || undefined,
@@ -5518,7 +5520,9 @@ function analyzeObdScannerImport() {
       ecuInfoSnapshot: currentSession.ecuInfoSnapshot,
       onboardMonitorSnapshot: currentSession.onboardMonitorSnapshot,
       supportedPidMatrix: currentSession.supportedPidMatrix,
-      ecuResponseSummary: currentSession.ecuResponseSummary
+      ecuResponseSummary: currentSession.ecuResponseSummary,
+      readoutCoverage: currentSession.readoutCoverage,
+      nextReadoutCandidates: currentSession.nextReadoutCandidates
     })
     : null;
   const analysis = bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
