@@ -1778,6 +1778,23 @@ check(mergedDiagnosticInputMetadataOuterOverride.toolHints.join(",") === "CONSUL
 check(mergedDiagnosticInputMetadataOuterOverride.warnings.includes("negative_obd_response_present") && mergedDiagnosticInputMetadataOuterOverride.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not merge outer warning_flags with nested bridgeSession input");
 check(mergedDiagnosticInputMetadataOuterOverride.sourceLength === 5, "Combined diagnostic inputs did not preserve merged sourceLength behavior after outer bridge source_length override");
 check(mergedDiagnosticInputMetadataOuterOverride.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve hadSensitiveIdentifier when nested bridgeSession remained true");
+const mergedDiagnosticInputDirectBridgeImportNestedSourceLength = obd.mergeDiagnosticInputs({
+  bridge_diagnostic_import: {
+    importType: "bridge_diagnostic_snapshot",
+    source: "local_bridge",
+    codes: ["P0171"],
+    sourceLength: 12,
+    bridgeSession: {
+      codes: ["P0171"],
+      tool_hints: ["NESTED"],
+      warning_flags: ["freeze_frame_available"],
+      source_length: 48
+    }
+  }
+});
+check(mergedDiagnosticInputDirectBridgeImportNestedSourceLength.toolHints.includes("NESTED"), "Combined diagnostic inputs did not preserve nested tool_hints from direct bridge_diagnostic_import input");
+check(mergedDiagnosticInputDirectBridgeImportNestedSourceLength.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not preserve nested warning_flags from direct bridge_diagnostic_import input");
+check(mergedDiagnosticInputDirectBridgeImportNestedSourceLength.sourceLength === 48, "Combined diagnostic inputs did not retain nested bridgeSession source_length from direct bridge_diagnostic_import input");
 const mergedDiagnosticInputSummaryOnlyMonitorCounts = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportSummaryOnlyRawWarning
 });

@@ -2228,6 +2228,8 @@
   }
 
   function buildMergedBridgeMetadata({ bridgeImport = null, bridgeSession = null } = {}) {
+    const bridgeImportMetadata = getSessionMetadataOverrides(bridgeImport || {});
+    const bridgeSessionMetadata = getSessionMetadataOverrides(bridgeSession || {});
     const readoutCoverageInput = pickDefined(
       bridgeImport?.readoutCoverage,
       bridgeImport?.readout_coverage,
@@ -2264,15 +2266,16 @@
       importClassification: importClassification && typeof importClassification === "object"
         ? { ...importClassification }
         : null,
-      toolHints: mergeUniqueStrings(bridgeImport?.toolHints, bridgeSession?.toolHints),
-      warnings: [...new Set(bridgeImport?.warnings || bridgeSession?.warnings || [])],
-      hadSensitiveIdentifier: bridgeImport?.hadSensitiveIdentifier === true
+      toolHints: mergeUniqueStrings(bridgeImportMetadata.toolHints, bridgeSessionMetadata.toolHints),
+      warnings: resolveWarningList(bridgeImportMetadata.warnings, bridgeSessionMetadata.warnings),
+      hadSensitiveIdentifier: bridgeImportMetadata.hadSensitiveIdentifier === true
         || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true
-        || bridgeSession?.hadSensitiveIdentifier === true
+        || bridgeImport?.ecu_info_snapshot?.hadSensitiveIdentifier === true
+        || bridgeSessionMetadata.hadSensitiveIdentifier === true
         || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
       sourceLength: Math.max(
-        Number.isFinite(Number(bridgeImport?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeImport.sourceLength))) : 0,
-        Number.isFinite(Number(bridgeSession?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeSession.sourceLength))) : 0
+        Number.isFinite(Number(bridgeImportMetadata.sourceLength)) ? Math.max(0, Math.round(Number(bridgeImportMetadata.sourceLength))) : 0,
+        Number.isFinite(Number(bridgeSessionMetadata.sourceLength)) ? Math.max(0, Math.round(Number(bridgeSessionMetadata.sourceLength))) : 0
       )
     };
   }
@@ -2379,6 +2382,26 @@
   function buildBridgeDiagnosticImport(parts = {}) {
     const summary = resolveBridgeSummary(parts);
     const metadataFields = buildSummaryMetadataFields(summary);
+    const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});
+    const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
+    const bridgeSessionMetadataFields = {
+      toolHints: preserveNestedBridgeSessionMetadata
+        ? mergeUniqueStrings(metadataFields.toolHints, nestedSessionMetadata.toolHints)
+        : metadataFields.toolHints,
+      warnings: preserveNestedBridgeSessionMetadata
+        ? resolveWarningList(metadataFields.warnings, nestedSessionMetadata.warnings)
+        : metadataFields.warnings,
+      nextReadoutCandidates: metadataFields.nextReadoutCandidates,
+      hadSensitiveIdentifier: preserveNestedBridgeSessionMetadata
+        ? metadataFields.hadSensitiveIdentifier === true || nestedSessionMetadata.hadSensitiveIdentifier === true
+        : metadataFields.hadSensitiveIdentifier,
+      sourceLength: preserveNestedBridgeSessionMetadata
+        ? Math.max(
+          Number.isFinite(Number(metadataFields.sourceLength)) ? Math.max(0, Math.round(Number(metadataFields.sourceLength))) : 0,
+          Number.isFinite(Number(nestedSessionMetadata.sourceLength)) ? Math.max(0, Math.round(Number(nestedSessionMetadata.sourceLength))) : 0
+        )
+        : metadataFields.sourceLength
+    };
     const exportPayload = buildBridgeSessionExportPayload(summary);
     const codes = cloneBridgeArrayItems(summary.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
@@ -2433,11 +2456,11 @@
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
         importClassification: metadataFields.importClassification,
-        toolHints: metadataFields.toolHints,
-        warnings: metadataFields.warnings,
-        nextReadoutCandidates: metadataFields.nextReadoutCandidates,
-        hadSensitiveIdentifier: metadataFields.hadSensitiveIdentifier,
-        sourceLength: metadataFields.sourceLength,
+        toolHints: bridgeSessionMetadataFields.toolHints,
+        warnings: bridgeSessionMetadataFields.warnings,
+        nextReadoutCandidates: bridgeSessionMetadataFields.nextReadoutCandidates,
+        hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
+        sourceLength: bridgeSessionMetadataFields.sourceLength,
         exportRequired: true
       },
       exportPayload,
