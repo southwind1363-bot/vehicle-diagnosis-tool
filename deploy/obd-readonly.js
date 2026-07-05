@@ -1683,6 +1683,7 @@
   function getBridgeSummaryInput(parts = {}) {
     const nested = parts.bridgeSession || parts.bridge_session || parts.session || null;
     if (!nested || typeof nested !== "object") return parts;
+    const mergedMetadata = mergeNestedSessionMetadata(parts, nested);
     return {
       ...nested,
       ...parts,
@@ -1691,16 +1692,7 @@
       endedAt: parts.endedAt || parts.ended_at || nested.endedAt || nested.ended_at || null,
       capturedAt: parts.capturedAt || parts.captured_at || nested.capturedAt || nested.captured_at || null,
       protocol: parts.protocol || nested.protocol || null,
-      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
-      vehicleApplicability: parts.vehicleApplicability || parts.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
-      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || nested.readoutCoverage || nested.readout_coverage || null,
-      readout_coverage: parts.readout_coverage || parts.readoutCoverage || nested.readout_coverage || nested.readoutCoverage || null,
-      nextReadoutCandidates: pickDefined(parts.nextReadoutCandidates, parts.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
-      importClassification: pickDefined(parts.importClassification, parts.import_classification, nested.importClassification, nested.import_classification, null),
-      toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints, nested.toolHints, nested.tool_hints),
-      warnings: mergeUniqueStrings(parts.warnings, parts.warning_flags, parts.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
-      sourceLength: pickDefined(parts.sourceLength, parts.source_length, nested.sourceLength, nested.source_length, null),
-      hadSensitiveIdentifier: pickDefined(parts.hadSensitiveIdentifier, parts.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, null)
+      ...mergedMetadata
     };
   }
 
@@ -1890,6 +1882,42 @@
       || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
       || Boolean(vciDevicesInput?.devices?.length)
       || Boolean(nestedSession);
+  }
+
+  function mergeNestedSessionMetadata(base = {}, nested = {}) {
+    return {
+      vehicleProfile: base.vehicleProfile || base.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
+      vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
+      vehicleApplicability: base.vehicleApplicability || base.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
+      vehicle_applicability: base.vehicle_applicability || base.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
+      readoutCoverage: pickDefined(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
+      readout_coverage: pickDefined(base.readout_coverage, base.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
+      nextReadoutCandidates: pickDefined(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
+      next_readout_candidates: pickDefined(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
+      importClassification: pickDefined(base.importClassification, base.import_classification, nested.importClassification, nested.import_classification, null),
+      import_classification: pickDefined(base.import_classification, base.importClassification, nested.import_classification, nested.importClassification, null),
+      toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, nested.toolHints, nested.tool_hints),
+      tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
+      warnings: mergeUniqueStrings(base.warnings, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
+      sourceLength: pickDefined(base.sourceLength, base.source_length, nested.sourceLength, nested.source_length, null),
+      source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
+      hadSensitiveIdentifier: [
+        base.hadSensitiveIdentifier,
+        base.had_sensitive_identifier,
+        nested.hadSensitiveIdentifier,
+        nested.had_sensitive_identifier
+      ].some((value) => value === true)
+        ? true
+        : pickDefined(base.hadSensitiveIdentifier, base.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, null),
+      had_sensitive_identifier: [
+        base.had_sensitive_identifier,
+        base.hadSensitiveIdentifier,
+        nested.had_sensitive_identifier,
+        nested.hadSensitiveIdentifier
+      ].some((value) => value === true)
+        ? true
+        : pickDefined(base.had_sensitive_identifier, base.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
+    };
   }
 
   function getDiagnosticSessionInput(input = {}) {
