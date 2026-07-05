@@ -1105,6 +1105,7 @@ const bridgeSummaryFreezeFrameDtcCandidates = obd.buildNextReadoutCandidates(
   { codes: ["P0171"] }
 );
 check(bridgeSummaryFreezeFrameDtcCandidates.find((item) => item.id === "freeze_frame_snapshot")?.reason === "DTC確定のため再確認候補", "Next readout candidates did not explain freeze_frame_snapshot priority when DTCs are present");
+check(bridgeSummaryFreezeFrameDtcCandidates.find((item) => item.id === "readiness_snapshot")?.reason === "判定状態確認のため再確認候補", "Next readout candidates did not explain readiness_snapshot priority when DTCs are present");
 const bridgeSummaryMissingKeyItemCandidates = obd.buildNextReadoutCandidates(
   manualApplicabilityReadoutCoverage,
   { status: "matched" },
