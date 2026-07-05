@@ -2919,7 +2919,8 @@ function getObdAutoStage() {
     || obdDevSession.lastSession?.readinessSnapshot?.monitorCount
     || obdDevSession.lastSession?.onboardMonitorSnapshot?.testCount
   );
-  if (obdDevModeUnlocked) return "details";
+  const hasPendingReadoutCandidates = Boolean(obdDevSession.lastSession?.nextReadoutCandidates?.length);
+  if (obdDevModeUnlocked && !hasPendingReadoutCandidates) return "details";
   if (hasReadout) return "results";
   return "setup";
 }
