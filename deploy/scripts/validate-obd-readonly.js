@@ -1027,6 +1027,27 @@ check(normalizedVehicleApplicabilitySnakeArrays.maker === "Toyota" && normalized
 check(normalizedVehicleApplicabilitySnakeArrays.candidateRangeCount === 2 && normalizedVehicleApplicabilitySnakeArrays.applicableRangeCount === 1, "Vehicle applicability normalization did not derive counts from snake_case range aliases");
 check(normalizedVehicleApplicabilitySnakeArrays.supportedEngineCodeCount === 1, "Vehicle applicability normalization did not derive supported engine count from snake_case aliases");
 check(normalizedVehicleApplicabilitySnakeArrays.status === "matched" && normalizedVehicleApplicabilitySnakeArrays.summaryLabel === "Toyota Prius / Applicable candidate found", "Vehicle applicability normalization did not preserve snake_case status inputs");
+const normalizedVehicleApplicabilityCamelArrays = obd.normalizeVehicleApplicabilitySnapshot({
+  make: "Toyota",
+  model: "Corolla",
+  modelCode: "ZRE212",
+  year: "2021",
+  engineCode: "2ZR-FAE",
+  catalogMatched: true,
+  yearMatched: true,
+  engineMatched: true,
+  modelCodeMatched: true,
+  candidateRanges: [{ start: "2019" }, { start: "2021" }, { start: "2023" }],
+  applicableRanges: [{ start: "2021" }, { start: "2022" }],
+  supportedEngineCodes: ["2ZR-FAE"],
+  candidateRangeCount: 3,
+  applicableRangeCount: 2,
+  supportedEngineCodeCount: 1,
+  summaryLabel: "Toyota Corolla / Applicable candidate found"
+});
+check(normalizedVehicleApplicabilityCamelArrays.candidateRangeCount === 3 && normalizedVehicleApplicabilityCamelArrays.applicableRangeCount === 2, "Vehicle applicability normalization did not accept camelCase range aliases");
+check(normalizedVehicleApplicabilityCamelArrays.supportedEngineCodeCount === 1, "Vehicle applicability normalization did not accept camelCase supported engine code aliases");
+check(normalizedVehicleApplicabilityCamelArrays.status === "matched" && normalizedVehicleApplicabilityCamelArrays.modelCodeMatched === true, "Vehicle applicability normalization did not preserve camelCase match flags");
 const explicitNextReadoutCandidatesSample = [
   {
     id: "custom_snapshot",
@@ -4243,6 +4264,28 @@ check(normalizedNextReadoutCandidatesAliases[1]?.label === "ECU Info", "Next rea
 check(normalizedNextReadoutCandidatesAliases[1]?.priority === 92, "Next readout candidates did not normalize sort_order alias input");
 check(normalizedNextReadoutCandidatesAliases[1]?.reason === "Need ECU info refresh", "Next readout candidates did not normalize reason_label alias input");
 check(normalizedNextReadoutCandidatesAliases[1]?.applicabilityStatus === "partial", "Next readout candidates did not normalize applicability_status alias input");
+const normalizedNextReadoutCandidatesCamelAliases = obd.normalizeNextReadoutCandidates([
+  {
+    readoutId: "freeze_frame_snapshot",
+    displayLabel: "Freeze Frame",
+    status: "empty",
+    sortOrder: "95",
+    reasonLabel: "Need freeze frame refresh",
+    vehicleApplicabilityStatus: "partial"
+  },
+  {
+    id: "dtc_snapshot",
+    label: "DTC",
+    status: "missing",
+    priority: 100,
+    reason: "Need DTC"
+  }
+]);
+check(normalizedNextReadoutCandidatesCamelAliases[1]?.id === "freeze_frame_snapshot", "Next readout candidates did not preserve readoutId camelCase alias input");
+check(normalizedNextReadoutCandidatesCamelAliases[1]?.label === "Freeze Frame", "Next readout candidates did not preserve displayLabel camelCase alias input");
+check(normalizedNextReadoutCandidatesCamelAliases[1]?.priority === 95, "Next readout candidates did not normalize sortOrder camelCase alias input");
+check(normalizedNextReadoutCandidatesCamelAliases[1]?.reason === "Need freeze frame refresh", "Next readout candidates did not normalize reasonLabel camelCase alias input");
+check(normalizedNextReadoutCandidatesCamelAliases[1]?.applicabilityStatus === "partial", "Next readout candidates did not normalize vehicleApplicabilityStatus camelCase alias input");
 const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
   session_id: "shop-test-non-infra-bridge-session"
