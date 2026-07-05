@@ -5555,11 +5555,12 @@ function analyzeObdScannerImport() {
   const mergedSession = bridgeImport ? (obdDevSession.lastSession || null) : null;
   const mergedCodes = mergedSession?.dtcSnapshot?.codes || analysis.codes;
   const mergedMonitorValues = mergedSession?.livePidSnapshot?.monitorValues || analysis.monitorValues;
+  const summarySource = mergedSession || analysis;
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
-  renderObdImportToolHints(analysis.toolHints);
+  renderObdImportToolHints(summarySource.toolHints || analysis.toolHints);
 
   if (!hasScannerText && !bridgeImport) {
     obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
@@ -5569,14 +5570,13 @@ function analyzeObdScannerImport() {
   }
 
   const notes = [];
-  const summarySource = mergedSession || analysis;
-  if (Array.isArray(analysis.toolHints) && analysis.toolHints.length > 0) {
-    notes.push(`入力元 ${analysis.toolHints.join(" / ")}`);
-    if (analysis.toolHints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
+  if (Array.isArray(summarySource.toolHints) && summarySource.toolHints.length > 0) {
+    notes.push(`入力元 ${summarySource.toolHints.join(" / ")}`);
+    if (summarySource.toolHints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
       notes.push("メーカー固有候補は未確認扱い");
     }
   }
-  if (analysis.protocol) notes.push(`Protocol ${analysis.protocol}`);
+  if (summarySource.protocol) notes.push(`Protocol ${summarySource.protocol}`);
   const analysisVehicleLabel = formatVehicleProfileLabel(summarySource.vehicleProfile);
   const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summarySource.vehicleApplicability);
   if (analysisVehicleLabel) {
@@ -5671,7 +5671,7 @@ function analyzeObdScannerImport() {
   const detailNote = notes.length ? ` ${notes.join(" / ")}。` : "";
 
   if (!mergedCodes.length) {
-    obdImportStatus.textContent = analysis.hadSensitiveIdentifier
+    obdImportStatus.textContent = summarySource.hadSensitiveIdentifier
       ? `識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。${detailNote}`
       : bridgeImport
         ? `${hasScannerText ? "ローカルブリッジ読取と統合しましたが" : "ローカルブリッジ読取結果では"}、標準形式のDTCは検出できませんでした。${detailNote}`
