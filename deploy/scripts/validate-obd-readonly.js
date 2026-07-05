@@ -1306,6 +1306,13 @@ check(bridgeExportDirectMixedMetadataSummary.session.had_sensitive_identifier ==
 check(bridgeExportDirectMixedMetadataSummary.session.source_length === 68, "Bridge export did not preserve mixed-case direct source_length summary input");
 check(bridgeExportDirectMixedMetadataSummary.session.tool_hints.join(",") === "Techstream", "Bridge export did not preserve mixed-case direct toolHints summary input");
 check(bridgeExportDirectMixedMetadataSummary.session.warnings.includes("negative_obd_response_present"), "Bridge export did not preserve mixed-case direct warning_flags summary input");
+const bridgeExportDirectMixedVehicleMetadataSummary = obd.buildBridgeSessionExportPayload({
+  vehicleProfile: { maker: "Toyota", model: "Mixed Aqua" },
+  vehicle_applicability: vehicleApplicabilitySample,
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(bridgeExportDirectMixedVehicleMetadataSummary.session.vehicle_profile?.model === "Mixed Aqua", "Bridge export did not preserve mixed-case direct vehicleProfile summary input");
+check(bridgeExportDirectMixedVehicleMetadataSummary.session.vehicle_applicability?.status === "matched", "Bridge export did not preserve mixed-case direct vehicle_applicability summary input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",
@@ -1430,6 +1437,13 @@ check(bridgeDiagnosticImportDirectMixedMetadata.hadSensitiveIdentifier === true,
 check(bridgeDiagnosticImportDirectMixedMetadata.sourceLength === 67, "Bridge diagnostic import did not preserve mixed-case direct source_length");
 check(bridgeDiagnosticImportDirectMixedMetadata.toolHints.join(",") === "Techstream", "Bridge diagnostic import did not preserve mixed-case direct toolHints");
 check(bridgeDiagnosticImportDirectMixedMetadata.warnings.includes("negative_obd_response_present"), "Bridge diagnostic import did not preserve mixed-case direct warning_flags");
+const bridgeDiagnosticImportDirectMixedVehicleMetadata = obd.buildBridgeDiagnosticImport({
+  vehicleProfile: { maker: "Toyota", model: "Mixed Prius" },
+  vehicle_applicability: vehicleApplicabilitySample,
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(bridgeDiagnosticImportDirectMixedVehicleMetadata.vehicleProfile?.model === "Mixed Prius", "Bridge diagnostic import did not preserve mixed-case direct vehicleProfile");
+check(bridgeDiagnosticImportDirectMixedVehicleMetadata.vehicleApplicability?.status === "matched", "Bridge diagnostic import did not preserve mixed-case direct vehicle_applicability");
 check(bridgeDiagnosticImport.retainedRawText === false, "ブリッジ診断取込が原文保持になっています");
 check(bridgeDiagnosticImport.wouldTransmit === false && bridgeDiagnosticImport.vehicleCommandEnabled === false, "ブリッジ診断取込が送信可能扱いになっています");
 const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
@@ -2785,6 +2799,15 @@ check(decodedScanSessionAliasInputs.supportedPidMatrix.supportedPids.includes("4
 check(decodedScanSessionAliasInputs.onboardMonitorSnapshot.testCount === 1, "Decoded OBD session did not accept onboard_monitor_response alias input");
 check(decodedScanSessionAliasInputs.startedAt === "2026-06-28T00:12:00Z" && decodedScanSessionAliasInputs.endedAt === "2026-06-28T00:13:00Z", "Decoded OBD session did not accept started_at or ended_at alias input");
 check(decodedScanSessionAliasInputs.vehicleProfile?.model === "Prius", "Decoded OBD session did not accept vehicle_profile alias input");
+const decodedScanSessionDirectMixedVehicleMetadata = obd.buildDecodedObdScanSession({
+  sessionId: "decoded-mixed-vehicle-meta",
+  vehicleProfile: { maker: "Toyota", model: "Mixed Axio" },
+  vehicle_applicability: vehicleApplicabilitySample,
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" }
+});
+check(decodedScanSessionDirectMixedVehicleMetadata.sessionId === "decoded-mixed-vehicle-meta", "Decoded OBD session did not preserve mixed-case direct sessionId input");
+check(decodedScanSessionDirectMixedVehicleMetadata.vehicleProfile?.model === "Mixed Axio", "Decoded OBD session did not preserve mixed-case direct vehicleProfile input");
+check(decodedScanSessionDirectMixedVehicleMetadata.vehicleApplicability?.status === "matched", "Decoded OBD session did not preserve mixed-case direct vehicle_applicability input");
 const decodedScanSessionEcuResponsesAlias = obd.buildDecodedObdScanSession({
   session_id: "decoded-ecu-responses-alias-test",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3159,6 +3182,14 @@ const textScanSessionAliasOptions = obd.buildScanSessionFromObdText(obdTextLog, 
 });
 check(textScanSessionAliasOptions.startedAt === "2026-06-28T00:14:00Z" && textScanSessionAliasOptions.endedAt === "2026-06-28T00:15:00Z", "OBD text scan session did not accept started_at or ended_at option alias input");
 check(textScanSessionAliasOptions.vehicleProfile?.model === "Corolla", "OBD text scan session did not accept vehicle_profile option alias input");
+const textScanSessionDirectMixedVehicleMetadata = obd.buildScanSessionFromObdText(obdTextLog, {
+  sessionId: "obd-text-mixed-vehicle-meta",
+  vehicleProfile: { maker: "Toyota", model: "Mixed Rize" },
+  vehicle_applicability: vehicleApplicabilitySample
+});
+check(textScanSessionDirectMixedVehicleMetadata.sessionId === "obd-text-mixed-vehicle-meta", "OBD text scan session did not preserve mixed-case direct sessionId option input");
+check(textScanSessionDirectMixedVehicleMetadata.vehicleProfile?.model === "Mixed Rize", "OBD text scan session did not preserve mixed-case direct vehicleProfile option input");
+check(textScanSessionDirectMixedVehicleMetadata.vehicleApplicability?.status === "matched", "OBD text scan session did not preserve mixed-case direct vehicle_applicability option input");
 const textScanSessionNestedOptions = obd.buildScanSessionFromObdText(obdTextLog, {
   scan_session: {
     session_id: "obd-text-nested-options",
@@ -3529,6 +3560,15 @@ check(scanSessionAliasInputs.startedAt === "2026-06-28T00:10:00Z" && scanSession
 check(scanSessionAliasInputs.vehicleProfile?.model === "Aqua", "Diagnostic scan session did not accept vehicle_profile alias input");
 check(scanSessionAliasInputs.vehicleApplicability?.status === "matched", "Diagnostic scan session did not accept vehicle_applicability alias input");
 check(!scanSessionAliasInputs.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session emitted partial applicability warning for matched vehicle_applicability");
+const scanSessionDirectMixedVehicleMetadata = obd.buildDiagnosticScanSession({
+  sessionId: "shop-test-mixed-vehicle-meta",
+  vehicleProfile: { maker: "Toyota", model: "Mixed Roomy" },
+  vehicle_applicability: vehicleApplicabilitySample,
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(scanSessionDirectMixedVehicleMetadata.sessionId === "shop-test-mixed-vehicle-meta", "Diagnostic scan session did not preserve mixed-case direct sessionId input");
+check(scanSessionDirectMixedVehicleMetadata.vehicleProfile?.model === "Mixed Roomy", "Diagnostic scan session did not preserve mixed-case direct vehicleProfile input");
+check(scanSessionDirectMixedVehicleMetadata.vehicleApplicability?.status === "matched", "Diagnostic scan session did not preserve mixed-case direct vehicle_applicability input");
 const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-partial",
   vehicle_profile: { maker: "Toyota", model: "Prius" },
