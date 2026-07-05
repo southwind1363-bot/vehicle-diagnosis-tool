@@ -1185,6 +1185,8 @@ const bridgeExportDirectSnakeMetadataSummary = obd.buildBridgeSessionExportPaylo
     bucketCounts: { storedDtcResponses: 2 }
   },
   next_readout_candidates: [{ id: "direct_snake_snapshot", label: "Direct Snake Snapshot", priority: 4, reason: "summary alias" }],
+  tool_hints: ["Techstream", "CONSULT"],
+  warning_flags: ["negative_obd_response_present", "freeze_frame_available"],
   had_sensitive_identifier: true,
   source_length: 77,
   ecu_info_snapshot: {
@@ -1197,6 +1199,8 @@ check(bridgeExportDirectSnakeMetadataSummary.session.import_classification?.buck
 check(bridgeExportDirectSnakeMetadataSummary.session.next_readout_candidates[0]?.id === "direct_snake_snapshot", "Bridge export did not preserve direct snake_case next_readout_candidates summary input");
 check(bridgeExportDirectSnakeMetadataSummary.session.had_sensitive_identifier === true, "Bridge export did not preserve direct snake_case had_sensitive_identifier summary input");
 check(bridgeExportDirectSnakeMetadataSummary.session.source_length === 77, "Bridge export did not preserve direct snake_case source_length summary input");
+check(bridgeExportDirectSnakeMetadataSummary.session.tool_hints.join(",") === "Techstream,CONSULT", "Bridge export did not preserve direct snake_case tool_hints summary input");
+check(bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("negative_obd_response_present") && bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("freeze_frame_available"), "Bridge export did not preserve direct snake_case warning_flags summary input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",

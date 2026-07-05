@@ -2202,8 +2202,8 @@
     const importClassification = importClassificationInput && typeof importClassificationInput === "object"
       ? { ...importClassificationInput }
       : null;
-    const toolHints = mergeUniqueStrings(summary.toolHints);
-    const warnings = [...new Set(summary.warnings || [])];
+    const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints);
+    const warnings = resolveWarningList(summary.warnings, summary.warning_flags, summary.warningFlags);
     const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);
     const hadSensitiveIdentifier = summary.hadSensitiveIdentifier === true
       || summary.had_sensitive_identifier === true
