@@ -1284,11 +1284,32 @@ check(bridgeExportDirectSnakeMetadataSummary.session.tool_hints.join(",") === "T
 check(bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("negative_obd_response_present") && bridgeExportDirectSnakeMetadataSummary.session.warnings.includes("freeze_frame_available"), "Bridge export did not preserve direct snake_case warning_flags summary input");
 check(bridgeExportDirectSnakeMetadataSummary.session.vehicle_applicability?.candidateRangeCount === 2 && bridgeExportDirectSnakeMetadataSummary.session.vehicle_applicability?.supportedEngineCodeCount === 1, "Bridge export did not normalize direct snake_case vehicle_applicability summary input");
 const bridgeExportDirectCamelMetadataSummary = obd.buildBridgeSessionExportPayload({
+  vehicleApplicability: {
+    make: "Toyota",
+    model: "Corolla",
+    modelCode: "ZRE212",
+    year: "2021",
+    engineCode: "2ZR-FAE",
+    catalogMatched: true,
+    yearMatched: true,
+    engineMatched: true,
+    modelCodeMatched: true,
+    candidateRanges: [{ start: "2019" }, { start: "2021" }],
+    applicableRanges: [{ start: "2021" }],
+    supportedEngineCodes: ["2ZR-FAE"],
+    summaryLabel: "Toyota Corolla / Applicable candidate found"
+  },
   importClassification: {
     schemaVersion: "obd_response_line_classification_v1",
     bucketCounts: { storedDtcResponses: 4 }
   },
-  nextReadoutCandidates: [{ id: "direct_camel_snapshot", label: "Direct Camel Snapshot", priority: 4, reason: "summary camel" }],
+  nextReadoutCandidates: [{
+    readoutId: "direct_camel_snapshot",
+    displayLabel: "Direct Camel Snapshot",
+    sortOrder: 4,
+    reasonLabel: "summary camel",
+    vehicleApplicabilityStatus: "matched"
+  }],
   toolHints: ["Techstream", "CONSULT"],
   warningFlags: ["negative_obd_response_present", "freeze_frame_available"],
   hadSensitiveIdentifier: true,
@@ -1301,10 +1322,14 @@ const bridgeExportDirectCamelMetadataSummary = obd.buildBridgeSessionExportPaylo
 });
 check(bridgeExportDirectCamelMetadataSummary.session.import_classification?.bucketCounts?.storedDtcResponses === 4, "Bridge export did not preserve direct camelCase importClassification summary input");
 check(bridgeExportDirectCamelMetadataSummary.session.next_readout_candidates[0]?.id === "direct_camel_snapshot", "Bridge export did not preserve direct camelCase nextReadoutCandidates summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.next_readout_candidates[0]?.label === "Direct Camel Snapshot" && bridgeExportDirectCamelMetadataSummary.session.next_readout_candidates[0]?.priority === 4, "Bridge export did not normalize camelCase nextReadoutCandidates item aliases");
+check(bridgeExportDirectCamelMetadataSummary.session.next_readout_candidates[0]?.applicabilityStatus === "matched", "Bridge export did not preserve camelCase vehicleApplicabilityStatus in nextReadoutCandidates");
 check(bridgeExportDirectCamelMetadataSummary.session.had_sensitive_identifier === true, "Bridge export did not preserve direct camelCase hadSensitiveIdentifier summary input");
 check(bridgeExportDirectCamelMetadataSummary.session.source_length === 66, "Bridge export did not preserve direct camelCase sourceLength summary input");
 check(bridgeExportDirectCamelMetadataSummary.session.tool_hints.join(",") === "Techstream,CONSULT", "Bridge export did not preserve direct camelCase toolHints summary input");
 check(bridgeExportDirectCamelMetadataSummary.session.warnings.includes("negative_obd_response_present") && bridgeExportDirectCamelMetadataSummary.session.warnings.includes("freeze_frame_available"), "Bridge export did not preserve direct camelCase warningFlags summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.vehicle_applicability?.candidateRangeCount === 2 && bridgeExportDirectCamelMetadataSummary.session.vehicle_applicability?.supportedEngineCodeCount === 1, "Bridge export did not normalize direct camelCase vehicleApplicability summary input");
+check(bridgeExportDirectCamelMetadataSummary.session.vehicle_applicability?.summaryLabel === "Toyota Corolla / Applicable candidate found", "Bridge export did not preserve camelCase vehicleApplicability summaryLabel");
 const bridgeExportDirectMixedMetadataSummary = obd.buildBridgeSessionExportPayload({
   importClassification: {
     schemaVersion: "obd_response_line_classification_v1",
@@ -4286,6 +4311,18 @@ check(normalizedNextReadoutCandidatesCamelAliases[1]?.label === "Freeze Frame", 
 check(normalizedNextReadoutCandidatesCamelAliases[1]?.priority === 95, "Next readout candidates did not normalize sortOrder camelCase alias input");
 check(normalizedNextReadoutCandidatesCamelAliases[1]?.reason === "Need freeze frame refresh", "Next readout candidates did not normalize reasonLabel camelCase alias input");
 check(normalizedNextReadoutCandidatesCamelAliases[1]?.applicabilityStatus === "partial", "Next readout candidates did not normalize vehicleApplicabilityStatus camelCase alias input");
+const normalizedNextReadoutCandidatesMixedApplicabilityAliases = obd.normalizeNextReadoutCandidates([
+  {
+    readoutId: "supported_pid_matrix",
+    display_label: "Supported PID",
+    sortOrder: "75",
+    reason: "Need supported PID map",
+    vehicle_applicability_status: "manual"
+  }
+]);
+check(normalizedNextReadoutCandidatesMixedApplicabilityAliases[0]?.id === "supported_pid_matrix", "Next readout candidates did not preserve mixed readoutId/display_label aliases");
+check(normalizedNextReadoutCandidatesMixedApplicabilityAliases[0]?.priority === 75, "Next readout candidates did not normalize mixed sortOrder alias input");
+check(normalizedNextReadoutCandidatesMixedApplicabilityAliases[0]?.applicabilityStatus === "manual", "Next readout candidates did not normalize vehicle_applicability_status alias input");
 const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
   session_id: "shop-test-non-infra-bridge-session"
