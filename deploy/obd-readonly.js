@@ -2024,6 +2024,56 @@
       };
   }
 
+  function buildMergedBridgeMetadata({ bridgeImport = null, bridgeSession = null } = {}) {
+    const readoutCoverageInput = pickDefined(
+      bridgeImport?.readoutCoverage,
+      bridgeImport?.readout_coverage,
+      bridgeSession?.readoutCoverage,
+      bridgeSession?.readout_coverage,
+      null
+    );
+    const vehicleApplicability = pickDefined(
+      bridgeImport?.vehicleApplicability,
+      bridgeImport?.vehicle_applicability,
+      bridgeSession?.vehicleApplicability,
+      bridgeSession?.vehicle_applicability,
+      null
+    );
+    const nextReadoutCandidatesInput = pickDefined(
+      bridgeImport?.nextReadoutCandidates,
+      bridgeImport?.next_readout_candidates,
+      bridgeSession?.nextReadoutCandidates,
+      bridgeSession?.next_readout_candidates,
+      []
+    );
+    const importClassification = pickDefined(
+      bridgeImport?.importClassification,
+      bridgeImport?.import_classification,
+      bridgeSession?.importClassification,
+      bridgeSession?.import_classification,
+      null
+    );
+    return {
+      readoutCoverageInput,
+      readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverageInput),
+      vehicleApplicability,
+      nextReadoutCandidatesInput,
+      importClassification: importClassification && typeof importClassification === "object"
+        ? { ...importClassification }
+        : null,
+      toolHints: mergeUniqueStrings(bridgeImport?.toolHints, bridgeSession?.toolHints),
+      warnings: [...new Set(bridgeImport?.warnings || bridgeSession?.warnings || [])],
+      hadSensitiveIdentifier: bridgeImport?.hadSensitiveIdentifier === true
+        || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true
+        || bridgeSession?.hadSensitiveIdentifier === true
+        || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+      sourceLength: Math.max(
+        Number.isFinite(Number(bridgeImport?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeImport.sourceLength))) : 0,
+        Number.isFinite(Number(bridgeSession?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeSession.sourceLength))) : 0
+      )
+    };
+  }
+
   function buildBridgeSessionExportPayload(parts = {}) {
     const summaryInput = getBridgeSummaryInput(parts);
     const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
@@ -2234,39 +2284,12 @@
         ? "scanner_text_and_local_bridge"
         : "local_bridge"
       : "scanner_text";
-    const mergedReadoutCoverageInput = pickDefined(
-      bridgeImport?.readoutCoverage,
-      bridgeImport?.readout_coverage,
-      bridgeSession?.readoutCoverage,
-      bridgeSession?.readout_coverage,
-      null
-    );
-    const mergedVehicleApplicabilityInput = pickDefined(
-      bridgeImport?.vehicleApplicability,
-      bridgeImport?.vehicle_applicability,
-      bridgeSession?.vehicleApplicability,
-      bridgeSession?.vehicle_applicability,
-      null
-    );
-    const mergedNextReadoutCandidates = pickDefined(
-      bridgeImport?.nextReadoutCandidates,
-      bridgeImport?.next_readout_candidates,
-      bridgeSession?.nextReadoutCandidates,
-      bridgeSession?.next_readout_candidates,
-      []
-    );
-    const mergedImportClassification = pickDefined(
-      bridgeImport?.importClassification,
-      bridgeImport?.import_classification,
-      bridgeSession?.importClassification,
-      bridgeSession?.import_classification,
-      null
-    );
+    const mergedBridgeMetadata = buildMergedBridgeMetadata({ bridgeImport, bridgeSession });
 
     return {
       source,
       importType: "combined_diagnostic_inputs",
-      toolHints: mergeUniqueStrings(scannerAnalysis.toolHints, bridgeImport?.toolHints, bridgeSession?.toolHints),
+      toolHints: mergeUniqueStrings(scannerAnalysis.toolHints, mergedBridgeMetadata.toolHints),
       startedAt: bridgeImport?.startedAt || bridgeSession?.startedAt || null,
       endedAt: bridgeImport?.endedAt || bridgeSession?.endedAt || null,
       protocol: bridgeImport?.protocol || bridgeSession?.protocol || null,
@@ -2280,33 +2303,27 @@
       readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
       ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
       onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
-      readoutCoverage: normalizeReadoutCoverageSnapshot(mergedReadoutCoverageInput),
+      readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
       vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
-      vehicleApplicability: mergedVehicleApplicabilityInput,
-      importClassification: mergedImportClassification && typeof mergedImportClassification === "object"
-        ? { ...mergedImportClassification }
-        : null,
+      vehicleApplicability: mergedBridgeMetadata.vehicleApplicability,
+      importClassification: mergedBridgeMetadata.importClassification,
       connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
       vciDevices: bridgeImport?.vciDevices || bridgeSession?.vciDevices || [],
       adapterIdentity: bridgeImport?.adapterIdentity || bridgeSession?.adapterIdentity || null,
       bridgeSession,
       bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
-      warnings: [...new Set(bridgeImport?.warnings || bridgeSession?.warnings || [])],
+      warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: normalizeNextReadoutCandidates(
-        Array.isArray(mergedNextReadoutCandidates) && mergedNextReadoutCandidates.length
-          ? mergedNextReadoutCandidates
+        Array.isArray(mergedBridgeMetadata.nextReadoutCandidatesInput) && mergedBridgeMetadata.nextReadoutCandidatesInput.length
+          ? mergedBridgeMetadata.nextReadoutCandidatesInput
           : buildNextReadoutCandidates(
-            mergedReadoutCoverageInput,
-            mergedVehicleApplicabilityInput
+            mergedBridgeMetadata.readoutCoverageInput,
+            mergedBridgeMetadata.vehicleApplicability
           )
       ),
-      hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || bridgeImport?.hadSensitiveIdentifier === true || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
-      sourceLength: Math.max(
-        scannerAnalysis.sourceLength || 0,
-        Number.isFinite(Number(bridgeImport?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeImport.sourceLength))) : 0,
-        Number.isFinite(Number(bridgeSession?.sourceLength)) ? Math.max(0, Math.round(Number(bridgeSession.sourceLength))) : 0
-      ),
+      hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
+      sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
       wouldTransmit: false,
       vehicleCommandEnabled: false
