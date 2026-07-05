@@ -1930,6 +1930,32 @@ check(mergedDiagnosticInputBridgeInfrastructureOnly.source === "local_bridge", "
 check(mergedDiagnosticInputBridgeInfrastructureOnly.connectionStatus?.vehicleConnected === false, "Combined diagnostic inputs did not preserve connection_status from infrastructure-only bridge_import");
 check(mergedDiagnosticInputBridgeInfrastructureOnly.vciDevices[0]?.id === "meta-vci", "Combined diagnostic inputs did not preserve vci_devices from infrastructure-only bridge_import");
 check(mergedDiagnosticInputBridgeInfrastructureOnly.adapterIdentity?.adapterName === "Metadata Adapter", "Combined diagnostic inputs did not preserve adapter_identity from infrastructure-only bridge_import");
+const mergedDiagnosticInputBridgeInfrastructureResponseOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    connection_status_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    list_vci_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { items: [{ deviceId: "meta-response-vci", name: "Metadata Response VCI", isConnected: true }], selectedVciId: "meta-response-vci" }
+    },
+    adapter_identity_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Metadata Response Adapter", family: "stn", version: "6.0" }
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeInfrastructureResponseOnly.source === "local_bridge", "Combined diagnostic inputs did not treat infrastructure-response-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeInfrastructureResponseOnly.connectionStatus?.vehicleConnected === true, "Combined diagnostic inputs did not preserve connection_status_response from infrastructure-response-only bridge_import");
+check(mergedDiagnosticInputBridgeInfrastructureResponseOnly.vciDevices[0]?.id === "meta-response-vci", "Combined diagnostic inputs did not preserve list_vci_response from infrastructure-response-only bridge_import");
+check(mergedDiagnosticInputBridgeInfrastructureResponseOnly.adapterIdentity?.adapterFamily === "stn", "Combined diagnostic inputs did not preserve adapter_identity_response from infrastructure-response-only bridge_import");
 const mergedDiagnosticInputBridgeTemporalOnly = obd.mergeDiagnosticInputs({
   bridge_import: {
     started_at: "2026-06-28T00:01:00Z",

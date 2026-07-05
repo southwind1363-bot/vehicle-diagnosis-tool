@@ -1703,8 +1703,12 @@
       || parts.vehicle_applicability
       || parts.connectionStatus
       || parts.connection_status
+      || parts.connectionStatusResponse
+      || parts.connection_status_response
       || parts.adapterIdentity
       || parts.adapter_identity
+      || parts.adapterIdentityResponse
+      || parts.adapter_identity_response
       || parts.ecuResponseSummary
       || parts.ecu_response_summary
       || parts.dtcSnapshot
@@ -1737,6 +1741,8 @@
       || Array.isArray(parts.vci_devices)
       || parts.vciList
       || parts.vci_list
+      || parts.listVciResponse
+      || parts.list_vci_response
       || parts.startedAt
       || parts.started_at
       || parts.endedAt
