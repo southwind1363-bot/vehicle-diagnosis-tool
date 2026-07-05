@@ -2149,7 +2149,8 @@ const scanSessionNestedSessionAlias = obd.buildDiagnosticScanSession({
 check(scanSessionNestedSessionAlias.adapterIdentity.adapterFamily === "elm327", "Diagnostic scan session did not accept nested session alias input");
 check(scanSessionNestedSessionAlias.vciDevices[0]?.id === bridgeDiagnosticImport.exportPayload.session.vci_devices[0]?.id, "Diagnostic scan session did not carry vci_devices from nested session alias input");
 check(scanSessionNestedSessionAlias.supportedPidMatrix.supportedPids.includes("40"), "Diagnostic scan session did not carry supported_pid_matrix from nested session alias input");
-check(scanSessionNestedSessionAlias.vehicleProfile?.make === bridgeDiagnosticImport.exportPayload.session.vehicle_profile?.make, "Diagnostic scan session did not carry vehicle_profile from nested session alias input");
+check(scanSessionNestedSessionAlias.vehicleProfile?.maker === bridgeDiagnosticImport.exportPayload.session.vehicle_profile?.maker, "Diagnostic scan session did not carry vehicle_profile maker from nested session alias input");
+check(scanSessionNestedSessionAlias.vehicleProfile?.model === bridgeDiagnosticImport.exportPayload.session.vehicle_profile?.model, "Diagnostic scan session did not carry vehicle_profile model from nested session alias input");
 check(scanSessionNestedSessionAlias.vehicleApplicability?.status === "matched", "Diagnostic scan session did not carry vehicle_applicability from nested session alias input");
 check(scanSessionNestedSessionAlias.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.exportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from nested session alias input");
 const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
