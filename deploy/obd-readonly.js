@@ -3971,6 +3971,7 @@
     buildBridgeSessionExportPayload,
     buildBridgeDiagnosticImport,
     buildReadoutCoverageSnapshot,
+    normalizeReadoutCoverageSnapshot,
     mergeDiagnosticInputs,
     normalizeDtcSnapshot,
     normalizeFreezeFrameSnapshot,

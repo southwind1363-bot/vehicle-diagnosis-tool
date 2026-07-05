@@ -1449,6 +1449,16 @@ check(mergedDiagnosticInputBridgeParts.supportedPidMatrix?.supportedPids.include
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
 check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
 check(emptyReadoutCoverage.capturedPercent === 0, "Empty readout coverage did not keep capturedPercent at zero");
+const normalizedLegacyReadoutCoverage = obd.normalizeReadoutCoverageSnapshot({
+  schemaVersion: "readout_coverage_v1",
+  totalCategories: 7,
+  availableCategories: 7,
+  capturedCategories: 2,
+  emptyCategories: 5,
+  missingCategories: 0
+});
+check(normalizedLegacyReadoutCoverage.capturedPercent === 29, "Legacy readout coverage did not backfill capturedPercent");
+check(normalizedLegacyReadoutCoverage.progressPercent === 100, "Legacy readout coverage did not preserve progressPercent");
 check(emptyReadoutCoverage.capturedCategories === 0 && emptyReadoutCoverage.emptyCategories === 0, "Empty readout coverage counted missing data as captured or empty");
 check(emptyReadoutCoverage.missingLabels.includes("ECU情報") && emptyReadoutCoverage.missingLabels.includes("Mode06"), "Empty readout coverage missing labels are incomplete");
 const aliasReadoutCoverage = obd.buildReadoutCoverageSnapshot({

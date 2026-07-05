@@ -4496,18 +4496,41 @@ function summarizeObdMonitorValues(values = []) {
   return { totalCount: values.length, outOfRangeCount: 0, decodedCount: 0, undecodedRawCount: 0 };
 }
 
+function getReadoutCoverageDisplay(coverage = null) {
+  if (!coverage || typeof coverage !== "object") return null;
+  if (typeof window.ObdReadOnly?.normalizeReadoutCoverageSnapshot === "function") {
+    return window.ObdReadOnly.normalizeReadoutCoverageSnapshot(coverage);
+  }
+  const totalCategories = Number.isFinite(Number(coverage.totalCategories)) ? Math.max(0, Math.round(Number(coverage.totalCategories))) : 0;
+  const availableCategories = Number.isFinite(Number(coverage.availableCategories)) ? Math.max(0, Math.round(Number(coverage.availableCategories))) : 0;
+  const capturedCategories = Number.isFinite(Number(coverage.capturedCategories)) ? Math.max(0, Math.round(Number(coverage.capturedCategories))) : 0;
+  return {
+    ...coverage,
+    totalCategories,
+    availableCategories,
+    capturedCategories,
+    capturedPercent: Number.isFinite(Number(coverage.capturedPercent))
+      ? Math.max(0, Math.min(100, Math.round(Number(coverage.capturedPercent))))
+      : (totalCategories > 0 ? Math.round((capturedCategories / totalCategories) * 100) : 0),
+    progressPercent: Number.isFinite(Number(coverage.progressPercent))
+      ? Math.max(0, Math.min(100, Math.round(Number(coverage.progressPercent))))
+      : (totalCategories > 0 ? Math.round((availableCategories / totalCategories) * 100) : 0)
+  };
+}
+
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
-  if (analysis.readoutCoverage?.totalCategories) {
-    parts.push(`取得率${analysis.readoutCoverage.capturedPercent || 0}%`);
-    parts.push(`応答率${analysis.readoutCoverage.progressPercent}%`);
-    if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
-      const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
-      parts.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
+  const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
+  if (coverage?.totalCategories) {
+    parts.push(`取得率${coverage.capturedPercent || 0}%`);
+    parts.push(`応答率${coverage.progressPercent}%`);
+    if ((coverage.missingCategories || 0) > 0) {
+      const missingLabels = coverage.missingLabels?.slice(0, 2).join(" / ");
+      parts.push(`未取得${coverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
     }
-    if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
-      const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
-      parts.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
+    if ((coverage.emptyCategories || 0) > 0) {
+      const emptyLabels = coverage.emptyLabels?.slice(0, 2).join(" / ");
+      parts.push(`空応答${coverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
     }
   }
   const readinessSummary = formatObdBridgeReadinessSummary(
@@ -4603,7 +4626,7 @@ function renderObdBridgeSessionDetails(session = null) {
     ]]);
   }
 
-  const coverage = session?.readoutCoverage;
+  const coverage = getReadoutCoverageDisplay(session?.readoutCoverage);
   if (coverage?.totalCategories) {
     const lines = [
       `取得率: ${coverage.capturedPercent || 0}% (${coverage.capturedCategories || 0}/${coverage.totalCategories})`,
@@ -4792,7 +4815,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ? session.vciDevices.length
     : (obdDevSession.bridgeVciList?.deviceCount ?? 0);
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(session?.dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
-  const coverage = session?.readoutCoverage || null;
+  const coverage = getReadoutCoverageDisplay(session?.readoutCoverage);
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
@@ -5345,16 +5368,17 @@ function analyzeObdScannerImport() {
   if (analysis.supportedPidMatrix?.supportedCount > 0) {
     notes.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
   }
-  if (analysis.readoutCoverage?.totalCategories) {
-    notes.push(`取得率${analysis.readoutCoverage.capturedPercent || 0}% (${analysis.readoutCoverage.capturedCategories || 0}/${analysis.readoutCoverage.totalCategories})`);
-    notes.push(`応答率${analysis.readoutCoverage.progressPercent}% (${analysis.readoutCoverage.availableCategories}/${analysis.readoutCoverage.totalCategories})`);
-    if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
-      const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
-      notes.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
+  const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
+  if (coverage?.totalCategories) {
+    notes.push(`取得率${coverage.capturedPercent || 0}% (${coverage.capturedCategories || 0}/${coverage.totalCategories})`);
+    notes.push(`応答率${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})`);
+    if ((coverage.missingCategories || 0) > 0) {
+      const missingLabels = coverage.missingLabels?.slice(0, 2).join(" / ");
+      notes.push(`未取得${coverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
     }
-    if ((analysis.readoutCoverage.emptyCategories || 0) > 0) {
-      const emptyLabels = analysis.readoutCoverage.emptyLabels?.slice(0, 2).join(" / ");
-      notes.push(`空応答${analysis.readoutCoverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
+    if ((coverage.emptyCategories || 0) > 0) {
+      const emptyLabels = coverage.emptyLabels?.slice(0, 2).join(" / ");
+      notes.push(`空応答${coverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
     }
   }
   if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
