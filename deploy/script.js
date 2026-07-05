@@ -1584,6 +1584,14 @@ function formatTopNextReadoutLabel(candidates, limit = 2, fallback = "") {
   return labels.length ? labels.join(" / ") : fallback;
 }
 
+function formatNextReadoutSummary(candidates, options = {}) {
+  const { limit = 2, fallback = NO_DATA } = options;
+  const topLabel = formatTopNextReadoutLabel(candidates, limit, "");
+  const count = Array.isArray(candidates) ? candidates.filter(Boolean).length : 0;
+  if (!count) return fallback;
+  return topLabel ? `${count}件 / ${topLabel}` : `${count}件`;
+}
+
 function syncObdVehicleInput() {
   const values = [
     selectedVehicleValue(obdVehicleMakerSelect),
@@ -5011,7 +5019,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
-  const nextReadoutLabel = formatTopNextReadoutLabel(session?.nextReadoutCandidates, 2, NO_DATA);
+  const nextReadoutLabel = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA });
   const startedAtLabel = session?.startedAt
     ? formatDateTime(session.startedAt)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
