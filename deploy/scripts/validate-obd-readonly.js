@@ -1148,6 +1148,7 @@ check(bridgeExportSummaryAliases.session.freeze_frame_snapshot.triggerDtc === "P
 check(bridgeExportSummaryAliases.session.readiness_snapshot.incompleteCount === 1, "Bridge export did not accept readiness_response summary alias input");
 check(bridgeExportSummaryAliases.session.ecu_info_snapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Bridge export did not accept ecu_info_response summary alias input");
 check(bridgeExportSummaryAliases.session.onboard_monitor_snapshot.failedCount === 1, "Bridge export did not accept onboard_monitor_response summary alias input");
+check(bridgeExportSummaryAliases.session.next_readout_candidates[0]?.id === "custom_snapshot", "Bridge export did not preserve explicit next_readout_candidates summary alias input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",
@@ -2159,6 +2160,7 @@ const scanSessionScanSessionAlias = obd.buildDiagnosticScanSession({
 });
 check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
 check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
+check(scanSessionScanSessionAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from scan_session alias input");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
