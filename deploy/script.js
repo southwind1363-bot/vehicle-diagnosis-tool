@@ -5552,6 +5552,7 @@ function analyzeObdScannerImport() {
       scan_session: analysis
     });
   }
+  const mergedSession = bridgeImport ? (obdDevSession.lastSession || null) : null;
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
@@ -5595,6 +5596,12 @@ function analyzeObdScannerImport() {
   }
   if (Array.isArray(analysis.vciDevices) && analysis.vciDevices.length > 0) {
     notes.push(`VCI ${analysis.vciDevices.length}件`);
+  }
+  if (mergedSession?.sourceLength > 0) {
+    notes.push(`入力長 ${mergedSession.sourceLength}文字`);
+  }
+  if (mergedSession?.hadSensitiveIdentifier === true) {
+    notes.push("識別情報候補はマスク済み");
   }
   const readinessNoteSummary = formatObdBridgeReadinessSummary(analysis.readinessSnapshot);
   if (readinessNoteSummary !== NO_DATA) {
@@ -5673,7 +5680,7 @@ function analyzeObdScannerImport() {
   if (bridgeImport && analysis.monitorValues.length) {
     const bridgeValueCount = analysis.monitorValues.filter((item) => item.source === "local_bridge").length;
     const scannerValueCount = analysis.monitorValues.filter((item) => item.source === "scanner_text").length;
-    const summary = [analysis.source === "local_bridge"
+    const summary = [(mergedSession?.source || analysis.source) === "local_bridge"
       ? `ローカルブリッジ読取で${analysis.monitorValues.length}項目を表示しています。`
       : `統合入力で${analysis.monitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
@@ -5690,7 +5697,7 @@ function analyzeObdScannerImport() {
     appendObdAnalysisReadoutSummary(summary, analysis);
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
   } else if (bridgeImport && !analysis.monitorValues.length) {
-    const summary = [analysis.source === "local_bridge"
+    const summary = [(mergedSession?.source || analysis.source) === "local_bridge"
       ? "ローカルブリッジ読取の計測値は0項目です。"
       : "計測値は0項目です。"];
     if (analysisVehicleLabel) {
