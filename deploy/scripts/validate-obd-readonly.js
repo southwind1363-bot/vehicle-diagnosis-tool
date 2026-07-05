@@ -3008,6 +3008,16 @@ check(decodedScanSessionSnapshotSet.readinessSnapshot.incompleteCount === 1, "De
 check(decodedScanSessionSnapshotSet.onboardMonitorSnapshot.failedCount === 1, "Decoded OBD session did not accept onboard_monitor_snapshot alias input");
 check(decodedScanSessionSnapshotSet.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Decoded OBD session did not accept ecu_info_snapshot alias input");
 check(decodedScanSessionSnapshotSet.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept supported_pid_matrix alias input");
+const decodedScanSessionSupportedPidReason = obd.buildDecodedObdScanSession({
+  session_id: "decoded-supported-pid-reason",
+  vehicle_applicability: vehicleApplicabilitySample,
+  dtc_snapshot: bridgeDtcSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(decodedScanSessionSupportedPidReason.nextReadoutCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "Decoded OBD session did not derive live_pid_snapshot reason from supported_pid_matrix");
 const decodedScanSessionNestedAlias = obd.buildDecodedObdScanSession({
   scan_session: {
     session_id: "decoded-nested-session-test",
@@ -3192,6 +3202,21 @@ check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("ne
 check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "Decoded OBD session did not preserve snake_case outer source_length over nested camelCase scanSession input");
 check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve nested camelCase sensitive identifier when outer snake_case value was false");
 check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 19, "Decoded OBD session did not preserve snake_case outer import_classification over nested camelCase scanSession input");
+const decodedScanSessionPlainCoverageOverride = obd.buildDecodedObdScanSession({
+  session_id: "decoded-plain-coverage-override",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  readout_coverage: {
+    includeInfrastructure: false,
+    items: [
+      { id: "live_pid_snapshot", status: "captured", available: true, count: 3 },
+      { id: "freeze_frame_snapshot", status: "captured", available: true, count: 1 },
+      { id: "readiness_snapshot", status: "captured", available: true, count: 1 }
+    ],
+    missingIds: ["ecu_info_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix"]
+  }
+});
+check(decodedScanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Decoded OBD session did not preserve plain-object includeInfrastructure override");
+check(!decodedScanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !decodedScanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Decoded OBD session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
 const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-coverage-candidates",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3560,6 +3585,16 @@ const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFr
 check(textScanSessionExplicitCamelCoverageAndCandidates.sessionId === "obd-text-explicit-camel-coverage-candidates", "OBD text scan session did not preserve camelCase sessionId option input");
 check(textScanSessionExplicitCamelCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve camelCase readoutCoverage option input");
 check(textScanSessionExplicitCamelCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_camel_snapshot", "OBD text scan session did not preserve camelCase nextReadoutCandidates option input");
+const textScanSessionSupportedPidReason = obd.buildScanSessionFromObdText("P0171", {
+  session_id: "obd-text-supported-pid-reason",
+  vehicle_applicability: vehicleApplicabilitySample,
+  dtc_snapshot: bridgeDtcSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(textScanSessionSupportedPidReason.nextReadoutCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "OBD text scan session did not derive live_pid_snapshot reason from supported_pid_matrix");
 const textScanSessionExplicitMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-meta-overrides",
   tool_hints: ["Techstream", "J2534"],
