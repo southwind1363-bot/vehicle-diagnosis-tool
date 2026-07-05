@@ -2476,6 +2476,33 @@ const scanSessionLegacyCoverageImport = obd.buildDiagnosticScanSession({
   session_id: "shop-test-legacy-coverage-import"
 });
 check(scanSessionLegacyCoverageImport.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve backfilled capturedPercent from legacy readout coverage");
+const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-plain-coverage-override",
+  readout_coverage: {
+    includeInfrastructure: false,
+    totalCategories: 7,
+    availableCategories: 3,
+    capturedCategories: 2,
+    emptyCategories: 1,
+    missingCategories: 4,
+    capturedPercent: 29,
+    progressPercent: 43,
+    items: [
+      { id: "dtc_snapshot", status: "captured", available: true, count: 2 },
+      { id: "live_pid_snapshot", status: "captured", available: true, count: 3 },
+      { id: "freeze_frame_snapshot", status: "empty", available: true, count: 0 }
+    ],
+    emptyIds: ["freeze_frame_snapshot"],
+    missingIds: ["readiness_snapshot", "ecu_info_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix"]
+  },
+  bridge_session: {
+    connection_status: { displayStatus: "connected", vehicleConnected: true },
+    dtc_codes: [{ code: "P0300", status: "stored" }]
+  }
+});
+check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
+check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve plain-object capturedPercent override");
+check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
 const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
   session_id: "shop-test-non-infra-bridge-session"

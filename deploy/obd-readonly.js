@@ -3762,7 +3762,11 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    const readoutCoverage = normalizeReadoutCoverageSnapshot(readoutCoverageInput?.schemaVersion ? readoutCoverageInput : derivedReadoutCoverage);
+    const readoutCoverage = normalizeReadoutCoverageSnapshot(
+      readoutCoverageInput && typeof readoutCoverageInput === "object"
+        ? readoutCoverageInput
+        : derivedReadoutCoverage
+    );
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
     const explicitNextReadoutCandidates = sessionInput.next_readout_candidates
