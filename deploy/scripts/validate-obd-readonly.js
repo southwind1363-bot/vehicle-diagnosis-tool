@@ -1191,7 +1191,7 @@ const bridgeExportDirectSnakeMetadataSummary = obd.buildBridgeSessionExportPaylo
   source_length: 77,
   ecu_info_snapshot: {
     itemCount: 1,
-    hadSensitiveIdentifier: true,
+    had_sensitive_identifier: true,
     items: [{ id: "vin", value: "JT123456789012345", privacyClass: "sensitive_identifier" }]
   }
 });
@@ -1714,7 +1714,7 @@ const mergedDiagnosticInputBridgeSessionSnakeSensitiveIdentifier = obd.mergeDiag
     importType: "bridge_diagnostic_snapshot",
     bridge_session: {
       ecu_info_snapshot: {
-        hadSensitiveIdentifier: true,
+        had_sensitive_identifier: true,
         items: [{ id: "vin", value: "JT123456789012345", privacyClass: "sensitive_identifier" }]
       }
     }

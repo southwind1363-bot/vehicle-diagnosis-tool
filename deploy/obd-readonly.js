@@ -2208,7 +2208,9 @@
     const hadSensitiveIdentifier = summary.hadSensitiveIdentifier === true
       || summary.had_sensitive_identifier === true
       || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true
-      || summary.ecu_info_snapshot?.hadSensitiveIdentifier === true;
+      || summary.ecuInfoSnapshot?.had_sensitive_identifier === true
+      || summary.ecu_info_snapshot?.hadSensitiveIdentifier === true
+      || summary.ecu_info_snapshot?.had_sensitive_identifier === true;
     const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, 0);
     const sourceLength = Number.isFinite(Number(sourceLengthValue)) ? Math.max(0, Math.round(Number(sourceLengthValue))) : 0;
     return snakeCase
@@ -2275,10 +2277,14 @@
       warnings: resolveWarningList(bridgeImportMetadata.warnings, bridgeSessionMetadata.warnings),
       hadSensitiveIdentifier: bridgeImportMetadata.hadSensitiveIdentifier === true
         || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true
+        || bridgeImport?.ecuInfoSnapshot?.had_sensitive_identifier === true
         || bridgeImport?.ecu_info_snapshot?.hadSensitiveIdentifier === true
+        || bridgeImport?.ecu_info_snapshot?.had_sensitive_identifier === true
         || bridgeSessionMetadata.hadSensitiveIdentifier === true
         || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true
-        || bridgeSession?.ecu_info_snapshot?.hadSensitiveIdentifier === true,
+        || bridgeSession?.ecuInfoSnapshot?.had_sensitive_identifier === true
+        || bridgeSession?.ecu_info_snapshot?.hadSensitiveIdentifier === true
+        || bridgeSession?.ecu_info_snapshot?.had_sensitive_identifier === true,
       sourceLength: Math.max(
         Number.isFinite(Number(bridgeImportMetadata.sourceLength)) ? Math.max(0, Math.round(Number(bridgeImportMetadata.sourceLength))) : 0,
         Number.isFinite(Number(bridgeSessionMetadata.sourceLength)) ? Math.max(0, Math.round(Number(bridgeSessionMetadata.sourceLength))) : 0
@@ -2319,7 +2325,9 @@
       hadSensitiveIdentifier: session.hadSensitiveIdentifier === true
         || classified.hadSensitiveIdentifier === true
         || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true
-        || session.ecu_info_snapshot?.hadSensitiveIdentifier === true,
+        || session.ecuInfoSnapshot?.had_sensitive_identifier === true
+        || session.ecu_info_snapshot?.hadSensitiveIdentifier === true
+        || session.ecu_info_snapshot?.had_sensitive_identifier === true,
       sourceLength: Number.isFinite(Number(pickDefined(session.sourceLength, classified.sourceLength)))
         ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
         : 0
