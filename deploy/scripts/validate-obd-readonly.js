@@ -3162,6 +3162,36 @@ const scanSessionBridgeInfrastructureResponseAliases = obd.buildDiagnosticScanSe
 check(scanSessionBridgeInfrastructureResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connection_status_response from bridge_session alias input");
 check(scanSessionBridgeInfrastructureResponseAliases.vciDevices[0]?.id === "nested-response-vci", "Diagnostic scan session did not accept list_vci_response from bridge_session alias input");
 check(scanSessionBridgeInfrastructureResponseAliases.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not accept adapter_identity_response from bridge_session alias input");
+const scanSessionBridgeCamelResponseAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-bridge-camel-response-aliases",
+  bridgeSession: {
+    livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
+    ecuResponseSummaryResponse: bridgeSummary.ecuResponseSummary,
+    connectionStatusResponse: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    listVciResponse: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { items: [{ deviceId: "camel-response-vci", name: "Camel Response VCI", isConnected: true }], selectedVciId: "camel-response-vci" }
+    },
+    adapterIdentityResponse: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Camel Response Adapter", family: "stn", version: "7.5" }
+    }
+  }
+});
+check(scanSessionBridgeCamelResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode livePidResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecuResponseSummaryResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connectionStatusResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.vciDevices[0]?.id === "camel-response-vci", "Diagnostic scan session did not accept listVciResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not accept adapterIdentityResponse from bridgeSession camelCase alias input");
 const scanSessionNestedResponseAliases = obd.buildDiagnosticScanSession({
   session_id: "shop-test-scan-session-response-aliases",
   scan_session: {
@@ -3178,6 +3208,22 @@ const scanSessionNestedResponseAliases = obd.buildDiagnosticScanSession({
 check(scanSessionNestedResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode live_pid_response from scan_session alias input");
 check(scanSessionNestedResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecu_response_summary_response from scan_session alias input");
 check(scanSessionNestedResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connection_status_response from scan_session alias input");
+const scanSessionNestedCamelResponseAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-scan-session-camel-response-aliases",
+  scanSession: {
+    livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
+    ecuResponseSummaryResponse: bridgeSummary.ecuResponseSummary,
+    connectionStatusResponse: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    }
+  }
+});
+check(scanSessionNestedCamelResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode livePidResponse from scanSession camelCase alias input");
+check(scanSessionNestedCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecuResponseSummaryResponse from scanSession camelCase alias input");
+check(scanSessionNestedCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connectionStatusResponse from scanSession camelCase alias input");
 const scanSessionBridgeExportPayloadAlias = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeExportPayload,
   session_id: "shop-test-bridge-export-alias"
