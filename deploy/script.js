@@ -5678,13 +5678,13 @@ function analyzeObdScannerImport() {
     });
   }
 
-  renderObdMonitorValues(analysis.monitorValues, analysis.monitorInsights);
+  renderObdMonitorValues(mergedMonitorValues, mergedSession?.livePidSnapshot?.monitorInsights || analysis.monitorInsights);
   if (bridgeImport && mergedMonitorValues.length) {
-    const bridgeValueCount = analysis.monitorValues.filter((item) => item.source === "local_bridge").length;
-    const scannerValueCount = analysis.monitorValues.filter((item) => item.source === "scanner_text").length;
+    const bridgeValueCount = mergedMonitorValues.filter((item) => item.source === "local_bridge").length;
+    const scannerValueCount = mergedMonitorValues.filter((item) => item.source === "scanner_text").length;
     const summary = [(mergedSession?.source || analysis.source) === "local_bridge"
-      ? `ローカルブリッジ読取で${analysis.monitorValues.length}項目を表示しています。`
-      : `統合入力で${analysis.monitorValues.length}項目を表示しています。`];
+      ? `ローカルブリッジ読取で${mergedMonitorValues.length}項目を表示しています。`
+      : `統合入力で${mergedMonitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
     if (scannerValueCount > 0) summary.push(`貼り付け${scannerValueCount}項目`);
     if (analysisVehicleLabel) {
