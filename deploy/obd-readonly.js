@@ -1511,6 +1511,7 @@
 
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
+    const metadataOverrides = getSessionMetadataOverrides(parts);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
     const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot;
     const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
@@ -1578,7 +1579,7 @@
     if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");
     if (livePidSnapshot.monitorValues.length) warnings.push("compare_values_under_same_conditions");
     if ((livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0) > 0) warnings.push("raw_pid_values_need_conversion");
-    appendVehicleApplicabilityWarnings(warnings, parts.vehicleApplicability || parts.vehicle_applicability || {});
+    appendVehicleApplicabilityWarnings(warnings, metadataOverrides.vehicleApplicability || {});
     const protocol = parts.protocol
       || dtcSnapshot.protocol
       || livePidSnapshot.protocol
@@ -1613,7 +1614,7 @@
     const readoutCoverage = normalizeReadoutCoverageSnapshot(readoutCoverageInput?.schemaVersion ? readoutCoverageInput : (readoutCoverageInput || derivedReadoutCoverage));
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
-    const explicitNextReadoutCandidates = parts.nextReadoutCandidates || parts.next_readout_candidates || [];
+    const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
 
     return {
       source: "local_bridge",
@@ -1621,8 +1622,8 @@
       endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt,
       protocol,
-      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
-      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(parts.vehicleApplicability || parts.vehicle_applicability || {}),
+      vehicleProfile: metadataOverrides.vehicleProfile,
+      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
@@ -1636,19 +1637,18 @@
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
-      toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints),
+      toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       freezeFrameSnapshot,
       warnings,
       nextReadoutCandidates: normalizeNextReadoutCandidates(
         Array.isArray(explicitNextReadoutCandidates) && explicitNextReadoutCandidates.length
           ? explicitNextReadoutCandidates
-          : buildNextReadoutCandidates(readoutCoverage, parts.vehicleApplicability || parts.vehicle_applicability || {})
+          : buildNextReadoutCandidates(readoutCoverage, metadataOverrides.vehicleApplicability || {})
       ),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
-        || parts.hadSensitiveIdentifier === true
-        || parts.had_sensitive_identifier === true,
-      sourceLength: Number.isFinite(Number(pickDefined(parts.sourceLength, parts.source_length)))
-        ? Math.max(0, Math.round(Number(pickDefined(parts.sourceLength, parts.source_length))))
+        || metadataOverrides.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
+        ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
         : 0,
       exportRequired: true,
       retainedRawText: false,
@@ -1705,6 +1705,7 @@
   }
 
   function normalizeBridgeSummaryAliases(parts = {}) {
+    const metadataOverrides = getSessionMetadataOverrides(parts);
     const connectionStatusInput = parts.connectionStatus || parts.connection_status || parts.connectionStatusResponse || parts.connection_status_response || {};
     const vciDevicesInput = parts.vciDevices || parts.vci_devices || parts.vciList || parts.vci_list || parts.listVciResponse || parts.list_vci_response || [];
     const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || parts.adapterIdentityResponse || parts.adapter_identity_response || {};
@@ -1716,9 +1717,9 @@
     const codesInput = parts.codes || parts.dtc_codes || parts.dtcCodes || [];
     const monitorValuesInput = parts.monitorValues || parts.monitor_values || [];
     const monitorInsightsInput = parts.monitorInsights || parts.monitor_insights || [];
-    const nextReadoutCandidatesInput = parts.nextReadoutCandidates || parts.next_readout_candidates || [];
-    const warningsInput = parts.warnings || parts.warning_flags || parts.warningFlags || [];
-    const importClassificationInput = parts.importClassification || parts.import_classification || null;
+    const nextReadoutCandidatesInput = metadataOverrides.nextReadoutCandidates || [];
+    const warningsInput = metadataOverrides.warnings || [];
+    const importClassificationInput = metadataOverrides.importClassification;
     const connectionStatus = connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput);
     const normalizedVciList = Array.isArray(vciDevicesInput)
       ? { devices: vciDevicesInput, blocked: false }
@@ -1783,7 +1784,7 @@
     if (((monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0)) > 0) {
       derivedWarnings.push("raw_pid_values_need_conversion");
     }
-    appendVehicleApplicabilityWarnings(derivedWarnings, parts.vehicleApplicability || parts.vehicle_applicability || {});
+    appendVehicleApplicabilityWarnings(derivedWarnings, metadataOverrides.vehicleApplicability || {});
     if (hasBridgeInfrastructureContext && derivedReadoutCoverage.missingCategories > 0) derivedWarnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && derivedReadoutCoverage.emptyCategories > 0) derivedWarnings.push("bridge_readout_empty_sections");
     return {
@@ -1792,8 +1793,8 @@
       endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt: parts.capturedAt || parts.captured_at || null,
       protocol: parts.protocol || null,
-      vehicleProfile: parts.vehicleProfile || parts.vehicle_profile || null,
-      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(parts.vehicleApplicability || parts.vehicle_applicability || {}),
+      vehicleProfile: metadataOverrides.vehicleProfile,
+      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
@@ -1813,21 +1814,20 @@
       importClassification: importClassificationInput && typeof importClassificationInput === "object"
         ? { ...importClassificationInput }
         : null,
-      toolHints: mergeUniqueStrings(parts.toolHints, parts.tool_hints),
+      toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       warnings: [...new Set(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings)],
       nextReadoutCandidates: normalizeNextReadoutCandidates(
         Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
           ? nextReadoutCandidatesInput
           : buildNextReadoutCandidates(
             parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
-            parts.vehicleApplicability || parts.vehicle_applicability || {}
+            metadataOverrides.vehicleApplicability || {}
           )
       ),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
-        || parts.hadSensitiveIdentifier === true
-        || parts.had_sensitive_identifier === true,
-      sourceLength: Number.isFinite(Number(pickDefined(parts.sourceLength, parts.source_length)))
-        ? Math.max(0, Math.round(Number(pickDefined(parts.sourceLength, parts.source_length))))
+        || metadataOverrides.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
+        ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
         : 0,
       exportRequired: true,
       retainedRawText: false,
