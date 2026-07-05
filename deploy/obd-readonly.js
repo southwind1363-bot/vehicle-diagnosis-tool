@@ -1951,6 +1951,20 @@
     };
   }
 
+  function getSessionMetadataOverrides(sessionInput = {}) {
+    return {
+      vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
+      vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
+      readoutCoverage: sessionInput.readoutCoverage || sessionInput.readout_coverage || null,
+      nextReadoutCandidates: sessionInput.nextReadoutCandidates || sessionInput.next_readout_candidates || null,
+      importClassification: sessionInput.importClassification || sessionInput.import_classification || null,
+      toolHints: sessionInput.toolHints || sessionInput.tool_hints || null,
+      warnings: sessionInput.warnings || sessionInput.warning_flags || sessionInput.warningFlags || null,
+      sourceLength: pickDefined(sessionInput.sourceLength, sessionInput.source_length, null),
+      hadSensitiveIdentifier: pickDefined(sessionInput.hadSensitiveIdentifier, sessionInput.had_sensitive_identifier, null)
+    };
+  }
+
   function buildBridgeSessionExportPayload(parts = {}) {
     const summaryInput = getBridgeSummaryInput(parts);
     const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
@@ -2927,6 +2941,7 @@
 
   function buildDecodedObdScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
+    const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const sessionProtocol = sessionInput.protocol || null;
     const withSessionProtocol = (value) => {
       if (!sessionProtocol || !value || typeof value !== "object" || Array.isArray(value)) return value;
@@ -2992,15 +3007,7 @@
       session_id: sessionInput.session_id || sessionInput.sessionId || "decoded_obd_scan_session",
       started_at: sessionInput.started_at || sessionInput.startedAt || null,
       ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
-      vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
-      vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
-      readoutCoverage: sessionInput.readoutCoverage || sessionInput.readout_coverage || null,
-      nextReadoutCandidates: sessionInput.nextReadoutCandidates || sessionInput.next_readout_candidates || null,
-      importClassification: sessionInput.importClassification || sessionInput.import_classification || null,
-      toolHints: sessionInput.toolHints || sessionInput.tool_hints || null,
-      warnings: sessionInput.warnings || sessionInput.warning_flags || sessionInput.warningFlags || null,
-      sourceLength: pickDefined(sessionInput.sourceLength, sessionInput.source_length, null),
-      hadSensitiveIdentifier: pickDefined(sessionInput.hadSensitiveIdentifier, sessionInput.had_sensitive_identifier, null),
+      ...metadataOverrides,
       dtcSnapshot,
       livePidSnapshot,
       freezeFrameSnapshot,
@@ -3304,6 +3311,7 @@
 
   function buildScanSessionFromObdText(value, options = {}) {
     const sessionInput = getDiagnosticSessionInput(options);
+    const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const classified = classifyObdResponseLines(value);
     const toolHints = detectScannerToolHints(value);
     const textDtcSnapshot = extractTextDtcSnapshot(value);
@@ -3314,10 +3322,10 @@
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
       started_at: sessionInput.started_at || sessionInput.startedAt || null,
       ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
-      vehicleProfile: sessionInput.vehicleProfile || sessionInput.vehicle_profile || null,
-      vehicleApplicability: sessionInput.vehicleApplicability || sessionInput.vehicle_applicability || null,
-      readoutCoverage: sessionInput.readoutCoverage || sessionInput.readout_coverage || null,
-      nextReadoutCandidates: sessionInput.nextReadoutCandidates || sessionInput.next_readout_candidates || null,
+      vehicleProfile: metadataOverrides.vehicleProfile,
+      vehicleApplicability: metadataOverrides.vehicleApplicability,
+      readoutCoverage: metadataOverrides.readoutCoverage,
+      nextReadoutCandidates: metadataOverrides.nextReadoutCandidates,
       dtcSnapshot: sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || null,
       livePidSnapshot: sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot || null,
       freezeFrameSnapshot: sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || null,
@@ -3325,10 +3333,10 @@
       onboardMonitorSnapshot: sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot || null,
       ecuInfoSnapshot: sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || null,
       supportedPidMatrix: sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || null,
-      toolHints: sessionInput.toolHints || sessionInput.tool_hints || null,
-      warnings: sessionInput.warnings || sessionInput.warning_flags || sessionInput.warningFlags || null,
-      sourceLength: pickDefined(sessionInput.sourceLength, sessionInput.source_length, null),
-      hadSensitiveIdentifier: pickDefined(sessionInput.hadSensitiveIdentifier, sessionInput.had_sensitive_identifier, null),
+      toolHints: metadataOverrides.toolHints,
+      warnings: metadataOverrides.warnings,
+      sourceLength: metadataOverrides.sourceLength,
+      hadSensitiveIdentifier: metadataOverrides.hadSensitiveIdentifier,
       storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: sessionInput.protocol || null },
       pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: sessionInput.protocol || null },
       permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: sessionInput.protocol || null },
