@@ -2074,6 +2074,45 @@
     };
   }
 
+  function buildTextImportMetadata({
+    session = {},
+    classified = {},
+    explicitImportClassification = null,
+    detectedToolHints = []
+  } = {}) {
+    const mergedToolHints = mergeUniqueStrings(session.toolHints, detectedToolHints);
+    return {
+      toolHints: mergedToolHints,
+      importClassification: {
+        schemaVersion: explicitImportClassification?.schemaVersion || classified.schemaVersion,
+        bucketCounts: explicitImportClassification?.bucketCounts && typeof explicitImportClassification.bucketCounts === "object"
+          ? { ...classified.bucketCounts, ...explicitImportClassification.bucketCounts }
+          : classified.bucketCounts,
+        isoTpSummary: explicitImportClassification?.isoTpSummary && typeof explicitImportClassification.isoTpSummary === "object"
+          ? { ...classified.isoTpSummary, ...explicitImportClassification.isoTpSummary }
+          : classified.isoTpSummary,
+        negativeResponseSummary: explicitImportClassification?.negativeResponseSummary && typeof explicitImportClassification.negativeResponseSummary === "object"
+          ? { ...classified.negativeResponseSummary, ...explicitImportClassification.negativeResponseSummary }
+          : classified.negativeResponseSummary,
+        lineCount: Number.isFinite(Number(explicitImportClassification?.lineCount))
+          ? Math.max(0, Math.round(Number(explicitImportClassification.lineCount)))
+          : classified.lineCount,
+        toolHints: mergedToolHints
+      },
+      warnings: mergeUniqueStrings(
+        session.warnings,
+        classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : [],
+        classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
+      ),
+      hadSensitiveIdentifier: session.hadSensitiveIdentifier === true
+        || classified.hadSensitiveIdentifier === true
+        || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+      sourceLength: Number.isFinite(Number(pickDefined(session.sourceLength, classified.sourceLength)))
+        ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
+        : 0
+    };
+  }
+
   function buildBridgeSessionExportPayload(parts = {}) {
     const summaryInput = getBridgeSummaryInput(parts);
     const summary = hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);
@@ -3421,37 +3460,22 @@
       ecus: ecuResponses
     });
     const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);
+    const textImportMetadata = buildTextImportMetadata({
+      session,
+      classified,
+      explicitImportClassification,
+      detectedToolHints: toolHints
+    });
 
     return {
       ...session,
       dtcSnapshot: mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot,
       source: "obd_text_import",
-      toolHints: mergeUniqueStrings(session.toolHints, toolHints),
-      importClassification: {
-        schemaVersion: explicitImportClassification?.schemaVersion || classified.schemaVersion,
-        bucketCounts: explicitImportClassification?.bucketCounts && typeof explicitImportClassification.bucketCounts === "object"
-          ? { ...classified.bucketCounts, ...explicitImportClassification.bucketCounts }
-          : classified.bucketCounts,
-        isoTpSummary: explicitImportClassification?.isoTpSummary && typeof explicitImportClassification.isoTpSummary === "object"
-          ? { ...classified.isoTpSummary, ...explicitImportClassification.isoTpSummary }
-          : classified.isoTpSummary,
-        negativeResponseSummary: explicitImportClassification?.negativeResponseSummary && typeof explicitImportClassification.negativeResponseSummary === "object"
-          ? { ...classified.negativeResponseSummary, ...explicitImportClassification.negativeResponseSummary }
-          : classified.negativeResponseSummary,
-        lineCount: Number.isFinite(Number(explicitImportClassification?.lineCount))
-          ? Math.max(0, Math.round(Number(explicitImportClassification.lineCount)))
-          : classified.lineCount,
-        toolHints: mergeUniqueStrings(session.toolHints, toolHints)
-      },
-      warnings: mergeUniqueStrings(
-        session.warnings,
-        classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : [],
-        classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
-      ),
-      hadSensitiveIdentifier: session.hadSensitiveIdentifier === true || classified.hadSensitiveIdentifier || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
-      sourceLength: Number.isFinite(Number(pickDefined(session.sourceLength, classified.sourceLength)))
-        ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
-        : 0,
+      toolHints: textImportMetadata.toolHints,
+      importClassification: textImportMetadata.importClassification,
+      warnings: textImportMetadata.warnings,
+      hadSensitiveIdentifier: textImportMetadata.hadSensitiveIdentifier,
+      sourceLength: textImportMetadata.sourceLength,
       retainedRawText: false,
       retainedRawFrames: false,
       wouldTransmit: false,
