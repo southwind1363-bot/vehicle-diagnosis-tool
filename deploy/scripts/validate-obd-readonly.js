@@ -2470,6 +2470,22 @@ check(decodedScanSessionNestedAlias.dtcSnapshot.codes.includes("P0171"), "Decode
 check(decodedScanSessionNestedAlias.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept scan_session nested supported_pid alias input");
 check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept scan_session nested readiness alias input");
 check(decodedScanSessionNestedAlias.vehicleProfile?.model === "Yaris", "Decoded OBD session did not carry vehicle_profile from scan_session nested alias input");
+const decodedScanSessionNestedCamelResponseAliases = obd.buildDecodedObdScanSession({
+  scanSession: {
+    sessionId: "decoded-camel-nested",
+    vehicleProfile: { maker: "Toyota", model: "Axio" },
+    livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
+    supportedPidResponse: { raw: "41 00 18 18 00 01 41 20 80 00 00 01" },
+    readinessResponse: { raw: "41 01 81 07 22 00" },
+    onboardMonitorResponse: { raw: "46 01 01 00 64 00 32 00 C8" }
+  }
+});
+check(decodedScanSessionNestedCamelResponseAliases.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Decoded OBD session did not decode livePidResponse from scanSession camelCase alias input");
+check(decodedScanSessionNestedCamelResponseAliases.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept supportedPidResponse from scanSession camelCase alias input");
+check(decodedScanSessionNestedCamelResponseAliases.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept readinessResponse from scanSession camelCase alias input");
+check(decodedScanSessionNestedCamelResponseAliases.onboardMonitorSnapshot.testCount === 1, "Decoded OBD session did not accept onboardMonitorResponse from scanSession camelCase alias input");
+check(decodedScanSessionNestedCamelResponseAliases.vehicleProfile?.model === "Axio", "Decoded OBD session did not carry vehicleProfile from scanSession camelCase alias input");
+check(decodedScanSessionNestedCamelResponseAliases.sessionId === "decoded-camel-nested", "Decoded OBD session did not carry sessionId from scanSession camelCase alias input");
 const decodedScanSessionNestedCoreOverrides = obd.buildDecodedObdScanSession({
   scan_session: {
     session_id: "decoded-nested-core-overrides",
@@ -2735,6 +2751,19 @@ check(textScanSessionNestedOptions.startedAt === "2026-06-28T00:16:00Z" && textS
 check(textScanSessionNestedOptions.vehicleProfile?.model === "Vitz", "OBD text scan session did not carry vehicle_profile from scan_session nested options");
 check(textScanSessionNestedOptions.sessionId === "obd-text-nested-options", "OBD text scan session did not carry session_id from scan_session nested options");
 check(textScanSessionNestedOptions.protocol === "ISO15765-4", "OBD text scan session did not carry protocol from scan_session nested options");
+const textScanSessionNestedCamelOptions = obd.buildScanSessionFromObdText(obdTextLog, {
+  scanSession: {
+    sessionId: "obd-text-camel-nested",
+    startedAt: "2026-06-28T00:16:30Z",
+    endedAt: "2026-06-28T00:17:30Z",
+    vehicleProfile: { maker: "Toyota", model: "Rize" },
+    protocol: "ISO15765-4"
+  }
+});
+check(textScanSessionNestedCamelOptions.startedAt === "2026-06-28T00:16:30Z" && textScanSessionNestedCamelOptions.endedAt === "2026-06-28T00:17:30Z", "OBD text scan session did not accept scanSession camelCase option timestamps");
+check(textScanSessionNestedCamelOptions.vehicleProfile?.model === "Rize", "OBD text scan session did not carry vehicleProfile from scanSession camelCase options");
+check(textScanSessionNestedCamelOptions.sessionId === "obd-text-camel-nested", "OBD text scan session did not carry sessionId from scanSession camelCase options");
+check(textScanSessionNestedCamelOptions.protocol === "ISO15765-4", "OBD text scan session did not carry protocol from scanSession camelCase options");
 const textScanSessionNestedCoreOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   scan_session: {
     session_id: "obd-text-nested-core-overrides",
