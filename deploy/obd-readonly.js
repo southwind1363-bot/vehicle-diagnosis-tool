@@ -2272,7 +2272,8 @@
         || bridgeImport?.ecuInfoSnapshot?.hadSensitiveIdentifier === true
         || bridgeImport?.ecu_info_snapshot?.hadSensitiveIdentifier === true
         || bridgeSessionMetadata.hadSensitiveIdentifier === true
-        || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+        || bridgeSession?.ecuInfoSnapshot?.hadSensitiveIdentifier === true
+        || bridgeSession?.ecu_info_snapshot?.hadSensitiveIdentifier === true,
       sourceLength: Math.max(
         Number.isFinite(Number(bridgeImportMetadata.sourceLength)) ? Math.max(0, Math.round(Number(bridgeImportMetadata.sourceLength))) : 0,
         Number.isFinite(Number(bridgeSessionMetadata.sourceLength)) ? Math.max(0, Math.round(Number(bridgeSessionMetadata.sourceLength))) : 0
@@ -2312,7 +2313,8 @@
       ),
       hadSensitiveIdentifier: session.hadSensitiveIdentifier === true
         || classified.hadSensitiveIdentifier === true
-        || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true,
+        || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true
+        || session.ecu_info_snapshot?.hadSensitiveIdentifier === true,
       sourceLength: Number.isFinite(Number(pickDefined(session.sourceLength, classified.sourceLength)))
         ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
         : 0

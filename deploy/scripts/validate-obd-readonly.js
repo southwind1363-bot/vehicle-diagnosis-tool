@@ -1687,6 +1687,18 @@ check(mergedDiagnosticInputBridgeSessionOnlyImport.warnings.includes("freeze_fra
 check(mergedDiagnosticInputBridgeSessionOnlyImport.nextReadoutCandidates[0]?.id === bridgeDiagnosticImport.bridgeSession.nextReadoutCandidates[0]?.id, "Combined diagnostic inputs did not recover nextReadoutCandidates from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.toolHints.join(",") === "Techstream,J2534", "Combined diagnostic inputs did not recover toolHints from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.sourceLength === 128, "Combined diagnostic inputs did not recover sourceLength from bridgeSession-only diagnostic import");
+const mergedDiagnosticInputBridgeSessionSnakeSensitiveIdentifier = obd.mergeDiagnosticInputs({
+  bridge_diagnostic_import: {
+    importType: "bridge_diagnostic_snapshot",
+    bridge_session: {
+      ecu_info_snapshot: {
+        hadSensitiveIdentifier: true,
+        items: [{ id: "vin", value: "JT123456789012345", privacyClass: "sensitive_identifier" }]
+      }
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeSessionSnakeSensitiveIdentifier.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not recover hadSensitiveIdentifier from snake_case bridge_session ecu_info_snapshot input");
 const mergedDiagnosticInputImportClassification = obd.mergeDiagnosticInputs({
   bridge_session: {
     import_classification: {
