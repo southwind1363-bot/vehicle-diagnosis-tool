@@ -1862,6 +1862,7 @@
       next_readout_candidates: pickDefined(input.next_readout_candidates, input.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       tool_hints: mergeUniqueStrings(input.tool_hints, input.toolHints, nested.tool_hints, nested.toolHints),
       warnings: mergeUniqueStrings(input.warnings, input.warning_flags, input.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
+      import_classification: pickDefined(input.import_classification, input.importClassification, nested.import_classification, nested.importClassification, null),
       source_length: pickDefined(input.source_length, input.sourceLength, nested.source_length, nested.sourceLength, null),
       had_sensitive_identifier: pickDefined(input.had_sensitive_identifier, input.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
     };
@@ -3777,6 +3778,13 @@
       input.warning_flags,
       input.warningFlags
     );
+    const importClassification = pickDefined(
+      input.importClassification,
+      input.import_classification,
+      sessionInput.importClassification,
+      sessionInput.import_classification,
+      null
+    );
 
     return {
       schemaVersion: "scan_session_v1",
@@ -3812,6 +3820,9 @@
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
       ]),
+      importClassification: importClassification && typeof importClassification === "object"
+        ? { ...importClassification }
+        : null,
       toolHints: mergeUniqueStrings(
         sessionInput.toolHints,
         sessionInput.tool_hints,

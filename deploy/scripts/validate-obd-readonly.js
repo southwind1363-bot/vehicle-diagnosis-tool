@@ -2158,6 +2158,21 @@ const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTe
 check(textScanSessionNestedOuterOverride.sessionId === "obd-text-outer-override", "OBD text scan session did not let outer session_id override scan_session nested options");
 check(textScanSessionNestedOuterOverride.protocol === "ISO9141-2", "OBD text scan session did not let outer protocol override scan_session nested options");
 check(textScanSessionNestedOuterOverride.vehicleProfile?.model === "Ractis", "OBD text scan session did not let outer vehicle_profile override scan_session nested options");
+const textScanSessionRebuilt = obd.buildDiagnosticScanSession({
+  session_id: "obd-text-rebuilt",
+  scan_session: textScanSession
+});
+check(textScanSessionRebuilt.importClassification?.negativeResponseSummary?.totalCount === 1, "Diagnostic scan session did not preserve importClassification from obd_text scan session");
+check(textScanSessionRebuilt.warnings.includes("negative_obd_response_present"), "Diagnostic scan session did not preserve text-derived warnings from obd_text scan session");
+const textScanSessionOuterImportClassificationOverride = obd.buildDiagnosticScanSession({
+  session_id: "obd-text-import-classification-outer-override",
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { livePidResponses: 99 }
+  },
+  scan_session: textScanSession
+});
+check(textScanSessionOuterImportClassificationOverride.importClassification?.bucketCounts?.livePidResponses === 99, "Diagnostic scan session did not let outer import_classification override nested scan_session input");
 const compactCanLog = [
   "can0 7E8#04410C1AF8",
   "(171234.123456) can0 7E8#0341057B"
