@@ -1284,6 +1284,28 @@ check(bridgeExportDirectCamelMetadataSummary.session.had_sensitive_identifier ==
 check(bridgeExportDirectCamelMetadataSummary.session.source_length === 66, "Bridge export did not preserve direct camelCase sourceLength summary input");
 check(bridgeExportDirectCamelMetadataSummary.session.tool_hints.join(",") === "Techstream,CONSULT", "Bridge export did not preserve direct camelCase toolHints summary input");
 check(bridgeExportDirectCamelMetadataSummary.session.warnings.includes("negative_obd_response_present") && bridgeExportDirectCamelMetadataSummary.session.warnings.includes("freeze_frame_available"), "Bridge export did not preserve direct camelCase warningFlags summary input");
+const bridgeExportDirectMixedMetadataSummary = obd.buildBridgeSessionExportPayload({
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 6 }
+  },
+  next_readout_candidates: [{ id: "direct_mixed_snapshot", label: "Direct Mixed Snapshot", priority: 4, reason: "mixed summary" }],
+  toolHints: ["Techstream"],
+  warning_flags: ["negative_obd_response_present"],
+  hadSensitiveIdentifier: true,
+  source_length: 68,
+  ecu_info_snapshot: {
+    itemCount: 1,
+    had_sensitive_identifier: true,
+    items: [{ id: "vin", value: "JT123456789012345", privacyClass: "sensitive_identifier" }]
+  }
+});
+check(bridgeExportDirectMixedMetadataSummary.session.import_classification?.bucketCounts?.storedDtcResponses === 6, "Bridge export did not preserve mixed-case direct importClassification summary input");
+check(bridgeExportDirectMixedMetadataSummary.session.next_readout_candidates[0]?.id === "direct_mixed_snapshot", "Bridge export did not preserve mixed-case direct next_readout_candidates summary input");
+check(bridgeExportDirectMixedMetadataSummary.session.had_sensitive_identifier === true, "Bridge export did not preserve mixed-case direct hadSensitiveIdentifier summary input");
+check(bridgeExportDirectMixedMetadataSummary.session.source_length === 68, "Bridge export did not preserve mixed-case direct source_length summary input");
+check(bridgeExportDirectMixedMetadataSummary.session.tool_hints.join(",") === "Techstream", "Bridge export did not preserve mixed-case direct toolHints summary input");
+check(bridgeExportDirectMixedMetadataSummary.session.warnings.includes("negative_obd_response_present"), "Bridge export did not preserve mixed-case direct warning_flags summary input");
 const bridgeDiagnosticImport = obd.buildBridgeDiagnosticImport({
   started_at: "2026-06-28T00:05:00Z",
   ended_at: "2026-06-28T00:06:00Z",
@@ -1390,6 +1412,24 @@ check(bridgeDiagnosticImportDirectCamelMetadata.hadSensitiveIdentifier === true,
 check(bridgeDiagnosticImportDirectCamelMetadata.sourceLength === 65, "Bridge diagnostic import did not preserve direct camelCase sourceLength");
 check(bridgeDiagnosticImportDirectCamelMetadata.toolHints.join(",") === "Techstream,CONSULT", "Bridge diagnostic import did not preserve direct camelCase toolHints");
 check(bridgeDiagnosticImportDirectCamelMetadata.warnings.includes("negative_obd_response_present") && bridgeDiagnosticImportDirectCamelMetadata.warnings.includes("freeze_frame_available"), "Bridge diagnostic import did not preserve direct camelCase warningFlags");
+const bridgeDiagnosticImportDirectMixedMetadata = obd.buildBridgeDiagnosticImport({
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 7 }
+  },
+  next_readout_candidates: [{ id: "direct_mixed_import_snapshot", label: "Direct Mixed Import Snapshot", priority: 4, reason: "direct mixed import" }],
+  toolHints: ["Techstream"],
+  warning_flags: ["negative_obd_response_present"],
+  hadSensitiveIdentifier: true,
+  source_length: 67,
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(bridgeDiagnosticImportDirectMixedMetadata.importClassification?.bucketCounts?.storedDtcResponses === 7, "Bridge diagnostic import did not preserve mixed-case direct importClassification");
+check(bridgeDiagnosticImportDirectMixedMetadata.nextReadoutCandidates[0]?.id === "direct_mixed_import_snapshot", "Bridge diagnostic import did not preserve mixed-case direct next_readout_candidates");
+check(bridgeDiagnosticImportDirectMixedMetadata.hadSensitiveIdentifier === true, "Bridge diagnostic import did not preserve mixed-case direct hadSensitiveIdentifier");
+check(bridgeDiagnosticImportDirectMixedMetadata.sourceLength === 67, "Bridge diagnostic import did not preserve mixed-case direct source_length");
+check(bridgeDiagnosticImportDirectMixedMetadata.toolHints.join(",") === "Techstream", "Bridge diagnostic import did not preserve mixed-case direct toolHints");
+check(bridgeDiagnosticImportDirectMixedMetadata.warnings.includes("negative_obd_response_present"), "Bridge diagnostic import did not preserve mixed-case direct warning_flags");
 check(bridgeDiagnosticImport.retainedRawText === false, "ブリッジ診断取込が原文保持になっています");
 check(bridgeDiagnosticImport.wouldTransmit === false && bridgeDiagnosticImport.vehicleCommandEnabled === false, "ブリッジ診断取込が送信可能扱いになっています");
 const bridgeDiagnosticImportAliases = obd.buildBridgeDiagnosticImport({
