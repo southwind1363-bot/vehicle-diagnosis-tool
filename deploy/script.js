@@ -5591,8 +5591,8 @@ function analyzeObdScannerImport() {
   if (mergedSession?.endedAt || analysis.endedAt) {
     notes.push(`終了 ${formatDateTime(mergedSession?.endedAt || analysis.endedAt)}`);
   }
-  if (analysis.connectionStatus?.displayStatus) {
-    notes.push(`状態 ${analysis.connectionStatus.displayStatus}`);
+  if (summarySource.connectionStatus?.displayStatus) {
+    notes.push(`状態 ${summarySource.connectionStatus.displayStatus}`);
   }
   if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
     notes.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
@@ -5610,17 +5610,17 @@ function analyzeObdScannerImport() {
   if (mergedSession?.hadSensitiveIdentifier === true) {
     notes.push("識別情報候補はマスク済み");
   }
-  const readinessNoteSummary = formatObdBridgeReadinessSummary(analysis.readinessSnapshot);
+  const readinessNoteSummary = formatObdBridgeReadinessSummary(summarySource.readinessSnapshot);
   if (readinessNoteSummary !== NO_DATA) {
     notes.push(`レディネス${readinessNoteSummary}`);
   }
-  if (analysis.monitorValueSummary?.totalCount > 0) {
-    notes.push(`ライブデータ${analysis.monitorValueSummary.totalCount}項目`);
+  if (summarySource.monitorValueSummary?.totalCount > 0) {
+    notes.push(`ライブデータ${summarySource.monitorValueSummary.totalCount}項目`);
   }
-  if (analysis.supportedPidMatrix?.supportedCount > 0) {
-    notes.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
+  if (summarySource.supportedPidMatrix?.supportedCount > 0) {
+    notes.push(`対応PID${summarySource.supportedPidMatrix.supportedCount}件`);
   }
-  const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
+  const coverage = getReadoutCoverageDisplay(summarySource.readoutCoverage);
   if (coverage?.totalCategories) {
     notes.push(`取得率${coverage.capturedPercent || 0}% (${coverage.capturedCategories || 0}/${coverage.totalCategories})`);
     notes.push(`応答率${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})`);
@@ -5633,35 +5633,35 @@ function analyzeObdScannerImport() {
       notes.push(`空応答${coverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
     }
   }
-  if (analysis.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
-    const labels = analysis.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 3).join(" / ");
-    notes.push(`Mode09対応${analysis.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
+  if (summarySource.ecuInfoSnapshot?.supportInfoTypesSummary?.count > 0) {
+    const labels = summarySource.ecuInfoSnapshot.supportInfoTypesSummary.labels?.slice(0, 3).join(" / ");
+    notes.push(`Mode09対応${summarySource.ecuInfoSnapshot.supportInfoTypesSummary.count}件${labels ? ` (${labels})` : ""}`);
   }
-  if (analysis.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
+  if (summarySource.ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
     notes.push("Mode09対応情報タイプ00未取得");
   }
-  if (analysis.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
-    const missingLabels = analysis.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 3).join(" / ");
-    notes.push(`Mode09未取得${analysis.ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`);
+  if (summarySource.ecuInfoSnapshot?.keyItemSummary?.missingCount > 0) {
+    const missingLabels = summarySource.ecuInfoSnapshot.keyItemSummary.missingLabels?.slice(0, 3).join(" / ");
+    notes.push(`Mode09未取得${summarySource.ecuInfoSnapshot.keyItemSummary.missingCount}件${missingLabels ? ` (${missingLabels})` : ""}`);
   }
-  if (analysis.ecuResponseSummary?.ecus?.length > 0) {
-    notes.push(`ECU応答${analysis.ecuResponseSummary.ecus.length}件`);
+  if (summarySource.ecuResponseSummary?.ecus?.length > 0) {
+    notes.push(`ECU応答${summarySource.ecuResponseSummary.ecus.length}件`);
   }
-  if (analysis.ecuInfoSnapshot?.itemCount > 0) {
-    notes.push(`ECU情報${analysis.ecuInfoSnapshot.itemCount}項目`);
+  if (summarySource.ecuInfoSnapshot?.itemCount > 0) {
+    notes.push(`ECU情報${summarySource.ecuInfoSnapshot.itemCount}項目`);
   }
-  if (analysis.onboardMonitorSnapshot?.testCount > 0) {
-    notes.push(`Mode06 ${analysis.onboardMonitorSnapshot.testCount}件`);
+  if (summarySource.onboardMonitorSnapshot?.testCount > 0) {
+    notes.push(`Mode06 ${summarySource.onboardMonitorSnapshot.testCount}件`);
   }
-  if (analysis.freezeFrameSnapshot?.monitorValues?.length > 0) {
-    notes.push(`FF ${analysis.freezeFrameSnapshot.monitorValues.length}項目`);
+  if (summarySource.freezeFrameSnapshot?.monitorValues?.length > 0) {
+    notes.push(`FF ${summarySource.freezeFrameSnapshot.monitorValues.length}項目`);
   }
-  if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) notes.push(`主要ECU情報${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
-  if (analysis.freezeFrameSnapshot?.triggerDtc) notes.push(`FF起点${analysis.freezeFrameSnapshot.triggerDtc}`);
-  if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) notes.push(`FF要約${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
-  if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
-    const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
-    notes.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
+  if (summarySource.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) notes.push(`主要ECU情報${formatObdBridgeEcuKeySummary(summarySource.ecuInfoSnapshot.keyItemSummary)}`);
+  if (summarySource.freezeFrameSnapshot?.triggerDtc) notes.push(`FF起点${summarySource.freezeFrameSnapshot.triggerDtc}`);
+  if (summarySource.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) notes.push(`FF要約${formatObdBridgeMonitorSummary(summarySource.freezeFrameSnapshot.monitorValueSummary)}`);
+  if (Array.isArray(summarySource.warnings) && summarySource.warnings.length) {
+    const warningLabels = summarySource.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
+    notes.push(`注意${summarySource.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
   }
   const sourcePrefix = bridgeImport
     ? hasScannerText
