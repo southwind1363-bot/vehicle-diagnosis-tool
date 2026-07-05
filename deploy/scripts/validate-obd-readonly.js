@@ -1219,6 +1219,20 @@ const bridgeDiagnosticImportSummaryOnlyRawWarning = obd.buildBridgeDiagnosticImp
 });
 check(bridgeDiagnosticImportSummaryOnlyRawWarning.monitorValueSummary.undecodedRawCount === 2, "Bridge diagnostic import did not retain monitor_value_summary without monitor_values");
 check(bridgeDiagnosticImportSummaryOnlyRawWarning.warnings.includes("raw_pid_values_need_conversion"), "Bridge diagnostic import did not derive raw PID warning from monitor_value_summary-only input");
+const legacyReadoutCoverage = {
+  schemaVersion: "readout_coverage_v1",
+  includeInfrastructure: false,
+  totalCategories: 7,
+  availableCategories: 7,
+  capturedCategories: 2,
+  emptyCategories: 5,
+  missingCategories: 0
+};
+const bridgeDiagnosticImportLegacyCoverage = obd.buildBridgeDiagnosticImport({
+  dtc_codes: ["P0300"],
+  readout_coverage: legacyReadoutCoverage
+});
+check(bridgeDiagnosticImportLegacyCoverage.readoutCoverage.capturedPercent === 29, "Bridge diagnostic import did not backfill capturedPercent for legacy readout coverage");
 const bridgeDiagnosticImportNonInfrastructureAliases = obd.buildBridgeDiagnosticImport({
   dtc_codes: ["P0300"],
   supported_pid_snapshot: bridgeSupportedPidSnapshot
@@ -2067,6 +2081,11 @@ const scanSessionNonInfrastructureBridgeImport = obd.buildDiagnosticScanSession(
 });
 check(scanSessionNonInfrastructureBridgeImport.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve non-infrastructure readoutCoverage from bridge diagnostic import");
 check(!scanSessionNonInfrastructureBridgeImport.warnings.includes("bridge_readout_incomplete") && !scanSessionNonInfrastructureBridgeImport.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings for non-infrastructure bridge diagnostic import");
+const scanSessionLegacyCoverageImport = obd.buildDiagnosticScanSession({
+  scan_session: bridgeDiagnosticImportLegacyCoverage,
+  session_id: "shop-test-legacy-coverage-import"
+});
+check(scanSessionLegacyCoverageImport.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve backfilled capturedPercent from legacy readout coverage");
 const scanSessionNonInfrastructureBridgeSession = obd.buildDiagnosticScanSession({
   bridge_session: bridgeDiagnosticImportNonInfrastructureAliases.bridgeSession,
   session_id: "shop-test-non-infra-bridge-session"

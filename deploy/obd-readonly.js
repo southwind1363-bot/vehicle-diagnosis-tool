@@ -1367,6 +1367,34 @@
     };
   }
 
+  function normalizeReadoutCoverageSnapshot(input = {}) {
+    if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();
+    const totalCategories = Number.isFinite(Number(input.totalCategories)) ? Math.max(0, Math.round(Number(input.totalCategories))) : 0;
+    const availableCategories = Number.isFinite(Number(input.availableCategories)) ? Math.max(0, Math.round(Number(input.availableCategories))) : 0;
+    const capturedCategories = Number.isFinite(Number(input.capturedCategories)) ? Math.max(0, Math.round(Number(input.capturedCategories))) : 0;
+    const emptyCategories = Number.isFinite(Number(input.emptyCategories)) ? Math.max(0, Math.round(Number(input.emptyCategories))) : 0;
+    const missingCategories = Number.isFinite(Number(input.missingCategories)) ? Math.max(0, Math.round(Number(input.missingCategories))) : 0;
+    const computedCapturedPercent = totalCategories > 0 ? Math.round((capturedCategories / totalCategories) * 100) : 0;
+    const computedProgressPercent = totalCategories > 0 ? Math.round((availableCategories / totalCategories) * 100) : 0;
+    return {
+      ...input,
+      schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",
+      includeInfrastructure: input.includeInfrastructure === true,
+      totalCategories,
+      availableCategories,
+      capturedCategories,
+      emptyCategories,
+      missingCategories,
+      capturedPercent: Number.isFinite(Number(input.capturedPercent)) ? Math.max(0, Math.min(100, Math.round(Number(input.capturedPercent)))) : computedCapturedPercent,
+      progressPercent: Number.isFinite(Number(input.progressPercent)) ? Math.max(0, Math.min(100, Math.round(Number(input.progressPercent)))) : computedProgressPercent,
+      items: Array.isArray(input.items) ? input.items.map((item) => (item && typeof item === "object" ? { ...item } : item)) : [],
+      emptyIds: Array.isArray(input.emptyIds) ? [...input.emptyIds] : [],
+      emptyLabels: Array.isArray(input.emptyLabels) ? [...input.emptyLabels] : [],
+      missingIds: Array.isArray(input.missingIds) ? [...input.missingIds] : [],
+      missingLabels: Array.isArray(input.missingLabels) ? [...input.missingLabels] : []
+    };
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
@@ -1484,7 +1512,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
-      readoutCoverage,
+      readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverage),
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(livePidSnapshot.monitorValues),
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -1629,7 +1657,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
-      readoutCoverage: parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage,
+      readoutCoverage: normalizeReadoutCoverageSnapshot(parts.readoutCoverage || parts.readout_coverage || parts.readoutCoverageResponse || parts.readout_coverage_response || derivedReadoutCoverage),
       freezeFrameSnapshot,
       monitorValues,
       monitorValueSummary,
@@ -1689,7 +1717,7 @@
         readiness_snapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
         ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
-        readout_coverage: summary.readoutCoverage || buildReadoutCoverageSnapshot(),
+        readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(cloneBridgeArrayItems(summary.monitorValues)),
@@ -1729,7 +1757,7 @@
       readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
       ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
-      readoutCoverage: summary.readoutCoverage || buildReadoutCoverageSnapshot(),
+      readoutCoverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
       connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
       vciDevices: cloneBridgeArrayItems(summary.vciDevices),
@@ -1750,7 +1778,7 @@
         readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
         ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
-        readoutCoverage: summary.readoutCoverage || buildReadoutCoverageSnapshot(),
+        readoutCoverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitorValues,
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
@@ -1863,7 +1891,7 @@
       readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
       ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
       onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
-      readoutCoverage: bridgeImport?.readoutCoverage || bridgeSession?.readoutCoverage || null,
+      readoutCoverage: normalizeReadoutCoverageSnapshot(bridgeImport?.readoutCoverage || bridgeSession?.readoutCoverage || null),
       freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
       vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
       connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
@@ -3527,7 +3555,7 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    const readoutCoverage = readoutCoverageInput?.schemaVersion ? readoutCoverageInput : derivedReadoutCoverage;
+    const readoutCoverage = normalizeReadoutCoverageSnapshot(readoutCoverageInput?.schemaVersion ? readoutCoverageInput : derivedReadoutCoverage);
     if (hasBridgeInfrastructureContext && readoutCoverage.missingCategories > 0) warnings.push("bridge_readout_incomplete");
     if (hasBridgeInfrastructureContext && readoutCoverage.emptyCategories > 0) warnings.push("bridge_readout_empty_sections");
 
