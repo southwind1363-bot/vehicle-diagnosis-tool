@@ -5528,6 +5528,12 @@ function analyzeObdScannerImport() {
   const analysis = bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
     ? window.ObdReadOnly.mergeDiagnosticInputs({ scannerText, bridgeImport })
     : window.ObdReadOnly.analyzeScannerText(scannerText);
+  if (bridgeImport && hasBridgeDiagnosticScanSessionSupport()) {
+    obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
+      session_id: obdDevSession.lastSession?.sessionId || "scanner-bridge-merge-session",
+      scan_session: analysis
+    });
+  }
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
@@ -5680,6 +5686,9 @@ function analyzeObdScannerImport() {
     }
     appendObdAnalysisReadoutSummary(summary, analysis, { includeReadinessCount: true });
     obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
+  }
+  if (bridgeImport && obdDevSession.lastSession) {
+    renderObdDeveloperSessionSummary(obdDevSession.lastSession);
   }
 }
 
