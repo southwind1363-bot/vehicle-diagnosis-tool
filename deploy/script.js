@@ -5540,7 +5540,8 @@ function analyzeObdScannerImport() {
       supportedPidMatrix: currentSession.supportedPidMatrix,
       ecuResponseSummary: currentSession.ecuResponseSummary,
       readoutCoverage: currentSession.readoutCoverage,
-      nextReadoutCandidates: currentSession.nextReadoutCandidates
+      nextReadoutCandidates: currentSession.nextReadoutCandidates,
+      warnings: currentSession.warnings
     })
     : null;
   const analysis = bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
