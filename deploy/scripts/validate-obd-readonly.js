@@ -1674,6 +1674,7 @@ check(scanSessionFromMergedDiagnosticInput.connectionStatus?.vehicleConnected ==
 check(scanSessionFromMergedDiagnosticInput.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not preserve readout_coverage from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not preserve ecu_info_snapshot from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.nextReadoutCandidates?.[0]?.id === mergedDiagnosticInputExportNestedOuterOverride.nextReadoutCandidates?.[0]?.id, "Diagnostic scan session did not preserve next_readout_candidates from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not preserve warnings from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.source === "scanner_text_and_local_bridge", "Diagnostic scan session did not preserve source from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.toolHints.join(",") === mergedDiagnosticInputExportNestedOuterOverride.toolHints.join(","), "Diagnostic scan session did not preserve toolHints from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve hadSensitiveIdentifier from merged diagnostic input");
