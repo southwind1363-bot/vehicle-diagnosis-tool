@@ -3005,6 +3005,24 @@ check(decodedScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstrea
 check(decodedScanSessionExplicitMetaOverrides.warnings.includes("negative_obd_response_present"), "Decoded OBD session did not preserve explicit warning_flags input");
 check(decodedScanSessionExplicitMetaOverrides.sourceLength === 128, "Decoded OBD session did not preserve explicit source_length input");
 check(decodedScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve explicit had_sensitive_identifier input");
+const decodedScanSessionExplicitMixedMetaOverrides = obd.buildDecodedObdScanSession({
+  sessionId: "decoded-explicit-mixed-meta-overrides",
+  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  toolHints: ["Techstream"],
+  warning_flags: ["negative_obd_response_present"],
+  sourceLength: 129,
+  had_sensitive_identifier: true,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 22 }
+  }
+});
+check(decodedScanSessionExplicitMixedMetaOverrides.sessionId === "decoded-explicit-mixed-meta-overrides", "Decoded OBD session did not preserve mixed-case sessionId input");
+check(decodedScanSessionExplicitMixedMetaOverrides.toolHints.join(",") === "Techstream", "Decoded OBD session did not preserve mixed-case toolHints input");
+check(decodedScanSessionExplicitMixedMetaOverrides.warnings.includes("negative_obd_response_present"), "Decoded OBD session did not preserve mixed-case warning_flags input");
+check(decodedScanSessionExplicitMixedMetaOverrides.sourceLength === 129, "Decoded OBD session did not preserve mixed-case sourceLength input");
+check(decodedScanSessionExplicitMixedMetaOverrides.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve mixed-case had_sensitive_identifier input");
+check(decodedScanSessionExplicitMixedMetaOverrides.importClassification?.bucketCounts?.storedDtcResponses === 22, "Decoded OBD session did not preserve mixed-case importClassification input");
 const decodedScanSessionExplicitImportClassification = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-import-classification",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3326,6 +3344,23 @@ check(textScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J
 check(textScanSessionExplicitMetaOverrides.warnings.includes("isotp_reassembly_issue"), "OBD text scan session did not preserve explicit warning_flags option input");
 check(textScanSessionExplicitMetaOverrides.sourceLength === 128, "OBD text scan session did not preserve explicit source_length option input");
 check(textScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "OBD text scan session did not preserve explicit had_sensitive_identifier option input");
+const textScanSessionExplicitMixedMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
+  sessionId: "obd-text-explicit-mixed-meta-overrides",
+  toolHints: ["Techstream"],
+  warning_flags: ["isotp_reassembly_issue"],
+  sourceLength: 129,
+  had_sensitive_identifier: true,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { livePidResponses: 22 }
+  }
+});
+check(textScanSessionExplicitMixedMetaOverrides.sessionId === "obd-text-explicit-mixed-meta-overrides", "OBD text scan session did not preserve mixed-case sessionId option input");
+check(textScanSessionExplicitMixedMetaOverrides.toolHints.join(",") === "Techstream", "OBD text scan session did not preserve mixed-case toolHints option input");
+check(textScanSessionExplicitMixedMetaOverrides.warnings.includes("isotp_reassembly_issue"), "OBD text scan session did not preserve mixed-case warning_flags option input");
+check(textScanSessionExplicitMixedMetaOverrides.sourceLength === 129, "OBD text scan session did not preserve mixed-case sourceLength option input");
+check(textScanSessionExplicitMixedMetaOverrides.hadSensitiveIdentifier === true, "OBD text scan session did not preserve mixed-case had_sensitive_identifier option input");
+check(textScanSessionExplicitMixedMetaOverrides.importClassification?.bucketCounts?.livePidResponses === 22, "OBD text scan session did not preserve mixed-case importClassification option input");
 const textScanSessionExplicitCamelMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-meta-overrides",
   toolHints: ["Techstream", "J2534"],
