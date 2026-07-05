@@ -3444,6 +3444,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
     supportedPids: ["0104", "0105", "0106", "0107", "010B", "010C", "010D", "010F", "0110", "0111", "0142", "0151"]
   };
   const sharedCoverage = {
+    capturedPercent: 100,
     progressPercent: 100,
     availableCategories: 7,
     totalCategories: 7,
@@ -4498,7 +4499,8 @@ function summarizeObdMonitorValues(values = []) {
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   if (analysis.readoutCoverage?.totalCategories) {
-    parts.push(`読取率${analysis.readoutCoverage.progressPercent}%`);
+    parts.push(`取得率${analysis.readoutCoverage.capturedPercent || 0}%`);
+    parts.push(`応答率${analysis.readoutCoverage.progressPercent}%`);
     if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
       const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
       parts.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);
@@ -4604,7 +4606,8 @@ function renderObdBridgeSessionDetails(session = null) {
   const coverage = session?.readoutCoverage;
   if (coverage?.totalCategories) {
     const lines = [
-      `進捗: ${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})`,
+      `取得率: ${coverage.capturedPercent || 0}% (${coverage.capturedCategories || 0}/${coverage.totalCategories})`,
+      `応答率: ${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})`,
       `取得済み: ${coverage.capturedCategories || 0} / 空応答: ${coverage.emptyCategories || 0} / 未取得: ${coverage.missingCategories || 0}`,
       `未取得: ${coverage.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"}`,
       `空応答: ${coverage.emptyLabels?.length ? coverage.emptyLabels.join(" / ") : "なし"}`
@@ -4844,7 +4847,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["ブリッジ", obdDevSession.bridgeEndpoint || hasRecoveredBridgeSession ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ["アダプター", adapterIdentity?.adapterFamily || adapterIdentity?.adapterName || NO_DATA],
-    ["読取率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
+    ["取得率", coverage?.totalCategories ? `${coverage.capturedPercent || 0}% (${coverage.capturedCategories || 0}/${coverage.totalCategories})` : NO_DATA],
+    ["応答率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
     ["取得済", coverage?.capturedCategories ?? 0],
     ["空応答", coverage?.emptyCategories ?? 0],
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"]
@@ -5342,7 +5346,8 @@ function analyzeObdScannerImport() {
     notes.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
   }
   if (analysis.readoutCoverage?.totalCategories) {
-    notes.push(`読取率${analysis.readoutCoverage.progressPercent}% (${analysis.readoutCoverage.availableCategories}/${analysis.readoutCoverage.totalCategories})`);
+    notes.push(`取得率${analysis.readoutCoverage.capturedPercent || 0}% (${analysis.readoutCoverage.capturedCategories || 0}/${analysis.readoutCoverage.totalCategories})`);
+    notes.push(`応答率${analysis.readoutCoverage.progressPercent}% (${analysis.readoutCoverage.availableCategories}/${analysis.readoutCoverage.totalCategories})`);
     if ((analysis.readoutCoverage.missingCategories || 0) > 0) {
       const missingLabels = analysis.readoutCoverage.missingLabels?.slice(0, 2).join(" / ");
       notes.push(`未取得${analysis.readoutCoverage.missingCategories}件${missingLabels ? ` (${missingLabels})` : ""}`);

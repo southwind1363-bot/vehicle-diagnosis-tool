@@ -1357,6 +1357,7 @@
       capturedCategories: capturedItems.length,
       emptyCategories: emptyItems.length,
       missingCategories: missingItems.length,
+      capturedPercent: Math.round((capturedItems.length / items.length) * 100),
       progressPercent: Math.round((availableCount / items.length) * 100),
       items,
       emptyIds: emptyItems.map((item) => item.id),

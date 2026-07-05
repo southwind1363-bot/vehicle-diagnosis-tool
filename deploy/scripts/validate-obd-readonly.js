@@ -939,6 +939,7 @@ check(bridgeSummary.supportedPidMatrix.supportedPids.includes("0C"), "ブリッ�
 check(bridgeSummary.freezeFrameSnapshot.triggerDtc === "P0171", "ブリッジセッション要約へフリーズフレームを引き継げません");
 check(bridgeSummary.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge session summary did not carry ECU info");
 check(bridgeSummary.readoutCoverage.progressPercent >= 80, "Bridge session summary did not build readout coverage");
+check(bridgeSummary.readoutCoverage.capturedPercent >= 70, "Bridge session summary did not calculate capturedPercent");
 check(bridgeSummary.readoutCoverage.capturedCategories >= 7, "Bridge session summary did not count captured readout sections");
 check(bridgeSummary.readoutCoverage.emptyCategories === 0, "Bridge session summary counted missing readout sections as empty");
 check(bridgeSummary.readoutCoverage.items.some((item) => item.id === "ecu_info_snapshot" && item.available === true && item.count === 4), "Bridge session summary readout coverage did not count ECU info");
@@ -1223,6 +1224,7 @@ const bridgeDiagnosticImportNonInfrastructureAliases = obd.buildBridgeDiagnostic
   supported_pid_snapshot: bridgeSupportedPidSnapshot
 });
 check(bridgeDiagnosticImportNonInfrastructureAliases.readoutCoverage.includeInfrastructure === false, "Bridge diagnostic import incorrectly counted bridge infrastructure for summary-only alias input");
+check(bridgeDiagnosticImportNonInfrastructureAliases.readoutCoverage.capturedPercent === 29, "Bridge diagnostic import did not preserve capturedPercent for summary-only alias input");
 check(!bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("bridge_readout_incomplete") && !bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("bridge_readout_empty_sections"), "Bridge diagnostic import emitted bridge readout warnings without bridge infrastructure context");
 check(!bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("local_bridge_disabled"), "Bridge diagnostic import emitted local_bridge_disabled without bridge context");
 check(!bridgeDiagnosticImportNonInfrastructureAliases.warnings.includes("mode09_supported_types_unknown"), "Bridge diagnostic import emitted mode09_supported_types_unknown without ECU info input");
@@ -1432,6 +1434,7 @@ check(mergedDiagnosticInputBridgeParts.bridgeSession?.adapterIdentity?.adapterFa
 check(mergedDiagnosticInputBridgeParts.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not carry supported_pid_matrix from bridge_parts alias input");
 const emptyReadoutCoverage = obd.buildReadoutCoverageSnapshot();
 check(emptyReadoutCoverage.progressPercent === 0, "Empty readout coverage did not stay at zero without captured data");
+check(emptyReadoutCoverage.capturedPercent === 0, "Empty readout coverage did not keep capturedPercent at zero");
 check(emptyReadoutCoverage.capturedCategories === 0 && emptyReadoutCoverage.emptyCategories === 0, "Empty readout coverage counted missing data as captured or empty");
 check(emptyReadoutCoverage.missingLabels.includes("ECU情報") && emptyReadoutCoverage.missingLabels.includes("Mode06"), "Empty readout coverage missing labels are incomplete");
 const aliasReadoutCoverage = obd.buildReadoutCoverageSnapshot({
