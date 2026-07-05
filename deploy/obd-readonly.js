@@ -2391,7 +2391,16 @@
       warnings: preserveNestedBridgeSessionMetadata
         ? resolveWarningList(metadataFields.warnings, nestedSessionMetadata.warnings)
         : metadataFields.warnings,
-      nextReadoutCandidates: metadataFields.nextReadoutCandidates,
+      nextReadoutCandidates: preserveNestedBridgeSessionMetadata
+        ? resolveNextReadoutCandidates({
+          explicitCandidates: nestedSessionMetadata.nextReadoutCandidates,
+          readoutCoverage: summary.readoutCoverage,
+          vehicleApplicability: summary.vehicleApplicability
+        })
+        : metadataFields.nextReadoutCandidates,
+      importClassification: preserveNestedBridgeSessionMetadata
+        ? resolveImportClassification(nestedSessionMetadata.importClassification || metadataFields.importClassification)
+        : metadataFields.importClassification,
       hadSensitiveIdentifier: preserveNestedBridgeSessionMetadata
         ? metadataFields.hadSensitiveIdentifier === true || nestedSessionMetadata.hadSensitiveIdentifier === true
         : metadataFields.hadSensitiveIdentifier,
@@ -2455,7 +2464,7 @@
         monitorValues,
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
-        importClassification: metadataFields.importClassification,
+        importClassification: bridgeSessionMetadataFields.importClassification,
         toolHints: bridgeSessionMetadataFields.toolHints,
         warnings: bridgeSessionMetadataFields.warnings,
         nextReadoutCandidates: bridgeSessionMetadataFields.nextReadoutCandidates,

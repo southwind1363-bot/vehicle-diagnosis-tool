@@ -1795,6 +1795,27 @@ const mergedDiagnosticInputDirectBridgeImportNestedSourceLength = obd.mergeDiagn
 check(mergedDiagnosticInputDirectBridgeImportNestedSourceLength.toolHints.includes("NESTED"), "Combined diagnostic inputs did not preserve nested tool_hints from direct bridge_diagnostic_import input");
 check(mergedDiagnosticInputDirectBridgeImportNestedSourceLength.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not preserve nested warning_flags from direct bridge_diagnostic_import input");
 check(mergedDiagnosticInputDirectBridgeImportNestedSourceLength.sourceLength === 48, "Combined diagnostic inputs did not retain nested bridgeSession source_length from direct bridge_diagnostic_import input");
+const bridgeDiagnosticImportDirectNestedMetadataPreservation = obd.buildBridgeDiagnosticImport({
+  importType: "bridge_diagnostic_snapshot",
+  source: "local_bridge",
+  next_readout_candidates: [{ id: "outer_snapshot", label: "Outer Snapshot", priority: 1, reason: "outer override" }],
+  import_classification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { storedDtcResponses: 12 }
+  },
+  bridgeSession: {
+    codes: ["P0171"],
+    next_readout_candidates: [{ id: "nested_snapshot", label: "Nested Snapshot", priority: 8, reason: "nested retained" }],
+    import_classification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 3 }
+    }
+  }
+});
+check(bridgeDiagnosticImportDirectNestedMetadataPreservation.nextReadoutCandidates[0]?.id === "outer_snapshot", "Bridge diagnostic import did not let direct bridge_diagnostic_import outer next_readout_candidates drive top-level metadata");
+check(bridgeDiagnosticImportDirectNestedMetadataPreservation.importClassification?.bucketCounts?.storedDtcResponses === 12, "Bridge diagnostic import did not let direct bridge_diagnostic_import outer import_classification drive top-level metadata");
+check(bridgeDiagnosticImportDirectNestedMetadataPreservation.bridgeSession.nextReadoutCandidates[0]?.id === "nested_snapshot", "Bridge diagnostic import did not preserve nested bridgeSession next_readout_candidates for direct bridge_diagnostic_import input");
+check(bridgeDiagnosticImportDirectNestedMetadataPreservation.bridgeSession.importClassification?.bucketCounts?.storedDtcResponses === 3, "Bridge diagnostic import did not preserve nested bridgeSession import_classification for direct bridge_diagnostic_import input");
 const mergedDiagnosticInputSummaryOnlyMonitorCounts = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportSummaryOnlyRawWarning
 });
