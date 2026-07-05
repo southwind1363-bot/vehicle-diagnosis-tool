@@ -1560,15 +1560,37 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
+      ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
+          ? {
+            ...supportedPidMatrixInput.data,
+            protocol: supportedPidMatrixInput.data.protocol || supportedPidMatrixInput.protocol || null,
+            captured_at: supportedPidMatrixInput.data.captured_at || supportedPidMatrixInput.data.capturedAt || supportedPidMatrixInput.captured_at || supportedPidMatrixInput.capturedAt || null
+          }
+          : supportedPidMatrixInput)
+      : supportedPidMatrixInput;
+    const readinessResponseInput = readinessSnapshotInput && typeof readinessSnapshotInput === "object" && !Array.isArray(readinessSnapshotInput)
+      ? (readinessSnapshotInput.data && typeof readinessSnapshotInput.data === "object"
+          ? {
+            ...readinessSnapshotInput.data,
+            protocol: readinessSnapshotInput.data.protocol || readinessSnapshotInput.protocol || null,
+            captured_at: readinessSnapshotInput.data.captured_at || readinessSnapshotInput.data.capturedAt || readinessSnapshotInput.captured_at || readinessSnapshotInput.capturedAt || null
+          }
+          : readinessSnapshotInput)
+      : readinessSnapshotInput;
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
     const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
-      : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
+      : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
+        ? decodeSupportedPidResponse(supportedPidResponseInput)
+        : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
     const readinessSnapshot = readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
-      : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || livePidSnapshot);
+      : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
+        ? decodeReadinessResponse(readinessResponseInput)
+        : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || livePidSnapshot);
     const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
       : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {});
@@ -4346,13 +4368,37 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
+      ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
+          ? {
+            ...supportedPidMatrixInput.data,
+            protocol: supportedPidMatrixInput.data.protocol || supportedPidMatrixInput.protocol || sessionInput.protocol || null,
+            captured_at: supportedPidMatrixInput.data.captured_at || supportedPidMatrixInput.data.capturedAt || supportedPidMatrixInput.captured_at || supportedPidMatrixInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
+          }
+          : supportedPidMatrixInput)
+      : supportedPidMatrixInput;
+    const readinessResponseInput = readinessSnapshotInput && typeof readinessSnapshotInput === "object" && !Array.isArray(readinessSnapshotInput)
+      ? (readinessSnapshotInput.data && typeof readinessSnapshotInput.data === "object"
+          ? {
+            ...readinessSnapshotInput.data,
+            protocol: readinessSnapshotInput.data.protocol || readinessSnapshotInput.protocol || sessionInput.protocol || null,
+            captured_at: readinessSnapshotInput.data.captured_at || readinessSnapshotInput.data.capturedAt || readinessSnapshotInput.captured_at || readinessSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
+          }
+          : readinessSnapshotInput)
+      : readinessSnapshotInput;
     const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
-    const readinessSnapshot = readinessSnapshotInput?.schemaVersion ? readinessSnapshotInput : normalizeReadinessSnapshot(readinessSnapshotInput);
+    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+      ? readinessSnapshotInput
+      : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
+        ? decodeReadinessResponse(readinessResponseInput)
+        : normalizeReadinessSnapshot(readinessSnapshotInput);
     const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput);
     const ecuResponseSummary = ecuResponseSummaryInput?.schemaVersion ? ecuResponseSummaryInput : normalizeEcuResponseSummary(ecuResponseSummaryInput);
     const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion ? ecuInfoSnapshotInput : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput);
     const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
+      : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
+        ? decodeSupportedPidResponse(supportedPidResponseInput)
       : (supportedPidMatrixInput?.data || Array.isArray(supportedPidMatrixInput?.supported_pids) || Array.isArray(supportedPidMatrixInput?.supportedPids))
         ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
         : buildSupportedPidMatrix(supportedPidMatrixInput);
