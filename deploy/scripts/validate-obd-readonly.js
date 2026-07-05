@@ -2942,6 +2942,14 @@ const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObd
 });
 check(textScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve explicit readout_coverage option input");
 check(textScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates option input");
+const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
+  sessionId: "obd-text-explicit-camel-coverage-candidates",
+  readoutCoverage: legacyReadoutCoverage,
+  nextReadoutCandidates: [{ id: "custom_text_camel_snapshot", label: "Text Camel Snapshot", priority: 1, reason: "camel override" }]
+});
+check(textScanSessionExplicitCamelCoverageAndCandidates.sessionId === "obd-text-explicit-camel-coverage-candidates", "OBD text scan session did not preserve camelCase sessionId option input");
+check(textScanSessionExplicitCamelCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve camelCase readoutCoverage option input");
+check(textScanSessionExplicitCamelCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_camel_snapshot", "OBD text scan session did not preserve camelCase nextReadoutCandidates option input");
 const textScanSessionExplicitMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-meta-overrides",
   tool_hints: ["Techstream", "J2534"],
@@ -3519,6 +3527,49 @@ const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
 check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve plain-object capturedPercent override");
 check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
+const scanSessionCamelCoverageOverride = obd.buildDiagnosticScanSession({
+  sessionId: "shop-test-camel-coverage-override",
+  readoutCoverage: {
+    includeInfrastructure: false,
+    totalCategories: 7,
+    availableCategories: 3,
+    capturedCategories: 2,
+    emptyCategories: 1,
+    missingCategories: 4,
+    capturedPercent: 29,
+    progressPercent: 43,
+    items: [
+      { id: "dtc_snapshot", status: "captured", available: true, count: 2 },
+      { id: "live_pid_snapshot", status: "captured", available: true, count: 3 },
+      { id: "freeze_frame_snapshot", status: "empty", available: true, count: 0 }
+    ],
+    emptyIds: ["freeze_frame_snapshot"],
+    missingIds: ["readiness_snapshot", "ecu_info_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix"]
+  },
+  nextReadoutCandidates: [{ id: "custom_camel_snapshot", label: "Camel Snapshot", priority: 1, reason: "camel override" }],
+  toolHints: ["CONSULT"],
+  warningFlags: ["negative_obd_response_present"],
+  sourceLength: 9,
+  hadSensitiveIdentifier: true,
+  bridgeSession: {
+    connectionStatusResponse: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    dtcSnapshot: bridgeDtcSnapshot
+  }
+});
+check(scanSessionCamelCoverageOverride.sessionId === "shop-test-camel-coverage-override", "Diagnostic scan session did not accept sessionId camelCase input");
+check(scanSessionCamelCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve camelCase readoutCoverage override");
+check(scanSessionCamelCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve camelCase readoutCoverage capturedPercent");
+check(scanSessionCamelCoverageOverride.nextReadoutCandidates[0]?.id === "custom_camel_snapshot", "Diagnostic scan session did not preserve camelCase nextReadoutCandidates override");
+check(scanSessionCamelCoverageOverride.toolHints.includes("CONSULT"), "Diagnostic scan session did not preserve camelCase toolHints override");
+check(scanSessionCamelCoverageOverride.warnings.includes("negative_obd_response_present"), "Diagnostic scan session did not preserve camelCase warningFlags override");
+check(scanSessionCamelCoverageOverride.sourceLength === 9, "Diagnostic scan session did not preserve camelCase sourceLength override");
+check(scanSessionCamelCoverageOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve camelCase hadSensitiveIdentifier override");
+check(!scanSessionCamelCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionCamelCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when camelCase coverage disabled infrastructure");
 const scanSessionSnakeCoverageOverride = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-coverage-override",
   readout_coverage: {
