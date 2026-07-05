@@ -1700,6 +1700,30 @@ check(mergedDiagnosticInputAliases.bridgeSession?.adapterIdentity?.adapterFamily
 check(mergedDiagnosticInputAliases.monitorInsights.length > 0, "Combined diagnostic inputs did not rebuild monitor insights from bridge_import alias input");
 check(mergedDiagnosticInputAliases.bridgeExportPayload?.schema_version === "bridge_session_export_v1", "Combined diagnostic inputs did not rebuild export payload from bridge_diagnostic_import alias input");
 check(mergedDiagnosticInputAliases.bridgeSession?.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not retain bridgeSession snapshots from bridge_diagnostic_import alias input");
+const mergedDiagnosticInputCamelMetadataAliases = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  bridge_import: {
+    toolHints: ["CONSULT"],
+    warningFlags: ["negative_obd_response_present"],
+    sourceLength: 21,
+    hadSensitiveIdentifier: true,
+    importClassification: {
+      schemaVersion: "obd_response_line_classification_v1",
+      bucketCounts: { storedDtcResponses: 6 }
+    },
+    bridgeSession: {
+      toolHints: ["Techstream"],
+      warningFlags: ["freeze_frame_available"],
+      sourceLength: 12,
+      hadSensitiveIdentifier: false
+    }
+  }
+});
+check(mergedDiagnosticInputCamelMetadataAliases.toolHints.includes("CONSULT") && mergedDiagnosticInputCamelMetadataAliases.toolHints.includes("Techstream"), "Combined diagnostic inputs did not merge camelCase toolHints metadata");
+check(mergedDiagnosticInputCamelMetadataAliases.warnings.includes("negative_obd_response_present") && mergedDiagnosticInputCamelMetadataAliases.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not merge camelCase warningFlags metadata");
+check(mergedDiagnosticInputCamelMetadataAliases.sourceLength === 21, "Combined diagnostic inputs did not preserve camelCase sourceLength metadata");
+check(mergedDiagnosticInputCamelMetadataAliases.hadSensitiveIdentifier === true, "Combined diagnostic inputs did not preserve camelCase hadSensitiveIdentifier metadata");
+check(mergedDiagnosticInputCamelMetadataAliases.importClassification?.bucketCounts?.storedDtcResponses === 6, "Combined diagnostic inputs did not preserve camelCase importClassification metadata");
 const mergedDiagnosticInputRawBridgePreference = obd.mergeDiagnosticInputs({
   scanner_text: "Engine RPM: 650 rpm",
   bridge_diagnostic_import: {
@@ -2929,6 +2953,22 @@ check(textScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J
 check(textScanSessionExplicitMetaOverrides.warnings.includes("isotp_reassembly_issue"), "OBD text scan session did not preserve explicit warning_flags option input");
 check(textScanSessionExplicitMetaOverrides.sourceLength === 128, "OBD text scan session did not preserve explicit source_length option input");
 check(textScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "OBD text scan session did not preserve explicit had_sensitive_identifier option input");
+const textScanSessionExplicitCamelMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
+  sessionId: "obd-text-explicit-camel-meta-overrides",
+  toolHints: ["Techstream", "J2534"],
+  warningFlags: ["isotp_reassembly_issue"],
+  sourceLength: 128,
+  hadSensitiveIdentifier: true,
+  importClassification: {
+    schemaVersion: "obd_response_line_classification_v1",
+    bucketCounts: { livePidResponses: 77 }
+  }
+});
+check(textScanSessionExplicitCamelMetaOverrides.toolHints.join(",") === "Techstream,J2534", "OBD text scan session did not preserve explicit camelCase toolHints option input");
+check(textScanSessionExplicitCamelMetaOverrides.warnings.includes("isotp_reassembly_issue"), "OBD text scan session did not preserve explicit camelCase warningFlags option input");
+check(textScanSessionExplicitCamelMetaOverrides.sourceLength === 128, "OBD text scan session did not preserve explicit camelCase sourceLength option input");
+check(textScanSessionExplicitCamelMetaOverrides.hadSensitiveIdentifier === true, "OBD text scan session did not preserve explicit camelCase hadSensitiveIdentifier option input");
+check(textScanSessionExplicitCamelMetaOverrides.importClassification?.bucketCounts?.livePidResponses === 77, "OBD text scan session did not preserve explicit camelCase importClassification option input");
 const textScanSessionExplicitImportClassification = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-import-classification",
   import_classification: {
