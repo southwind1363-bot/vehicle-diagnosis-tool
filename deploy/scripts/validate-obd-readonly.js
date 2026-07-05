@@ -2493,12 +2493,18 @@ const scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata = o
   },
   scan_session: {
     ...mergedDiagnosticInputExportNestedOuterOverride,
+    started_at: "2026-06-28T00:05:30Z",
+    ended_at: "2026-06-28T00:06:30Z",
+    captured_at: "2026-06-28T00:11:45Z",
     tool_hints: ["Techstream"],
     warning_flags: ["freeze_frame_available"],
     source_length: 128,
     had_sensitive_identifier: true
   }
 });
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.sessionId === "merged-diagnostic-input-mixed-camel-outer-snake-nested", "Diagnostic scan session did not preserve camelCase outer sessionId over nested snake_case merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.startedAt === "2026-06-28T00:05:30Z" && scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.endedAt === "2026-06-28T00:06:30Z", "Diagnostic scan session did not accept nested snake_case merged diagnostic input timestamps with camelCase outer metadata");
+check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.capturedAt === "2026-06-28T00:11:45Z", "Diagnostic scan session did not accept nested snake_case captured_at with camelCase outer metadata");
 check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.warnings.includes("isotp_reassembly_issue") && scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge camelCase outer warnings with nested snake_case merged diagnostic input metadata");
 check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.toolHints.includes("IDS") && scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.toolHints.includes("Techstream"), "Diagnostic scan session did not merge camelCase outer toolHints with nested snake_case merged diagnostic input metadata");
 check(scanSessionFromMergedDiagnosticInputMixedCamelOuterSnakeNestedMetadata.sourceLength === 7, "Diagnostic scan session did not preserve camelCase outer sourceLength over nested snake_case merged diagnostic input metadata");
@@ -2516,12 +2522,18 @@ const scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata = o
   },
   scanSession: {
     ...mergedDiagnosticInputExportNestedOuterOverride,
+    startedAt: "2026-06-28T00:05:45Z",
+    endedAt: "2026-06-28T00:06:45Z",
+    capturedAt: "2026-06-28T00:11:46Z",
     toolHints: ["Techstream"],
     warningFlags: ["freeze_frame_available"],
     sourceLength: 128,
     hadSensitiveIdentifier: true
   }
 });
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.sessionId === "merged-diagnostic-input-mixed-snake-outer-camel-nested", "Diagnostic scan session did not preserve snake_case outer session_id over nested camelCase merged diagnostic input metadata");
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.startedAt === "2026-06-28T00:05:45Z" && scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.endedAt === "2026-06-28T00:06:45Z", "Diagnostic scan session did not accept nested camelCase merged diagnostic input timestamps with snake_case outer metadata");
+check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.capturedAt === "2026-06-28T00:11:46Z", "Diagnostic scan session did not accept nested camelCase capturedAt with snake_case outer metadata");
 check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.warnings.includes("isotp_reassembly_issue") && scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge snake_case outer warnings with nested camelCase merged diagnostic input metadata");
 check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.toolHints.includes("IDS") && scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.toolHints.includes("Techstream"), "Diagnostic scan session did not merge snake_case outer tool_hints with nested camelCase merged diagnostic input metadata");
 check(scanSessionFromMergedDiagnosticInputMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "Diagnostic scan session did not preserve snake_case outer source_length over nested camelCase merged diagnostic input metadata");
@@ -2974,12 +2986,18 @@ const decodedScanSessionMixedCamelOuterSnakeNestedMetadata = obd.buildDecodedObd
     bucketCounts: { storedDtcResponses: 18 }
   },
   scan_session: {
+    started_at: "2026-06-28T00:12:30Z",
+    ended_at: "2026-06-28T00:13:30Z",
+    captured_at: "2026-06-28T00:13:00Z",
     tool_hints: ["Techstream"],
     warning_flags: ["freeze_frame_available"],
     source_length: 128,
     had_sensitive_identifier: true
   }
 });
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.sessionId === "decoded-mixed-camel-outer-snake-nested", "Decoded OBD session did not preserve camelCase outer sessionId over nested snake_case scan_session input");
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.startedAt === "2026-06-28T00:12:30Z" && decodedScanSessionMixedCamelOuterSnakeNestedMetadata.endedAt === "2026-06-28T00:13:30Z", "Decoded OBD session did not accept nested snake_case scan_session timestamps with camelCase outer metadata");
+check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.capturedAt === "2026-06-28T00:13:00Z", "Decoded OBD session did not accept nested snake_case captured_at with camelCase outer metadata");
 check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("CONSULT") && decodedScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("Techstream"), "Decoded OBD session did not merge camelCase outer toolHints with nested snake_case scan_session input");
 check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("negative_obd_response_present") && decodedScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("freeze_frame_available"), "Decoded OBD session did not merge camelCase outer warningFlags with nested snake_case scan_session input");
 check(decodedScanSessionMixedCamelOuterSnakeNestedMetadata.sourceLength === 7, "Decoded OBD session did not preserve camelCase outer sourceLength over nested snake_case scan_session input");
@@ -2997,12 +3015,18 @@ const decodedScanSessionMixedSnakeOuterCamelNestedMetadata = obd.buildDecodedObd
     bucketCounts: { storedDtcResponses: 19 }
   },
   scanSession: {
+    startedAt: "2026-06-28T00:12:45Z",
+    endedAt: "2026-06-28T00:13:45Z",
+    capturedAt: "2026-06-28T00:13:15Z",
     toolHints: ["Techstream"],
     warningFlags: ["freeze_frame_available"],
     sourceLength: 128,
     hadSensitiveIdentifier: true
   }
 });
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.sessionId === "decoded-mixed-snake-outer-camel-nested", "Decoded OBD session did not preserve snake_case outer session_id over nested camelCase scanSession input");
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.startedAt === "2026-06-28T00:12:45Z" && decodedScanSessionMixedSnakeOuterCamelNestedMetadata.endedAt === "2026-06-28T00:13:45Z", "Decoded OBD session did not accept nested camelCase scanSession timestamps with snake_case outer metadata");
+check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.capturedAt === "2026-06-28T00:13:15Z", "Decoded OBD session did not accept nested camelCase capturedAt with snake_case outer metadata");
 check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("CONSULT") && decodedScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("Techstream"), "Decoded OBD session did not merge snake_case outer tool_hints with nested camelCase scanSession input");
 check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("negative_obd_response_present") && decodedScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("freeze_frame_available"), "Decoded OBD session did not merge snake_case outer warning_flags with nested camelCase scanSession input");
 check(decodedScanSessionMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "Decoded OBD session did not preserve snake_case outer source_length over nested camelCase scanSession input");
@@ -3316,12 +3340,18 @@ const textScanSessionMixedCamelOuterSnakeNestedMetadata = obd.buildScanSessionFr
     bucketCounts: { livePidResponses: 18 }
   },
   scan_session: {
+    started_at: "2026-06-28T00:18:30Z",
+    ended_at: "2026-06-28T00:19:30Z",
+    captured_at: "2026-06-28T00:19:00Z",
     tool_hints: ["Techstream"],
     warning_flags: ["freeze_frame_available"],
     source_length: 128,
     had_sensitive_identifier: true
   }
 });
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.sessionId === "obd-text-mixed-camel-outer-snake-nested", "OBD text scan session did not preserve camelCase outer sessionId over nested snake_case scan_session options");
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.startedAt === "2026-06-28T00:18:30Z" && textScanSessionMixedCamelOuterSnakeNestedMetadata.endedAt === "2026-06-28T00:19:30Z", "OBD text scan session did not accept nested snake_case scan_session timestamps with camelCase outer metadata");
+check(textScanSessionMixedCamelOuterSnakeNestedMetadata.capturedAt === "2026-06-28T00:19:00Z", "OBD text scan session did not accept nested snake_case captured_at with camelCase outer metadata");
 check(textScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("CONSULT") && textScanSessionMixedCamelOuterSnakeNestedMetadata.toolHints.includes("Techstream"), "OBD text scan session did not merge camelCase outer toolHints with nested snake_case scan_session options");
 check(textScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("negative_obd_response_present") && textScanSessionMixedCamelOuterSnakeNestedMetadata.warnings.includes("freeze_frame_available"), "OBD text scan session did not merge camelCase outer warningFlags with nested snake_case scan_session options");
 check(textScanSessionMixedCamelOuterSnakeNestedMetadata.sourceLength === 7, "OBD text scan session did not preserve camelCase outer sourceLength over nested snake_case scan_session options");
@@ -3338,12 +3368,18 @@ const textScanSessionMixedSnakeOuterCamelNestedMetadata = obd.buildScanSessionFr
     bucketCounts: { livePidResponses: 19 }
   },
   scanSession: {
+    startedAt: "2026-06-28T00:18:45Z",
+    endedAt: "2026-06-28T00:19:45Z",
+    capturedAt: "2026-06-28T00:19:15Z",
     toolHints: ["Techstream"],
     warningFlags: ["freeze_frame_available"],
     sourceLength: 128,
     hadSensitiveIdentifier: true
   }
 });
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.sessionId === "obd-text-mixed-snake-outer-camel-nested", "OBD text scan session did not preserve snake_case outer session_id over nested camelCase scanSession options");
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.startedAt === "2026-06-28T00:18:45Z" && textScanSessionMixedSnakeOuterCamelNestedMetadata.endedAt === "2026-06-28T00:19:45Z", "OBD text scan session did not accept nested camelCase scanSession timestamps with snake_case outer metadata");
+check(textScanSessionMixedSnakeOuterCamelNestedMetadata.capturedAt === "2026-06-28T00:19:15Z", "OBD text scan session did not accept nested camelCase capturedAt with snake_case outer metadata");
 check(textScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("CONSULT") && textScanSessionMixedSnakeOuterCamelNestedMetadata.toolHints.includes("Techstream"), "OBD text scan session did not merge snake_case outer tool_hints with nested camelCase scanSession options");
 check(textScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("negative_obd_response_present") && textScanSessionMixedSnakeOuterCamelNestedMetadata.warnings.includes("freeze_frame_available"), "OBD text scan session did not merge snake_case outer warning_flags with nested camelCase scanSession options");
 check(textScanSessionMixedSnakeOuterCamelNestedMetadata.sourceLength === 8, "OBD text scan session did not preserve snake_case outer source_length over nested camelCase scanSession options");
