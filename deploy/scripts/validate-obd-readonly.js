@@ -41,6 +41,7 @@ const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeS
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
+const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -88,6 +89,16 @@ const resolveBridgeSummaryFunctionChecks = () => {
     const functionBody = resolveBridgeSummaryFunctionSource[0];
     check(functionBody.includes('const summaryInput = getBridgeSummaryInput(parts);'), "resolveBridgeSummary should derive bridge summary input before branching");
     check(functionBody.includes('return hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);'), "resolveBridgeSummary should normalize summary aliases before falling back to bridge session summary");
+  }
+};
+const resolveBridgeInfrastructureFunctionChecks = () => {
+  check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
+  if (resolveBridgeInfrastructureFunctionSource) {
+    const functionBody = resolveBridgeInfrastructureFunctionSource[0];
+    check(functionBody.includes('const vciList = allowVciArray && Array.isArray(vciDevicesInput)'), "resolveBridgeInfrastructureInputs should preserve array-form VCI inputs when allowVciArray is enabled");
+    check(functionBody.includes('hasBridgeInfrastructureContext: detectBridgeInfrastructureContext({'), "resolveBridgeInfrastructureInputs should derive bridge infrastructure context through detectBridgeInfrastructureContext");
+    check(functionBody.includes('readoutCoverageInput,'), "resolveBridgeInfrastructureInputs should pass readout coverage override context into bridge infrastructure detection");
+    check(functionBody.includes('honorCoverageOverride'), "resolveBridgeInfrastructureInputs should pass honorCoverageOverride into bridge infrastructure detection");
   }
 };
 const bridgeSessionSummaryFunctionChecks = () => {
@@ -139,6 +150,7 @@ bridgeSummaryAliasFunctionChecks();
 readoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
+resolveBridgeInfrastructureFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
