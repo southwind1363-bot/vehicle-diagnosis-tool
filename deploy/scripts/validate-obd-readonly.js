@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
@@ -59,6 +60,15 @@ const bridgeReadoutWarningsFunctionChecks = () => {
     check(functionBody.includes('if (!hasBridgeInfrastructureContext || !readoutCoverage) return;'), "appendBridgeReadoutCoverageWarnings should short-circuit without bridge infrastructure context");
     check(functionBody.includes('if (readoutCoverage.missingCategories > 0) warnings.push(\"bridge_readout_incomplete\");'), "appendBridgeReadoutCoverageWarnings should derive incomplete readout warning from missing categories");
     check(functionBody.includes('if (readoutCoverage.emptyCategories > 0) warnings.push(\"bridge_readout_empty_sections\");'), "appendBridgeReadoutCoverageWarnings should derive empty readout warning from empty categories");
+  }
+};
+const bridgeSummaryAliasFunctionChecks = () => {
+  check(Boolean(bridgeSummaryAliasFunctionSource), "normalizeBridgeSummaryAliases is missing from obd-readonly.js");
+  if (bridgeSummaryAliasFunctionSource) {
+    const functionBody = bridgeSummaryAliasFunctionSource[0];
+    check(functionBody.includes('appendBridgeReadoutCoverageWarnings(derivedWarnings, {'), "normalizeBridgeSummaryAliases should append bridge readout warnings through derived warnings");
+    check(functionBody.includes('hasBridgeInfrastructureContext,'), "normalizeBridgeSummaryAliases should pass bridge infrastructure context into bridge readout warning mapping");
+    check(functionBody.includes('readoutCoverage: derivedReadoutCoverage'), "normalizeBridgeSummaryAliases should map bridge readout warnings from derived readout coverage");
   }
 };
 const bridgeSessionSummaryFunctionChecks = () => {
@@ -106,6 +116,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+bridgeSummaryAliasFunctionChecks();
 readoutCoverageFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
