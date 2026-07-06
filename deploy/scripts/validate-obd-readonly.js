@@ -3382,6 +3382,21 @@ check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.status =
 check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.completionPercent === 100, "Decoded OBD session did not keep populated manual applicability at 100 percent completion");
 check(Array.isArray(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.remainingReadoutIds) && decodedScanSessionPopulatedManualApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Decoded OBD session treated populated manual applicability as having unread core readouts");
 check(Array.isArray(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.emptyReadoutIds) && decodedScanSessionPopulatedManualApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Decoded OBD session treated populated manual applicability as having empty core readouts");
+const decodedScanSessionPopulatedManualExplicitCandidates = obd.buildDecodedObdScanSession({
+  session_id: "decoded-populated-manual-explicit-candidates",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_decoded_snapshot", label: "Decoded Snapshot", priority: 1, reason: "outer override" }]
+});
+check(decodedScanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Decoded OBD session did not keep manual applicability blocking with explicit next_readout_candidates on populated readouts");
+check(decodedScanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Decoded OBD session did not keep populated manual applicability with explicit next_readout_candidates at 100 percent completion");
+check(decodedScanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates for populated manual applicability");
 const decodedScanSessionPopulatedUnlistedApplicability = obd.buildDecodedObdScanSession({
   session_id: "decoded-populated-unlisted-applicability",
   vehicle_applicability: { status: "unlisted" },
@@ -3399,6 +3414,21 @@ check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status
 check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.completionPercent === 100, "Decoded OBD session did not keep populated unlisted applicability at 100 percent completion");
 check(Array.isArray(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.remainingReadoutIds) && decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Decoded OBD session treated populated unlisted applicability as having unread core readouts");
 check(Array.isArray(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.emptyReadoutIds) && decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Decoded OBD session treated populated unlisted applicability as having empty core readouts");
+const decodedScanSessionPopulatedUnlistedExplicitCandidates = obd.buildDecodedObdScanSession({
+  session_id: "decoded-populated-unlisted-explicit-candidates",
+  vehicle_applicability: { status: "unlisted" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_decoded_snapshot", label: "Decoded Snapshot", priority: 1, reason: "outer override" }]
+});
+check(decodedScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Decoded OBD session did not keep unlisted applicability blocking with explicit next_readout_candidates on populated readouts");
+check(decodedScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Decoded OBD session did not keep populated unlisted applicability with explicit next_readout_candidates at 100 percent completion");
+check(decodedScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates for populated unlisted applicability");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3824,6 +3854,21 @@ check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.status === 
 check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.completionPercent === 100, "OBD text scan session did not keep populated manual applicability at 100 percent completion");
 check(Array.isArray(textScanSessionPopulatedManualApplicability.coreSessionStatus?.remainingReadoutIds) && textScanSessionPopulatedManualApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "OBD text scan session treated populated manual applicability as having unread core readouts");
 check(Array.isArray(textScanSessionPopulatedManualApplicability.coreSessionStatus?.emptyReadoutIds) && textScanSessionPopulatedManualApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "OBD text scan session treated populated manual applicability as having empty core readouts");
+const textScanSessionPopulatedManualExplicitCandidates = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-populated-manual-explicit-candidates",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_text_snapshot", label: "Text Snapshot", priority: 1, reason: "outer override" }]
+});
+check(textScanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "OBD text scan session did not keep manual applicability blocking with explicit next_readout_candidates on populated readouts");
+check(textScanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.completionPercent === 100, "OBD text scan session did not keep populated manual applicability with explicit next_readout_candidates at 100 percent completion");
+check(textScanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates for populated manual applicability");
 const textScanSessionPopulatedUnlistedApplicability = obd.buildScanSessionFromObdText("NO DTC", {
   session_id: "obd-text-populated-unlisted-applicability",
   vehicle_applicability: { status: "unlisted" },
@@ -3841,6 +3886,21 @@ check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status ==
 check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.completionPercent === 100, "OBD text scan session did not keep populated unlisted applicability at 100 percent completion");
 check(Array.isArray(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.remainingReadoutIds) && textScanSessionPopulatedUnlistedApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "OBD text scan session treated populated unlisted applicability as having unread core readouts");
 check(Array.isArray(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.emptyReadoutIds) && textScanSessionPopulatedUnlistedApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "OBD text scan session treated populated unlisted applicability as having empty core readouts");
+const textScanSessionPopulatedUnlistedExplicitCandidates = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-populated-unlisted-explicit-candidates",
+  vehicle_applicability: { status: "unlisted" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_text_snapshot", label: "Text Snapshot", priority: 1, reason: "outer override" }]
+});
+check(textScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "OBD text scan session did not keep unlisted applicability blocking with explicit next_readout_candidates on populated readouts");
+check(textScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.completionPercent === 100, "OBD text scan session did not keep populated unlisted applicability with explicit next_readout_candidates at 100 percent completion");
+check(textScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates for populated unlisted applicability");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -4265,6 +4325,21 @@ check(scanSessionPopulatedManualApplicability.coreSessionStatus?.status === "col
 check(scanSessionPopulatedManualApplicability.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated manual applicability at 100 percent completion");
 check(Array.isArray(scanSessionPopulatedManualApplicability.coreSessionStatus?.remainingReadoutIds) && scanSessionPopulatedManualApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated manual applicability as having unread core readouts");
 check(Array.isArray(scanSessionPopulatedManualApplicability.coreSessionStatus?.emptyReadoutIds) && scanSessionPopulatedManualApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated manual applicability as having empty core readouts");
+const scanSessionPopulatedManualExplicitCandidates = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-populated-manual-explicit-candidates",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+check(scanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Diagnostic scan session did not keep manual applicability blocking with explicit next_readout_candidates on populated readouts");
+check(scanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated manual applicability with explicit next_readout_candidates at 100 percent completion");
+check(scanSessionPopulatedManualExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates for populated manual applicability");
 const scanSessionPopulatedUnlistedApplicability = obd.buildDiagnosticScanSession({
   session_id: "shop-test-populated-unlisted-applicability",
   vehicle_applicability: { status: "unlisted" },
@@ -4282,6 +4357,21 @@ check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status === "c
 check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated unlisted applicability at 100 percent completion");
 check(Array.isArray(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.remainingReadoutIds) && scanSessionPopulatedUnlistedApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated unlisted applicability as having unread core readouts");
 check(Array.isArray(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.emptyReadoutIds) && scanSessionPopulatedUnlistedApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated unlisted applicability as having empty core readouts");
+const scanSessionPopulatedUnlistedExplicitCandidates = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-populated-unlisted-explicit-candidates",
+  vehicle_applicability: { status: "unlisted" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+check(scanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Diagnostic scan session did not keep unlisted applicability blocking with explicit next_readout_candidates on populated readouts");
+check(scanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated unlisted applicability with explicit next_readout_candidates at 100 percent completion");
+check(scanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates for populated unlisted applicability");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
