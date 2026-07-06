@@ -5651,11 +5651,20 @@ function analyzeObdScannerImport() {
   if (summarySource.protocol) notes.push(`Protocol ${summarySource.protocol}`);
   const analysisVehicleLabel = formatVehicleProfileLabel(summarySource.vehicleProfile);
   const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summarySource.vehicleApplicability);
+  const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summarySource.coreSessionStatus, "");
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
   }
   if (analysisApplicabilityLabel) {
     notes.push(`適用 ${analysisApplicabilityLabel}`);
+  }
+  if (analysisCoreStatusLabel) {
+    notes.push(`コア ${analysisCoreStatusLabel}`);
+  }
+  if (summarySource.coreSessionStatus?.readyForAnalysis === true) {
+    notes.push("解析へ進行可能");
+  } else if (Array.isArray(summarySource.coreSessionStatus?.remainingReadoutIds) && summarySource.coreSessionStatus.remainingReadoutIds.length > 0) {
+    notes.push(`次読取 ${summarySource.coreSessionStatus.remainingReadoutIds.slice(0, 3).join(" / ")}`);
   }
   if (summarySource.startedAt) {
     notes.push(`開始 ${formatDateTime(summarySource.startedAt)}`);
