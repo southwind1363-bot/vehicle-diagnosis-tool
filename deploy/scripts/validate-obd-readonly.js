@@ -3073,6 +3073,17 @@ const decodedScanSessionSupportedPidReason = obd.buildDecodedObdScanSession({
   supported_pid_matrix: bridgeSupportedPidSnapshot
 });
 check(decodedScanSessionSupportedPidReason.nextReadoutCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "Decoded OBD session did not derive live_pid_snapshot reason from supported_pid_matrix");
+const decodedScanSessionUnknownApplicability = obd.buildDecodedObdScanSession({
+  session_id: "decoded-unknown-applicability",
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:10:00Z", codes: [], dtcs: [] },
+  freeze_frame_snapshot: { blocked: false, capturedAt: "2026-07-06T00:10:01Z", monitorValues: [] },
+  readiness_snapshot: { blocked: false, capturedAt: "2026-07-06T00:10:02Z", monitors: [], monitorCount: 0 },
+  ecu_info_snapshot: { blocked: false, capturedAt: "2026-07-06T00:10:03Z", items: [], itemCount: 0 },
+  supported_pid_matrix: { blocked: false, capturedAt: "2026-07-06T00:10:04Z", supportedPids: [], supportedCount: 0 },
+  live_pid_snapshot: { blocked: false, capturedAt: "2026-07-06T00:10:05Z", monitorValues: [] }
+});
+check(decodedScanSessionUnknownApplicability.coreSessionStatus?.applicabilityStatus === "unknown", "Decoded OBD session did not default missing vehicle applicability to unknown");
+check(decodedScanSessionUnknownApplicability.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Decoded OBD session did not prioritize dtc_snapshot when vehicle applicability is absent");
 const decodedScanSessionNestedAlias = obd.buildDecodedObdScanSession({
   scan_session: {
     session_id: "decoded-nested-session-test",
@@ -3650,6 +3661,17 @@ const textScanSessionSupportedPidReason = obd.buildScanSessionFromObdText("P0171
   supported_pid_matrix: bridgeSupportedPidSnapshot
 });
 check(textScanSessionSupportedPidReason.nextReadoutCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "OBD text scan session did not derive live_pid_snapshot reason from supported_pid_matrix");
+const textScanSessionUnknownApplicability = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-unknown-applicability",
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:11:00Z", codes: [], dtcs: [] },
+  freeze_frame_snapshot: { blocked: false, capturedAt: "2026-07-06T00:11:01Z", monitorValues: [] },
+  readiness_snapshot: { blocked: false, capturedAt: "2026-07-06T00:11:02Z", monitors: [], monitorCount: 0 },
+  ecu_info_snapshot: { blocked: false, capturedAt: "2026-07-06T00:11:03Z", items: [], itemCount: 0 },
+  supported_pid_matrix: { blocked: false, capturedAt: "2026-07-06T00:11:04Z", supportedPids: [], supportedCount: 0 },
+  live_pid_snapshot: { blocked: false, capturedAt: "2026-07-06T00:11:05Z", monitorValues: [] }
+});
+check(textScanSessionUnknownApplicability.coreSessionStatus?.applicabilityStatus === "unknown", "OBD text scan session did not default missing vehicle applicability to unknown");
+check(textScanSessionUnknownApplicability.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "OBD text scan session did not prioritize dtc_snapshot when vehicle applicability is absent");
 const textScanSessionExplicitMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-meta-overrides",
   tool_hints: ["Techstream", "J2534"],
