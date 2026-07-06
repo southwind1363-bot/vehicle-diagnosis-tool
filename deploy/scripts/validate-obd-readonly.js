@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummaryInput[\s\S]*?endedAt: parts\.endedAt \|\| parts\.ended_at \|\| nested\.endedAt \|\| nested\.ended_at \|\| null,\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
@@ -102,6 +103,16 @@ const detectBridgeInfrastructureFunctionChecks = () => {
     check(functionBody.includes('|| Boolean(nestedSession);'), "detectBridgeInfrastructureContext should infer bridge infrastructure context from nested session presence");
   }
 };
+const bridgeSummaryInputFunctionChecks = () => {
+  check(Boolean(bridgeSummaryInputFunctionSource), "getBridgeSummaryInput is missing from obd-readonly.js");
+  if (bridgeSummaryInputFunctionSource) {
+    const functionBody = bridgeSummaryInputFunctionSource[0];
+    check(functionBody.includes('const nested = parts.bridgeSession || parts.bridge_session || parts.session || null;'), "getBridgeSummaryInput should prefer bridgeSession aliases before generic session");
+    check(functionBody.includes('if (!nested || typeof nested !== \"object\") return parts;'), "getBridgeSummaryInput should return outer parts when nested bridge summary is unavailable");
+    check(functionBody.includes('const mergedMetadata = mergeNestedSessionMetadata(parts, nested);'), "getBridgeSummaryInput should merge nested session metadata before rebuilding bridge summary input");
+    check(functionBody.includes('...nested,') && functionBody.includes('...parts,'), "getBridgeSummaryInput should layer nested bridge summary fields before outer overrides");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -157,6 +168,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
 readoutCoverageFunctionChecks();
