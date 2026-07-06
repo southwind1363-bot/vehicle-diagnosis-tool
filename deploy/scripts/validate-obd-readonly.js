@@ -2232,6 +2232,47 @@ const mergedDiagnosticInputApplicabilityPartial = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportApplicabilityPartial
 });
 check(Array.isArray(mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates) && mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates.length > 0, "統合診断入力へ次の読取候補を引き継げません");
+const bridgeExportPayloadPopulatedPartialExplicitCandidates = obd.buildBridgeSessionExportPayload({
+  vehicle_applicability: { status: "partial" },
+  dtcSnapshot: bridgeDtcSnapshot,
+  livePidSnapshot: bridgePidSnapshot,
+  freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
+  readinessSnapshot: bridgeReadinessSnapshot,
+  ecuInfoSnapshot: bridgeEcuInfoSnapshot,
+  onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot,
+  supportedPidMatrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+const mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates = obd.mergeDiagnosticInputs({
+  bridge_export_payload: bridgeExportPayloadPopulatedPartialExplicitCandidates
+});
+check(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.vehicleApplicability?.status === "partial", "Combined diagnostic inputs did not preserve partial vehicle applicability from populated bridge_export_payload input");
+check(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.nextReadoutCandidates[0]?.id === "custom_snapshot", "Combined diagnostic inputs did not preserve explicit next_readout_candidates from populated bridge_export_payload input");
+check(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "Combined diagnostic inputs did not keep populated partial bridge_export_payload input analysis-ready");
+check(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Combined diagnostic inputs did not keep populated partial bridge_export_payload input at 100 percent completion");
+check(Array.isArray(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Combined diagnostic inputs treated populated partial bridge_export_payload input as having unread core readouts");
+check(Array.isArray(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Combined diagnostic inputs treated populated partial bridge_export_payload input as having empty core readouts");
+const bridgeDiagnosticImportPopulatedManualExplicitCandidates = obd.buildBridgeDiagnosticImport({
+  vehicle_applicability: { status: "manual" },
+  dtcSnapshot: bridgeDtcSnapshot,
+  livePidSnapshot: bridgePidSnapshot,
+  freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
+  readinessSnapshot: bridgeReadinessSnapshot,
+  ecuInfoSnapshot: bridgeEcuInfoSnapshot,
+  onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot,
+  supportedPidMatrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+const mergedDiagnosticInputImportPopulatedManualExplicitCandidates = obd.mergeDiagnosticInputs({
+  bridge_diagnostic_import: bridgeDiagnosticImportPopulatedManualExplicitCandidates
+});
+check(mergedDiagnosticInputImportPopulatedManualExplicitCandidates.vehicleApplicability?.status === "manual", "Combined diagnostic inputs did not preserve manual vehicle applicability from populated bridge_diagnostic_import input");
+check(mergedDiagnosticInputImportPopulatedManualExplicitCandidates.nextReadoutCandidates[0]?.id === "custom_snapshot", "Combined diagnostic inputs did not preserve explicit next_readout_candidates from populated bridge_diagnostic_import input");
+check(mergedDiagnosticInputImportPopulatedManualExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Combined diagnostic inputs did not keep manual applicability blocking for populated bridge_diagnostic_import input");
+check(mergedDiagnosticInputImportPopulatedManualExplicitCandidates.coreSessionStatus?.readyForAnalysis === false, "Combined diagnostic inputs incorrectly marked populated manual bridge_diagnostic_import input as analysis-ready");
+check(mergedDiagnosticInputImportPopulatedManualExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Combined diagnostic inputs did not keep populated manual bridge_diagnostic_import input at 100 percent completion");
+check(Array.isArray(mergedDiagnosticInputImportPopulatedManualExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && mergedDiagnosticInputImportPopulatedManualExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Combined diagnostic inputs treated populated manual bridge_diagnostic_import input as having unread core readouts");
+check(Array.isArray(mergedDiagnosticInputImportPopulatedManualExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && mergedDiagnosticInputImportPopulatedManualExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Combined diagnostic inputs treated populated manual bridge_diagnostic_import input as having empty core readouts");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.protocol === "ISO15765-4", "Combined diagnostic inputs did not recover protocol from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.capturedAt === "2026-06-28T00:00:00Z", "Combined diagnostic inputs did not recover capturedAt from bridgeSession-only diagnostic import");
 check(mergedDiagnosticInputBridgeSessionOnlyImport.supportedPidMatrix?.supportedPids.includes("40"), "Combined diagnostic inputs did not recover supported_pid_matrix from bridgeSession-only diagnostic import");
