@@ -3304,6 +3304,15 @@ const decodedScanSessionExplicitCandidatesEmptyReadouts = obd.buildDecodedObdSca
 });
 check(decodedScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session treated explicit-candidate empty readouts as analysis-ready");
 check(decodedScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates over empty readout fallback");
+const decodedScanSessionExplicitCandidatesManualBlocking = obd.buildDecodedObdScanSession({
+  session_id: "decoded-explicit-manual-blocking",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:20:10Z", codes: [], dtcs: [] },
+  next_readout_candidates: [{ id: "custom_decoded_snapshot", label: "Decoded Snapshot", priority: 1, reason: "outer override" }]
+});
+check(decodedScanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Decoded OBD session did not surface manual applicability as a blocking warning with explicit next_readout_candidates");
+check(decodedScanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session treated manual applicability with explicit next_readout_candidates as analysis-ready");
+check(decodedScanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates over manual applicability blocking");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3669,6 +3678,15 @@ const textScanSessionExplicitCandidatesEmptyReadouts = obd.buildScanSessionFromO
 });
 check(textScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session treated explicit-candidate empty readouts as analysis-ready");
 check(textScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates over empty readout fallback");
+const textScanSessionExplicitCandidatesManualBlocking = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-explicit-manual-blocking",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:21:10Z", codes: [], dtcs: [] },
+  next_readout_candidates: [{ id: "custom_text_snapshot", label: "Text Snapshot", priority: 1, reason: "outer override" }]
+});
+check(textScanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "OBD text scan session did not surface manual applicability as a blocking warning with explicit next_readout_candidates");
+check(textScanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session treated manual applicability with explicit next_readout_candidates as analysis-ready");
+check(textScanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates over manual applicability blocking");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -4033,6 +4051,15 @@ const scanSessionExplicitCandidatesEmptyReadouts = obd.buildDiagnosticScanSessio
 });
 check(scanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated explicit-candidate empty readouts as analysis-ready");
 check(scanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates over empty readout fallback");
+const scanSessionExplicitCandidatesManualBlocking = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-explicit-manual-blocking",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:10Z", codes: [], dtcs: [] },
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+check(scanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Diagnostic scan session did not surface manual applicability as a blocking warning with explicit next_readout_candidates");
+check(scanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated manual applicability with explicit next_readout_candidates as analysis-ready");
+check(scanSessionExplicitCandidatesManualBlocking.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates over manual applicability blocking");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
