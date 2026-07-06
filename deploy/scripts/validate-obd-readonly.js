@@ -2284,6 +2284,17 @@ const bridgeDiagnosticImportPopulatedManualExplicitCandidates = obd.buildBridgeD
   supportedPidMatrix: bridgeSupportedPidSnapshot,
   next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
 });
+const bridgeDiagnosticImportPopulatedPartialExplicitCandidates = obd.buildBridgeDiagnosticImport({
+  vehicle_applicability: { status: "partial" },
+  dtcSnapshot: bridgeDtcSnapshot,
+  livePidSnapshot: bridgePidSnapshot,
+  freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
+  readinessSnapshot: bridgeReadinessSnapshot,
+  ecuInfoSnapshot: bridgeEcuInfoSnapshot,
+  onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot,
+  supportedPidMatrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
 const mergedDiagnosticInputImportPopulatedManualExplicitCandidates = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportPopulatedManualExplicitCandidates
 });
@@ -4504,6 +4515,28 @@ check(scanSessionBridgeDiagnosticImportAlias.vciDevices[0]?.id === "vci-1", "Dia
 check(scanSessionBridgeDiagnosticImportAlias.adapterIdentity?.adapterFamily === "elm327", "Diagnostic scan session did not carry adapter identity from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.readoutCoverage?.progressPercent === bridgeDiagnosticImport.readoutCoverage?.progressPercent, "Diagnostic scan session did not carry readoutCoverage from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importClassification?.bucketCounts?.storedDtcResponses === bridgeDiagnosticImport.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not carry importClassification from bridge_diagnostic_import alias input");
+const scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates = obd.buildDiagnosticScanSession({
+  bridge_diagnostic_import: bridgeDiagnosticImportPopulatedManualExplicitCandidates,
+  session_id: "shop-test-bridge-import-populated-manual-explicit-candidates"
+});
+check(scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.vehicleApplicability?.status === "manual", "Diagnostic scan session did not preserve manual vehicle applicability from populated bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Diagnostic scan session did not keep manual applicability blocking for populated bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly marked populated manual bridge_diagnostic_import alias input as analysis-ready");
+check(scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated manual bridge_diagnostic_import alias input at 100 percent completion");
+check(scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates from populated manual bridge_diagnostic_import alias input");
+check(Array.isArray(scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated manual bridge_diagnostic_import alias input as having unread core readouts");
+check(Array.isArray(scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated manual bridge_diagnostic_import alias input as having empty core readouts");
+const scanSessionBridgeDiagnosticImportPopulatedPartial = obd.buildDiagnosticScanSession({
+  bridge_diagnostic_import: bridgeDiagnosticImportPopulatedPartialExplicitCandidates,
+  session_id: "shop-test-bridge-import-populated-partial"
+});
+check(scanSessionBridgeDiagnosticImportPopulatedPartial.vehicleApplicability?.status === "partial", "Diagnostic scan session did not preserve partial vehicle applicability from populated bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not keep populated partial bridge_diagnostic_import alias input analysis-ready");
+check(scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus?.status === "analysis_ready", "Diagnostic scan session did not expose analysis_ready for populated partial bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated partial bridge_diagnostic_import alias input at 100 percent completion");
+check(scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates from populated partial bridge_diagnostic_import alias input");
+check(Array.isArray(scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus?.remainingReadoutIds) && scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated partial bridge_diagnostic_import alias input as having unread core readouts");
+check(Array.isArray(scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus?.emptyReadoutIds) && scanSessionBridgeDiagnosticImportPopulatedPartial.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated partial bridge_diagnostic_import alias input as having empty core readouts");
 const scanSessionBridgeSessionToolHintsMerge = obd.buildDiagnosticScanSession({
   session_id: "shop-test-bridge-session-tool-hints",
   bridgeSession: {
