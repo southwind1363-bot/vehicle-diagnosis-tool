@@ -4712,6 +4712,16 @@ function formatCoreBlockingWarningSummary(coreSessionStatus, limit = 2, fallback
   return labels.length ? labels.join(" / ") : fallback;
 }
 
+function formatCoreEmptyReadoutSummary(coreSessionStatus, limit = 2, fallback = "") {
+  if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
+  if (!Array.isArray(coreSessionStatus.emptyReadoutIds) || !coreSessionStatus.emptyReadoutIds.length) return fallback;
+  const labels = coreSessionStatus.emptyReadoutIds
+    .slice(0, Math.max(1, limit))
+    .map((item) => formatCoreReadoutLabel(item, item))
+    .filter(Boolean);
+  return labels.length ? labels.join(" / ") : fallback;
+}
+
 function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fallback = NO_DATA) {
   const nextReadoutSummary = formatNextReadoutSummary(nextReadoutCandidates, { limit: 2, fallback: "" });
   if (nextReadoutSummary) return nextReadoutSummary;
@@ -4743,6 +4753,9 @@ function buildCoreSessionStatusLines(coreSessionStatus) {
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
   if (coreSessionStatus.applicabilityStatus) lines.push(`適用判定: ${coreSessionStatus.applicabilityStatus}`);
   if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次操作: ${formatCoreReadoutLabel(coreSessionStatus.nextRecommendedReadoutId, coreSessionStatus.nextRecommendedReadoutId)}`);
+  if (Array.isArray(coreSessionStatus.emptyReadoutIds) && coreSessionStatus.emptyReadoutIds.length) {
+    lines.push(`空応答: ${coreSessionStatus.emptyReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
+  }
   if (Array.isArray(coreSessionStatus.remainingReadoutIds) && coreSessionStatus.remainingReadoutIds.length) {
     lines.push(`残件: ${coreSessionStatus.remainingReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
   }
@@ -4758,9 +4771,13 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
   const nextStepLabel = formatCoreNextStepSummary(analysis.coreSessionStatus, analysis.nextReadoutCandidates, "");
   const coreSessionSummary = formatCoreSessionStatusSummary(analysis.coreSessionStatus, "");
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(analysis.coreSessionStatus, 2, "");
   const blockingSummary = formatCoreBlockingWarningSummary(analysis.coreSessionStatus, 2, "");
   if (coreSessionSummary) {
     parts.push(`コア進捗 ${coreSessionSummary}`);
+  }
+  if (emptyReadoutSummary) {
+    parts.push(`空応答 ${emptyReadoutSummary}`);
   }
   if (blockingSummary) {
     parts.push(`保留 ${blockingSummary}`);
