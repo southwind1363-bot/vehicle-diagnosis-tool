@@ -945,6 +945,7 @@ check(bridgeSummary.readoutCoverage.emptyCategories === 0, "Bridge session summa
 check(bridgeSummary.readoutCoverage.items.some((item) => item.id === "ecu_info_snapshot" && item.available === true && item.count === 4), "Bridge session summary readout coverage did not count ECU info");
 check(bridgeSummary.coreSessionStatus?.stage === "diagnostic_core", "Bridge session summary did not expose coreSessionStatus stage");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.remainingReadoutIds), "Bridge session summary did not expose coreSessionStatus remainingReadoutIds");
+check(Array.isArray(bridgeSummary.coreSessionStatus?.emptyReadoutIds), "Bridge session summary did not expose coreSessionStatus emptyReadoutIds");
 check(bridgeSummary.warnings.includes("bridge_readout_incomplete"), "Bridge session summary did not warn about incomplete readout sections");
 check(bridgeSummary.warnings.includes("mode09_key_items_missing"), "Bridge session summary did not warn about missing key Mode 09 items");
 check(!bridgeSummary.warnings.includes("mode09_supported_types_unknown"), "Bridge session summary warned about missing supported Mode 09 info types despite captured type 00");
@@ -2800,6 +2801,7 @@ check(!populatedScanSession.warnings.includes("bridge_readout_incomplete"), "Dia
 check(populatedScanSession.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not report full coreSessionStatus completion for populated inputs");
 check(populatedScanSession.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not mark populated inputs as ready for analysis");
 check(Array.isArray(populatedScanSession.coreSessionStatus?.remainingReadoutIds) && populatedScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session did not clear remaining core readouts for populated inputs");
+check(Array.isArray(populatedScanSession.coreSessionStatus?.emptyReadoutIds) && populatedScanSession.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session did not clear emptyReadoutIds for populated inputs");
 const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-empty-readout-scan-session",
   dtcSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:00Z", codes: [], dtcs: [] },
@@ -2810,6 +2812,7 @@ const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
   livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:05Z", monitorValues: [] }
 });
 check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.remainingReadoutIds) && emptyReadoutScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated empty but completed core readouts as missing");
+check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.emptyReadoutIds) && emptyReadoutScanSession.coreSessionStatus.emptyReadoutIds.length === 6, "Diagnostic scan session did not expose emptyReadoutIds for completed empty core readouts");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");

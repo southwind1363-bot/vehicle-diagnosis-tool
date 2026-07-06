@@ -2276,6 +2276,7 @@
     nextReadoutCandidates = []
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const isCapturedReadout = (snapshot, key) => (
       Boolean(snapshot?.capturedAt)
       || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
@@ -2299,6 +2300,9 @@
     ];
     const capturedReadoutIds = requiredReadouts.filter((item) => item.captured).map((item) => item.id);
     const remainingReadoutIds = requiredReadouts.filter((item) => !item.captured).map((item) => item.id);
+    const emptyReadoutIds = Array.isArray(normalizedCoverage.emptyIds)
+      ? normalizedCoverage.emptyIds.filter((item) => requiredReadouts.some((readout) => readout.id === item))
+      : [];
     const blockingWarningIds = resolveWarningList(warnings).filter((warning) => (
       warning === "bridge_readout_incomplete"
       || warning === "bridge_readout_empty_sections"
@@ -2320,9 +2324,10 @@
       status: readyForAnalysis ? "analysis_ready" : capturedReadoutIds.length ? "collecting_readouts" : "not_started",
       completionPercent,
       applicabilityStatus: applicability.status || "unknown",
-      includeInfrastructure: normalizeReadoutCoverageSnapshot(readoutCoverage || {}).includeInfrastructure === true,
+      includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
       capturedReadoutIds,
       remainingReadoutIds,
+      emptyReadoutIds,
       nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,
       blockingWarningIds,
       readyForAnalysis
