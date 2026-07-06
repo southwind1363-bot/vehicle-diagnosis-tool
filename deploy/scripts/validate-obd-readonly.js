@@ -40,6 +40,7 @@ const failures = [];
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
+const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -79,6 +80,14 @@ const resolveReadoutCoverageFunctionChecks = () => {
     check(functionBody.includes('if (input && typeof input === "object") {'), "resolveReadoutCoverageSnapshot should prefer explicit readout coverage input");
     check(functionBody.includes('return normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);'), "resolveReadoutCoverageSnapshot should normalize explicit readout coverage input");
     check(functionBody.includes('return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());'), "resolveReadoutCoverageSnapshot should fall back to derived or empty readout coverage");
+  }
+};
+const resolveBridgeSummaryFunctionChecks = () => {
+  check(Boolean(resolveBridgeSummaryFunctionSource), "resolveBridgeSummary is missing from obd-readonly.js");
+  if (resolveBridgeSummaryFunctionSource) {
+    const functionBody = resolveBridgeSummaryFunctionSource[0];
+    check(functionBody.includes('const summaryInput = getBridgeSummaryInput(parts);'), "resolveBridgeSummary should derive bridge summary input before branching");
+    check(functionBody.includes('return hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);'), "resolveBridgeSummary should normalize summary aliases before falling back to bridge session summary");
   }
 };
 const bridgeSessionSummaryFunctionChecks = () => {
@@ -129,6 +138,7 @@ function check(condition, message) {
 bridgeSummaryAliasFunctionChecks();
 readoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
+resolveBridgeSummaryFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
