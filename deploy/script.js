@@ -4967,16 +4967,14 @@ function renderObdBridgeSessionDetails(session = null) {
   const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutSummary = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA }) || NO_DATA;
   const coreSessionLines = buildCoreSessionStatusLines(session?.coreSessionStatus);
-  const warningLines = [
-    ...coreSessionLines,
-    ...(Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [])
-  ];
-  if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || warningLines.length)) {
+  const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
+  if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || coreSessionLines.length || warningLines.length)) {
     sections.push(["読取メタ", [
       `適用: ${vehicleApplicabilitySummary}`,
       `車両: ${vehicleLabel}`,
       `次読取: ${nextReadoutSummary}`,
-      ...warningLines.slice(0, 6).map((item) => `注意: ${item}`),
+      ...coreSessionLines.slice(0, 4),
+      ...warningLines.slice(0, 4).map((item) => `注意: ${item}`),
       `プロトコル: ${readoutProtocol}`,
       `開始: ${startedAt === NO_DATA ? NO_DATA : formatDateTime(startedAt)}`,
       `終了: ${endedAt === NO_DATA ? NO_DATA : formatDateTime(endedAt)}`,
