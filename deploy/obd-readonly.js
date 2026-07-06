@@ -3047,6 +3047,7 @@
       schemaVersion: "freeze_frame_snapshot_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
       triggerDtc: triggerCodes[0] || null,
       monitorValues,
       monitorValueSummary: buildMonitorValueSummary(monitorValues),

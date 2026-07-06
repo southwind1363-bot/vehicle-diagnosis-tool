@@ -987,6 +987,18 @@ const bridgeSummaryReadinessOnly = obd.buildBridgeSessionSummary({
 check(bridgeSummaryReadinessOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from readiness_snapshot-only input");
 check(bridgeSummaryReadinessOnly.capturedAt === "2026-07-07T00:00:30Z", "Bridge session summary did not recover capturedAt from readiness_snapshot-only input");
 check(bridgeSummaryReadinessOnly.readinessSnapshot?.incompleteCount === 1, "Bridge session summary did not preserve readiness_snapshot-only monitor state");
+const bridgeSummaryFreezeFrameOnly = obd.buildBridgeSessionSummary({
+  freeze_frame_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:00:40Z",
+    trigger_dtc: "P0300",
+    values: [{ pid: "0C", label: "Engine RPM", value: 900, unit: "rpm" }]
+  }
+});
+check(bridgeSummaryFreezeFrameOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from freeze_frame_snapshot-only input");
+check(bridgeSummaryFreezeFrameOnly.capturedAt === "2026-07-07T00:00:40Z", "Bridge session summary did not recover capturedAt from freeze_frame_snapshot-only input");
+check(bridgeSummaryFreezeFrameOnly.freezeFrameSnapshot?.triggerDtc === "P0300", "Bridge session summary did not preserve freeze_frame_snapshot-only trigger DTC");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
   started_at: "2026-06-28T00:03:00Z",
   ended_at: "2026-06-28T00:04:00Z",
@@ -2814,6 +2826,21 @@ check(mergedDiagnosticInputBridgeReadinessOnly.source === "local_bridge", "Combi
 check(mergedDiagnosticInputBridgeReadinessOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from readiness_snapshot-only bridge_import");
 check(mergedDiagnosticInputBridgeReadinessOnly.capturedAt === "2026-07-07T00:02:00Z", "Combined diagnostic inputs did not preserve capturedAt from readiness_snapshot-only bridge_import");
 check(mergedDiagnosticInputBridgeReadinessOnly.readinessSnapshot?.incompleteCount === 1, "Combined diagnostic inputs did not preserve readiness_snapshot-only bridge_import");
+const mergedDiagnosticInputBridgeFreezeFrameOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    freeze_frame_snapshot: {
+      blocked: false,
+      protocol: "ISO9141-2",
+      capturedAt: "2026-07-07T00:02:30Z",
+      trigger_dtc: "P0300",
+      values: [{ pid: "0C", label: "Engine RPM", value: 900, unit: "rpm" }]
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeFreezeFrameOnly.source === "local_bridge", "Combined diagnostic inputs did not treat freeze_frame_snapshot-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeFreezeFrameOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from freeze_frame_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeFreezeFrameOnly.capturedAt === "2026-07-07T00:02:30Z", "Combined diagnostic inputs did not preserve capturedAt from freeze_frame_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeFreezeFrameOnly.freezeFrameSnapshot?.triggerDtc === "P0300", "Combined diagnostic inputs did not preserve freeze_frame_snapshot-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
@@ -4352,6 +4379,19 @@ const readinessOnlyScanSession = obd.buildDiagnosticScanSession({
 });
 check(readinessOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from readiness_snapshot-only input");
 check(readinessOnlyScanSession.capturedAt === "2026-07-07T00:01:00Z", "Diagnostic scan session did not recover capturedAt from readiness_snapshot-only input");
+const freezeFrameOnlyScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-freeze-frame-only",
+  freeze_frame_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:01:30Z",
+    trigger_dtc: "P0300",
+    values: [{ pid: "0C", label: "Engine RPM", value: 900, unit: "rpm" }]
+  }
+});
+check(freezeFrameOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from freeze_frame_snapshot-only input");
+check(freezeFrameOnlyScanSession.capturedAt === "2026-07-07T00:01:30Z", "Diagnostic scan session did not recover capturedAt from freeze_frame_snapshot-only input");
+check(freezeFrameOnlyScanSession.freezeFrameSnapshot?.triggerDtc === "P0300", "Diagnostic scan session did not preserve freeze_frame_snapshot-only input");
 const scanSessionAliasInputs = obd.buildDiagnosticScanSession({
   session_id: "shop-test-alias",
   started_at: "2026-06-28T00:10:00Z",
