@@ -4712,6 +4712,15 @@ function formatCoreBlockingWarningSummary(coreSessionStatus, limit = 2, fallback
   return labels.length ? labels.join(" / ") : fallback;
 }
 
+function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fallback = NO_DATA) {
+  const nextReadoutSummary = formatNextReadoutSummary(nextReadoutCandidates, { limit: 2, fallback: "" });
+  if (nextReadoutSummary) return nextReadoutSummary;
+  const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
+  if (blockingSummary) return "保留要因確認";
+  if (coreSessionStatus?.readyForAnalysis === true) return "解析結果確認";
+  return fallback;
+}
+
 function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
@@ -4965,7 +4974,7 @@ function renderObdBridgeSessionDetails(session = null) {
   const endedAt = session?.endedAt || NO_DATA;
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, NO_DATA) || NO_DATA;
   const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
-  const nextReadoutSummary = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA }) || NO_DATA;
+  const nextReadoutSummary = formatCoreNextStepSummary(session?.coreSessionStatus, session?.nextReadoutCandidates, NO_DATA);
   const coreSessionLines = buildCoreSessionStatusLines(session?.coreSessionStatus);
   const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || coreSessionLines.length || warningLines.length)) {
@@ -5176,7 +5185,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
-  const nextReadoutLabel = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA });
+  const nextReadoutLabel = formatCoreNextStepSummary(session?.coreSessionStatus, session?.nextReadoutCandidates, NO_DATA);
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
