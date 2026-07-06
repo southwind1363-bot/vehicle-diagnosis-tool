@@ -2978,6 +2978,7 @@ const emptyManualApplicabilityScanSession = obd.buildDiagnosticScanSession({
 });
 check(emptyManualApplicabilityScanSession.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for completed empty manual-applicability core readouts");
 check(emptyManualApplicabilityScanSession.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Diagnostic scan session did not surface vehicle_profile_manual as a blocking warning for manual applicability");
+check(emptyManualApplicabilityScanSession.nextReadoutCandidates[0]?.id === "ecu_info_snapshot" && emptyManualApplicabilityScanSession.nextReadoutCandidates[1]?.id === "dtc_snapshot", "Diagnostic scan session did not keep manual applicability next readout candidate fallback order");
 const emptyUnlistedApplicabilityScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-empty-unlisted-applicability-scan-session",
   vehicle_applicability: { status: "unlisted" },
@@ -2989,6 +2990,7 @@ const emptyUnlistedApplicabilityScanSession = obd.buildDiagnosticScanSession({
   livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:02:05Z", monitorValues: [] }
 });
 check(emptyUnlistedApplicabilityScanSession.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Diagnostic scan session did not surface vehicle_applicability_unlisted as a blocking warning for unlisted applicability");
+check(emptyUnlistedApplicabilityScanSession.nextReadoutCandidates[0]?.id === "ecu_info_snapshot" && emptyUnlistedApplicabilityScanSession.nextReadoutCandidates[1]?.id === "dtc_snapshot", "Diagnostic scan session did not keep unlisted applicability next readout candidate fallback order");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
