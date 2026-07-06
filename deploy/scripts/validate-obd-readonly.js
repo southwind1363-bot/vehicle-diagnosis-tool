@@ -1010,6 +1010,27 @@ const bridgeSummarySupportedPidOnly = obd.buildBridgeSessionSummary({
 check(bridgeSummarySupportedPidOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from supported_pid_matrix-only input");
 check(bridgeSummarySupportedPidOnly.capturedAt === "2026-07-07T00:00:50Z", "Bridge session summary did not recover capturedAt from supported_pid_matrix-only input");
 check(bridgeSummarySupportedPidOnly.supportedPidMatrix?.supportedPids.includes("0C"), "Bridge session summary did not preserve supported_pid_matrix-only input");
+const bridgeSummaryOnboardMonitorOnly = obd.buildBridgeSessionSummary({
+  onboard_monitor_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:00:55Z",
+    tests: [{ testId: "01", componentId: "01", value: 120, min: 100, max: 140, status: "pass" }]
+  }
+});
+check(bridgeSummaryOnboardMonitorOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from onboard_monitor_snapshot-only input");
+check(bridgeSummaryOnboardMonitorOnly.capturedAt === "2026-07-07T00:00:55Z", "Bridge session summary did not recover capturedAt from onboard_monitor_snapshot-only input");
+check(bridgeSummaryOnboardMonitorOnly.onboardMonitorSnapshot?.testCount === 1, "Bridge session summary did not preserve onboard_monitor_snapshot-only input");
+const bridgeSummaryEcuResponseOnly = obd.buildBridgeSessionSummary({
+  ecu_response_summary: {
+    capturedAt: "2026-07-07T00:00:57Z",
+    protocol: "ISO9141-2",
+    ecus: [{ address: "7E8", status: "ok", dtcCount: 1, services: ["03"] }]
+  }
+});
+check(bridgeSummaryEcuResponseOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from ecu_response_summary-only input");
+check(bridgeSummaryEcuResponseOnly.capturedAt === "2026-07-07T00:00:57Z", "Bridge session summary did not recover capturedAt from ecu_response_summary-only input");
+check(bridgeSummaryEcuResponseOnly.ecuResponseSummary?.ecus[0]?.address === "7E8", "Bridge session summary did not preserve ecu_response_summary-only input");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
   started_at: "2026-06-28T00:03:00Z",
   ended_at: "2026-06-28T00:04:00Z",
@@ -2866,6 +2887,33 @@ check(mergedDiagnosticInputBridgeSupportedPidOnly.source === "local_bridge", "Co
 check(mergedDiagnosticInputBridgeSupportedPidOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from supported_pid_matrix-only bridge_import");
 check(mergedDiagnosticInputBridgeSupportedPidOnly.capturedAt === "2026-07-07T00:03:00Z", "Combined diagnostic inputs did not preserve capturedAt from supported_pid_matrix-only bridge_import");
 check(mergedDiagnosticInputBridgeSupportedPidOnly.supportedPidMatrix?.supportedPids.includes("0C"), "Combined diagnostic inputs did not preserve supported_pid_matrix-only bridge_import");
+const mergedDiagnosticInputBridgeOnboardMonitorOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    onboard_monitor_snapshot: {
+      blocked: false,
+      protocol: "ISO9141-2",
+      capturedAt: "2026-07-07T00:03:10Z",
+      tests: [{ testId: "01", componentId: "01", value: 120, min: 100, max: 140, status: "pass" }]
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeOnboardMonitorOnly.source === "local_bridge", "Combined diagnostic inputs did not treat onboard_monitor_snapshot-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeOnboardMonitorOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from onboard_monitor_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeOnboardMonitorOnly.capturedAt === "2026-07-07T00:03:10Z", "Combined diagnostic inputs did not preserve capturedAt from onboard_monitor_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeOnboardMonitorOnly.onboardMonitorSnapshot?.testCount === 1, "Combined diagnostic inputs did not preserve onboard_monitor_snapshot-only bridge_import");
+const mergedDiagnosticInputBridgeEcuResponseOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    ecu_response_summary: {
+      capturedAt: "2026-07-07T00:03:20Z",
+      protocol: "ISO9141-2",
+      ecus: [{ address: "7E8", status: "ok", dtcCount: 1, services: ["03"] }]
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeEcuResponseOnly.source === "local_bridge", "Combined diagnostic inputs did not treat ecu_response_summary-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeEcuResponseOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from ecu_response_summary-only bridge_import");
+check(mergedDiagnosticInputBridgeEcuResponseOnly.capturedAt === "2026-07-07T00:03:20Z", "Combined diagnostic inputs did not preserve capturedAt from ecu_response_summary-only bridge_import");
+check(mergedDiagnosticInputBridgeEcuResponseOnly.ecuResponseSummary?.ecus[0]?.address === "7E8", "Combined diagnostic inputs did not preserve ecu_response_summary-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
@@ -4429,6 +4477,29 @@ const supportedPidOnlyScanSession = obd.buildDiagnosticScanSession({
 check(supportedPidOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from supported_pid_matrix-only input");
 check(supportedPidOnlyScanSession.capturedAt === "2026-07-07T00:01:45Z", "Diagnostic scan session did not recover capturedAt from supported_pid_matrix-only input");
 check(supportedPidOnlyScanSession.supportedPidMatrix?.supportedPids.includes("0C"), "Diagnostic scan session did not preserve supported_pid_matrix-only input");
+const onboardMonitorOnlyScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-onboard-monitor-only",
+  onboard_monitor_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:01:50Z",
+    tests: [{ testId: "01", componentId: "01", value: 120, min: 100, max: 140, status: "pass" }]
+  }
+});
+check(onboardMonitorOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from onboard_monitor_snapshot-only input");
+check(onboardMonitorOnlyScanSession.capturedAt === "2026-07-07T00:01:50Z", "Diagnostic scan session did not recover capturedAt from onboard_monitor_snapshot-only input");
+check(onboardMonitorOnlyScanSession.onboardMonitorSnapshot?.testCount === 1, "Diagnostic scan session did not preserve onboard_monitor_snapshot-only input");
+const ecuResponseOnlyScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-ecu-response-only",
+  ecu_response_summary: {
+    capturedAt: "2026-07-07T00:01:55Z",
+    protocol: "ISO9141-2",
+    ecus: [{ address: "7E8", status: "ok", dtcCount: 1, services: ["03"] }]
+  }
+});
+check(ecuResponseOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from ecu_response_summary-only input");
+check(ecuResponseOnlyScanSession.capturedAt === "2026-07-07T00:01:55Z", "Diagnostic scan session did not recover capturedAt from ecu_response_summary-only input");
+check(ecuResponseOnlyScanSession.ecuResponseSummary?.ecus[0]?.address === "7E8", "Diagnostic scan session did not preserve ecu_response_summary-only input");
 const scanSessionAliasInputs = obd.buildDiagnosticScanSession({
   session_id: "shop-test-alias",
   started_at: "2026-06-28T00:10:00Z",
