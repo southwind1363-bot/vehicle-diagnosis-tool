@@ -4666,17 +4666,22 @@ function formatCoreSessionStatusSummary(coreSessionStatus, fallback = NO_DATA) {
   const completionPercent = Number.isFinite(Number(coreSessionStatus.completionPercent))
     ? Math.max(0, Math.min(100, Math.round(Number(coreSessionStatus.completionPercent))))
     : null;
-  const statusLabel = {
+  const rawStatusLabel = {
     analysis_ready: "解析へ進行可能",
     collecting_readouts: "コア読取を継続",
     not_started: "読取待ち"
   }[coreSessionStatus.status] || coreSessionStatus.status || "";
   const remainingCount = Array.isArray(coreSessionStatus.remainingReadoutIds) ? coreSessionStatus.remainingReadoutIds.length : 0;
+  const emptyCount = Array.isArray(coreSessionStatus.emptyReadoutIds) ? coreSessionStatus.emptyReadoutIds.length : 0;
+  const statusLabel = coreSessionStatus.status === "analysis_ready" && emptyCount > 0
+    ? "コア読取完了"
+    : rawStatusLabel;
   const parts = [];
   if (completionPercent !== null) parts.push(`${completionPercent}%`);
   if (statusLabel) parts.push(statusLabel);
+  if (emptyCount > 0) parts.push(`空応答${emptyCount}件`);
   if (remainingCount > 0) parts.push(`残り${remainingCount}項目`);
-  if (coreSessionStatus.readyForAnalysis === true) parts.push("解析準備完了");
+  if (coreSessionStatus.readyForAnalysis === true && emptyCount === 0) parts.push("解析準備完了");
   return parts.join(" / ") || fallback;
 }
 
