@@ -4756,7 +4756,7 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
-  const nextReadoutLabel = formatNextReadoutSummary(analysis.nextReadoutCandidates, { limit: 2, fallback: "" });
+  const nextStepLabel = formatCoreNextStepSummary(analysis.coreSessionStatus, analysis.nextReadoutCandidates, "");
   const coreSessionSummary = formatCoreSessionStatusSummary(analysis.coreSessionStatus, "");
   const blockingSummary = formatCoreBlockingWarningSummary(analysis.coreSessionStatus, 2, "");
   if (coreSessionSummary) {
@@ -4765,8 +4765,8 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   if (blockingSummary) {
     parts.push(`保留 ${blockingSummary}`);
   }
-  if (nextReadoutLabel) {
-    parts.push(`次読取 ${nextReadoutLabel}`);
+  if (nextStepLabel) {
+    parts.push(`次操作 ${nextStepLabel}`);
   }
   if (applicabilitySummary) {
     parts.push(`適用 ${applicabilitySummary}`);
