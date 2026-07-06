@@ -2813,6 +2813,8 @@ const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
 });
 check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.remainingReadoutIds) && emptyReadoutScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated empty but completed core readouts as missing");
 check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.emptyReadoutIds) && emptyReadoutScanSession.coreSessionStatus.emptyReadoutIds.length === 6, "Diagnostic scan session did not expose emptyReadoutIds for completed empty core readouts");
+check(emptyReadoutScanSession.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated empty completed core readouts as ready for analysis");
+check(emptyReadoutScanSession.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep empty completed core readouts in collecting_readouts status");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");

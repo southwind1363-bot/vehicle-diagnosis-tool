@@ -2318,7 +2318,9 @@
         return (fallbackPriorityById[right] || 0) - (fallbackPriorityById[left] || 0);
       })[0] || null;
     const completionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
-    const readyForAnalysis = remainingReadoutIds.length === 0 && blockingWarningIds.length === 0;
+    const readyForAnalysis = remainingReadoutIds.length === 0
+      && emptyReadoutIds.length === 0
+      && blockingWarningIds.length === 0;
     return {
       stage: "diagnostic_core",
       status: readyForAnalysis ? "analysis_ready" : capturedReadoutIds.length ? "collecting_readouts" : "not_started",
