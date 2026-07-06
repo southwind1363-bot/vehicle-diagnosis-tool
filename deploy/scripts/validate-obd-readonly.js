@@ -3347,6 +3347,34 @@ check(decodedScanSessionPopulatedPartialApplicability.warnings.includes("vehicle
 check(!decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Decoded OBD session incorrectly blocked populated partial applicability");
 check(decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "Decoded OBD session did not allow populated partial applicability inputs to become analysis-ready");
 check(decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "Decoded OBD session did not expose analysis_ready status for populated partial applicability");
+const decodedScanSessionPopulatedManualApplicability = obd.buildDecodedObdScanSession({
+  session_id: "decoded-populated-manual-applicability",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Decoded OBD session did not keep manual applicability as a blocking warning for populated readouts");
+check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session incorrectly allowed populated manual applicability inputs to become analysis-ready");
+check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.status === "collecting_readouts", "Decoded OBD session did not keep populated manual applicability in collecting_readouts");
+const decodedScanSessionPopulatedUnlistedApplicability = obd.buildDecodedObdScanSession({
+  session_id: "decoded-populated-unlisted-applicability",
+  vehicle_applicability: { status: "unlisted" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Decoded OBD session did not keep unlisted applicability as a blocking warning for populated readouts");
+check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session incorrectly allowed populated unlisted applicability inputs to become analysis-ready");
+check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status === "collecting_readouts", "Decoded OBD session did not keep populated unlisted applicability in collecting_readouts");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3755,6 +3783,34 @@ check(textScanSessionPopulatedPartialApplicability.warnings.includes("vehicle_ap
 check(!textScanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "OBD text scan session incorrectly blocked populated partial applicability");
 check(textScanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "OBD text scan session did not allow populated partial applicability inputs to become analysis-ready");
 check(textScanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "OBD text scan session did not expose analysis_ready status for populated partial applicability");
+const textScanSessionPopulatedManualApplicability = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-populated-manual-applicability",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "OBD text scan session did not keep manual applicability as a blocking warning for populated readouts");
+check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session incorrectly allowed populated manual applicability inputs to become analysis-ready");
+check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.status === "collecting_readouts", "OBD text scan session did not keep populated manual applicability in collecting_readouts");
+const textScanSessionPopulatedUnlistedApplicability = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-populated-unlisted-applicability",
+  vehicle_applicability: { status: "unlisted" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "OBD text scan session did not keep unlisted applicability as a blocking warning for populated readouts");
+check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session incorrectly allowed populated unlisted applicability inputs to become analysis-ready");
+check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status === "collecting_readouts", "OBD text scan session did not keep populated unlisted applicability in collecting_readouts");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -4162,6 +4218,34 @@ check(scanSessionPopulatedPartialApplicability.warnings.includes("vehicle_applic
 check(!scanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Diagnostic scan session incorrectly blocked populated partial applicability");
 check(scanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not allow populated partial applicability inputs to become analysis-ready");
 check(scanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "Diagnostic scan session did not expose analysis_ready status for populated partial applicability");
+const scanSessionPopulatedManualApplicability = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-populated-manual-applicability",
+  vehicle_applicability: { status: "manual" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(scanSessionPopulatedManualApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Diagnostic scan session did not keep manual applicability as a blocking warning for populated readouts");
+check(scanSessionPopulatedManualApplicability.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly allowed populated manual applicability inputs to become analysis-ready");
+check(scanSessionPopulatedManualApplicability.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep populated manual applicability in collecting_readouts");
+const scanSessionPopulatedUnlistedApplicability = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-populated-unlisted-applicability",
+  vehicle_applicability: { status: "unlisted" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Diagnostic scan session did not keep unlisted applicability as a blocking warning for populated readouts");
+check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly allowed populated unlisted applicability inputs to become analysis-ready");
+check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep populated unlisted applicability in collecting_readouts");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
