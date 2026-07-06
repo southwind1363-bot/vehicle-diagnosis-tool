@@ -4981,7 +4981,7 @@ function renderObdBridgeSessionDetails(session = null) {
     sections.push(["読取メタ", [
       `適用: ${vehicleApplicabilitySummary}`,
       `車両: ${vehicleLabel}`,
-      `次読取: ${nextReadoutSummary}`,
+      `次操作: ${nextReadoutSummary}`,
       ...coreSessionLines.slice(0, 4),
       ...warningLines.slice(0, 4).map((item) => `注意: ${item}`),
       `プロトコル: ${readoutProtocol}`,
@@ -5251,7 +5251,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["保留要因", blockingSummaryLabel], ["次読取", nextReadoutLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["保留要因", blockingSummaryLabel], ["次操作", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
