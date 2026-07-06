@@ -987,6 +987,8 @@ const bridgeSummaryReadinessOnly = obd.buildBridgeSessionSummary({
 check(bridgeSummaryReadinessOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from readiness_snapshot-only input");
 check(bridgeSummaryReadinessOnly.capturedAt === "2026-07-07T00:00:30Z", "Bridge session summary did not recover capturedAt from readiness_snapshot-only input");
 check(bridgeSummaryReadinessOnly.readinessSnapshot?.incompleteCount === 1, "Bridge session summary did not preserve readiness_snapshot-only monitor state");
+check(!bridgeSummaryReadinessOnly.coreSessionStatus?.remainingReadoutIds?.includes("readiness_snapshot"), "Bridge session summary incorrectly treated readiness_snapshot-only input as unread");
+check(!bridgeSummaryReadinessOnly.coreSessionStatus?.emptyReadoutIds?.includes("readiness_snapshot"), "Bridge session summary incorrectly treated readiness_snapshot-only input as empty");
 const bridgeSummaryFreezeFrameOnly = obd.buildBridgeSessionSummary({
   freeze_frame_snapshot: {
     blocked: false,
@@ -1042,6 +1044,8 @@ const bridgeSummaryEcuInfoOnly = obd.buildBridgeSessionSummary({
 check(bridgeSummaryEcuInfoOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from ecu_info_snapshot-only input");
 check(bridgeSummaryEcuInfoOnly.capturedAt === "2026-07-07T00:00:58Z", "Bridge session summary did not recover capturedAt from ecu_info_snapshot-only input");
 check(bridgeSummaryEcuInfoOnly.ecuInfoSnapshot?.items.find((item) => item.id === "calibration_id")?.value === "CAL-ONLY-01", "Bridge session summary did not preserve ecu_info_snapshot-only input");
+check(!bridgeSummaryEcuInfoOnly.coreSessionStatus?.remainingReadoutIds?.includes("ecu_info_snapshot"), "Bridge session summary incorrectly treated ecu_info_snapshot-only input as unread");
+check(!bridgeSummaryEcuInfoOnly.coreSessionStatus?.emptyReadoutIds?.includes("ecu_info_snapshot"), "Bridge session summary incorrectly treated ecu_info_snapshot-only input as empty");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
   started_at: "2026-06-28T00:03:00Z",
   ended_at: "2026-06-28T00:04:00Z",
@@ -4477,6 +4481,9 @@ const readinessOnlyScanSession = obd.buildDiagnosticScanSession({
 });
 check(readinessOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from readiness_snapshot-only input");
 check(readinessOnlyScanSession.capturedAt === "2026-07-07T00:01:00Z", "Diagnostic scan session did not recover capturedAt from readiness_snapshot-only input");
+check(!readinessOnlyScanSession.coreSessionStatus?.remainingReadoutIds?.includes("readiness_snapshot"), "Diagnostic scan session incorrectly treated readiness_snapshot-only input as unread");
+check(!readinessOnlyScanSession.coreSessionStatus?.emptyReadoutIds?.includes("readiness_snapshot"), "Diagnostic scan session incorrectly treated readiness_snapshot-only input as empty");
+check(readinessOnlyScanSession.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not fall back to dtc_snapshot after capturing readiness_snapshot-only input");
 const freezeFrameOnlyScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-freeze-frame-only",
   freeze_frame_snapshot: {
@@ -4490,6 +4497,9 @@ const freezeFrameOnlyScanSession = obd.buildDiagnosticScanSession({
 check(freezeFrameOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from freeze_frame_snapshot-only input");
 check(freezeFrameOnlyScanSession.capturedAt === "2026-07-07T00:01:30Z", "Diagnostic scan session did not recover capturedAt from freeze_frame_snapshot-only input");
 check(freezeFrameOnlyScanSession.freezeFrameSnapshot?.triggerDtc === "P0300", "Diagnostic scan session did not preserve freeze_frame_snapshot-only input");
+check(!freezeFrameOnlyScanSession.coreSessionStatus?.remainingReadoutIds?.includes("freeze_frame_snapshot"), "Diagnostic scan session incorrectly treated freeze_frame_snapshot-only input as unread");
+check(!freezeFrameOnlyScanSession.coreSessionStatus?.emptyReadoutIds?.includes("freeze_frame_snapshot"), "Diagnostic scan session incorrectly treated freeze_frame_snapshot-only input as empty");
+check(freezeFrameOnlyScanSession.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not fall back to dtc_snapshot after capturing freeze_frame_snapshot-only input");
 const supportedPidOnlyScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-supported-pid-only",
   supported_pid_matrix: {
@@ -4502,6 +4512,9 @@ const supportedPidOnlyScanSession = obd.buildDiagnosticScanSession({
 check(supportedPidOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from supported_pid_matrix-only input");
 check(supportedPidOnlyScanSession.capturedAt === "2026-07-07T00:01:45Z", "Diagnostic scan session did not recover capturedAt from supported_pid_matrix-only input");
 check(supportedPidOnlyScanSession.supportedPidMatrix?.supportedPids.includes("0C"), "Diagnostic scan session did not preserve supported_pid_matrix-only input");
+check(!supportedPidOnlyScanSession.coreSessionStatus?.remainingReadoutIds?.includes("supported_pid_matrix"), "Diagnostic scan session incorrectly treated supported_pid_matrix-only input as unread");
+check(!supportedPidOnlyScanSession.coreSessionStatus?.emptyReadoutIds?.includes("supported_pid_matrix"), "Diagnostic scan session incorrectly treated supported_pid_matrix-only input as empty");
+check(supportedPidOnlyScanSession.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not fall back to dtc_snapshot after capturing supported_pid_matrix-only input");
 const onboardMonitorOnlyScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-onboard-monitor-only",
   onboard_monitor_snapshot: {
@@ -4537,6 +4550,9 @@ const ecuInfoOnlyScanSession = obd.buildDiagnosticScanSession({
 check(ecuInfoOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from ecu_info_snapshot-only input");
 check(ecuInfoOnlyScanSession.capturedAt === "2026-07-07T00:01:58Z", "Diagnostic scan session did not recover capturedAt from ecu_info_snapshot-only input");
 check(ecuInfoOnlyScanSession.ecuInfoSnapshot?.items.find((item) => item.id === "calibration_id")?.value === "CAL-ONLY-01", "Diagnostic scan session did not preserve ecu_info_snapshot-only input");
+check(!ecuInfoOnlyScanSession.coreSessionStatus?.remainingReadoutIds?.includes("ecu_info_snapshot"), "Diagnostic scan session incorrectly treated ecu_info_snapshot-only input as unread");
+check(!ecuInfoOnlyScanSession.coreSessionStatus?.emptyReadoutIds?.includes("ecu_info_snapshot"), "Diagnostic scan session incorrectly treated ecu_info_snapshot-only input as empty");
+check(ecuInfoOnlyScanSession.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not fall back to dtc_snapshot after capturing ecu_info_snapshot-only input");
 const scanSessionAliasInputs = obd.buildDiagnosticScanSession({
   session_id: "shop-test-alias",
   started_at: "2026-06-28T00:10:00Z",
