@@ -38,6 +38,7 @@ vm.runInContext(source, context);
 const obd = context.window.ObdReadOnly;
 const failures = [];
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
+const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
@@ -48,6 +49,15 @@ const readoutCoverageFunctionChecks = () => {
     check(functionBody.includes('const includeInfrastructureInput = pickDefined(input.includeInfrastructure, input.include_infrastructure);'), "buildReadoutCoverageSnapshot should normalize includeInfrastructure aliases");
     check(functionBody.includes('includeInfrastructureInput === false'), "buildReadoutCoverageSnapshot should preserve explicit includeInfrastructure false");
     check(functionBody.indexOf('includeInfrastructureInput === false') < functionBody.indexOf(': hasConnectionStatusInput'), "buildReadoutCoverageSnapshot should evaluate explicit includeInfrastructure false before inferring infrastructure from bridge inputs");
+  }
+};
+const bridgeSessionSummaryFunctionChecks = () => {
+  check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
+  if (bridgeSessionSummaryFunctionSource) {
+    const functionBody = bridgeSessionSummaryFunctionSource[0];
+    check(functionBody.includes('includeInfrastructure: hasBridgeInfrastructureContext'), "buildBridgeSessionSummary should derive readout coverage with bridge infrastructure context");
+    check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should append bridge readout warnings through bridge context guard");
+    check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should resolve readout coverage before appending bridge readout warnings");
   }
 };
 const diagnosticScanSessionFunctionChecks = () => {
@@ -87,6 +97,7 @@ function check(condition, message) {
   if (!condition) failures.push(message);
 }
 readoutCoverageFunctionChecks();
+bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
