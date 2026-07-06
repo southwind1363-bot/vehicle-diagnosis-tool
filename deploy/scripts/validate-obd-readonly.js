@@ -2,6 +2,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8");
+const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const monitorDefinitions = JSON.parse(
   fs.readFileSync(new URL("../data/obd-monitor-definitions.json", import.meta.url), "utf8")
 );
@@ -105,6 +106,13 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.current_basis.includes("貼り付け解析入口")), "メーカー固有DTCの貼り付け解析入口が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.done.includes("Techstream等の読取結果貼り付けを先行解析する方針")), "メーカー固有DTCの貼り付け解析方針が不足しています");
 const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const nextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\n}\n/);
+check(Boolean(nextStepFunctionSource), "formatCoreNextStepSummary is missing from script.js");
+if (nextStepFunctionSource) {
+  const functionBody = nextStepFunctionSource[0];
+  check(functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary') < functionBody.indexOf('const nextReadoutSummary = formatNextReadoutSummary'), "formatCoreNextStepSummary should evaluate blocking warnings before next readout candidates");
+  check(functionBody.indexOf('const emptyReadoutSummary = formatCoreEmptyReadoutSummary') < functionBody.indexOf('const nextReadoutSummary = formatNextReadoutSummary'), "formatCoreNextStepSummary should evaluate empty readouts before next readout candidates");
+}
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(indexHtml.includes("Techstream/J2534") && indexHtml.includes("Current/Pending/Permanent") && indexHtml.includes("CONSULT") && indexHtml.includes("HDS") && indexHtml.includes("IDS"), "OBD import helper text in index.html is out of date");

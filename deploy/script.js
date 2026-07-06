@@ -4745,12 +4745,12 @@ function formatCoreEmptyReadoutSummary(coreSessionStatus, limit = 2, fallback = 
 }
 
 function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fallback = NO_DATA) {
-  const nextReadoutSummary = formatNextReadoutSummary(nextReadoutCandidates, { limit: 2, fallback: "" });
-  if (nextReadoutSummary) return nextReadoutSummary;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
   if (blockingSummary) return "保留要因確認";
   const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   if (emptyReadoutSummary) return "空応答再確認";
+  const nextReadoutSummary = formatNextReadoutSummary(nextReadoutCandidates, { limit: 2, fallback: "" });
+  if (nextReadoutSummary) return nextReadoutSummary;
   if (coreSessionStatus?.readyForAnalysis === true) return "解析結果確認";
   return fallback;
 }
