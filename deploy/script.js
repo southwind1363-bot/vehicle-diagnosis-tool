@@ -4894,7 +4894,7 @@ function renderObdNextReadoutActions(session = null) {
       const status = document.createElement("p");
       status.textContent = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
       const reason = document.createElement("p");
-      reason.textContent = "コア読取が揃っています。次読取候補がない場合は解析結果の確認へ進めます。";
+      reason.textContent = "コア読取が揃っています。次操作候補がない場合は解析結果の確認へ進めます。";
       card.append(head, status, reason);
       obdNextReadoutList.appendChild(card);
       obdNextReadoutPanel.hidden = false;
