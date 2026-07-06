@@ -5011,6 +5011,9 @@ const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
 check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve plain-object capturedPercent override");
 check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly treated plain-object coverage override with empty and missing readouts as analysis-ready");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot from plain-object coverage override emptyIds");
+check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve plain-object coverage override emptyReadoutIds");
 const scanSessionCamelCoverageOverride = obd.buildDiagnosticScanSession({
   sessionId: "shop-test-camel-coverage-override",
   readoutCoverage: {
@@ -5054,6 +5057,9 @@ check(scanSessionCamelCoverageOverride.warnings.includes("negative_obd_response_
 check(scanSessionCamelCoverageOverride.sourceLength === 9, "Diagnostic scan session did not preserve camelCase sourceLength override");
 check(scanSessionCamelCoverageOverride.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve camelCase hadSensitiveIdentifier override");
 check(!scanSessionCamelCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionCamelCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when camelCase coverage disabled infrastructure");
+check(scanSessionCamelCoverageOverride.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly treated camelCase coverage override with empty and missing readouts as analysis-ready");
+check(scanSessionCamelCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "custom_camel_snapshot", "Diagnostic scan session did not preserve camelCase nextReadoutCandidates over coverage override emptyIds");
+check(Array.isArray(scanSessionCamelCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionCamelCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionCamelCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve camelCase coverage override emptyReadoutIds");
 const scanSessionSnakeCoverageOverride = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-coverage-override",
   readout_coverage: {
