@@ -38,6 +38,7 @@ vm.runInContext(source, context);
 const obd = context.window.ObdReadOnly;
 const failures = [];
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
+const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readinessHeadlineFunctionChecks = () => {
   check(Boolean(readinessHeadlineFunctionSource), "buildCoreReadinessHeadline is missing from script.js");
   if (readinessHeadlineFunctionSource) {
@@ -49,11 +50,24 @@ const readinessHeadlineFunctionChecks = () => {
     check(functionBody.indexOf('if (coreSessionStatus.readyForAnalysis === true)') < functionBody.indexOf('const labels = coreSessionStatus.remainingReadoutIds'), "buildCoreReadinessHeadline should evaluate analysis-ready status before remaining readout labels");
   }
 };
+const coreSummaryFunctionChecks = () => {
+  check(Boolean(coreNextStepFunctionSource), "formatCoreNextStepSummary is missing from script.js");
+  if (coreNextStepFunctionSource) {
+    const functionBody = coreNextStepFunctionSource[0];
+    check(functionBody.includes('const blockingSummary = formatCoreBlockingWarningSummary'), "formatCoreNextStepSummary should derive blocking warnings");
+    check(functionBody.includes('const emptyReadoutSummary = formatCoreEmptyReadoutSummary'), "formatCoreNextStepSummary should derive empty readout summary");
+    check(functionBody.includes('const nextReadoutSummary = formatNextReadoutSummary'), "formatCoreNextStepSummary should derive next readout summary");
+    check(functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary') < functionBody.indexOf('const emptyReadoutSummary = formatCoreEmptyReadoutSummary'), "formatCoreNextStepSummary should evaluate blocking warnings before empty readouts");
+    check(functionBody.indexOf('const emptyReadoutSummary = formatCoreEmptyReadoutSummary') < functionBody.indexOf('const nextReadoutSummary = formatNextReadoutSummary'), "formatCoreNextStepSummary should evaluate empty readouts before explicit next-readout summary");
+    check(functionBody.indexOf('const nextReadoutSummary = formatNextReadoutSummary') < functionBody.indexOf('if (coreSessionStatus?.readyForAnalysis === true)'), "formatCoreNextStepSummary should evaluate explicit next-readout summary before analysis-ready status");
+  }
+};
 
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
 readinessHeadlineFunctionChecks();
+coreSummaryFunctionChecks();
 
 check(obd?.policy?.transmitsVehicleCommands === false, "車両コマンド送信が禁止されていません");
 check(obd?.policy?.storesRawInput === false, "入力原文の保存が禁止されていません");
