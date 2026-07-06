@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const bridgeSessionExportPayloadFunctionSource = source.match(/function buildBridgeSessionExportPayload[\s\S]*?readout_coverage: normalizeReadoutCoverageSnapshot\(summary\.readoutCoverage \|\| buildReadoutCoverageSnapshot\(\)\),\r?\n[\s\S]*?\r?\n  \}/);
 const summaryMetadataFieldsFunctionSource = source.match(/function buildSummaryMetadataFields[\s\S]*?const sourceLengthValue = pickDefined\(summary\.sourceLength, summary\.source_length, 0\);\r?\n[\s\S]*?\r?\n  \}/);
 const mergedBridgeMetadataFunctionSource = source.match(/function buildMergedBridgeMetadata[\s\S]*?warnings: resolveWarningList\(bridgeImportMetadata\.warnings, bridgeSessionMetadata\.warnings\),\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummaryInput[\s\S]*?endedAt: parts\.endedAt \|\| parts\.ended_at \|\| nested\.endedAt \|\| nested\.ended_at \|\| null,\r?\n[\s\S]*?\r?\n  \}/);
@@ -137,6 +138,16 @@ const summaryMetadataFieldsFunctionChecks = () => {
     check(functionBody.includes('const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, 0);'), "buildSummaryMetadataFields should normalize source length aliases");
   }
 };
+const bridgeSessionExportPayloadFunctionChecks = () => {
+  check(Boolean(bridgeSessionExportPayloadFunctionSource), "buildBridgeSessionExportPayload is missing from obd-readonly.js");
+  if (bridgeSessionExportPayloadFunctionSource) {
+    const functionBody = bridgeSessionExportPayloadFunctionSource[0];
+    check(functionBody.includes('const summary = resolveBridgeSummary(parts);'), "buildBridgeSessionExportPayload should resolve bridge summary before export serialization");
+    check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });'), "buildBridgeSessionExportPayload should rebuild summary metadata in snake_case for export");
+    check(functionBody.includes('schema_version: \"bridge_session_export_v1\"'), "buildBridgeSessionExportPayload should emit bridge session export schema version");
+    check(functionBody.includes('readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),'), "buildBridgeSessionExportPayload should normalize readout coverage into export payload");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -192,6 +203,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+bridgeSessionExportPayloadFunctionChecks();
 summaryMetadataFieldsFunctionChecks();
 mergedBridgeMetadataFunctionChecks();
 bridgeSummaryInputFunctionChecks();
