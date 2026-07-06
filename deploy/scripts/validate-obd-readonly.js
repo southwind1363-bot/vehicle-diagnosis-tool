@@ -2815,6 +2815,18 @@ check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.remainingReadoutI
 check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.emptyReadoutIds) && emptyReadoutScanSession.coreSessionStatus.emptyReadoutIds.length === 6, "Diagnostic scan session did not expose emptyReadoutIds for completed empty core readouts");
 check(emptyReadoutScanSession.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated empty completed core readouts as ready for analysis");
 check(emptyReadoutScanSession.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep empty completed core readouts in collecting_readouts status");
+check(emptyReadoutScanSession.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for completed empty core readouts without vehicle applicability");
+const emptyManualApplicabilityScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-empty-manual-applicability-scan-session",
+  vehicle_applicability: { status: "manual" },
+  dtcSnapshot: { blocked: false, capturedAt: "2026-07-06T00:01:00Z", codes: [], dtcs: [] },
+  freezeFrameSnapshot: { blocked: false, capturedAt: "2026-07-06T00:01:01Z", monitorValues: [] },
+  readinessSnapshot: { blocked: false, capturedAt: "2026-07-06T00:01:02Z", monitors: [], monitorCount: 0 },
+  ecuInfoSnapshot: { blocked: false, capturedAt: "2026-07-06T00:01:03Z", items: [], itemCount: 0 },
+  supportedPidMatrix: { blocked: false, capturedAt: "2026-07-06T00:01:04Z", supportedPids: [], supportedCount: 0 },
+  livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:01:05Z", monitorValues: [] }
+});
+check(emptyManualApplicabilityScanSession.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for completed empty manual-applicability core readouts");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");

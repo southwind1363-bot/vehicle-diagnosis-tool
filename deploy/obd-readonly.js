@@ -1549,8 +1549,10 @@
           id: item.id || "",
           label: item.label || item.id || "",
           status: item.status,
-          priority: item.id === "ecu_info_snapshot" && applicabilityNeedsVehicleConfirmation
-            ? 92
+          priority: item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")
+            ? 102
+            : item.id === "ecu_info_snapshot" && applicability.status === "partial"
+              ? 92
             : (priorityById[item.id] || 10),
           reason,
           applicabilityStatus: applicability.status || null
@@ -1760,7 +1762,7 @@
     const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
       explicitCandidates: explicitNextReadoutCandidates,
       readoutCoverage,
-      vehicleApplicability: metadataOverrides.vehicleApplicability || {},
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
       ecuInfoSnapshot,
       dtcSnapshot,
       supportedPidMatrix
@@ -2309,7 +2311,10 @@
       || warning === "vehicle_applicability_manual_confirmation"
       || warning === "vehicle_unlisted_confirm_vehicle_profile"
     ));
-    const fallbackNextRecommendedReadoutId = (Array.isArray(remainingReadoutIds) ? [...remainingReadoutIds] : [])
+    const fallbackCandidateIds = Array.isArray(remainingReadoutIds) && remainingReadoutIds.length
+      ? [...remainingReadoutIds]
+      : (Array.isArray(emptyReadoutIds) ? [...emptyReadoutIds] : []);
+    const fallbackNextRecommendedReadoutId = fallbackCandidateIds
       .sort((left, right) => {
         if ((applicability.status === "manual" || applicability.status === "unlisted") && left !== right) {
           if (left === "ecu_info_snapshot") return -1;
@@ -4711,7 +4716,7 @@
     const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
       explicitCandidates: explicitNextReadoutCandidates,
       readoutCoverage,
-      vehicleApplicability: metadataOverrides.vehicleApplicability || {},
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
       ecuInfoSnapshot,
       dtcSnapshot,
       supportedPidMatrix
