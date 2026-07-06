@@ -1031,6 +1031,17 @@ const bridgeSummaryEcuResponseOnly = obd.buildBridgeSessionSummary({
 check(bridgeSummaryEcuResponseOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from ecu_response_summary-only input");
 check(bridgeSummaryEcuResponseOnly.capturedAt === "2026-07-07T00:00:57Z", "Bridge session summary did not recover capturedAt from ecu_response_summary-only input");
 check(bridgeSummaryEcuResponseOnly.ecuResponseSummary?.ecus[0]?.address === "7E8", "Bridge session summary did not preserve ecu_response_summary-only input");
+const bridgeSummaryEcuInfoOnly = obd.buildBridgeSessionSummary({
+  ecu_info_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:00:58Z",
+    items: [{ id: "calibration_id", infoType: "04", value: "CAL-ONLY-01" }]
+  }
+});
+check(bridgeSummaryEcuInfoOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from ecu_info_snapshot-only input");
+check(bridgeSummaryEcuInfoOnly.capturedAt === "2026-07-07T00:00:58Z", "Bridge session summary did not recover capturedAt from ecu_info_snapshot-only input");
+check(bridgeSummaryEcuInfoOnly.ecuInfoSnapshot?.items.find((item) => item.id === "calibration_id")?.value === "CAL-ONLY-01", "Bridge session summary did not preserve ecu_info_snapshot-only input");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
   started_at: "2026-06-28T00:03:00Z",
   ended_at: "2026-06-28T00:04:00Z",
@@ -2914,6 +2925,20 @@ check(mergedDiagnosticInputBridgeEcuResponseOnly.source === "local_bridge", "Com
 check(mergedDiagnosticInputBridgeEcuResponseOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from ecu_response_summary-only bridge_import");
 check(mergedDiagnosticInputBridgeEcuResponseOnly.capturedAt === "2026-07-07T00:03:20Z", "Combined diagnostic inputs did not preserve capturedAt from ecu_response_summary-only bridge_import");
 check(mergedDiagnosticInputBridgeEcuResponseOnly.ecuResponseSummary?.ecus[0]?.address === "7E8", "Combined diagnostic inputs did not preserve ecu_response_summary-only bridge_import");
+const mergedDiagnosticInputBridgeEcuInfoOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    ecu_info_snapshot: {
+      blocked: false,
+      protocol: "ISO9141-2",
+      capturedAt: "2026-07-07T00:03:30Z",
+      items: [{ id: "calibration_id", infoType: "04", value: "CAL-ONLY-01" }]
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeEcuInfoOnly.source === "local_bridge", "Combined diagnostic inputs did not treat ecu_info_snapshot-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeEcuInfoOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from ecu_info_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeEcuInfoOnly.capturedAt === "2026-07-07T00:03:30Z", "Combined diagnostic inputs did not preserve capturedAt from ecu_info_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeEcuInfoOnly.ecuInfoSnapshot?.items.find((item) => item.id === "calibration_id")?.value === "CAL-ONLY-01", "Combined diagnostic inputs did not preserve ecu_info_snapshot-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
@@ -4500,6 +4525,18 @@ const ecuResponseOnlyScanSession = obd.buildDiagnosticScanSession({
 check(ecuResponseOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from ecu_response_summary-only input");
 check(ecuResponseOnlyScanSession.capturedAt === "2026-07-07T00:01:55Z", "Diagnostic scan session did not recover capturedAt from ecu_response_summary-only input");
 check(ecuResponseOnlyScanSession.ecuResponseSummary?.ecus[0]?.address === "7E8", "Diagnostic scan session did not preserve ecu_response_summary-only input");
+const ecuInfoOnlyScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-ecu-info-only",
+  ecu_info_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:01:58Z",
+    items: [{ id: "calibration_id", infoType: "04", value: "CAL-ONLY-01" }]
+  }
+});
+check(ecuInfoOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from ecu_info_snapshot-only input");
+check(ecuInfoOnlyScanSession.capturedAt === "2026-07-07T00:01:58Z", "Diagnostic scan session did not recover capturedAt from ecu_info_snapshot-only input");
+check(ecuInfoOnlyScanSession.ecuInfoSnapshot?.items.find((item) => item.id === "calibration_id")?.value === "CAL-ONLY-01", "Diagnostic scan session did not preserve ecu_info_snapshot-only input");
 const scanSessionAliasInputs = obd.buildDiagnosticScanSession({
   session_id: "shop-test-alias",
   started_at: "2026-06-28T00:10:00Z",
