@@ -1892,7 +1892,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
       ? `${nextReadoutLabel} 繧帝・↓遒ｺ隱・`
       : `${nextReadoutLabel} 繧堤｢ｺ隱・`;
   }
-  if (coreSessionStatus?.readyForAnalysis === true && !nextReadoutLabels.length) {
+  if (coreSessionStatus?.readyForAnalysis === true && !nextReadoutLabels.length && !emptyReadoutSummary) {
     nextAction = "コア読取が揃ったため解析結果の確認へ進行可能";
   }
   const readoutPath = connected
@@ -4926,7 +4926,7 @@ function renderObdNextReadoutActions(session = null) {
     obdNextReadoutList.appendChild(emptyCard);
   }
   if (!candidates.length) {
-    if (session?.coreSessionStatus?.readyForAnalysis === true) {
+    if (session?.coreSessionStatus?.readyForAnalysis === true && !emptyReadoutSummary) {
       const card = document.createElement("article");
       card.className = "obd-operation-card";
       const head = document.createElement("strong");
