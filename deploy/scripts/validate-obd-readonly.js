@@ -1107,6 +1107,7 @@ const bridgeSummaryApplicabilityManual = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryApplicabilityManual.warnings.includes("vehicle_profile_manual"), "Bridge session summary did not emit manual applicability warning");
 check(bridgeSummaryApplicabilityManual.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Bridge session summary did not prioritize ecu_info_snapshot for manual applicability");
+check(bridgeSummaryApplicabilityManual.nextReadoutCandidates[1]?.id === "freeze_frame_snapshot", "Bridge session summary did not keep freeze_frame_snapshot after ecu_info_snapshot for manual applicability");
 const bridgeSummaryApplicabilityUnlisted = obd.buildBridgeSessionSummary({
   vehicle_profile: { maker: "Toyota", model: "Prius" },
   vehicle_applicability: { status: "unlisted" },
@@ -1114,6 +1115,7 @@ const bridgeSummaryApplicabilityUnlisted = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryApplicabilityUnlisted.warnings.includes("vehicle_applicability_unlisted"), "Bridge session summary did not emit unlisted applicability warning");
 check(bridgeSummaryApplicabilityUnlisted.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Bridge session summary did not prioritize ecu_info_snapshot for unlisted applicability");
+check(bridgeSummaryApplicabilityUnlisted.nextReadoutCandidates[1]?.id === "freeze_frame_snapshot", "Bridge session summary did not keep freeze_frame_snapshot after ecu_info_snapshot for unlisted applicability");
 const manualApplicabilityReadoutCoverage = {
   items: [
     { id: "freeze_frame_snapshot", label: "Freeze Frame", status: "missing", available: false, count: 0 },
