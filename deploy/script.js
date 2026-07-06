@@ -4776,7 +4776,10 @@ function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
 function buildCoreSessionStatusLines(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
-  if (coreSessionStatus.applicabilityStatus) lines.push(`適用判定: ${coreSessionStatus.applicabilityStatus}`);
+  if (coreSessionStatus.applicabilityStatus) {
+    const applicabilityLabel = formatVehicleApplicabilitySummary({ status: coreSessionStatus.applicabilityStatus }, coreSessionStatus.applicabilityStatus);
+    lines.push(`適用判定: ${applicabilityLabel}`);
+  }
   if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次操作: ${formatCoreReadoutLabel(coreSessionStatus.nextRecommendedReadoutId, coreSessionStatus.nextRecommendedReadoutId)}`);
   if (Array.isArray(coreSessionStatus.emptyReadoutIds) && coreSessionStatus.emptyReadoutIds.length) {
     lines.push(`空応答: ${coreSessionStatus.emptyReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
