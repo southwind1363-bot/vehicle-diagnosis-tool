@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const mergedBridgeMetadataFunctionSource = source.match(/function buildMergedBridgeMetadata[\s\S]*?warnings: resolveWarningList\(bridgeImportMetadata\.warnings, bridgeSessionMetadata\.warnings\),\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummaryInput[\s\S]*?endedAt: parts\.endedAt \|\| parts\.ended_at \|\| nested\.endedAt \|\| nested\.ended_at \|\| null,\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
@@ -113,6 +114,18 @@ const bridgeSummaryInputFunctionChecks = () => {
     check(functionBody.includes('...nested,') && functionBody.includes('...parts,'), "getBridgeSummaryInput should layer nested bridge summary fields before outer overrides");
   }
 };
+const mergedBridgeMetadataFunctionChecks = () => {
+  check(Boolean(mergedBridgeMetadataFunctionSource), "buildMergedBridgeMetadata is missing from obd-readonly.js");
+  if (mergedBridgeMetadataFunctionSource) {
+    const functionBody = mergedBridgeMetadataFunctionSource[0];
+    check(functionBody.includes('const bridgeImportMetadata = getSessionMetadataOverrides(bridgeImport || {});'), "buildMergedBridgeMetadata should derive bridge import metadata overrides first");
+    check(functionBody.includes('const bridgeSessionMetadata = getSessionMetadataOverrides(bridgeSession || {});'), "buildMergedBridgeMetadata should derive bridge session metadata overrides");
+    check(functionBody.includes('const readoutCoverageInput = pickDefined('), "buildMergedBridgeMetadata should prioritize explicit readout coverage inputs from bridge import and bridge session");
+    check(functionBody.includes('readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverageInput),'), "buildMergedBridgeMetadata should normalize merged readout coverage input");
+    check(functionBody.includes('toolHints: mergeUniqueStrings(bridgeImportMetadata.toolHints, bridgeSessionMetadata.toolHints),'), "buildMergedBridgeMetadata should merge tool hints from bridge import and bridge session");
+    check(functionBody.includes('warnings: resolveWarningList(bridgeImportMetadata.warnings, bridgeSessionMetadata.warnings),'), "buildMergedBridgeMetadata should merge warnings from bridge import and bridge session");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -168,6 +181,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+mergedBridgeMetadataFunctionChecks();
 bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
