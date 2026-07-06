@@ -4731,6 +4731,8 @@ function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fal
   if (nextReadoutSummary) return nextReadoutSummary;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
   if (blockingSummary) return "保留要因確認";
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
+  if (emptyReadoutSummary) return "空応答再確認";
   if (coreSessionStatus?.readyForAnalysis === true) return "解析結果確認";
   return fallback;
 }
