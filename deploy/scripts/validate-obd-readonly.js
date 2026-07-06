@@ -1188,6 +1188,30 @@ const bridgeSummaryApplicabilityUnlisted = obd.buildBridgeSessionSummary({
 check(bridgeSummaryApplicabilityUnlisted.warnings.includes("vehicle_applicability_unlisted"), "Bridge session summary did not emit unlisted applicability warning");
 check(bridgeSummaryApplicabilityUnlisted.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Bridge session summary did not prioritize ecu_info_snapshot for unlisted applicability");
 check(bridgeSummaryApplicabilityUnlisted.nextReadoutCandidates[1]?.id === "freeze_frame_snapshot", "Bridge session summary did not keep freeze_frame_snapshot after ecu_info_snapshot for unlisted applicability");
+const bridgeSummaryCoverageOverride = obd.buildBridgeSessionSummary({
+  readout_coverage: {
+    includeInfrastructure: false,
+    totalCategories: 7,
+    availableCategories: 3,
+    capturedCategories: 2,
+    emptyCategories: 1,
+    missingCategories: 4,
+    capturedPercent: 29,
+    progressPercent: 43,
+    items: [
+      { id: "dtc_snapshot", status: "captured", available: true, count: 2 },
+      { id: "live_pid_snapshot", status: "captured", available: true, count: 3 },
+      { id: "freeze_frame_snapshot", status: "empty", available: true, count: 0 }
+    ],
+    emptyIds: ["freeze_frame_snapshot"],
+    missingIds: ["readiness_snapshot", "ecu_info_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix"]
+  },
+  next_readout_candidates: [{ id: "custom_summary_snapshot", label: "Summary Snapshot", priority: 1, reason: "summary override" }],
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(bridgeSummaryCoverageOverride.readoutCoverage.includeInfrastructure === false, "Bridge session summary did not preserve explicit readout_coverage override");
+check(bridgeSummaryCoverageOverride.nextReadoutCandidates[0]?.id === "custom_summary_snapshot", "Bridge session summary did not preserve explicit next_readout_candidates override");
+check(bridgeSummaryCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "custom_summary_snapshot", "Bridge session summary did not preserve explicit next_readout_candidates over coverage override emptyIds");
 const manualApplicabilityReadoutCoverage = {
   items: [
     { id: "freeze_frame_snapshot", label: "Freeze Frame", status: "missing", available: false, count: 0 },
@@ -2400,6 +2424,32 @@ const mergedDiagnosticInputApplicabilityUnlisted = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputApplicabilityUnlisted.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Combined diagnostic inputs did not prioritize ecu_info_snapshot for unlisted applicability");
 check(mergedDiagnosticInputApplicabilityUnlisted.nextReadoutCandidates[1]?.id === "freeze_frame_snapshot", "Combined diagnostic inputs did not keep freeze_frame_snapshot after ecu_info_snapshot for unlisted applicability");
 check(mergedDiagnosticInputApplicabilityUnlisted.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Combined diagnostic inputs did not expose ecu_info_snapshot as the next recommended readout for unlisted applicability");
+const mergedDiagnosticInputCoverageOverride = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    readout_coverage: {
+      includeInfrastructure: false,
+      totalCategories: 7,
+      availableCategories: 3,
+      capturedCategories: 2,
+      emptyCategories: 1,
+      missingCategories: 4,
+      capturedPercent: 29,
+      progressPercent: 43,
+      items: [
+        { id: "dtc_snapshot", status: "captured", available: true, count: 2 },
+        { id: "live_pid_snapshot", status: "captured", available: true, count: 3 },
+        { id: "freeze_frame_snapshot", status: "empty", available: true, count: 0 }
+      ],
+      emptyIds: ["freeze_frame_snapshot"],
+      missingIds: ["readiness_snapshot", "ecu_info_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix"]
+    },
+    next_readout_candidates: [{ id: "custom_merged_snapshot", label: "Merged Snapshot", priority: 1, reason: "merged override" }],
+    dtc_snapshot: bridgeDtcSnapshot
+  }
+});
+check(mergedDiagnosticInputCoverageOverride.readoutCoverage?.includeInfrastructure === false, "Combined diagnostic inputs did not preserve explicit readout_coverage override");
+check(mergedDiagnosticInputCoverageOverride.nextReadoutCandidates[0]?.id === "custom_merged_snapshot", "Combined diagnostic inputs did not preserve explicit next_readout_candidates override");
+check(mergedDiagnosticInputCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "custom_merged_snapshot", "Combined diagnostic inputs did not preserve explicit next_readout_candidates over coverage override emptyIds");
 const bridgeExportPayloadPopulatedPartialExplicitCandidates = obd.buildBridgeSessionExportPayload({
   vehicle_applicability: { status: "partial" },
   dtcSnapshot: bridgeDtcSnapshot,
