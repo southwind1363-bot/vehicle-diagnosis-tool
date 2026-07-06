@@ -4697,6 +4697,8 @@ function formatCoreReadoutLabel(readoutId = "", fallback = "") {
 
 function buildCoreReadinessHeadline(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return "";
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
+  if (emptyReadoutSummary) return `空応答再確認: ${emptyReadoutSummary}。`;
   if (coreSessionStatus.readyForAnalysis === true) return "解析準備完了。";
   if (!Array.isArray(coreSessionStatus.remainingReadoutIds) || !coreSessionStatus.remainingReadoutIds.length) return "";
   const labels = coreSessionStatus.remainingReadoutIds
@@ -4741,6 +4743,8 @@ function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
   if (blockingSummary) return `解析保留: ${blockingSummary}。`;
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
+  if (emptyReadoutSummary) return `解析保留: ${emptyReadoutSummary} を再確認してください。`;
   if (coreSessionStatus.readyForAnalysis === true) {
     return "解析待ち: コア読取は完了しています。解析結果の確認へ進めます。";
   }
