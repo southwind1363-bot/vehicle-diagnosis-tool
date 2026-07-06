@@ -1182,6 +1182,28 @@ const scanSessionMissingSupportedTypePriority = obd.buildDiagnosticScanSession({
 });
 check(scanSessionMissingSupportedTypePriority.warnings.includes("mode09_supported_types_unknown"), "Diagnostic scan session did not keep mode09_supported_types_unknown warning for missing supported ECU info types");
 check(scanSessionMissingSupportedTypePriority.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot when supported ECU info types are missing");
+const scanSessionMissingKeyItemPriority = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-missing-key-item-priority",
+  readout_coverage: {
+    includeInfrastructure: false,
+    items: [
+      { id: "ecu_info_snapshot", label: "ECU Info", status: "missing", available: false, count: 0 },
+      { id: "freeze_frame_snapshot", label: "Freeze Frame", status: "missing", available: false, count: 0 }
+    ]
+  },
+  vehicle_applicability: { status: "matched" },
+  ecuInfoSnapshot: {
+    blocked: false,
+    capturedAt: "2026-07-06T00:03:30Z",
+    items: [],
+    itemCount: 0,
+    keyItemSummary: { missingCount: 2, missingLabels: ["キャリブレーション確認番号 CVN"] },
+    supportInfoTypesCaptured: true
+  }
+});
+check(scanSessionMissingKeyItemPriority.warnings.includes("mode09_key_items_missing"), "Diagnostic scan session did not keep mode09_key_items_missing warning for missing ECU key items");
+check(scanSessionMissingKeyItemPriority.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Diagnostic scan session did not keep freeze_frame_snapshot ahead of ECU info for matched missing-key-item coverage");
+check(scanSessionMissingKeyItemPriority.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Diagnostic scan session did not keep ecu_info_snapshot as a top follow-up when ECU key items are missing");
 const supportedPidReasonReadoutCoverage = {
   items: [
     { id: "supported_pid_matrix", label: "Supported PID", status: "missing", available: false, count: 0 },
