@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const summaryMetadataFieldsFunctionSource = source.match(/function buildSummaryMetadataFields[\s\S]*?const sourceLengthValue = pickDefined\(summary\.sourceLength, summary\.source_length, 0\);\r?\n[\s\S]*?\r?\n  \}/);
 const mergedBridgeMetadataFunctionSource = source.match(/function buildMergedBridgeMetadata[\s\S]*?warnings: resolveWarningList\(bridgeImportMetadata\.warnings, bridgeSessionMetadata\.warnings\),\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummaryInput[\s\S]*?endedAt: parts\.endedAt \|\| parts\.ended_at \|\| nested\.endedAt \|\| nested\.ended_at \|\| null,\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
@@ -126,6 +127,16 @@ const mergedBridgeMetadataFunctionChecks = () => {
     check(functionBody.includes('warnings: resolveWarningList(bridgeImportMetadata.warnings, bridgeSessionMetadata.warnings),'), "buildMergedBridgeMetadata should merge warnings from bridge import and bridge session");
   }
 };
+const summaryMetadataFieldsFunctionChecks = () => {
+  check(Boolean(summaryMetadataFieldsFunctionSource), "buildSummaryMetadataFields is missing from obd-readonly.js");
+  if (summaryMetadataFieldsFunctionSource) {
+    const functionBody = summaryMetadataFieldsFunctionSource[0];
+    check(functionBody.includes('const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints);'), "buildSummaryMetadataFields should merge camelCase and snake_case tool hints");
+    check(functionBody.includes('const warnings = resolveWarningList(summary.warnings, summary.warning_flags, summary.warningFlags);'), "buildSummaryMetadataFields should normalize warning aliases");
+    check(functionBody.includes('const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);'), "buildSummaryMetadataFields should normalize next-readout candidate aliases");
+    check(functionBody.includes('const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, 0);'), "buildSummaryMetadataFields should normalize source length aliases");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -181,6 +192,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+summaryMetadataFieldsFunctionChecks();
 mergedBridgeMetadataFunctionChecks();
 bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
