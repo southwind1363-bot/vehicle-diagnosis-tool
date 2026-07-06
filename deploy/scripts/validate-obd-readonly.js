@@ -1143,6 +1143,20 @@ const bridgeSummaryFreezeFrameDtcCandidates = obd.buildNextReadoutCandidates(
 );
 check(bridgeSummaryFreezeFrameDtcCandidates.find((item) => item.id === "freeze_frame_snapshot")?.reason === "DTC確定のため再確認候補", "Next readout candidates did not explain freeze_frame_snapshot priority when DTCs are present");
 check(bridgeSummaryFreezeFrameDtcCandidates.find((item) => item.id === "readiness_snapshot")?.reason === "判定状態確認のため再確認候補", "Next readout candidates did not explain readiness_snapshot priority when DTCs are present");
+const scanSessionFreezeFrameDtcPriority = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-freeze-frame-dtc-priority",
+  readout_coverage: {
+    includeInfrastructure: false,
+    items: [
+      { id: "freeze_frame_snapshot", label: "Freeze Frame", status: "missing", available: false, count: 0 },
+      { id: "readiness_snapshot", label: "Readiness", status: "missing", available: false, count: 0 }
+    ]
+  },
+  vehicle_applicability: { status: "matched" },
+  dtcSnapshot: { blocked: false, capturedAt: "2026-07-07T00:04:00Z", codes: ["P0171"], dtcs: [{ code: "P0171", status: "stored" }] }
+});
+check(scanSessionFreezeFrameDtcPriority.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot when DTCs are present");
+check(scanSessionFreezeFrameDtcPriority.nextReadoutCandidates[1]?.id === "readiness_snapshot", "Diagnostic scan session did not keep readiness_snapshot after freeze_frame_snapshot when DTCs are present");
 const bridgeSummaryMissingKeyItemCandidates = obd.buildNextReadoutCandidates(
   manualApplicabilityReadoutCoverage,
   { status: "matched" },
