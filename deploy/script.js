@@ -1842,6 +1842,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const nextReadoutLabel = formatTopNextReadoutLabel(currentSession?.nextReadoutCandidates, 2);
   const coreSessionStatus = currentSession?.coreSessionStatus || null;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const previewActive = Boolean(obdDevSession.previewMode);
   const connected = Boolean(obdDevSession.port);
@@ -1882,6 +1883,9 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
     nextAction = nextReadoutLabels.length
       ? `保留要因: ${blockingSummary}。${nextReadoutLabel} を再確認`
       : `保留要因: ${blockingSummary}。適用判定と読取内容を再確認`;
+  }
+  if ((connected || bridgeReady) && emptyReadoutSummary && !blockingSummary && !nextReadoutLabels.length) {
+    nextAction = `空応答: ${emptyReadoutSummary}。対象読取を再確認`;
   }
   if ((connected || bridgeReady) && nextReadoutLabels.length && !blockingSummary) {
     nextAction = connected
