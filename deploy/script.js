@@ -4975,12 +4975,12 @@ function renderObdBridgeSessionDetails(session = null) {
     sections.push(["読取メタ", [
       `適用: ${vehicleApplicabilitySummary}`,
       `車両: ${vehicleLabel}`,
+      `次読取: ${nextReadoutSummary}`,
+      ...warningLines.slice(0, 6).map((item) => `注意: ${item}`),
       `プロトコル: ${readoutProtocol}`,
       `開始: ${startedAt === NO_DATA ? NO_DATA : formatDateTime(startedAt)}`,
       `終了: ${endedAt === NO_DATA ? NO_DATA : formatDateTime(endedAt)}`,
-      `次読取: ${nextReadoutSummary}`,
-      `取得時刻: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`,
-      ...warningLines.slice(0, 6).map((item) => `注意: ${item}`)
+      `取得時刻: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`
     ]]);
   }
 
@@ -5180,6 +5180,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatNextReadoutSummary(session?.nextReadoutCandidates, { limit: 2, fallback: NO_DATA });
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+  const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -5242,8 +5243,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   ];
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
-  values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel], ["谺｡讀取", nextReadoutLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel]);
+  values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["保留要因", blockingSummaryLabel], ["次読取", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
