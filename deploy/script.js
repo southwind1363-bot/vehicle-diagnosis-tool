@@ -4723,6 +4723,16 @@ function formatCoreBlockingWarningSummary(coreSessionStatus, limit = 2, fallback
   return labels.length ? labels.join(" / ") : fallback;
 }
 
+function getNonBlockingWarningLabels(source = null, limit = 4) {
+  if (!source || !Array.isArray(source.warnings) || !source.warnings.length) return [];
+  const blocked = new Set(Array.isArray(source.coreSessionStatus?.blockingWarningIds) ? source.coreSessionStatus.blockingWarningIds : []);
+  return source.warnings
+    .filter((item) => !blocked.has(item))
+    .map((item) => formatObdBridgeWarningLabel(item))
+    .filter(Boolean)
+    .slice(0, Math.max(1, limit));
+}
+
 function formatCoreEmptyReadoutSummary(coreSessionStatus, limit = 2, fallback = "") {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
   if (!Array.isArray(coreSessionStatus.emptyReadoutIds) || !coreSessionStatus.emptyReadoutIds.length) return fallback;
@@ -4844,9 +4854,9 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   if (analysis.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) parts.push(`主要ECU情報${formatObdBridgeEcuKeySummary(analysis.ecuInfoSnapshot.keyItemSummary)}`);
   if (analysis.freezeFrameSnapshot?.triggerDtc) parts.push(`FF起点${analysis.freezeFrameSnapshot.triggerDtc}`);
   if (analysis.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) parts.push(`FF要約${formatObdBridgeMonitorSummary(analysis.freezeFrameSnapshot.monitorValueSummary)}`);
-  if (Array.isArray(analysis.warnings) && analysis.warnings.length) {
-    const warningLabels = analysis.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
-    parts.push(`注意${analysis.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
+  const warningLabels = getNonBlockingWarningLabels(analysis, 2);
+  if (warningLabels.length) {
+    parts.push(`注意${warningLabels.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
   }
 }
 
@@ -5025,7 +5035,7 @@ function renderObdBridgeSessionDetails(session = null) {
   const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutSummary = formatCoreNextStepSummary(session?.coreSessionStatus, session?.nextReadoutCandidates, NO_DATA);
   const coreSessionLines = buildCoreSessionStatusLines(session?.coreSessionStatus);
-  const warningLines = Array.isArray(session?.warnings) ? session.warnings.map((item) => formatObdBridgeWarningLabel(item)) : [];
+  const warningLines = getNonBlockingWarningLabels(session, 4);
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || coreSessionLines.length || warningLines.length)) {
     sections.push(["読取メタ", [
       `適用: ${vehicleApplicabilitySummary}`,
