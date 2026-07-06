@@ -4712,6 +4712,23 @@ function formatCoreBlockingWarningSummary(coreSessionStatus, limit = 2, fallback
   return labels.length ? labels.join(" / ") : fallback;
 }
 
+function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
+  if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
+  const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
+  if (blockingSummary) return `解析保留: ${blockingSummary}。`;
+  if (coreSessionStatus.readyForAnalysis === true) {
+    return "解析待ち: コア読取は完了しています。解析結果の確認へ進めます。";
+  }
+  if (Array.isArray(coreSessionStatus.remainingReadoutIds) && coreSessionStatus.remainingReadoutIds.length > 0) {
+    const labels = coreSessionStatus.remainingReadoutIds
+      .slice(0, 2)
+      .map((item) => formatCoreReadoutLabel(item, item))
+      .filter(Boolean);
+    if (labels.length) return `解析待ち: ${labels.join(" / ")} を読取後に解析します。`;
+  }
+  return fallback;
+}
+
 function buildCoreSessionStatusLines(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
@@ -5690,7 +5707,10 @@ function analyzeObdScannerImport() {
   renderObdImportToolHints(summarySource.toolHints);
 
   if (!hasScannerText && !bridgeImport) {
-    obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
+    obdImportStatus.textContent = buildCoreAnalysisPendingStatus(
+      obdDevSession.lastSession?.coreSessionStatus,
+      "外部診断機の読取結果を入力してください。"
+    );
     obdMonitorStatus.textContent = "読取後にライブデータを表示します。";
     obdMonitorCount.textContent = "0項目";
     return;
@@ -6019,7 +6039,10 @@ function clearObdScannerImport() {
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
   renderObdImportToolHints();
-  obdImportStatus.textContent = "まだ解析していません。";
+  obdImportStatus.textContent = buildCoreAnalysisPendingStatus(
+    obdDevSession.lastSession?.coreSessionStatus,
+    "まだ解析していません。"
+  );
   obdMonitorStatus.textContent = "読取後にライブデータを表示します。";
   obdMonitorCount.textContent = "0項目";
 }
