@@ -42,8 +42,11 @@ const readinessHeadlineFunctionChecks = () => {
   check(Boolean(readinessHeadlineFunctionSource), "buildCoreReadinessHeadline is missing from script.js");
   if (readinessHeadlineFunctionSource) {
     const functionBody = readinessHeadlineFunctionSource[0];
+    check(functionBody.includes('const emptyReadoutSummary = formatCoreEmptyReadoutSummary'), "buildCoreReadinessHeadline should derive empty readout summary");
     check(functionBody.includes('const blockingSummary = formatCoreBlockingWarningSummary'), "buildCoreReadinessHeadline should derive blocking warnings");
+    check(functionBody.indexOf('const emptyReadoutSummary = formatCoreEmptyReadoutSummary') < functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary'), "buildCoreReadinessHeadline should evaluate empty readouts before blocking warnings");
     check(functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary') < functionBody.indexOf('if (coreSessionStatus.readyForAnalysis === true)'), "buildCoreReadinessHeadline should evaluate blocking warnings before analysis-ready status");
+    check(functionBody.indexOf('if (coreSessionStatus.readyForAnalysis === true)') < functionBody.indexOf('const labels = coreSessionStatus.remainingReadoutIds'), "buildCoreReadinessHeadline should evaluate analysis-ready status before remaining readout labels");
   }
 };
 
