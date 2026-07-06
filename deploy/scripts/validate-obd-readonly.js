@@ -1161,6 +1161,27 @@ const bridgeSummaryMissingSupportedTypeCandidates = obd.buildNextReadoutCandidat
   }
 );
 check(bridgeSummaryMissingSupportedTypeCandidates.find((item) => item.id === "ecu_info_snapshot")?.reason === "対応ECU情報不足のため再確認候補", "Next readout candidates did not explain missing supported ECU info types");
+const scanSessionMissingSupportedTypePriority = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-missing-supported-type-priority",
+  readout_coverage: {
+    includeInfrastructure: false,
+    items: [
+      { id: "ecu_info_snapshot", label: "ECU Info", status: "missing", available: false, count: 0 },
+      { id: "supported_pid_matrix", label: "Supported PID", status: "missing", available: false, count: 0 }
+    ]
+  },
+  vehicle_applicability: { status: "matched" },
+  ecuInfoSnapshot: {
+    blocked: false,
+    capturedAt: "2026-07-06T00:03:00Z",
+    items: [],
+    itemCount: 0,
+    keyItemSummary: { missingCount: 0, missingLabels: [] },
+    supportInfoTypesCaptured: false
+  }
+});
+check(scanSessionMissingSupportedTypePriority.warnings.includes("mode09_supported_types_unknown"), "Diagnostic scan session did not keep mode09_supported_types_unknown warning for missing supported ECU info types");
+check(scanSessionMissingSupportedTypePriority.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot when supported ECU info types are missing");
 const supportedPidReasonReadoutCoverage = {
   items: [
     { id: "supported_pid_matrix", label: "Supported PID", status: "missing", available: false, count: 0 },
