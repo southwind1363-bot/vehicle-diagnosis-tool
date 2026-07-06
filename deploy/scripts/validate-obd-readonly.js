@@ -38,6 +38,7 @@ vm.runInContext(source, context);
 const obd = context.window.ObdReadOnly;
 const failures = [];
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
+const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
@@ -89,6 +90,16 @@ const resolveBridgeSummaryFunctionChecks = () => {
     const functionBody = resolveBridgeSummaryFunctionSource[0];
     check(functionBody.includes('const summaryInput = getBridgeSummaryInput(parts);'), "resolveBridgeSummary should derive bridge summary input before branching");
     check(functionBody.includes('return hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);'), "resolveBridgeSummary should normalize summary aliases before falling back to bridge session summary");
+  }
+};
+const detectBridgeInfrastructureFunctionChecks = () => {
+  check(Boolean(detectBridgeInfrastructureFunctionSource), "detectBridgeInfrastructureContext is missing from obd-readonly.js");
+  if (detectBridgeInfrastructureFunctionSource) {
+    const functionBody = detectBridgeInfrastructureFunctionSource[0];
+    check(functionBody.includes('const explicitIncludeInfrastructureValue = pickDefined('), "detectBridgeInfrastructureContext should derive explicit includeInfrastructure overrides");
+    check(functionBody.includes('if (honorCoverageOverride && typeof explicitIncludeInfrastructureValue === \"boolean\") {'), "detectBridgeInfrastructureContext should honor explicit readout coverage override before inference");
+    check(functionBody.includes('return explicitIncludeInfrastructureValue;'), "detectBridgeInfrastructureContext should return explicit includeInfrastructure override when enabled");
+    check(functionBody.includes('|| Boolean(nestedSession);'), "detectBridgeInfrastructureContext should infer bridge infrastructure context from nested session presence");
   }
 };
 const resolveBridgeInfrastructureFunctionChecks = () => {
@@ -147,6 +158,7 @@ function check(condition, message) {
   if (!condition) failures.push(message);
 }
 bridgeSummaryAliasFunctionChecks();
+detectBridgeInfrastructureFunctionChecks();
 readoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
