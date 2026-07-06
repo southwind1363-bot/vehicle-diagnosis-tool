@@ -3189,6 +3189,17 @@ check(aliasReadoutCoverage.progressPercent >= 80, "Readout coverage did not acce
 check(aliasReadoutCoverage.items.some((item) => item.id === "vci_devices" && item.count === 1), "Readout coverage did not count vci_list alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "freeze_frame_snapshot" && item.count === 2), "Readout coverage did not accept freeze_frame_response alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "supported_pid_matrix" && item.count >= 2), "Readout coverage did not accept supported_pid_snapshot alias input");
+const nonInfrastructureAliasReadoutCoverage = obd.buildReadoutCoverageSnapshot({
+  includeInfrastructure: false,
+  connection_status: bridgeStatus,
+  vci_list: bridgeVciList,
+  adapter_identity: bridgeAdapterIdentity,
+  dtc_snapshot: bridgeDtcSnapshot,
+  readiness_response: bridgeReadinessSnapshot
+});
+check(nonInfrastructureAliasReadoutCoverage.includeInfrastructure === false, "Readout coverage did not preserve includeInfrastructure false for alias inputs");
+check(!nonInfrastructureAliasReadoutCoverage.items.some((item) => item.id === "connection_status" || item.id === "vci_devices" || item.id === "adapter_identity"), "Readout coverage counted bridge infrastructure despite includeInfrastructure false");
+check(nonInfrastructureAliasReadoutCoverage.items.some((item) => item.id === "dtc_snapshot" && item.count >= 1), "Readout coverage dropped core alias inputs when infrastructure was disabled");
 const camelResponseReadoutCoverage = obd.buildReadoutCoverageSnapshot({
   connectionStatusResponse: {
     ok: true,
