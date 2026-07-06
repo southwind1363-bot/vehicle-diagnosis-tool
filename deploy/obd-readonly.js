@@ -1748,7 +1748,8 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
-      ecuResponseSummary
+      ecuResponseSummary,
+      supportedPidMatrix
     });
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
@@ -2197,7 +2198,8 @@
     readinessSnapshot = {},
     ecuInfoSnapshot = {},
     onboardMonitorSnapshot = {},
-    ecuResponseSummary = {}
+    ecuResponseSummary = {},
+    supportedPidMatrix = {}
   } = {}) {
     return {
       protocol: input.protocol
@@ -2208,6 +2210,7 @@
         || ecuInfoSnapshot.protocol
         || onboardMonitorSnapshot.protocol
         || ecuResponseSummary.protocol
+        || supportedPidMatrix.protocol
         || null,
       capturedAt: input.capturedAt
         || input.captured_at
@@ -2218,6 +2221,7 @@
         || ecuInfoSnapshot.capturedAt
         || onboardMonitorSnapshot.capturedAt
         || ecuResponseSummary.capturedAt
+        || supportedPidMatrix.capturedAt
         || null
     };
   }
@@ -4536,6 +4540,7 @@
       schemaVersion: "supported_pid_matrix_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
       supportedPids: [...supported],
       supportedCount: items.filter((item) => item.supported).length,
       knownPidCount: items.length,
@@ -4704,7 +4709,8 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
-      ecuResponseSummary
+      ecuResponseSummary,
+      supportedPidMatrix
     });
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,

@@ -999,6 +999,17 @@ const bridgeSummaryFreezeFrameOnly = obd.buildBridgeSessionSummary({
 check(bridgeSummaryFreezeFrameOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from freeze_frame_snapshot-only input");
 check(bridgeSummaryFreezeFrameOnly.capturedAt === "2026-07-07T00:00:40Z", "Bridge session summary did not recover capturedAt from freeze_frame_snapshot-only input");
 check(bridgeSummaryFreezeFrameOnly.freezeFrameSnapshot?.triggerDtc === "P0300", "Bridge session summary did not preserve freeze_frame_snapshot-only trigger DTC");
+const bridgeSummarySupportedPidOnly = obd.buildBridgeSessionSummary({
+  supported_pid_matrix: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:00:50Z",
+    supported_pids: ["0C", "05"]
+  }
+});
+check(bridgeSummarySupportedPidOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from supported_pid_matrix-only input");
+check(bridgeSummarySupportedPidOnly.capturedAt === "2026-07-07T00:00:50Z", "Bridge session summary did not recover capturedAt from supported_pid_matrix-only input");
+check(bridgeSummarySupportedPidOnly.supportedPidMatrix?.supportedPids.includes("0C"), "Bridge session summary did not preserve supported_pid_matrix-only input");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
   started_at: "2026-06-28T00:03:00Z",
   ended_at: "2026-06-28T00:04:00Z",
@@ -2841,6 +2852,20 @@ check(mergedDiagnosticInputBridgeFreezeFrameOnly.source === "local_bridge", "Com
 check(mergedDiagnosticInputBridgeFreezeFrameOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from freeze_frame_snapshot-only bridge_import");
 check(mergedDiagnosticInputBridgeFreezeFrameOnly.capturedAt === "2026-07-07T00:02:30Z", "Combined diagnostic inputs did not preserve capturedAt from freeze_frame_snapshot-only bridge_import");
 check(mergedDiagnosticInputBridgeFreezeFrameOnly.freezeFrameSnapshot?.triggerDtc === "P0300", "Combined diagnostic inputs did not preserve freeze_frame_snapshot-only bridge_import");
+const mergedDiagnosticInputBridgeSupportedPidOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    supported_pid_matrix: {
+      blocked: false,
+      protocol: "ISO9141-2",
+      capturedAt: "2026-07-07T00:03:00Z",
+      supported_pids: ["0C", "05"]
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeSupportedPidOnly.source === "local_bridge", "Combined diagnostic inputs did not treat supported_pid_matrix-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeSupportedPidOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from supported_pid_matrix-only bridge_import");
+check(mergedDiagnosticInputBridgeSupportedPidOnly.capturedAt === "2026-07-07T00:03:00Z", "Combined diagnostic inputs did not preserve capturedAt from supported_pid_matrix-only bridge_import");
+check(mergedDiagnosticInputBridgeSupportedPidOnly.supportedPidMatrix?.supportedPids.includes("0C"), "Combined diagnostic inputs did not preserve supported_pid_matrix-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {
@@ -4392,6 +4417,18 @@ const freezeFrameOnlyScanSession = obd.buildDiagnosticScanSession({
 check(freezeFrameOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from freeze_frame_snapshot-only input");
 check(freezeFrameOnlyScanSession.capturedAt === "2026-07-07T00:01:30Z", "Diagnostic scan session did not recover capturedAt from freeze_frame_snapshot-only input");
 check(freezeFrameOnlyScanSession.freezeFrameSnapshot?.triggerDtc === "P0300", "Diagnostic scan session did not preserve freeze_frame_snapshot-only input");
+const supportedPidOnlyScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-pid-only",
+  supported_pid_matrix: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:01:45Z",
+    supported_pids: ["0C", "05"]
+  }
+});
+check(supportedPidOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from supported_pid_matrix-only input");
+check(supportedPidOnlyScanSession.capturedAt === "2026-07-07T00:01:45Z", "Diagnostic scan session did not recover capturedAt from supported_pid_matrix-only input");
+check(supportedPidOnlyScanSession.supportedPidMatrix?.supportedPids.includes("0C"), "Diagnostic scan session did not preserve supported_pid_matrix-only input");
 const scanSessionAliasInputs = obd.buildDiagnosticScanSession({
   session_id: "shop-test-alias",
   started_at: "2026-06-28T00:10:00Z",
