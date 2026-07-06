@@ -37,8 +37,18 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
+const readoutCoverageFunctionChecks = () => {
+  check(Boolean(readoutCoverageFunctionSource), "buildReadoutCoverageSnapshot is missing from obd-readonly.js");
+  if (readoutCoverageFunctionSource) {
+    const functionBody = readoutCoverageFunctionSource[0];
+    check(functionBody.includes('const includeInfrastructureInput = pickDefined(input.includeInfrastructure, input.include_infrastructure);'), "buildReadoutCoverageSnapshot should normalize includeInfrastructure aliases");
+    check(functionBody.includes('includeInfrastructureInput === false'), "buildReadoutCoverageSnapshot should preserve explicit includeInfrastructure false");
+    check(functionBody.indexOf('includeInfrastructureInput === false') < functionBody.indexOf(': hasConnectionStatusInput'), "buildReadoutCoverageSnapshot should evaluate explicit includeInfrastructure false before inferring infrastructure from bridge inputs");
+  }
+};
 const readinessHeadlineFunctionChecks = () => {
   check(Boolean(readinessHeadlineFunctionSource), "buildCoreReadinessHeadline is missing from script.js");
   if (readinessHeadlineFunctionSource) {
@@ -66,6 +76,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+readoutCoverageFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
 
