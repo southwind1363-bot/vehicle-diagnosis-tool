@@ -1841,6 +1841,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const nextReadoutLabels = getTopNextReadoutLabels(currentSession?.nextReadoutCandidates, 2);
   const nextReadoutLabel = formatTopNextReadoutLabel(currentSession?.nextReadoutCandidates, 2);
   const coreSessionStatus = currentSession?.coreSessionStatus || null;
+  const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const previewActive = Boolean(obdDevSession.previewMode);
   const connected = Boolean(obdDevSession.port);
@@ -1877,7 +1878,12 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   } else if (!detailUnlocked) {
     nextAction = "必要なら詳細トークンで詳細読取を有効化";
   }
-  if ((connected || bridgeReady) && nextReadoutLabels.length) {
+  if ((connected || bridgeReady) && blockingSummary) {
+    nextAction = nextReadoutLabels.length
+      ? `保留要因: ${blockingSummary}。${nextReadoutLabel} を再確認`
+      : `保留要因: ${blockingSummary}。適用判定と読取内容を再確認`;
+  }
+  if ((connected || bridgeReady) && nextReadoutLabels.length && !blockingSummary) {
     nextAction = connected
       ? `${nextReadoutLabel} 繧帝・↓遒ｺ隱・`
       : `${nextReadoutLabel} 繧堤｢ｺ隱・`;
@@ -4696,6 +4702,16 @@ function buildCoreReadinessHeadline(coreSessionStatus) {
   return labels.length ? `読取継続: ${labels.join(" / ")}。` : "";
 }
 
+function formatCoreBlockingWarningSummary(coreSessionStatus, limit = 2, fallback = "") {
+  if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
+  if (!Array.isArray(coreSessionStatus.blockingWarningIds) || !coreSessionStatus.blockingWarningIds.length) return fallback;
+  const labels = coreSessionStatus.blockingWarningIds
+    .slice(0, Math.max(1, limit))
+    .map((item) => formatObdBridgeWarningLabel(item))
+    .filter(Boolean);
+  return labels.length ? labels.join(" / ") : fallback;
+}
+
 function buildCoreSessionStatusLines(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
@@ -4826,6 +4842,19 @@ function renderObdNextReadoutActions(session = null) {
   if (!obdNextReadoutPanel || !obdNextReadoutList) return;
   obdNextReadoutList.innerHTML = "";
   const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates, 4);
+  const blockingSummary = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, "");
+  if (blockingSummary) {
+    const holdCard = document.createElement("article");
+    holdCard.className = "obd-operation-card";
+    const holdHead = document.createElement("strong");
+    holdHead.textContent = "保留要因あり";
+    const holdStatus = document.createElement("p");
+    holdStatus.textContent = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+    const holdReason = document.createElement("p");
+    holdReason.textContent = `解析前に ${blockingSummary} を確認してください。`;
+    holdCard.append(holdHead, holdStatus, holdReason);
+    obdNextReadoutList.appendChild(holdCard);
+  }
   if (!candidates.length) {
     if (session?.coreSessionStatus?.readyForAnalysis === true) {
       const card = document.createElement("article");
@@ -4841,7 +4870,7 @@ function renderObdNextReadoutActions(session = null) {
       obdNextReadoutPanel.hidden = false;
       return;
     }
-    obdNextReadoutPanel.hidden = true;
+    obdNextReadoutPanel.hidden = !blockingSummary;
     return;
   }
   candidates.forEach((candidate) => {
