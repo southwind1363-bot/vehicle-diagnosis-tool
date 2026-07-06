@@ -4406,6 +4406,20 @@ const scanSessionSupportedPidReason = obd.buildDiagnosticScanSession({
   supported_pid_matrix: bridgeSupportedPidSnapshot
 });
 check(scanSessionSupportedPidReason.nextReadoutCandidates.find((item) => item.id === "live_pid_snapshot")?.reason === "対応PID実測確認のため再確認候補", "Diagnostic scan session did not derive live_pid_snapshot reason from supported_pid_matrix");
+const scanSessionSupportedPidPriority = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-pid-priority",
+  vehicle_applicability: vehicleApplicabilitySample,
+  readout_coverage: {
+    includeInfrastructure: false,
+    items: [
+      { id: "supported_pid_matrix", label: "Supported PID", status: "missing", available: false, count: 0 },
+      { id: "live_pid_snapshot", label: "Live PID", status: "missing", available: false, count: 0 }
+    ]
+  },
+  supported_pid_matrix: { blocked: false, capturedAt: "2026-07-07T00:05:00Z", supportedPids: ["0C", "0D"], supportedCount: 2 }
+});
+check(scanSessionSupportedPidPriority.nextReadoutCandidates[0]?.id === "live_pid_snapshot", "Diagnostic scan session did not prioritize live_pid_snapshot when supported PID data is available");
+check(scanSessionSupportedPidPriority.nextReadoutCandidates[1]?.id === "supported_pid_matrix", "Diagnostic scan session did not keep supported_pid_matrix after live_pid_snapshot when supported PID data is available");
 const scanSessionEcuInfoCamelAliases = obd.buildDiagnosticScanSession({
   session_id: "shop-test-ecuinfo-camel",
   ecuInfo: [
