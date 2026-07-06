@@ -3365,6 +3365,21 @@ check(decodedScanSessionPopulatedPartialApplicability.warnings.includes("vehicle
 check(!decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Decoded OBD session incorrectly blocked populated partial applicability");
 check(decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "Decoded OBD session did not allow populated partial applicability inputs to become analysis-ready");
 check(decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "Decoded OBD session did not expose analysis_ready status for populated partial applicability");
+const decodedScanSessionPopulatedPartialExplicitCandidates = obd.buildDecodedObdScanSession({
+  session_id: "decoded-populated-partial-explicit-candidates",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_decoded_snapshot", label: "Decoded Snapshot", priority: 1, reason: "outer override" }]
+});
+check(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "Decoded OBD session did not keep populated partial applicability with explicit next_readout_candidates as analysis-ready");
+check(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.status === "analysis_ready", "Decoded OBD session did not expose analysis_ready status for populated partial applicability with explicit next_readout_candidates");
+check(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates for populated partial applicability");
 const decodedScanSessionPopulatedManualApplicability = obd.buildDecodedObdScanSession({
   session_id: "decoded-populated-manual-applicability",
   vehicle_applicability: { status: "manual" },
@@ -3837,6 +3852,21 @@ check(textScanSessionPopulatedPartialApplicability.warnings.includes("vehicle_ap
 check(!textScanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "OBD text scan session incorrectly blocked populated partial applicability");
 check(textScanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "OBD text scan session did not allow populated partial applicability inputs to become analysis-ready");
 check(textScanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "OBD text scan session did not expose analysis_ready status for populated partial applicability");
+const textScanSessionPopulatedPartialExplicitCandidates = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-populated-partial-explicit-candidates",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_text_snapshot", label: "Text Snapshot", priority: 1, reason: "outer override" }]
+});
+check(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "OBD text scan session did not keep populated partial applicability with explicit next_readout_candidates as analysis-ready");
+check(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.status === "analysis_ready", "OBD text scan session did not expose analysis_ready status for populated partial applicability with explicit next_readout_candidates");
+check(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates for populated partial applicability");
 const textScanSessionPopulatedManualApplicability = obd.buildScanSessionFromObdText("NO DTC", {
   session_id: "obd-text-populated-manual-applicability",
   vehicle_applicability: { status: "manual" },
@@ -4308,6 +4338,21 @@ check(scanSessionPopulatedPartialApplicability.warnings.includes("vehicle_applic
 check(!scanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Diagnostic scan session incorrectly blocked populated partial applicability");
 check(scanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not allow populated partial applicability inputs to become analysis-ready");
 check(scanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "Diagnostic scan session did not expose analysis_ready status for populated partial applicability");
+const scanSessionPopulatedPartialExplicitCandidates = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-populated-partial-explicit-candidates",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+check(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not keep populated partial applicability with explicit next_readout_candidates as analysis-ready");
+check(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.status === "analysis_ready", "Diagnostic scan session did not expose analysis_ready status for populated partial applicability with explicit next_readout_candidates");
+check(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates for populated partial applicability");
 const scanSessionPopulatedManualApplicability = obd.buildDiagnosticScanSession({
   session_id: "shop-test-populated-manual-applicability",
   vehicle_applicability: { status: "manual" },
