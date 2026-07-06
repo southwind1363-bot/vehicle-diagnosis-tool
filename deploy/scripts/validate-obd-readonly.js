@@ -2815,7 +2815,8 @@ check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.remainingReadoutI
 check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.emptyReadoutIds) && emptyReadoutScanSession.coreSessionStatus.emptyReadoutIds.length === 6, "Diagnostic scan session did not expose emptyReadoutIds for completed empty core readouts");
 check(emptyReadoutScanSession.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated empty completed core readouts as ready for analysis");
 check(emptyReadoutScanSession.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep empty completed core readouts in collecting_readouts status");
-check(emptyReadoutScanSession.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for completed empty core readouts without vehicle applicability");
+check(emptyReadoutScanSession.coreSessionStatus?.applicabilityStatus === "unknown", "Diagnostic scan session did not expose unknown applicability status when vehicle applicability is absent");
+check(emptyReadoutScanSession.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not prioritize dtc_snapshot for completed empty core readouts without vehicle applicability");
 const emptyManualApplicabilityScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-empty-manual-applicability-scan-session",
   vehicle_applicability: { status: "manual" },
@@ -4419,7 +4420,8 @@ const scanSessionSnakeCoverageOverride = obd.buildDiagnosticScanSession({
 });
 check(scanSessionSnakeCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not accept include_infrastructure readout coverage alias");
 check(!scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when include_infrastructure alias disabled infrastructure");
-check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for manual applicability when coverage override omitted next readout candidates");
+check(scanSessionSnakeCoverageOverride.coreSessionStatus?.applicabilityStatus === "unknown", "Diagnostic scan session did not preserve unknown applicability when coverage override omitted vehicle applicability");
+check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not prioritize dtc_snapshot when coverage override omitted vehicle applicability");
 const scanSessionSnakeCoverageManualApplicability = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-coverage-manual-applicability",
   readout_coverage: {

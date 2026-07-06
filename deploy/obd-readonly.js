@@ -1433,7 +1433,7 @@
     let status = providedStatus;
     if (!status) {
       if (!maker && !model && !modelCode && !year && !engineCode) {
-        status = "manual";
+        status = "unknown";
       } else if (!catalogMatched) {
         status = "unlisted";
       } else if ((!year || yearMatched) && (!engineCode || engineMatched) && (!modelCode || modelCodeMatched)) {

@@ -1552,7 +1552,8 @@ function formatVehicleApplicabilitySummary(applicability, fallback = "") {
     matched: "適合候補あり",
     partial: "候補要確認",
     unlisted: "未登録",
-    manual: "手入力"
+    manual: "手入力",
+    unknown: "未判定"
   }[applicability.status] || applicability.status || "";
   const detailParts = [];
   if (Number.isFinite(applicability.applicableRangeCount) && applicability.applicableRangeCount > 0) detailParts.push(`適合 ${applicability.applicableRangeCount}件`);
