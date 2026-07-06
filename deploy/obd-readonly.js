@@ -1462,6 +1462,7 @@
   }
 
   function appendVehicleApplicabilityWarnings(warnings, applicability = {}) {
+    if (!hasObjectContent(applicability)) return;
     const normalized = applicability?.schemaVersion === "vehicle_applicability_v1"
       ? applicability
       : normalizeVehicleApplicabilitySnapshot(applicability || {});
@@ -2308,7 +2309,9 @@
     const blockingWarningIds = resolveWarningList(warnings).filter((warning) => (
       warning === "bridge_readout_incomplete"
       || warning === "bridge_readout_empty_sections"
+      || warning === "vehicle_profile_manual"
       || warning === "vehicle_applicability_manual_confirmation"
+      || warning === "vehicle_applicability_unlisted"
       || warning === "vehicle_unlisted_confirm_vehicle_profile"
     ));
     const fallbackCandidateIds = Array.isArray(remainingReadoutIds) && remainingReadoutIds.length

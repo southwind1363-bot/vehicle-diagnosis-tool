@@ -2827,6 +2827,18 @@ const emptyManualApplicabilityScanSession = obd.buildDiagnosticScanSession({
   livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:01:05Z", monitorValues: [] }
 });
 check(emptyManualApplicabilityScanSession.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for completed empty manual-applicability core readouts");
+check(emptyManualApplicabilityScanSession.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Diagnostic scan session did not surface vehicle_profile_manual as a blocking warning for manual applicability");
+const emptyUnlistedApplicabilityScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-empty-unlisted-applicability-scan-session",
+  vehicle_applicability: { status: "unlisted" },
+  dtcSnapshot: { blocked: false, capturedAt: "2026-07-06T00:02:00Z", codes: [], dtcs: [] },
+  freezeFrameSnapshot: { blocked: false, capturedAt: "2026-07-06T00:02:01Z", monitorValues: [] },
+  readinessSnapshot: { blocked: false, capturedAt: "2026-07-06T00:02:02Z", monitors: [], monitorCount: 0 },
+  ecuInfoSnapshot: { blocked: false, capturedAt: "2026-07-06T00:02:03Z", items: [], itemCount: 0 },
+  supportedPidMatrix: { blocked: false, capturedAt: "2026-07-06T00:02:04Z", supportedPids: [], supportedCount: 0 },
+  livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:02:05Z", monitorValues: [] }
+});
+check(emptyUnlistedApplicabilityScanSession.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Diagnostic scan session did not surface vehicle_applicability_unlisted as a blocking warning for unlisted applicability");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
