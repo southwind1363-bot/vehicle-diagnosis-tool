@@ -986,6 +986,7 @@ const bridgeSummaryReadinessOnly = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryReadinessOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from readiness_snapshot-only input");
 check(bridgeSummaryReadinessOnly.capturedAt === "2026-07-07T00:00:30Z", "Bridge session summary did not recover capturedAt from readiness_snapshot-only input");
+check(bridgeSummaryReadinessOnly.readinessSnapshot?.incompleteCount === 1, "Bridge session summary did not preserve readiness_snapshot-only monitor state");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
   started_at: "2026-06-28T00:03:00Z",
   ended_at: "2026-06-28T00:04:00Z",
@@ -2797,6 +2798,22 @@ const mergedDiagnosticInputBridgeLivePidResponseOnly = obd.mergeDiagnosticInputs
 check(mergedDiagnosticInputBridgeLivePidResponseOnly.source === "local_bridge", "Combined diagnostic inputs did not treat live_pid_response-only bridge_import as bridge input");
 check(mergedDiagnosticInputBridgeLivePidResponseOnly.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Combined diagnostic inputs did not decode live_pid_response-only bridge_import");
 check(mergedDiagnosticInputBridgeLivePidResponseOnly.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Combined diagnostic inputs did not preserve ecu_response_summary_response from live_pid_response-only bridge_import");
+const mergedDiagnosticInputBridgeReadinessOnly = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    readiness_snapshot: {
+      blocked: false,
+      protocol: "ISO9141-2",
+      capturedAt: "2026-07-07T00:02:00Z",
+      monitors: [{ id: "catalyst", available: true, complete: false }],
+      incompleteCount: 1,
+      knownMonitorCount: 1
+    }
+  }
+});
+check(mergedDiagnosticInputBridgeReadinessOnly.source === "local_bridge", "Combined diagnostic inputs did not treat readiness_snapshot-only bridge_import as bridge input");
+check(mergedDiagnosticInputBridgeReadinessOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from readiness_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeReadinessOnly.capturedAt === "2026-07-07T00:02:00Z", "Combined diagnostic inputs did not preserve capturedAt from readiness_snapshot-only bridge_import");
+check(mergedDiagnosticInputBridgeReadinessOnly.readinessSnapshot?.incompleteCount === 1, "Combined diagnostic inputs did not preserve readiness_snapshot-only bridge_import");
 const mergedDiagnosticInputBridgeParts = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_parts: {

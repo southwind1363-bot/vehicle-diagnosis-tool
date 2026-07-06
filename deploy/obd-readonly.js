@@ -1674,6 +1674,10 @@
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
+        : (Array.isArray(readinessSnapshotInput?.monitors)
+            || Number.isFinite(Number(readinessSnapshotInput?.incompleteCount))
+            || Number.isFinite(Number(readinessSnapshotInput?.knownMonitorCount)))
+          ? normalizeReadinessSnapshot(readinessSnapshotInput)
         : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || livePidSnapshot);
     const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
