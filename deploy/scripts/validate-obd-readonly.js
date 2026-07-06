@@ -3291,6 +3291,7 @@ const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanS
 });
 check(decodedScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not preserve explicit readout_coverage input");
 check(decodedScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates input");
+check(decodedScanSessionExplicitCoverageAndCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not let explicit next_readout_candidates drive coreSessionStatus nextRecommendedReadoutId");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3643,6 +3644,7 @@ const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObd
 });
 check(textScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve explicit readout_coverage option input");
 check(textScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates option input");
+check(textScanSessionExplicitCoverageAndCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not let explicit next_readout_candidates drive coreSessionStatus nextRecommendedReadoutId");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -3651,6 +3653,7 @@ const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFr
 check(textScanSessionExplicitCamelCoverageAndCandidates.sessionId === "obd-text-explicit-camel-coverage-candidates", "OBD text scan session did not preserve camelCase sessionId option input");
 check(textScanSessionExplicitCamelCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve camelCase readoutCoverage option input");
 check(textScanSessionExplicitCamelCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_camel_snapshot", "OBD text scan session did not preserve camelCase nextReadoutCandidates option input");
+check(textScanSessionExplicitCamelCoverageAndCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_camel_snapshot", "OBD text scan session did not let camelCase explicit nextReadoutCandidates drive coreSessionStatus nextRecommendedReadoutId");
 const textScanSessionSupportedPidReason = obd.buildScanSessionFromObdText("P0171", {
   session_id: "obd-text-supported-pid-reason",
   vehicle_applicability: vehicleApplicabilitySample,
@@ -3993,6 +3996,7 @@ const scanSessionScanSessionToolHintsAlias = obd.buildDiagnosticScanSession({
 });
 check(scanSessionScanSessionToolHintsAlias.toolHints.join(",") === "CONSULT,IDS", "Diagnostic scan session did not carry toolHints from scan_session alias input");
 check(scanSessionExplicitUnsortedCandidates.nextReadoutCandidates[0]?.id === "dtc_snapshot", "Diagnostic scan session did not sort explicit next_readout_candidates by priority");
+check(scanSessionExplicitUnsortedCandidates.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not let explicit next_readout_candidates drive coreSessionStatus nextRecommendedReadoutId");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
