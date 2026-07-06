@@ -4685,6 +4685,17 @@ function formatCoreReadoutLabel(readoutId = "", fallback = "") {
   }[readoutId] || fallback || readoutId;
 }
 
+function buildCoreReadinessHeadline(coreSessionStatus) {
+  if (!coreSessionStatus || typeof coreSessionStatus !== "object") return "";
+  if (coreSessionStatus.readyForAnalysis === true) return "解析準備完了。";
+  if (!Array.isArray(coreSessionStatus.remainingReadoutIds) || !coreSessionStatus.remainingReadoutIds.length) return "";
+  const labels = coreSessionStatus.remainingReadoutIds
+    .slice(0, 2)
+    .map((item) => formatCoreReadoutLabel(item, item))
+    .filter(Boolean);
+  return labels.length ? `読取継続: ${labels.join(" / ")}。` : "";
+}
+
 function buildCoreSessionStatusLines(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
@@ -5767,16 +5778,17 @@ function analyzeObdScannerImport() {
       ? "貼り付け結果とローカルブリッジ読取を統合し、"
       : "ローカルブリッジ読取結果を反映し、"
     : "";
+  const coreReadinessHeadline = buildCoreReadinessHeadline(summarySource.coreSessionStatus);
   const detailNote = notes.length ? ` ${notes.join(" / ")}。` : "";
 
   if (!mergedCodes.length) {
     obdImportStatus.textContent = summarySource.hadSensitiveIdentifier
-      ? `識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。${detailNote}`
+      ? `${coreReadinessHeadline}識別情報候補をマスクしましたが、標準形式のDTCは検出できませんでした。${detailNote}`
       : bridgeImport
-        ? `${hasScannerText ? "ローカルブリッジ読取と統合しましたが" : "ローカルブリッジ読取結果では"}、標準形式のDTCは検出できませんでした。${detailNote}`
-        : "標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。";
+        ? `${coreReadinessHeadline}${hasScannerText ? "ローカルブリッジ読取と統合しましたが" : "ローカルブリッジ読取結果では"}、標準形式のDTCは検出できませんでした。${detailNote}`
+        : `${coreReadinessHeadline}標準形式のDTCは検出できませんでした。スキャンツールの表示形式を確認してください。`;
   } else {
-    obdImportStatus.textContent = `${sourcePrefix}${mergedCodes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
+    obdImportStatus.textContent = `${coreReadinessHeadline}${sourcePrefix}${mergedCodes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
     mergedCodes.forEach((code) => {
       obdDetectedCodes.appendChild(createObdDtcCard(code));
     });
@@ -5807,7 +5819,7 @@ function analyzeObdScannerImport() {
       summary.push(`Adapter ${summarySource.adapterIdentity.adapterFamily || summarySource.adapterIdentity.adapterName}`);
     }
     appendObdAnalysisReadoutSummary(summary, summarySource);
-    obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
+    obdMonitorStatus.textContent = `${coreReadinessHeadline}${summary.join(" / ")}。`;
   } else if (bridgeImport && !mergedMonitorValues.length) {
     const summary = [summarySource.source === "local_bridge"
       ? "ローカルブリッジ読取の計測値は0項目です。"
@@ -5825,7 +5837,7 @@ function analyzeObdScannerImport() {
       summary.push(`Adapter ${summarySource.adapterIdentity.adapterFamily || summarySource.adapterIdentity.adapterName}`);
     }
     appendObdAnalysisReadoutSummary(summary, summarySource, { includeReadinessCount: true });
-    obdMonitorStatus.textContent = `${summary.join(" / ")}。`;
+    obdMonitorStatus.textContent = `${coreReadinessHeadline}${summary.join(" / ")}。`;
   }
   if (bridgeImport && obdDevSession.lastSession) {
     renderObdWorkflowGuide();
