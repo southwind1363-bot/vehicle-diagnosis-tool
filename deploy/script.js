@@ -1905,7 +1905,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
     ["車両", selectedVehicle],
     ["方式", selectedInterface],
     ["現在", currentState],
-    ["次の操作", nextAction],
+    ["次操作", nextAction],
     ["読取経路", readoutPath],
     ["安全", "読取専用のみ。有効化していない送信は開かない"]
   ].forEach(([label, value]) => {
