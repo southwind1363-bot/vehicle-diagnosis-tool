@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const sessionMetadataOverridesFunctionSource = source.match(/function getSessionMetadataOverrides[\s\S]*?hadSensitiveIdentifier\r?\n    \};\r?\n  \}/);
 const bridgeDiagnosticImportFunctionSource = source.match(/function buildBridgeDiagnosticImport[\s\S]*?const exportPayload = buildBridgeSessionExportPayload\(summary\);\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSessionExportPayloadFunctionSource = source.match(/function buildBridgeSessionExportPayload[\s\S]*?readout_coverage: normalizeReadoutCoverageSnapshot\(summary\.readoutCoverage \|\| buildReadoutCoverageSnapshot\(\)\),\r?\n[\s\S]*?\r?\n  \}/);
 const summaryMetadataFieldsFunctionSource = source.match(/function buildSummaryMetadataFields[\s\S]*?const sourceLengthValue = pickDefined\(summary\.sourceLength, summary\.source_length, 0\);\r?\n[\s\S]*?\r?\n  \}/);
@@ -159,6 +160,17 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const exportPayload = buildBridgeSessionExportPayload(summary);'), "buildBridgeDiagnosticImport should rebuild bridge export payload from resolved summary");
   }
 };
+const sessionMetadataOverridesFunctionChecks = () => {
+  check(Boolean(sessionMetadataOverridesFunctionSource), "getSessionMetadataOverrides is missing from obd-readonly.js");
+  if (sessionMetadataOverridesFunctionSource) {
+    const functionBody = sessionMetadataOverridesFunctionSource[0];
+    check(functionBody.includes('vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
+    check(functionBody.includes('readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,'), "getSessionMetadataOverrides should normalize readout coverage aliases");
+    check(functionBody.includes('toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints),'), "getSessionMetadataOverrides should merge tool hint aliases");
+    check(functionBody.includes('warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_flags, sessionInput.warningFlags),'), "getSessionMetadataOverrides should merge warning aliases");
+    check(functionBody.includes('sourceLength: pickDefined(sessionInput.source_length, sessionInput.sourceLength, null),'), "getSessionMetadataOverrides should normalize source length aliases");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -214,6 +226,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+sessionMetadataOverridesFunctionChecks();
 bridgeDiagnosticImportFunctionChecks();
 bridgeSessionExportPayloadFunctionChecks();
 summaryMetadataFieldsFunctionChecks();
