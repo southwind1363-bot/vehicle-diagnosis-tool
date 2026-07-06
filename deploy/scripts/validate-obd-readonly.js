@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const nestedSessionMetadataMergeFunctionSource = source.match(/function mergeNestedSessionMetadata[\s\S]*?had_sensitive_identifier:[\s\S]*?\r?\n  \}/);
 const sessionMetadataOverridesFunctionSource = source.match(/function getSessionMetadataOverrides[\s\S]*?hadSensitiveIdentifier\r?\n    \};\r?\n  \}/);
 const bridgeDiagnosticImportFunctionSource = source.match(/function buildBridgeDiagnosticImport[\s\S]*?const exportPayload = buildBridgeSessionExportPayload\(summary\);\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSessionExportPayloadFunctionSource = source.match(/function buildBridgeSessionExportPayload[\s\S]*?readout_coverage: normalizeReadoutCoverageSnapshot\(summary\.readoutCoverage \|\| buildReadoutCoverageSnapshot\(\)\),\r?\n[\s\S]*?\r?\n  \}/);
@@ -171,6 +172,17 @@ const sessionMetadataOverridesFunctionChecks = () => {
     check(functionBody.includes('sourceLength: pickDefined(sessionInput.source_length, sessionInput.sourceLength, null),'), "getSessionMetadataOverrides should normalize source length aliases");
   }
 };
+const nestedSessionMetadataMergeFunctionChecks = () => {
+  check(Boolean(nestedSessionMetadataMergeFunctionSource), "mergeNestedSessionMetadata is missing from obd-readonly.js");
+  if (nestedSessionMetadataMergeFunctionSource) {
+    const functionBody = nestedSessionMetadataMergeFunctionSource[0];
+    check(functionBody.includes('readoutCoverage: pickDefined(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),'), "mergeNestedSessionMetadata should prefer outer readout coverage before nested aliases");
+    check(functionBody.includes('toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, nested.toolHints, nested.tool_hints),'), "mergeNestedSessionMetadata should merge outer and nested tool hints");
+    check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),'), "mergeNestedSessionMetadata should merge outer and nested warning aliases");
+    check(functionBody.includes('sourceLength: pickDefined(base.sourceLength, base.source_length, nested.sourceLength, nested.source_length, null),'), "mergeNestedSessionMetadata should prefer outer source length before nested aliases");
+    check(functionBody.includes('].some((value) => value === true)\r\n        ? true'), "mergeNestedSessionMetadata should preserve true hadSensitiveIdentifier across outer and nested metadata");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -226,6 +238,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+nestedSessionMetadataMergeFunctionChecks();
 sessionMetadataOverridesFunctionChecks();
 bridgeDiagnosticImportFunctionChecks();
 bridgeSessionExportPayloadFunctionChecks();
