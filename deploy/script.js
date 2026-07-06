@@ -4742,7 +4742,7 @@ function buildCoreSessionStatusLines(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
   if (coreSessionStatus.applicabilityStatus) lines.push(`適用判定: ${coreSessionStatus.applicabilityStatus}`);
-  if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次の読取: ${formatCoreReadoutLabel(coreSessionStatus.nextRecommendedReadoutId, coreSessionStatus.nextRecommendedReadoutId)}`);
+  if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次操作: ${formatCoreReadoutLabel(coreSessionStatus.nextRecommendedReadoutId, coreSessionStatus.nextRecommendedReadoutId)}`);
   if (Array.isArray(coreSessionStatus.remainingReadoutIds) && coreSessionStatus.remainingReadoutIds.length) {
     lines.push(`残件: ${coreSessionStatus.remainingReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
   }
