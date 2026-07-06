@@ -2800,6 +2800,16 @@ check(!populatedScanSession.warnings.includes("bridge_readout_incomplete"), "Dia
 check(populatedScanSession.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not report full coreSessionStatus completion for populated inputs");
 check(populatedScanSession.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not mark populated inputs as ready for analysis");
 check(Array.isArray(populatedScanSession.coreSessionStatus?.remainingReadoutIds) && populatedScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session did not clear remaining core readouts for populated inputs");
+const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-empty-readout-scan-session",
+  dtcSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:00Z", codes: [], dtcs: [] },
+  freezeFrameSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:01Z", monitorValues: [] },
+  readinessSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:02Z", monitors: [], monitorCount: 0 },
+  ecuInfoSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:03Z", items: [], itemCount: 0 },
+  supportedPidMatrix: { blocked: false, capturedAt: "2026-07-06T00:00:04Z", supportedPids: [], supportedCount: 0 },
+  livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:05Z", monitorValues: [] }
+});
+check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.remainingReadoutIds) && emptyReadoutScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated empty but completed core readouts as missing");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");

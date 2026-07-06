@@ -2276,6 +2276,10 @@
     nextReadoutCandidates = []
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const isCapturedReadout = (snapshot, key) => (
+      Boolean(snapshot?.capturedAt)
+      || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
+    );
     const fallbackPriorityById = {
       dtc_snapshot: 100,
       freeze_frame_snapshot: 95,
@@ -2286,12 +2290,12 @@
       onboard_monitor_snapshot: 70
     };
     const requiredReadouts = [
-      { id: "dtc_snapshot", captured: Array.isArray(dtcSnapshot?.codes) && dtcSnapshot.codes.length > 0 },
-      { id: "freeze_frame_snapshot", captured: Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0 },
-      { id: "readiness_snapshot", captured: Number(readinessSnapshot?.monitorCount || 0) > 0 },
-      { id: "ecu_info_snapshot", captured: Number(ecuInfoSnapshot?.itemCount || 0) > 0 },
-      { id: "supported_pid_matrix", captured: Array.isArray(supportedPidMatrix?.supportedPids) && supportedPidMatrix.supportedPids.length > 0 },
-      { id: "live_pid_snapshot", captured: Array.isArray(livePidSnapshot?.monitorValues) && livePidSnapshot.monitorValues.length > 0 }
+      { id: "dtc_snapshot", captured: isCapturedReadout(dtcSnapshot, "codes") },
+      { id: "freeze_frame_snapshot", captured: isCapturedReadout(freezeFrameSnapshot, "monitorValues") },
+      { id: "readiness_snapshot", captured: isCapturedReadout(readinessSnapshot, "monitors") },
+      { id: "ecu_info_snapshot", captured: isCapturedReadout(ecuInfoSnapshot, "items") },
+      { id: "supported_pid_matrix", captured: isCapturedReadout(supportedPidMatrix, "supportedPids") },
+      { id: "live_pid_snapshot", captured: isCapturedReadout(livePidSnapshot, "monitorValues") }
     ];
     const capturedReadoutIds = requiredReadouts.filter((item) => item.captured).map((item) => item.id);
     const remainingReadoutIds = requiredReadouts.filter((item) => !item.captured).map((item) => item.id);
