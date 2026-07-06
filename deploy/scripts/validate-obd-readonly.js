@@ -39,6 +39,7 @@ const obd = context.window.ObdReadOnly;
 const failures = [];
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
+const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -69,6 +70,15 @@ const bridgeSummaryAliasFunctionChecks = () => {
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(derivedWarnings, {'), "normalizeBridgeSummaryAliases should append bridge readout warnings through derived warnings");
     check(functionBody.includes('hasBridgeInfrastructureContext,'), "normalizeBridgeSummaryAliases should pass bridge infrastructure context into bridge readout warning mapping");
     check(functionBody.includes('readoutCoverage: derivedReadoutCoverage'), "normalizeBridgeSummaryAliases should map bridge readout warnings from derived readout coverage");
+  }
+};
+const resolveReadoutCoverageFunctionChecks = () => {
+  check(Boolean(resolveReadoutCoverageFunctionSource), "resolveReadoutCoverageSnapshot is missing from obd-readonly.js");
+  if (resolveReadoutCoverageFunctionSource) {
+    const functionBody = resolveReadoutCoverageFunctionSource[0];
+    check(functionBody.includes('if (input && typeof input === "object") {'), "resolveReadoutCoverageSnapshot should prefer explicit readout coverage input");
+    check(functionBody.includes('return normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);'), "resolveReadoutCoverageSnapshot should normalize explicit readout coverage input");
+    check(functionBody.includes('return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());'), "resolveReadoutCoverageSnapshot should fall back to derived or empty readout coverage");
   }
 };
 const bridgeSessionSummaryFunctionChecks = () => {
@@ -118,6 +128,7 @@ function check(condition, message) {
 }
 bridgeSummaryAliasFunctionChecks();
 readoutCoverageFunctionChecks();
+resolveReadoutCoverageFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
