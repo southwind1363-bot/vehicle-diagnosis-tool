@@ -5757,6 +5757,7 @@ function analyzeObdScannerImport() {
   const analysisVehicleLabel = formatVehicleProfileLabel(summarySource.vehicleProfile);
   const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summarySource.vehicleApplicability);
   const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summarySource.coreSessionStatus, "");
+  const analysisEmptyReadoutLabel = formatCoreEmptyReadoutSummary(summarySource.coreSessionStatus, 2, "");
   const analysisNextStepLabel = formatCoreNextStepSummary(summarySource.coreSessionStatus, summarySource.nextReadoutCandidates, "");
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
@@ -5766,6 +5767,9 @@ function analyzeObdScannerImport() {
   }
   if (analysisCoreStatusLabel) {
     notes.push(`コア ${analysisCoreStatusLabel}`);
+  }
+  if (analysisEmptyReadoutLabel) {
+    notes.push(`空応答 ${analysisEmptyReadoutLabel}`);
   }
   if (analysisNextStepLabel) {
     notes.push(`次操作 ${analysisNextStepLabel}`);
