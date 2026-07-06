@@ -4749,8 +4749,18 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
   const nextReadoutLabel = formatNextReadoutSummary(analysis.nextReadoutCandidates, { limit: 2, fallback: "" });
   const coreSessionSummary = formatCoreSessionStatusSummary(analysis.coreSessionStatus, "");
+  const blockingSummary = formatCoreBlockingWarningSummary(analysis.coreSessionStatus, 2, "");
   if (coreSessionSummary) {
     parts.push(`コア進捗 ${coreSessionSummary}`);
+  }
+  if (blockingSummary) {
+    parts.push(`保留 ${blockingSummary}`);
+  }
+  if (nextReadoutLabel) {
+    parts.push(`次読取 ${nextReadoutLabel}`);
+  }
+  if (applicabilitySummary) {
+    parts.push(`適用 ${applicabilitySummary}`);
   }
   if (coverage?.totalCategories) {
     parts.push(`取得率${coverage.capturedPercent || 0}%`);
@@ -4763,12 +4773,6 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
       const emptyLabels = coverage.emptyLabels?.slice(0, 2).join(" / ");
       parts.push(`空応答${coverage.emptyCategories}件${emptyLabels ? ` (${emptyLabels})` : ""}`);
     }
-  }
-  if (applicabilitySummary) {
-    parts.push(`適用 ${applicabilitySummary}`);
-  }
-  if (nextReadoutLabel) {
-    parts.push(`谺｡讀取 ${nextReadoutLabel}`);
   }
   const readinessSummary = formatObdBridgeReadinessSummary(
     analysis.readinessSnapshot,
