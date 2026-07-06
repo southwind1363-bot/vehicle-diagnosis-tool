@@ -2276,6 +2276,15 @@
     nextReadoutCandidates = []
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const fallbackPriorityById = {
+      dtc_snapshot: 100,
+      freeze_frame_snapshot: 95,
+      readiness_snapshot: 90,
+      ecu_info_snapshot: 85,
+      live_pid_snapshot: 80,
+      supported_pid_matrix: 75,
+      onboard_monitor_snapshot: 70
+    };
     const requiredReadouts = [
       { id: "dtc_snapshot", captured: Array.isArray(dtcSnapshot?.codes) && dtcSnapshot.codes.length > 0 },
       { id: "freeze_frame_snapshot", captured: Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0 },
@@ -2292,6 +2301,14 @@
       || warning === "vehicle_applicability_manual_confirmation"
       || warning === "vehicle_unlisted_confirm_vehicle_profile"
     ));
+    const fallbackNextRecommendedReadoutId = (Array.isArray(remainingReadoutIds) ? [...remainingReadoutIds] : [])
+      .sort((left, right) => {
+        if ((applicability.status === "manual" || applicability.status === "unlisted") && left !== right) {
+          if (left === "ecu_info_snapshot") return -1;
+          if (right === "ecu_info_snapshot") return 1;
+        }
+        return (fallbackPriorityById[right] || 0) - (fallbackPriorityById[left] || 0);
+      })[0] || null;
     const completionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
     const readyForAnalysis = remainingReadoutIds.length === 0 && blockingWarningIds.length === 0;
     return {
@@ -2302,7 +2319,7 @@
       includeInfrastructure: normalizeReadoutCoverageSnapshot(readoutCoverage || {}).includeInfrastructure === true,
       capturedReadoutIds,
       remainingReadoutIds,
-      nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || remainingReadoutIds[0] || null,
+      nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,
       blockingWarningIds,
       readyForAnalysis
     };

@@ -4379,7 +4379,24 @@ const scanSessionSnakeCoverageOverride = obd.buildDiagnosticScanSession({
 });
 check(scanSessionSnakeCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not accept include_infrastructure readout coverage alias");
 check(!scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when include_infrastructure alias disabled infrastructure");
-check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not fall back nextRecommendedReadoutId from remaining core readouts when coverage override omitted next readout candidates");
+check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for manual applicability when coverage override omitted next readout candidates");
+const scanSessionSnakeCoverageManualApplicability = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-snake-coverage-manual-applicability",
+  readout_coverage: {
+    include_infrastructure: false,
+    totalCategories: 7,
+    availableCategories: 1,
+    capturedCategories: 1,
+    emptyCategories: 0,
+    missingCategories: 6
+  },
+  vehicle_applicability: { status: "manual" },
+  bridge_session: {
+    connection_status: { displayStatus: "connected", vehicleConnected: true },
+    dtc_codes: [{ code: "P0300", status: "stored" }]
+  }
+});
+check(scanSessionSnakeCoverageManualApplicability.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot for manual applicability when falling back nextRecommendedReadoutId");
 const normalizedSnakeCoverage = obd.normalizeReadoutCoverageSnapshot({
   include_infrastructure: true,
   totalCategories: 10,
