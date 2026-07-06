@@ -4670,16 +4670,31 @@ function formatCoreSessionStatusSummary(coreSessionStatus, fallback = NO_DATA) {
   return parts.join(" / ") || fallback;
 }
 
+function formatCoreReadoutLabel(readoutId = "", fallback = "") {
+  if (!readoutId) return fallback;
+  const actionLabel = OBD_NEXT_READOUT_ACTIONS?.[readoutId]?.label;
+  if (actionLabel) return actionLabel;
+  return {
+    dtc_snapshot: "DTC読取",
+    freeze_frame_snapshot: "フリーズフレーム読取",
+    readiness_snapshot: "レディネス読取",
+    ecu_info_snapshot: "ECU情報読取",
+    live_pid_snapshot: "ライブデータ読取",
+    supported_pid_matrix: "対応PID読取",
+    onboard_monitor_snapshot: "Mode06読取"
+  }[readoutId] || fallback || readoutId;
+}
+
 function buildCoreSessionStatusLines(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
   if (coreSessionStatus.applicabilityStatus) lines.push(`適用判定: ${coreSessionStatus.applicabilityStatus}`);
-  if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次の読取: ${coreSessionStatus.nextRecommendedReadoutId}`);
+  if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次の読取: ${formatCoreReadoutLabel(coreSessionStatus.nextRecommendedReadoutId, coreSessionStatus.nextRecommendedReadoutId)}`);
   if (Array.isArray(coreSessionStatus.remainingReadoutIds) && coreSessionStatus.remainingReadoutIds.length) {
-    lines.push(`残件: ${coreSessionStatus.remainingReadoutIds.slice(0, 4).join(" / ")}`);
+    lines.push(`残件: ${coreSessionStatus.remainingReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
   }
   if (Array.isArray(coreSessionStatus.blockingWarningIds) && coreSessionStatus.blockingWarningIds.length) {
-    lines.push(`保留要因: ${coreSessionStatus.blockingWarningIds.slice(0, 4).join(" / ")}`);
+    lines.push(`保留要因: ${coreSessionStatus.blockingWarningIds.slice(0, 4).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
   }
   return lines;
 }
@@ -5664,7 +5679,10 @@ function analyzeObdScannerImport() {
   if (summarySource.coreSessionStatus?.readyForAnalysis === true) {
     notes.push("解析へ進行可能");
   } else if (Array.isArray(summarySource.coreSessionStatus?.remainingReadoutIds) && summarySource.coreSessionStatus.remainingReadoutIds.length > 0) {
-    notes.push(`次読取 ${summarySource.coreSessionStatus.remainingReadoutIds.slice(0, 3).join(" / ")}`);
+    notes.push(`次読取 ${summarySource.coreSessionStatus.remainingReadoutIds.slice(0, 3).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
+  }
+  if (Array.isArray(summarySource.coreSessionStatus?.blockingWarningIds) && summarySource.coreSessionStatus.blockingWarningIds.length > 0) {
+    notes.push(`保留要因 ${summarySource.coreSessionStatus.blockingWarningIds.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
   }
   if (summarySource.startedAt) {
     notes.push(`開始 ${formatDateTime(summarySource.startedAt)}`);
