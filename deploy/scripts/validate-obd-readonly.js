@@ -2252,6 +2252,27 @@ check(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreS
 check(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Combined diagnostic inputs did not keep populated partial bridge_export_payload input at 100 percent completion");
 check(Array.isArray(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Combined diagnostic inputs treated populated partial bridge_export_payload input as having unread core readouts");
 check(Array.isArray(mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && mergedDiagnosticInputExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Combined diagnostic inputs treated populated partial bridge_export_payload input as having empty core readouts");
+const bridgeExportPayloadPopulatedUnlistedExplicitCandidates = obd.buildBridgeSessionExportPayload({
+  vehicle_applicability: { status: "unlisted" },
+  dtcSnapshot: bridgeDtcSnapshot,
+  livePidSnapshot: bridgePidSnapshot,
+  freezeFrameSnapshot: bridgeFreezeFrameSnapshot,
+  readinessSnapshot: bridgeReadinessSnapshot,
+  ecuInfoSnapshot: bridgeEcuInfoSnapshot,
+  onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot,
+  supportedPidMatrix: bridgeSupportedPidSnapshot,
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+const mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates = obd.mergeDiagnosticInputs({
+  bridge_export_payload: bridgeExportPayloadPopulatedUnlistedExplicitCandidates
+});
+check(mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.vehicleApplicability?.status === "unlisted", "Combined diagnostic inputs did not preserve unlisted vehicle applicability from populated bridge_export_payload input");
+check(mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.nextReadoutCandidates[0]?.id === "custom_snapshot", "Combined diagnostic inputs did not preserve explicit next_readout_candidates for unlisted populated bridge_export_payload input");
+check(mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Combined diagnostic inputs did not keep unlisted applicability blocking for populated bridge_export_payload input");
+check(mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.readyForAnalysis === false, "Combined diagnostic inputs incorrectly marked populated unlisted bridge_export_payload input as analysis-ready");
+check(mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Combined diagnostic inputs did not keep populated unlisted bridge_export_payload input at 100 percent completion");
+check(Array.isArray(mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Combined diagnostic inputs treated populated unlisted bridge_export_payload input as having unread core readouts");
+check(Array.isArray(mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && mergedDiagnosticInputExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Combined diagnostic inputs treated populated unlisted bridge_export_payload input as having empty core readouts");
 const bridgeDiagnosticImportPopulatedManualExplicitCandidates = obd.buildBridgeDiagnosticImport({
   vehicle_applicability: { status: "manual" },
   dtcSnapshot: bridgeDtcSnapshot,
