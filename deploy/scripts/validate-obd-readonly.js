@@ -2377,6 +2377,29 @@ const mergedDiagnosticInputApplicabilityPartial = obd.mergeDiagnosticInputs({
   bridge_diagnostic_import: bridgeDiagnosticImportApplicabilityPartial
 });
 check(Array.isArray(mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates) && mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates.length > 0, "統合診断入力へ次の読取候補を引き継げません");
+check(mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Combined diagnostic inputs did not prioritize freeze_frame_snapshot for partial applicability");
+check(mergedDiagnosticInputApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Combined diagnostic inputs did not keep ecu_info_snapshot after freeze_frame for partial applicability");
+check(mergedDiagnosticInputApplicabilityPartial.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Combined diagnostic inputs did not expose freeze_frame_snapshot as the next recommended readout for partial applicability");
+const mergedDiagnosticInputApplicabilityManual = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    vehicle_profile: { maker: "Toyota", model: "Prius" },
+    vehicle_applicability: { status: "manual" },
+    dtc_snapshot: bridgeDtcSnapshot
+  }
+});
+check(mergedDiagnosticInputApplicabilityManual.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Combined diagnostic inputs did not prioritize ecu_info_snapshot for manual applicability");
+check(mergedDiagnosticInputApplicabilityManual.nextReadoutCandidates[1]?.id === "freeze_frame_snapshot", "Combined diagnostic inputs did not keep freeze_frame_snapshot after ecu_info_snapshot for manual applicability");
+check(mergedDiagnosticInputApplicabilityManual.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Combined diagnostic inputs did not expose ecu_info_snapshot as the next recommended readout for manual applicability");
+const mergedDiagnosticInputApplicabilityUnlisted = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    vehicle_profile: { maker: "Toyota", model: "Prius" },
+    vehicle_applicability: { status: "unlisted" },
+    dtc_snapshot: bridgeDtcSnapshot
+  }
+});
+check(mergedDiagnosticInputApplicabilityUnlisted.nextReadoutCandidates[0]?.id === "ecu_info_snapshot", "Combined diagnostic inputs did not prioritize ecu_info_snapshot for unlisted applicability");
+check(mergedDiagnosticInputApplicabilityUnlisted.nextReadoutCandidates[1]?.id === "freeze_frame_snapshot", "Combined diagnostic inputs did not keep freeze_frame_snapshot after ecu_info_snapshot for unlisted applicability");
+check(mergedDiagnosticInputApplicabilityUnlisted.coreSessionStatus?.nextRecommendedReadoutId === "ecu_info_snapshot", "Combined diagnostic inputs did not expose ecu_info_snapshot as the next recommended readout for unlisted applicability");
 const bridgeExportPayloadPopulatedPartialExplicitCandidates = obd.buildBridgeSessionExportPayload({
   vehicle_applicability: { status: "partial" },
   dtcSnapshot: bridgeDtcSnapshot,
