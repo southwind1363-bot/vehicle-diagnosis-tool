@@ -1264,6 +1264,10 @@ check(bridgeExportAliasInputs.exported_at === "2026-06-28T00:07:00Z", "Bridge ex
 check(bridgeExportAliasInputs.session.started_at === "2026-06-28T00:05:00Z" && bridgeExportAliasInputs.session.ended_at === "2026-06-28T00:06:00Z", "Bridge export did not accept started_at or ended_at alias input");
 check(bridgeExportAliasInputs.session.vehicle_profile?.model === "Aqua", "Bridge export did not accept vehicle_profile alias input");
 check(bridgeExportAliasInputs.session.vehicle_applicability?.status === "matched", "Bridge export did not accept vehicle_applicability alias input");
+const bridgeExportUnknownApplicability = obd.buildBridgeSessionExportPayload({
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(bridgeExportUnknownApplicability.session.vehicle_applicability?.status === "unknown", "Bridge export did not default missing vehicle applicability to unknown");
 const bridgeExportSummaryAliases = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:08:00Z",
   dtc_codes: ["P0171"],
@@ -1445,6 +1449,10 @@ const bridgeDiagnosticImportApplicabilityPartial = obd.buildBridgeDiagnosticImpo
   vehicle_applicability: vehicleApplicabilityPartialSample,
   dtcSnapshot: bridgeDtcSnapshot
 });
+const bridgeDiagnosticImportUnknownApplicability = obd.buildBridgeDiagnosticImport({
+  bridge_export_payload: bridgeExportUnknownApplicability
+});
+check(bridgeDiagnosticImportUnknownApplicability.vehicleApplicability?.status === "unknown", "Bridge diagnostic import did not preserve unknown vehicle applicability from bridge export payload");
 check(bridgeDiagnosticImport.importType === "bridge_diagnostic_snapshot", "ブリッジ診断取込の種別が不正です");
 check(bridgeDiagnosticImport.codes.join(",") === "P0171,P0300", "ブリッジ診断取込へDTCを引き継げません");
 check(bridgeDiagnosticImport.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge diagnostic import did not carry ECU response summary");
