@@ -3332,6 +3332,21 @@ check(decodedScanSessionExplicitCandidatesPartialWarning.warnings.includes("vehi
 check(!decodedScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Decoded OBD session incorrectly treated partial applicability as a blocking warning with explicit next_readout_candidates");
 check(decodedScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session treated partial applicability with explicit next_readout_candidates as analysis-ready");
 check(decodedScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates over partial applicability warning");
+const decodedScanSessionPopulatedPartialApplicability = obd.buildDecodedObdScanSession({
+  session_id: "decoded-populated-partial-applicability",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(decodedScanSessionPopulatedPartialApplicability.warnings.includes("vehicle_applicability_partial"), "Decoded OBD session did not keep partial applicability warning for populated readouts");
+check(!decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Decoded OBD session incorrectly blocked populated partial applicability");
+check(decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "Decoded OBD session did not allow populated partial applicability inputs to become analysis-ready");
+check(decodedScanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "Decoded OBD session did not expose analysis_ready status for populated partial applicability");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3725,6 +3740,21 @@ check(textScanSessionExplicitCandidatesPartialWarning.warnings.includes("vehicle
 check(!textScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "OBD text scan session incorrectly treated partial applicability as a blocking warning with explicit next_readout_candidates");
 check(textScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session treated partial applicability with explicit next_readout_candidates as analysis-ready");
 check(textScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates over partial applicability warning");
+const textScanSessionPopulatedPartialApplicability = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-populated-partial-applicability",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(textScanSessionPopulatedPartialApplicability.warnings.includes("vehicle_applicability_partial"), "OBD text scan session did not keep partial applicability warning for populated readouts");
+check(!textScanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "OBD text scan session incorrectly blocked populated partial applicability");
+check(textScanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "OBD text scan session did not allow populated partial applicability inputs to become analysis-ready");
+check(textScanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "OBD text scan session did not expose analysis_ready status for populated partial applicability");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -4117,6 +4147,21 @@ check(scanSessionExplicitCandidatesPartialWarning.warnings.includes("vehicle_app
 check(!scanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Diagnostic scan session incorrectly treated partial applicability as a blocking warning with explicit next_readout_candidates");
 check(scanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated partial applicability with explicit next_readout_candidates as analysis-ready");
 check(scanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates over partial applicability warning");
+const scanSessionPopulatedPartialApplicability = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-populated-partial-applicability",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot
+});
+check(scanSessionPopulatedPartialApplicability.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session did not keep partial applicability warning for populated readouts");
+check(!scanSessionPopulatedPartialApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Diagnostic scan session incorrectly blocked populated partial applicability");
+check(scanSessionPopulatedPartialApplicability.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not allow populated partial applicability inputs to become analysis-ready");
+check(scanSessionPopulatedPartialApplicability.coreSessionStatus?.status === "analysis_ready", "Diagnostic scan session did not expose analysis_ready status for populated partial applicability");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
