@@ -3322,6 +3322,16 @@ const decodedScanSessionExplicitCandidatesUnlistedBlocking = obd.buildDecodedObd
 check(decodedScanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Decoded OBD session did not surface unlisted applicability as a blocking warning with explicit next_readout_candidates");
 check(decodedScanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session treated unlisted applicability with explicit next_readout_candidates as analysis-ready");
 check(decodedScanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates over unlisted applicability blocking");
+const decodedScanSessionExplicitCandidatesPartialWarning = obd.buildDecodedObdScanSession({
+  session_id: "decoded-explicit-partial-warning",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:20:30Z", codes: [], dtcs: [] },
+  next_readout_candidates: [{ id: "custom_decoded_snapshot", label: "Decoded Snapshot", priority: 1, reason: "outer override" }]
+});
+check(decodedScanSessionExplicitCandidatesPartialWarning.warnings.includes("vehicle_applicability_partial"), "Decoded OBD session did not surface partial applicability warning with explicit next_readout_candidates");
+check(!decodedScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Decoded OBD session incorrectly treated partial applicability as a blocking warning with explicit next_readout_candidates");
+check(decodedScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session treated partial applicability with explicit next_readout_candidates as analysis-ready");
+check(decodedScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates over partial applicability warning");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3705,6 +3715,16 @@ const textScanSessionExplicitCandidatesUnlistedBlocking = obd.buildScanSessionFr
 check(textScanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "OBD text scan session did not surface unlisted applicability as a blocking warning with explicit next_readout_candidates");
 check(textScanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session treated unlisted applicability with explicit next_readout_candidates as analysis-ready");
 check(textScanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates over unlisted applicability blocking");
+const textScanSessionExplicitCandidatesPartialWarning = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-explicit-partial-warning",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:21:30Z", codes: [], dtcs: [] },
+  next_readout_candidates: [{ id: "custom_text_snapshot", label: "Text Snapshot", priority: 1, reason: "outer override" }]
+});
+check(textScanSessionExplicitCandidatesPartialWarning.warnings.includes("vehicle_applicability_partial"), "OBD text scan session did not surface partial applicability warning with explicit next_readout_candidates");
+check(!textScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "OBD text scan session incorrectly treated partial applicability as a blocking warning with explicit next_readout_candidates");
+check(textScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session treated partial applicability with explicit next_readout_candidates as analysis-ready");
+check(textScanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates over partial applicability warning");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -4087,6 +4107,16 @@ const scanSessionExplicitCandidatesUnlistedBlocking = obd.buildDiagnosticScanSes
 check(scanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Diagnostic scan session did not surface unlisted applicability as a blocking warning with explicit next_readout_candidates");
 check(scanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated unlisted applicability with explicit next_readout_candidates as analysis-ready");
 check(scanSessionExplicitCandidatesUnlistedBlocking.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates over unlisted applicability blocking");
+const scanSessionExplicitCandidatesPartialWarning = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-explicit-partial-warning",
+  vehicle_applicability: { status: "partial" },
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:30Z", codes: [], dtcs: [] },
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+check(scanSessionExplicitCandidatesPartialWarning.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session did not surface partial applicability warning with explicit next_readout_candidates");
+check(!scanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Diagnostic scan session incorrectly treated partial applicability as a blocking warning with explicit next_readout_candidates");
+check(scanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated partial applicability with explicit next_readout_candidates as analysis-ready");
+check(scanSessionExplicitCandidatesPartialWarning.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates over partial applicability warning");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
