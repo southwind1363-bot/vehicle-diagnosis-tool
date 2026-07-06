@@ -2302,7 +2302,7 @@
       includeInfrastructure: normalizeReadoutCoverageSnapshot(readoutCoverage || {}).includeInfrastructure === true,
       capturedReadoutIds,
       remainingReadoutIds,
-      nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || null,
+      nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || remainingReadoutIds[0] || null,
       blockingWarningIds,
       readyForAnalysis
     };

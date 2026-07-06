@@ -4379,6 +4379,7 @@ const scanSessionSnakeCoverageOverride = obd.buildDiagnosticScanSession({
 });
 check(scanSessionSnakeCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not accept include_infrastructure readout coverage alias");
 check(!scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when include_infrastructure alias disabled infrastructure");
+check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not fall back nextRecommendedReadoutId from remaining core readouts when coverage override omitted next readout candidates");
 const normalizedSnakeCoverage = obd.normalizeReadoutCoverageSnapshot({
   include_infrastructure: true,
   totalCategories: 10,
