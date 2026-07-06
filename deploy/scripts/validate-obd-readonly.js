@@ -4643,6 +4643,27 @@ check(scanSessionBridgeExportPayloadAlias.connectionStatus.vehicleConnected === 
 check(scanSessionBridgeExportPayloadAlias.vehicleProfile?.model === bridgeExportPayload.session.vehicle_profile?.model, "Diagnostic scan session did not carry vehicle_profile from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not carry warnings from bridge_export_payload alias input");
+const scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates = obd.buildDiagnosticScanSession({
+  bridge_export_payload: bridgeExportPayloadPopulatedPartialExplicitCandidates,
+  session_id: "shop-test-bridge-export-populated-partial-explicit-candidates"
+});
+check(scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.vehicleApplicability?.status === "partial", "Diagnostic scan session did not preserve partial vehicle applicability from populated bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not keep populated partial bridge_export_payload alias input analysis-ready");
+check(scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated partial bridge_export_payload alias input at 100 percent completion");
+check(scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates from populated partial bridge_export_payload alias input");
+check(Array.isArray(scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated partial bridge_export_payload alias input as having unread core readouts");
+check(Array.isArray(scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated partial bridge_export_payload alias input as having empty core readouts");
+const scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates = obd.buildDiagnosticScanSession({
+  bridge_export_payload: bridgeExportPayloadPopulatedUnlistedExplicitCandidates,
+  session_id: "shop-test-bridge-export-populated-unlisted-explicit-candidates"
+});
+check(scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.vehicleApplicability?.status === "unlisted", "Diagnostic scan session did not preserve unlisted vehicle applicability from populated bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Diagnostic scan session did not keep unlisted applicability blocking for populated bridge_export_payload alias input");
+check(scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly marked populated unlisted bridge_export_payload alias input as analysis-ready");
+check(scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated unlisted bridge_export_payload alias input at 100 percent completion");
+check(scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates from populated unlisted bridge_export_payload alias input");
+check(Array.isArray(scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated unlisted bridge_export_payload alias input as having unread core readouts");
+check(Array.isArray(scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && scanSessionBridgeExportPayloadPopulatedUnlistedExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated unlisted bridge_export_payload alias input as having empty core readouts");
 const scanSessionBridgeDiagnosticImportOuterOverride = obd.buildDiagnosticScanSession({
   bridge_diagnostic_import: bridgeDiagnosticImport,
   session_id: "shop-test-bridge-import-outer-override",
