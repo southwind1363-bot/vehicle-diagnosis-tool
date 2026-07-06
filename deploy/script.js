@@ -5893,9 +5893,9 @@ function analyzeObdScannerImport() {
   if (summarySource.ecuInfoSnapshot?.keyItemSummary?.totalCount > 0) notes.push(`主要ECU情報${formatObdBridgeEcuKeySummary(summarySource.ecuInfoSnapshot.keyItemSummary)}`);
   if (summarySource.freezeFrameSnapshot?.triggerDtc) notes.push(`FF起点${summarySource.freezeFrameSnapshot.triggerDtc}`);
   if (summarySource.freezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) notes.push(`FF要約${formatObdBridgeMonitorSummary(summarySource.freezeFrameSnapshot.monitorValueSummary)}`);
-  if (Array.isArray(summarySource.warnings) && summarySource.warnings.length) {
-    const warningLabels = summarySource.warnings.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item));
-    notes.push(`注意${summarySource.warnings.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
+  const warningLabels = getNonBlockingWarningLabels(summarySource, 2);
+  if (warningLabels.length) {
+    notes.push(`注意${warningLabels.length}件${warningLabels.length ? ` (${warningLabels.join(" / ")})` : ""}`);
   }
   const sourcePrefix = bridgeImport
     ? hasScannerText
