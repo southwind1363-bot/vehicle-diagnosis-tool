@@ -974,6 +974,18 @@ check(bridgeSummary.connectionStatus.displayStatus === "未接続", "ブリッ�
 check(Array.isArray(bridgeSummary.vciDevices) && bridgeSummary.vciDevices.length === 0, "ブリッジセッション要約のVCI初期値が不正です");
 check(bridgeSummary.exportRequired === true, "ブリッジセッション要約がエクスポート前提ではありません");
 check(bridgeSummary.retainedRawText === false, "ブリッジセッション要約が原文保持になっています");
+const bridgeSummaryReadinessOnly = obd.buildBridgeSessionSummary({
+  readiness_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:00:30Z",
+    monitors: [{ id: "misfire", available: true, complete: false }],
+    incompleteCount: 1,
+    knownMonitorCount: 1
+  }
+});
+check(bridgeSummaryReadinessOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from readiness_snapshot-only input");
+check(bridgeSummaryReadinessOnly.capturedAt === "2026-07-07T00:00:30Z", "Bridge session summary did not recover capturedAt from readiness_snapshot-only input");
 const bridgeSummaryAliasInputs = obd.buildBridgeSessionSummary({
   started_at: "2026-06-28T00:03:00Z",
   ended_at: "2026-06-28T00:04:00Z",
@@ -4310,6 +4322,19 @@ const nonBridgeScanSession = obd.buildDiagnosticScanSession({
 check(nonBridgeScanSession.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session incorrectly counted bridge infrastructure without infrastructure inputs");
 check(!nonBridgeScanSession.warnings.includes("bridge_readout_incomplete") && !nonBridgeScanSession.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings without bridge infrastructure context");
 check(!nonBridgeScanSession.warnings.includes("mode09_supported_types_unknown"), "Diagnostic scan session emitted mode09_supported_types_unknown without ECU info input");
+const readinessOnlyScanSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-readiness-only",
+  readiness_snapshot: {
+    blocked: false,
+    protocol: "ISO9141-2",
+    capturedAt: "2026-07-07T00:01:00Z",
+    monitors: [{ id: "catalyst", available: true, complete: false }],
+    incompleteCount: 1,
+    knownMonitorCount: 1
+  }
+});
+check(readinessOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from readiness_snapshot-only input");
+check(readinessOnlyScanSession.capturedAt === "2026-07-07T00:01:00Z", "Diagnostic scan session did not recover capturedAt from readiness_snapshot-only input");
 const scanSessionAliasInputs = obd.buildDiagnosticScanSession({
   session_id: "shop-test-alias",
   started_at: "2026-06-28T00:10:00Z",

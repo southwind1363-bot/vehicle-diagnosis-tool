@@ -1072,6 +1072,7 @@
       return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
+        protocol: readBridgeProtocol(data),
         monitors: []
       }));
     }
@@ -1102,6 +1103,7 @@
     return withBridgeMetadata(normalizeReadinessSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
+      protocol: readBridgeProtocol(data),
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
       monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
         const supported = (byte & supportedBit) !== 0;
@@ -2198,6 +2200,7 @@
         || dtcSnapshot.protocol
         || livePidSnapshot.protocol
         || freezeFrameSnapshot.protocol
+        || readinessSnapshot.protocol
         || ecuInfoSnapshot.protocol
         || onboardMonitorSnapshot.protocol
         || ecuResponseSummary.protocol
@@ -3080,6 +3083,7 @@
       schemaVersion: "readiness_snapshot_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || null,
       milOn: input.mil_on === true || input.milOn === true,
       monitorCount: normalized.length,
       incompleteCount: normalized.filter((item) => item.supported && !item.complete).length,
