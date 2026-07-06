@@ -38,6 +38,7 @@ vm.runInContext(source, context);
 const obd = context.window.ObdReadOnly;
 const failures = [];
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
+const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
@@ -49,6 +50,15 @@ const readoutCoverageFunctionChecks = () => {
     check(functionBody.includes('const includeInfrastructureInput = pickDefined(input.includeInfrastructure, input.include_infrastructure);'), "buildReadoutCoverageSnapshot should normalize includeInfrastructure aliases");
     check(functionBody.includes('includeInfrastructureInput === false'), "buildReadoutCoverageSnapshot should preserve explicit includeInfrastructure false");
     check(functionBody.indexOf('includeInfrastructureInput === false') < functionBody.indexOf(': hasConnectionStatusInput'), "buildReadoutCoverageSnapshot should evaluate explicit includeInfrastructure false before inferring infrastructure from bridge inputs");
+  }
+};
+const bridgeReadoutWarningsFunctionChecks = () => {
+  check(Boolean(bridgeReadoutWarningsFunctionSource), "appendBridgeReadoutCoverageWarnings is missing from obd-readonly.js");
+  if (bridgeReadoutWarningsFunctionSource) {
+    const functionBody = bridgeReadoutWarningsFunctionSource[0];
+    check(functionBody.includes('if (!hasBridgeInfrastructureContext || !readoutCoverage) return;'), "appendBridgeReadoutCoverageWarnings should short-circuit without bridge infrastructure context");
+    check(functionBody.includes('if (readoutCoverage.missingCategories > 0) warnings.push(\"bridge_readout_incomplete\");'), "appendBridgeReadoutCoverageWarnings should derive incomplete readout warning from missing categories");
+    check(functionBody.includes('if (readoutCoverage.emptyCategories > 0) warnings.push(\"bridge_readout_empty_sections\");'), "appendBridgeReadoutCoverageWarnings should derive empty readout warning from empty categories");
   }
 };
 const bridgeSessionSummaryFunctionChecks = () => {
@@ -97,6 +107,7 @@ function check(condition, message) {
   if (!condition) failures.push(message);
 }
 readoutCoverageFunctionChecks();
+bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
