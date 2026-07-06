@@ -3380,6 +3380,9 @@ const decodedScanSessionPopulatedPartialExplicitCandidates = obd.buildDecodedObd
 check(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "Decoded OBD session did not keep populated partial applicability with explicit next_readout_candidates as analysis-ready");
 check(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.status === "analysis_ready", "Decoded OBD session did not expose analysis_ready status for populated partial applicability with explicit next_readout_candidates");
 check(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates for populated partial applicability");
+check(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Decoded OBD session did not keep populated partial applicability with explicit next_readout_candidates at 100 percent completion");
+check(Array.isArray(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Decoded OBD session treated populated partial applicability with explicit next_readout_candidates as having unread core readouts");
+check(Array.isArray(decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && decodedScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Decoded OBD session treated populated partial applicability with explicit next_readout_candidates as having empty core readouts");
 const decodedScanSessionPopulatedManualApplicability = obd.buildDecodedObdScanSession({
   session_id: "decoded-populated-manual-applicability",
   vehicle_applicability: { status: "manual" },
@@ -3867,6 +3870,9 @@ const textScanSessionPopulatedPartialExplicitCandidates = obd.buildScanSessionFr
 check(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "OBD text scan session did not keep populated partial applicability with explicit next_readout_candidates as analysis-ready");
 check(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.status === "analysis_ready", "OBD text scan session did not expose analysis_ready status for populated partial applicability with explicit next_readout_candidates");
 check(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates for populated partial applicability");
+check(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.completionPercent === 100, "OBD text scan session did not keep populated partial applicability with explicit next_readout_candidates at 100 percent completion");
+check(Array.isArray(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "OBD text scan session treated populated partial applicability with explicit next_readout_candidates as having unread core readouts");
+check(Array.isArray(textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && textScanSessionPopulatedPartialExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "OBD text scan session treated populated partial applicability with explicit next_readout_candidates as having empty core readouts");
 const textScanSessionPopulatedManualApplicability = obd.buildScanSessionFromObdText("NO DTC", {
   session_id: "obd-text-populated-manual-applicability",
   vehicle_applicability: { status: "manual" },
@@ -4353,6 +4359,9 @@ const scanSessionPopulatedPartialExplicitCandidates = obd.buildDiagnosticScanSes
 check(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not keep populated partial applicability with explicit next_readout_candidates as analysis-ready");
 check(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.status === "analysis_ready", "Diagnostic scan session did not expose analysis_ready status for populated partial applicability with explicit next_readout_candidates");
 check(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates for populated partial applicability");
+check(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated partial applicability with explicit next_readout_candidates at 100 percent completion");
+check(Array.isArray(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.remainingReadoutIds) && scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated partial applicability with explicit next_readout_candidates as having unread core readouts");
+check(Array.isArray(scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus?.emptyReadoutIds) && scanSessionPopulatedPartialExplicitCandidates.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated partial applicability with explicit next_readout_candidates as having empty core readouts");
 const scanSessionPopulatedManualApplicability = obd.buildDiagnosticScanSession({
   session_id: "shop-test-populated-manual-applicability",
   vehicle_applicability: { status: "manual" },
