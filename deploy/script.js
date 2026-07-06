@@ -4894,6 +4894,7 @@ function renderObdNextReadoutActions(session = null) {
   obdNextReadoutList.innerHTML = "";
   const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates, 4);
   const blockingSummary = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, "");
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(session?.coreSessionStatus, 2, "");
   if (blockingSummary) {
     const holdCard = document.createElement("article");
     holdCard.className = "obd-operation-card";
@@ -4905,6 +4906,18 @@ function renderObdNextReadoutActions(session = null) {
     holdReason.textContent = `解析前に ${blockingSummary} を確認してください。`;
     holdCard.append(holdHead, holdStatus, holdReason);
     obdNextReadoutList.appendChild(holdCard);
+  }
+  if (emptyReadoutSummary) {
+    const emptyCard = document.createElement("article");
+    emptyCard.className = "obd-operation-card";
+    const emptyHead = document.createElement("strong");
+    emptyHead.textContent = "空応答あり";
+    const emptyStatus = document.createElement("p");
+    emptyStatus.textContent = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+    const emptyReason = document.createElement("p");
+    emptyReason.textContent = `空応答だった ${emptyReadoutSummary} を再確認してください。`;
+    emptyCard.append(emptyHead, emptyStatus, emptyReason);
+    obdNextReadoutList.appendChild(emptyCard);
   }
   if (!candidates.length) {
     if (session?.coreSessionStatus?.readyForAnalysis === true) {
@@ -4921,7 +4934,7 @@ function renderObdNextReadoutActions(session = null) {
       obdNextReadoutPanel.hidden = false;
       return;
     }
-    obdNextReadoutPanel.hidden = !blockingSummary;
+    obdNextReadoutPanel.hidden = !blockingSummary && !emptyReadoutSummary;
     return;
   }
   candidates.forEach((candidate) => {
