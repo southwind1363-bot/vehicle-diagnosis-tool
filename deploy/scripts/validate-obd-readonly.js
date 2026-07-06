@@ -37,10 +37,20 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\n}\n/);
+const readinessHeadlineFunctionChecks = () => {
+  check(Boolean(readinessHeadlineFunctionSource), "buildCoreReadinessHeadline is missing from script.js");
+  if (readinessHeadlineFunctionSource) {
+    const functionBody = readinessHeadlineFunctionSource[0];
+    check(functionBody.includes('const blockingSummary = formatCoreBlockingWarningSummary'), "buildCoreReadinessHeadline should derive blocking warnings");
+    check(functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary') < functionBody.indexOf('if (coreSessionStatus.readyForAnalysis === true)'), "buildCoreReadinessHeadline should evaluate blocking warnings before analysis-ready status");
+  }
+};
 
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+readinessHeadlineFunctionChecks();
 
 check(obd?.policy?.transmitsVehicleCommands === false, "車両コマンド送信が禁止されていません");
 check(obd?.policy?.storesRawInput === false, "入力原文の保存が禁止されていません");

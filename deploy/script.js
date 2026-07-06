@@ -4705,6 +4705,8 @@ function buildCoreReadinessHeadline(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return "";
   const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   if (emptyReadoutSummary) return `空応答再確認: ${emptyReadoutSummary}。`;
+  const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
+  if (blockingSummary) return `保留要因確認: ${blockingSummary}。`;
   if (coreSessionStatus.readyForAnalysis === true) return "解析準備完了。";
   if (!Array.isArray(coreSessionStatus.remainingReadoutIds) || !coreSessionStatus.remainingReadoutIds.length) return "";
   const labels = coreSessionStatus.remainingReadoutIds
