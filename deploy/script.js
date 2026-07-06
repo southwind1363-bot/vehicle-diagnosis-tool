@@ -5204,6 +5204,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatCoreNextStepSummary(session?.coreSessionStatus, session?.nextReadoutCandidates, NO_DATA);
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+  const emptyReadoutLabel = formatCoreEmptyReadoutSummary(session?.coreSessionStatus, 2, NO_DATA);
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
@@ -5268,7 +5269,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["保留要因", blockingSummaryLabel], ["次操作", nextReadoutLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["次操作", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
