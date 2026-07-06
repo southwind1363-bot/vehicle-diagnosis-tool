@@ -3292,6 +3292,18 @@ const decodedScanSessionExplicitCoverageAndCandidates = obd.buildDecodedObdScanS
 check(decodedScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "Decoded OBD session did not preserve explicit readout_coverage input");
 check(decodedScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates input");
 check(decodedScanSessionExplicitCoverageAndCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not let explicit next_readout_candidates drive coreSessionStatus nextRecommendedReadoutId");
+const decodedScanSessionExplicitCandidatesEmptyReadouts = obd.buildDecodedObdScanSession({
+  session_id: "decoded-explicit-empty-readouts",
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:20:00Z", codes: [], dtcs: [] },
+  freeze_frame_snapshot: { blocked: false, capturedAt: "2026-07-06T00:20:01Z", monitorValues: [] },
+  readiness_snapshot: { blocked: false, capturedAt: "2026-07-06T00:20:02Z", monitors: [], monitorCount: 0 },
+  ecu_info_snapshot: { blocked: false, capturedAt: "2026-07-06T00:20:03Z", items: [], itemCount: 0 },
+  supported_pid_matrix: { blocked: false, capturedAt: "2026-07-06T00:20:04Z", supportedPids: [], supportedCount: 0 },
+  live_pid_snapshot: { blocked: false, capturedAt: "2026-07-06T00:20:05Z", monitorValues: [] },
+  next_readout_candidates: [{ id: "custom_decoded_snapshot", label: "Decoded Snapshot", priority: 1, reason: "outer override" }]
+});
+check(decodedScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session treated explicit-candidate empty readouts as analysis-ready");
+check(decodedScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates over empty readout fallback");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3645,6 +3657,18 @@ const textScanSessionExplicitCoverageAndCandidates = obd.buildScanSessionFromObd
 check(textScanSessionExplicitCoverageAndCandidates.readoutCoverage?.capturedPercent === 29, "OBD text scan session did not preserve explicit readout_coverage option input");
 check(textScanSessionExplicitCoverageAndCandidates.nextReadoutCandidates[0]?.id === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates option input");
 check(textScanSessionExplicitCoverageAndCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not let explicit next_readout_candidates drive coreSessionStatus nextRecommendedReadoutId");
+const textScanSessionExplicitCandidatesEmptyReadouts = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-explicit-empty-readouts",
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:21:00Z", codes: [], dtcs: [] },
+  freeze_frame_snapshot: { blocked: false, capturedAt: "2026-07-06T00:21:01Z", monitorValues: [] },
+  readiness_snapshot: { blocked: false, capturedAt: "2026-07-06T00:21:02Z", monitors: [], monitorCount: 0 },
+  ecu_info_snapshot: { blocked: false, capturedAt: "2026-07-06T00:21:03Z", items: [], itemCount: 0 },
+  supported_pid_matrix: { blocked: false, capturedAt: "2026-07-06T00:21:04Z", supportedPids: [], supportedCount: 0 },
+  live_pid_snapshot: { blocked: false, capturedAt: "2026-07-06T00:21:05Z", monitorValues: [] },
+  next_readout_candidates: [{ id: "custom_text_snapshot", label: "Text Snapshot", priority: 1, reason: "outer override" }]
+});
+check(textScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session treated explicit-candidate empty readouts as analysis-ready");
+check(textScanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.nextRecommendedReadoutId === "custom_text_snapshot", "OBD text scan session did not preserve explicit next_readout_candidates over empty readout fallback");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -3997,6 +4021,18 @@ const scanSessionScanSessionToolHintsAlias = obd.buildDiagnosticScanSession({
 check(scanSessionScanSessionToolHintsAlias.toolHints.join(",") === "CONSULT,IDS", "Diagnostic scan session did not carry toolHints from scan_session alias input");
 check(scanSessionExplicitUnsortedCandidates.nextReadoutCandidates[0]?.id === "dtc_snapshot", "Diagnostic scan session did not sort explicit next_readout_candidates by priority");
 check(scanSessionExplicitUnsortedCandidates.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not let explicit next_readout_candidates drive coreSessionStatus nextRecommendedReadoutId");
+const scanSessionExplicitCandidatesEmptyReadouts = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-explicit-empty-readouts",
+  dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:00Z", codes: [], dtcs: [] },
+  freeze_frame_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:01Z", monitorValues: [] },
+  readiness_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:02Z", monitors: [], monitorCount: 0 },
+  ecu_info_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:03Z", items: [], itemCount: 0 },
+  supported_pid_matrix: { blocked: false, capturedAt: "2026-07-06T00:22:04Z", supportedPids: [], supportedCount: 0 },
+  live_pid_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:05Z", monitorValues: [] },
+  next_readout_candidates: [{ id: "custom_snapshot", label: "Custom Snapshot", priority: 1, reason: "outer override" }]
+});
+check(scanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated explicit-candidate empty readouts as analysis-ready");
+check(scanSessionExplicitCandidatesEmptyReadouts.coreSessionStatus?.nextRecommendedReadoutId === "custom_snapshot", "Diagnostic scan session did not preserve explicit next_readout_candidates over empty readout fallback");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
