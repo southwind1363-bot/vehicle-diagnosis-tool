@@ -4907,12 +4907,16 @@ function triggerObdNextReadoutCandidate(candidate = null) {
 function formatObdNextReadoutCandidateReason(candidate = null) {
   if (!candidate) return "次に確認する候補です。";
   const parts = [];
+  const suppressApplicabilityDetail = candidate.id === "ecu_info_snapshot"
+    && (candidate.applicabilityStatus === "partial"
+      || candidate.applicabilityStatus === "unlisted"
+      || candidate.applicabilityStatus === "manual");
   parts.push(candidate.status === "missing" ? "まだ読取っていません。" : "空応答だったため再確認します。");
-  if (candidate.applicabilityStatus === "partial") {
+  if (!suppressApplicabilityDetail && candidate.applicabilityStatus === "partial") {
     parts.push("車両適用候補を確認しながら判断します。");
-  } else if (candidate.applicabilityStatus === "unlisted") {
+  } else if (!suppressApplicabilityDetail && candidate.applicabilityStatus === "unlisted") {
     parts.push("適用データ未登録のため実車照合を優先します。");
-  } else if (candidate.applicabilityStatus === "manual") {
+  } else if (!suppressApplicabilityDetail && candidate.applicabilityStatus === "manual") {
     parts.push("手入力車両情報のため実車照合を優先します。");
   }
   return parts.join(" ");
