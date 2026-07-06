@@ -5739,6 +5739,7 @@ function analyzeObdScannerImport() {
   const analysisVehicleLabel = formatVehicleProfileLabel(summarySource.vehicleProfile);
   const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summarySource.vehicleApplicability);
   const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summarySource.coreSessionStatus, "");
+  const analysisNextStepLabel = formatCoreNextStepSummary(summarySource.coreSessionStatus, summarySource.nextReadoutCandidates, "");
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
   }
@@ -5748,10 +5749,8 @@ function analyzeObdScannerImport() {
   if (analysisCoreStatusLabel) {
     notes.push(`コア ${analysisCoreStatusLabel}`);
   }
-  if (summarySource.coreSessionStatus?.readyForAnalysis === true) {
-    notes.push("解析へ進行可能");
-  } else if (Array.isArray(summarySource.coreSessionStatus?.remainingReadoutIds) && summarySource.coreSessionStatus.remainingReadoutIds.length > 0) {
-    notes.push(`次読取 ${summarySource.coreSessionStatus.remainingReadoutIds.slice(0, 3).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
+  if (analysisNextStepLabel) {
+    notes.push(`次操作 ${analysisNextStepLabel}`);
   }
   if (Array.isArray(summarySource.coreSessionStatus?.blockingWarningIds) && summarySource.coreSessionStatus.blockingWarningIds.length > 0) {
     notes.push(`保留要因 ${summarySource.coreSessionStatus.blockingWarningIds.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
