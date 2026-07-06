@@ -37,7 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
-const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\n}\n/);
+const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const readinessHeadlineFunctionChecks = () => {
   check(Boolean(readinessHeadlineFunctionSource), "buildCoreReadinessHeadline is missing from script.js");
   if (readinessHeadlineFunctionSource) {
@@ -116,7 +116,7 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.current_basis.includes("貼り付け解析入口")), "メーカー固有DTCの貼り付け解析入口が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.done.includes("Techstream等の読取結果貼り付けを先行解析する方針")), "メーカー固有DTCの貼り付け解析方針が不足しています");
 const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const nextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\n}\n/);
+const nextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 check(Boolean(nextStepFunctionSource), "formatCoreNextStepSummary is missing from script.js");
 if (nextStepFunctionSource) {
   const functionBody = nextStepFunctionSource[0];
@@ -3379,6 +3379,9 @@ const decodedScanSessionPopulatedManualApplicability = obd.buildDecodedObdScanSe
 check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Decoded OBD session did not keep manual applicability as a blocking warning for populated readouts");
 check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session incorrectly allowed populated manual applicability inputs to become analysis-ready");
 check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.status === "collecting_readouts", "Decoded OBD session did not keep populated manual applicability in collecting_readouts");
+check(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.completionPercent === 100, "Decoded OBD session did not keep populated manual applicability at 100 percent completion");
+check(Array.isArray(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.remainingReadoutIds) && decodedScanSessionPopulatedManualApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Decoded OBD session treated populated manual applicability as having unread core readouts");
+check(Array.isArray(decodedScanSessionPopulatedManualApplicability.coreSessionStatus?.emptyReadoutIds) && decodedScanSessionPopulatedManualApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Decoded OBD session treated populated manual applicability as having empty core readouts");
 const decodedScanSessionPopulatedUnlistedApplicability = obd.buildDecodedObdScanSession({
   session_id: "decoded-populated-unlisted-applicability",
   vehicle_applicability: { status: "unlisted" },
@@ -3393,6 +3396,9 @@ const decodedScanSessionPopulatedUnlistedApplicability = obd.buildDecodedObdScan
 check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Decoded OBD session did not keep unlisted applicability as a blocking warning for populated readouts");
 check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.readyForAnalysis === false, "Decoded OBD session incorrectly allowed populated unlisted applicability inputs to become analysis-ready");
 check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status === "collecting_readouts", "Decoded OBD session did not keep populated unlisted applicability in collecting_readouts");
+check(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.completionPercent === 100, "Decoded OBD session did not keep populated unlisted applicability at 100 percent completion");
+check(Array.isArray(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.remainingReadoutIds) && decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Decoded OBD session treated populated unlisted applicability as having unread core readouts");
+check(Array.isArray(decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.emptyReadoutIds) && decodedScanSessionPopulatedUnlistedApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Decoded OBD session treated populated unlisted applicability as having empty core readouts");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -3815,6 +3821,9 @@ const textScanSessionPopulatedManualApplicability = obd.buildScanSessionFromObdT
 check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "OBD text scan session did not keep manual applicability as a blocking warning for populated readouts");
 check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session incorrectly allowed populated manual applicability inputs to become analysis-ready");
 check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.status === "collecting_readouts", "OBD text scan session did not keep populated manual applicability in collecting_readouts");
+check(textScanSessionPopulatedManualApplicability.coreSessionStatus?.completionPercent === 100, "OBD text scan session did not keep populated manual applicability at 100 percent completion");
+check(Array.isArray(textScanSessionPopulatedManualApplicability.coreSessionStatus?.remainingReadoutIds) && textScanSessionPopulatedManualApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "OBD text scan session treated populated manual applicability as having unread core readouts");
+check(Array.isArray(textScanSessionPopulatedManualApplicability.coreSessionStatus?.emptyReadoutIds) && textScanSessionPopulatedManualApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "OBD text scan session treated populated manual applicability as having empty core readouts");
 const textScanSessionPopulatedUnlistedApplicability = obd.buildScanSessionFromObdText("NO DTC", {
   session_id: "obd-text-populated-unlisted-applicability",
   vehicle_applicability: { status: "unlisted" },
@@ -3829,6 +3838,9 @@ const textScanSessionPopulatedUnlistedApplicability = obd.buildScanSessionFromOb
 check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "OBD text scan session did not keep unlisted applicability as a blocking warning for populated readouts");
 check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.readyForAnalysis === false, "OBD text scan session incorrectly allowed populated unlisted applicability inputs to become analysis-ready");
 check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status === "collecting_readouts", "OBD text scan session did not keep populated unlisted applicability in collecting_readouts");
+check(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.completionPercent === 100, "OBD text scan session did not keep populated unlisted applicability at 100 percent completion");
+check(Array.isArray(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.remainingReadoutIds) && textScanSessionPopulatedUnlistedApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "OBD text scan session treated populated unlisted applicability as having unread core readouts");
+check(Array.isArray(textScanSessionPopulatedUnlistedApplicability.coreSessionStatus?.emptyReadoutIds) && textScanSessionPopulatedUnlistedApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "OBD text scan session treated populated unlisted applicability as having empty core readouts");
 const textScanSessionExplicitCamelCoverageAndCandidates = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-camel-coverage-candidates",
   readoutCoverage: legacyReadoutCoverage,
@@ -4250,6 +4262,9 @@ const scanSessionPopulatedManualApplicability = obd.buildDiagnosticScanSession({
 check(scanSessionPopulatedManualApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"), "Diagnostic scan session did not keep manual applicability as a blocking warning for populated readouts");
 check(scanSessionPopulatedManualApplicability.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly allowed populated manual applicability inputs to become analysis-ready");
 check(scanSessionPopulatedManualApplicability.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep populated manual applicability in collecting_readouts");
+check(scanSessionPopulatedManualApplicability.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated manual applicability at 100 percent completion");
+check(Array.isArray(scanSessionPopulatedManualApplicability.coreSessionStatus?.remainingReadoutIds) && scanSessionPopulatedManualApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated manual applicability as having unread core readouts");
+check(Array.isArray(scanSessionPopulatedManualApplicability.coreSessionStatus?.emptyReadoutIds) && scanSessionPopulatedManualApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated manual applicability as having empty core readouts");
 const scanSessionPopulatedUnlistedApplicability = obd.buildDiagnosticScanSession({
   session_id: "shop-test-populated-unlisted-applicability",
   vehicle_applicability: { status: "unlisted" },
@@ -4264,6 +4279,9 @@ const scanSessionPopulatedUnlistedApplicability = obd.buildDiagnosticScanSession
 check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_unlisted"), "Diagnostic scan session did not keep unlisted applicability as a blocking warning for populated readouts");
 check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly allowed populated unlisted applicability inputs to become analysis-ready");
 check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep populated unlisted applicability in collecting_readouts");
+check(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.completionPercent === 100, "Diagnostic scan session did not keep populated unlisted applicability at 100 percent completion");
+check(Array.isArray(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.remainingReadoutIds) && scanSessionPopulatedUnlistedApplicability.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated populated unlisted applicability as having unread core readouts");
+check(Array.isArray(scanSessionPopulatedUnlistedApplicability.coreSessionStatus?.emptyReadoutIds) && scanSessionPopulatedUnlistedApplicability.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session treated populated unlisted applicability as having empty core readouts");
 const scanSessionBridgeSessionCamelAlias = obd.buildDiagnosticScanSession({
   bridgeSession: bridgeDiagnosticImport.bridgeSession,
   session_id: "shop-test-bridge-session-camel"
