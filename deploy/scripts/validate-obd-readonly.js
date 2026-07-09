@@ -79,6 +79,7 @@ const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSna
 const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
 const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
+const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -513,6 +514,17 @@ const sanitizeEcuInfoValueFunctionChecks = () => {
     check(functionBody.includes('const text = String(value ?? "").trim();') && functionBody.includes('return text ? text.slice(0, 240) : "";'), "sanitizeEcuInfoValue should trim scalar values and cap them to 240 characters");
   }
 };
+const mode09SupportedInfoTypesFunctionChecks = () => {
+  check(Boolean(mode09SupportedInfoTypesFunctionSource), "decodeMode09SupportedInfoTypes is missing from obd-readonly.js");
+  if (mode09SupportedInfoTypesFunctionSource) {
+    const functionBody = mode09SupportedInfoTypesFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(value);'), "decodeMode09SupportedInfoTypes should parse OBD hex bytes");
+    check(functionBody.includes('if (!bytes.length)') && functionBody.includes('count: 0') && functionBody.includes('ids: []') && functionBody.includes('labels: []'), "decodeMode09SupportedInfoTypes should return an empty summary without bytes");
+    check(functionBody.includes('for (let bit = 0; bit < 8; bit += 1)') && functionBody.includes('0x80 >> bit'), "decodeMode09SupportedInfoTypes should walk supported-info bits from MSB to LSB");
+    check(functionBody.includes('id.toString(16).toUpperCase().padStart(2, "0")'), "decodeMode09SupportedInfoTypes should normalize supported info ids as uppercase two-digit hex");
+    check(functionBody.includes('ecuInfoItemCatalog.find((row) => row.infoType === infoType)') && functionBody.includes('return item ? item.label'), "decodeMode09SupportedInfoTypes should map supported info ids through catalog labels with fallback text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -590,6 +602,7 @@ ecuInfoSnapshotFunctionChecks();
 onboardMonitorSnapshotFunctionChecks();
 ecuInfoValueFunctionChecks();
 sanitizeEcuInfoValueFunctionChecks();
+mode09SupportedInfoTypesFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
