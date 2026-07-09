@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const nextReadoutCandidatesFunctionSource = source.match(/function buildNextReadoutCandidates[\s\S]*?\.slice\(0, 5\);\r?\n  \}/);
 const coreSessionStatusFunctionSource = source.match(/function buildCoreSessionStatus[\s\S]*?readyForAnalysis\r?\n    \};\r?\n  \}/);
 const resolvedSessionMetadataFunctionSource = source.match(/function buildResolvedSessionMetadata[\s\S]*?sourceLength: Number\.isFinite\(Number\(metadataOverrides\.sourceLength\)\)\r?\n[\s\S]*?\r?\n  \}/);
 const diagnosticSessionInputFunctionSource = source.match(/function getDiagnosticSessionInput[\s\S]*?source: base\.source \|\| nested\.source \|\| \"diagnostic_core\",\r?\n[\s\S]*?\r?\n  \}/);
@@ -219,6 +220,17 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,'), "buildCoreSessionStatus should prefer explicit next readout candidates over fallback recommendation");
   }
 };
+const nextReadoutCandidatesFunctionChecks = () => {
+  check(Boolean(nextReadoutCandidatesFunctionSource), "buildNextReadoutCandidates is missing from obd-readonly.js");
+  if (nextReadoutCandidatesFunctionSource) {
+    const functionBody = nextReadoutCandidatesFunctionSource[0];
+    check(functionBody.includes('const applicabilityNeedsVehicleConfirmation = applicability.status === "partial"') && functionBody.includes('|| applicability.status === "unlisted"') && functionBody.includes('|| applicability.status === "manual";'), "buildNextReadoutCandidates should derive applicability confirmation states");
+    check(functionBody.includes('priority: item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")') && functionBody.includes('? 102') && functionBody.includes('item.id === "ecu_info_snapshot" && applicability.status === "partial"') && functionBody.includes('? 92'), "buildNextReadoutCandidates should prioritize ecu_info_snapshot for manual, unlisted, and partial applicability");
+    check(functionBody.includes('.sort((left, right) => {'), "buildNextReadoutCandidates should sort candidate priorities");
+    check(functionBody.includes('if ((applicability.status === "manual" || applicability.status === "unlisted") && left.id !== right.id) {'), "buildNextReadoutCandidates should force ecu_info_snapshot to the front for manual and unlisted applicability");
+    check(functionBody.includes('.slice(0, 5);'), "buildNextReadoutCandidates should cap fallback candidates to five items");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -274,6 +286,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+nextReadoutCandidatesFunctionChecks();
 coreSessionStatusFunctionChecks();
 resolvedSessionMetadataFunctionChecks();
 diagnosticSessionInputFunctionChecks();
