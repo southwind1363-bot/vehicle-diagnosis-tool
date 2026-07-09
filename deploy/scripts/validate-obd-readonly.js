@@ -61,6 +61,7 @@ const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeS
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
 const sessionTemporalContextFunctionSource = source.match(/function resolveSessionTemporalContext[\s\S]*?capturedAt:[\s\S]*?\r?\n    \};\r?\n  \}/);
 const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s\S]*?return flags;\r?\n  \}/);
+const commonCoreWarningsFunctionSource = source.match(/function appendCommonCoreWarnings[\s\S]*?appendVehicleApplicabilityWarnings\(warnings, vehicleApplicability \|\| \{\}\);\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -324,6 +325,18 @@ const readOnlyFlagsFunctionChecks = () => {
     check(functionBody.includes('if (vehicleCommandEnabled !== undefined) flags.vehicleCommandEnabled = vehicleCommandEnabled;'), "buildReadOnlyFlags should preserve explicit vehicleCommandEnabled values");
   }
 };
+const commonCoreWarningsFunctionChecks = () => {
+  check(Boolean(commonCoreWarningsFunctionSource), "appendCommonCoreWarnings is missing from obd-readonly.js");
+  if (commonCoreWarningsFunctionSource) {
+    const functionBody = commonCoreWarningsFunctionSource[0];
+    check(functionBody.includes('if (dtcWarning && hasDtcCodes) warnings.push(dtcWarning);'), "appendCommonCoreWarnings should only emit DTC warnings when DTC codes are present");
+    check(functionBody.includes('if ((freezeFrameSnapshot.monitorValues || []).length) warnings.push("freeze_frame_available");'), "appendCommonCoreWarnings should emit freeze-frame availability warnings from monitor values");
+    check(functionBody.includes('if (hasReadinessSnapshotInput && readinessSnapshot.incompleteCount > 0) warnings.push("readiness_incomplete");'), "appendCommonCoreWarnings should emit readiness incomplete warnings from readiness snapshots");
+    check(functionBody.includes('if (hasOnboardMonitorSnapshotInput && onboardMonitorSnapshot.failedCount > 0) warnings.push("onboard_monitor_test_failed");'), "appendCommonCoreWarnings should emit Mode 06 failure warnings from onboard monitor snapshots");
+    check(functionBody.includes('if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.keyItemSummary?.missingCount > 0) warnings.push("mode09_key_items_missing");') && functionBody.includes('if (hasEcuInfoSnapshotInput && ecuInfoSnapshot.supportInfoTypesCaptured === false) warnings.push("mode09_supported_types_unknown");'), "appendCommonCoreWarnings should emit Mode 09 key and supported-type warnings from ECU info snapshots");
+    check(functionBody.includes('if (rawPidUndecodedCount > 0) warnings.push("raw_pid_values_need_conversion");') && functionBody.includes('appendVehicleApplicabilityWarnings(warnings, vehicleApplicability || {});'), "appendCommonCoreWarnings should emit raw PID conversion and vehicle applicability warnings");
+  }
+};
 const bridgeSessionSummaryFunctionChecks = () => {
   check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
   if (bridgeSessionSummaryFunctionSource) {
@@ -393,6 +406,7 @@ resolveBridgeSummaryFunctionChecks();
 resolveBridgeInfrastructureFunctionChecks();
 sessionTemporalContextFunctionChecks();
 readOnlyFlagsFunctionChecks();
+commonCoreWarningsFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
