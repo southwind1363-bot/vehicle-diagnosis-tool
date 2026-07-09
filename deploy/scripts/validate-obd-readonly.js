@@ -38,6 +38,7 @@ vm.runInContext(source, context);
 const obd = context.window.ObdReadOnly;
 const failures = [];
 const resolveNextReadoutCandidatesFunctionSource = source.match(/function resolveNextReadoutCandidates[\s\S]*?buildNextReadoutCandidates\(readoutCoverage, vehicleApplicability \|\| \{\}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix\)\r?\n    \);\r?\n  \}/);
+const normalizeNextReadoutCandidatesFunctionSource = source.match(/function normalizeNextReadoutCandidates[\s\S]*?return String\(left\?\.label \|\| left\?\.id \|\| \"\"\)\.localeCompare\(String\(right\?\.label \|\| right\?\.id \|\| \"\"\), \"ja\"\);\r?\n      \}\);\r?\n  \}/);
 const nextReadoutCandidatesFunctionSource = source.match(/function buildNextReadoutCandidates[\s\S]*?\.slice\(0, 5\);\r?\n  \}/);
 const coreSessionStatusFunctionSource = source.match(/function buildCoreSessionStatus[\s\S]*?readyForAnalysis\r?\n    \};\r?\n  \}/);
 const resolvedSessionMetadataFunctionSource = source.match(/function buildResolvedSessionMetadata[\s\S]*?sourceLength: Number\.isFinite\(Number\(metadataOverrides\.sourceLength\)\)\r?\n[\s\S]*?\r?\n  \}/);
@@ -242,6 +243,17 @@ const resolveNextReadoutCandidatesFunctionChecks = () => {
     check(functionBody.includes(': buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix)'), "resolveNextReadoutCandidates should fall back to generated candidates when explicit candidates are absent");
   }
 };
+const normalizeNextReadoutCandidatesFunctionChecks = () => {
+  check(Boolean(normalizeNextReadoutCandidatesFunctionSource), "normalizeNextReadoutCandidates is missing from obd-readonly.js");
+  if (normalizeNextReadoutCandidatesFunctionSource) {
+    const functionBody = normalizeNextReadoutCandidatesFunctionSource[0];
+    check(functionBody.includes('id: String(pickDefined(item.id, item.readout_id, item.readoutId, "") || "")'), "normalizeNextReadoutCandidates should normalize readout id aliases");
+    check(functionBody.includes('priority: Number.isFinite(Number(pickDefined(item.priority, item.sort_order, item.sortOrder)))'), "normalizeNextReadoutCandidates should normalize priority aliases");
+    check(functionBody.includes('applicabilityStatus: pickDefined(item.applicabilityStatus, item.applicability_status, item.vehicleApplicabilityStatus, item.vehicle_applicability_status, null)'), "normalizeNextReadoutCandidates should normalize applicability status aliases");
+    check(functionBody.includes('if (rightPriority !== leftPriority) return rightPriority - leftPriority;'), "normalizeNextReadoutCandidates should sort by normalized priority before fallback ordering");
+    check(functionBody.includes('return String(left?.label || left?.id || "").localeCompare(String(right?.label || right?.id || ""), "ja");'), "normalizeNextReadoutCandidates should stabilize ties with Japanese label ordering");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -297,6 +309,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+normalizeNextReadoutCandidatesFunctionChecks();
 resolveNextReadoutCandidatesFunctionChecks();
 nextReadoutCandidatesFunctionChecks();
 coreSessionStatusFunctionChecks();
