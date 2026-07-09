@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const diagnosticSessionInputFunctionSource = source.match(/function getDiagnosticSessionInput[\s\S]*?source: base\.source \|\| nested\.source \|\| \"diagnostic_core\",\r?\n[\s\S]*?\r?\n  \}/);
 const nestedSessionMetadataMergeFunctionSource = source.match(/function mergeNestedSessionMetadata[\s\S]*?had_sensitive_identifier:[\s\S]*?\r?\n  \}/);
 const sessionMetadataOverridesFunctionSource = source.match(/function getSessionMetadataOverrides[\s\S]*?hadSensitiveIdentifier\r?\n    \};\r?\n  \}/);
 const bridgeDiagnosticImportFunctionSource = source.match(/function buildBridgeDiagnosticImport[\s\S]*?const exportPayload = buildBridgeSessionExportPayload\(summary\);\r?\n[\s\S]*?\r?\n  \}/);
@@ -183,6 +184,17 @@ const nestedSessionMetadataMergeFunctionChecks = () => {
     check(functionBody.includes('].some((value) => value === true)\r\n        ? true'), "mergeNestedSessionMetadata should preserve true hadSensitiveIdentifier across outer and nested metadata");
   }
 };
+const diagnosticSessionInputFunctionChecks = () => {
+  check(Boolean(diagnosticSessionInputFunctionSource), "getDiagnosticSessionInput is missing from obd-readonly.js");
+  if (diagnosticSessionInputFunctionSource) {
+    const functionBody = diagnosticSessionInputFunctionSource[0];
+    check(functionBody.includes('const payload = input.bridgeDiagnosticImport') && functionBody.includes('|| input.bridge_export_payload'), "getDiagnosticSessionInput should accept bridge diagnostic import and export payload aliases");
+    check(functionBody.includes('const base = payload && typeof payload === \"object\"\r\n      ? { ...payload, ...input }'), "getDiagnosticSessionInput should layer outer input over payload fields");
+    check(functionBody.includes('const nested = input.session') && functionBody.includes('|| input.scan_session') && functionBody.includes('|| input.bridge_session'), "getDiagnosticSessionInput should accept nested session aliases from outer input");
+    check(functionBody.includes('|| payload?.bridgeSession') && functionBody.includes('|| payload?.bridge_session') && functionBody.includes('|| payload?.session'), "getDiagnosticSessionInput should accept nested session aliases from bridge payloads");
+    check(functionBody.includes('...nested,') && functionBody.includes('...base,'), "getDiagnosticSessionInput should layer nested session fields before base overrides");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -238,6 +250,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+diagnosticSessionInputFunctionChecks();
 nestedSessionMetadataMergeFunctionChecks();
 sessionMetadataOverridesFunctionChecks();
 bridgeDiagnosticImportFunctionChecks();
