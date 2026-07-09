@@ -71,6 +71,7 @@ const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeR
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
 const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreezeFrameSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -410,6 +411,18 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('const key = `${row.code}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should deduplicate by code/status and never retain raw text");
   }
 };
+const freezeFrameSnapshotFunctionChecks = () => {
+  check(Boolean(freezeFrameSnapshotFunctionSource), "normalizeFreezeFrameSnapshot is missing from obd-readonly.js");
+  if (freezeFrameSnapshotFunctionSource) {
+    const functionBody = freezeFrameSnapshotFunctionSource[0];
+    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeFreezeFrameSnapshot should default source to diagnostic_core");
+    check(functionBody.includes('Array.isArray(input.values) ? input.values : Array.isArray(input.freeze_frame) ? input.freeze_frame : []'), "normalizeFreezeFrameSnapshot should accept values and freeze_frame array inputs");
+    check(functionBody.includes('normalizeBridgePidValue(row, index)') && functionBody.includes('source: "freeze_frame"'), "normalizeFreezeFrameSnapshot should normalize rows through PID value normalization and mark freeze-frame source");
+    check(functionBody.includes('freezeFramePriority: catalogItem?.priority || null') && functionBody.includes('interpretationNote: catalogItem?.interpretationNote || item.supportNote'), "normalizeFreezeFrameSnapshot should enrich values from freeze-frame item catalog");
+    check(functionBody.includes('input.trigger_dtc') && functionBody.includes('input.freezeDtc') && functionBody.includes('triggerDtc: triggerCodes[0] || null'), "normalizeFreezeFrameSnapshot should normalize trigger DTC aliases");
+    check(functionBody.includes('monitorValueSummary: buildMonitorValueSummary(monitorValues),') && functionBody.includes('retainedRawText: false'), "normalizeFreezeFrameSnapshot should summarize monitor values and never retain raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -479,6 +492,7 @@ buildMonitorValueSummaryFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 dtcSnapshotFunctionChecks();
+freezeFrameSnapshotFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
