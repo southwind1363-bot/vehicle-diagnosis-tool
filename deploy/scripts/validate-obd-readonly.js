@@ -82,6 +82,7 @@ const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInf
 const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
 const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\s\S]*?parseInt\(byte, 16\)\);\r?\n  \}/);
 const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcResponse[\s\S]*?\.\.\.new Set\(codes\)[\s\S]*?\r?\n    \}\);\r?\n  \}/);
+const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -550,6 +551,18 @@ const decodeObdDtcResponseFunctionChecks = () => {
     check(functionBody.includes('dtcs: [...new Set(codes)].map((code) => ({ code, status }))'), "decodeObdDtcResponse should deduplicate decoded DTC codes");
   }
 };
+const decodeSupportedPidResponseFunctionChecks = () => {
+  check(Boolean(decodeSupportedPidResponseFunctionSource), "decodeSupportedPidResponse is missing from obd-readonly.js");
+  if (decodeSupportedPidResponseFunctionSource) {
+    const functionBody = decodeSupportedPidResponseFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeSupportedPidResponse should normalize raw supported PID bytes");
+    check(functionBody.includes('if (bytes[index] !== 0x41 || !Number.isInteger(bytes[index + 1])) continue;'), "decodeSupportedPidResponse should only parse Mode 01 responses with a PID byte");
+    check(functionBody.includes('if (!isSupportedPidBase(bytes[index + 1])) continue;'), "decodeSupportedPidResponse should ignore non-bitmap live PID responses");
+    check(functionBody.includes('const bitBytes = bytes.slice(index + 2, index + 6);'), "decodeSupportedPidResponse should use the four bitmap bytes after the base PID");
+    check(functionBody.includes('for (let bit = 7; bit >= 0; bit--)') && functionBody.includes('basePid + byteIndex * 8 + (8 - bit)'), "decodeSupportedPidResponse should map supported PID bits in MSB order");
+    check(functionBody.includes('supported_pids: [...new Set(supportedPids)]'), "decodeSupportedPidResponse should deduplicate supported PID ids");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -630,6 +643,7 @@ sanitizeEcuInfoValueFunctionChecks();
 mode09SupportedInfoTypesFunctionChecks();
 parseObdHexBytesFunctionChecks();
 decodeObdDtcResponseFunctionChecks();
+decodeSupportedPidResponseFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
