@@ -87,6 +87,7 @@ const decodeLivePidResponseFunctionSource = source.match(/function decodeLivePid
 const decodeFreezeFrameResponseFunctionSource = source.match(/function decodeFreezeFrameResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
 const decodeEcuInfoResponseFunctionSource = source.match(/function decodeEcuInfoResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
 const decodeReadinessResponseFunctionSource = source.match(/function decodeReadinessResponse[\s\S]*?monitors\r?\n    \}\);\r?\n  \}/);
+const decodeOnboardMonitorResponseFunctionSource = source.match(/function decodeOnboardMonitorResponse[\s\S]*?tests\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -615,6 +616,18 @@ const decodeReadinessResponseFunctionChecks = () => {
     check(functionBody.includes('mil_on: (a & 0x80) !== 0') && functionBody.includes('normalizeReadinessSnapshot({'), "decodeReadinessResponse should return a normalized readiness snapshot with MIL state");
   }
 };
+const decodeOnboardMonitorResponseFunctionChecks = () => {
+  check(Boolean(decodeOnboardMonitorResponseFunctionSource), "decodeOnboardMonitorResponse is missing from obd-readonly.js");
+  if (decodeOnboardMonitorResponseFunctionSource) {
+    const functionBody = decodeOnboardMonitorResponseFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeOnboardMonitorResponse should normalize raw Mode 06 bytes");
+    check(functionBody.includes('if (bytes[index] !== 0x46) continue;'), "decodeOnboardMonitorResponse should only parse Mode 06 onboard monitor responses");
+    check(functionBody.includes('const testId = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");'), "decodeOnboardMonitorResponse should normalize test ids as uppercase hex");
+    check(functionBody.includes('const componentId = bytes[index + 2].toString(16).toUpperCase().padStart(2, "0");'), "decodeOnboardMonitorResponse should normalize component ids as uppercase hex");
+    check(functionBody.includes('const value = (bytes[index + 3] * 256) + bytes[index + 4];') && functionBody.includes('const max = (bytes[index + 7] * 256) + bytes[index + 8];'), "decodeOnboardMonitorResponse should decode value, min, and max words");
+    check(functionBody.includes('normalizeOnboardMonitorSnapshot({') && functionBody.includes('tests'), "decodeOnboardMonitorResponse should return a normalized onboard monitor snapshot");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -700,6 +713,7 @@ decodeLivePidResponseFunctionChecks();
 decodeFreezeFrameResponseFunctionChecks();
 decodeEcuInfoResponseFunctionChecks();
 decodeReadinessResponseFunctionChecks();
+decodeOnboardMonitorResponseFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
