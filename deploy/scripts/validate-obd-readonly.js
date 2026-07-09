@@ -63,6 +63,7 @@ const sessionTemporalContextFunctionSource = source.match(/function resolveSessi
 const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s\S]*?return flags;\r?\n  \}/);
 const commonCoreWarningsFunctionSource = source.match(/function appendCommonCoreWarnings[\s\S]*?appendVehicleApplicabilityWarnings\(warnings, vehicleApplicability \|\| \{\}\);\r?\n  \}/);
 const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
+const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -346,6 +347,16 @@ const warningListFunctionChecks = () => {
     check(functionBody.includes('return mergeUniqueStrings(...warningSets);'), "resolveWarningList should deduplicate warning sets through mergeUniqueStrings");
   }
 };
+const readoutCoverageInputFunctionChecks = () => {
+  check(Boolean(readoutCoverageInputFunctionSource), "getReadoutCoverageInput is missing from obd-readonly.js");
+  if (readoutCoverageInputFunctionSource) {
+    const functionBody = readoutCoverageInputFunctionSource[0];
+    check(functionBody.includes('function getReadoutCoverageInput(input = {})'), "getReadoutCoverageInput should default to an empty input object");
+    check(functionBody.includes('input.readoutCoverage || input.readout_coverage'), "getReadoutCoverageInput should accept direct camelCase and snake_case readout coverage aliases");
+    check(functionBody.includes('input.readoutCoverageResponse || input.readout_coverage_response'), "getReadoutCoverageInput should accept readout coverage response aliases");
+    check(functionBody.includes('|| null;'), "getReadoutCoverageInput should fall back to null when no coverage alias is present");
+  }
+};
 const bridgeSessionSummaryFunctionChecks = () => {
   check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
   if (bridgeSessionSummaryFunctionSource) {
@@ -417,6 +428,7 @@ sessionTemporalContextFunctionChecks();
 readOnlyFlagsFunctionChecks();
 commonCoreWarningsFunctionChecks();
 warningListFunctionChecks();
+readoutCoverageInputFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
