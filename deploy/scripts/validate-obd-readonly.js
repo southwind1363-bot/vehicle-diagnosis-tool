@@ -78,6 +78,7 @@ const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S
 const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
+const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -501,6 +502,17 @@ const ecuInfoValueFunctionChecks = () => {
     check(functionBody.includes('retainedRawValue: false') && functionBody.includes('detected: rawValue !== null && rawValue !== undefined'), "normalizeEcuInfoValue should expose detection state without retaining raw values");
   }
 };
+const sanitizeEcuInfoValueFunctionChecks = () => {
+  check(Boolean(sanitizeEcuInfoValueFunctionSource), "sanitizeEcuInfoValue is missing from obd-readonly.js");
+  if (sanitizeEcuInfoValueFunctionSource) {
+    const functionBody = sanitizeEcuInfoValueFunctionSource[0];
+    check(functionBody.includes('if (Array.isArray(value)) {'), "sanitizeEcuInfoValue should handle array values recursively");
+    check(functionBody.includes('value.map((item) => sanitizeEcuInfoValue(item)).filter((item) => item !== null && item !== "")'), "sanitizeEcuInfoValue should drop empty sanitized array values");
+    check(functionBody.includes('if (value && typeof value === "object") {'), "sanitizeEcuInfoValue should handle object values recursively");
+    check(functionBody.includes('Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeEcuInfoValue(item)]))'), "sanitizeEcuInfoValue should preserve object keys while sanitizing values");
+    check(functionBody.includes('const text = String(value ?? "").trim();') && functionBody.includes('return text ? text.slice(0, 240) : "";'), "sanitizeEcuInfoValue should trim scalar values and cap them to 240 characters");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -577,6 +589,7 @@ ecuInfoRowsFunctionChecks();
 ecuInfoSnapshotFunctionChecks();
 onboardMonitorSnapshotFunctionChecks();
 ecuInfoValueFunctionChecks();
+sanitizeEcuInfoValueFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
