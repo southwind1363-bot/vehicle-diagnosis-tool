@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const resolveNextReadoutCandidatesFunctionSource = source.match(/function resolveNextReadoutCandidates[\s\S]*?buildNextReadoutCandidates\(readoutCoverage, vehicleApplicability \|\| \{\}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix\)\r?\n    \);\r?\n  \}/);
 const nextReadoutCandidatesFunctionSource = source.match(/function buildNextReadoutCandidates[\s\S]*?\.slice\(0, 5\);\r?\n  \}/);
 const coreSessionStatusFunctionSource = source.match(/function buildCoreSessionStatus[\s\S]*?readyForAnalysis\r?\n    \};\r?\n  \}/);
 const resolvedSessionMetadataFunctionSource = source.match(/function buildResolvedSessionMetadata[\s\S]*?sourceLength: Number\.isFinite\(Number\(metadataOverrides\.sourceLength\)\)\r?\n[\s\S]*?\r?\n  \}/);
@@ -231,6 +232,16 @@ const nextReadoutCandidatesFunctionChecks = () => {
     check(functionBody.includes('.slice(0, 5);'), "buildNextReadoutCandidates should cap fallback candidates to five items");
   }
 };
+const resolveNextReadoutCandidatesFunctionChecks = () => {
+  check(Boolean(resolveNextReadoutCandidatesFunctionSource), "resolveNextReadoutCandidates is missing from obd-readonly.js");
+  if (resolveNextReadoutCandidatesFunctionSource) {
+    const functionBody = resolveNextReadoutCandidatesFunctionSource[0];
+    check(functionBody.includes('return normalizeNextReadoutCandidates('), "resolveNextReadoutCandidates should normalize resolved candidate lists");
+    check(functionBody.includes('Array.isArray(explicitCandidates) && explicitCandidates.length'), "resolveNextReadoutCandidates should prefer explicit candidate arrays when provided");
+    check(functionBody.includes('? explicitCandidates'), "resolveNextReadoutCandidates should preserve explicit candidates before fallback generation");
+    check(functionBody.includes(': buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix)'), "resolveNextReadoutCandidates should fall back to generated candidates when explicit candidates are absent");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -286,6 +297,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+resolveNextReadoutCandidatesFunctionChecks();
 nextReadoutCandidatesFunctionChecks();
 coreSessionStatusFunctionChecks();
 resolvedSessionMetadataFunctionChecks();
