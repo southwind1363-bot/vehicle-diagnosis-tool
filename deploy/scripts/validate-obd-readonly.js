@@ -64,6 +64,7 @@ const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s
 const commonCoreWarningsFunctionSource = source.match(/function appendCommonCoreWarnings[\s\S]*?appendVehicleApplicabilityWarnings\(warnings, vehicleApplicability \|\| \{\}\);\r?\n  \}/);
 const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
 const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
+const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?return explicitSummary \|\| buildMonitorValueSummary\(monitorValues\);\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -357,6 +358,14 @@ const readoutCoverageInputFunctionChecks = () => {
     check(functionBody.includes('|| null;'), "getReadoutCoverageInput should fall back to null when no coverage alias is present");
   }
 };
+const monitorValueSummaryFunctionChecks = () => {
+  check(Boolean(monitorValueSummaryFunctionSource), "resolveMonitorValueSummary is missing from obd-readonly.js");
+  if (monitorValueSummaryFunctionSource) {
+    const functionBody = monitorValueSummaryFunctionSource[0];
+    check(functionBody.includes('function resolveMonitorValueSummary(monitorValues = [], explicitSummary = null)'), "resolveMonitorValueSummary should default monitor values and explicit summary inputs");
+    check(functionBody.includes('return explicitSummary || buildMonitorValueSummary(monitorValues);'), "resolveMonitorValueSummary should prefer explicit summaries before rebuilding from monitor values");
+  }
+};
 const bridgeSessionSummaryFunctionChecks = () => {
   check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
   if (bridgeSessionSummaryFunctionSource) {
@@ -429,6 +438,7 @@ readOnlyFlagsFunctionChecks();
 commonCoreWarningsFunctionChecks();
 warningListFunctionChecks();
 readoutCoverageInputFunctionChecks();
+monitorValueSummaryFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
