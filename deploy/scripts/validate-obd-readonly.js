@@ -75,6 +75,7 @@ const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreeze
 const readinessSnapshotFunctionSource = source.match(/function normalizeReadinessSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S]*?value: input\[key\]\r?\n      \}\)\);\r?\n  \}/);
+const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -462,6 +463,18 @@ const ecuInfoRowsFunctionChecks = () => {
     check(functionBody.includes('.filter(([key]) => input[key] !== undefined && input[key] !== null && input[key] !== "")'), "collectEcuInfoRows should skip empty object alias values");
   }
 };
+const ecuInfoSnapshotFunctionChecks = () => {
+  check(Boolean(ecuInfoSnapshotFunctionSource), "normalizeEcuInfoSnapshot is missing from obd-readonly.js");
+  if (ecuInfoSnapshotFunctionSource) {
+    const functionBody = ecuInfoSnapshotFunctionSource[0];
+    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeEcuInfoSnapshot should default source to diagnostic_core");
+    check(functionBody.includes('const rows = collectEcuInfoRows(input);') && functionBody.includes('normalizeEcuInfoValue(row, index)'), "normalizeEcuInfoSnapshot should collect ECU info rows and normalize each value");
+    check(functionBody.includes('const expectedItems = ecuInfoItemCatalog.map((item) => ({') && functionBody.includes('captured: items.some((value) => value.id === item.id || value.infoType === item.infoType)'), "normalizeEcuInfoSnapshot should build expected ECU info catalog coverage");
+    check(functionBody.includes('const keyItemIds = new Set(["vin", "calibration_id", "calibration_verification_number", "ecu_name"]);'), "normalizeEcuInfoSnapshot should define key Mode 09 item ids");
+    check(functionBody.includes('hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),'), "normalizeEcuInfoSnapshot should surface detected sensitive identifiers");
+    check(functionBody.includes('supportInfoTypesSummary: supportedInfoTypesSummary,') && functionBody.includes('retainedRawText: false'), "normalizeEcuInfoSnapshot should summarize supported info types and never retain raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -535,6 +548,7 @@ freezeFrameSnapshotFunctionChecks();
 readinessSnapshotFunctionChecks();
 ecuResponseSummaryFunctionChecks();
 ecuInfoRowsFunctionChecks();
+ecuInfoSnapshotFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
