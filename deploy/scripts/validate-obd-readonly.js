@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const coreSessionStatusFunctionSource = source.match(/function buildCoreSessionStatus[\s\S]*?readyForAnalysis\r?\n    \};\r?\n  \}/);
 const resolvedSessionMetadataFunctionSource = source.match(/function buildResolvedSessionMetadata[\s\S]*?sourceLength: Number\.isFinite\(Number\(metadataOverrides\.sourceLength\)\)\r?\n[\s\S]*?\r?\n  \}/);
 const diagnosticSessionInputFunctionSource = source.match(/function getDiagnosticSessionInput[\s\S]*?source: base\.source \|\| nested\.source \|\| \"diagnostic_core\",\r?\n[\s\S]*?\r?\n  \}/);
 const nestedSessionMetadataMergeFunctionSource = source.match(/function mergeNestedSessionMetadata[\s\S]*?had_sensitive_identifier:[\s\S]*?\r?\n  \}/);
@@ -207,6 +208,17 @@ const resolvedSessionMetadataFunctionChecks = () => {
     check(functionBody.includes('sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))'), "buildResolvedSessionMetadata should sanitize metadata source length");
   }
 };
+const coreSessionStatusFunctionChecks = () => {
+  check(Boolean(coreSessionStatusFunctionSource), "buildCoreSessionStatus is missing from obd-readonly.js");
+  if (coreSessionStatusFunctionSource) {
+    const functionBody = coreSessionStatusFunctionSource[0];
+    check(functionBody.includes('const emptyReadoutIds = Array.isArray(normalizedCoverage.emptyIds)'), "buildCoreSessionStatus should derive empty readout ids from normalized coverage");
+    check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
+    check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
+    check(functionBody.includes('const readyForAnalysis = remainingReadoutIds.length === 0') && functionBody.includes('&& emptyReadoutIds.length === 0') && functionBody.includes('&& blockingWarningIds.length === 0;'), "buildCoreSessionStatus should require no remaining, empty, or blocking readouts before analysis-ready");
+    check(functionBody.includes('nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,'), "buildCoreSessionStatus should prefer explicit next readout candidates over fallback recommendation");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -262,6 +274,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+coreSessionStatusFunctionChecks();
 resolvedSessionMetadataFunctionChecks();
 diagnosticSessionInputFunctionChecks();
 nestedSessionMetadataMergeFunctionChecks();
