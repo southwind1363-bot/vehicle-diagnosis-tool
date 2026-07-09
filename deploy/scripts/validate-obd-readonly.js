@@ -73,6 +73,7 @@ const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnost
 const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreezeFrameSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessSnapshotFunctionSource = source.match(/function normalizeReadinessSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -436,6 +437,18 @@ const readinessSnapshotFunctionChecks = () => {
     check(functionBody.includes('knownMonitors,') && functionBody.includes('retainedRawText: false'), "normalizeReadinessSnapshot should expose known monitors and never retain raw text");
   }
 };
+const ecuResponseSummaryFunctionChecks = () => {
+  check(Boolean(ecuResponseSummaryFunctionSource), "normalizeEcuResponseSummary is missing from obd-readonly.js");
+  if (ecuResponseSummaryFunctionSource) {
+    const functionBody = ecuResponseSummaryFunctionSource[0];
+    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeEcuResponseSummary should default source to diagnostic_core");
+    check(functionBody.includes('Array.isArray(input.ecu_responses)') && functionBody.includes('Array.isArray(input.ecuResponseRows)'), "normalizeEcuResponseSummary should accept ECU response array aliases");
+    check(functionBody.includes('id: String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId'), "normalizeEcuResponseSummary should normalize ECU id aliases");
+    check(functionBody.includes('dtcCount: Number.isInteger(row?.dtc_count)') && functionBody.includes('Array.isArray(row?.codes) ? row.codes.length : null'), "normalizeEcuResponseSummary should normalize DTC count aliases and arrays");
+    check(functionBody.includes('negativeResponseCount: Number.isInteger(row?.negative_response_count)') && functionBody.includes('negativeRequestedServices:'), "normalizeEcuResponseSummary should normalize negative response counts and service aliases");
+    check(functionBody.includes('responseTimeMs: Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -507,6 +520,7 @@ bridgeSessionSummaryFunctionChecks();
 dtcSnapshotFunctionChecks();
 freezeFrameSnapshotFunctionChecks();
 readinessSnapshotFunctionChecks();
+ecuResponseSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
