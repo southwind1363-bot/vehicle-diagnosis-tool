@@ -88,6 +88,7 @@ const decodeFreezeFrameResponseFunctionSource = source.match(/function decodeFre
 const decodeEcuInfoResponseFunctionSource = source.match(/function decodeEcuInfoResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
 const decodeReadinessResponseFunctionSource = source.match(/function decodeReadinessResponse[\s\S]*?monitors\r?\n    \}\);\r?\n  \}/);
 const decodeOnboardMonitorResponseFunctionSource = source.match(/function decodeOnboardMonitorResponse[\s\S]*?tests\r?\n    \}\);\r?\n  \}/);
+const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedObdScanSession[\s\S]*?ecus: sessionInput\.ecus \|\| sessionInput\.ecu_responses \|\| \[\]\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -628,6 +629,19 @@ const decodeOnboardMonitorResponseFunctionChecks = () => {
     check(functionBody.includes('normalizeOnboardMonitorSnapshot({') && functionBody.includes('tests'), "decodeOnboardMonitorResponse should return a normalized onboard monitor snapshot");
   }
 };
+const decodedObdScanSessionFunctionChecks = () => {
+  check(Boolean(decodedObdScanSessionFunctionSource), "buildDecodedObdScanSession is missing from obd-readonly.js");
+  if (decodedObdScanSessionFunctionSource) {
+    const functionBody = decodedObdScanSessionFunctionSource[0];
+    check(functionBody.includes('const sessionInput = getDiagnosticSessionInput(input);'), "buildDecodedObdScanSession should normalize nested diagnostic session input first");
+    check(functionBody.includes('const metadataOverrides = getSessionMetadataOverrides(sessionInput);'), "buildDecodedObdScanSession should collect session metadata overrides");
+    check(functionBody.includes('const withSessionProtocol = (value) => {') && functionBody.includes('return { ...value, protocol: sessionProtocol };'), "buildDecodedObdScanSession should propagate session protocol to raw response inputs");
+    check(functionBody.includes('mergeDtcSnapshots(') && functionBody.includes('storedDtcResponse') && functionBody.includes('pendingDtcResponse') && functionBody.includes('permanentDtcResponse'), "buildDecodedObdScanSession should merge stored, pending, and permanent DTC responses");
+    check(functionBody.includes('decodeLivePidResponse(livePidResponseInput)') && functionBody.includes('decodeFreezeFrameResponse(freezeFrameResponseInput)') && functionBody.includes('decodeReadinessResponse(readinessResponseInput)'), "buildDecodedObdScanSession should decode live PID, freeze-frame, and readiness responses");
+    check(functionBody.includes('decodeOnboardMonitorResponse(onboardMonitorResponseInput)') && functionBody.includes('decodeEcuInfoResponse(ecuInfoResponseInput)') && functionBody.includes('decodeSupportedPidResponse(supportedPidResponseInput)'), "buildDecodedObdScanSession should decode Mode 06, ECU info, and supported PID responses");
+    check(functionBody.includes('return buildDiagnosticScanSession({') && functionBody.includes('...metadataOverrides,'), "buildDecodedObdScanSession should return a diagnostic scan session with metadata overrides");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -714,6 +728,7 @@ decodeFreezeFrameResponseFunctionChecks();
 decodeEcuInfoResponseFunctionChecks();
 decodeReadinessResponseFunctionChecks();
 decodeOnboardMonitorResponseFunctionChecks();
+decodedObdScanSessionFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
