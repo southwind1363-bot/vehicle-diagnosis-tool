@@ -60,6 +60,7 @@ const vehicleApplicabilityWarningsFunctionSource = source.match(/function append
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
 const sessionTemporalContextFunctionSource = source.match(/function resolveSessionTemporalContext[\s\S]*?capturedAt:[\s\S]*?\r?\n    \};\r?\n  \}/);
+const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s\S]*?return flags;\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -312,6 +313,17 @@ const sessionTemporalContextFunctionChecks = () => {
     check(functionBody.indexOf('protocol: input.protocol') < functionBody.indexOf('capturedAt: input.capturedAt'), "resolveSessionTemporalContext should resolve protocol before capturedAt metadata");
   }
 };
+const readOnlyFlagsFunctionChecks = () => {
+  check(Boolean(readOnlyFlagsFunctionSource), "buildReadOnlyFlags is missing from obd-readonly.js");
+  if (readOnlyFlagsFunctionSource) {
+    const functionBody = readOnlyFlagsFunctionSource[0];
+    check(functionBody.includes('retainedRawText = false') && functionBody.includes('wouldTransmit = false'), "buildReadOnlyFlags should default raw retention and transmission to false");
+    check(functionBody.includes('vehicleCommandEnabled = undefined'), "buildReadOnlyFlags should only include vehicleCommandEnabled when explicitly provided");
+    check(functionBody.includes('retainedRawText,') && functionBody.includes('wouldTransmit'), "buildReadOnlyFlags should always expose retainedRawText and wouldTransmit");
+    check(functionBody.includes('if (retainedRawFrames !== undefined) flags.retainedRawFrames = retainedRawFrames;'), "buildReadOnlyFlags should preserve explicit retainedRawFrames values");
+    check(functionBody.includes('if (vehicleCommandEnabled !== undefined) flags.vehicleCommandEnabled = vehicleCommandEnabled;'), "buildReadOnlyFlags should preserve explicit vehicleCommandEnabled values");
+  }
+};
 const bridgeSessionSummaryFunctionChecks = () => {
   check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
   if (bridgeSessionSummaryFunctionSource) {
@@ -380,6 +392,7 @@ vehicleApplicabilityWarningsFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
 resolveBridgeInfrastructureFunctionChecks();
 sessionTemporalContextFunctionChecks();
+readOnlyFlagsFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
