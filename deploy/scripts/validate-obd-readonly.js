@@ -62,6 +62,7 @@ const resolveBridgeInfrastructureFunctionSource = source.match(/function resolve
 const sessionTemporalContextFunctionSource = source.match(/function resolveSessionTemporalContext[\s\S]*?capturedAt:[\s\S]*?\r?\n    \};\r?\n  \}/);
 const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s\S]*?return flags;\r?\n  \}/);
 const commonCoreWarningsFunctionSource = source.match(/function appendCommonCoreWarnings[\s\S]*?appendVehicleApplicabilityWarnings\(warnings, vehicleApplicability \|\| \{\}\);\r?\n  \}/);
+const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -337,6 +338,14 @@ const commonCoreWarningsFunctionChecks = () => {
     check(functionBody.includes('if (rawPidUndecodedCount > 0) warnings.push("raw_pid_values_need_conversion");') && functionBody.includes('appendVehicleApplicabilityWarnings(warnings, vehicleApplicability || {});'), "appendCommonCoreWarnings should emit raw PID conversion and vehicle applicability warnings");
   }
 };
+const warningListFunctionChecks = () => {
+  check(Boolean(warningListFunctionSource), "resolveWarningList is missing from obd-readonly.js");
+  if (warningListFunctionSource) {
+    const functionBody = warningListFunctionSource[0];
+    check(functionBody.includes('function resolveWarningList(...warningSets)'), "resolveWarningList should accept multiple warning sets");
+    check(functionBody.includes('return mergeUniqueStrings(...warningSets);'), "resolveWarningList should deduplicate warning sets through mergeUniqueStrings");
+  }
+};
 const bridgeSessionSummaryFunctionChecks = () => {
   check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
   if (bridgeSessionSummaryFunctionSource) {
@@ -407,6 +416,7 @@ resolveBridgeInfrastructureFunctionChecks();
 sessionTemporalContextFunctionChecks();
 readOnlyFlagsFunctionChecks();
 commonCoreWarningsFunctionChecks();
+warningListFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
