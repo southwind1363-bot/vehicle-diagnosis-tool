@@ -76,6 +76,7 @@ const readinessSnapshotFunctionSource = source.match(/function normalizeReadines
 const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S]*?value: input\[key\]\r?\n      \}\)\);\r?\n  \}/);
 const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -475,6 +476,18 @@ const ecuInfoSnapshotFunctionChecks = () => {
     check(functionBody.includes('supportInfoTypesSummary: supportedInfoTypesSummary,') && functionBody.includes('retainedRawText: false'), "normalizeEcuInfoSnapshot should summarize supported info types and never retain raw text");
   }
 };
+const onboardMonitorSnapshotFunctionChecks = () => {
+  check(Boolean(onboardMonitorSnapshotFunctionSource), "normalizeOnboardMonitorSnapshot is missing from obd-readonly.js");
+  if (onboardMonitorSnapshotFunctionSource) {
+    const functionBody = onboardMonitorSnapshotFunctionSource[0];
+    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeOnboardMonitorSnapshot should default source to diagnostic_core");
+    check(functionBody.includes('Array.isArray(input.mode06_tests)') && functionBody.includes('Array.isArray(input.onboardMonitorTests)') && functionBody.includes('Array.isArray(input.testRows)'), "normalizeOnboardMonitorSnapshot should accept Mode 06 and onboard monitor row aliases");
+    check(functionBody.includes('row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId'), "normalizeOnboardMonitorSnapshot should normalize test id aliases");
+    check(functionBody.includes('row.component_id || row.componentId || row.cid || row.component') && functionBody.includes('row.measured_value ?? row.measuredValue'), "normalizeOnboardMonitorSnapshot should normalize component and measured value aliases");
+    check(functionBody.includes('const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : row.passed === true;'), "normalizeOnboardMonitorSnapshot should derive pass/fail from limits before explicit passed fallback");
+    check(functionBody.includes('failedCount: tests.filter((test) => test.status === "fail").length') && functionBody.includes('retainedRawText: false'), "normalizeOnboardMonitorSnapshot should count failed tests and never retain raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -549,6 +562,7 @@ readinessSnapshotFunctionChecks();
 ecuResponseSummaryFunctionChecks();
 ecuInfoRowsFunctionChecks();
 ecuInfoSnapshotFunctionChecks();
+onboardMonitorSnapshotFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
