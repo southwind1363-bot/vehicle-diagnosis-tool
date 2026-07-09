@@ -54,6 +54,7 @@ const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeS
 const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
+const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
@@ -95,6 +96,17 @@ const resolveReadoutCoverageFunctionChecks = () => {
     check(functionBody.includes('if (input && typeof input === "object") {'), "resolveReadoutCoverageSnapshot should prefer explicit readout coverage input");
     check(functionBody.includes('return normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);'), "resolveReadoutCoverageSnapshot should normalize explicit readout coverage input");
     check(functionBody.includes('return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());'), "resolveReadoutCoverageSnapshot should fall back to derived or empty readout coverage");
+  }
+};
+const vehicleApplicabilityFunctionChecks = () => {
+  check(Boolean(vehicleApplicabilityFunctionSource), "normalizeVehicleApplicabilitySnapshot is missing from obd-readonly.js");
+  if (vehicleApplicabilityFunctionSource) {
+    const functionBody = vehicleApplicabilityFunctionSource[0];
+    check(functionBody.includes('const candidateRanges = Array.isArray(source.candidateRanges) ? source.candidateRanges : Array.isArray(source.candidate_ranges) ? source.candidate_ranges : [];'), "normalizeVehicleApplicabilitySnapshot should normalize candidate range aliases");
+    check(functionBody.includes('const supportedEngineCodes = Array.isArray(source.supportedEngineCodes) ? source.supportedEngineCodes : Array.isArray(source.supported_engine_codes) ? source.supported_engine_codes : [];'), "normalizeVehicleApplicabilitySnapshot should normalize supported engine code aliases");
+    check(functionBody.includes('const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);'), "normalizeVehicleApplicabilitySnapshot should derive candidate range counts from explicit values or array length");
+    check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
+    check(functionBody.includes('const summaryLabel = source.summaryLabel || source.summary_label || source.label || null;'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
   }
 };
 const resolveBridgeSummaryFunctionChecks = () => {
@@ -326,6 +338,7 @@ bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
 readoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
+vehicleApplicabilityFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
 resolveBridgeInfrastructureFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
