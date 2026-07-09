@@ -70,6 +70,7 @@ const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonit
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
+const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -397,6 +398,18 @@ const bridgeSessionSummaryFunctionChecks = () => {
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should resolve readout coverage before appending bridge readout warnings");
   }
 };
+const dtcSnapshotFunctionChecks = () => {
+  check(Boolean(dtcSnapshotFunctionSource), "normalizeDtcSnapshot is missing from obd-readonly.js");
+  if (dtcSnapshotFunctionSource) {
+    const functionBody = dtcSnapshotFunctionSource[0];
+    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeDtcSnapshot should default source to diagnostic_core");
+    check(functionBody.includes('Array.isArray(input.dtcs) ? input.dtcs : Array.isArray(input.codes) ? input.codes : []'), "normalizeDtcSnapshot should accept dtcs and codes array inputs");
+    check(functionBody.includes('extractDtcCodes(row.code || row.dtc || row.id || "")'), "normalizeDtcSnapshot should normalize row code aliases");
+    check(functionBody.includes('status: row.status || row.kind || input.status || "unknown"'), "normalizeDtcSnapshot should normalize DTC status aliases");
+    check(functionBody.includes('ecu: row.ecu || row.ecu_id || row.address || null') && functionBody.includes('freezeFrameAvailable: row.freeze_frame_available === true || row.freezeFrameAvailable === true'), "normalizeDtcSnapshot should preserve ECU and freeze-frame aliases");
+    check(functionBody.includes('const key = `${row.code}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should deduplicate by code/status and never retain raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -465,6 +478,7 @@ monitorValueSummaryFunctionChecks();
 buildMonitorValueSummaryFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
+dtcSnapshotFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
