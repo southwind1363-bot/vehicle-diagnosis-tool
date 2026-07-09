@@ -85,6 +85,7 @@ const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcRe
 const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
 const decodeLivePidResponseFunctionSource = source.match(/function decodeLivePidResponse[\s\S]*?captured_at: input\.captured_at \|\| input\.capturedAt \|\| null\r?\n      \}\r?\n    \}\);\r?\n  \}/);
 const decodeFreezeFrameResponseFunctionSource = source.match(/function decodeFreezeFrameResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
+const decodeReadinessResponseFunctionSource = source.match(/function decodeReadinessResponse[\s\S]*?monitors\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -589,6 +590,18 @@ const decodeFreezeFrameResponseFunctionChecks = () => {
     check(functionBody.includes('normalizeFreezeFrameSnapshot({') && functionBody.includes('trigger_dtc: triggerDtc'), "decodeFreezeFrameResponse should return a normalized freeze-frame snapshot with trigger DTC");
   }
 };
+const decodeReadinessResponseFunctionChecks = () => {
+  check(Boolean(decodeReadinessResponseFunctionSource), "decodeReadinessResponse is missing from obd-readonly.js");
+  if (decodeReadinessResponseFunctionSource) {
+    const functionBody = decodeReadinessResponseFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeReadinessResponse should normalize raw readiness bytes");
+    check(functionBody.includes('byte === 0x41 && bytes[index + 1] === 0x01'), "decodeReadinessResponse should locate Mode 01 PID 01 readiness responses");
+    check(functionBody.includes('if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length)') && functionBody.includes('monitors: []'), "decodeReadinessResponse should return an empty readiness snapshot without enough bytes");
+    check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "decodeReadinessResponse should branch monitor definitions by ignition type");
+    check(functionBody.includes('nox_scr') && functionBody.includes('catalyst'), "decodeReadinessResponse should support diesel and spark readiness monitor sets");
+    check(functionBody.includes('mil_on: (a & 0x80) !== 0') && functionBody.includes('normalizeReadinessSnapshot({'), "decodeReadinessResponse should return a normalized readiness snapshot with MIL state");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -672,6 +685,7 @@ decodeObdDtcResponseFunctionChecks();
 decodeSupportedPidResponseFunctionChecks();
 decodeLivePidResponseFunctionChecks();
 decodeFreezeFrameResponseFunctionChecks();
+decodeReadinessResponseFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
