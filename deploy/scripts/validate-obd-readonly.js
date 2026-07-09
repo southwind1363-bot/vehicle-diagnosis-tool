@@ -80,6 +80,7 @@ const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnb
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
 const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
 const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
+const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\s\S]*?parseInt\(byte, 16\)\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -525,6 +526,17 @@ const mode09SupportedInfoTypesFunctionChecks = () => {
     check(functionBody.includes('ecuInfoItemCatalog.find((row) => row.infoType === infoType)') && functionBody.includes('return item ? item.label'), "decodeMode09SupportedInfoTypes should map supported info ids through catalog labels with fallback text");
   }
 };
+const parseObdHexBytesFunctionChecks = () => {
+  check(Boolean(parseObdHexBytesFunctionSource), "parseObdHexBytes is missing from obd-readonly.js");
+  if (parseObdHexBytesFunctionSource) {
+    const functionBody = parseObdHexBytesFunctionSource[0];
+    check(functionBody.includes('if (Array.isArray(value)) {') && functionBody.includes('.map((item) => Number(item))'), "parseObdHexBytes should accept array byte input");
+    check(functionBody.includes('Number.isInteger(item) && item >= 0 && item <= 255'), "parseObdHexBytes should filter array input to valid byte values");
+    check(functionBody.includes('normalizeCanLogLineFormat(value)'), "parseObdHexBytes should normalize CAN log line formatting before parsing");
+    check(functionBody.includes('SEARCHING|BUS INIT|OK|NO DATA|STOPPED|ERROR|UNABLE TO CONNECT'), "parseObdHexBytes should strip common adapter status tokens");
+    check(functionBody.includes('text.match(/\\b[0-9A-F]{2}\\b/gi)') && functionBody.includes('parseInt(byte, 16)'), "parseObdHexBytes should extract two-digit hex bytes case-insensitively");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -603,6 +615,7 @@ onboardMonitorSnapshotFunctionChecks();
 ecuInfoValueFunctionChecks();
 sanitizeEcuInfoValueFunctionChecks();
 mode09SupportedInfoTypesFunctionChecks();
+parseObdHexBytesFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
