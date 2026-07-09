@@ -59,6 +59,7 @@ const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehic
 const vehicleApplicabilityWarningsFunctionSource = source.match(/function appendVehicleApplicabilityWarnings[\s\S]*?vehicle_profile_manual"\);\r?\n    \}\r?\n  \}/);
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
+const sessionTemporalContextFunctionSource = source.match(/function resolveSessionTemporalContext[\s\S]*?capturedAt:[\s\S]*?\r?\n    \};\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -301,6 +302,16 @@ const resolveBridgeInfrastructureFunctionChecks = () => {
     check(functionBody.includes('honorCoverageOverride'), "resolveBridgeInfrastructureInputs should pass honorCoverageOverride into bridge infrastructure detection");
   }
 };
+const sessionTemporalContextFunctionChecks = () => {
+  check(Boolean(sessionTemporalContextFunctionSource), "resolveSessionTemporalContext is missing from obd-readonly.js");
+  if (sessionTemporalContextFunctionSource) {
+    const functionBody = sessionTemporalContextFunctionSource[0];
+    check(functionBody.includes('protocol: input.protocol') && functionBody.includes('|| dtcSnapshot.protocol') && functionBody.includes('|| supportedPidMatrix.protocol'), "resolveSessionTemporalContext should derive protocol from input before readout snapshots");
+    check(functionBody.includes('capturedAt: input.capturedAt') && functionBody.includes('|| input.captured_at'), "resolveSessionTemporalContext should normalize capturedAt aliases from direct input");
+    check(functionBody.includes('|| dtcSnapshot.capturedAt') && functionBody.includes('|| supportedPidMatrix.capturedAt'), "resolveSessionTemporalContext should derive capturedAt from readout snapshots");
+    check(functionBody.indexOf('protocol: input.protocol') < functionBody.indexOf('capturedAt: input.capturedAt'), "resolveSessionTemporalContext should resolve protocol before capturedAt metadata");
+  }
+};
 const bridgeSessionSummaryFunctionChecks = () => {
   check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
   if (bridgeSessionSummaryFunctionSource) {
@@ -368,6 +379,7 @@ vehicleApplicabilityFunctionChecks();
 vehicleApplicabilityWarningsFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
 resolveBridgeInfrastructureFunctionChecks();
+sessionTemporalContextFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
