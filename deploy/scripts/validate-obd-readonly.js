@@ -74,6 +74,7 @@ const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s
 const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreezeFrameSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessSnapshotFunctionSource = source.match(/function normalizeReadinessSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S]*?value: input\[key\]\r?\n      \}\)\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -449,6 +450,18 @@ const ecuResponseSummaryFunctionChecks = () => {
     check(functionBody.includes('responseTimeMs: Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
   }
 };
+const ecuInfoRowsFunctionChecks = () => {
+  check(Boolean(ecuInfoRowsFunctionSource), "collectEcuInfoRows is missing from obd-readonly.js");
+  if (ecuInfoRowsFunctionSource) {
+    const functionBody = ecuInfoRowsFunctionSource[0];
+    check(functionBody.includes('if (Array.isArray(input)) return input;'), "collectEcuInfoRows should accept direct array input");
+    check(functionBody.includes('if (Array.isArray(input.ecu_info_items)) return input.ecu_info_items;') && functionBody.includes('if (Array.isArray(input.ecuInfoRows)) return input.ecuInfoRows;'), "collectEcuInfoRows should accept ECU info row aliases");
+    check(functionBody.includes('if (Array.isArray(input.mode09_values)) return input.mode09_values;') && functionBody.includes('if (Array.isArray(input.infoValues)) return input.infoValues;'), "collectEcuInfoRows should accept Mode 09 and info value aliases");
+    check(functionBody.includes('["supportedInfoTypes", "supported_info_types_00", "00"]') && functionBody.includes('["vinValues", "vin", "02"]'), "collectEcuInfoRows should map supported info type and VIN object aliases");
+    check(functionBody.includes('["calibrationId", "calibration_id", "04"]') && functionBody.includes('["cvnValues", "calibration_verification_number", "06"]'), "collectEcuInfoRows should map calibration ID and CVN object aliases");
+    check(functionBody.includes('.filter(([key]) => input[key] !== undefined && input[key] !== null && input[key] !== "")'), "collectEcuInfoRows should skip empty object alias values");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -521,6 +534,7 @@ dtcSnapshotFunctionChecks();
 freezeFrameSnapshotFunctionChecks();
 readinessSnapshotFunctionChecks();
 ecuResponseSummaryFunctionChecks();
+ecuInfoRowsFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
