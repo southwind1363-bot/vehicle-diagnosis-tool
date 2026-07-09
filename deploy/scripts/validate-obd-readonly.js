@@ -89,6 +89,7 @@ const decodeEcuInfoResponseFunctionSource = source.match(/function decodeEcuInfo
 const decodeReadinessResponseFunctionSource = source.match(/function decodeReadinessResponse[\s\S]*?monitors\r?\n    \}\);\r?\n  \}/);
 const decodeOnboardMonitorResponseFunctionSource = source.match(/function decodeOnboardMonitorResponse[\s\S]*?tests\r?\n    \}\);\r?\n  \}/);
 const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedObdScanSession[\s\S]*?ecus: sessionInput\.ecus \|\| sessionInput\.ecu_responses \|\| \[\]\r?\n    \}\);\r?\n  \}/);
+const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -642,6 +643,18 @@ const decodedObdScanSessionFunctionChecks = () => {
     check(functionBody.includes('return buildDiagnosticScanSession({') && functionBody.includes('...metadataOverrides,'), "buildDecodedObdScanSession should return a diagnostic scan session with metadata overrides");
   }
 };
+const scanSessionFromObdTextFunctionChecks = () => {
+  check(Boolean(scanSessionFromObdTextFunctionSource), "buildScanSessionFromObdText is missing from obd-readonly.js");
+  if (scanSessionFromObdTextFunctionSource) {
+    const functionBody = scanSessionFromObdTextFunctionSource[0];
+    check(functionBody.includes('const classified = classifyObdResponseLines(value);'), "buildScanSessionFromObdText should classify OBD response lines before decoding");
+    check(functionBody.includes('const textDtcSnapshot = extractTextDtcSnapshot(value);'), "buildScanSessionFromObdText should preserve text-only DTC extraction");
+    check(functionBody.includes('const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";'), "buildScanSessionFromObdText should feed decoded sessions from classified response buckets");
+    check(functionBody.includes('storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses")') && functionBody.includes('ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs");
+    check(functionBody.includes('const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);'), "buildScanSessionFromObdText should merge decoded and text-extracted DTC snapshots");
+    check(functionBody.includes('retainedRawText: false') && functionBody.includes('retainedRawFrames: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "buildScanSessionFromObdText should return read-only imports without retaining raw text or frames");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -729,6 +742,7 @@ decodeEcuInfoResponseFunctionChecks();
 decodeReadinessResponseFunctionChecks();
 decodeOnboardMonitorResponseFunctionChecks();
 decodedObdScanSessionFunctionChecks();
+scanSessionFromObdTextFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
