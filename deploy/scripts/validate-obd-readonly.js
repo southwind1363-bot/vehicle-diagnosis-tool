@@ -83,6 +83,7 @@ const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode
 const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\s\S]*?parseInt\(byte, 16\)\);\r?\n  \}/);
 const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcResponse[\s\S]*?\.\.\.new Set\(codes\)[\s\S]*?\r?\n    \}\);\r?\n  \}/);
 const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
+const decodeLivePidResponseFunctionSource = source.match(/function decodeLivePidResponse[\s\S]*?captured_at: input\.captured_at \|\| input\.capturedAt \|\| null\r?\n      \}\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -563,6 +564,18 @@ const decodeSupportedPidResponseFunctionChecks = () => {
     check(functionBody.includes('supported_pids: [...new Set(supportedPids)]'), "decodeSupportedPidResponse should deduplicate supported PID ids");
   }
 };
+const decodeLivePidResponseFunctionChecks = () => {
+  check(Boolean(decodeLivePidResponseFunctionSource), "decodeLivePidResponse is missing from obd-readonly.js");
+  if (decodeLivePidResponseFunctionSource) {
+    const functionBody = decodeLivePidResponseFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeLivePidResponse should normalize raw live PID bytes");
+    check(functionBody.includes('if (bytes[index] !== 0x41) continue;'), "decodeLivePidResponse should only parse Mode 01 live PID responses");
+    check(functionBody.includes('getStandardPidPayloadLength(pid)') && functionBody.includes('getResponsePayload(bytes, index + 2, payloadLength, 0x41)'), "decodeLivePidResponse should bound payload extraction by standard PID length");
+    check(functionBody.includes('decodeStandardPidValue(pid, payload)'), "decodeLivePidResponse should decode standard PID payloads into monitor values");
+    check(functionBody.includes('if (Array.isArray(decoded)) values.push(...decoded);') && functionBody.includes('else if (decoded) values.push(decoded);'), "decodeLivePidResponse should collect scalar and grouped decoded values");
+    check(functionBody.includes('would_transmit: false') && functionBody.includes('normalizeBridgeLivePidSnapshot({'), "decodeLivePidResponse should return a read-only normalized live PID snapshot");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -644,6 +657,7 @@ mode09SupportedInfoTypesFunctionChecks();
 parseObdHexBytesFunctionChecks();
 decodeObdDtcResponseFunctionChecks();
 decodeSupportedPidResponseFunctionChecks();
+decodeLivePidResponseFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
