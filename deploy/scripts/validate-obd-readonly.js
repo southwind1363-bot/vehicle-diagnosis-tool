@@ -60,6 +60,7 @@ const vehicleApplicabilityWarningsFunctionSource = source.match(/function append
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
 const sessionTemporalContextFunctionSource = source.match(/function resolveSessionTemporalContext[\s\S]*?capturedAt:[\s\S]*?\r?\n    \};\r?\n  \}/);
+const importClassificationFunctionSource = source.match(/function resolveImportClassification[\s\S]*?return input && typeof input === "object" \? \{ \.\.\.input \} : null;\r?\n  \}/);
 const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s\S]*?return flags;\r?\n  \}/);
 const commonCoreWarningsFunctionSource = source.match(/function appendCommonCoreWarnings[\s\S]*?appendVehicleApplicabilityWarnings\(warnings, vehicleApplicability \|\| \{\}\);\r?\n  \}/);
 const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
@@ -317,6 +318,15 @@ const sessionTemporalContextFunctionChecks = () => {
     check(functionBody.indexOf('protocol: input.protocol') < functionBody.indexOf('capturedAt: input.capturedAt'), "resolveSessionTemporalContext should resolve protocol before capturedAt metadata");
   }
 };
+const importClassificationFunctionChecks = () => {
+  check(Boolean(importClassificationFunctionSource), "resolveImportClassification is missing from obd-readonly.js");
+  if (importClassificationFunctionSource) {
+    const functionBody = importClassificationFunctionSource[0];
+    check(functionBody.includes('function resolveImportClassification(input = null)'), "resolveImportClassification should default missing input to null");
+    check(functionBody.includes('input && typeof input === "object"'), "resolveImportClassification should only preserve object classification input");
+    check(functionBody.includes('? { ...input } : null;'), "resolveImportClassification should clone object input and fall back to null for non-objects");
+  }
+};
 const readOnlyFlagsFunctionChecks = () => {
   check(Boolean(readOnlyFlagsFunctionSource), "buildReadOnlyFlags is missing from obd-readonly.js");
   if (readOnlyFlagsFunctionSource) {
@@ -434,6 +444,7 @@ vehicleApplicabilityWarningsFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
 resolveBridgeInfrastructureFunctionChecks();
 sessionTemporalContextFunctionChecks();
+importClassificationFunctionChecks();
 readOnlyFlagsFunctionChecks();
 commonCoreWarningsFunctionChecks();
 warningListFunctionChecks();
