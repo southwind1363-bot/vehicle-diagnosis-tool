@@ -81,6 +81,7 @@ const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[
 const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
 const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
 const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\s\S]*?parseInt\(byte, 16\)\);\r?\n  \}/);
+const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcResponse[\s\S]*?\.\.\.new Set\(codes\)[\s\S]*?\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -537,6 +538,18 @@ const parseObdHexBytesFunctionChecks = () => {
     check(functionBody.includes('text.match(/\\b[0-9A-F]{2}\\b/gi)') && functionBody.includes('parseInt(byte, 16)'), "parseObdHexBytes should extract two-digit hex bytes case-insensitively");
   }
 };
+const decodeObdDtcResponseFunctionChecks = () => {
+  check(Boolean(decodeObdDtcResponseFunctionSource), "decodeObdDtcResponse is missing from obd-readonly.js");
+  if (decodeObdDtcResponseFunctionSource) {
+    const functionBody = decodeObdDtcResponseFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeObdDtcResponse should normalize raw DTC response bytes");
+    check(functionBody.includes('byte === 0x43 || byte === 0x47 || byte === 0x4A'), "decodeObdDtcResponse should accept stored, pending, and permanent DTC service responses");
+    check(functionBody.includes('if (serviceByte === undefined)') && functionBody.includes('dtcs: []'), "decodeObdDtcResponse should return an empty normalized DTC snapshot without a service byte");
+    check(functionBody.includes('if (high === 0 && low === 0) continue;') && functionBody.includes('decodeDtcPair(high, low)'), "decodeObdDtcResponse should ignore zero padding and decode byte pairs");
+    check(functionBody.includes('serviceByte === 0x47 ? "pending" : serviceByte === 0x4A ? "permanent" : "stored"'), "decodeObdDtcResponse should preserve stored, pending, and permanent DTC status");
+    check(functionBody.includes('dtcs: [...new Set(codes)].map((code) => ({ code, status }))'), "decodeObdDtcResponse should deduplicate decoded DTC codes");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -616,6 +629,7 @@ ecuInfoValueFunctionChecks();
 sanitizeEcuInfoValueFunctionChecks();
 mode09SupportedInfoTypesFunctionChecks();
 parseObdHexBytesFunctionChecks();
+decodeObdDtcResponseFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
