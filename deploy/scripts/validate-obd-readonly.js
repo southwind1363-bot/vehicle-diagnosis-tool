@@ -37,6 +37,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+const resolvedSessionMetadataFunctionSource = source.match(/function buildResolvedSessionMetadata[\s\S]*?sourceLength: Number\.isFinite\(Number\(metadataOverrides\.sourceLength\)\)\r?\n[\s\S]*?\r?\n  \}/);
 const diagnosticSessionInputFunctionSource = source.match(/function getDiagnosticSessionInput[\s\S]*?source: base\.source \|\| nested\.source \|\| \"diagnostic_core\",\r?\n[\s\S]*?\r?\n  \}/);
 const nestedSessionMetadataMergeFunctionSource = source.match(/function mergeNestedSessionMetadata[\s\S]*?had_sensitive_identifier:[\s\S]*?\r?\n  \}/);
 const sessionMetadataOverridesFunctionSource = source.match(/function getSessionMetadataOverrides[\s\S]*?hadSensitiveIdentifier\r?\n    \};\r?\n  \}/);
@@ -195,6 +196,17 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('...nested,') && functionBody.includes('...base,'), "getDiagnosticSessionInput should layer nested session fields before base overrides");
   }
 };
+const resolvedSessionMetadataFunctionChecks = () => {
+  check(Boolean(resolvedSessionMetadataFunctionSource), "buildResolvedSessionMetadata is missing from obd-readonly.js");
+  if (resolvedSessionMetadataFunctionSource) {
+    const functionBody = resolvedSessionMetadataFunctionSource[0];
+    check(functionBody.includes('vehicleProfile: metadataOverrides.vehicleProfile,'), "buildResolvedSessionMetadata should preserve explicit vehicle profile metadata");
+    check(functionBody.includes('vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),'), "buildResolvedSessionMetadata should normalize vehicle applicability metadata");
+    check(functionBody.includes('toolHints: mergeUniqueStrings(metadataOverrides.toolHints),'), "buildResolvedSessionMetadata should merge metadata tool hints");
+    check(functionBody.includes('hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true') && functionBody.includes('|| metadataOverrides.hadSensitiveIdentifier === true,'), "buildResolvedSessionMetadata should preserve sensitive-identifier metadata from ECU info or overrides");
+    check(functionBody.includes('sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))'), "buildResolvedSessionMetadata should sanitize metadata source length");
+  }
+};
 const resolveBridgeInfrastructureFunctionChecks = () => {
   check(Boolean(resolveBridgeInfrastructureFunctionSource), "resolveBridgeInfrastructureInputs is missing from obd-readonly.js");
   if (resolveBridgeInfrastructureFunctionSource) {
@@ -250,6 +262,7 @@ const coreSummaryFunctionChecks = () => {
 function check(condition, message) {
   if (!condition) failures.push(message);
 }
+resolvedSessionMetadataFunctionChecks();
 diagnosticSessionInputFunctionChecks();
 nestedSessionMetadataMergeFunctionChecks();
 sessionMetadataOverridesFunctionChecks();
