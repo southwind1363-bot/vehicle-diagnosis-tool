@@ -77,6 +77,7 @@ const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResp
 const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S]*?value: input\[key\]\r?\n      \}\)\);\r?\n  \}/);
 const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -488,6 +489,18 @@ const onboardMonitorSnapshotFunctionChecks = () => {
     check(functionBody.includes('failedCount: tests.filter((test) => test.status === "fail").length') && functionBody.includes('retainedRawText: false'), "normalizeOnboardMonitorSnapshot should count failed tests and never retain raw text");
   }
 };
+const ecuInfoValueFunctionChecks = () => {
+  check(Boolean(ecuInfoValueFunctionSource), "normalizeEcuInfoValue is missing from obd-readonly.js");
+  if (ecuInfoValueFunctionSource) {
+    const functionBody = ecuInfoValueFunctionSource[0];
+    check(functionBody.includes('if (!row || typeof row !== "object") return null;'), "normalizeEcuInfoValue should ignore non-object rows");
+    check(functionBody.includes('row.info_type || row.infoType || row.mode09_type || row.mode09Type || row.type'), "normalizeEcuInfoValue should normalize Mode 09 info type aliases");
+    check(functionBody.includes('row.id || row.item_id || row.itemId || row.mode09_id || row.mode09Id'), "normalizeEcuInfoValue should normalize ECU info row id aliases");
+    check(functionBody.includes('ecuInfoItemCatalog.find((item) => item.id === rowId || item.infoType === infoType)'), "normalizeEcuInfoValue should match rows against the ECU info catalog");
+    check(functionBody.includes('privacyClass === "sensitive_identifier"') && functionBody.includes('maskSensitiveIdentifier(rawValue)'), "normalizeEcuInfoValue should mask sensitive identifier values");
+    check(functionBody.includes('retainedRawValue: false') && functionBody.includes('detected: rawValue !== null && rawValue !== undefined'), "normalizeEcuInfoValue should expose detection state without retaining raw values");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -563,6 +576,7 @@ ecuResponseSummaryFunctionChecks();
 ecuInfoRowsFunctionChecks();
 ecuInfoSnapshotFunctionChecks();
 onboardMonitorSnapshotFunctionChecks();
+ecuInfoValueFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
