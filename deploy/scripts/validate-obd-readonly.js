@@ -84,6 +84,7 @@ const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\
 const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcResponse[\s\S]*?\.\.\.new Set\(codes\)[\s\S]*?\r?\n    \}\);\r?\n  \}/);
 const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
 const decodeLivePidResponseFunctionSource = source.match(/function decodeLivePidResponse[\s\S]*?captured_at: input\.captured_at \|\| input\.capturedAt \|\| null\r?\n      \}\r?\n    \}\);\r?\n  \}/);
+const decodeFreezeFrameResponseFunctionSource = source.match(/function decodeFreezeFrameResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -576,6 +577,18 @@ const decodeLivePidResponseFunctionChecks = () => {
     check(functionBody.includes('would_transmit: false') && functionBody.includes('normalizeBridgeLivePidSnapshot({'), "decodeLivePidResponse should return a read-only normalized live PID snapshot");
   }
 };
+const decodeFreezeFrameResponseFunctionChecks = () => {
+  check(Boolean(decodeFreezeFrameResponseFunctionSource), "decodeFreezeFrameResponse is missing from obd-readonly.js");
+  if (decodeFreezeFrameResponseFunctionSource) {
+    const functionBody = decodeFreezeFrameResponseFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeFreezeFrameResponse should normalize raw freeze-frame bytes");
+    check(functionBody.includes('if (bytes[index] !== 0x42) continue;'), "decodeFreezeFrameResponse should only parse Mode 02 freeze-frame responses");
+    check(functionBody.includes('const frameNumber = bytes[index + 2];'), "decodeFreezeFrameResponse should preserve the freeze-frame number byte");
+    check(functionBody.includes('if (pid === "02"') && functionBody.includes('triggerDtc = decoded'), "decodeFreezeFrameResponse should decode trigger DTC from PID 02");
+    check(functionBody.includes('freeze_frame_number: frameNumber'), "decodeFreezeFrameResponse should attach frame numbers to decoded PID values");
+    check(functionBody.includes('normalizeFreezeFrameSnapshot({') && functionBody.includes('trigger_dtc: triggerDtc'), "decodeFreezeFrameResponse should return a normalized freeze-frame snapshot with trigger DTC");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -658,6 +671,7 @@ parseObdHexBytesFunctionChecks();
 decodeObdDtcResponseFunctionChecks();
 decodeSupportedPidResponseFunctionChecks();
 decodeLivePidResponseFunctionChecks();
+decodeFreezeFrameResponseFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
