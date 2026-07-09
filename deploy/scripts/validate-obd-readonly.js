@@ -85,6 +85,7 @@ const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcRe
 const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
 const decodeLivePidResponseFunctionSource = source.match(/function decodeLivePidResponse[\s\S]*?captured_at: input\.captured_at \|\| input\.capturedAt \|\| null\r?\n      \}\r?\n    \}\);\r?\n  \}/);
 const decodeFreezeFrameResponseFunctionSource = source.match(/function decodeFreezeFrameResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
+const decodeEcuInfoResponseFunctionSource = source.match(/function decodeEcuInfoResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
 const decodeReadinessResponseFunctionSource = source.match(/function decodeReadinessResponse[\s\S]*?monitors\r?\n    \}\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
@@ -590,6 +591,18 @@ const decodeFreezeFrameResponseFunctionChecks = () => {
     check(functionBody.includes('normalizeFreezeFrameSnapshot({') && functionBody.includes('trigger_dtc: triggerDtc'), "decodeFreezeFrameResponse should return a normalized freeze-frame snapshot with trigger DTC");
   }
 };
+const decodeEcuInfoResponseFunctionChecks = () => {
+  check(Boolean(decodeEcuInfoResponseFunctionSource), "decodeEcuInfoResponse is missing from obd-readonly.js");
+  if (decodeEcuInfoResponseFunctionSource) {
+    const functionBody = decodeEcuInfoResponseFunctionSource[0];
+    check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeEcuInfoResponse should normalize raw ECU info bytes");
+    check(functionBody.includes('if (bytes[index] !== 0x49) continue;'), "decodeEcuInfoResponse should only parse Mode 09 ECU info responses");
+    check(functionBody.includes('const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && byte === 0x49);'), "decodeEcuInfoResponse should split repeated Mode 09 response segments");
+    check(functionBody.includes('trimEcuInfoPayload(bytes.slice(index + 2, end))'), "decodeEcuInfoResponse should trim Mode 09 payload framing bytes");
+    check(functionBody.includes('ecuInfoItemCatalog.find((item) => item.infoType === infoType)') && functionBody.includes('if (!catalogItem) continue;'), "decodeEcuInfoResponse should accept only cataloged Mode 09 info types");
+    check(functionBody.includes('decodeEcuInfoPayload(payload, catalogItem.valueType)') && functionBody.includes('normalizeEcuInfoSnapshot({'), "decodeEcuInfoResponse should decode typed values into a normalized ECU info snapshot");
+  }
+};
 const decodeReadinessResponseFunctionChecks = () => {
   check(Boolean(decodeReadinessResponseFunctionSource), "decodeReadinessResponse is missing from obd-readonly.js");
   if (decodeReadinessResponseFunctionSource) {
@@ -685,6 +698,7 @@ decodeObdDtcResponseFunctionChecks();
 decodeSupportedPidResponseFunctionChecks();
 decodeLivePidResponseFunctionChecks();
 decodeFreezeFrameResponseFunctionChecks();
+decodeEcuInfoResponseFunctionChecks();
 decodeReadinessResponseFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
