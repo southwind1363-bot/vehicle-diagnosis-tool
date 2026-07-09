@@ -56,6 +56,7 @@ const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverag
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: Array\.isArray\(pickDefined\(input\.missingLabels, input\.missing_labels\)\) \? \[\.\.\.pickDefined\(input\.missingLabels, input\.missing_labels\)\] : \[\]\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
+const vehicleApplicabilityWarningsFunctionSource = source.match(/function appendVehicleApplicabilityWarnings[\s\S]*?vehicle_profile_manual"\);\r?\n    \}\r?\n  \}/);
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
@@ -120,6 +121,17 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);'), "normalizeVehicleApplicabilitySnapshot should derive candidate range counts from explicit values or array length");
     check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
     check(functionBody.includes('const summaryLabel = source.summaryLabel || source.summary_label || source.label || null;'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
+  }
+};
+const vehicleApplicabilityWarningsFunctionChecks = () => {
+  check(Boolean(vehicleApplicabilityWarningsFunctionSource), "appendVehicleApplicabilityWarnings is missing from obd-readonly.js");
+  if (vehicleApplicabilityWarningsFunctionSource) {
+    const functionBody = vehicleApplicabilityWarningsFunctionSource[0];
+    check(functionBody.includes('if (!hasObjectContent(applicability)) return;'), "appendVehicleApplicabilityWarnings should skip empty applicability input");
+    check(functionBody.includes('normalizeVehicleApplicabilitySnapshot(applicability || {})'), "appendVehicleApplicabilityWarnings should normalize applicability before warning mapping");
+    check(functionBody.includes('if (normalized.status === "partial")') && functionBody.includes('warnings.push("vehicle_applicability_partial");'), "appendVehicleApplicabilityWarnings should map partial applicability to a partial warning");
+    check(functionBody.includes('} else if (normalized.status === "unlisted")') && functionBody.includes('warnings.push("vehicle_applicability_unlisted");'), "appendVehicleApplicabilityWarnings should map unlisted applicability to an unlisted warning");
+    check(functionBody.includes('} else if (normalized.status === "manual")') && functionBody.includes('warnings.push("vehicle_profile_manual");'), "appendVehicleApplicabilityWarnings should map manual applicability to a manual-profile warning");
   }
 };
 const resolveBridgeSummaryFunctionChecks = () => {
@@ -353,6 +365,7 @@ readoutCoverageFunctionChecks();
 normalizeReadoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
 vehicleApplicabilityFunctionChecks();
+vehicleApplicabilityWarningsFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
 resolveBridgeInfrastructureFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
