@@ -72,6 +72,7 @@ const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSes
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
 const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreezeFrameSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const readinessSnapshotFunctionSource = source.match(/function normalizeReadinessSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -423,6 +424,18 @@ const freezeFrameSnapshotFunctionChecks = () => {
     check(functionBody.includes('monitorValueSummary: buildMonitorValueSummary(monitorValues),') && functionBody.includes('retainedRawText: false'), "normalizeFreezeFrameSnapshot should summarize monitor values and never retain raw text");
   }
 };
+const readinessSnapshotFunctionChecks = () => {
+  check(Boolean(readinessSnapshotFunctionSource), "normalizeReadinessSnapshot is missing from obd-readonly.js");
+  if (readinessSnapshotFunctionSource) {
+    const functionBody = readinessSnapshotFunctionSource[0];
+    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeReadinessSnapshot should default source to diagnostic_core");
+    check(functionBody.includes('const monitors = Array.isArray(input) ? input : Array.isArray(input.monitors) ? input.monitors : [];'), "normalizeReadinessSnapshot should accept direct array or monitors array input");
+    check(functionBody.includes('readinessMonitorCatalog.find((entry) => entry.id === id)') && functionBody.includes('diagnosticUse: catalogItem?.diagnosticUse || ""'), "normalizeReadinessSnapshot should enrich monitors from readiness catalog");
+    check(functionBody.includes('supported: monitor?.supported !== false') && functionBody.includes('complete: monitor?.complete === true'), "normalizeReadinessSnapshot should normalize supported and complete states");
+    check(functionBody.includes('milOn: input.mil_on === true || input.milOn === true') && functionBody.includes('incompleteCount: normalized.filter((item) => item.supported && !item.complete).length'), "normalizeReadinessSnapshot should normalize MIL aliases and supported incomplete count");
+    check(functionBody.includes('knownMonitors,') && functionBody.includes('retainedRawText: false'), "normalizeReadinessSnapshot should expose known monitors and never retain raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -493,6 +506,7 @@ bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 dtcSnapshotFunctionChecks();
 freezeFrameSnapshotFunctionChecks();
+readinessSnapshotFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
