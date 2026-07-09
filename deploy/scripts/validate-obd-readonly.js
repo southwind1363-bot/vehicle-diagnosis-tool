@@ -66,6 +66,7 @@ const commonCoreWarningsFunctionSource = source.match(/function appendCommonCore
 const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
 const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
 const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?return explicitSummary \|\| buildMonitorValueSummary\(monitorValues\);\r?\n  \}/);
+const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonitorValueSummary[\s\S]*?textCount\r?\n    \};\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -376,6 +377,17 @@ const monitorValueSummaryFunctionChecks = () => {
     check(functionBody.includes('return explicitSummary || buildMonitorValueSummary(monitorValues);'), "resolveMonitorValueSummary should prefer explicit summaries before rebuilding from monitor values");
   }
 };
+const buildMonitorValueSummaryFunctionChecks = () => {
+  check(Boolean(buildMonitorValueSummaryFunctionSource), "buildMonitorValueSummary is missing from obd-readonly.js");
+  if (buildMonitorValueSummaryFunctionSource) {
+    const functionBody = buildMonitorValueSummaryFunctionSource[0];
+    check(functionBody.includes('const rows = Array.isArray(values) ? values : [];'), "buildMonitorValueSummary should treat non-array input as empty rows");
+    check(functionBody.includes('item?.decoded === false || item?.valueType === "raw_hex"'), "buildMonitorValueSummary should count undecoded raw values from decoded=false or raw_hex type");
+    check(functionBody.includes('Number.isFinite(item?.value)'), "buildMonitorValueSummary should count numeric values only from finite numeric values");
+    check(functionBody.includes('decodedCount: Math.max(0, rows.length - undecodedRawCount),'), "buildMonitorValueSummary should derive decoded count without going below zero");
+    check(functionBody.includes('numericCount,') && functionBody.includes('textCount'), "buildMonitorValueSummary should expose numeric and text counts");
+  }
+};
 const bridgeSessionSummaryFunctionChecks = () => {
   check(Boolean(bridgeSessionSummaryFunctionSource), "buildBridgeSessionSummary is missing from obd-readonly.js");
   if (bridgeSessionSummaryFunctionSource) {
@@ -450,6 +462,7 @@ commonCoreWarningsFunctionChecks();
 warningListFunctionChecks();
 readoutCoverageInputFunctionChecks();
 monitorValueSummaryFunctionChecks();
+buildMonitorValueSummaryFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
