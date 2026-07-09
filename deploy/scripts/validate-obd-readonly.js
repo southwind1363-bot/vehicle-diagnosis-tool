@@ -53,6 +53,7 @@ const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummary
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
+const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: Array\.isArray\(pickDefined\(input\.missingLabels, input\.missing_labels\)\) \? \[\.\.\.pickDefined\(input\.missingLabels, input\.missing_labels\)\] : \[\]\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
@@ -96,6 +97,18 @@ const resolveReadoutCoverageFunctionChecks = () => {
     check(functionBody.includes('if (input && typeof input === "object") {'), "resolveReadoutCoverageSnapshot should prefer explicit readout coverage input");
     check(functionBody.includes('return normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);'), "resolveReadoutCoverageSnapshot should normalize explicit readout coverage input");
     check(functionBody.includes('return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());'), "resolveReadoutCoverageSnapshot should fall back to derived or empty readout coverage");
+  }
+};
+const normalizeReadoutCoverageFunctionChecks = () => {
+  check(Boolean(normalizeReadoutCoverageFunctionSource), "normalizeReadoutCoverageSnapshot is missing from obd-readonly.js");
+  if (normalizeReadoutCoverageFunctionSource) {
+    const functionBody = normalizeReadoutCoverageFunctionSource[0];
+    check(functionBody.includes('if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();'), "normalizeReadoutCoverageSnapshot should fall back to empty readout coverage for non-object input");
+    check(functionBody.includes('schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",'), "normalizeReadoutCoverageSnapshot should normalize schema version aliases");
+    check(functionBody.includes('includeInfrastructure: pickDefined(input.includeInfrastructure, input.include_infrastructure) === true,'), "normalizeReadoutCoverageSnapshot should normalize includeInfrastructure aliases as explicit true");
+    check(functionBody.includes('capturedPercent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent)))') && functionBody.includes(': computedCapturedPercent,'), "normalizeReadoutCoverageSnapshot should clamp capturedPercent and fall back to computed captured percent");
+    check(functionBody.includes('progressPercent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent)))') && functionBody.includes(': computedProgressPercent,'), "normalizeReadoutCoverageSnapshot should clamp progressPercent and fall back to computed progress percent");
+    check(functionBody.includes('emptyIds: Array.isArray(pickDefined(input.emptyIds, input.empty_ids)) ? [...pickDefined(input.emptyIds, input.empty_ids)] : [],') && functionBody.includes('missingLabels: Array.isArray(pickDefined(input.missingLabels, input.missing_labels)) ? [...pickDefined(input.missingLabels, input.missing_labels)] : []'), "normalizeReadoutCoverageSnapshot should normalize snake_case coverage label and id aliases");
   }
 };
 const vehicleApplicabilityFunctionChecks = () => {
@@ -337,6 +350,7 @@ bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
 readoutCoverageFunctionChecks();
+normalizeReadoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
 vehicleApplicabilityFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
