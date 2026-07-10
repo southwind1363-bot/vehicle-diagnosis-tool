@@ -93,6 +93,7 @@ const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSes
 const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
 const normalizeCanLogLineFormatFunctionSource = source.match(/function normalizeCanLogLineFormat[\s\S]*?return text;\r?\n  \}/);
+const normalizeCanCsvLogLineFunctionSource = source.match(/function normalizeCanCsvLogLine[\s\S]*?join\(" "\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -694,6 +695,18 @@ const normalizeCanLogLineFormatFunctionChecks = () => {
     check(functionBody.includes('const csvNormalized = normalizeCanCsvLogLine(text);') && functionBody.includes('if (csvNormalized) return csvNormalized;'), "normalizeCanLogLineFormat should accept CSV-like CAN logs before returning raw text");
   }
 };
+const normalizeCanCsvLogLineFunctionChecks = () => {
+  check(Boolean(normalizeCanCsvLogLineFunctionSource), "normalizeCanCsvLogLine is missing from obd-readonly.js");
+  if (normalizeCanCsvLogLineFunctionSource) {
+    const functionBody = normalizeCanCsvLogLineFunctionSource[0];
+    check(functionBody.includes('if (!/[,;\\t]/.test(text)) return "";'), "normalizeCanCsvLogLine should only parse delimited log lines");
+    check(functionBody.includes('text.split(/[,;\\t]/).map((part) => part.trim()).filter(Boolean)'), "normalizeCanCsvLogLine should trim and compact delimited fields");
+    check(functionBody.includes('const idIndex = parts.findIndex((part) => /^[0-9A-F]{3}$|^[0-9A-F]{8}$/i.test(part));'), "normalizeCanCsvLogLine should find 11-bit and extended CAN IDs");
+    check(functionBody.includes('while (byteStart > idIndex + 1 && /^[0-9A-F]{2}$/i.test(parts[byteStart - 1]))'), "normalizeCanCsvLogLine should collect trailing byte fields");
+    check(functionBody.includes('const parsedLength = /^\\d{1,3}$/.test(lengthPart) ? parseInt(lengthPart, 10) : bytes.length;'), "normalizeCanCsvLogLine should use explicit frame length or byte count fallback");
+    check(functionBody.includes('return [parts[idIndex].toUpperCase(), lengthByte, ...bytes.map((byte) => byte.toUpperCase())].join(" ");'), "normalizeCanCsvLogLine should emit normalized ECU, length, and uppercase byte fields");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -785,6 +798,7 @@ scanSessionFromObdTextFunctionChecks();
 classifyObdResponseLinesFunctionChecks();
 buildObdLogPacketsFunctionChecks();
 normalizeCanLogLineFormatFunctionChecks();
+normalizeCanCsvLogLineFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
