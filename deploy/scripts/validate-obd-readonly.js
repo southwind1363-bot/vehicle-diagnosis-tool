@@ -80,6 +80,7 @@ const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnb
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
 const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
 const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
+const ecuInfoPayloadFunctionSource = source.match(/function decodeEcuInfoPayload[\s\S]*?return payload\.map\(\(byte\) => String\.fromCharCode\(byte\)\)\.join\(""\)\.trim\(\);\r?\n  \}/);
 const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\s\S]*?parseInt\(byte, 16\)\);\r?\n  \}/);
 const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcResponse[\s\S]*?\.\.\.new Set\(codes\)[\s\S]*?\r?\n    \}\);\r?\n  \}/);
 const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
@@ -562,6 +563,17 @@ const mode09SupportedInfoTypesFunctionChecks = () => {
     check(functionBody.includes('for (let bit = 0; bit < 8; bit += 1)') && functionBody.includes('0x80 >> bit'), "decodeMode09SupportedInfoTypes should walk supported-info bits from MSB to LSB");
     check(functionBody.includes('id.toString(16).toUpperCase().padStart(2, "0")'), "decodeMode09SupportedInfoTypes should normalize supported info ids as uppercase two-digit hex");
     check(functionBody.includes('ecuInfoItemCatalog.find((row) => row.infoType === infoType)') && functionBody.includes('return item ? item.label'), "decodeMode09SupportedInfoTypes should map supported info ids through catalog labels with fallback text");
+  }
+};
+const ecuInfoPayloadFunctionChecks = () => {
+  check(Boolean(ecuInfoPayloadFunctionSource), "decodeEcuInfoPayload is missing from obd-readonly.js");
+  if (ecuInfoPayloadFunctionSource) {
+    const functionBody = ecuInfoPayloadFunctionSource[0];
+    check(functionBody.includes('if (!payload.length) return "";'), "decodeEcuInfoPayload should return an empty string for empty payloads");
+    check(functionBody.includes('const printable = payload.every((byte) => byte >= 0x20 && byte <= 0x7E);'), "decodeEcuInfoPayload should detect printable ASCII payloads");
+    check(functionBody.includes('if (valueType === "counter_set" || !printable)'), "decodeEcuInfoPayload should retain counter sets and non-printable values as hex");
+    check(functionBody.includes('byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")'), "decodeEcuInfoPayload should format hex payload bytes consistently");
+    check(functionBody.includes('String.fromCharCode(byte)).join("").trim()'), "decodeEcuInfoPayload should decode printable ASCII payloads and trim padding");
   }
 };
 const parseObdHexBytesFunctionChecks = () => {
@@ -1072,6 +1084,7 @@ onboardMonitorSnapshotFunctionChecks();
 ecuInfoValueFunctionChecks();
 sanitizeEcuInfoValueFunctionChecks();
 mode09SupportedInfoTypesFunctionChecks();
+ecuInfoPayloadFunctionChecks();
 parseObdHexBytesFunctionChecks();
 decodeObdDtcResponseFunctionChecks();
 decodeSupportedPidResponseFunctionChecks();
