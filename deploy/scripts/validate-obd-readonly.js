@@ -98,6 +98,7 @@ const trimEcuInfoPayloadFunctionSource = source.match(/function trimEcuInfoPaylo
 const ecuInfoPayloadFunctionSource = source.match(/function decodeEcuInfoPayload[\s\S]*?return payload\.map\(\(byte\) => String\.fromCharCode\(byte\)\)\.join\(""\)\.trim\(\);\r?\n  \}/);
 const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\s\S]*?parseInt\(byte, 16\)\);\r?\n  \}/);
 const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcResponse[\s\S]*?\.\.\.new Set\(codes\)[\s\S]*?\r?\n    \}\);\r?\n  \}/);
+const mergeDtcSnapshotsFunctionSource = source.match(/function mergeDtcSnapshots[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const decodeDtcPairFunctionSource = source.match(/function decodeDtcPair[\s\S]*?return `\$\{system\}\$\{first\}\$\{second\}\$\{third\}\$\{fourth\}`;\r?\n  \}/);
 const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
 const supportedPidBaseFunctionSource = source.match(/function isSupportedPidBase[\s\S]*?includes\(pid\);\r?\n  \}/);
@@ -773,6 +774,20 @@ const decodeObdDtcResponseFunctionChecks = () => {
     check(functionBody.includes('dtcs: [...new Set(codes)].map((code) => ({ code, status }))'), "decodeObdDtcResponse should deduplicate decoded DTC codes");
   }
 };
+const mergeDtcSnapshotsFunctionChecks = () => {
+  check(Boolean(mergeDtcSnapshotsFunctionSource), "mergeDtcSnapshots is missing from obd-readonly.js");
+  if (mergeDtcSnapshotsFunctionSource) {
+    const functionBody = mergeDtcSnapshotsFunctionSource[0];
+    check(functionBody.includes('.filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))'), "mergeDtcSnapshots should ignore missing snapshots and snapshots without DTC rows");
+    check(functionBody.includes('snapshot.dtcs.map((row) => ({ ...row, source: row.source || snapshot.source || "diagnostic_core" }))'), "mergeDtcSnapshots should preserve row source with snapshot/default fallback");
+    check(functionBody.includes('const key = `${row.code || ""}::${row.status || "unknown"}`;'), "mergeDtcSnapshots should deduplicate by DTC code and status");
+    check(functionBody.includes('if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);'), "mergeDtcSnapshots should retain the first valid row for each code/status pair");
+    check(functionBody.includes('source: "merged_dtc_snapshots"'), "mergeDtcSnapshots should mark merged DTC source explicitly");
+    check(functionBody.includes('capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null') && functionBody.includes('protocol: snapshots.find((item) => item?.protocol)?.protocol || null'), "mergeDtcSnapshots should carry capturedAt and protocol from the first available snapshot");
+    check(functionBody.includes('codes: [...new Set(mergedRows.map((row) => row.code))]'), "mergeDtcSnapshots should expose deduplicated DTC code list");
+    check(functionBody.includes('retainedRawText: false'), "mergeDtcSnapshots should never retain raw text");
+  }
+};
 const decodeDtcPairFunctionChecks = () => {
   check(Boolean(decodeDtcPairFunctionSource), "decodeDtcPair is missing from obd-readonly.js");
   if (decodeDtcPairFunctionSource) {
@@ -1315,6 +1330,7 @@ trimEcuInfoPayloadFunctionChecks();
 ecuInfoPayloadFunctionChecks();
 parseObdHexBytesFunctionChecks();
 decodeObdDtcResponseFunctionChecks();
+mergeDtcSnapshotsFunctionChecks();
 decodeDtcPairFunctionChecks();
 decodeSupportedPidResponseFunctionChecks();
 supportedPidBaseFunctionChecks();
