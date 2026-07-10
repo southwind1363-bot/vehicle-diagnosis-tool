@@ -121,6 +121,13 @@ const negativeResponseSummaryFunctionSource = source.match(/function buildNegati
 const negativeObdResponseFunctionSource = source.match(/function decodeNegativeObdResponse[\s\S]*?responseLabel: decodeNegativeResponseCode\(responseCode\)\r?\n    \};\r?\n  \}/);
 const negativeResponseCodeFunctionSource = source.match(/function decodeNegativeResponseCode[\s\S]*?return labels\[responseCode\] \|\| "unknown_negative_response";\r?\n  \}/);
 const textImportMetadataFunctionSource = source.match(/function buildTextImportMetadata[\s\S]*?sourceLength: Number\.isFinite[\s\S]*?\r?\n    \};\r?\n  \}/);
+const scannerToolHintsFunctionSource = source.match(/function detectScannerToolHints[\s\S]*?return hints;\r?\n  \}/);
+const extractDtcCodesFunctionSource = source.match(/function extractDtcCodes[\s\S]*?return \[\.\.\.new Set\(matches\)\];\r?\n  \}/);
+const redactSensitiveTextFunctionSource = source.match(/function redactSensitiveText[\s\S]*?VIN_PATTERN[\s\S]*?\);\r?\n  \}/);
+const monitorLabelFunctionSource = source.match(/function normalizeMonitorLabel[\s\S]*?trim\(\);\r?\n  \}/);
+const monitorLabelTokensFunctionSource = source.match(/function normalizeMonitorLabelTokens[\s\S]*?trim\(\);\r?\n  \}/);
+const monitorLabelMatchFunctionSource = source.match(/function isMonitorLabelMatch[\s\S]*?return Boolean\(tokenLabel\) && tokenLabel === tokenAlias;\r?\n  \}/);
+const extractMonitorValuesFunctionSource = source.match(/function extractMonitorValues[\s\S]*?return \[\.\.\.values\.values\(\)\];\r?\n  \}/);
 const supportedPidMatrixFunctionSource = source.match(/function buildSupportedPidMatrix[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const standardPidValueFunctionSource = source.match(/function decodeStandardPidValue[\s\S]*?unit: definition\.unit\r?\n    \};\r?\n  \}/);
 const undecodedPidValueFunctionSource = source.match(/function buildUndecodedPidValue[\s\S]*?decoded: false,[\s\S]*?\r?\n    \};\r?\n  \}/);
@@ -1044,6 +1051,54 @@ const textImportMetadataFunctionChecks = () => {
     check(functionBody.includes('Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))'), "buildTextImportMetadata should normalize source length without retaining raw input");
   }
 };
+const scannerTextExtractionFunctionChecks = () => {
+  check(Boolean(scannerToolHintsFunctionSource), "detectScannerToolHints is missing from obd-readonly.js");
+  if (scannerToolHintsFunctionSource) {
+    const functionBody = scannerToolHintsFunctionSource[0];
+    check(functionBody.includes('const add = (label, pattern) => {') && functionBody.includes('!hints.includes(label)'), "detectScannerToolHints should deduplicate scanner tool hints");
+    check(functionBody.includes('add("Techstream"') && functionBody.includes('add("J2534"') && functionBody.includes('add("CONSULT"'), "detectScannerToolHints should retain major OEM and pass-thru tool hints");
+    check(functionBody.includes('add("ELM327"') && functionBody.includes('add("SavvyCAN"') && functionBody.includes('add("CANable"'), "detectScannerToolHints should retain bridge/CAN adapter tool hints");
+  }
+  check(Boolean(extractDtcCodesFunctionSource), "extractDtcCodes is missing from obd-readonly.js");
+  if (extractDtcCodesFunctionSource) {
+    const functionBody = extractDtcCodesFunctionSource[0];
+    check(functionBody.includes('String(value || "").toUpperCase().match(DTC_PATTERN) || []'), "extractDtcCodes should normalize text to uppercase before DTC matching");
+    check(functionBody.includes('return [...new Set(matches)];'), "extractDtcCodes should deduplicate matched DTC codes");
+  }
+  check(Boolean(redactSensitiveTextFunctionSource), "redactSensitiveText is missing from obd-readonly.js");
+  if (redactSensitiveTextFunctionSource) {
+    const functionBody = redactSensitiveTextFunctionSource[0];
+    check(functionBody.includes('String(value || "").replace(VIN_PATTERN'), "redactSensitiveText should replace VIN-like identifiers before retention");
+  }
+  check(Boolean(monitorLabelFunctionSource), "normalizeMonitorLabel is missing from obd-readonly.js");
+  if (monitorLabelFunctionSource) {
+    const functionBody = monitorLabelFunctionSource[0];
+    check(functionBody.includes('.toLowerCase()') && functionBody.includes('.replace(/[_\\-]/g, " ")'), "normalizeMonitorLabel should lowercase labels and normalize separators");
+    check(functionBody.includes('.replace(/\\s+/g, " ")') && functionBody.includes('.trim();'), "normalizeMonitorLabel should compact whitespace and trim labels");
+  }
+  check(Boolean(monitorLabelTokensFunctionSource), "normalizeMonitorLabelTokens is missing from obd-readonly.js");
+  if (monitorLabelTokensFunctionSource) {
+    const functionBody = monitorLabelTokensFunctionSource[0];
+    check(functionBody.includes('.replace(/[()[\\]{}]/g, " ")') && functionBody.includes('.replace(/[=,/%]/g, " ")'), "normalizeMonitorLabelTokens should remove punctuation before alias comparison");
+    check(functionBody.includes('rpm|kpa|pa|c|f|deg|degree|degrees|percent|pct'), "normalizeMonitorLabelTokens should drop common unit tokens");
+  }
+  check(Boolean(monitorLabelMatchFunctionSource), "isMonitorLabelMatch is missing from obd-readonly.js");
+  if (monitorLabelMatchFunctionSource) {
+    const functionBody = monitorLabelMatchFunctionSource[0];
+    check(functionBody.includes('if (normalizedLabel === normalizedAlias) return true;'), "isMonitorLabelMatch should first compare normalized labels directly");
+    check(functionBody.includes('return Boolean(tokenLabel) && tokenLabel === tokenAlias;'), "isMonitorLabelMatch should fall back to token label matching");
+  }
+  check(Boolean(extractMonitorValuesFunctionSource), "extractMonitorValues is missing from obd-readonly.js");
+  if (extractMonitorValuesFunctionSource) {
+    const functionBody = extractMonitorValuesFunctionSource[0];
+    check(functionBody.includes('const redacted = redactSensitiveText(value);'), "extractMonitorValues should redact sensitive identifiers before parsing lines");
+    check(functionBody.includes('const separator = line.search(/[:') && functionBody.includes('\\t]/);') && functionBody.includes('if (separator < 1) return;'), "extractMonitorValues should split labels and values on known separators");
+    check(functionBody.includes('item.aliases.some((alias) => isMonitorLabelMatch(labelPart, alias))'), "extractMonitorValues should resolve monitor definitions through aliases");
+    check(functionBody.includes('valuePart.replace(/(\\d),(?=\\d{3}\\b)/g, "$1").match(NUMBER_PATTERN)'), "extractMonitorValues should parse numeric values while tolerating thousands separators");
+    check(functionBody.includes('values.set(definition.id, {'), "extractMonitorValues should keep the latest parsed value by monitor id");
+    check(functionBody.includes('sourceLine: lineIndex + 1') && functionBody.includes('return [...values.values()];'), "extractMonitorValues should preserve source line and return parsed monitor rows");
+  }
+};
 const supportedPidMatrixFunctionChecks = () => {
   check(Boolean(supportedPidMatrixFunctionSource), "buildSupportedPidMatrix is missing from obd-readonly.js");
   if (supportedPidMatrixFunctionSource) {
@@ -1353,6 +1408,7 @@ negativeResponseSummaryFunctionChecks();
 negativeObdResponseFunctionChecks();
 negativeResponseCodeFunctionChecks();
 textImportMetadataFunctionChecks();
+scannerTextExtractionFunctionChecks();
 supportedPidMatrixFunctionChecks();
 standardPidValueFunctionChecks();
 undecodedPidValueFunctionChecks();
