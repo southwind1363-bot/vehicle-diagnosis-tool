@@ -2380,9 +2380,12 @@
     const completionPercent = normalizedCoverage.totalCategories > 0
       ? Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)
       : directCompletionPercent;
-    const readyForAnalysis = remainingReadoutIds.length === 0
-      && emptyReadoutIds.length === 0
-      && blockingWarningIds.length === 0;
+    const analysisBlockers = [
+      ...(remainingReadoutIds.length ? ["missing_readouts"] : []),
+      ...(emptyReadoutIds.length ? ["empty_readouts"] : []),
+      ...(blockingWarningIds.length ? ["blocking_warnings"] : [])
+    ];
+    const readyForAnalysis = analysisBlockers.length === 0;
     const hasReadoutProgress = capturedReadoutIds.length > 0
       || emptyReadoutIds.length > 0
       || normalizedCoverage.availableCategories > 0;
@@ -2403,6 +2406,7 @@
       nextRecommendedReadoutId,
       nextReadoutSource,
       nextReadoutState,
+      analysisBlockers,
       blockingWarningIds,
       readyForAnalysis
     };
