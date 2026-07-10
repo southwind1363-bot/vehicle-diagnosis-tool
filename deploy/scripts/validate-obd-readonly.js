@@ -59,6 +59,9 @@ const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDt
 const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeReadinessSnapshotFunctionSource = source.match(/function normalizeBridgeReadinessSnapshot[\s\S]*?monitors: monitorBits\.map[\s\S]*?\r?\n    \}\)\);\r?\n  \}/);
+const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBridgeEcuInfoSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: Array\.isArray\(pickDefined\(input\.missingLabels, input\.missing_labels\)\) \? \[\.\.\.pickDefined\(input\.missingLabels, input\.missing_labels\)\] : \[\]\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
@@ -280,6 +283,34 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC aliases");
     check(functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame value aliases");
     check(functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeFreezeFrameSnapshot should preserve bridge intent and safety metadata");
+  }
+};
+const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
+  check(Boolean(bridgeReadinessSnapshotFunctionSource), "normalizeBridgeReadinessSnapshot is missing from obd-readonly.js");
+  if (bridgeReadinessSnapshotFunctionSource) {
+    const functionBody = bridgeReadinessSnapshotFunctionSource[0];
+    check(functionBody.includes('readinessRowIdAliases') && functionBody.includes('statusbyteb: "readiness_status_byte_b"'), "normalizeBridgeReadinessSnapshot should normalize readiness row id aliases");
+    check(functionBody.includes('Array.isArray(data.readiness_values)') && functionBody.includes('Array.isArray(data.readinessRows)') && functionBody.includes('Array.isArray(response.monitorValues)'), "normalizeBridgeReadinessSnapshot should accept readiness value aliases");
+    check(functionBody.includes('data.readinessStatusByteB !== undefined') && functionBody.includes('data.statusByteD !== undefined'), "normalizeBridgeReadinessSnapshot should accept direct readiness status byte aliases");
+    check(functionBody.includes('const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {'), "normalizeBridgeReadinessSnapshot should build readiness values by normalized id");
+    check(functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('monitors: []'), "normalizeBridgeReadinessSnapshot should return an empty normalized snapshot without B/C/D bytes");
+    check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
+    check(functionBody.includes('["nox_scr", c, 0x02, 0x20]') && functionBody.includes('["evaporative_system", c, 0x08, 0x80]'), "normalizeBridgeReadinessSnapshot should preserve compression and spark monitor layouts");
+    check(functionBody.includes('status: supported ? (complete ? "complete" : "not_complete") : "not_supported"'), "normalizeBridgeReadinessSnapshot should derive readiness monitor status from supported and incomplete bits");
+  }
+  check(Boolean(bridgeEcuInfoSnapshotFunctionSource), "normalizeBridgeEcuInfoSnapshot is missing from obd-readonly.js");
+  if (bridgeEcuInfoSnapshotFunctionSource) {
+    const functionBody = bridgeEcuInfoSnapshotFunctionSource[0];
+    check(functionBody.includes('...normalizeEcuInfoSnapshot({') && functionBody.includes('...data,'), "normalizeBridgeEcuInfoSnapshot should delegate bridge ECU info data to the core normalizer");
+    check(functionBody.includes('source: "local_bridge"') && functionBody.includes('protocol: readBridgeProtocol(data)'), "normalizeBridgeEcuInfoSnapshot should preserve local bridge source and protocol");
+    check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge intent and safety metadata");
+  }
+  check(Boolean(bridgeOnboardMonitorSnapshotFunctionSource), "normalizeBridgeOnboardMonitorSnapshot is missing from obd-readonly.js");
+  if (bridgeOnboardMonitorSnapshotFunctionSource) {
+    const functionBody = bridgeOnboardMonitorSnapshotFunctionSource[0];
+    check(functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should reuse the core Mode 06 normalizer");
+    check(functionBody.includes('Array.isArray(data.mode06_tests)') && functionBody.includes('Array.isArray(data.mode06Rows)') && functionBody.includes('Array.isArray(data.onboardMonitorTests)'), "normalizeBridgeOnboardMonitorSnapshot should accept Mode 06 test aliases");
+    check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge intent and safety metadata");
   }
 };
 const bridgeSummaryInputFunctionChecks = () => {
@@ -1169,6 +1200,7 @@ bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
 bridgeResponseSafetyFunctionChecks();
 bridgeCoreReadoutNormalizerFunctionChecks();
+bridgeExtendedCoreReadoutNormalizerFunctionChecks();
 readoutCoverageFunctionChecks();
 normalizeReadoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
