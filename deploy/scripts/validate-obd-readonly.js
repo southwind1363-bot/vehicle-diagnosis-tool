@@ -108,6 +108,8 @@ const responsePayloadFunctionSource = source.match(/function getResponsePayload[
 const monitorStatusPidFunctionSource = source.match(/function decodeMonitorStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const fuelSystemStatusPidFunctionSource = source.match(/function decodeFuelSystemStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const oxygenSensorPidFunctionSource = source.match(/function decodeOxygenSensorPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
+const wideOxygenVoltagePidFunctionSource = source.match(/function decodeWideOxygenVoltagePid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
+const wideOxygenCurrentPidFunctionSource = source.match(/function decodeWideOxygenCurrentPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -889,6 +891,24 @@ const oxygenSensorPidFunctionChecks = () => {
     check(functionBody.includes('return values.length ? values : null;'), "decodeOxygenSensorPid should return null without matching definitions");
   }
 };
+const wideOxygenSensorPidFunctionChecks = () => {
+  check(Boolean(wideOxygenVoltagePidFunctionSource), "decodeWideOxygenVoltagePid is missing from obd-readonly.js");
+  check(Boolean(wideOxygenCurrentPidFunctionSource), "decodeWideOxygenCurrentPid is missing from obd-readonly.js");
+  if (wideOxygenVoltagePidFunctionSource) {
+    const functionBody = wideOxygenVoltagePidFunctionSource[0];
+    check(functionBody.includes('if (!Number.isInteger(b) || !Number.isInteger(c) || !Number.isInteger(d)) return null;'), "decodeWideOxygenVoltagePid should require four payload bytes");
+    check(functionBody.includes('item.id.endsWith("_ratio")') && functionBody.includes('item.id.endsWith("_voltage_wide")'), "decodeWideOxygenVoltagePid should resolve ratio and wide-voltage definitions by suffix");
+    check(functionBody.includes('value: Number((((a * 256) + b) / 32768).toFixed(3))'), "decodeWideOxygenVoltagePid should decode equivalence ratio");
+    check(functionBody.includes('value: Number((((c * 256) + d) / 8192).toFixed(3))'), "decodeWideOxygenVoltagePid should decode wideband voltage");
+  }
+  if (wideOxygenCurrentPidFunctionSource) {
+    const functionBody = wideOxygenCurrentPidFunctionSource[0];
+    check(functionBody.includes('if (!Number.isInteger(b) || !Number.isInteger(c) || !Number.isInteger(d)) return null;'), "decodeWideOxygenCurrentPid should require four payload bytes");
+    check(functionBody.includes('item.id.endsWith("_current")') && functionBody.includes('item.id.endsWith("_current_ratio")'), "decodeWideOxygenCurrentPid should resolve current and ratio definitions by suffix");
+    check(functionBody.includes('value: Number((((a * 256) + b) / 32768).toFixed(3))'), "decodeWideOxygenCurrentPid should decode current ratio");
+    check(functionBody.includes('value: Number((((c * 256) + d) / 256 - 128).toFixed(3))'), "decodeWideOxygenCurrentPid should decode sensor current");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -995,6 +1015,7 @@ responsePayloadFunctionChecks();
 monitorStatusPidFunctionChecks();
 fuelSystemStatusPidFunctionChecks();
 oxygenSensorPidFunctionChecks();
+wideOxygenSensorPidFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
