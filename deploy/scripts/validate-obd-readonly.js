@@ -111,6 +111,12 @@ const oxygenSensorPidFunctionSource = source.match(/function decodeOxygenSensorP
 const wideOxygenVoltagePidFunctionSource = source.match(/function decodeWideOxygenVoltagePid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const wideOxygenCurrentPidFunctionSource = source.match(/function decodeWideOxygenCurrentPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const enginePercentTorqueDataFunctionSource = source.match(/function decodeEnginePercentTorqueData[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
+const commandedEgrAndErrorFunctionSource = source.match(/function decodeCommandedEgrAndError[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
+const secondaryAirStatusFunctionSource = source.match(/function decodeSecondaryAirStatus[\s\S]*?\r?\n  \}/);
+const oxygenSensorLocationsFunctionSource = source.match(/function decodeOxygenSensorLocations[\s\S]*?\r?\n  \}/);
+const auxiliaryInputStatusFunctionSource = source.match(/function decodeAuxiliaryInputStatus[\s\S]*?\r?\n  \}/);
+const obdStandardFunctionSource = source.match(/function decodeObdStandard[\s\S]*?\r?\n  \}/);
+const fuelTypeFunctionSource = source.match(/function decodeFuelType[\s\S]*?\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -922,6 +928,52 @@ const enginePercentTorqueDataFunctionChecks = () => {
     check(functionBody.includes('return values.length ? values : null;'), "decodeEnginePercentTorqueData should return null without decoded torque values");
   }
 };
+const commandedEgrAndErrorFunctionChecks = () => {
+  check(Boolean(commandedEgrAndErrorFunctionSource), "decodeCommandedEgrAndError is missing from obd-readonly.js");
+  if (commandedEgrAndErrorFunctionSource) {
+    const functionBody = commandedEgrAndErrorFunctionSource[0];
+    check(functionBody.includes('if (!Number.isInteger(b)) return null;'), "decodeCommandedEgrAndError should require the EGR error byte");
+    check(functionBody.includes('item.id === "commanded_egr_pid69"') && functionBody.includes('item.id === "egr_error_pid69"'), "decodeCommandedEgrAndError should resolve commanded EGR and EGR error definitions");
+    check(functionBody.includes('value: Number((a * 100 / 255).toFixed(3))'), "decodeCommandedEgrAndError should decode commanded EGR percentage");
+    check(functionBody.includes('value: Number(((b - 128) * 100 / 128).toFixed(3))'), "decodeCommandedEgrAndError should decode signed EGR error percentage");
+    check(functionBody.includes('return values.length ? values : null;'), "decodeCommandedEgrAndError should return null without decoded EGR values");
+  }
+};
+const basicEnumPidFunctionChecks = () => {
+  check(Boolean(secondaryAirStatusFunctionSource), "decodeSecondaryAirStatus is missing from obd-readonly.js");
+  if (secondaryAirStatusFunctionSource) {
+    const functionBody = secondaryAirStatusFunctionSource[0];
+    check(functionBody.includes('0x01: "upstream"') && functionBody.includes('0x08: "pump_commanded_on_for_diagnostics"'), "decodeSecondaryAirStatus should retain secondary-air status labels");
+    check(functionBody.includes('return labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;'), "decodeSecondaryAirStatus should provide an unknown hex fallback");
+  }
+  check(Boolean(oxygenSensorLocationsFunctionSource), "decodeOxygenSensorLocations is missing from obd-readonly.js");
+  if (oxygenSensorLocationsFunctionSource) {
+    const functionBody = oxygenSensorLocationsFunctionSource[0];
+    check(functionBody.includes('["b1s1", "b1s2", "b2s1", "b2s2", "b3s1", "b3s2", "b4s1", "b4s2"]'), "decodeOxygenSensorLocations should retain the four-bank oxygen sensor layout");
+    check(functionBody.includes('["b1s1", "b1s2", "b1s3", "b1s4", "b2s1", "b2s2", "b2s3", "b2s4"]'), "decodeOxygenSensorLocations should retain the two-bank oxygen sensor layout");
+    check(functionBody.includes('const present = labels.filter((_, index) => Boolean(a & (1 << index)));'), "decodeOxygenSensorLocations should map set bits to sensor locations");
+    check(functionBody.includes('return present.length ? present.join(",") : "none_reported";'), "decodeOxygenSensorLocations should report none when no sensor bits are set");
+  }
+  check(Boolean(auxiliaryInputStatusFunctionSource), "decodeAuxiliaryInputStatus is missing from obd-readonly.js");
+  if (auxiliaryInputStatusFunctionSource) {
+    const functionBody = auxiliaryInputStatusFunctionSource[0];
+    check(functionBody.includes('return (a & 0x01) ? "pto_active" : "pto_inactive";'), "decodeAuxiliaryInputStatus should decode PTO state from bit 0");
+  }
+  check(Boolean(obdStandardFunctionSource), "decodeObdStandard is missing from obd-readonly.js");
+  if (obdStandardFunctionSource) {
+    const functionBody = obdStandardFunctionSource[0];
+    check(functionBody.includes('0x01: "obd_ii_california_arb"') && functionBody.includes('0x0A: "jobd"'), "decodeObdStandard should retain OBD II and JOBD labels");
+    check(functionBody.includes('0x13: "heavy_duty_obd"') && functionBody.includes('0x14: "wwh_obd"'), "decodeObdStandard should retain heavy-duty and WWH-OBD labels");
+    check(functionBody.includes('return labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;'), "decodeObdStandard should provide an unknown hex fallback");
+  }
+  check(Boolean(fuelTypeFunctionSource), "decodeFuelType is missing from obd-readonly.js");
+  if (fuelTypeFunctionSource) {
+    const functionBody = fuelTypeFunctionSource[0];
+    check(functionBody.includes('0x01: "gasoline"') && functionBody.includes('0x04: "diesel"') && functionBody.includes('0x08: "electric"'), "decodeFuelType should retain core fuel-type labels");
+    check(functionBody.includes('0x11: "hybrid_gasoline"') && functionBody.includes('0x17: "bifuel_diesel"'), "decodeFuelType should retain hybrid and bifuel labels");
+    check(functionBody.includes('return labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;'), "decodeFuelType should provide an unknown hex fallback");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -1030,6 +1082,8 @@ fuelSystemStatusPidFunctionChecks();
 oxygenSensorPidFunctionChecks();
 wideOxygenSensorPidFunctionChecks();
 enginePercentTorqueDataFunctionChecks();
+commandedEgrAndErrorFunctionChecks();
+basicEnumPidFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
