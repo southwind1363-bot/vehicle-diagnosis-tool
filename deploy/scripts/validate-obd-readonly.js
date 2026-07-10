@@ -103,6 +103,8 @@ const negativeResponseCodeFunctionSource = source.match(/function decodeNegative
 const textImportMetadataFunctionSource = source.match(/function buildTextImportMetadata[\s\S]*?sourceLength: Number\.isFinite[\s\S]*?\r?\n    \};\r?\n  \}/);
 const supportedPidMatrixFunctionSource = source.match(/function buildSupportedPidMatrix[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const standardPidValueFunctionSource = source.match(/function decodeStandardPidValue[\s\S]*?unit: definition\.unit\r?\n    \};\r?\n  \}/);
+const standardPidPayloadLengthFunctionSource = source.match(/function getStandardPidPayloadLength[\s\S]*?return 0;\r?\n  \}/);
+const responsePayloadFunctionSource = source.match(/function getResponsePayload[\s\S]*?return bytes\.slice\(payloadStart, payloadEnd\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -824,6 +826,28 @@ const standardPidValueFunctionChecks = () => {
     check(functionBody.includes('value: typeof value === "number" ? Number(value.toFixed(3)) : value'), "decodeStandardPidValue should round decoded numeric values consistently");
   }
 };
+const standardPidPayloadLengthFunctionChecks = () => {
+  check(Boolean(standardPidPayloadLengthFunctionSource), "getStandardPidPayloadLength is missing from obd-readonly.js");
+  if (standardPidPayloadLengthFunctionSource) {
+    const functionBody = standardPidPayloadLengthFunctionSource[0];
+    check(functionBody.includes('const oneBytePids = [') && functionBody.includes('"04"') && functionBody.includes('"A5"'), "getStandardPidPayloadLength should retain one-byte PID mapping");
+    check(functionBody.includes('const twoBytePids = [') && functionBody.includes('"0C"') && functionBody.includes('"69"'), "getStandardPidPayloadLength should retain two-byte PID mapping");
+    check(functionBody.includes('const fourBytePids = ["01", "24"') && functionBody.includes('"A6"'), "getStandardPidPayloadLength should retain four-byte PID mapping");
+    check(functionBody.includes('if (oneBytePids.includes(pid)) return 1;') && functionBody.includes('if (twoBytePids.includes(pid)) return 2;'), "getStandardPidPayloadLength should return fixed lengths for known one- and two-byte PIDs");
+    check(functionBody.includes('if (fourBytePids.includes(pid)) return 4;') && functionBody.includes('if (pid === "64") return 5;'), "getStandardPidPayloadLength should return fixed lengths for four- and five-byte PIDs");
+    check(functionBody.includes('return 0;'), "getStandardPidPayloadLength should return zero for unknown-length PIDs");
+  }
+};
+const responsePayloadFunctionChecks = () => {
+  check(Boolean(responsePayloadFunctionSource), "getResponsePayload is missing from obd-readonly.js");
+  if (responsePayloadFunctionSource) {
+    const functionBody = responsePayloadFunctionSource[0];
+    check(functionBody.includes('if (payloadLength > 0) return bytes.slice(payloadStart, payloadStart + payloadLength);'), "getResponsePayload should use fixed payload length when known");
+    check(functionBody.includes('const nextHeader = bytes.findIndex((byte, nextIndex) => nextIndex > payloadStart && byte === responseHeader);'), "getResponsePayload should find the next response header for unknown-length payloads");
+    check(functionBody.includes('const payloadEnd = nextHeader > payloadStart ? nextHeader : bytes.length;'), "getResponsePayload should fall back to end of bytes when no next header exists");
+    check(functionBody.includes('return bytes.slice(payloadStart, payloadEnd);'), "getResponsePayload should slice only the current response payload");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -925,6 +949,8 @@ negativeResponseCodeFunctionChecks();
 textImportMetadataFunctionChecks();
 supportedPidMatrixFunctionChecks();
 standardPidValueFunctionChecks();
+standardPidPayloadLengthFunctionChecks();
+responsePayloadFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
