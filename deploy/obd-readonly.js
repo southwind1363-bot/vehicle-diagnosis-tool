@@ -2332,6 +2332,10 @@
     const remainingReadoutIds = requiredReadouts
       .filter((item) => !item.captured && !emptyReadoutIds.includes(item.id))
       .map((item) => item.id);
+    const readoutStates = requiredReadouts.map((item) => ({
+      id: item.id,
+      status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"
+    }));
     const blockingWarningIds = resolveWarningList(warnings).filter((warning) => (
       warning === "bridge_readout_incomplete"
       || warning === "bridge_readout_empty_sections"
@@ -2371,6 +2375,7 @@
       missingReadoutIds: remainingReadoutIds,
       remainingReadoutIds,
       emptyReadoutIds,
+      readoutStates,
       nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,
       blockingWarningIds,
       readyForAnalysis
