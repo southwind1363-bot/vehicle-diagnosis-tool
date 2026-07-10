@@ -102,6 +102,7 @@ const negativeObdResponseFunctionSource = source.match(/function decodeNegativeO
 const negativeResponseCodeFunctionSource = source.match(/function decodeNegativeResponseCode[\s\S]*?return labels\[responseCode\] \|\| "unknown_negative_response";\r?\n  \}/);
 const textImportMetadataFunctionSource = source.match(/function buildTextImportMetadata[\s\S]*?sourceLength: Number\.isFinite[\s\S]*?\r?\n    \};\r?\n  \}/);
 const supportedPidMatrixFunctionSource = source.match(/function buildSupportedPidMatrix[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const standardPidValueFunctionSource = source.match(/function decodeStandardPidValue[\s\S]*?unit: definition\.unit\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -810,6 +811,19 @@ const supportedPidMatrixFunctionChecks = () => {
     check(functionBody.includes('retainedRawText: false'), "buildSupportedPidMatrix should never retain raw text");
   }
 };
+const standardPidValueFunctionChecks = () => {
+  check(Boolean(standardPidValueFunctionSource), "decodeStandardPidValue is missing from obd-readonly.js");
+  if (standardPidValueFunctionSource) {
+    const functionBody = standardPidValueFunctionSource[0];
+    check(functionBody.includes('monitorDefinitions.find((item) => item.service === "01" && item.pid === pid)'), "decodeStandardPidValue should resolve Mode 01 monitor definitions by PID");
+    check(functionBody.includes('if (!Number.isInteger(a)) return null;'), "decodeStandardPidValue should reject payloads without a first byte");
+    check(functionBody.includes('decodeOxygenSensorPid(pid, a, b)') && functionBody.includes('decodeWideOxygenVoltagePid(pid, a, b, c, d)'), "decodeStandardPidValue should route oxygen sensor PID families to specialized decoders");
+    check(functionBody.includes('if (pid === "01") return decodeMonitorStatusPid(pid, a, b);') && functionBody.includes('else if (pid === "03") return decodeFuelSystemStatusPid(pid, a, b);'), "decodeStandardPidValue should preserve status PID specialized decoders");
+    check(functionBody.includes('else if (pid === "0C" && Number.isInteger(b)) value = ((a * 256) + b) / 4;') && functionBody.includes('else if (pid === "42" && Number.isInteger(b)) value = ((a * 256) + b) / 1000;'), "decodeStandardPidValue should preserve RPM and control-module-voltage formulas");
+    check(functionBody.includes('else if (definition.valueType === "number") return buildUndecodedPidValue(definition, pid, dataBytes);'), "decodeStandardPidValue should retain undecoded numeric PIDs as explicit raw values");
+    check(functionBody.includes('value: typeof value === "number" ? Number(value.toFixed(3)) : value'), "decodeStandardPidValue should round decoded numeric values consistently");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -910,6 +924,7 @@ negativeObdResponseFunctionChecks();
 negativeResponseCodeFunctionChecks();
 textImportMetadataFunctionChecks();
 supportedPidMatrixFunctionChecks();
+standardPidValueFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
