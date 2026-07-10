@@ -2370,6 +2370,11 @@
       })[0] || null;
     const nextReadoutCandidate = nextReadoutCandidates[0] ? { ...nextReadoutCandidates[0] } : null;
     const nextRecommendedReadoutId = nextReadoutCandidate?.id || fallbackNextRecommendedReadoutId;
+    const nextReadoutSource = nextReadoutCandidate
+      ? "explicit_candidate"
+      : fallbackNextRecommendedReadoutId
+        ? "fallback_state"
+        : null;
     const nextReadoutState = readoutStates.find((item) => item.id === nextRecommendedReadoutId) || null;
     const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
     const completionPercent = normalizedCoverage.totalCategories > 0
@@ -2396,6 +2401,7 @@
       readoutStateSummary,
       nextReadoutCandidate,
       nextRecommendedReadoutId,
+      nextReadoutSource,
       nextReadoutState,
       blockingWarningIds,
       readyForAnalysis

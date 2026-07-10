@@ -519,6 +519,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const nextReadoutCandidate = nextReadoutCandidates[0] ? { ...nextReadoutCandidates[0] } : null;'), "buildCoreSessionStatus should preserve the resolved next readout candidate details");
     check(functionBody.includes('const nextRecommendedReadoutId = nextReadoutCandidate?.id || fallbackNextRecommendedReadoutId;'), "buildCoreSessionStatus should resolve the next recommended readout id once");
+    check(functionBody.includes('const nextReadoutSource = nextReadoutCandidate') && functionBody.includes('? "explicit_candidate"') && functionBody.includes('? "fallback_state"'), "buildCoreSessionStatus should identify next-readout source");
     check(functionBody.includes('const nextReadoutState = readoutStates.find((item) => item.id === nextRecommendedReadoutId) || null;'), "buildCoreSessionStatus should expose the state for the next recommended readout");
     check(functionBody.includes('const readyForAnalysis = remainingReadoutIds.length === 0') && functionBody.includes('&& emptyReadoutIds.length === 0') && functionBody.includes('&& blockingWarningIds.length === 0;'), "buildCoreSessionStatus should require no remaining, empty, or blocking readouts before analysis-ready");
     check(functionBody.includes('const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);'), "buildCoreSessionStatus should calculate direct completion from captured core readouts");
@@ -531,6 +532,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('readoutStateSummary,'), "buildCoreSessionStatus should expose per-readout state summary");
     check(functionBody.includes('nextReadoutCandidate,'), "buildCoreSessionStatus should expose the resolved next readout candidate");
     check(functionBody.includes('nextRecommendedReadoutId,'), "buildCoreSessionStatus should expose the resolved next recommended readout id");
+    check(functionBody.includes('nextReadoutSource,'), "buildCoreSessionStatus should expose the next readout source");
     check(functionBody.includes('nextReadoutState,'), "buildCoreSessionStatus should expose the next readout state");
   }
 };
@@ -6894,6 +6896,7 @@ check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "
 check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly treated plain-object coverage override with empty and missing readouts as analysis-ready");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot from plain-object coverage override emptyIds");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutSource === "explicit_candidate", "Diagnostic scan session did not mark explicit next readout source from generated candidates");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutCandidate?.id === "freeze_frame_snapshot" && Boolean(scanSessionPlainCoverageOverride.coreSessionStatus.nextReadoutCandidate?.reason), "Diagnostic scan session did not preserve next readout candidate details");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutState?.id === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.coreSessionStatus.nextReadoutState?.status === "empty", "Diagnostic scan session did not expose next readout state");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not derive captured core readout ids from coverage items");
@@ -6957,6 +6960,7 @@ check(scanSessionCamelCoverageOverride.hadSensitiveIdentifier === true, "Diagnos
 check(!scanSessionCamelCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionCamelCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when camelCase coverage disabled infrastructure");
 check(scanSessionCamelCoverageOverride.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly treated camelCase coverage override with empty and missing readouts as analysis-ready");
 check(scanSessionCamelCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "custom_camel_snapshot", "Diagnostic scan session did not preserve camelCase nextReadoutCandidates over coverage override emptyIds");
+check(scanSessionCamelCoverageOverride.coreSessionStatus?.nextReadoutSource === "explicit_candidate", "Diagnostic scan session did not mark explicit next readout source");
 check(Array.isArray(scanSessionCamelCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionCamelCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionCamelCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve camelCase coverage override emptyReadoutIds");
 const scanSessionSnakeCoverageOverride = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-coverage-override",
@@ -6978,6 +6982,7 @@ check(!scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_incomp
 check(scanSessionSnakeCoverageOverride.coreSessionStatus?.applicabilityStatus === "unknown", "Diagnostic scan session did not preserve unknown applicability when coverage override omitted vehicle applicability");
 check(scanSessionSnakeCoverageOverride.coreSessionStatus?.completionPercent === 29, "Diagnostic scan session did not preserve explicit coverage completion progress");
 check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not prioritize dtc_snapshot when coverage override omitted vehicle applicability");
+check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextReadoutSource === "fallback_state", "Diagnostic scan session did not mark fallback next readout source");
 const scanSessionCoverageOnlyProgress = obd.buildDiagnosticScanSession({
   session_id: "shop-test-coverage-only-progress",
   readout_coverage: {
