@@ -2320,6 +2320,7 @@
       { id: "supported_pid_matrix", captured: isCapturedReadout(supportedPidMatrix, "supportedPids") || isCoverageCapturedReadout("supported_pid_matrix") },
       { id: "live_pid_snapshot", captured: isCapturedReadout(livePidSnapshot, "monitorValues") || isCoverageCapturedReadout("live_pid_snapshot") }
     ];
+    const requiredReadoutIds = requiredReadouts.map((item) => item.id);
     const capturedReadoutIds = requiredReadouts.filter((item) => item.captured).map((item) => item.id);
     const coverageEmptyReadoutIds = (normalizedCoverage.items || [])
       .filter((item) => item && item.status === "empty" && typeof item.id === "string")
@@ -2413,6 +2414,7 @@
       completionPercent,
       applicabilityStatus: applicability.status || "unknown",
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
+      requiredReadoutIds,
       capturedReadoutIds,
       missingReadoutIds: remainingReadoutIds,
       remainingReadoutIds,
