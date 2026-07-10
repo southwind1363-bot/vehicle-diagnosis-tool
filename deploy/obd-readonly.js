@@ -2339,6 +2339,7 @@
       priority: fallbackPriorityById[item.id] || 0,
       status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"
     }));
+    const readoutStateById = Object.fromEntries(readoutStates.map((item) => [item.id, { ...item }]));
     const readoutStateSummary = {
       totalCount: readoutStates.length,
       capturedCount: capturedReadoutIds.length,
@@ -2407,6 +2408,7 @@
       remainingReadoutIds,
       emptyReadoutIds,
       readoutStates,
+      readoutStateById,
       readoutStateSummary,
       nextReadoutCandidate,
       nextRecommendedReadoutId,
