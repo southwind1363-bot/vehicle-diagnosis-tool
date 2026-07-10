@@ -95,6 +95,7 @@ const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPacke
 const normalizeCanLogLineFormatFunctionSource = source.match(/function normalizeCanLogLineFormat[\s\S]*?return text;\r?\n  \}/);
 const normalizeCanCsvLogLineFunctionSource = source.match(/function normalizeCanCsvLogLine[\s\S]*?join\(" "\);\r?\n  \}/);
 const extractObdFrameMetadataFunctionSource = source.match(/function extractObdFrameMetadata[\s\S]*?serviceIndex: Number\.isInteger\(serviceIndex\) && serviceIndex >= 0 \? serviceIndex : null\r?\n    \};\r?\n  \}/);
+const ecuResponsesFromBucketsFunctionSource = source.match(/function buildEcuResponsesFromResponseBuckets[\s\S]*?negative_response_labels: \[\.\.\.row\.negative_response_labels\]\r?\n    \}\)\);\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -720,6 +721,18 @@ const extractObdFrameMetadataFunctionChecks = () => {
     check(functionBody.includes('serviceIndex: Number.isInteger(serviceIndex) && serviceIndex >= 0 ? serviceIndex : null'), "extractObdFrameMetadata should preserve valid service indexes only");
   }
 };
+const ecuResponsesFromBucketsFunctionChecks = () => {
+  check(Boolean(ecuResponsesFromBucketsFunctionSource), "buildEcuResponsesFromResponseBuckets is missing from obd-readonly.js");
+  if (ecuResponsesFromBucketsFunctionSource) {
+    const functionBody = ecuResponsesFromBucketsFunctionSource[0];
+    check(functionBody.includes('Object.values(responseBuckets || {}).flat().filter((row) => row?.ecu)'), "buildEcuResponsesFromResponseBuckets should aggregate only packets with ECU ids");
+    check(functionBody.includes('const byEcu = new Map();') && functionBody.includes('byEcu.get(packet.ecu)'), "buildEcuResponsesFromResponseBuckets should group responses by ECU");
+    check(functionBody.includes('services: new Set()') && functionBody.includes('if (packet.service) current.services.add(packet.service);'), "buildEcuResponsesFromResponseBuckets should deduplicate service ids per ECU");
+    check(functionBody.includes('negative_response_count: 0') && functionBody.includes('current.negative_response_count += 1;'), "buildEcuResponsesFromResponseBuckets should count negative responses per ECU");
+    check(functionBody.includes('negative_requested_services: new Set()') && functionBody.includes('negative_response_labels: new Set()'), "buildEcuResponsesFromResponseBuckets should collect negative requested services and labels");
+    check(functionBody.includes('services: [...row.services]') && functionBody.includes('negative_response_labels: [...row.negative_response_labels]'), "buildEcuResponsesFromResponseBuckets should return serializable ECU response arrays");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -813,6 +826,7 @@ buildObdLogPacketsFunctionChecks();
 normalizeCanLogLineFormatFunctionChecks();
 normalizeCanCsvLogLineFunctionChecks();
 extractObdFrameMetadataFunctionChecks();
+ecuResponsesFromBucketsFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
