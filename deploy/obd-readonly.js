@@ -2336,6 +2336,12 @@
       id: item.id,
       status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"
     }));
+    const readoutStateSummary = {
+      totalCount: readoutStates.length,
+      capturedCount: capturedReadoutIds.length,
+      emptyCount: emptyReadoutIds.length,
+      missingCount: remainingReadoutIds.length
+    };
     const blockingWarningIds = resolveWarningList(warnings).filter((warning) => (
       warning === "bridge_readout_incomplete"
       || warning === "bridge_readout_empty_sections"
@@ -2376,6 +2382,7 @@
       remainingReadoutIds,
       emptyReadoutIds,
       readoutStates,
+      readoutStateSummary,
       nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,
       blockingWarningIds,
       readyForAnalysis
