@@ -103,6 +103,8 @@ const negativeResponseCodeFunctionSource = source.match(/function decodeNegative
 const textImportMetadataFunctionSource = source.match(/function buildTextImportMetadata[\s\S]*?sourceLength: Number\.isFinite[\s\S]*?\r?\n    \};\r?\n  \}/);
 const supportedPidMatrixFunctionSource = source.match(/function buildSupportedPidMatrix[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const standardPidValueFunctionSource = source.match(/function decodeStandardPidValue[\s\S]*?unit: definition\.unit\r?\n    \};\r?\n  \}/);
+const undecodedPidValueFunctionSource = source.match(/function buildUndecodedPidValue[\s\S]*?decoded: false,[\s\S]*?\r?\n    \};\r?\n  \}/);
+const rawPidBytesFunctionSource = source.match(/function formatRawPidBytes[\s\S]*?join\(" "\);\r?\n  \}/);
 const standardPidPayloadLengthFunctionSource = source.match(/function getStandardPidPayloadLength[\s\S]*?return 0;\r?\n  \}/);
 const responsePayloadFunctionSource = source.match(/function getResponsePayload[\s\S]*?return bytes\.slice\(payloadStart, payloadEnd\);\r?\n  \}/);
 const monitorStatusPidFunctionSource = source.match(/function decodeMonitorStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
@@ -838,6 +840,24 @@ const standardPidValueFunctionChecks = () => {
     check(functionBody.includes('value: typeof value === "number" ? Number(value.toFixed(3)) : value'), "decodeStandardPidValue should round decoded numeric values consistently");
   }
 };
+const undecodedPidValueFunctionChecks = () => {
+  check(Boolean(undecodedPidValueFunctionSource), "buildUndecodedPidValue is missing from obd-readonly.js");
+  if (undecodedPidValueFunctionSource) {
+    const functionBody = undecodedPidValueFunctionSource[0];
+    check(functionBody.includes('const rawHex = formatRawPidBytes(dataBytes);'), "buildUndecodedPidValue should format payload bytes before retaining an undecoded value");
+    check(functionBody.includes('if (!rawHex) return null;'), "buildUndecodedPidValue should reject empty undecoded payloads");
+    check(functionBody.includes('id: definition.id,') && functionBody.includes('pid,'), "buildUndecodedPidValue should retain definition id and PID");
+    check(functionBody.includes('value: rawHex,') && functionBody.includes('unit: definition.unit || "",'), "buildUndecodedPidValue should expose raw hex and a safe unit fallback");
+    check(functionBody.includes('decoded: false,') && functionBody.includes('note:'), "buildUndecodedPidValue should mark undecoded raw values explicitly");
+  }
+  check(Boolean(rawPidBytesFunctionSource), "formatRawPidBytes is missing from obd-readonly.js");
+  if (rawPidBytesFunctionSource) {
+    const functionBody = rawPidBytesFunctionSource[0];
+    check(functionBody.includes('.filter(Number.isInteger)'), "formatRawPidBytes should ignore non-integer byte values");
+    check(functionBody.includes('.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0"))'), "formatRawPidBytes should format bytes as uppercase two-digit hex");
+    check(functionBody.includes('.join(" ");'), "formatRawPidBytes should separate byte values with spaces");
+  }
+};
 const standardPidPayloadLengthFunctionChecks = () => {
   check(Boolean(standardPidPayloadLengthFunctionSource), "getStandardPidPayloadLength is missing from obd-readonly.js");
   if (standardPidPayloadLengthFunctionSource) {
@@ -1075,6 +1095,7 @@ negativeResponseCodeFunctionChecks();
 textImportMetadataFunctionChecks();
 supportedPidMatrixFunctionChecks();
 standardPidValueFunctionChecks();
+undecodedPidValueFunctionChecks();
 standardPidPayloadLengthFunctionChecks();
 responsePayloadFunctionChecks();
 monitorStatusPidFunctionChecks();
