@@ -504,6 +504,8 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const readyForAnalysis = remainingReadoutIds.length === 0') && functionBody.includes('&& emptyReadoutIds.length === 0') && functionBody.includes('&& blockingWarningIds.length === 0;'), "buildCoreSessionStatus should require no remaining, empty, or blocking readouts before analysis-ready");
+    check(functionBody.includes('const hasReadoutProgress = capturedReadoutIds.length > 0') && functionBody.includes('|| normalizedCoverage.availableCategories > 0;'), "buildCoreSessionStatus should treat explicit readout coverage progress as collecting readouts");
+    check(functionBody.includes('status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",'), "buildCoreSessionStatus should derive status from analysis readiness and readout progress");
     check(functionBody.includes('nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,'), "buildCoreSessionStatus should prefer explicit next readout candidates over fallback recommendation");
   }
 };
@@ -6931,6 +6933,20 @@ check(scanSessionSnakeCoverageOverride.readoutCoverage.includeInfrastructure ===
 check(!scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionSnakeCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when include_infrastructure alias disabled infrastructure");
 check(scanSessionSnakeCoverageOverride.coreSessionStatus?.applicabilityStatus === "unknown", "Diagnostic scan session did not preserve unknown applicability when coverage override omitted vehicle applicability");
 check(scanSessionSnakeCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not prioritize dtc_snapshot when coverage override omitted vehicle applicability");
+const scanSessionCoverageOnlyProgress = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-coverage-only-progress",
+  readout_coverage: {
+    include_infrastructure: false,
+    totalCategories: 7,
+    availableCategories: 1,
+    capturedCategories: 0,
+    emptyCategories: 1,
+    missingCategories: 6,
+    emptyIds: ["dtc_snapshot"],
+    missingIds: ["freeze_frame_snapshot", "readiness_snapshot", "ecu_info_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix", "live_pid_snapshot"]
+  }
+});
+check(scanSessionCoverageOnlyProgress.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not treat explicit coverage-only progress as collecting readouts");
 const scanSessionSnakeCoverageManualApplicability = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-coverage-manual-applicability",
   readout_coverage: {

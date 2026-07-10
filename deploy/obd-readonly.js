@@ -2343,9 +2343,12 @@
     const readyForAnalysis = remainingReadoutIds.length === 0
       && emptyReadoutIds.length === 0
       && blockingWarningIds.length === 0;
+    const hasReadoutProgress = capturedReadoutIds.length > 0
+      || emptyReadoutIds.length > 0
+      || normalizedCoverage.availableCategories > 0;
     return {
       stage: "diagnostic_core",
-      status: readyForAnalysis ? "analysis_ready" : capturedReadoutIds.length ? "collecting_readouts" : "not_started",
+      status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",
       completionPercent,
       applicabilityStatus: applicability.status || "unknown",
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
