@@ -78,6 +78,8 @@ const warningListFunctionSource = source.match(/function resolveWarningList[\s\S
 const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
 const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?return explicitSummary \|\| buildMonitorValueSummary\(monitorValues\);\r?\n  \}/);
 const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonitorValueSummary[\s\S]*?textCount\r?\n    \};\r?\n  \}/);
+const analyzeMonitorValuesFunctionSource = source.match(/function analyzeMonitorValues[\s\S]*?return insights\.slice\(0, 6\);\r?\n  \}/);
+const fuelTrimInsightFunctionSource = source.match(/function addFuelTrimInsight[\s\S]*?\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
@@ -558,6 +560,29 @@ const buildMonitorValueSummaryFunctionChecks = () => {
     check(functionBody.includes('Number.isFinite(item?.value)'), "buildMonitorValueSummary should count numeric values only from finite numeric values");
     check(functionBody.includes('decodedCount: Math.max(0, rows.length - undecodedRawCount),'), "buildMonitorValueSummary should derive decoded count without going below zero");
     check(functionBody.includes('numericCount,') && functionBody.includes('textCount'), "buildMonitorValueSummary should expose numeric and text counts");
+  }
+};
+const analyzeMonitorValuesFunctionChecks = () => {
+  check(Boolean(analyzeMonitorValuesFunctionSource), "analyzeMonitorValues is missing from obd-readonly.js");
+  if (analyzeMonitorValuesFunctionSource) {
+    const functionBody = analyzeMonitorValuesFunctionSource[0];
+    check(functionBody.includes('const byId = new Map(values.map((item) => [item.id, item]));'), "analyzeMonitorValues should index monitor values by id");
+    check(functionBody.includes('return item && item.valueType !== "text" && Number.isFinite(item.value) ? item.value : null;'), "analyzeMonitorValues should only treat finite non-text values as numeric inputs");
+    check(functionBody.includes('const add = (level, title, detail, nextStep) => {') && functionBody.includes('insights.push({ level, title, detail, nextStep });'), "analyzeMonitorValues should normalize insight shape through a single add helper");
+    check(functionBody.includes('const rpm = numeric("engine_speed");') && functionBody.includes('const voltage = numeric("control_module_voltage");'), "analyzeMonitorValues should derive core engine speed and voltage inputs");
+    check(functionBody.includes('stftB1, ltftB1, add);') && functionBody.includes('stftB2, ltftB2, add);'), "analyzeMonitorValues should evaluate both fuel-trim banks");
+    check(functionBody.includes('voltage !== null && voltage < 11.5') && functionBody.includes('voltage !== null && voltage > 15.2'), "analyzeMonitorValues should flag low and high control-module voltage");
+    check(functionBody.includes('coolant !== null && intakeTemp !== null && Math.abs(coolant - intakeTemp) >= 35'), "analyzeMonitorValues should compare coolant and intake temperature context");
+    check(functionBody.includes('rpm !== null && rpm > 500 && speed !== null && speed === 0 && map !== null && map >= 60'), "analyzeMonitorValues should flag high MAP in likely idle context");
+    check(functionBody.includes('if (!insights.length && values.length)') && functionBody.includes('return insights.slice(0, 6);'), "analyzeMonitorValues should provide a fallback insight and cap insight count");
+  }
+  check(Boolean(fuelTrimInsightFunctionSource), "addFuelTrimInsight is missing from obd-readonly.js");
+  if (fuelTrimInsightFunctionSource) {
+    const functionBody = fuelTrimInsightFunctionSource[0];
+    check(functionBody.includes('if (shortTrim === null || longTrim === null) return;'), "addFuelTrimInsight should require both short and long fuel trim values");
+    check(functionBody.includes('const total = shortTrim + longTrim;') && functionBody.includes('const absoluteTotal = Math.abs(total);'), "addFuelTrimInsight should evaluate combined fuel trim magnitude");
+    check(functionBody.includes('if (absoluteTotal >= 15)') && functionBody.includes('} else if (absoluteTotal >= 8)'), "addFuelTrimInsight should separate caution and observation fuel-trim thresholds");
+    check(functionBody.includes('total > 0'), "addFuelTrimInsight should branch next steps by lean versus rich direction");
   }
 };
 const bridgeSessionSummaryFunctionChecks = () => {
@@ -1236,6 +1261,7 @@ warningListFunctionChecks();
 readoutCoverageInputFunctionChecks();
 monitorValueSummaryFunctionChecks();
 buildMonitorValueSummaryFunctionChecks();
+analyzeMonitorValuesFunctionChecks();
 bridgeReadoutWarningsFunctionChecks();
 bridgeSessionSummaryFunctionChecks();
 dtcSnapshotFunctionChecks();
