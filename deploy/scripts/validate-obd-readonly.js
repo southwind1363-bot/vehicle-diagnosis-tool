@@ -52,6 +52,8 @@ const mergedBridgeMetadataFunctionSource = source.match(/function buildMergedBri
 const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummaryInput[\s\S]*?endedAt: parts\.endedAt \|\| parts\.ended_at \|\| nested\.endedAt \|\| nested\.ended_at \|\| null,\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
+const bridgeBlockedResponseFunctionSource = source.match(/function createLocalBridgeBlockedResponse[\s\S]*?data: schema \? cloneBridgeValue\(schema\.safeDefault\) : null\r?\n    \};\r?\n  \}/);
+const bridgeRequestEvaluationFunctionSource = source.match(/function evaluateLocalBridgeRequest[\s\S]*?localBridgeContract\.connectionEnabled[\s\S]*?\r?\n    \};\r?\n  \}/);
 const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
 const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.protocol_name \|\| data\.protocolName \|\| data\.bus_protocol \|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
@@ -235,6 +237,27 @@ const detectBridgeInfrastructureFunctionChecks = () => {
     check(functionBody.includes('if (honorCoverageOverride && typeof explicitIncludeInfrastructureValue === \"boolean\") {'), "detectBridgeInfrastructureContext should honor explicit readout coverage override before inference");
     check(functionBody.includes('return explicitIncludeInfrastructureValue;'), "detectBridgeInfrastructureContext should return explicit includeInfrastructure override when enabled");
     check(functionBody.includes('|| Boolean(nestedSession);'), "detectBridgeInfrastructureContext should infer bridge infrastructure context from nested session presence");
+  }
+};
+const bridgeReadOnlyGateFunctionChecks = () => {
+  check(Boolean(bridgeBlockedResponseFunctionSource), "createLocalBridgeBlockedResponse is missing from obd-readonly.js");
+  if (bridgeBlockedResponseFunctionSource) {
+    const functionBody = bridgeBlockedResponseFunctionSource[0];
+    check(functionBody.includes('const schema = localBridgeResponseSchemas.find((item) => item.intent === intent);'), "createLocalBridgeBlockedResponse should resolve a safe default response schema by intent");
+    check(functionBody.includes('ok: false') && functionBody.includes('blocked: true') && functionBody.includes('would_transmit: false'), "createLocalBridgeBlockedResponse should always return a blocked non-transmitting response");
+    check(functionBody.includes('errors: errors.length ? [...errors] : ["local_bridge_disabled"]'), "createLocalBridgeBlockedResponse should default to a local_bridge_disabled error");
+    check(functionBody.includes('data: schema ? cloneBridgeValue(schema.safeDefault) : null'), "createLocalBridgeBlockedResponse should clone safe defaults and avoid shared mutation");
+  }
+  check(Boolean(bridgeRequestEvaluationFunctionSource), "evaluateLocalBridgeRequest is missing from obd-readonly.js");
+  if (bridgeRequestEvaluationFunctionSource) {
+    const functionBody = bridgeRequestEvaluationFunctionSource[0];
+    check(functionBody.includes('request.request_id || request.requestId') && functionBody.includes('request.pairing_token || request.pairingToken'), "evaluateLocalBridgeRequest should normalize request id and pairing token aliases");
+    check(functionBody.includes('const isAllowedRead = localBridgeContract.allowedReadIntents.includes(intent);'), "evaluateLocalBridgeRequest should recognize allowed read intents");
+    check(functionBody.includes('const isBlockedWrite = localBridgeContract.blockedWriteIntents.includes(intent);'), "evaluateLocalBridgeRequest should recognize blocked write intents");
+    check(functionBody.includes('const missingFields = localBridgeContract.requiredRequestFields.filter((field) => !normalizedRequest[field]);'), "evaluateLocalBridgeRequest should enforce required bridge request fields");
+    check(functionBody.includes('ok: false') && functionBody.includes('blocked: true') && functionBody.includes('wouldTransmit: false'), "evaluateLocalBridgeRequest should remain fail-closed and non-transmitting");
+    check(functionBody.includes('vehicleCommandEnabled: false'), "evaluateLocalBridgeRequest should keep vehicle commands disabled");
+    check(functionBody.includes('response: createLocalBridgeBlockedResponse(intent, missingFields.length ? ["missing_required_fields"] : [])'), "evaluateLocalBridgeRequest should return a safe blocked bridge response");
   }
 };
 const bridgeResponseSafetyFunctionChecks = () => {
@@ -1362,6 +1385,7 @@ mergedBridgeMetadataFunctionChecks();
 bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
+bridgeReadOnlyGateFunctionChecks();
 bridgeResponseSafetyFunctionChecks();
 bridgeCoreReadoutNormalizerFunctionChecks();
 bridgeExtendedCoreReadoutNormalizerFunctionChecks();
