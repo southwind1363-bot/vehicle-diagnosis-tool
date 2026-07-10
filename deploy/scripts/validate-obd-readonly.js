@@ -75,6 +75,7 @@ const importClassificationFunctionSource = source.match(/function resolveImportC
 const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s\S]*?return flags;\r?\n  \}/);
 const commonCoreWarningsFunctionSource = source.match(/function appendCommonCoreWarnings[\s\S]*?appendVehicleApplicabilityWarnings\(warnings, vehicleApplicability \|\| \{\}\);\r?\n  \}/);
 const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
+const mergeDiagnosticInputsFunctionSource = source.match(/function mergeDiagnosticInputs[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
 const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?return explicitSummary \|\| buildMonitorValueSummary\(monitorValues\);\r?\n  \}/);
 const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonitorValueSummary[\s\S]*?textCount\r?\n    \};\r?\n  \}/);
@@ -531,6 +532,23 @@ const warningListFunctionChecks = () => {
     const functionBody = warningListFunctionSource[0];
     check(functionBody.includes('function resolveWarningList(...warningSets)'), "resolveWarningList should accept multiple warning sets");
     check(functionBody.includes('return mergeUniqueStrings(...warningSets);'), "resolveWarningList should deduplicate warning sets through mergeUniqueStrings");
+  }
+};
+const mergeDiagnosticInputsFunctionChecks = () => {
+  check(Boolean(mergeDiagnosticInputsFunctionSource), "mergeDiagnosticInputs is missing from obd-readonly.js");
+  if (mergeDiagnosticInputsFunctionSource) {
+    const functionBody = mergeDiagnosticInputsFunctionSource[0];
+    check(functionBody.includes('const scannerTextInput = input.scannerText || input.scanner_text || "";'), "mergeDiagnosticInputs should accept scanner text aliases");
+    check(functionBody.includes('input.bridgeImport') && functionBody.includes('input.bridge_diagnostic_import') && functionBody.includes('input.bridge_export_payload'), "mergeDiagnosticInputs should accept bridge import/export aliases");
+    check(functionBody.includes('const scannerAnalysis = analyzeScannerText(scannerTextInput);'), "mergeDiagnosticInputs should analyze scanner text before merging");
+    check(functionBody.includes('buildBridgeDiagnosticImport(bridgeImportInput)') && functionBody.includes('buildBridgeDiagnosticImport(bridgePartsInput)'), "mergeDiagnosticInputs should normalize bridge import and bridge parts through bridge diagnostic import");
+    check(functionBody.includes('if (item.source === "local_bridge") value += 40;') && functionBody.includes('if (item.decoded === false || item.valueType === "raw_hex") value -= 25;'), "mergeDiagnosticInputs should prefer decoded bridge values while penalizing undecoded raw values");
+    check(functionBody.includes('scannerAnalysis.monitorValues.forEach((item) => {') && functionBody.includes('(bridgeImport?.monitorValues || bridgeSession?.monitorValues || []).forEach((item) => {'), "mergeDiagnosticInputs should merge scanner and bridge monitor values");
+    check(functionBody.includes('const codes = [...new Set([') && functionBody.includes('...scannerAnalysis.codes') && functionBody.includes('...(bridgeImport?.codes || bridgeSession?.codes || [])'), "mergeDiagnosticInputs should deduplicate scanner and bridge DTC codes");
+    check(functionBody.includes('const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);'), "mergeDiagnosticInputs should recalculate monitor summaries and insights from merged values");
+    check(functionBody.includes('const source = bridgeImport') && functionBody.includes('"scanner_text_and_local_bridge"') && functionBody.includes('"local_bridge"') && functionBody.includes('"scanner_text"'), "mergeDiagnosticInputs should classify merged input source");
+    check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "mergeDiagnosticInputs should build core session status from merged diagnostic inputs");
+    check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "mergeDiagnosticInputs should remain read-only and avoid raw text retention");
   }
 };
 const readoutCoverageInputFunctionChecks = () => {
@@ -1258,6 +1276,7 @@ importClassificationFunctionChecks();
 readOnlyFlagsFunctionChecks();
 commonCoreWarningsFunctionChecks();
 warningListFunctionChecks();
+mergeDiagnosticInputsFunctionChecks();
 readoutCoverageInputFunctionChecks();
 monitorValueSummaryFunctionChecks();
 buildMonitorValueSummaryFunctionChecks();
