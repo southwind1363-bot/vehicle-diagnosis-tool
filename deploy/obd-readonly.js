@@ -2334,6 +2334,7 @@
       .map((item) => item.id);
     const readoutStates = requiredReadouts.map((item) => ({
       id: item.id,
+      priority: fallbackPriorityById[item.id] || 0,
       status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"
     }));
     const readoutStateSummary = {
