@@ -2378,6 +2378,7 @@
       || emptyReadoutIds.length > 0
       || normalizedCoverage.availableCategories > 0;
     return {
+      schemaVersion: "core_session_status_v1",
       stage: "diagnostic_core",
       status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",
       completionPercent,

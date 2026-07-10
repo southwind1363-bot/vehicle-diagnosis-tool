@@ -523,6 +523,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);'), "buildCoreSessionStatus should calculate direct completion from captured core readouts");
     check(functionBody.includes('Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)'), "buildCoreSessionStatus should preserve explicit readout coverage completion progress");
     check(functionBody.includes('const hasReadoutProgress = capturedReadoutIds.length > 0') && functionBody.includes('|| normalizedCoverage.availableCategories > 0;'), "buildCoreSessionStatus should treat explicit readout coverage progress as collecting readouts");
+    check(functionBody.includes('schemaVersion: "core_session_status_v1",'), "buildCoreSessionStatus should expose a stable schema version");
     check(functionBody.includes('status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",'), "buildCoreSessionStatus should derive status from analysis readiness and readout progress");
     check(functionBody.includes('missingReadoutIds: remainingReadoutIds,'), "buildCoreSessionStatus should expose missingReadoutIds as an explicit scan-session field");
     check(functionBody.includes('readoutStates,'), "buildCoreSessionStatus should expose per-readout state entries");
@@ -2436,6 +2437,7 @@ check(bridgeSummary.readoutCoverage.capturedCategories >= 7, "Bridge session sum
 check(bridgeSummary.readoutCoverage.emptyCategories === 0, "Bridge session summary counted missing readout sections as empty");
 check(bridgeSummary.readoutCoverage.items.some((item) => item.id === "ecu_info_snapshot" && item.available === true && item.count === 4), "Bridge session summary readout coverage did not count ECU info");
 check(bridgeSummary.coreSessionStatus?.stage === "diagnostic_core", "Bridge session summary did not expose coreSessionStatus stage");
+check(bridgeSummary.coreSessionStatus?.schemaVersion === "core_session_status_v1", "Bridge session summary did not expose coreSessionStatus schema version");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.remainingReadoutIds), "Bridge session summary did not expose coreSessionStatus remainingReadoutIds");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.missingReadoutIds), "Bridge session summary did not expose coreSessionStatus missingReadoutIds");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.emptyReadoutIds), "Bridge session summary did not expose coreSessionStatus emptyReadoutIds");
