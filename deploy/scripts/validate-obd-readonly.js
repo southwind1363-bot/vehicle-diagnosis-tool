@@ -500,7 +500,9 @@ const coreSessionStatusFunctionChecks = () => {
     const functionBody = coreSessionStatusFunctionSource[0];
     check(functionBody.includes('const emptyReadoutIds = Array.isArray(normalizedCoverage.emptyIds)'), "buildCoreSessionStatus should derive empty readout ids from normalized coverage");
     check(functionBody.includes('onboardMonitorSnapshot = null,'), "buildCoreSessionStatus should accept onboard monitor snapshots");
-    check(functionBody.includes('{ id: "onboard_monitor_snapshot", captured: isCapturedReadout(onboardMonitorSnapshot, "tests") }'), "buildCoreSessionStatus should count onboard monitor snapshots as core readouts");
+    check(functionBody.includes('const coverageStatusById = new Map((normalizedCoverage.items || [])'), "buildCoreSessionStatus should index explicit readout coverage item statuses");
+    check(functionBody.includes('const isCoverageCapturedReadout = (id) => coverageStatusById.get(id) === "captured";'), "buildCoreSessionStatus should detect captured readouts from coverage item status");
+    check(functionBody.includes('{ id: "onboard_monitor_snapshot", captured: isCapturedReadout(onboardMonitorSnapshot, "tests") || isCoverageCapturedReadout("onboard_monitor_snapshot") }'), "buildCoreSessionStatus should count onboard monitor snapshots as core readouts");
     check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const readyForAnalysis = remainingReadoutIds.length === 0') && functionBody.includes('&& emptyReadoutIds.length === 0') && functionBody.includes('&& blockingWarningIds.length === 0;'), "buildCoreSessionStatus should require no remaining, empty, or blocking readouts before analysis-ready");
@@ -6869,6 +6871,8 @@ check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "
 check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly treated plain-object coverage override with empty and missing readouts as analysis-ready");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot from plain-object coverage override emptyIds");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not derive captured core readout ids from coverage items");
+check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("dtc_snapshot") && !scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session kept coverage-captured readouts in remaining ids");
 check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve plain-object coverage override emptyReadoutIds");
 const scanSessionCamelCoverageOverride = obd.buildDiagnosticScanSession({
   sessionId: "shop-test-camel-coverage-override",

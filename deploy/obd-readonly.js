@@ -2297,6 +2297,10 @@
       Boolean(snapshot?.capturedAt)
       || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
     );
+    const coverageStatusById = new Map((normalizedCoverage.items || [])
+      .filter((item) => item && typeof item.id === "string")
+      .map((item) => [item.id, item.status]));
+    const isCoverageCapturedReadout = (id) => coverageStatusById.get(id) === "captured";
     const fallbackPriorityById = {
       dtc_snapshot: 100,
       freeze_frame_snapshot: 95,
@@ -2307,13 +2311,13 @@
       onboard_monitor_snapshot: 70
     };
     const requiredReadouts = [
-      { id: "dtc_snapshot", captured: isCapturedReadout(dtcSnapshot, "codes") },
-      { id: "freeze_frame_snapshot", captured: isCapturedReadout(freezeFrameSnapshot, "monitorValues") },
-      { id: "readiness_snapshot", captured: isCapturedReadout(readinessSnapshot, "monitors") },
-      { id: "ecu_info_snapshot", captured: isCapturedReadout(ecuInfoSnapshot, "items") },
-      { id: "onboard_monitor_snapshot", captured: isCapturedReadout(onboardMonitorSnapshot, "tests") },
-      { id: "supported_pid_matrix", captured: isCapturedReadout(supportedPidMatrix, "supportedPids") },
-      { id: "live_pid_snapshot", captured: isCapturedReadout(livePidSnapshot, "monitorValues") }
+      { id: "dtc_snapshot", captured: isCapturedReadout(dtcSnapshot, "codes") || isCoverageCapturedReadout("dtc_snapshot") },
+      { id: "freeze_frame_snapshot", captured: isCapturedReadout(freezeFrameSnapshot, "monitorValues") || isCoverageCapturedReadout("freeze_frame_snapshot") },
+      { id: "readiness_snapshot", captured: isCapturedReadout(readinessSnapshot, "monitors") || isCoverageCapturedReadout("readiness_snapshot") },
+      { id: "ecu_info_snapshot", captured: isCapturedReadout(ecuInfoSnapshot, "items") || isCoverageCapturedReadout("ecu_info_snapshot") },
+      { id: "onboard_monitor_snapshot", captured: isCapturedReadout(onboardMonitorSnapshot, "tests") || isCoverageCapturedReadout("onboard_monitor_snapshot") },
+      { id: "supported_pid_matrix", captured: isCapturedReadout(supportedPidMatrix, "supportedPids") || isCoverageCapturedReadout("supported_pid_matrix") },
+      { id: "live_pid_snapshot", captured: isCapturedReadout(livePidSnapshot, "monitorValues") || isCoverageCapturedReadout("live_pid_snapshot") }
     ];
     const capturedReadoutIds = requiredReadouts.filter((item) => item.captured).map((item) => item.id);
     const remainingReadoutIds = requiredReadouts.filter((item) => !item.captured).map((item) => item.id);
