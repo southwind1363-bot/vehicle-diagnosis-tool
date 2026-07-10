@@ -522,6 +522,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const nextReadoutSource = nextReadoutCandidate') && functionBody.includes('? "explicit_candidate"') && functionBody.includes('? "fallback_state"'), "buildCoreSessionStatus should identify next-readout source");
     check(functionBody.includes('const nextReadoutState = readoutStates.find((item) => item.id === nextRecommendedReadoutId) || null;'), "buildCoreSessionStatus should expose the state for the next recommended readout");
     check(functionBody.includes('const analysisBlockers = [') && functionBody.includes('"missing_readouts"') && functionBody.includes('"empty_readouts"') && functionBody.includes('"blocking_warnings"'), "buildCoreSessionStatus should expose analysis blocker categories");
+    check(functionBody.includes('const analysisBlockerSummary = {') && functionBody.includes('missingReadoutCount: remainingReadoutIds.length') && functionBody.includes('emptyReadoutCount: emptyReadoutIds.length') && functionBody.includes('blockingWarningCount: blockingWarningIds.length'), "buildCoreSessionStatus should expose analysis blocker counts");
     check(functionBody.includes('const readyForAnalysis = analysisBlockers.length === 0;'), "buildCoreSessionStatus should require no analysis blockers before analysis-ready");
     check(functionBody.includes('const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);'), "buildCoreSessionStatus should calculate direct completion from captured core readouts");
     check(functionBody.includes('Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)'), "buildCoreSessionStatus should preserve explicit readout coverage completion progress");
@@ -536,6 +537,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('nextReadoutSource,'), "buildCoreSessionStatus should expose the next readout source");
     check(functionBody.includes('nextReadoutState,'), "buildCoreSessionStatus should expose the next readout state");
     check(functionBody.includes('analysisBlockers,'), "buildCoreSessionStatus should expose analysis blockers");
+    check(functionBody.includes('analysisBlockerSummary,'), "buildCoreSessionStatus should expose analysis blocker summary");
   }
 };
 const nextReadoutCandidatesFunctionChecks = () => {
@@ -6902,6 +6904,9 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutSource === 
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutCandidate?.id === "freeze_frame_snapshot" && Boolean(scanSessionPlainCoverageOverride.coreSessionStatus.nextReadoutCandidate?.reason), "Diagnostic scan session did not preserve next readout candidate details");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutState?.id === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.coreSessionStatus.nextReadoutState?.status === "empty", "Diagnostic scan session did not expose next readout state");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockers?.includes("missing_readouts") && scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockers?.includes("empty_readouts"), "Diagnostic scan session did not expose analysis blockers for missing and empty readouts");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockerSummary?.missingReadoutCount === 4, "Diagnostic scan session did not expose missing readout blocker count");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockerSummary?.emptyReadoutCount === 1, "Diagnostic scan session did not expose empty readout blocker count");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockerSummary?.totalCount === 2, "Diagnostic scan session did not expose analysis blocker category count");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not derive captured core readout ids from coverage items");
 check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("dtc_snapshot") && !scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session kept coverage-captured readouts in remaining ids");
 check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("freeze_frame_snapshot"), "Diagnostic scan session kept coverage-empty readouts in remaining ids");

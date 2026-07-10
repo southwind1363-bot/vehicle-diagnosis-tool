@@ -2385,6 +2385,12 @@
       ...(emptyReadoutIds.length ? ["empty_readouts"] : []),
       ...(blockingWarningIds.length ? ["blocking_warnings"] : [])
     ];
+    const analysisBlockerSummary = {
+      totalCount: analysisBlockers.length,
+      missingReadoutCount: remainingReadoutIds.length,
+      emptyReadoutCount: emptyReadoutIds.length,
+      blockingWarningCount: blockingWarningIds.length
+    };
     const readyForAnalysis = analysisBlockers.length === 0;
     const hasReadoutProgress = capturedReadoutIds.length > 0
       || emptyReadoutIds.length > 0
@@ -2407,6 +2413,7 @@
       nextReadoutSource,
       nextReadoutState,
       analysisBlockers,
+      analysisBlockerSummary,
       blockingWarningIds,
       readyForAnalysis
     };
