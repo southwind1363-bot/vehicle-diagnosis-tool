@@ -98,6 +98,8 @@ const extractObdFrameMetadataFunctionSource = source.match(/function extractObdF
 const ecuResponsesFromBucketsFunctionSource = source.match(/function buildEcuResponsesFromResponseBuckets[\s\S]*?negative_response_labels: \[\.\.\.row\.negative_response_labels\]\r?\n    \}\)\);\r?\n  \}/);
 const isoTpSummaryFunctionSource = source.match(/function buildIsoTpSummary[\s\S]*?affectedEcus: \[\.\.\.new Set[\s\S]*?\r?\n    \};\r?\n  \}/);
 const negativeResponseSummaryFunctionSource = source.match(/function buildNegativeResponseSummary[\s\S]*?responseLabels: \[\.\.\.new Set[\s\S]*?\r?\n    \};\r?\n  \}/);
+const negativeObdResponseFunctionSource = source.match(/function decodeNegativeObdResponse[\s\S]*?responseLabel: decodeNegativeResponseCode\(responseCode\)\r?\n    \};\r?\n  \}/);
+const negativeResponseCodeFunctionSource = source.match(/function decodeNegativeResponseCode[\s\S]*?return labels\[responseCode\] \|\| "unknown_negative_response";\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -758,6 +760,28 @@ const negativeResponseSummaryFunctionChecks = () => {
     check(functionBody.includes('responseLabels: [...new Set(rows.map((packet) => packet?.negativeResponse?.responseLabel).filter(Boolean))]'), "buildNegativeResponseSummary should deduplicate negative response labels");
   }
 };
+const negativeObdResponseFunctionChecks = () => {
+  check(Boolean(negativeObdResponseFunctionSource), "decodeNegativeObdResponse is missing from obd-readonly.js");
+  if (negativeObdResponseFunctionSource) {
+    const functionBody = negativeObdResponseFunctionSource[0];
+    check(functionBody.includes('const requestedService = bytes[serviceIndex + 1];'), "decodeNegativeObdResponse should read the requested service after 0x7F");
+    check(functionBody.includes('const responseCode = bytes[serviceIndex + 2];'), "decodeNegativeObdResponse should read the negative response code after requested service");
+    check(functionBody.includes('requestedService: Number.isInteger(requestedService) ? requestedService.toString(16).toUpperCase().padStart(2, "0") : null'), "decodeNegativeObdResponse should normalize requested service as uppercase hex");
+    check(functionBody.includes('responseCode: Number.isInteger(responseCode) ? responseCode.toString(16).toUpperCase().padStart(2, "0") : null'), "decodeNegativeObdResponse should normalize response code as uppercase hex");
+    check(functionBody.includes('responseLabel: decodeNegativeResponseCode(responseCode)'), "decodeNegativeObdResponse should attach a decoded response label");
+  }
+};
+const negativeResponseCodeFunctionChecks = () => {
+  check(Boolean(negativeResponseCodeFunctionSource), "decodeNegativeResponseCode is missing from obd-readonly.js");
+  if (negativeResponseCodeFunctionSource) {
+    const functionBody = negativeResponseCodeFunctionSource[0];
+    check(functionBody.includes('0x10: "general_reject"') && functionBody.includes('0x11: "service_not_supported"'), "decodeNegativeResponseCode should include common service rejection labels");
+    check(functionBody.includes('0x12: "subfunction_not_supported"') && functionBody.includes('0x13: "incorrect_message_length_or_format"'), "decodeNegativeResponseCode should include subfunction and message-format labels");
+    check(functionBody.includes('0x21: "busy_repeat_request"') && functionBody.includes('0x22: "conditions_not_correct"'), "decodeNegativeResponseCode should include busy and conditions-not-correct labels");
+    check(functionBody.includes('0x31: "request_out_of_range"') && functionBody.includes('0x78: "response_pending"'), "decodeNegativeResponseCode should include request-range and pending labels");
+    check(functionBody.includes('return labels[responseCode] || "unknown_negative_response";'), "decodeNegativeResponseCode should fall back to unknown_negative_response");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -854,6 +878,8 @@ extractObdFrameMetadataFunctionChecks();
 ecuResponsesFromBucketsFunctionChecks();
 isoTpSummaryFunctionChecks();
 negativeResponseSummaryFunctionChecks();
+negativeObdResponseFunctionChecks();
+negativeResponseCodeFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
