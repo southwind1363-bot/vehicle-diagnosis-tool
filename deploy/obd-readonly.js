@@ -2368,6 +2368,7 @@
       applicabilityStatus: applicability.status || "unknown",
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
       capturedReadoutIds,
+      missingReadoutIds: remainingReadoutIds,
       remainingReadoutIds,
       emptyReadoutIds,
       nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,

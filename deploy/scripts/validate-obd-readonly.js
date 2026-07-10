@@ -513,6 +513,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)'), "buildCoreSessionStatus should preserve explicit readout coverage completion progress");
     check(functionBody.includes('const hasReadoutProgress = capturedReadoutIds.length > 0') && functionBody.includes('|| normalizedCoverage.availableCategories > 0;'), "buildCoreSessionStatus should treat explicit readout coverage progress as collecting readouts");
     check(functionBody.includes('status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",'), "buildCoreSessionStatus should derive status from analysis readiness and readout progress");
+    check(functionBody.includes('missingReadoutIds: remainingReadoutIds,'), "buildCoreSessionStatus should expose missingReadoutIds as an explicit scan-session field");
     check(functionBody.includes('nextRecommendedReadoutId: nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId,'), "buildCoreSessionStatus should prefer explicit next readout candidates over fallback recommendation");
   }
 };
@@ -2421,6 +2422,7 @@ check(bridgeSummary.readoutCoverage.emptyCategories === 0, "Bridge session summa
 check(bridgeSummary.readoutCoverage.items.some((item) => item.id === "ecu_info_snapshot" && item.available === true && item.count === 4), "Bridge session summary readout coverage did not count ECU info");
 check(bridgeSummary.coreSessionStatus?.stage === "diagnostic_core", "Bridge session summary did not expose coreSessionStatus stage");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.remainingReadoutIds), "Bridge session summary did not expose coreSessionStatus remainingReadoutIds");
+check(Array.isArray(bridgeSummary.coreSessionStatus?.missingReadoutIds), "Bridge session summary did not expose coreSessionStatus missingReadoutIds");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.emptyReadoutIds), "Bridge session summary did not expose coreSessionStatus emptyReadoutIds");
 check(bridgeSummary.warnings.includes("bridge_readout_incomplete"), "Bridge session summary did not warn about incomplete readout sections");
 check(bridgeSummary.warnings.includes("mode09_key_items_missing"), "Bridge session summary did not warn about missing key Mode 09 items");
@@ -6877,6 +6879,7 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextRecommendedReadout
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not derive captured core readout ids from coverage items");
 check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("dtc_snapshot") && !scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session kept coverage-captured readouts in remaining ids");
 check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("freeze_frame_snapshot"), "Diagnostic scan session kept coverage-empty readouts in remaining ids");
+check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.missingReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.missingReadoutIds.length === scanSessionPlainCoverageOverride.coreSessionStatus.remainingReadoutIds.length, "Diagnostic scan session did not expose missingReadoutIds alongside remainingReadoutIds");
 check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve plain-object coverage override emptyReadoutIds");
 const scanSessionCamelCoverageOverride = obd.buildDiagnosticScanSession({
   sessionId: "shop-test-camel-coverage-override",
