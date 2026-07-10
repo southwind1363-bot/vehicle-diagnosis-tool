@@ -52,6 +52,9 @@ const mergedBridgeMetadataFunctionSource = source.match(/function buildMergedBri
 const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummaryInput[\s\S]*?endedAt: parts\.endedAt \|\| parts\.ended_at \|\| nested\.endedAt \|\| nested\.ended_at \|\| null,\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
 const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
+const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
+const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.protocol_name \|\| data\.protocolName \|\| data\.bus_protocol \|\| null;\r?\n  \}/);
+const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: Array\.isArray\(pickDefined\(input\.missingLabels, input\.missing_labels\)\) \? \[\.\.\.pickDefined\(input\.missingLabels, input\.missing_labels\)\] : \[\]\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
@@ -212,6 +215,28 @@ const detectBridgeInfrastructureFunctionChecks = () => {
     check(functionBody.includes('if (honorCoverageOverride && typeof explicitIncludeInfrastructureValue === \"boolean\") {'), "detectBridgeInfrastructureContext should honor explicit readout coverage override before inference");
     check(functionBody.includes('return explicitIncludeInfrastructureValue;'), "detectBridgeInfrastructureContext should return explicit includeInfrastructure override when enabled");
     check(functionBody.includes('|| Boolean(nestedSession);'), "detectBridgeInfrastructureContext should infer bridge infrastructure context from nested session presence");
+  }
+};
+const bridgeResponseSafetyFunctionChecks = () => {
+  check(Boolean(bridgeResponseSafetyFunctionSource), "readBridgeResponseSafety is missing from obd-readonly.js");
+  if (bridgeResponseSafetyFunctionSource) {
+    const functionBody = bridgeResponseSafetyFunctionSource[0];
+    check(functionBody.includes('ok: response.ok === true'), "readBridgeResponseSafety should only mark bridge responses ok on explicit true");
+    check(functionBody.includes('blocked: response.blocked !== false && response.isBlocked !== false'), "readBridgeResponseSafety should fail closed unless blocked/isBlocked is explicitly false");
+    check(functionBody.includes('wouldTransmit: response.would_transmit === true || response.wouldTransmit === true'), "readBridgeResponseSafety should normalize wouldTransmit aliases only from explicit true");
+  }
+  check(Boolean(bridgeProtocolFunctionSource), "readBridgeProtocol is missing from obd-readonly.js");
+  if (bridgeProtocolFunctionSource) {
+    const functionBody = bridgeProtocolFunctionSource[0];
+    check(functionBody.includes('data.protocol || data.protocol_name || data.protocolName || data.bus_protocol || null'), "readBridgeProtocol should normalize bridge protocol aliases");
+  }
+  check(Boolean(bridgeSupportedPidsFunctionSource), "collectBridgeSupportedPids is missing from obd-readonly.js");
+  if (bridgeSupportedPidsFunctionSource) {
+    const functionBody = bridgeSupportedPidsFunctionSource[0];
+    check(functionBody.includes('if (Array.isArray(data.supported_pids)) return data.supported_pids;'), "collectBridgeSupportedPids should prefer snake_case supported PID arrays");
+    check(functionBody.includes('if (Array.isArray(data.supportedPids)) return data.supportedPids;'), "collectBridgeSupportedPids should accept camelCase supported PID arrays");
+    check(functionBody.includes('data.supported_pid_list || data.supportedPidsText || data.supported_pids_text || ""'), "collectBridgeSupportedPids should accept text supported PID aliases");
+    check(functionBody.includes('text.split(/[,\\s]+/).map((item) => item.trim()).filter(Boolean)'), "collectBridgeSupportedPids should split text supported PID lists on commas and whitespace");
   }
 };
 const bridgeSummaryInputFunctionChecks = () => {
@@ -1099,6 +1124,7 @@ mergedBridgeMetadataFunctionChecks();
 bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
+bridgeResponseSafetyFunctionChecks();
 readoutCoverageFunctionChecks();
 normalizeReadoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
