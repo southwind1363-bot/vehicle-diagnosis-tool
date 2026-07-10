@@ -514,6 +514,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"'), "buildCoreSessionStatus should classify per-readout state as captured, empty, or missing");
     check(functionBody.includes('const readoutStateSummary = {'), "buildCoreSessionStatus should summarize per-readout states");
     check(functionBody.includes('capturedCount: capturedReadoutIds.length') && functionBody.includes('emptyCount: emptyReadoutIds.length') && functionBody.includes('missingCount: remainingReadoutIds.length'), "buildCoreSessionStatus should expose readout state counts");
+    check(functionBody.includes('attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length') && functionBody.includes('attemptedPercent:'), "buildCoreSessionStatus should expose attempted readout progress");
     check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const nextReadoutCandidate = nextReadoutCandidates[0] ? { ...nextReadoutCandidates[0] } : null;'), "buildCoreSessionStatus should preserve the resolved next readout candidate details");
@@ -6908,6 +6909,8 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.t
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.capturedCount === 2, "Diagnostic scan session did not expose captured readout state count");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.emptyCount === 1, "Diagnostic scan session did not expose empty readout state count");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.missingCount === 4, "Diagnostic scan session did not expose missing readout state count");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.attemptedCount === 3, "Diagnostic scan session did not expose attempted readout state count");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.attemptedPercent === 43, "Diagnostic scan session did not expose attempted readout state percent");
 check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve plain-object coverage override emptyReadoutIds");
 const scanSessionCamelCoverageOverride = obd.buildDiagnosticScanSession({
   sessionId: "shop-test-camel-coverage-override",

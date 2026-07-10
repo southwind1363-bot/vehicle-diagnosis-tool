@@ -2343,7 +2343,11 @@
       totalCount: readoutStates.length,
       capturedCount: capturedReadoutIds.length,
       emptyCount: emptyReadoutIds.length,
-      missingCount: remainingReadoutIds.length
+      missingCount: remainingReadoutIds.length,
+      attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length,
+      attemptedPercent: readoutStates.length
+        ? Math.round(((capturedReadoutIds.length + emptyReadoutIds.length) / readoutStates.length) * 100)
+        : 0
     };
     const blockingWarningIds = resolveWarningList(warnings).filter((warning) => (
       warning === "bridge_readout_incomplete"
