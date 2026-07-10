@@ -100,6 +100,7 @@ const isoTpSummaryFunctionSource = source.match(/function buildIsoTpSummary[\s\S
 const negativeResponseSummaryFunctionSource = source.match(/function buildNegativeResponseSummary[\s\S]*?responseLabels: \[\.\.\.new Set[\s\S]*?\r?\n    \};\r?\n  \}/);
 const negativeObdResponseFunctionSource = source.match(/function decodeNegativeObdResponse[\s\S]*?responseLabel: decodeNegativeResponseCode\(responseCode\)\r?\n    \};\r?\n  \}/);
 const negativeResponseCodeFunctionSource = source.match(/function decodeNegativeResponseCode[\s\S]*?return labels\[responseCode\] \|\| "unknown_negative_response";\r?\n  \}/);
+const textImportMetadataFunctionSource = source.match(/function buildTextImportMetadata[\s\S]*?sourceLength: Number\.isFinite[\s\S]*?\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -782,6 +783,19 @@ const negativeResponseCodeFunctionChecks = () => {
     check(functionBody.includes('return labels[responseCode] || "unknown_negative_response";'), "decodeNegativeResponseCode should fall back to unknown_negative_response");
   }
 };
+const textImportMetadataFunctionChecks = () => {
+  check(Boolean(textImportMetadataFunctionSource), "buildTextImportMetadata is missing from obd-readonly.js");
+  if (textImportMetadataFunctionSource) {
+    const functionBody = textImportMetadataFunctionSource[0];
+    check(functionBody.includes('const mergedToolHints = mergeUniqueStrings(session.toolHints, detectedToolHints);'), "buildTextImportMetadata should merge session and detected tool hints");
+    check(functionBody.includes('bucketCounts: explicitImportClassification?.bucketCounts') && functionBody.includes('{ ...classified.bucketCounts, ...explicitImportClassification.bucketCounts }'), "buildTextImportMetadata should merge explicit and classified bucket counts");
+    check(functionBody.includes('isoTpSummary: explicitImportClassification?.isoTpSummary') && functionBody.includes('{ ...classified.isoTpSummary, ...explicitImportClassification.isoTpSummary }'), "buildTextImportMetadata should merge explicit and classified ISO-TP summaries");
+    check(functionBody.includes('negativeResponseSummary: explicitImportClassification?.negativeResponseSummary') && functionBody.includes('{ ...classified.negativeResponseSummary, ...explicitImportClassification.negativeResponseSummary }'), "buildTextImportMetadata should merge explicit and classified negative-response summaries");
+    check(functionBody.includes('isotp_reassembly_issue') && functionBody.includes('negative_obd_response_present'), "buildTextImportMetadata should map ISO-TP and negative-response issues into warnings");
+    check(functionBody.includes('session.ecuInfoSnapshot?.hadSensitiveIdentifier === true') && functionBody.includes('classified.hadSensitiveIdentifier === true'), "buildTextImportMetadata should preserve sensitive identifier detection from session and classification");
+    check(functionBody.includes('Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))'), "buildTextImportMetadata should normalize source length without retaining raw input");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -880,6 +894,7 @@ isoTpSummaryFunctionChecks();
 negativeResponseSummaryFunctionChecks();
 negativeObdResponseFunctionChecks();
 negativeResponseCodeFunctionChecks();
+textImportMetadataFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
