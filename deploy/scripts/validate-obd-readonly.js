@@ -92,6 +92,7 @@ const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedO
 const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
+const normalizeCanLogLineFormatFunctionSource = source.match(/function normalizeCanLogLineFormat[\s\S]*?return text;\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -682,6 +683,17 @@ const buildObdLogPacketsFunctionChecks = () => {
     check(functionBody.includes('pendingIsoTp.forEach((current) => {') && functionBody.includes('incomplete: true'), "buildObdLogPackets should emit incomplete ISO-TP payloads with metadata");
   }
 };
+const normalizeCanLogLineFormatFunctionChecks = () => {
+  check(Boolean(normalizeCanLogLineFormatFunctionSource), "normalizeCanLogLineFormat is missing from obd-readonly.js");
+  if (normalizeCanLogLineFormatFunctionSource) {
+    const functionBody = normalizeCanLogLineFormatFunctionSource[0];
+    check(functionBody.includes('let text = String(line || "").trim();') && functionBody.includes('if (!text) return "";'), "normalizeCanLogLineFormat should trim blank log lines");
+    check(functionBody.includes('text.replace(/^\\(\\s*[0-9]+(?:\\.[0-9]+)?\\s*\\)\\s+/, "")'), "normalizeCanLogLineFormat should strip SocketCAN timestamp prefixes");
+    check(functionBody.includes('([0-9A-F]{3}|[0-9A-F]{8})#([0-9A-F]{2,128})') && functionBody.includes('data.match(/[0-9A-F]{2}/gi)'), "normalizeCanLogLineFormat should expand compact CAN ID#DATA logs");
+    check(functionBody.includes('([0-9A-F]{3}|[0-9A-F]{8})\\s+\\[(\\d{1,2})\\]') && functionBody.includes('lengthByte'), "normalizeCanLogLineFormat should expand bracketed CAN length logs");
+    check(functionBody.includes('const csvNormalized = normalizeCanCsvLogLine(text);') && functionBody.includes('if (csvNormalized) return csvNormalized;'), "normalizeCanLogLineFormat should accept CSV-like CAN logs before returning raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -772,6 +784,7 @@ decodedObdScanSessionFunctionChecks();
 scanSessionFromObdTextFunctionChecks();
 classifyObdResponseLinesFunctionChecks();
 buildObdLogPacketsFunctionChecks();
+normalizeCanLogLineFormatFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
