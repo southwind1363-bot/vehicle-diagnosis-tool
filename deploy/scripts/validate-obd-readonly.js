@@ -94,6 +94,7 @@ const classifyObdResponseLinesFunctionSource = source.match(/function classifyOb
 const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
 const normalizeCanLogLineFormatFunctionSource = source.match(/function normalizeCanLogLineFormat[\s\S]*?return text;\r?\n  \}/);
 const normalizeCanCsvLogLineFunctionSource = source.match(/function normalizeCanCsvLogLine[\s\S]*?join\(" "\);\r?\n  \}/);
+const extractObdFrameMetadataFunctionSource = source.match(/function extractObdFrameMetadata[\s\S]*?serviceIndex: Number\.isInteger\(serviceIndex\) && serviceIndex >= 0 \? serviceIndex : null\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -707,6 +708,18 @@ const normalizeCanCsvLogLineFunctionChecks = () => {
     check(functionBody.includes('return [parts[idIndex].toUpperCase(), lengthByte, ...bytes.map((byte) => byte.toUpperCase())].join(" ");'), "normalizeCanCsvLogLine should emit normalized ECU, length, and uppercase byte fields");
   }
 };
+const extractObdFrameMetadataFunctionChecks = () => {
+  check(Boolean(extractObdFrameMetadataFunctionSource), "extractObdFrameMetadata is missing from obd-readonly.js");
+  if (extractObdFrameMetadataFunctionSource) {
+    const functionBody = extractObdFrameMetadataFunctionSource[0];
+    check(functionBody.includes('String(line || "").toUpperCase().match(/\\b[0-9A-F]{2,8}\\b/g) || []'), "extractObdFrameMetadata should tokenize uppercase hex fields from log lines");
+    check(functionBody.includes('const hasCanId = /^[0-9A-F]{3}$/.test(first) || /^[0-9A-F]{8}$/.test(first);'), "extractObdFrameMetadata should accept 11-bit and extended CAN IDs");
+    check(functionBody.includes('const frameLength = hasCanId && /^[0-9A-F]{2}$/.test(second) ? parseInt(second, 16) : null;'), "extractObdFrameMetadata should parse frame length only after a CAN ID");
+    check(functionBody.includes('ecu: hasCanId ? first : null') && functionBody.includes('address: hasCanId ? first : null'), "extractObdFrameMetadata should expose ECU and address from CAN ID");
+    check(functionBody.includes('service: Number.isInteger(serviceByte) ? serviceByte.toString(16).toUpperCase().padStart(2, "0") : null'), "extractObdFrameMetadata should normalize service bytes as uppercase hex");
+    check(functionBody.includes('serviceIndex: Number.isInteger(serviceIndex) && serviceIndex >= 0 ? serviceIndex : null'), "extractObdFrameMetadata should preserve valid service indexes only");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -799,6 +812,7 @@ classifyObdResponseLinesFunctionChecks();
 buildObdLogPacketsFunctionChecks();
 normalizeCanLogLineFormatFunctionChecks();
 normalizeCanCsvLogLineFunctionChecks();
+extractObdFrameMetadataFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
