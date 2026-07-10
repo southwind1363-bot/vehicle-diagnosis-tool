@@ -107,6 +107,7 @@ const standardPidPayloadLengthFunctionSource = source.match(/function getStandar
 const responsePayloadFunctionSource = source.match(/function getResponsePayload[\s\S]*?return bytes\.slice\(payloadStart, payloadEnd\);\r?\n  \}/);
 const monitorStatusPidFunctionSource = source.match(/function decodeMonitorStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const fuelSystemStatusPidFunctionSource = source.match(/function decodeFuelSystemStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
+const oxygenSensorPidFunctionSource = source.match(/function decodeOxygenSensorPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -876,6 +877,18 @@ const fuelSystemStatusPidFunctionChecks = () => {
     check(functionBody.includes('return values.length ? values : null;'), "decodeFuelSystemStatusPid should return null without matching definitions");
   }
 };
+const oxygenSensorPidFunctionChecks = () => {
+  check(Boolean(oxygenSensorPidFunctionSource), "decodeOxygenSensorPid is missing from obd-readonly.js");
+  if (oxygenSensorPidFunctionSource) {
+    const functionBody = oxygenSensorPidFunctionSource[0];
+    check(functionBody.includes('item.id.endsWith("_voltage")'), "decodeOxygenSensorPid should resolve voltage definitions by suffix");
+    check(functionBody.includes('item.id.endsWith("_stft")'), "decodeOxygenSensorPid should resolve short fuel trim definitions by suffix");
+    check(functionBody.includes('value: Number((a / 200).toFixed(3))'), "decodeOxygenSensorPid should decode narrowband oxygen sensor voltage");
+    check(functionBody.includes('if (trimDefinition && Number.isInteger(b))'), "decodeOxygenSensorPid should require a second byte for trim values");
+    check(functionBody.includes('value: Number((((b - 128) * 100 / 128)).toFixed(3))'), "decodeOxygenSensorPid should decode short fuel trim percentage");
+    check(functionBody.includes('return values.length ? values : null;'), "decodeOxygenSensorPid should return null without matching definitions");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -981,6 +994,7 @@ standardPidPayloadLengthFunctionChecks();
 responsePayloadFunctionChecks();
 monitorStatusPidFunctionChecks();
 fuelSystemStatusPidFunctionChecks();
+oxygenSensorPidFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
