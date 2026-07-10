@@ -96,6 +96,8 @@ const normalizeCanLogLineFormatFunctionSource = source.match(/function normalize
 const normalizeCanCsvLogLineFunctionSource = source.match(/function normalizeCanCsvLogLine[\s\S]*?join\(" "\);\r?\n  \}/);
 const extractObdFrameMetadataFunctionSource = source.match(/function extractObdFrameMetadata[\s\S]*?serviceIndex: Number\.isInteger\(serviceIndex\) && serviceIndex >= 0 \? serviceIndex : null\r?\n    \};\r?\n  \}/);
 const ecuResponsesFromBucketsFunctionSource = source.match(/function buildEcuResponsesFromResponseBuckets[\s\S]*?negative_response_labels: \[\.\.\.row\.negative_response_labels\]\r?\n    \}\)\);\r?\n  \}/);
+const isoTpSummaryFunctionSource = source.match(/function buildIsoTpSummary[\s\S]*?affectedEcus: \[\.\.\.new Set[\s\S]*?\r?\n    \};\r?\n  \}/);
+const negativeResponseSummaryFunctionSource = source.match(/function buildNegativeResponseSummary[\s\S]*?responseLabels: \[\.\.\.new Set[\s\S]*?\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -733,6 +735,29 @@ const ecuResponsesFromBucketsFunctionChecks = () => {
     check(functionBody.includes('services: [...row.services]') && functionBody.includes('negative_response_labels: [...row.negative_response_labels]'), "buildEcuResponsesFromResponseBuckets should return serializable ECU response arrays");
   }
 };
+const isoTpSummaryFunctionChecks = () => {
+  check(Boolean(isoTpSummaryFunctionSource), "buildIsoTpSummary is missing from obd-readonly.js");
+  if (isoTpSummaryFunctionSource) {
+    const functionBody = isoTpSummaryFunctionSource[0];
+    check(functionBody.includes('const packets = Object.values(responseBuckets || {}).flat();'), "buildIsoTpSummary should aggregate packets from all response buckets");
+    check(functionBody.includes('const isoTpPackets = packets.filter((packet) => packet?.isoTp === true);'), "buildIsoTpSummary should filter ISO-TP packets explicitly");
+    check(functionBody.includes('totalCount: isoTpPackets.length'), "buildIsoTpSummary should count total ISO-TP packets");
+    check(functionBody.includes('incompleteCount: isoTpPackets.filter((packet) => packet.incomplete === true).length'), "buildIsoTpSummary should count incomplete ISO-TP packets");
+    check(functionBody.includes('sequenceErrorCount: isoTpPackets.filter((packet) => packet.sequenceError === true).length'), "buildIsoTpSummary should count ISO-TP sequence errors");
+    check(functionBody.includes('affectedEcus: [...new Set') && functionBody.includes('packet.incomplete === true || packet.sequenceError === true'), "buildIsoTpSummary should expose affected ECUs for incomplete or sequence-error packets");
+  }
+};
+const negativeResponseSummaryFunctionChecks = () => {
+  check(Boolean(negativeResponseSummaryFunctionSource), "buildNegativeResponseSummary is missing from obd-readonly.js");
+  if (negativeResponseSummaryFunctionSource) {
+    const functionBody = negativeResponseSummaryFunctionSource[0];
+    check(functionBody.includes('const rows = Array.isArray(negativeResponses) ? negativeResponses : [];'), "buildNegativeResponseSummary should tolerate non-array input");
+    check(functionBody.includes('const responseCodes = [...new Set(rows.map((packet) => packet?.negativeResponse?.responseCode).filter(Boolean))];'), "buildNegativeResponseSummary should deduplicate negative response codes");
+    check(functionBody.includes('const requestedServices = [...new Set(rows.map((packet) => packet?.negativeResponse?.requestedService).filter(Boolean))];'), "buildNegativeResponseSummary should deduplicate requested service ids");
+    check(functionBody.includes('totalCount: rows.length') && functionBody.includes('requestedServices,'), "buildNegativeResponseSummary should expose total count and requested services");
+    check(functionBody.includes('responseLabels: [...new Set(rows.map((packet) => packet?.negativeResponse?.responseLabel).filter(Boolean))]'), "buildNegativeResponseSummary should deduplicate negative response labels");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -827,6 +852,8 @@ normalizeCanLogLineFormatFunctionChecks();
 normalizeCanCsvLogLineFunctionChecks();
 extractObdFrameMetadataFunctionChecks();
 ecuResponsesFromBucketsFunctionChecks();
+isoTpSummaryFunctionChecks();
+negativeResponseSummaryFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
