@@ -90,6 +90,7 @@ const decodeReadinessResponseFunctionSource = source.match(/function decodeReadi
 const decodeOnboardMonitorResponseFunctionSource = source.match(/function decodeOnboardMonitorResponse[\s\S]*?tests\r?\n    \}\);\r?\n  \}/);
 const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedObdScanSession[\s\S]*?ecus: sessionInput\.ecus \|\| sessionInput\.ecu_responses \|\| \[\]\r?\n    \}\);\r?\n  \}/);
 const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
+const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -655,6 +656,19 @@ const scanSessionFromObdTextFunctionChecks = () => {
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('retainedRawFrames: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "buildScanSessionFromObdText should return read-only imports without retaining raw text or frames");
   }
 };
+const classifyObdResponseLinesFunctionChecks = () => {
+  check(Boolean(classifyObdResponseLinesFunctionSource), "classifyObdResponseLines is missing from obd-readonly.js");
+  if (classifyObdResponseLinesFunctionSource) {
+    const functionBody = classifyObdResponseLinesFunctionSource[0];
+    check(functionBody.includes('const redacted = redactSensitiveText(raw);') && functionBody.includes('buildObdLogPackets(redacted)'), "classifyObdResponseLines should redact sensitive text before packet parsing");
+    check(functionBody.includes('storedDtcResponses: []') && functionBody.includes('negativeResponses: []') && functionBody.includes('unknownResponses: []'), "classifyObdResponseLines should initialize all response buckets");
+    check(functionBody.includes('const responseServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F];'), "classifyObdResponseLines should detect all supported OBD response services");
+    check(functionBody.includes('buckets.storedDtcResponses.push(packet)') && functionBody.includes('buckets.pendingDtcResponses.push(packet)') && functionBody.includes('buckets.permanentDtcResponses.push(packet)'), "classifyObdResponseLines should bucket stored, pending, and permanent DTC responses");
+    check(functionBody.includes('buckets.supportedPidResponses.push(packet)') && functionBody.includes('buckets.livePidResponses.push(packet)') && functionBody.includes('buckets.readinessResponses.push(packet)'), "classifyObdResponseLines should distinguish supported PID, live PID, and readiness responses");
+    check(functionBody.includes('buckets.freezeFrameResponses.push(packet)') && functionBody.includes('buckets.onboardMonitorResponses.push(packet)') && functionBody.includes('buckets.ecuInfoResponses.push(packet)'), "classifyObdResponseLines should bucket freeze-frame, Mode 06, and ECU info responses");
+    check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "classifyObdResponseLines should return read-only classification without raw text retention");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -743,6 +757,7 @@ decodeReadinessResponseFunctionChecks();
 decodeOnboardMonitorResponseFunctionChecks();
 decodedObdScanSessionFunctionChecks();
 scanSessionFromObdTextFunctionChecks();
+classifyObdResponseLinesFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
