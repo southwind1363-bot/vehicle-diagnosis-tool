@@ -2346,11 +2346,15 @@
       empty: readoutStates.filter((item) => item.status === "empty").map((item) => ({ ...item })),
       missing: readoutStates.filter((item) => item.status === "missing").map((item) => ({ ...item }))
     };
+    const capturedReadoutPercent = readoutStates.length
+      ? Math.round((capturedReadoutIds.length / readoutStates.length) * 100)
+      : 0;
     const readoutStateSummary = {
       totalCount: readoutStates.length,
       capturedCount: capturedReadoutIds.length,
       emptyCount: emptyReadoutIds.length,
       missingCount: remainingReadoutIds.length,
+      capturedPercent: capturedReadoutPercent,
       attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length,
       attemptedPercent: readoutStates.length
         ? Math.round(((capturedReadoutIds.length + emptyReadoutIds.length) / readoutStates.length) * 100)
