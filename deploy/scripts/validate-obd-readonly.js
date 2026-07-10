@@ -91,6 +91,7 @@ const decodeOnboardMonitorResponseFunctionSource = source.match(/function decode
 const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedObdScanSession[\s\S]*?ecus: sessionInput\.ecus \|\| sessionInput\.ecu_responses \|\| \[\]\r?\n    \}\);\r?\n  \}/);
 const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
+const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -669,6 +670,18 @@ const classifyObdResponseLinesFunctionChecks = () => {
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "classifyObdResponseLines should return read-only classification without raw text retention");
   }
 };
+const buildObdLogPacketsFunctionChecks = () => {
+  check(Boolean(buildObdLogPacketsFunctionSource), "buildObdLogPackets is missing from obd-readonly.js");
+  if (buildObdLogPacketsFunctionSource) {
+    const functionBody = buildObdLogPacketsFunctionSource[0];
+    check(functionBody.includes('String(text || "").split(/\\r?\\n/).forEach((line) => {'), "buildObdLogPackets should process text input line by line");
+    check(functionBody.includes('const normalized = normalizeObdLogLine(line);') && functionBody.includes('const bytes = parseObdHexBytes(normalized);'), "buildObdLogPackets should normalize each line before byte parsing");
+    check(functionBody.includes('const metadata = extractObdFrameMetadata(normalized, null, null);'), "buildObdLogPackets should extract frame metadata from normalized lines");
+    check(functionBody.includes('const isFirstFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x10') && functionBody.includes('pendingIsoTp.set(metadata.ecu'), "buildObdLogPackets should track ISO-TP first frames by ECU");
+    check(functionBody.includes('const isConsecutiveFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x20') && functionBody.includes('sequenceError = true'), "buildObdLogPackets should detect ISO-TP consecutive frame sequence errors");
+    check(functionBody.includes('pendingIsoTp.forEach((current) => {') && functionBody.includes('incomplete: true'), "buildObdLogPackets should emit incomplete ISO-TP payloads with metadata");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -758,6 +771,7 @@ decodeOnboardMonitorResponseFunctionChecks();
 decodedObdScanSessionFunctionChecks();
 scanSessionFromObdTextFunctionChecks();
 classifyObdResponseLinesFunctionChecks();
+buildObdLogPacketsFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
