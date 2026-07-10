@@ -54,6 +54,9 @@ const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeS
 const detectBridgeInfrastructureFunctionSource = source.match(/function detectBridgeInfrastructureContext[\s\S]*?Boolean\(nestedSession\);\r?\n  \}/);
 const bridgeBlockedResponseFunctionSource = source.match(/function createLocalBridgeBlockedResponse[\s\S]*?data: schema \? cloneBridgeValue\(schema\.safeDefault\) : null\r?\n    \};\r?\n  \}/);
 const bridgeRequestEvaluationFunctionSource = source.match(/function evaluateLocalBridgeRequest[\s\S]*?localBridgeContract\.connectionEnabled[\s\S]*?\r?\n    \};\r?\n  \}/);
+const preparedVehicleRequestFunctionSource = source.match(/function requestPreparedVehicleRequest[\s\S]*?blockedByMode\r?\n    \};\r?\n  \}/);
+const outboundSafetyFunctionSource = source.match(/function evaluateOutboundSafety[\s\S]*?reason: isStateChanging[\s\S]*?\r?\n    \};\r?\n  \}/);
+const vehicleOperationRequestFunctionSource = source.match(/function requestVehicleOperation[\s\S]*?requiredBeforeEnable: operation \? \[\.\.\.operation\.requiredBeforeEnable\] : \[\]\r?\n    \};\r?\n  \}/);
 const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
 const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.protocol_name \|\| data\.protocolName \|\| data\.bus_protocol \|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
@@ -258,6 +261,34 @@ const bridgeReadOnlyGateFunctionChecks = () => {
     check(functionBody.includes('ok: false') && functionBody.includes('blocked: true') && functionBody.includes('wouldTransmit: false'), "evaluateLocalBridgeRequest should remain fail-closed and non-transmitting");
     check(functionBody.includes('vehicleCommandEnabled: false'), "evaluateLocalBridgeRequest should keep vehicle commands disabled");
     check(functionBody.includes('response: createLocalBridgeBlockedResponse(intent, missingFields.length ? ["missing_required_fields"] : [])'), "evaluateLocalBridgeRequest should return a safe blocked bridge response");
+  }
+};
+const vehicleReadOnlyOperationGateFunctionChecks = () => {
+  check(Boolean(preparedVehicleRequestFunctionSource), "requestPreparedVehicleRequest is missing from obd-readonly.js");
+  if (preparedVehicleRequestFunctionSource) {
+    const functionBody = preparedVehicleRequestFunctionSource[0];
+    check(functionBody.includes('const request = preparedVehicleRequests.find((item) => item.id === requestId);'), "requestPreparedVehicleRequest should resolve prepared requests by id");
+    check(functionBody.includes('vehicleDamagePreventionInterlock.blockedServiceModes.includes(service)'), "requestPreparedVehicleRequest should recognize blocked service modes");
+    check(functionBody.includes('ok: false') && functionBody.includes('blocked: true') && functionBody.includes('wouldTransmit: false'), "requestPreparedVehicleRequest should always return a blocked non-transmitting result");
+    check(functionBody.includes('failClosed: vehicleDamagePreventionInterlock.failClosed'), "requestPreparedVehicleRequest should expose the fail-closed interlock state");
+    check(functionBody.includes('stateChanging: Boolean(request?.stateChanging)'), "requestPreparedVehicleRequest should preserve state-changing metadata");
+    check(functionBody.includes('safetyGate: request?.safetyGate ||') && functionBody.includes('blockedByMode'), "requestPreparedVehicleRequest should expose safety gate and blocked mode state");
+  }
+  check(Boolean(outboundSafetyFunctionSource), "evaluateOutboundSafety is missing from obd-readonly.js");
+  if (outboundSafetyFunctionSource) {
+    const functionBody = outboundSafetyFunctionSource[0];
+    check(functionBody.includes('const service = String(request.service || "").toUpperCase();'), "evaluateOutboundSafety should normalize outbound service ids to uppercase");
+    check(functionBody.includes('const isBlockedService = vehicleDamagePreventionInterlock.blockedServiceModes.includes(service);'), "evaluateOutboundSafety should recognize blocked service modes");
+    check(functionBody.includes('const isStateChanging = Boolean(request.stateChanging) || isBlockedService;'), "evaluateOutboundSafety should treat blocked services as state-changing");
+    check(functionBody.includes('ok: false') && functionBody.includes('blocked: true') && functionBody.includes('wouldTransmit: false'), "evaluateOutboundSafety should always block outbound transmission");
+    check(functionBody.includes('failClosed: true') && functionBody.includes('stateChanging: isStateChanging') && functionBody.includes('service,'), "evaluateOutboundSafety should expose fail-closed, state-changing, and normalized service state");
+  }
+  check(Boolean(vehicleOperationRequestFunctionSource), "requestVehicleOperation is missing from obd-readonly.js");
+  if (vehicleOperationRequestFunctionSource) {
+    const functionBody = vehicleOperationRequestFunctionSource[0];
+    check(functionBody.includes('const operation = vehicleOperationPlan.find((item) => item.id === operationId);'), "requestVehicleOperation should resolve operation plan entries by id");
+    check(functionBody.includes('ok: false') && functionBody.includes('blocked: true'), "requestVehicleOperation should always return a blocked result");
+    check(functionBody.includes('requiredBeforeEnable: operation ? [...operation.requiredBeforeEnable] : []'), "requestVehicleOperation should clone required-before-enable prerequisites");
   }
 };
 const bridgeResponseSafetyFunctionChecks = () => {
@@ -1386,6 +1417,7 @@ bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
 bridgeReadOnlyGateFunctionChecks();
+vehicleReadOnlyOperationGateFunctionChecks();
 bridgeResponseSafetyFunctionChecks();
 bridgeCoreReadoutNormalizerFunctionChecks();
 bridgeExtendedCoreReadoutNormalizerFunctionChecks();
