@@ -110,6 +110,7 @@ const fuelSystemStatusPidFunctionSource = source.match(/function decodeFuelSyste
 const oxygenSensorPidFunctionSource = source.match(/function decodeOxygenSensorPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const wideOxygenVoltagePidFunctionSource = source.match(/function decodeWideOxygenVoltagePid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const wideOxygenCurrentPidFunctionSource = source.match(/function decodeWideOxygenCurrentPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
+const enginePercentTorqueDataFunctionSource = source.match(/function decodeEnginePercentTorqueData[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -909,6 +910,18 @@ const wideOxygenSensorPidFunctionChecks = () => {
     check(functionBody.includes('value: Number((((c * 256) + d) / 256 - 128).toFixed(3))'), "decodeWideOxygenCurrentPid should decode sensor current");
   }
 };
+const enginePercentTorqueDataFunctionChecks = () => {
+  check(Boolean(enginePercentTorqueDataFunctionSource), "decodeEnginePercentTorqueData is missing from obd-readonly.js");
+  if (enginePercentTorqueDataFunctionSource) {
+    const functionBody = enginePercentTorqueDataFunctionSource[0];
+    check(functionBody.includes('"engine_percent_torque_idle"') && functionBody.includes('"engine_percent_torque_point4"'), "decodeEnginePercentTorqueData should retain idle through point 4 torque IDs");
+    check(functionBody.includes('ids.forEach((id, index) => {') && functionBody.includes('const byte = dataBytes[index];'), "decodeEnginePercentTorqueData should map each torque ID to its payload byte position");
+    check(functionBody.includes('monitorDefinitions.find((item) => item.service === "01" && item.pid === pid && item.id === id)'), "decodeEnginePercentTorqueData should resolve Mode 01 torque definitions by PID and ID");
+    check(functionBody.includes('if (!definition || !Number.isInteger(byte)) return;'), "decodeEnginePercentTorqueData should skip missing definitions or missing payload bytes");
+    check(functionBody.includes('value: byte - 125'), "decodeEnginePercentTorqueData should decode signed percent torque by subtracting 125");
+    check(functionBody.includes('return values.length ? values : null;'), "decodeEnginePercentTorqueData should return null without decoded torque values");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -1016,6 +1029,7 @@ monitorStatusPidFunctionChecks();
 fuelSystemStatusPidFunctionChecks();
 oxygenSensorPidFunctionChecks();
 wideOxygenSensorPidFunctionChecks();
+enginePercentTorqueDataFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
