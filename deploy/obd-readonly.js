@@ -2320,10 +2320,18 @@
       { id: "live_pid_snapshot", captured: isCapturedReadout(livePidSnapshot, "monitorValues") || isCoverageCapturedReadout("live_pid_snapshot") }
     ];
     const capturedReadoutIds = requiredReadouts.filter((item) => item.captured).map((item) => item.id);
-    const remainingReadoutIds = requiredReadouts.filter((item) => !item.captured).map((item) => item.id);
-    const emptyReadoutIds = Array.isArray(normalizedCoverage.emptyIds)
-      ? normalizedCoverage.emptyIds.filter((item) => requiredReadouts.some((readout) => readout.id === item))
-      : [];
+    const coverageEmptyReadoutIds = (normalizedCoverage.items || [])
+      .filter((item) => item && item.status === "empty" && typeof item.id === "string")
+      .map((item) => item.id);
+    const emptyReadoutIds = [
+      ...new Set([
+        ...(Array.isArray(normalizedCoverage.emptyIds) ? normalizedCoverage.emptyIds : []),
+        ...coverageEmptyReadoutIds
+      ])
+    ].filter((item) => requiredReadouts.some((readout) => readout.id === item));
+    const remainingReadoutIds = requiredReadouts
+      .filter((item) => !item.captured && !emptyReadoutIds.includes(item.id))
+      .map((item) => item.id);
     const blockingWarningIds = resolveWarningList(warnings).filter((warning) => (
       warning === "bridge_readout_incomplete"
       || warning === "bridge_readout_empty_sections"
