@@ -499,6 +499,8 @@ const coreSessionStatusFunctionChecks = () => {
   if (coreSessionStatusFunctionSource) {
     const functionBody = coreSessionStatusFunctionSource[0];
     check(functionBody.includes('const emptyReadoutIds = Array.isArray(normalizedCoverage.emptyIds)'), "buildCoreSessionStatus should derive empty readout ids from normalized coverage");
+    check(functionBody.includes('onboardMonitorSnapshot = null,'), "buildCoreSessionStatus should accept onboard monitor snapshots");
+    check(functionBody.includes('{ id: "onboard_monitor_snapshot", captured: isCapturedReadout(onboardMonitorSnapshot, "tests") }'), "buildCoreSessionStatus should count onboard monitor snapshots as core readouts");
     check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const readyForAnalysis = remainingReadoutIds.length === 0') && functionBody.includes('&& emptyReadoutIds.length === 0') && functionBody.includes('&& blockingWarningIds.length === 0;'), "buildCoreSessionStatus should require no remaining, empty, or blocking readouts before analysis-ready");
@@ -611,6 +613,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);'), "mergeDiagnosticInputs should recalculate monitor summaries and insights from merged values");
     check(functionBody.includes('const source = bridgeImport') && functionBody.includes('"scanner_text_and_local_bridge"') && functionBody.includes('"local_bridge"') && functionBody.includes('"scanner_text"'), "mergeDiagnosticInputs should classify merged input source");
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "mergeDiagnosticInputs should build core session status from merged diagnostic inputs");
+    check(functionBody.includes('onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,'), "mergeDiagnosticInputs should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "mergeDiagnosticInputs should remain read-only and avoid raw text retention");
   }
 };
@@ -673,6 +676,7 @@ const bridgeSessionSummaryFunctionChecks = () => {
     check(functionBody.includes('includeInfrastructure: hasBridgeInfrastructureContext'), "buildBridgeSessionSummary should derive readout coverage with bridge infrastructure context");
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should append bridge readout warnings through bridge context guard");
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should resolve readout coverage before appending bridge readout warnings");
+    check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildBridgeSessionSummary should pass onboard monitor snapshots into core session status");
   }
 };
 const dtcSnapshotFunctionChecks = () => {
@@ -1369,6 +1373,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should append bridge readout warnings through bridge context guard");
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should resolve readout coverage before appending bridge readout warnings");
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "buildDiagnosticScanSession should build core session status from resolved readout candidates");
+    check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildDiagnosticScanSession should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('schemaVersion: "scan_session_v1"') && functionBody.includes('sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80)'), "buildDiagnosticScanSession should emit a bounded scan session identity");
     check(functionBody.includes('monitorValueSummary: resolveMonitorValueSummary([') && functionBody.includes('...freezeFrameSnapshot.monitorValues'), "buildDiagnosticScanSession should summarize live PID and freeze-frame monitor values");
     check(functionBody.includes('...buildReadOnlyFlags({') && functionBody.includes('vehicleCommandEnabled: false'), "buildDiagnosticScanSession should return explicit read-only flags");
@@ -4701,10 +4706,11 @@ const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
   readinessSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:02Z", monitors: [], monitorCount: 0 },
   ecuInfoSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:03Z", items: [], itemCount: 0 },
   supportedPidMatrix: { blocked: false, capturedAt: "2026-07-06T00:00:04Z", supportedPids: [], supportedCount: 0 },
-  livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:05Z", monitorValues: [] }
+  onboardMonitorSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:05Z", tests: [], testCount: 0 },
+  livePidSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:06Z", monitorValues: [] }
 });
 check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.remainingReadoutIds) && emptyReadoutScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session treated empty but completed core readouts as missing");
-check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.emptyReadoutIds) && emptyReadoutScanSession.coreSessionStatus.emptyReadoutIds.length === 6, "Diagnostic scan session did not expose emptyReadoutIds for completed empty core readouts");
+check(Array.isArray(emptyReadoutScanSession.coreSessionStatus?.emptyReadoutIds) && emptyReadoutScanSession.coreSessionStatus.emptyReadoutIds.length === 7, "Diagnostic scan session did not expose emptyReadoutIds for completed empty core readouts");
 check(emptyReadoutScanSession.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session treated empty completed core readouts as ready for analysis");
 check(emptyReadoutScanSession.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep empty completed core readouts in collecting_readouts status");
 check(emptyReadoutScanSession.coreSessionStatus?.applicabilityStatus === "unknown", "Diagnostic scan session did not expose unknown applicability status when vehicle applicability is absent");
