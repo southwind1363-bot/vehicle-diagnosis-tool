@@ -2328,7 +2328,7 @@
         ...(Array.isArray(normalizedCoverage.emptyIds) ? normalizedCoverage.emptyIds : []),
         ...coverageEmptyReadoutIds
       ])
-    ].filter((item) => requiredReadouts.some((readout) => readout.id === item));
+    ].filter((item) => requiredReadouts.some((readout) => readout.id === item) && !isCoverageCapturedReadout(item));
     const remainingReadoutIds = requiredReadouts
       .filter((item) => !item.captured && !emptyReadoutIds.includes(item.id))
       .map((item) => item.id);

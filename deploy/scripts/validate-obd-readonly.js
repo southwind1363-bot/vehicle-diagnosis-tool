@@ -505,6 +505,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('{ id: "onboard_monitor_snapshot", captured: isCapturedReadout(onboardMonitorSnapshot, "tests") || isCoverageCapturedReadout("onboard_monitor_snapshot") }'), "buildCoreSessionStatus should count onboard monitor snapshots as core readouts");
     check(functionBody.includes('const coverageEmptyReadoutIds = (normalizedCoverage.items || [])'), "buildCoreSessionStatus should derive empty readouts from coverage item status");
     check(functionBody.includes('.filter((item) => !item.captured && !emptyReadoutIds.includes(item.id))'), "buildCoreSessionStatus should not keep empty readouts in remaining readouts");
+    check(functionBody.includes('&& !isCoverageCapturedReadout(item)'), "buildCoreSessionStatus should prefer captured coverage item status over conflicting empty coverage ids");
     check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const readyForAnalysis = remainingReadoutIds.length === 0') && functionBody.includes('&& emptyReadoutIds.length === 0') && functionBody.includes('&& blockingWarningIds.length === 0;'), "buildCoreSessionStatus should require no remaining, empty, or blocking readouts before analysis-ready");
@@ -6958,6 +6959,21 @@ const scanSessionCoverageOnlyProgress = obd.buildDiagnosticScanSession({
 });
 check(scanSessionCoverageOnlyProgress.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not treat explicit coverage-only progress as collecting readouts");
 check(scanSessionCoverageOnlyProgress.coreSessionStatus?.completionPercent === 0, "Diagnostic scan session should keep zero completion for coverage-only empty progress");
+const scanSessionConflictingCoverageStatus = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-conflicting-coverage-status",
+  readout_coverage: {
+    include_infrastructure: false,
+    totalCategories: 7,
+    availableCategories: 1,
+    capturedCategories: 1,
+    emptyCategories: 1,
+    missingCategories: 5,
+    items: [{ id: "dtc_snapshot", status: "captured", available: true, count: 1 }],
+    emptyIds: ["dtc_snapshot"]
+  }
+});
+check(scanSessionConflictingCoverageStatus.coreSessionStatus?.capturedReadoutIds?.includes("dtc_snapshot"), "Diagnostic scan session did not preserve captured readout when coverage status conflicted with emptyIds");
+check(!scanSessionConflictingCoverageStatus.coreSessionStatus?.emptyReadoutIds?.includes("dtc_snapshot"), "Diagnostic scan session did not prefer captured coverage status over conflicting emptyIds");
 const scanSessionSnakeCoverageManualApplicability = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-coverage-manual-applicability",
   readout_coverage: {
