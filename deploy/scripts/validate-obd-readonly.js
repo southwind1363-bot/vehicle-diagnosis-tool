@@ -1213,9 +1213,27 @@ const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
     const functionBody = diagnosticScanSessionFunctionSource[0];
+    check(functionBody.includes('const sessionInput = getDiagnosticSessionInput(input);') && functionBody.includes('const metadataOverrides = getSessionMetadataOverrides(sessionInput);'), "buildDiagnosticScanSession should normalize session input and metadata overrides first");
+    check(functionBody.includes('sessionInput.livePidSnapshot') && functionBody.includes('sessionInput.live_pid_response') && functionBody.includes('sessionInput.live_pids'), "buildDiagnosticScanSession should accept live PID snapshot and response aliases");
+    check(functionBody.includes('sessionInput.freezeFrameSnapshot') && functionBody.includes('sessionInput.freeze_frame_response') && functionBody.includes('sessionInput.freeze_frame'), "buildDiagnosticScanSession should accept freeze-frame snapshot and response aliases");
+    check(functionBody.includes('sessionInput.readinessSnapshot') && functionBody.includes('sessionInput.readiness_response'), "buildDiagnosticScanSession should accept readiness snapshot and response aliases");
+    check(functionBody.includes('sessionInput.ecuInfoSnapshot') && functionBody.includes('sessionInput.ecu_info_response') && functionBody.includes('sessionInput.ecu_info_items'), "buildDiagnosticScanSession should accept ECU info snapshot and response aliases");
+    check(functionBody.includes('decodeLivePidResponse(livePidResponseInput)') && functionBody.includes('normalizeBridgeLivePidSnapshot(livePidSnapshotInput)'), "buildDiagnosticScanSession should decode raw live PID responses or normalize bridge live PID snapshots");
+    check(functionBody.includes('decodeFreezeFrameResponse(freezeFrameResponseInput)') && functionBody.includes('normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)'), "buildDiagnosticScanSession should decode or normalize freeze-frame input");
+    check(functionBody.includes('decodeReadinessResponse(readinessResponseInput)') && functionBody.includes('normalizeReadinessSnapshot(readinessSnapshotInput)'), "buildDiagnosticScanSession should decode or normalize readiness input");
+    check(functionBody.includes('decodeEcuInfoResponse(ecuInfoResponseInput)') && functionBody.includes('normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)'), "buildDiagnosticScanSession should decode or normalize ECU info input");
+    check(functionBody.includes('decodeSupportedPidResponse(supportedPidResponseInput)') && functionBody.includes('buildSupportedPidMatrix(supportedPidMatrixInput)'), "buildDiagnosticScanSession should decode or build supported PID matrices");
+    check(functionBody.includes('resolveBridgeInfrastructureInputs({') && functionBody.includes('honorCoverageOverride: true'), "buildDiagnosticScanSession should resolve bridge infrastructure with coverage override support");
+    check(functionBody.includes('appendCommonCoreWarnings(warnings, {') && functionBody.includes('rawPidUndecodedCount:'), "buildDiagnosticScanSession should derive common core warnings including undecoded raw PID values");
+    check(functionBody.includes('const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });'), "buildDiagnosticScanSession should resolve metadata after ECU info normalization");
+    check(functionBody.includes('resolveSessionTemporalContext({') && functionBody.includes('supportedPidMatrix'), "buildDiagnosticScanSession should derive temporal context from all normalized snapshots");
     check(functionBody.includes('includeInfrastructure: hasBridgeInfrastructureContext'), "buildDiagnosticScanSession should derive readout coverage with bridge infrastructure context");
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should append bridge readout warnings through bridge context guard");
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should resolve readout coverage before appending bridge readout warnings");
+    check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "buildDiagnosticScanSession should build core session status from resolved readout candidates");
+    check(functionBody.includes('schemaVersion: "scan_session_v1"') && functionBody.includes('sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80)'), "buildDiagnosticScanSession should emit a bounded scan session identity");
+    check(functionBody.includes('monitorValueSummary: resolveMonitorValueSummary([') && functionBody.includes('...freezeFrameSnapshot.monitorValues'), "buildDiagnosticScanSession should summarize live PID and freeze-frame monitor values");
+    check(functionBody.includes('...buildReadOnlyFlags({') && functionBody.includes('vehicleCommandEnabled: false'), "buildDiagnosticScanSession should return explicit read-only flags");
   }
 };
 const readinessHeadlineFunctionChecks = () => {
