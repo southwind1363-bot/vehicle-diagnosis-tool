@@ -2364,7 +2364,8 @@
         }
         return (fallbackPriorityById[right] || 0) - (fallbackPriorityById[left] || 0);
       })[0] || null;
-    const nextRecommendedReadoutId = nextReadoutCandidates[0]?.id || fallbackNextRecommendedReadoutId;
+    const nextReadoutCandidate = nextReadoutCandidates[0] ? { ...nextReadoutCandidates[0] } : null;
+    const nextRecommendedReadoutId = nextReadoutCandidate?.id || fallbackNextRecommendedReadoutId;
     const nextReadoutState = readoutStates.find((item) => item.id === nextRecommendedReadoutId) || null;
     const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
     const completionPercent = normalizedCoverage.totalCategories > 0
@@ -2388,6 +2389,7 @@
       emptyReadoutIds,
       readoutStates,
       readoutStateSummary,
+      nextReadoutCandidate,
       nextRecommendedReadoutId,
       nextReadoutState,
       blockingWarningIds,
