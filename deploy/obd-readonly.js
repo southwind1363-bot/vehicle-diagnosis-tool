@@ -2297,9 +2297,10 @@
       Boolean(snapshot?.capturedAt)
       || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
     );
-    const coverageStatusById = new Map((normalizedCoverage.items || [])
-      .filter((item) => item && typeof item.id === "string")
-      .map((item) => [item.id, item.status]));
+    const coverageItems = (normalizedCoverage.items || [])
+      .filter((item) => item && typeof item.id === "string");
+    const coverageStatusById = new Map(coverageItems.map((item) => [item.id, item.status]));
+    const coverageLabelById = new Map(coverageItems.map((item) => [item.id, item.label || item.id]));
     const isCoverageCapturedReadout = (id) => coverageStatusById.get(id) === "captured";
     const fallbackPriorityById = {
       dtc_snapshot: 100,
@@ -2334,6 +2335,7 @@
       .map((item) => item.id);
     const readoutStates = requiredReadouts.map((item) => ({
       id: item.id,
+      label: coverageLabelById.get(item.id) || item.id,
       priority: fallbackPriorityById[item.id] || 0,
       status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"
     }));
