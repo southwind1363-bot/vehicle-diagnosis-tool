@@ -106,6 +106,7 @@ const standardPidValueFunctionSource = source.match(/function decodeStandardPidV
 const standardPidPayloadLengthFunctionSource = source.match(/function getStandardPidPayloadLength[\s\S]*?return 0;\r?\n  \}/);
 const responsePayloadFunctionSource = source.match(/function getResponsePayload[\s\S]*?return bytes\.slice\(payloadStart, payloadEnd\);\r?\n  \}/);
 const monitorStatusPidFunctionSource = source.match(/function decodeMonitorStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
+const fuelSystemStatusPidFunctionSource = source.match(/function decodeFuelSystemStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -862,6 +863,19 @@ const monitorStatusPidFunctionChecks = () => {
     check(functionBody.includes('return values.length ? values : null;'), "decodeMonitorStatusPid should return null without matching definitions");
   }
 };
+const fuelSystemStatusPidFunctionChecks = () => {
+  check(Boolean(fuelSystemStatusPidFunctionSource), "decodeFuelSystemStatusPid is missing from obd-readonly.js");
+  if (fuelSystemStatusPidFunctionSource) {
+    const functionBody = fuelSystemStatusPidFunctionSource[0];
+    check(functionBody.includes('item.id === "fuel_system_status"') && functionBody.includes('item.id === "fuel_system_status_bank1"'), "decodeFuelSystemStatusPid should resolve summary and bank 1 definitions");
+    check(functionBody.includes('item.id === "fuel_system_status_bank2"'), "decodeFuelSystemStatusPid should resolve bank 2 definitions");
+    check(functionBody.includes('0x01: "closed_loop_using_oxygen_sensor"') && functionBody.includes('0x04: "open_loop_due_to_system_failure"'), "decodeFuelSystemStatusPid should retain core fuel-system status labels");
+    check(functionBody.includes('const bank1 = labels[a] || `unknown_0x${a.toString(16).toUpperCase().padStart(2, "0")}`;'), "decodeFuelSystemStatusPid should provide an unknown fallback for bank 1");
+    check(functionBody.includes('const bank2 = Number.isInteger(b) && b !== 0 ? labels[b] || `unknown_0x${b.toString(16).toUpperCase().padStart(2, "0")}` : null;'), "decodeFuelSystemStatusPid should treat zero or missing bank 2 as absent");
+    check(functionBody.includes('value: bank2 ? `${bank1};${bank2}` : bank1'), "decodeFuelSystemStatusPid should expose a combined summary when bank 2 is present");
+    check(functionBody.includes('return values.length ? values : null;'), "decodeFuelSystemStatusPid should return null without matching definitions");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -966,6 +980,7 @@ standardPidValueFunctionChecks();
 standardPidPayloadLengthFunctionChecks();
 responsePayloadFunctionChecks();
 monitorStatusPidFunctionChecks();
+fuelSystemStatusPidFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
