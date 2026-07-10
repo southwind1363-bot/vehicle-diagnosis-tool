@@ -105,6 +105,7 @@ const supportedPidMatrixFunctionSource = source.match(/function buildSupportedPi
 const standardPidValueFunctionSource = source.match(/function decodeStandardPidValue[\s\S]*?unit: definition\.unit\r?\n    \};\r?\n  \}/);
 const standardPidPayloadLengthFunctionSource = source.match(/function getStandardPidPayloadLength[\s\S]*?return 0;\r?\n  \}/);
 const responsePayloadFunctionSource = source.match(/function getResponsePayload[\s\S]*?return bytes\.slice\(payloadStart, payloadEnd\);\r?\n  \}/);
+const monitorStatusPidFunctionSource = source.match(/function decodeMonitorStatusPid[\s\S]*?return values\.length \? values : null;\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -848,6 +849,19 @@ const responsePayloadFunctionChecks = () => {
     check(functionBody.includes('return bytes.slice(payloadStart, payloadEnd);'), "getResponsePayload should slice only the current response payload");
   }
 };
+const monitorStatusPidFunctionChecks = () => {
+  check(Boolean(monitorStatusPidFunctionSource), "decodeMonitorStatusPid is missing from obd-readonly.js");
+  if (monitorStatusPidFunctionSource) {
+    const functionBody = monitorStatusPidFunctionSource[0];
+    check(functionBody.includes('item.id === "monitor_status"') && functionBody.includes('item.id === "monitor_status_mil"'), "decodeMonitorStatusPid should resolve summary and MIL definitions");
+    check(functionBody.includes('item.id === "monitor_status_dtc_count"') && functionBody.includes('item.id === "monitor_status_ignition_type"'), "decodeMonitorStatusPid should resolve DTC count and ignition type definitions");
+    check(functionBody.includes('const dtcCount = a & 0x7F;'), "decodeMonitorStatusPid should decode DTC count from low seven bits");
+    check(functionBody.includes('const mil = (a & 0x80) !== 0 ? "mil_on" : "mil_off";'), "decodeMonitorStatusPid should decode MIL state from the high bit");
+    check(functionBody.includes('const ignition = Number.isInteger(b) && (b & 0x08) !== 0 ? "compression" : "spark";'), "decodeMonitorStatusPid should decode spark versus compression ignition");
+    check(functionBody.includes('value: `${mil};dtc_count=${dtcCount};ignition=${ignition}`'), "decodeMonitorStatusPid should expose a combined monitor status summary");
+    check(functionBody.includes('return values.length ? values : null;'), "decodeMonitorStatusPid should return null without matching definitions");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -951,6 +965,7 @@ supportedPidMatrixFunctionChecks();
 standardPidValueFunctionChecks();
 standardPidPayloadLengthFunctionChecks();
 responsePayloadFunctionChecks();
+monitorStatusPidFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
