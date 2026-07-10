@@ -2340,6 +2340,11 @@
       status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"
     }));
     const readoutStateById = Object.fromEntries(readoutStates.map((item) => [item.id, { ...item }]));
+    const readoutStatesByStatus = {
+      captured: readoutStates.filter((item) => item.status === "captured").map((item) => ({ ...item })),
+      empty: readoutStates.filter((item) => item.status === "empty").map((item) => ({ ...item })),
+      missing: readoutStates.filter((item) => item.status === "missing").map((item) => ({ ...item }))
+    };
     const readoutStateSummary = {
       totalCount: readoutStates.length,
       capturedCount: capturedReadoutIds.length,
@@ -2414,6 +2419,7 @@
       emptyReadoutIds,
       readoutStates,
       readoutStateById,
+      readoutStatesByStatus,
       readoutStateSummary,
       nextReadoutCandidate,
       nextRecommendedReadoutId,
