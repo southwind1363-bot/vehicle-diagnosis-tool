@@ -2386,6 +2386,11 @@
       ...(emptyReadoutIds.length ? ["empty_readouts"] : []),
       ...(blockingWarningIds.length ? ["blocking_warnings"] : [])
     ];
+    const analysisBlockerById = {
+      missing_readouts: { count: remainingReadoutIds.length, readoutIds: [...remainingReadoutIds] },
+      empty_readouts: { count: emptyReadoutIds.length, readoutIds: [...emptyReadoutIds] },
+      blocking_warnings: { count: blockingWarningIds.length, warningIds: [...blockingWarningIds] }
+    };
     const analysisBlockerSummary = {
       totalCount: analysisBlockers.length,
       missingReadoutCount: remainingReadoutIds.length,
@@ -2415,6 +2420,7 @@
       nextReadoutSource,
       nextReadoutState,
       analysisBlockers,
+      analysisBlockerById,
       analysisBlockerSummary,
       blockingWarningIds,
       readyForAnalysis
