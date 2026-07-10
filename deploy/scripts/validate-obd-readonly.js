@@ -55,6 +55,10 @@ const detectBridgeInfrastructureFunctionSource = source.match(/function detectBr
 const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
 const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.protocol_name \|\| data\.protocolName \|\| data\.bus_protocol \|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
+const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: Array\.isArray\(pickDefined\(input\.missingLabels, input\.missing_labels\)\) \? \[\.\.\.pickDefined\(input\.missingLabels, input\.missing_labels\)\] : \[\]\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
@@ -237,6 +241,45 @@ const bridgeResponseSafetyFunctionChecks = () => {
     check(functionBody.includes('if (Array.isArray(data.supportedPids)) return data.supportedPids;'), "collectBridgeSupportedPids should accept camelCase supported PID arrays");
     check(functionBody.includes('data.supported_pid_list || data.supportedPidsText || data.supported_pids_text || ""'), "collectBridgeSupportedPids should accept text supported PID aliases");
     check(functionBody.includes('text.split(/[,\\s]+/).map((item) => item.trim()).filter(Boolean)'), "collectBridgeSupportedPids should split text supported PID lists on commas and whitespace");
+  }
+};
+const bridgeCoreReadoutNormalizerFunctionChecks = () => {
+  check(Boolean(bridgeDtcSnapshotFunctionSource), "normalizeBridgeDtcSnapshot is missing from obd-readonly.js");
+  if (bridgeDtcSnapshotFunctionSource) {
+    const functionBody = bridgeDtcSnapshotFunctionSource[0];
+    check(functionBody.includes('const data = response && typeof response === "object" ? response.data || response : {};'), "normalizeBridgeDtcSnapshot should unwrap bridge response data safely");
+    check(functionBody.includes('Array.isArray(data.dtcs)') && functionBody.includes('Array.isArray(data.dtc_codes)') && functionBody.includes('Array.isArray(data.dtcCodes)'), "normalizeBridgeDtcSnapshot should accept DTC array aliases");
+    check(functionBody.includes('"read_stored_dtc"') && functionBody.includes('"read_pending_dtc"') && functionBody.includes('"read_permanent_dtc"'), "normalizeBridgeDtcSnapshot should preserve stored, pending, and permanent DTC intents");
+    check(functionBody.includes('const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";'), "normalizeBridgeDtcSnapshot should derive DTC status from bridge intent");
+    check(functionBody.includes('extractDtcCodes(row.code || row.dtc || row.id || "")'), "normalizeBridgeDtcSnapshot should normalize DTC row code aliases");
+    check(functionBody.includes('const key = `${entry.code}::${entry.status}`;'), "normalizeBridgeDtcSnapshot should deduplicate by code and status");
+    check(functionBody.includes('dtcs: dtcs.map((item) => ({ ...item, source: "local_bridge" }))'), "normalizeBridgeDtcSnapshot should mark normalized DTC rows as local bridge sourced");
+    check(functionBody.includes('retainedRawText: false'), "normalizeBridgeDtcSnapshot should not retain raw bridge text");
+  }
+  check(Boolean(bridgeLivePidSnapshotFunctionSource), "normalizeBridgeLivePidSnapshot is missing from obd-readonly.js");
+  if (bridgeLivePidSnapshotFunctionSource) {
+    const functionBody = bridgeLivePidSnapshotFunctionSource[0];
+    check(functionBody.includes('Array.isArray(data.values)') && functionBody.includes('Array.isArray(data.monitor_values)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeLivePidSnapshot should accept live PID value aliases");
+    check(functionBody.includes('.map((row, index) => normalizeBridgePidValue(row, index))') && functionBody.includes('.filter(Boolean)'), "normalizeBridgeLivePidSnapshot should normalize and filter PID value rows");
+    check(functionBody.includes('supportedPids: collectBridgeSupportedPids(data)'), "normalizeBridgeLivePidSnapshot should carry supported PID context");
+    check(functionBody.includes('monitorValueSummary: buildMonitorValueSummary(monitorValues)') && functionBody.includes('monitorInsights: analyzeMonitorValues(monitorValues)'), "normalizeBridgeLivePidSnapshot should derive summaries and monitor insights");
+    check(functionBody.includes('retainedRawText: false'), "normalizeBridgeLivePidSnapshot should not retain raw bridge text");
+  }
+  check(Boolean(bridgeSupportedPidSnapshotFunctionSource), "normalizeBridgeSupportedPidSnapshot is missing from obd-readonly.js");
+  if (bridgeSupportedPidSnapshotFunctionSource) {
+    const functionBody = bridgeSupportedPidSnapshotFunctionSource[0];
+    check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);'), "normalizeBridgeSupportedPidSnapshot should normalize supported PID aliases before matrix building");
+    check(functionBody.includes('...buildSupportedPidMatrix({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeSupportedPidSnapshot should reuse the supported PID matrix builder");
+    check(functionBody.includes('protocol: readBridgeProtocol(data)') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeSupportedPidSnapshot should pass protocol and supported PID rows into the matrix builder");
+    check(functionBody.includes('intent: "read_supported_pids"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeSupportedPidSnapshot should preserve bridge intent and safety metadata");
+  }
+  check(Boolean(bridgeFreezeFrameSnapshotFunctionSource), "normalizeBridgeFreezeFrameSnapshot is missing from obd-readonly.js");
+  if (bridgeFreezeFrameSnapshotFunctionSource) {
+    const functionBody = bridgeFreezeFrameSnapshotFunctionSource[0];
+    check(functionBody.includes('...normalizeFreezeFrameSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeFreezeFrameSnapshot should reuse the core freeze-frame normalizer");
+    check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC aliases");
+    check(functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame value aliases");
+    check(functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeFreezeFrameSnapshot should preserve bridge intent and safety metadata");
   }
 };
 const bridgeSummaryInputFunctionChecks = () => {
@@ -1125,6 +1168,7 @@ bridgeSummaryInputFunctionChecks();
 bridgeSummaryAliasFunctionChecks();
 detectBridgeInfrastructureFunctionChecks();
 bridgeResponseSafetyFunctionChecks();
+bridgeCoreReadoutNormalizerFunctionChecks();
 readoutCoverageFunctionChecks();
 normalizeReadoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
