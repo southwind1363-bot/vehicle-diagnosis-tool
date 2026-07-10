@@ -80,10 +80,13 @@ const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnb
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
 const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
 const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
+const trimEcuInfoPayloadFunctionSource = source.match(/function trimEcuInfoPayload[\s\S]*?return cleaned;\r?\n  \}/);
 const ecuInfoPayloadFunctionSource = source.match(/function decodeEcuInfoPayload[\s\S]*?return payload\.map\(\(byte\) => String\.fromCharCode\(byte\)\)\.join\(""\)\.trim\(\);\r?\n  \}/);
 const parseObdHexBytesFunctionSource = source.match(/function parseObdHexBytes[\s\S]*?parseInt\(byte, 16\)\);\r?\n  \}/);
 const decodeObdDtcResponseFunctionSource = source.match(/function decodeObdDtcResponse[\s\S]*?\.\.\.new Set\(codes\)[\s\S]*?\r?\n    \}\);\r?\n  \}/);
+const decodeDtcPairFunctionSource = source.match(/function decodeDtcPair[\s\S]*?return `\$\{system\}\$\{first\}\$\{second\}\$\{third\}\$\{fourth\}`;\r?\n  \}/);
 const decodeSupportedPidResponseFunctionSource = source.match(/function decodeSupportedPidResponse[\s\S]*?supported_pids: \[\.\.\.new Set\(supportedPids\)\]\r?\n    \}\);\r?\n  \}/);
+const supportedPidBaseFunctionSource = source.match(/function isSupportedPidBase[\s\S]*?includes\(pid\);\r?\n  \}/);
 const decodeLivePidResponseFunctionSource = source.match(/function decodeLivePidResponse[\s\S]*?captured_at: input\.captured_at \|\| input\.capturedAt \|\| null\r?\n      \}\r?\n    \}\);\r?\n  \}/);
 const decodeFreezeFrameResponseFunctionSource = source.match(/function decodeFreezeFrameResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
 const decodeEcuInfoResponseFunctionSource = source.match(/function decodeEcuInfoResponse[\s\S]*?values\r?\n    \}\);\r?\n  \}/);
@@ -93,6 +96,7 @@ const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedO
 const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
+const normalizeObdLogLineFunctionSource = source.match(/function normalizeObdLogLine[\s\S]*?\.trim\(\);\r?\n  \}/);
 const normalizeCanLogLineFormatFunctionSource = source.match(/function normalizeCanLogLineFormat[\s\S]*?return text;\r?\n  \}/);
 const normalizeCanCsvLogLineFunctionSource = source.match(/function normalizeCanCsvLogLine[\s\S]*?join\(" "\);\r?\n  \}/);
 const extractObdFrameMetadataFunctionSource = source.match(/function extractObdFrameMetadata[\s\S]*?serviceIndex: Number\.isInteger\(serviceIndex\) && serviceIndex >= 0 \? serviceIndex : null\r?\n    \};\r?\n  \}/);
@@ -576,6 +580,15 @@ const ecuInfoPayloadFunctionChecks = () => {
     check(functionBody.includes('String.fromCharCode(byte)).join("").trim()'), "decodeEcuInfoPayload should decode printable ASCII payloads and trim padding");
   }
 };
+const trimEcuInfoPayloadFunctionChecks = () => {
+  check(Boolean(trimEcuInfoPayloadFunctionSource), "trimEcuInfoPayload is missing from obd-readonly.js");
+  if (trimEcuInfoPayloadFunctionSource) {
+    const functionBody = trimEcuInfoPayloadFunctionSource[0];
+    check(functionBody.includes('const cleaned = [...payload];'), "trimEcuInfoPayload should clone payload bytes before trimming");
+    check(functionBody.includes('while (cleaned.length && (cleaned[0] === 0x00 || cleaned[0] <= 0x20)) cleaned.shift();'), "trimEcuInfoPayload should remove leading zero and control/padding bytes");
+    check(functionBody.includes('return cleaned;'), "trimEcuInfoPayload should return the trimmed payload bytes");
+  }
+};
 const parseObdHexBytesFunctionChecks = () => {
   check(Boolean(parseObdHexBytesFunctionSource), "parseObdHexBytes is missing from obd-readonly.js");
   if (parseObdHexBytesFunctionSource) {
@@ -599,6 +612,18 @@ const decodeObdDtcResponseFunctionChecks = () => {
     check(functionBody.includes('dtcs: [...new Set(codes)].map((code) => ({ code, status }))'), "decodeObdDtcResponse should deduplicate decoded DTC codes");
   }
 };
+const decodeDtcPairFunctionChecks = () => {
+  check(Boolean(decodeDtcPairFunctionSource), "decodeDtcPair is missing from obd-readonly.js");
+  if (decodeDtcPairFunctionSource) {
+    const functionBody = decodeDtcPairFunctionSource[0];
+    check(functionBody.includes('["P", "C", "B", "U"][(high & 0xC0) >> 6]'), "decodeDtcPair should decode system family from the high two bits");
+    check(functionBody.includes('((high & 0x30) >> 4).toString(16).toUpperCase()'), "decodeDtcPair should decode the first DTC digit from high-byte bits 5-4");
+    check(functionBody.includes('(high & 0x0F).toString(16).toUpperCase()'), "decodeDtcPair should decode the second DTC digit from the high-byte low nibble");
+    check(functionBody.includes('((low & 0xF0) >> 4).toString(16).toUpperCase()'), "decodeDtcPair should decode the third DTC digit from the low-byte high nibble");
+    check(functionBody.includes('(low & 0x0F).toString(16).toUpperCase()'), "decodeDtcPair should decode the fourth DTC digit from the low-byte low nibble");
+    check(functionBody.includes('return `${system}${first}${second}${third}${fourth}`;'), "decodeDtcPair should return a normalized five-character DTC");
+  }
+};
 const decodeSupportedPidResponseFunctionChecks = () => {
   check(Boolean(decodeSupportedPidResponseFunctionSource), "decodeSupportedPidResponse is missing from obd-readonly.js");
   if (decodeSupportedPidResponseFunctionSource) {
@@ -609,6 +634,13 @@ const decodeSupportedPidResponseFunctionChecks = () => {
     check(functionBody.includes('const bitBytes = bytes.slice(index + 2, index + 6);'), "decodeSupportedPidResponse should use the four bitmap bytes after the base PID");
     check(functionBody.includes('for (let bit = 7; bit >= 0; bit--)') && functionBody.includes('basePid + byteIndex * 8 + (8 - bit)'), "decodeSupportedPidResponse should map supported PID bits in MSB order");
     check(functionBody.includes('supported_pids: [...new Set(supportedPids)]'), "decodeSupportedPidResponse should deduplicate supported PID ids");
+  }
+};
+const supportedPidBaseFunctionChecks = () => {
+  check(Boolean(supportedPidBaseFunctionSource), "isSupportedPidBase is missing from obd-readonly.js");
+  if (supportedPidBaseFunctionSource) {
+    const functionBody = supportedPidBaseFunctionSource[0];
+    check(functionBody.includes('[0x00, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xE0].includes(pid)'), "isSupportedPidBase should only accept standard supported-PID bitmap base requests");
   }
 };
 const decodeLivePidResponseFunctionChecks = () => {
@@ -719,6 +751,16 @@ const buildObdLogPacketsFunctionChecks = () => {
     check(functionBody.includes('const isFirstFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x10') && functionBody.includes('pendingIsoTp.set(metadata.ecu'), "buildObdLogPackets should track ISO-TP first frames by ECU");
     check(functionBody.includes('const isConsecutiveFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x20') && functionBody.includes('sequenceError = true'), "buildObdLogPackets should detect ISO-TP consecutive frame sequence errors");
     check(functionBody.includes('pendingIsoTp.forEach((current) => {') && functionBody.includes('incomplete: true'), "buildObdLogPackets should emit incomplete ISO-TP payloads with metadata");
+  }
+};
+const normalizeObdLogLineFunctionChecks = () => {
+  check(Boolean(normalizeObdLogLineFunctionSource), "normalizeObdLogLine is missing from obd-readonly.js");
+  if (normalizeObdLogLineFunctionSource) {
+    const functionBody = normalizeObdLogLineFunctionSource[0];
+    check(functionBody.includes('return normalizeCanLogLineFormat(line)'), "normalizeObdLogLine should normalize CAN log formats before OBD adapter cleanup");
+    check(functionBody.includes('SEARCHING|BUS INIT|OK|NO DATA|STOPPED|ERROR|UNABLE TO CONNECT'), "normalizeObdLogLine should remove common adapter status tokens");
+    check(functionBody.includes('.replace(/^[>\\s]+/, "")'), "normalizeObdLogLine should strip ELM prompt prefixes");
+    check(functionBody.includes('.trim();'), "normalizeObdLogLine should trim the final OBD log line");
   }
 };
 const normalizeCanLogLineFormatFunctionChecks = () => {
@@ -1084,10 +1126,13 @@ onboardMonitorSnapshotFunctionChecks();
 ecuInfoValueFunctionChecks();
 sanitizeEcuInfoValueFunctionChecks();
 mode09SupportedInfoTypesFunctionChecks();
+trimEcuInfoPayloadFunctionChecks();
 ecuInfoPayloadFunctionChecks();
 parseObdHexBytesFunctionChecks();
 decodeObdDtcResponseFunctionChecks();
+decodeDtcPairFunctionChecks();
 decodeSupportedPidResponseFunctionChecks();
+supportedPidBaseFunctionChecks();
 decodeLivePidResponseFunctionChecks();
 decodeFreezeFrameResponseFunctionChecks();
 decodeEcuInfoResponseFunctionChecks();
@@ -1097,6 +1142,7 @@ decodedObdScanSessionFunctionChecks();
 scanSessionFromObdTextFunctionChecks();
 classifyObdResponseLinesFunctionChecks();
 buildObdLogPacketsFunctionChecks();
+normalizeObdLogLineFunctionChecks();
 normalizeCanLogLineFormatFunctionChecks();
 normalizeCanCsvLogLineFunctionChecks();
 extractObdFrameMetadataFunctionChecks();
