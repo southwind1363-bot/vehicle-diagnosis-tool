@@ -101,6 +101,7 @@ const negativeResponseSummaryFunctionSource = source.match(/function buildNegati
 const negativeObdResponseFunctionSource = source.match(/function decodeNegativeObdResponse[\s\S]*?responseLabel: decodeNegativeResponseCode\(responseCode\)\r?\n    \};\r?\n  \}/);
 const negativeResponseCodeFunctionSource = source.match(/function decodeNegativeResponseCode[\s\S]*?return labels\[responseCode\] \|\| "unknown_negative_response";\r?\n  \}/);
 const textImportMetadataFunctionSource = source.match(/function buildTextImportMetadata[\s\S]*?sourceLength: Number\.isFinite[\s\S]*?\r?\n    \};\r?\n  \}/);
+const supportedPidMatrixFunctionSource = source.match(/function buildSupportedPidMatrix[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const readinessHeadlineFunctionSource = appSource.match(/function buildCoreReadinessHeadline[\s\S]*?\r?\n\}/);
 const coreNextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 const readoutCoverageFunctionChecks = () => {
@@ -796,6 +797,19 @@ const textImportMetadataFunctionChecks = () => {
     check(functionBody.includes('Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))'), "buildTextImportMetadata should normalize source length without retaining raw input");
   }
 };
+const supportedPidMatrixFunctionChecks = () => {
+  check(Boolean(supportedPidMatrixFunctionSource), "buildSupportedPidMatrix is missing from obd-readonly.js");
+  if (supportedPidMatrixFunctionSource) {
+    const functionBody = supportedPidMatrixFunctionSource[0];
+    check(functionBody.includes('Array.isArray(input.supported_pids)') && functionBody.includes('Array.isArray(input.supportedPidRows)'), "buildSupportedPidMatrix should accept supported PID array aliases");
+    check(functionBody.includes('pid.pid || pid.code || pid.id || pid.pid_code || pid.pidCode'), "buildSupportedPidMatrix should normalize object PID aliases");
+    check(functionBody.includes('String(pid).toUpperCase().replace(/^0X/, "").padStart(2, "0")'), "buildSupportedPidMatrix should normalize scalar PIDs as uppercase two-digit hex");
+    check(functionBody.includes('monitorDefinitions') && functionBody.includes('definition.service === "01" && definition.pid'), "buildSupportedPidMatrix should map support against Mode 01 monitor definitions");
+    check(functionBody.includes('supported: supported.has(String(definition.pid).toUpperCase())'), "buildSupportedPidMatrix should mark definitions supported from decoded PID ids");
+    check(functionBody.includes('supportedCount: items.filter((item) => item.supported).length') && functionBody.includes('knownPidCount: items.length'), "buildSupportedPidMatrix should expose supported and known PID counts");
+    check(functionBody.includes('retainedRawText: false'), "buildSupportedPidMatrix should never retain raw text");
+  }
+};
 const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
@@ -895,6 +909,7 @@ negativeResponseSummaryFunctionChecks();
 negativeObdResponseFunctionChecks();
 negativeResponseCodeFunctionChecks();
 textImportMetadataFunctionChecks();
+supportedPidMatrixFunctionChecks();
 diagnosticScanSessionFunctionChecks();
 readinessHeadlineFunctionChecks();
 coreSummaryFunctionChecks();
