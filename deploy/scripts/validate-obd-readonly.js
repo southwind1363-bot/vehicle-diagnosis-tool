@@ -62,6 +62,7 @@ const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalize
 const bridgeReadinessSnapshotFunctionSource = source.match(/function normalizeBridgeReadinessSnapshot[\s\S]*?monitors: monitorBits\.map[\s\S]*?\r?\n    \}\)\);\r?\n  \}/);
 const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBridgeEcuInfoSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgePidValueFunctionSource = source.match(/function normalizeBridgePidValue[\s\S]*?sourceLine: index \+ 1\r?\n    \};\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: Array\.isArray\(pickDefined\(input\.missingLabels, input\.missing_labels\)\) \? \[\.\.\.pickDefined\(input\.missingLabels, input\.missing_labels\)\] : \[\]\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
@@ -311,6 +312,24 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should reuse the core Mode 06 normalizer");
     check(functionBody.includes('Array.isArray(data.mode06_tests)') && functionBody.includes('Array.isArray(data.mode06Rows)') && functionBody.includes('Array.isArray(data.onboardMonitorTests)'), "normalizeBridgeOnboardMonitorSnapshot should accept Mode 06 test aliases");
     check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge intent and safety metadata");
+  }
+};
+const bridgePidValueFunctionChecks = () => {
+  check(Boolean(bridgePidValueFunctionSource), "normalizeBridgePidValue is missing from obd-readonly.js");
+  if (bridgePidValueFunctionSource) {
+    const functionBody = bridgePidValueFunctionSource[0];
+    check(functionBody.includes('if (!row || typeof row !== "object") return null;'), "normalizeBridgePidValue should reject non-object PID rows");
+    check(functionBody.includes('row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName'), "normalizeBridgePidValue should accept monitor label aliases");
+    check(functionBody.includes('row.id || row.monitor_id || row.monitorId || row.pid || row.code || row.pid_code || row.pidCode'), "normalizeBridgePidValue should accept PID and monitor id aliases");
+    check(functionBody.includes('monitorDefinitions.find((item) => item.id === id)') && functionBody.includes('isMonitorLabelMatch(normalizedLabelAlias, alias)'), "normalizeBridgePidValue should resolve monitor definitions by id, PID, and label aliases");
+    check(functionBody.includes('bridgeComputedPidDefinitions[id]'), "normalizeBridgePidValue should preserve computed bridge PID definitions");
+    check(functionBody.includes('const isUndecodedRaw = row.decoded === false;'), "normalizeBridgePidValue should preserve explicit undecoded raw rows");
+    check(functionBody.includes('row.value ?? row.result ?? row.reading ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null'), "normalizeBridgePidValue should accept value aliases");
+    check(functionBody.includes('typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number"'), "normalizeBridgePidValue should infer text versus numeric values from raw value shape");
+    check(functionBody.includes('if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;'), "normalizeBridgePidValue should reject non-finite numeric values unless they are raw undecoded values");
+    check(functionBody.includes('valueType: isUndecodedRaw ? "raw_hex" : valueType') && functionBody.includes('decoded: isUndecodedRaw ? false : true'), "normalizeBridgePidValue should mark undecoded values as raw_hex and decoded=false");
+    check(functionBody.includes('freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null'), "normalizeBridgePidValue should normalize freeze-frame number aliases");
+    check(functionBody.includes('sourceLine: index + 1'), "normalizeBridgePidValue should retain source row position");
   }
 };
 const bridgeSummaryInputFunctionChecks = () => {
@@ -1201,6 +1220,7 @@ detectBridgeInfrastructureFunctionChecks();
 bridgeResponseSafetyFunctionChecks();
 bridgeCoreReadoutNormalizerFunctionChecks();
 bridgeExtendedCoreReadoutNormalizerFunctionChecks();
+bridgePidValueFunctionChecks();
 readoutCoverageFunctionChecks();
 normalizeReadoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
