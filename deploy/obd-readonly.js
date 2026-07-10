@@ -2339,7 +2339,10 @@
         }
         return (fallbackPriorityById[right] || 0) - (fallbackPriorityById[left] || 0);
       })[0] || null;
-    const completionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
+    const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
+    const completionPercent = normalizedCoverage.totalCategories > 0
+      ? Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)
+      : directCompletionPercent;
     const readyForAnalysis = remainingReadoutIds.length === 0
       && emptyReadoutIds.length === 0
       && blockingWarningIds.length === 0;
