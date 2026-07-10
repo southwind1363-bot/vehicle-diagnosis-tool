@@ -109,6 +109,7 @@ const decodeReadinessResponseFunctionSource = source.match(/function decodeReadi
 const decodeOnboardMonitorResponseFunctionSource = source.match(/function decodeOnboardMonitorResponse[\s\S]*?tests\r?\n    \}\);\r?\n  \}/);
 const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedObdScanSession[\s\S]*?ecus: sessionInput\.ecus \|\| sessionInput\.ecu_responses \|\| \[\]\r?\n    \}\);\r?\n  \}/);
 const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
+const textDtcSnapshotFunctionSource = source.match(/function extractTextDtcSnapshot[\s\S]*?dtcs: rows\r?\n    \}\);\r?\n  \}/);
 const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
 const normalizeObdLogLineFunctionSource = source.match(/function normalizeObdLogLine[\s\S]*?\.trim\(\);\r?\n  \}/);
@@ -911,6 +912,19 @@ const scanSessionFromObdTextFunctionChecks = () => {
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('retainedRawFrames: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "buildScanSessionFromObdText should return read-only imports without retaining raw text or frames");
   }
 };
+const textDtcSnapshotFunctionChecks = () => {
+  check(Boolean(textDtcSnapshotFunctionSource), "extractTextDtcSnapshot is missing from obd-readonly.js");
+  if (textDtcSnapshotFunctionSource) {
+    const functionBody = textDtcSnapshotFunctionSource[0];
+    check(functionBody.includes('const lines = String(value || "").split(/\\r?\\n/);'), "extractTextDtcSnapshot should process text line by line");
+    check(functionBody.includes('let currentStatus = "stored";'), "extractTextDtcSnapshot should default text-only DTC status to stored");
+    check(functionBody.includes('if (/\\bpending\\b/.test(normalized)) currentStatus = "pending";'), "extractTextDtcSnapshot should switch to pending status from headings");
+    check(functionBody.includes('else if (/\\bpermanent\\b/.test(normalized)) currentStatus = "permanent";'), "extractTextDtcSnapshot should switch to permanent status from headings");
+    check(functionBody.includes('else if (/\\bcurrent\\b|\\bstored\\b|\\bconfirmed\\b|\\bhistory\\b|\\bdtc(?:s)?\\b|\\bcodes?\\b/.test(normalized)) currentStatus = "stored";'), "extractTextDtcSnapshot should map current, stored, confirmed, history, DTC, and code headings to stored");
+    check(functionBody.includes('const codes = extractDtcCodes(text);') && functionBody.includes('codes.forEach((code) => rows.push({ code, status: currentStatus }));'), "extractTextDtcSnapshot should attach current heading status to extracted DTC codes");
+    check(functionBody.includes('source: "obd_text_status_headings"') && functionBody.includes('dtcs: rows'), "extractTextDtcSnapshot should normalize text-only DTC rows with an explicit source");
+  }
+};
 const classifyObdResponseLinesFunctionChecks = () => {
   check(Boolean(classifyObdResponseLinesFunctionSource), "classifyObdResponseLines is missing from obd-readonly.js");
   if (classifyObdResponseLinesFunctionSource) {
@@ -1396,6 +1410,7 @@ decodeReadinessResponseFunctionChecks();
 decodeOnboardMonitorResponseFunctionChecks();
 decodedObdScanSessionFunctionChecks();
 scanSessionFromObdTextFunctionChecks();
+textDtcSnapshotFunctionChecks();
 classifyObdResponseLinesFunctionChecks();
 buildObdLogPacketsFunctionChecks();
 normalizeObdLogLineFunctionChecks();
