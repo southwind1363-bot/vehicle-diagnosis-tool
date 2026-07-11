@@ -2355,6 +2355,11 @@
     const pendingReadoutQueueById = Object.fromEntries(pendingReadoutQueue.map((item) => [item.id, { ...item }]));
     const nextPendingReadoutId = pendingReadoutIds[0] || null;
     const nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
+    const pendingReadoutQueueSummary = {
+      totalCount: pendingReadoutQueue.length,
+      nextReadoutId: nextPendingReadoutId,
+      remainingAfterNextCount: Math.max(0, pendingReadoutQueue.length - 1)
+    };
     const readoutStatesByStatus = {
       captured: readoutStates.filter((item) => item.status === "captured").map((item) => ({ ...item })),
       empty: readoutStates.filter((item) => item.status === "empty").map((item) => ({ ...item })),
@@ -2443,6 +2448,7 @@
       pendingReadoutStateById,
       pendingReadoutQueue,
       pendingReadoutQueueById,
+      pendingReadoutQueueSummary,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
