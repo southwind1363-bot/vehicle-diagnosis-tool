@@ -543,6 +543,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length') && functionBody.includes('attemptedPercent:'), "buildCoreSessionStatus should expose attempted readout progress");
     check(functionBody.includes('const readoutProgressSummary = {') && functionBody.includes('requiredCount: requiredReadoutIds.length') && functionBody.includes('completionPercent'), "buildCoreSessionStatus should expose one consolidated readout progress summary");
     check(functionBody.includes('const readoutCompletionSummary = {') && functionBody.includes('complete: pendingReadoutIds.length === 0,') && functionBody.includes('pendingIds: [...pendingReadoutIds],'), "buildCoreSessionStatus should expose grouped readout completion details");
+    check(functionBody.includes('requiredCount: requiredReadoutIds.length,') && functionBody.includes('capturedCount: capturedReadoutIds.length,') && functionBody.includes('pendingCount: pendingReadoutIds.length,'), "buildCoreSessionStatus should expose readout completion counts beside ids");
     check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const nextReadoutCandidate = nextReadoutCandidates[0] ? { ...nextReadoutCandidates[0] } : null;'), "buildCoreSessionStatus should preserve the resolved next readout candidate details");
@@ -2529,6 +2530,7 @@ check(Array.isArray(bridgeSummary.coreSessionStatus?.missingReadoutIds), "Bridge
 check(Array.isArray(bridgeSummary.coreSessionStatus?.emptyReadoutIds), "Bridge session summary did not expose coreSessionStatus emptyReadoutIds");
 check(bridgeSummary.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Bridge session summary did not expose top-level readout completion captured ids");
 check(Array.isArray(bridgeSummary.readoutCompletionSummary?.pendingIds) && bridgeSummary.readoutCompletionSummary.pendingIds.length === bridgeSummary.coreSessionStatus?.readoutCompletionSummary?.pendingIds?.length, "Bridge session summary did not expose top-level readout completion pending ids");
+check(bridgeSummary.readoutCompletionSummary?.pendingCount === bridgeSummary.readoutCompletionSummary?.pendingIds?.length, "Bridge session summary did not expose readout completion pending count");
 check(bridgeSummary.analysisReadinessSummary?.ready === bridgeSummary.coreSessionStatus?.analysisReadinessSummary?.ready, "Bridge session summary did not expose top-level analysis readiness summary");
 check(bridgeSummary.warnings.includes("bridge_readout_incomplete"), "Bridge session summary did not warn about incomplete readout sections");
 check(bridgeSummary.warnings.includes("mode09_key_items_missing"), "Bridge session summary did not warn about missing key Mode 09 items");
@@ -3005,6 +3007,7 @@ check(bridgeExportPayload.session.diagnostic_flow_summary?.schemaVersion === "di
 check(bridgeExportPayload.session.diagnostic_flow_summary?.stage === "diagnostic_core", "Bridge export did not carry diagnostic flow summary stage");
 check(bridgeExportPayload.session.readout_completion_summary?.capturedIds?.includes("dtc_snapshot"), "Bridge export did not carry readout completion summary captured ids");
 check(Array.isArray(bridgeExportPayload.session.readout_completion_summary?.pendingIds), "Bridge export did not carry readout completion summary pending ids");
+check(bridgeExportPayload.session.readout_completion_summary?.capturedCount === bridgeExportPayload.session.readout_completion_summary?.capturedIds?.length, "Bridge export did not carry readout completion captured count");
 check(bridgeExportPayload.session.analysis_readiness_summary?.ready === bridgeExportPayload.session.core_session_status?.analysisReadinessSummary?.ready, "Bridge export did not carry analysis readiness summary");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
@@ -7053,6 +7056,7 @@ check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.currentStep === "r
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.nextReadoutId === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.completionPercent === 29, "Diagnostic scan session did not expose top-level diagnostic flow progress");
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.nextReadoutLabel && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.nextReadoutSource === "explicit_candidate", "Diagnostic scan session did not expose actionable top-level diagnostic flow next readout details");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.complete === false && scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingIds?.length === 5, "Diagnostic scan session did not expose top-level readout completion summary");
+check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingCount === 5 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.missingCount === 4 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyCount === 1, "Diagnostic scan session did not expose readout completion counts");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyIds?.includes("freeze_frame_snapshot") && scanSessionPlainCoverageOverride.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not expose top-level readout completion ids");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockers?.includes("missing_readouts") && scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockers?.includes("empty_readouts"), "Diagnostic scan session did not expose analysis blockers for missing and empty readouts");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockerSummary?.missingReadoutCount === 4, "Diagnostic scan session did not expose missing readout blocker count");
@@ -7342,6 +7346,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 561");
+  console.log("OBD read-only safety checks: 565");
   console.log("Errors: 0");
 }
