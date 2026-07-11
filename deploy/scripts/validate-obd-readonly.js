@@ -438,11 +438,13 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });'), "buildBridgeSessionExportPayload should rebuild summary metadata in snake_case for export");
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);'), "buildBridgeSessionExportPayload should rebuild diagnostic flow summary from core session status");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;'), "buildBridgeSessionExportPayload should rebuild readout completion summary from core session status");
+    check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;'), "buildBridgeSessionExportPayload should rebuild analysis readiness summary from core session status");
     check(functionBody.includes('core_session_status: coreSessionStatus,'), "buildBridgeSessionExportPayload should serialize core session status");
     check(functionBody.includes('schema_version: \"bridge_session_export_v1\"'), "buildBridgeSessionExportPayload should emit bridge session export schema version");
     check(functionBody.includes('readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),'), "buildBridgeSessionExportPayload should normalize readout coverage into export payload");
     check(functionBody.includes('diagnostic_flow_summary: diagnosticFlowSummary,'), "buildBridgeSessionExportPayload should serialize diagnostic flow summary");
     check(functionBody.includes('readout_completion_summary: readoutCompletionSummary,'), "buildBridgeSessionExportPayload should serialize readout completion summary");
+    check(functionBody.includes('analysis_readiness_summary: analysisReadinessSummary,'), "buildBridgeSessionExportPayload should serialize analysis readiness summary");
   }
 };
 const bridgeDiagnosticImportFunctionChecks = () => {
@@ -456,6 +458,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const coreSessionStatus = summary.coreSessionStatus') && functionBody.includes('coreSessionStatus,'), "buildBridgeDiagnosticImport should preserve core session status");
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary') && functionBody.includes('diagnosticFlowSummary,'), "buildBridgeDiagnosticImport should preserve diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary') && functionBody.includes('readoutCompletionSummary,'), "buildBridgeDiagnosticImport should preserve readout completion summary");
+    check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary') && functionBody.includes('analysisReadinessSummary,'), "buildBridgeDiagnosticImport should preserve analysis readiness summary");
   }
 };
 const sessionMetadataOverridesFunctionChecks = () => {
@@ -2993,6 +2996,7 @@ check(bridgeExportPayload.session.diagnostic_flow_summary?.schemaVersion === "di
 check(bridgeExportPayload.session.diagnostic_flow_summary?.stage === "diagnostic_core", "Bridge export did not carry diagnostic flow summary stage");
 check(bridgeExportPayload.session.readout_completion_summary?.capturedIds?.includes("dtc_snapshot"), "Bridge export did not carry readout completion summary captured ids");
 check(Array.isArray(bridgeExportPayload.session.readout_completion_summary?.pendingIds), "Bridge export did not carry readout completion summary pending ids");
+check(bridgeExportPayload.session.analysis_readiness_summary?.ready === bridgeExportPayload.session.core_session_status?.analysisReadinessSummary?.ready, "Bridge export did not carry analysis readiness summary");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
 check(bridgeExportPayload.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export did not carry tool_hints");
@@ -3215,6 +3219,8 @@ check(bridgeDiagnosticImport.diagnosticFlowSummary?.schemaVersion === "diagnosti
 check(bridgeDiagnosticImport.bridgeSession?.diagnosticFlowSummary?.stage === "diagnostic_core", "Bridge diagnostic import did not retain diagnostic flow summary on bridgeSession");
 check(bridgeDiagnosticImport.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Bridge diagnostic import did not carry top-level readout completion summary");
 check(bridgeDiagnosticImport.bridgeSession?.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Bridge diagnostic import did not retain readout completion summary on bridgeSession");
+check(bridgeDiagnosticImport.analysisReadinessSummary?.ready === bridgeDiagnosticImport.coreSessionStatus?.analysisReadinessSummary?.ready, "Bridge diagnostic import did not carry top-level analysis readiness summary");
+check(bridgeDiagnosticImport.bridgeSession?.analysisReadinessSummary?.ready === bridgeDiagnosticImport.bridgeSession?.coreSessionStatus?.analysisReadinessSummary?.ready, "Bridge diagnostic import did not retain analysis readiness summary on bridgeSession");
 check(bridgeDiagnosticImport.freezeFrameSnapshot.monitorValues.length === 2, "ブリッジ診断取込へフリーズフレームを引き継げません");
 check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取込へ相関ヒントを引き継げません");
 check(bridgeDiagnosticImport.connectionStatus.displayStatus === "読取準備モデル", "Bridge diagnostic import did not expose top-level connection status");
@@ -7315,6 +7321,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 534");
+  console.log("OBD read-only safety checks: 540");
   console.log("Errors: 0");
 }

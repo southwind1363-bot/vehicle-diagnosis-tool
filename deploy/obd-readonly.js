@@ -3041,6 +3041,7 @@
     });
     const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;
+    const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;
     return {
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
@@ -3078,6 +3079,7 @@
         core_session_status: coreSessionStatus,
         diagnostic_flow_summary: diagnosticFlowSummary,
         readout_completion_summary: readoutCompletionSummary,
+        analysis_readiness_summary: analysisReadinessSummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
         source_length: metadataFields.source_length
       },
@@ -3141,6 +3143,11 @@
       || summary.readout_completion_summary
       || exportPayload.session?.readout_completion_summary
       || null;
+    const analysisReadinessSummary = summary.analysisReadinessSummary
+      || summary.analysis_readiness_summary
+      || exportPayload.session?.analysis_readiness_summary
+      || coreSessionStatus.analysisReadinessSummary
+      || null;
     const codes = cloneBridgeArrayItems(summary.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
     const monitorInsights = cloneBridgeArrayItems(summary.monitorInsights);
@@ -3175,6 +3182,7 @@
       coreSessionStatus,
       diagnosticFlowSummary,
       readoutCompletionSummary,
+      analysisReadinessSummary,
       bridgeSession: {
         startedAt: summary.startedAt || null,
         endedAt: summary.endedAt || null,
@@ -3203,6 +3211,7 @@
         coreSessionStatus,
         diagnosticFlowSummary,
         readoutCompletionSummary,
+        analysisReadinessSummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
         sourceLength: bridgeSessionMetadataFields.sourceLength,
         exportRequired: true
