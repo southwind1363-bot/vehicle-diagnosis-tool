@@ -5287,6 +5287,10 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const blockerLabel = blockerIds.length
     ? blockerIds.slice(0, 3).map((item) => formatDiagnosticFlowBlockerLabel(item)).join(" / ")
     : canStartAnalysis ? "なし" : NO_DATA;
+  const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
+  const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
+    ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
+    : NO_DATA;
   const statusLabel = canStartAnalysis
     ? "解析へ進めます"
     : collectionRequired
@@ -5314,6 +5318,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "読取進捗", completionPercent === null ? NO_DATA : `${completionPercent}%`);
   addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
   addObdDiagnosticFlowMetric(grid, "保留理由", blockerLabel, analysisBlocked ? "blocked" : "");
+  addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
 

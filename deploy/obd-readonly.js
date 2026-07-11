@@ -2492,6 +2492,61 @@
       emptyReadoutCount: emptyReadoutIds.length,
       blockingWarningCount: blockingWarningIds.length
     };
+    const vehicleApplicabilityBlockingWarningIds = [
+      "vehicle_profile_manual",
+      "vehicle_applicability_manual_confirmation",
+      "vehicle_applicability_unlisted",
+      "vehicle_unlisted_confirm_vehicle_profile"
+    ];
+    const vehicleApplicabilityBlocking = blockingWarningIds.some((warning) => vehicleApplicabilityBlockingWarningIds.includes(warning));
+    const vehicleApplicabilityNeedsReview = applicability.status === "partial"
+      || applicability.status === "manual"
+      || applicability.status === "unlisted";
+    const analysisChecklist = [
+      {
+        id: "required_readouts",
+        label: "Required core readouts",
+        state: pendingReadoutIds.length > 0 ? "pending" : "complete",
+        complete: pendingReadoutIds.length === 0,
+        blocking: pendingReadoutIds.length > 0,
+        requiredCount: requiredReadoutIds.length,
+        capturedCount: capturedReadoutIds.length,
+        missingCount: remainingReadoutIds.length,
+        emptyCount: emptyReadoutIds.length,
+        pendingCount: pendingReadoutIds.length
+      },
+      {
+        id: "blocking_warnings",
+        label: "Blocking warnings",
+        state: blockingWarningIds.length > 0 ? "blocked" : "complete",
+        complete: blockingWarningIds.length === 0,
+        blocking: blockingWarningIds.length > 0,
+        warningCount: blockingWarningIds.length,
+        warningIds: [...blockingWarningIds]
+      },
+      {
+        id: "vehicle_applicability",
+        label: "Vehicle applicability",
+        state: vehicleApplicabilityBlocking ? "blocked" : vehicleApplicabilityNeedsReview ? "review" : "complete",
+        complete: !vehicleApplicabilityNeedsReview,
+        blocking: vehicleApplicabilityBlocking,
+        applicabilityStatus: applicability.status || "unknown",
+        candidateRangeCount: applicability.candidateRangeCount || 0,
+        applicableRangeCount: applicability.applicableRangeCount || 0,
+        supportedEngineCodeCount: applicability.supportedEngineCodeCount || 0
+      }
+    ];
+    const analysisChecklistById = Object.fromEntries(analysisChecklist.map((item) => [item.id, { ...item }]));
+    const analysisChecklistSummary = {
+      totalCount: analysisChecklist.length,
+      completeCount: analysisChecklist.filter((item) => item.complete).length,
+      blockingCount: analysisChecklist.filter((item) => item.blocking).length,
+      reviewCount: analysisChecklist.filter((item) => item.state === "review").length,
+      pendingCount: analysisChecklist.filter((item) => item.state === "pending").length,
+      blockedIds: analysisChecklist.filter((item) => item.blocking).map((item) => item.id),
+      reviewIds: analysisChecklist.filter((item) => item.state === "review").map((item) => item.id),
+      ready: analysisBlockers.length === 0
+    };
     const readyForAnalysis = analysisBlockers.length === 0;
     const hasReadoutProgress = capturedReadoutIds.length > 0
       || emptyReadoutIds.length > 0
@@ -2518,6 +2573,9 @@
       blockerIds: [...analysisBlockers],
       blockerSummary: analysisBlockerSummary,
       blockersById: analysisBlockerById,
+      checklist: analysisChecklist,
+      checklistById: analysisChecklistById,
+      checklistSummary: analysisChecklistSummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
       blockingWarningCount: analysisBlockerSummary.blockingWarningCount,
@@ -2564,6 +2622,9 @@
       analysisBlockers,
       analysisBlockerById,
       analysisBlockerSummary,
+      analysisChecklist,
+      analysisChecklistById,
+      analysisChecklistSummary,
       analysisReadinessSummary,
       blockingWarningIds,
       readyForAnalysis

@@ -555,11 +555,15 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const analysisBlockers = [') && functionBody.includes('"missing_readouts"') && functionBody.includes('"empty_readouts"') && functionBody.includes('"blocking_warnings"'), "buildCoreSessionStatus should expose analysis blocker categories");
     check(functionBody.includes('const analysisBlockerById = {') && functionBody.includes('missing_readouts: { count: remainingReadoutIds.length, readoutIds: [...remainingReadoutIds] }') && functionBody.includes('blocking_warnings: { count: blockingWarningIds.length, warningIds: [...blockingWarningIds] }'), "buildCoreSessionStatus should index analysis blocker details by id");
     check(functionBody.includes('const analysisBlockerSummary = {') && functionBody.includes('missingReadoutCount: remainingReadoutIds.length') && functionBody.includes('emptyReadoutCount: emptyReadoutIds.length') && functionBody.includes('blockingWarningCount: blockingWarningIds.length'), "buildCoreSessionStatus should expose analysis blocker counts");
+    check(functionBody.includes('const analysisChecklist = [') && functionBody.includes('id: "required_readouts"') && functionBody.includes('id: "vehicle_applicability"'), "buildCoreSessionStatus should expose an analysis readiness checklist");
+    check(functionBody.includes('const analysisChecklistById = Object.fromEntries(analysisChecklist.map((item) => [item.id, { ...item }]));'), "buildCoreSessionStatus should index analysis readiness checklist entries by id");
+    check(functionBody.includes('const analysisChecklistSummary = {') && functionBody.includes('reviewCount: analysisChecklist.filter((item) => item.state === "review").length,') && functionBody.includes('ready: analysisBlockers.length === 0'), "buildCoreSessionStatus should summarize analysis readiness checklist state");
     check(functionBody.includes('const readyForAnalysis = analysisBlockers.length === 0;'), "buildCoreSessionStatus should require no analysis blockers before analysis-ready");
     check(functionBody.includes('const coreStatus = readyForAnalysis ? "analysis_ready"') && functionBody.includes('const coreWorkflowSummary = {') && functionBody.includes('nextAction: readyForAnalysis ? "start_analysis"'), "buildCoreSessionStatus should expose core workflow status and next action");
     check(functionBody.includes('nextReadoutLabel: nextReadoutSummary?.label || null,') && functionBody.includes('nextReadoutSource: nextReadoutSummary?.source || null,'), "buildCoreSessionStatus should expose actionable next readout workflow details");
     check(functionBody.includes('const analysisReadinessSummary = {') && functionBody.includes('blockerIds: [...analysisBlockers],') && functionBody.includes('nextReadoutId: nextReadoutSummary?.id || null,'), "buildCoreSessionStatus should expose one analysis readiness summary");
     check(functionBody.includes('blockerSummary: analysisBlockerSummary,') && functionBody.includes('blockersById: analysisBlockerById,'), "buildCoreSessionStatus should carry blocker details into analysis readiness summary");
+    check(functionBody.includes('checklist: analysisChecklist,') && functionBody.includes('checklistSummary: analysisChecklistSummary,'), "buildCoreSessionStatus should carry checklist details into analysis readiness summary");
     check(source.includes('function buildDiagnosticFlowSummary(coreSessionStatus = {})') && source.includes('schemaVersion: "diagnostic_flow_summary_v1"'), "obd-readonly should expose a stable diagnostic flow summary builder");
     check(source.includes('nextReadoutLabel: workflow.nextReadoutLabel || readiness.nextReadoutLabel') && source.includes('nextReadoutSource: workflow.nextReadoutSource || readiness.nextReadoutSource'), "diagnostic flow summaries should carry actionable next readout details");
     check(source.includes('const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || {};') && source.includes('pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,') && source.includes('recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,'), "diagnostic flow summaries should carry pending queue and recommended readout cursors");
@@ -618,6 +622,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('analysisBlockers,'), "buildCoreSessionStatus should expose analysis blockers");
     check(functionBody.includes('analysisBlockerById,'), "buildCoreSessionStatus should expose analysis blocker details by id");
     check(functionBody.includes('analysisBlockerSummary,'), "buildCoreSessionStatus should expose analysis blocker summary");
+    check(functionBody.includes('analysisChecklist,') && functionBody.includes('analysisChecklistById,') && functionBody.includes('analysisChecklistSummary,'), "buildCoreSessionStatus should return analysis checklist details");
     check(functionBody.includes('analysisReadinessSummary,'), "buildCoreSessionStatus should return analysis readiness summary");
   }
 };
@@ -1712,6 +1717,7 @@ check(indexHtml.includes("診断機能・データ網羅・読取準備・適合
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
+check(appSource.includes('const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel'), "OBD diagnostic flow panel should show analysis readiness checklist progress");
 check(styleCss.includes(".obd-diagnostic-flow-panel") && styleCss.includes(".obd-diagnostic-flow-grid"), "OBD diagnostic flow panel styles are missing from style.css");
 check(indexHtml.includes("Techstream/J2534") && indexHtml.includes("Current/Pending/Permanent") && indexHtml.includes("CONSULT") && indexHtml.includes("HDS") && indexHtml.includes("IDS"), "OBD import helper text in index.html is out of date");
 check(indexHtml.includes("obdImportToolHints"), "OBD import tool hint container is missing from index.html");
@@ -7150,6 +7156,10 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockerById?.e
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisReadinessSummary?.ready === false && scanSessionPlainCoverageOverride.coreSessionStatus.analysisReadinessSummary?.status === "collecting_readouts", "Diagnostic scan session did not expose analysis readiness state");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisReadinessSummary?.blockerCount === 2 && scanSessionPlainCoverageOverride.coreSessionStatus.analysisReadinessSummary?.pendingReadoutCount === 5, "Diagnostic scan session did not expose analysis readiness blocker counts");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisReadinessSummary?.blockerSummary?.missingReadoutCount === 4 && scanSessionPlainCoverageOverride.coreSessionStatus.analysisReadinessSummary?.blockersById?.empty_readouts?.count === 1, "Diagnostic scan session did not carry blocker details in analysis readiness summary");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisChecklistSummary?.totalCount === 3 && scanSessionPlainCoverageOverride.coreSessionStatus.analysisChecklistSummary?.pendingCount === 1, "Diagnostic scan session did not expose top-level analysis checklist summary");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisChecklistById?.required_readouts?.pendingCount === 5, "Diagnostic scan session did not expose required-readout checklist details");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisReadinessSummary?.checklistSummary?.blockingCount === 1, "Diagnostic scan session did not carry checklist summary into analysis readiness");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.state === "complete", "Diagnostic scan session did not carry vehicle-applicability checklist state");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisReadinessSummary?.nextReadoutId === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.coreSessionStatus.analysisReadinessSummary?.completionPercent === 29, "Diagnostic scan session did not expose analysis readiness next readout progress");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisReadinessSummary?.nextReadoutLabel && scanSessionPlainCoverageOverride.coreSessionStatus.analysisReadinessSummary?.nextReadoutSource === "explicit_candidate", "Diagnostic scan session did not expose actionable analysis readiness next readout details");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.capturedReadoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not derive captured core readout ids from coverage items");
@@ -7430,6 +7440,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 610");
+  console.log("OBD read-only safety checks: 620");
   console.log("Errors: 0");
 }
