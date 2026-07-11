@@ -5288,8 +5288,11 @@ function renderObdDiagnosticFlowPanel(session = null) {
     : Number.isFinite(Number(readoutRequestPlan?.totalCount))
       ? Number(readoutRequestPlan.totalCount)
       : Array.isArray(core.pendingReadoutRequestQueue) ? core.pendingReadoutRequestQueue.length : 0;
+  const mappedReadoutRequestCount = Number.isFinite(Number(readoutRequestPlan?.mappedCount))
+    ? Number(readoutRequestPlan.mappedCount)
+    : null;
   const nextReadoutRequestLabel = nextReadoutRequest?.bridgeIntent
-    ? `${nextReadoutRequest.bridgeIntent}${nextReadoutRequest.serviceMode ? ` / Mode ${nextReadoutRequest.serviceMode}` : ""}${pendingReadoutRequestCount ? ` / queue ${pendingReadoutRequestCount}` : ""}`
+    ? `${nextReadoutRequest.bridgeIntent}${nextReadoutRequest.serviceMode ? ` / Mode ${nextReadoutRequest.serviceMode}` : ""}${pendingReadoutRequestCount ? ` / queue ${pendingReadoutRequestCount}${mappedReadoutRequestCount !== null ? ` / mapped ${mappedReadoutRequestCount}` : ""}` : ""}`
     : NO_DATA;
   const blockerIds = Array.isArray(flow.blockingReasonIds)
     ? flow.blockingReasonIds

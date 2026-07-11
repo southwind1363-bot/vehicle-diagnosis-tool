@@ -2478,12 +2478,23 @@
       })
       .filter(Boolean);
     const pendingReadoutRequestQueueById = Object.fromEntries(pendingReadoutRequestQueue.map((item) => [item.readoutId, { ...item }]));
+    const pendingReadoutRequestPlanEntries = nextReadoutRequest && !pendingReadoutRequestQueue.some((item) => item.readoutId === nextReadoutRequest.readoutId)
+      ? [{ ...nextReadoutRequest, queuePosition: nextReadoutSummary?.queuePosition || null, isNext: false, isRecommended: true }, ...pendingReadoutRequestQueue]
+      : pendingReadoutRequestQueue;
+    const mappedPendingReadoutRequests = pendingReadoutRequestPlanEntries.filter((item) => Boolean(item.bridgeIntent));
+    const unmappedPendingReadoutRequestIds = pendingReadoutRequestPlanEntries
+      .filter((item) => !item.bridgeIntent)
+      .map((item) => item.readoutId);
     const pendingReadoutRequestPlan = {
       schemaVersion: "read_only_readout_request_plan_v1",
-      totalCount: pendingReadoutRequestQueue.length,
-      nextRequest: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
-      requestIds: pendingReadoutRequestQueue.map((item) => item.readoutId),
-      bridgeIntents: [...new Set(pendingReadoutRequestQueue.map((item) => item.bridgeIntent).filter(Boolean))],
+      totalCount: pendingReadoutRequestPlanEntries.length,
+      mappedCount: mappedPendingReadoutRequests.length,
+      unmappedCount: unmappedPendingReadoutRequestIds.length,
+      allMapped: unmappedPendingReadoutRequestIds.length === 0,
+      unmappedRequestIds: [...unmappedPendingReadoutRequestIds],
+      nextRequest: nextReadoutRequest || pendingReadoutRequestPlanEntries.find((item) => item.isNext) || pendingReadoutRequestPlanEntries[0] || null,
+      requestIds: pendingReadoutRequestPlanEntries.map((item) => item.readoutId),
+      bridgeIntents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],
       executionEnabled: false,
       readOnly: true,
       wouldTransmit: false,
@@ -2724,12 +2735,20 @@
     const pendingReadoutRequestQueue = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
       ? coreSessionStatus.pendingReadoutRequestQueue.map((item) => ({ ...item }))
       : [];
+    const mappedPendingReadoutRequests = pendingReadoutRequestQueue.filter((item) => Boolean(item.bridgeIntent));
+    const unmappedPendingReadoutRequestIds = pendingReadoutRequestQueue
+      .filter((item) => !item.bridgeIntent)
+      .map((item) => item.readoutId);
     const pendingReadoutRequestPlan = coreSessionStatus?.pendingReadoutRequestPlan || {
       schemaVersion: "read_only_readout_request_plan_v1",
       totalCount: pendingReadoutRequestQueue.length,
+      mappedCount: mappedPendingReadoutRequests.length,
+      unmappedCount: unmappedPendingReadoutRequestIds.length,
+      allMapped: unmappedPendingReadoutRequestIds.length === 0,
+      unmappedRequestIds: [...unmappedPendingReadoutRequestIds],
       nextRequest: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
       requestIds: pendingReadoutRequestQueue.map((item) => item.readoutId),
-      bridgeIntents: [...new Set(pendingReadoutRequestQueue.map((item) => item.bridgeIntent).filter(Boolean))],
+      bridgeIntents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],
       executionEnabled: false,
       readOnly: true,
       wouldTransmit: false,
