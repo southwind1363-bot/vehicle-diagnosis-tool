@@ -1588,6 +1588,34 @@
     );
   }
 
+  function buildReadOnlyNextReadoutRequest(nextReadoutSummary = null) {
+    if (!nextReadoutSummary || typeof nextReadoutSummary !== "object" || !nextReadoutSummary.id) return null;
+    const requestByReadoutId = {
+      dtc_snapshot: { bridgeIntent: "read_stored_dtc", serviceMode: "03", pid: null },
+      freeze_frame_snapshot: { bridgeIntent: "read_freeze_frame", serviceMode: "02", pid: null },
+      readiness_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "01" },
+      ecu_info_snapshot: { bridgeIntent: "read_ecu_info", serviceMode: "09", pid: null },
+      onboard_monitor_snapshot: { bridgeIntent: "read_onboard_monitor", serviceMode: "06", pid: null },
+      supported_pid_matrix: { bridgeIntent: "read_supported_pids", serviceMode: "01", pid: "00" },
+      live_pid_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "supported-only" }
+    };
+    const request = requestByReadoutId[nextReadoutSummary.id] || null;
+    return {
+      schemaVersion: "read_only_next_readout_request_v1",
+      readoutId: nextReadoutSummary.id,
+      label: nextReadoutSummary.label || nextReadoutSummary.id,
+      status: nextReadoutSummary.status || null,
+      bridgeIntent: request?.bridgeIntent || null,
+      serviceMode: request?.serviceMode || null,
+      pid: request?.pid || null,
+      executionEnabled: false,
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false,
+      requiresUserAction: true
+    };
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
@@ -2435,6 +2463,10 @@
       isMissing: remainingReadoutIds.includes(nextRecommendedReadoutId),
       isEmpty: emptyReadoutIds.includes(nextRecommendedReadoutId)
     } : null;
+    const nextReadoutRequest = buildReadOnlyNextReadoutRequest(nextReadoutSummary);
+    if (nextReadoutSummary && nextReadoutRequest) {
+      nextReadoutSummary.readoutRequest = nextReadoutRequest;
+    }
     Object.assign(pendingReadoutQueueSummary, {
       recommendedReadoutId: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
@@ -2619,6 +2651,7 @@
       nextReadoutSource,
       nextReadoutState,
       nextReadoutSummary,
+      nextReadoutRequest,
       analysisBlockers,
       analysisBlockerById,
       analysisBlockerSummary,
@@ -2662,6 +2695,7 @@
     const blockingReasonIds = Array.isArray(readiness.blockerIds)
       ? [...readiness.blockerIds]
       : Array.isArray(coreSessionStatus?.analysisBlockers) ? [...coreSessionStatus.analysisBlockers] : [];
+    const nextReadoutRequest = coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.nextReadoutSummary?.readoutRequest || null;
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
@@ -2673,6 +2707,10 @@
       nextReadoutStatus: workflow.nextReadoutStatus || readiness.nextReadoutStatus || coreSessionStatus?.nextReadoutState?.status || null,
       nextReadoutSource: workflow.nextReadoutSource || readiness.nextReadoutSource || coreSessionStatus?.nextReadoutSource || null,
       nextReadoutQueuePosition: workflow.nextReadoutQueuePosition || readiness.nextReadoutQueuePosition || coreSessionStatus?.nextReadoutSummary?.queuePosition || null,
+      nextReadoutRequest,
+      nextReadoutBridgeIntent: nextReadoutRequest?.bridgeIntent || null,
+      nextReadoutServiceMode: nextReadoutRequest?.serviceMode || null,
+      nextReadoutExecutionEnabled: nextReadoutRequest?.executionEnabled === true,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
