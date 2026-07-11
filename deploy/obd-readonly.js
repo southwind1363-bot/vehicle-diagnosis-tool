@@ -2579,6 +2579,15 @@
     const readCount = (field, fallbackIds = []) => Number.isFinite(Number(completion[field]))
       ? Number(completion[field])
       : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
+    const readyForAnalysis = typeof coreSessionStatus?.readyForAnalysis === "boolean"
+      ? coreSessionStatus.readyForAnalysis
+      : readiness.ready === true;
+    const pendingReadoutCount = Number.isFinite(Number(progress.pendingCount))
+      ? Number(progress.pendingCount)
+      : readCount("pendingCount", coreSessionStatus?.pendingReadoutIds);
+    const blockingReasonIds = Array.isArray(readiness.blockerIds)
+      ? [...readiness.blockerIds]
+      : Array.isArray(coreSessionStatus?.analysisBlockers) ? [...coreSessionStatus.analysisBlockers] : [];
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
@@ -2597,7 +2606,11 @@
       recommendedReadoutSource: queueSummary.recommendedReadoutSource || coreSessionStatus?.nextReadoutSource || null,
       recommendedReadoutQueuePosition: queueSummary.recommendedReadoutQueuePosition || coreSessionStatus?.nextReadoutSummary?.queuePosition || null,
       recommendedReadoutIsPending: queueSummary.recommendedReadoutIsPending === true,
-      readyForAnalysis: coreSessionStatus?.readyForAnalysis === true,
+      readyForAnalysis,
+      canStartAnalysis: readyForAnalysis,
+      analysisBlocked: !readyForAnalysis,
+      blockingReasonIds,
+      readoutCollectionRequired: pendingReadoutCount > 0,
       completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
         ? Number(coreSessionStatus.completionPercent)
         : Number(progress.completionPercent) || 0,
@@ -2605,9 +2618,7 @@
       capturedReadoutCount: readCount("capturedCount", coreSessionStatus?.capturedReadoutIds),
       missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.remainingReadoutIds),
       emptyReadoutCount: readCount("emptyCount", coreSessionStatus?.emptyReadoutIds),
-      pendingReadoutCount: Number.isFinite(Number(progress.pendingCount))
-        ? Number(progress.pendingCount)
-        : readCount("pendingCount", coreSessionStatus?.pendingReadoutIds),
+      pendingReadoutCount,
       blockerCount: Number.isFinite(Number(readiness.blockerCount))
         ? Number(readiness.blockerCount)
         : Array.isArray(coreSessionStatus?.analysisBlockers) ? coreSessionStatus.analysisBlockers.length : 0
