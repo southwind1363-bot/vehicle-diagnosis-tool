@@ -2570,6 +2570,26 @@
     };
   }
 
+  function buildCoreSessionStatusFromSummary(summary = {}, {
+    vehicleApplicability = null,
+    warnings = null,
+    nextReadoutCandidates = null
+  } = {}) {
+    return buildCoreSessionStatus({
+      readoutCoverage: summary.readoutCoverage || summary.readout_coverage,
+      vehicleApplicability: vehicleApplicability || summary.vehicleApplicability || summary.vehicle_applicability,
+      dtcSnapshot: summary.dtcSnapshot || summary.dtc_snapshot || { codes: summary.codes || summary.dtc_codes || [] },
+      freezeFrameSnapshot: summary.freezeFrameSnapshot || summary.freeze_frame_snapshot || null,
+      readinessSnapshot: summary.readinessSnapshot || summary.readiness_snapshot || null,
+      ecuInfoSnapshot: summary.ecuInfoSnapshot || summary.ecu_info_snapshot || null,
+      onboardMonitorSnapshot: summary.onboardMonitorSnapshot || summary.onboard_monitor_snapshot || null,
+      livePidSnapshot: summary.livePidSnapshot || summary.live_pid_snapshot || { monitorValues: summary.monitorValues || summary.monitor_values || [] },
+      supportedPidMatrix: summary.supportedPidMatrix || summary.supported_pid_matrix || null,
+      warnings: warnings || summary.warnings || summary.warning_flags || [],
+      nextReadoutCandidates: nextReadoutCandidates || summary.nextReadoutCandidates || summary.next_readout_candidates || []
+    });
+  }
+
   function resolveImportClassification(input = null) {
     return input && typeof input === "object" ? { ...input } : null;
   }
@@ -2894,6 +2914,12 @@
   function buildBridgeSessionExportPayload(parts = {}) {
     const summary = resolveBridgeSummary(parts);
     const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });
+    const coreSessionStatus = summary.coreSessionStatus || summary.core_session_status || buildCoreSessionStatusFromSummary(summary, {
+      vehicleApplicability: metadataFields.vehicle_applicability,
+      warnings: metadataFields.warnings,
+      nextReadoutCandidates: metadataFields.next_readout_candidates
+    });
+    const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);
     return {
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
@@ -2928,6 +2954,7 @@
         tool_hints: metadataFields.tool_hints,
         warnings: metadataFields.warnings,
         next_readout_candidates: metadataFields.next_readout_candidates,
+        diagnostic_flow_summary: diagnosticFlowSummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
         source_length: metadataFields.source_length
       },
@@ -2975,6 +3002,14 @@
         : metadataFields.sourceLength
     };
     const exportPayload = buildBridgeSessionExportPayload(summary);
+    const diagnosticFlowSummary = summary.diagnosticFlowSummary
+      || summary.diagnostic_flow_summary
+      || exportPayload.session?.diagnostic_flow_summary
+      || buildDiagnosticFlowSummary(buildCoreSessionStatusFromSummary(summary, {
+        vehicleApplicability: metadataFields.vehicleApplicability,
+        warnings: metadataFields.warnings,
+        nextReadoutCandidates: metadataFields.nextReadoutCandidates
+      }));
     const codes = cloneBridgeArrayItems(summary.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
     const monitorInsights = cloneBridgeArrayItems(summary.monitorInsights);
@@ -3006,6 +3041,7 @@
       toolHints: metadataFields.toolHints,
       warnings: metadataFields.warnings,
       nextReadoutCandidates: metadataFields.nextReadoutCandidates,
+      diagnosticFlowSummary,
       bridgeSession: {
         startedAt: summary.startedAt || null,
         endedAt: summary.endedAt || null,
@@ -3031,6 +3067,7 @@
         toolHints: bridgeSessionMetadataFields.toolHints,
         warnings: bridgeSessionMetadataFields.warnings,
         nextReadoutCandidates: bridgeSessionMetadataFields.nextReadoutCandidates,
+        diagnosticFlowSummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
         sourceLength: bridgeSessionMetadataFields.sourceLength,
         exportRequired: true
