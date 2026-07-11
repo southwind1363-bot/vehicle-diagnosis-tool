@@ -2884,6 +2884,14 @@
         };
       });
     const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
+    const sectionSummaryById = sectionSummaries.reduce((byId, item) => {
+      byId[item.id] = item;
+      return byId;
+    }, {});
+    const changedSectionSummaryById = changedSectionSummaries.reduce((byId, item) => {
+      byId[item.id] = item;
+      return byId;
+    }, {});
     const changedSectionIds = changedSectionSummaries.map((item) => item.id);
     const changedReasonIds = [...new Set(changedSectionSummaries.flatMap((item) => item.changeReasonIds || []))];
     const changedReasonCountsById = changedReasonIds.reduce((counts, reasonId) => {
@@ -2916,6 +2924,8 @@
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       sectionSummaries,
       changedSectionSummaries,
+      sectionSummaryById,
+      changedSectionSummaryById,
       changedReasonIds,
       changedReasonCountsById,
       changedSectionsByReasonId,
