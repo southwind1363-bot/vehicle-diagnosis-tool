@@ -2415,6 +2415,20 @@
         ? "fallback_state"
         : null;
     const nextReadoutState = readoutStates.find((item) => item.id === nextRecommendedReadoutId) || null;
+    const nextReadoutQueueEntry = nextRecommendedReadoutId
+      ? pendingReadoutQueueById[nextRecommendedReadoutId] || null
+      : null;
+    const nextReadoutSummary = nextRecommendedReadoutId ? {
+      id: nextRecommendedReadoutId,
+      label: nextReadoutState?.label || nextReadoutCandidate?.label || nextRecommendedReadoutId,
+      status: nextReadoutState?.status || null,
+      source: nextReadoutSource,
+      priority: nextReadoutState?.priority ?? nextReadoutCandidate?.priority ?? null,
+      queuePosition: nextReadoutQueueEntry?.position || null,
+      isPending: pendingReadoutIds.includes(nextRecommendedReadoutId),
+      isMissing: remainingReadoutIds.includes(nextRecommendedReadoutId),
+      isEmpty: emptyReadoutIds.includes(nextRecommendedReadoutId)
+    } : null;
     const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
     const completionPercent = normalizedCoverage.totalCategories > 0
       ? Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)
@@ -2479,6 +2493,7 @@
       nextRecommendedReadoutId,
       nextReadoutSource,
       nextReadoutState,
+      nextReadoutSummary,
       analysisBlockers,
       analysisBlockerById,
       analysisBlockerSummary,
