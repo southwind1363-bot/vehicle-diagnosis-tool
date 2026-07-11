@@ -3778,6 +3778,8 @@ check(mergedDiagnosticInputExportPayload.vciDevices.length === 1, "Combined diag
 check(mergedDiagnosticInputExportPayload.warnings.includes("freeze_frame_available"), "Combined diagnostic inputs did not carry warnings from bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Combined diagnostic inputs did not carry next_readout_candidates from bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.coreSessionStatus?.stage === "diagnostic_core" && Number(mergedDiagnosticInputExportPayload.coreSessionStatus?.completionPercent) > 0, "Combined diagnostic inputs did not expose coreSessionStatus for bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.diagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Combined diagnostic inputs did not expose diagnosticFlowSummary for bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.diagnosticFlowSummary?.stage === "diagnostic_core", "Combined diagnostic inputs did not expose diagnosticFlowSummary stage for bridge_session_export_v1 bridge_import input");
 check(Array.isArray(mergedDiagnosticInputExportPayload.coreSessionStatus?.blockingWarningIds), "Combined diagnostic inputs did not expose coreSessionStatus blockingWarningIds");
 const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
@@ -4975,6 +4977,8 @@ check(decodedScanSession.freezeFrameSnapshot.monitorValues.find((item) => item.i
 check(decodedScanSession.readinessSnapshot.milOn === true, "デコード済みOBDセッションへレディネスを統合できません");
 check(decodedScanSession.onboardMonitorSnapshot.testCount === 1, "デコード済みOBDセッションへMode 06を統合できません");
 check(decodedScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "デコード済みOBDセッションへECU情報を統合できません");
+check(decodedScanSession.diagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Decoded OBD session did not expose diagnosticFlowSummary");
+check(decodedScanSession.diagnosticFlowSummary?.stage === "diagnostic_core", "Decoded OBD session did not expose diagnosticFlowSummary stage");
 const decodedScanSessionAliasInputs = obd.buildDecodedObdScanSession({
   session_id: "decoded-alias-test",
   started_at: "2026-06-28T00:12:00Z",
@@ -5539,6 +5543,8 @@ check(textScanSession.readinessSnapshot.milOn === true, "OBD text scan session d
 check(textScanSession.onboardMonitorSnapshot.tests[0]?.status === "pass", "OBD text scan session did not decode Mode 06");
 check(textScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "OBD text scan session did not decode CALID");
 check(textScanSession.retainedRawText === false && textScanSession.retainedRawFrames === false && textScanSession.wouldTransmit === false, "OBD text scan session retained raw text/frames or allowed transmit");
+check(textScanSession.diagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "OBD text scan session did not expose diagnosticFlowSummary");
+check(textScanSession.diagnosticFlowSummary?.stage === "diagnostic_core", "OBD text scan session did not expose diagnosticFlowSummary stage");
 const techstreamTextScanSession = obd.buildScanSessionFromObdText(["Toyota Techstream", "J2534", "7E8 04 43 01 71"].join("\n"), { session_id: "techstream-log" });
 check(techstreamTextScanSession.toolHints.join(",") === "Techstream,J2534", "OBD text scan session did not retain Techstream/J2534 tool hints");
 check(techstreamTextScanSession.importClassification.toolHints.join(",") === "Techstream,J2534", "OBD text scan session import classification did not retain tool hints");
