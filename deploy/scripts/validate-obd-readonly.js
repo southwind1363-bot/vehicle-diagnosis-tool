@@ -558,6 +558,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('function buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary = null, currentReadoutCompletionSummary = {})') && source.includes('schemaVersion: "imported_readout_completion_comparison_v1"'), "obd-readonly should expose imported readout completion comparison summaries");
     check(source.includes('function buildImportedSessionComparisonSummary({') && source.includes('schemaVersion: "imported_session_comparison_v1"'), "obd-readonly should expose imported session comparison summaries");
     check(source.includes('hasChanges: changedSectionIds.length > 0') && source.includes('unchanged: changedSectionIds.length === 0'), "imported session comparison summaries should expose a direct change flag");
+    check(source.includes('status: changedSectionIds.length > 0 ? "changed" : "unchanged"') && source.includes('changedSectionCount: changedSectionIds.length'), "imported session comparison summaries should expose status and changed section count");
     check(functionBody.includes('const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);'), "buildCoreSessionStatus should calculate direct completion from captured core readouts");
     check(functionBody.includes('Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)'), "buildCoreSessionStatus should preserve explicit readout coverage completion progress");
     check(functionBody.includes('const hasReadoutProgress = capturedReadoutIds.length > 0') && functionBody.includes('|| normalizedCoverage.availableCategories > 0;'), "buildCoreSessionStatus should treat explicit readout coverage progress as collecting readouts");
@@ -3830,6 +3831,7 @@ check(Number.isFinite(mergedDiagnosticInputExportPayload.importedReadoutCompleti
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Combined diagnostic inputs did not summarize imported session comparison results");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionIds), "Combined diagnostic inputs did not expose imported session changed section ids");
 check(typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.hasChanges === "boolean" && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.unchanged === "boolean", "Combined diagnostic inputs did not expose imported session direct change flags");
+check(["changed", "unchanged"].includes(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.status) && Number.isInteger(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionCount), "Combined diagnostic inputs did not expose imported session comparison status");
 check(Array.isArray(mergedDiagnosticInputExportPayload.coreSessionStatus?.blockingWarningIds), "Combined diagnostic inputs did not expose coreSessionStatus blockingWarningIds");
 const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
@@ -6560,6 +6562,7 @@ check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutComp
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Diagnostic scan session did not summarize imported session comparison results");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionIds), "Diagnostic scan session did not expose imported session changed section ids");
 check(typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.hasChanges === "boolean" && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.unchanged === "boolean", "Diagnostic scan session did not expose imported session direct change flags");
+check(["changed", "unchanged"].includes(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.status) && Number.isInteger(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionCount), "Diagnostic scan session did not expose imported session comparison status");
 const scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates = obd.buildDiagnosticScanSession({
   bridge_diagnostic_import: bridgeDiagnosticImportPopulatedManualExplicitCandidates,
   session_id: "shop-test-bridge-import-populated-manual-explicit-candidates"
@@ -7307,6 +7310,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 526");
+  console.log("OBD read-only safety checks: 529");
   console.log("Errors: 0");
 }

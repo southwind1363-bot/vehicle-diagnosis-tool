@@ -2671,6 +2671,8 @@
       comparedSectionCount: comparisons.length,
       hasChanges: changedSectionIds.length > 0,
       unchanged: changedSectionIds.length === 0,
+      status: changedSectionIds.length > 0 ? "changed" : "unchanged",
+      changedSectionCount: changedSectionIds.length,
       statusChanged: comparisons.some((item) => item.statusChanged === true),
       completionChanged: comparisons.some((item) => Number(item.completionDelta || item.pendingCountDelta || item.pendingReadoutDelta || 0) !== 0),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true),
