@@ -2840,14 +2840,33 @@
     readoutCompletionComparison = null,
     analysisReadinessComparison = null
   } = {}) {
-    const comparisons = [coreComparison, diagnosticFlowComparison, readoutCompletionComparison, analysisReadinessComparison].filter(Boolean);
+    const sectionInputs = [
+      { id: "core_session_status", comparison: coreComparison },
+      { id: "diagnostic_flow_summary", comparison: diagnosticFlowComparison },
+      { id: "readout_completion_summary", comparison: readoutCompletionComparison },
+      { id: "analysis_readiness_summary", comparison: analysisReadinessComparison }
+    ];
+    const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const changedSectionIds = [
-      coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || coreComparison.nextReadoutDetailsChanged || Number(coreComparison.completionDelta || coreComparison.requiredReadoutDelta || coreComparison.capturedReadoutDelta || coreComparison.missingReadoutDelta || coreComparison.emptyReadoutDelta || coreComparison.blockerCountDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
-      diagnosticFlowComparison && (diagnosticFlowComparison.statusChanged || diagnosticFlowComparison.readyForAnalysisChanged || diagnosticFlowComparison.nextReadoutChanged || diagnosticFlowComparison.nextReadoutDetailsChanged || Number(diagnosticFlowComparison.completionDelta || diagnosticFlowComparison.requiredReadoutDelta || diagnosticFlowComparison.capturedReadoutDelta || diagnosticFlowComparison.missingReadoutDelta || diagnosticFlowComparison.emptyReadoutDelta || diagnosticFlowComparison.blockerCountDelta || diagnosticFlowComparison.pendingReadoutDelta || 0) !== 0) ? "diagnostic_flow_summary" : null,
-      readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.requiredCountDelta || readoutCompletionComparison.capturedCountDelta || readoutCompletionComparison.missingCountDelta || readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null,
-      analysisReadinessComparison && (analysisReadinessComparison.readyChanged || analysisReadinessComparison.statusChanged || analysisReadinessComparison.nextReadoutChanged || analysisReadinessComparison.nextReadoutDetailsChanged || Number(analysisReadinessComparison.completionDelta || analysisReadinessComparison.blockerCountDelta || analysisReadinessComparison.pendingReadoutDelta || 0) !== 0) ? "analysis_readiness_summary" : null
-    ].filter(Boolean);
+    const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
+      || comparison.readyForAnalysisChanged === true
+      || comparison.readyChanged === true
+      || comparison.nextReadoutChanged === true
+      || comparison.nextReadoutDetailsChanged === true
+      || comparison.completeChanged === true
+      || Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || 0) !== 0;
+    const sectionSummaries = sectionInputs
+      .filter((item) => item.comparison)
+      .map((item) => ({
+        id: item.id,
+        changed: hasSectionChanges(item.comparison),
+        statusChanged: item.comparison.statusChanged === true,
+        completionChanged: Number(item.comparison.completionDelta || item.comparison.requiredCountDelta || item.comparison.capturedCountDelta || item.comparison.missingCountDelta || item.comparison.pendingCountDelta || item.comparison.emptyCountDelta || item.comparison.requiredReadoutDelta || item.comparison.capturedReadoutDelta || item.comparison.missingReadoutDelta || item.comparison.emptyReadoutDelta || item.comparison.blockerCountDelta || item.comparison.pendingReadoutDelta || 0) !== 0,
+        nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
+        readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true
+      }));
+    const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
+    const changedSectionIds = changedSectionSummaries.map((item) => item.id);
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -2861,6 +2880,8 @@
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
+      sectionSummaries,
+      changedSectionSummaries,
       changedSectionIds
     };
   }

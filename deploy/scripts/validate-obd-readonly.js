@@ -564,7 +564,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('requiredReadoutCount: readCount("requiredCount", coreSessionStatus?.requiredReadoutIds),') && source.includes('missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.remainingReadoutIds),'), "diagnostic flow summaries should carry readout completion counts");
     check(source.includes('function buildImportedCoreComparisonSummary(importedCoreSessionStatus = null, currentCoreSessionStatus = {})') && source.includes('schemaVersion: "imported_core_comparison_v1"'), "obd-readonly should expose imported core comparison summaries");
     check(source.includes('requiredReadoutDelta: currentRequiredCount - importedRequiredCount,') && source.includes('emptyReadoutDelta: currentEmptyCount - importedEmptyCount,'), "imported core comparison should compare readout completion counts");
-    check(source.includes('blockerCountDelta: currentBlockerCount - importedBlockerCount,') && source.includes('coreComparison.completionDelta || coreComparison.requiredReadoutDelta'), "imported core comparison should compare blocker counts");
+    check(source.includes('blockerCountDelta: currentBlockerCount - importedBlockerCount,') && source.includes('comparison.emptyReadoutDelta || comparison.blockerCountDelta'), "imported core comparison should compare blocker counts");
     check(source.includes('importedNextReadoutLabel: importedFlow.nextReadoutLabel || null,') && source.includes('nextReadoutDetailsChanged: (importedFlow.nextReadoutLabel || null) !== (currentFlow.nextReadoutLabel || null)'), "imported core comparison should compare next readout details");
     check(source.includes('function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {})') && source.includes('schemaVersion: "imported_diagnostic_flow_comparison_v1"'), "obd-readonly should expose imported diagnostic flow comparison summaries");
     check(source.includes('requiredReadoutDelta: currentRequiredCount - importedRequiredCount,') && source.includes('missingReadoutDelta: currentMissingCount - importedMissingCount,'), "imported diagnostic flow comparison should compare readout completion counts");
@@ -574,6 +574,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {})') && source.includes('schemaVersion: "imported_analysis_readiness_comparison_v1"'), "obd-readonly should expose imported analysis readiness comparison summaries");
     check(source.includes('importedNextReadoutLabel: importedAnalysisReadinessSummary.nextReadoutLabel || null,') && source.includes('nextReadoutDetailsChanged: (importedAnalysisReadinessSummary.nextReadoutLabel || null) !== (currentSummary.nextReadoutLabel || null)'), "imported analysis readiness comparison should compare next readout details");
     check(source.includes('function buildImportedSessionComparisonSummary({') && source.includes('schemaVersion: "imported_session_comparison_v1"'), "obd-readonly should expose imported session comparison summaries");
+    check(source.includes('const sectionSummaries = sectionInputs') && source.includes('const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);'), "imported session comparison summaries should expose section summaries");
     check(source.includes('hasChanges: changedSectionIds.length > 0') && source.includes('unchanged: changedSectionIds.length === 0'), "imported session comparison summaries should expose a direct change flag");
     check(source.includes('status: changedSectionIds.length > 0 ? "changed" : "unchanged"') && source.includes('changedSectionCount: changedSectionIds.length'), "imported session comparison summaries should expose status and changed section count");
     check(functionBody.includes('const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);'), "buildCoreSessionStatus should calculate direct completion from captured core readouts");
@@ -3870,6 +3871,8 @@ check(Number.isFinite(mergedDiagnosticInputExportPayload.importedAnalysisReadine
 check("nextReadoutDetailsChanged" in mergedDiagnosticInputExportPayload.importedAnalysisReadinessComparisonSummary, "Combined diagnostic inputs did not expose imported analysis readiness next readout detail change flag");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Combined diagnostic inputs did not summarize imported session comparison results");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionIds), "Combined diagnostic inputs did not expose imported session changed section ids");
+check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.sectionSummaries) && mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.sectionSummaries.length >= 4, "Combined diagnostic inputs did not expose imported session section summaries");
+check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionSummaries), "Combined diagnostic inputs did not expose imported session changed section summaries");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.comparedSectionCount >= 4, "Combined diagnostic inputs did not include analysis readiness in imported session comparison count");
 check(typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.hasChanges === "boolean" && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.unchanged === "boolean", "Combined diagnostic inputs did not expose imported session direct change flags");
 check(["changed", "unchanged"].includes(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.status) && Number.isInteger(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionCount), "Combined diagnostic inputs did not expose imported session comparison status");
@@ -6613,6 +6616,8 @@ check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedAnalysisRea
 check("nextReadoutDetailsChanged" in scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessComparisonSummary, "Diagnostic scan session did not expose imported analysis readiness next readout detail change flag");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Diagnostic scan session did not summarize imported session comparison results");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionIds), "Diagnostic scan session did not expose imported session changed section ids");
+check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.sectionSummaries) && scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.sectionSummaries.length >= 4, "Diagnostic scan session did not expose imported session section summaries");
+check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionSummaries), "Diagnostic scan session did not expose imported session changed section summaries");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.comparedSectionCount >= 4, "Diagnostic scan session did not include analysis readiness in imported session comparison count");
 check(typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.hasChanges === "boolean" && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.unchanged === "boolean", "Diagnostic scan session did not expose imported session direct change flags");
 check(["changed", "unchanged"].includes(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.status) && Number.isInteger(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionCount), "Diagnostic scan session did not expose imported session comparison status");
@@ -7383,6 +7388,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 590");
+  console.log("OBD read-only safety checks: 595");
   console.log("Errors: 0");
 }
