@@ -2419,6 +2419,17 @@
     const completionPercent = normalizedCoverage.totalCategories > 0
       ? Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)
       : directCompletionPercent;
+    const readoutProgressSummary = {
+      requiredCount: requiredReadoutIds.length,
+      capturedCount: capturedReadoutIds.length,
+      attemptedCount: readoutStateSummary.attemptedCount,
+      pendingCount: pendingReadoutIds.length,
+      openCount: pendingReadoutIds.length,
+      capturedPercent: readoutStateSummary.capturedPercent,
+      attemptedPercent: readoutStateSummary.attemptedPercent,
+      pendingPercent: readoutStateSummary.pendingPercent,
+      completionPercent
+    };
     const analysisBlockers = [
       ...(remainingReadoutIds.length ? ["missing_readouts"] : []),
       ...(emptyReadoutIds.length ? ["empty_readouts"] : []),
@@ -2463,6 +2474,7 @@
       readoutStateById,
       readoutStatesByStatus,
       readoutStateSummary,
+      readoutProgressSummary,
       nextReadoutCandidate,
       nextRecommendedReadoutId,
       nextReadoutSource,
