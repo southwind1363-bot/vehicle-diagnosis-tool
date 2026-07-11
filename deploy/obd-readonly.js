@@ -2890,6 +2890,12 @@
       counts[reasonId] = changedSectionSummaries.filter((item) => (item.changeReasonIds || []).includes(reasonId)).length;
       return counts;
     }, {});
+    const changedSectionsByReasonId = changedReasonIds.reduce((sectionsByReason, reasonId) => {
+      sectionsByReason[reasonId] = changedSectionSummaries
+        .filter((item) => (item.changeReasonIds || []).includes(reasonId))
+        .map((item) => item.id);
+      return sectionsByReason;
+    }, {});
     const primaryChangedReasonId = changedReasonIds
       .slice()
       .sort((left, right) => (changedReasonCountsById[right] || 0) - (changedReasonCountsById[left] || 0) || left.localeCompare(right))[0] || null;
@@ -2912,6 +2918,7 @@
       changedSectionSummaries,
       changedReasonIds,
       changedReasonCountsById,
+      changedSectionsByReasonId,
       changedSectionIds
     };
   }

@@ -578,6 +578,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('const getSectionChangeReasonIds = (comparison = {}) => [') && source.includes('changeReasonIds,') && source.includes('changeReasonCount: changeReasonIds.length,'), "imported session comparison section summaries should expose change reasons");
     check(source.includes('const changedReasonIds = [...new Set(changedSectionSummaries.flatMap((item) => item.changeReasonIds || []))];') && source.includes('changedReasonCount: changedReasonIds.length,'), "imported session comparison summaries should expose top-level change reasons");
     check(source.includes('const changedReasonCountsById = changedReasonIds.reduce((counts, reasonId) => {') && source.includes('primaryChangedReasonId,'), "imported session comparison summaries should expose reason counts and primary reason");
+    check(source.includes('const changedSectionsByReasonId = changedReasonIds.reduce((sectionsByReason, reasonId) => {') && source.includes('changedSectionsByReasonId,'), "imported session comparison summaries should expose sections by change reason");
     check(source.includes('hasChanges: changedSectionIds.length > 0') && source.includes('unchanged: changedSectionIds.length === 0'), "imported session comparison summaries should expose a direct change flag");
     check(source.includes('status: changedSectionIds.length > 0 ? "changed" : "unchanged"') && source.includes('changedSectionCount: changedSectionIds.length'), "imported session comparison summaries should expose status and changed section count");
     check(functionBody.includes('const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);'), "buildCoreSessionStatus should calculate direct completion from captured core readouts");
@@ -3879,6 +3880,7 @@ check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparison
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.sectionSummaries?.[0]?.changeReasonIds), "Combined diagnostic inputs did not expose imported session section change reasons");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedReasonIds) && Number.isInteger(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedReasonCount), "Combined diagnostic inputs did not expose imported session top-level change reasons");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedReasonCountsById && "primaryChangedReasonId" in mergedDiagnosticInputExportPayload.importedSessionComparisonSummary, "Combined diagnostic inputs did not expose imported session reason counts");
+check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionsByReasonId && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.changedSectionsByReasonId === "object", "Combined diagnostic inputs did not expose imported session sections by reason");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.comparedSectionCount >= 4, "Combined diagnostic inputs did not include analysis readiness in imported session comparison count");
 check(typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.hasChanges === "boolean" && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.unchanged === "boolean", "Combined diagnostic inputs did not expose imported session direct change flags");
 check(["changed", "unchanged"].includes(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.status) && Number.isInteger(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionCount), "Combined diagnostic inputs did not expose imported session comparison status");
@@ -6627,6 +6629,7 @@ check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionCompar
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.sectionSummaries?.[0]?.changeReasonIds), "Diagnostic scan session did not expose imported session section change reasons");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedReasonIds) && Number.isInteger(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedReasonCount), "Diagnostic scan session did not expose imported session top-level change reasons");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedReasonCountsById && "primaryChangedReasonId" in scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary, "Diagnostic scan session did not expose imported session reason counts");
+check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionsByReasonId && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.changedSectionsByReasonId === "object", "Diagnostic scan session did not expose imported session sections by reason");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.comparedSectionCount >= 4, "Diagnostic scan session did not include analysis readiness in imported session comparison count");
 check(typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.hasChanges === "boolean" && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.unchanged === "boolean", "Diagnostic scan session did not expose imported session direct change flags");
 check(["changed", "unchanged"].includes(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.status) && Number.isInteger(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionCount), "Diagnostic scan session did not expose imported session comparison status");
@@ -7397,6 +7400,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 604");
+  console.log("OBD read-only safety checks: 607");
   console.log("Errors: 0");
 }
