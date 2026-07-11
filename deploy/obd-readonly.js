@@ -2702,6 +2702,12 @@
       adapter_identity: pickDefined(input.adapter_identity, input.adapterIdentity, payload?.adapter_identity, payload?.adapterIdentity, nested.adapter_identity, nested.adapterIdentity, null),
       readoutCoverage: pickDefined(input.readoutCoverage, input.readout_coverage, payload?.readoutCoverage, payload?.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
       readout_coverage: pickDefined(input.readout_coverage, input.readoutCoverage, payload?.readout_coverage, payload?.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
+      coreSessionStatus: pickDefined(input.coreSessionStatus, input.core_session_status, payload?.coreSessionStatus, payload?.core_session_status, nested.coreSessionStatus, nested.core_session_status, null),
+      core_session_status: pickDefined(input.core_session_status, input.coreSessionStatus, payload?.core_session_status, payload?.coreSessionStatus, nested.core_session_status, nested.coreSessionStatus, null),
+      diagnosticFlowSummary: pickDefined(input.diagnosticFlowSummary, input.diagnostic_flow_summary, payload?.diagnosticFlowSummary, payload?.diagnostic_flow_summary, nested.diagnosticFlowSummary, nested.diagnostic_flow_summary, null),
+      diagnostic_flow_summary: pickDefined(input.diagnostic_flow_summary, input.diagnosticFlowSummary, payload?.diagnostic_flow_summary, payload?.diagnosticFlowSummary, nested.diagnostic_flow_summary, nested.diagnosticFlowSummary, null),
+      readoutCompletionSummary: pickDefined(input.readoutCompletionSummary, input.readout_completion_summary, payload?.readoutCompletionSummary, payload?.readout_completion_summary, nested.readoutCompletionSummary, nested.readout_completion_summary, null),
+      readout_completion_summary: pickDefined(input.readout_completion_summary, input.readoutCompletionSummary, payload?.readout_completion_summary, payload?.readoutCompletionSummary, nested.readout_completion_summary, nested.readoutCompletionSummary, null),
       dtcSnapshot: pickDefined(input.dtcSnapshot, input.dtc_snapshot, payload?.dtcSnapshot, payload?.dtc_snapshot, nested.dtcSnapshot, nested.dtc_snapshot, null),
       dtc_snapshot: pickDefined(input.dtc_snapshot, input.dtcSnapshot, payload?.dtc_snapshot, payload?.dtcSnapshot, nested.dtc_snapshot, nested.dtcSnapshot, null),
       livePidSnapshot: pickDefined(input.livePidSnapshot, input.live_pid_snapshot, payload?.livePidSnapshot, payload?.live_pid_snapshot, nested.livePidSnapshot, nested.live_pid_snapshot, null),
@@ -4826,6 +4832,9 @@
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
+    const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;
+    const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;
+    const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
@@ -5055,6 +5064,9 @@
       coreSessionStatus,
       diagnosticFlowSummary,
       readoutCompletionSummary,
+      importedCoreSessionStatus,
+      importedDiagnosticFlowSummary,
+      importedReadoutCompletionSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
