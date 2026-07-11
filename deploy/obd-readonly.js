@@ -2886,6 +2886,13 @@
     const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
     const changedSectionIds = changedSectionSummaries.map((item) => item.id);
     const changedReasonIds = [...new Set(changedSectionSummaries.flatMap((item) => item.changeReasonIds || []))];
+    const changedReasonCountsById = changedReasonIds.reduce((counts, reasonId) => {
+      counts[reasonId] = changedSectionSummaries.filter((item) => (item.changeReasonIds || []).includes(reasonId)).length;
+      return counts;
+    }, {});
+    const primaryChangedReasonId = changedReasonIds
+      .slice()
+      .sort((left, right) => (changedReasonCountsById[right] || 0) - (changedReasonCountsById[left] || 0) || left.localeCompare(right))[0] || null;
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -2895,6 +2902,7 @@
       status: changedSectionIds.length > 0 ? "changed" : "unchanged",
       changedSectionCount: changedSectionIds.length,
       changedReasonCount: changedReasonIds.length,
+      primaryChangedReasonId,
       statusChanged: comparisons.some((item) => item.statusChanged === true),
       completionChanged: comparisons.some((item) => Number(item.completionDelta || item.requiredCountDelta || item.capturedCountDelta || item.missingCountDelta || item.pendingCountDelta || item.requiredReadoutDelta || item.capturedReadoutDelta || item.missingReadoutDelta || item.emptyReadoutDelta || item.blockerCountDelta || item.pendingReadoutDelta || 0) !== 0),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
@@ -2903,6 +2911,7 @@
       sectionSummaries,
       changedSectionSummaries,
       changedReasonIds,
+      changedReasonCountsById,
       changedSectionIds
     };
   }
