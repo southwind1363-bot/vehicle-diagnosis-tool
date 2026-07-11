@@ -1790,6 +1790,7 @@
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
+    const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
 
     return {
       source: "local_bridge",
@@ -1819,6 +1820,7 @@
       coreSessionStatus,
       diagnosticFlowSummary,
       readoutCompletionSummary,
+      analysisReadinessSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
@@ -3333,6 +3335,7 @@
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
+    const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
@@ -3374,6 +3377,7 @@
       coreSessionStatus,
       diagnosticFlowSummary,
       readoutCompletionSummary,
+      analysisReadinessSummary,
       importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,
@@ -5165,6 +5169,7 @@
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
+    const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
@@ -5200,6 +5205,7 @@
       coreSessionStatus,
       diagnosticFlowSummary,
       readoutCompletionSummary,
+      analysisReadinessSummary,
       importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,

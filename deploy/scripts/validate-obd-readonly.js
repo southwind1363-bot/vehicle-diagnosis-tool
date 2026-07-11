@@ -706,6 +706,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "mergeDiagnosticInputs should build core session status from merged diagnostic inputs");
     check(functionBody.includes('const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);') && functionBody.includes('diagnosticFlowSummary,'), "mergeDiagnosticInputs should expose a top-level diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;') && functionBody.includes('readoutCompletionSummary,'), "mergeDiagnosticInputs should expose a top-level readout completion summary");
+    check(functionBody.includes('const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;') && functionBody.includes('analysisReadinessSummary,'), "mergeDiagnosticInputs should expose a top-level analysis readiness summary");
     check(functionBody.includes('onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,'), "mergeDiagnosticInputs should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "mergeDiagnosticInputs should remain read-only and avoid raw text retention");
   }
@@ -1471,6 +1472,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "buildDiagnosticScanSession should build core session status from resolved readout candidates");
     check(functionBody.includes('const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);') && functionBody.includes('diagnosticFlowSummary,'), "buildDiagnosticScanSession should expose a top-level diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;') && functionBody.includes('readoutCompletionSummary,'), "buildDiagnosticScanSession should expose a top-level readout completion summary");
+    check(functionBody.includes('const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;') && functionBody.includes('analysisReadinessSummary,'), "buildDiagnosticScanSession should expose a top-level analysis readiness summary");
     check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildDiagnosticScanSession should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('schemaVersion: "scan_session_v1"') && functionBody.includes('sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80)'), "buildDiagnosticScanSession should emit a bounded scan session identity");
     check(functionBody.includes('monitorValueSummary: resolveMonitorValueSummary([') && functionBody.includes('...freezeFrameSnapshot.monitorValues'), "buildDiagnosticScanSession should summarize live PID and freeze-frame monitor values");
@@ -2515,6 +2517,7 @@ check(Array.isArray(bridgeSummary.coreSessionStatus?.missingReadoutIds), "Bridge
 check(Array.isArray(bridgeSummary.coreSessionStatus?.emptyReadoutIds), "Bridge session summary did not expose coreSessionStatus emptyReadoutIds");
 check(bridgeSummary.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Bridge session summary did not expose top-level readout completion captured ids");
 check(Array.isArray(bridgeSummary.readoutCompletionSummary?.pendingIds) && bridgeSummary.readoutCompletionSummary.pendingIds.length === bridgeSummary.coreSessionStatus?.readoutCompletionSummary?.pendingIds?.length, "Bridge session summary did not expose top-level readout completion pending ids");
+check(bridgeSummary.analysisReadinessSummary?.ready === bridgeSummary.coreSessionStatus?.analysisReadinessSummary?.ready, "Bridge session summary did not expose top-level analysis readiness summary");
 check(bridgeSummary.warnings.includes("bridge_readout_incomplete"), "Bridge session summary did not warn about incomplete readout sections");
 check(bridgeSummary.warnings.includes("mode09_key_items_missing"), "Bridge session summary did not warn about missing key Mode 09 items");
 check(!bridgeSummary.warnings.includes("mode09_supported_types_unknown"), "Bridge session summary warned about missing supported Mode 09 info types despite captured type 00");
@@ -3819,6 +3822,7 @@ check(mergedDiagnosticInputExportPayload.diagnosticFlowSummary?.schemaVersion ==
 check(mergedDiagnosticInputExportPayload.diagnosticFlowSummary?.stage === "diagnostic_core", "Combined diagnostic inputs did not expose diagnosticFlowSummary stage for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not expose top-level readout completion captured ids for bridge_session_export_v1 bridge_import input");
 check(Array.isArray(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.pendingIds), "Combined diagnostic inputs did not expose top-level readout completion pending ids for bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.analysisReadinessSummary?.ready === mergedDiagnosticInputExportPayload.coreSessionStatus?.analysisReadinessSummary?.ready, "Combined diagnostic inputs did not expose top-level analysis readiness summary");
 check(mergedDiagnosticInputExportPayload.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Combined diagnostic inputs did not preserve imported core session status for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Combined diagnostic inputs did not preserve imported diagnostic flow summary for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not preserve imported readout completion summary for bridge_session_export_v1 bridge_import input");
@@ -6550,6 +6554,7 @@ check(scanSessionBridgeDiagnosticImportAlias.vciDevices[0]?.id === "vci-1", "Dia
 check(scanSessionBridgeDiagnosticImportAlias.adapterIdentity?.adapterFamily === "elm327", "Diagnostic scan session did not carry adapter identity from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.readoutCoverage?.progressPercent === bridgeDiagnosticImport.readoutCoverage?.progressPercent, "Diagnostic scan session did not carry readoutCoverage from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importClassification?.bucketCounts?.storedDtcResponses === bridgeDiagnosticImport.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not carry importClassification from bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportAlias.analysisReadinessSummary?.ready === scanSessionBridgeDiagnosticImportAlias.coreSessionStatus?.analysisReadinessSummary?.ready, "Diagnostic scan session did not expose top-level analysis readiness summary");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Diagnostic scan session did not preserve imported core session status from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Diagnostic scan session did not preserve imported diagnostic flow summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not preserve imported readout completion summary from bridge_diagnostic_import alias input");
@@ -7310,6 +7315,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 529");
+  console.log("OBD read-only safety checks: 534");
   console.log("Errors: 0");
 }
