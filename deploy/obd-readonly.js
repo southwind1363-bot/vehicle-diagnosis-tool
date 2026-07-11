@@ -2467,6 +2467,17 @@
     if (nextReadoutSummary && nextReadoutRequest) {
       nextReadoutSummary.readoutRequest = nextReadoutRequest;
     }
+    const pendingReadoutRequestQueue = pendingReadoutQueue
+      .map((item) => {
+        const request = buildReadOnlyNextReadoutRequest(item);
+        return request ? {
+          ...request,
+          queuePosition: item.position,
+          isNext: item.isNext === true
+        } : null;
+      })
+      .filter(Boolean);
+    const pendingReadoutRequestQueueById = Object.fromEntries(pendingReadoutRequestQueue.map((item) => [item.readoutId, { ...item }]));
     Object.assign(pendingReadoutQueueSummary, {
       recommendedReadoutId: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
@@ -2637,6 +2648,8 @@
       pendingReadoutQueue,
       pendingReadoutQueueById,
       pendingReadoutQueueSummary,
+      pendingReadoutRequestQueue,
+      pendingReadoutRequestQueueById,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
@@ -2696,6 +2709,9 @@
       ? [...readiness.blockerIds]
       : Array.isArray(coreSessionStatus?.analysisBlockers) ? [...coreSessionStatus.analysisBlockers] : [];
     const nextReadoutRequest = coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.nextReadoutSummary?.readoutRequest || null;
+    const pendingReadoutRequestQueue = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
+      ? coreSessionStatus.pendingReadoutRequestQueue.map((item) => ({ ...item }))
+      : [];
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
@@ -2711,6 +2727,9 @@
       nextReadoutBridgeIntent: nextReadoutRequest?.bridgeIntent || null,
       nextReadoutServiceMode: nextReadoutRequest?.serviceMode || null,
       nextReadoutExecutionEnabled: nextReadoutRequest?.executionEnabled === true,
+      pendingReadoutRequestCount: pendingReadoutRequestQueue.length,
+      pendingReadoutRequestQueue,
+      pendingReadoutRequestNext: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
