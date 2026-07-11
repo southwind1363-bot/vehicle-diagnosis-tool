@@ -1616,6 +1616,25 @@
     };
   }
 
+  function buildReadoutRequestPlanSafetySummary(entries = [], unmappedRequestIds = []) {
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    const safeUnmappedRequestIds = Array.isArray(unmappedRequestIds) ? unmappedRequestIds : [];
+    const totalCount = safeEntries.length;
+    const unmappedCount = safeUnmappedRequestIds.length;
+    const mappedCount = Math.max(0, totalCount - unmappedCount);
+    const allReadOnly = safeEntries.every((item) => item?.readOnly === true);
+    const allNonTransmitting = safeEntries.every((item) => item?.wouldTransmit !== true && item?.vehicleCommandEnabled !== true && item?.executionEnabled !== true);
+    return {
+      mappedPercent: totalCount ? Math.round((mappedCount / totalCount) * 100) : 100,
+      unmappedPercent: totalCount ? Math.round((unmappedCount / totalCount) * 100) : 0,
+      hasUnmappedRequests: unmappedCount > 0,
+      mappingStatus: unmappedCount > 0 ? "partial" : "mapped",
+      allReadOnly,
+      allNonTransmitting,
+      safeForBridgePlanning: allReadOnly && allNonTransmitting && unmappedCount === 0
+    };
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
@@ -2485,12 +2504,14 @@
     const unmappedPendingReadoutRequestIds = pendingReadoutRequestPlanEntries
       .filter((item) => !item.bridgeIntent)
       .map((item) => item.readoutId);
+    const readoutRequestPlanSafetySummary = buildReadoutRequestPlanSafetySummary(pendingReadoutRequestPlanEntries, unmappedPendingReadoutRequestIds);
     const pendingReadoutRequestPlan = {
       schemaVersion: "read_only_readout_request_plan_v1",
       totalCount: pendingReadoutRequestPlanEntries.length,
       mappedCount: mappedPendingReadoutRequests.length,
       unmappedCount: unmappedPendingReadoutRequestIds.length,
       allMapped: unmappedPendingReadoutRequestIds.length === 0,
+      ...readoutRequestPlanSafetySummary,
       unmappedRequestIds: [...unmappedPendingReadoutRequestIds],
       nextRequest: nextReadoutRequest || pendingReadoutRequestPlanEntries.find((item) => item.isNext) || pendingReadoutRequestPlanEntries[0] || null,
       requestIds: pendingReadoutRequestPlanEntries.map((item) => item.readoutId),
@@ -2739,12 +2760,14 @@
     const unmappedPendingReadoutRequestIds = pendingReadoutRequestQueue
       .filter((item) => !item.bridgeIntent)
       .map((item) => item.readoutId);
+    const fallbackReadoutRequestPlanSafetySummary = buildReadoutRequestPlanSafetySummary(pendingReadoutRequestQueue, unmappedPendingReadoutRequestIds);
     const pendingReadoutRequestPlan = coreSessionStatus?.pendingReadoutRequestPlan || {
       schemaVersion: "read_only_readout_request_plan_v1",
       totalCount: pendingReadoutRequestQueue.length,
       mappedCount: mappedPendingReadoutRequests.length,
       unmappedCount: unmappedPendingReadoutRequestIds.length,
       allMapped: unmappedPendingReadoutRequestIds.length === 0,
+      ...fallbackReadoutRequestPlanSafetySummary,
       unmappedRequestIds: [...unmappedPendingReadoutRequestIds],
       nextRequest: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
       requestIds: pendingReadoutRequestQueue.map((item) => item.readoutId),
@@ -2773,6 +2796,14 @@
       pendingReadoutRequestQueue,
       pendingReadoutRequestNext: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
       pendingReadoutRequestPlan,
+      requestPlanMappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedCount)) ? Number(pendingReadoutRequestPlan.mappedCount) : 0,
+      requestPlanUnmappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.unmappedCount)) ? Number(pendingReadoutRequestPlan.unmappedCount) : 0,
+      requestPlanMappedPercent: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedPercent)) ? Number(pendingReadoutRequestPlan.mappedPercent) : 0,
+      requestPlanHasUnmappedRequests: pendingReadoutRequestPlan?.hasUnmappedRequests === true,
+      requestPlanMappingStatus: pendingReadoutRequestPlan?.mappingStatus || "unknown",
+      requestPlanAllReadOnly: pendingReadoutRequestPlan?.allReadOnly === true,
+      requestPlanAllNonTransmitting: pendingReadoutRequestPlan?.allNonTransmitting === true,
+      requestPlanSafeForBridgePlanning: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
@@ -2841,6 +2872,10 @@
     const currentRequestPlan = readRequestPlan(currentFlow);
     const importedRequestPlanCount = readFlowCount(importedRequestPlan, "totalCount");
     const currentRequestPlanCount = readFlowCount(currentRequestPlan, "totalCount");
+    const importedRequestPlanMappedCount = readFlowCount(importedRequestPlan, "mappedCount");
+    const currentRequestPlanMappedCount = readFlowCount(currentRequestPlan, "mappedCount");
+    const importedRequestPlanUnmappedCount = readFlowCount(importedRequestPlan, "unmappedCount");
+    const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
     const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
     const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
     return {
@@ -2893,6 +2928,14 @@
       importedRequestPlanCount,
       currentRequestPlanCount,
       requestPlanCountDelta: currentRequestPlanCount - importedRequestPlanCount,
+      importedRequestPlanMappedCount,
+      currentRequestPlanMappedCount,
+      requestPlanMappedDelta: currentRequestPlanMappedCount - importedRequestPlanMappedCount,
+      importedRequestPlanUnmappedCount,
+      currentRequestPlanUnmappedCount,
+      requestPlanUnmappedDelta: currentRequestPlanUnmappedCount - importedRequestPlanUnmappedCount,
+      requestPlanMappingChanged: importedRequestPlanMappedCount !== currentRequestPlanMappedCount
+        || importedRequestPlanUnmappedCount !== currentRequestPlanUnmappedCount,
       importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
       currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
       requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),
@@ -2937,6 +2980,10 @@
     const currentRequestPlan = readRequestPlan(currentFlow);
     const importedRequestPlanCount = readFlowCount(importedRequestPlan, "totalCount");
     const currentRequestPlanCount = readFlowCount(currentRequestPlan, "totalCount");
+    const importedRequestPlanMappedCount = readFlowCount(importedRequestPlan, "mappedCount");
+    const currentRequestPlanMappedCount = readFlowCount(currentRequestPlan, "mappedCount");
+    const importedRequestPlanUnmappedCount = readFlowCount(importedRequestPlan, "unmappedCount");
+    const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
     const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
     const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
     return {
@@ -2989,6 +3036,14 @@
       importedRequestPlanCount,
       currentRequestPlanCount,
       requestPlanCountDelta: currentRequestPlanCount - importedRequestPlanCount,
+      importedRequestPlanMappedCount,
+      currentRequestPlanMappedCount,
+      requestPlanMappedDelta: currentRequestPlanMappedCount - importedRequestPlanMappedCount,
+      importedRequestPlanUnmappedCount,
+      currentRequestPlanUnmappedCount,
+      requestPlanUnmappedDelta: currentRequestPlanUnmappedCount - importedRequestPlanUnmappedCount,
+      requestPlanMappingChanged: importedRequestPlanMappedCount !== currentRequestPlanMappedCount
+        || importedRequestPlanUnmappedCount !== currentRequestPlanUnmappedCount,
       importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
       currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
       requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),

@@ -5291,9 +5291,16 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const mappedReadoutRequestCount = Number.isFinite(Number(readoutRequestPlan?.mappedCount))
     ? Number(readoutRequestPlan.mappedCount)
     : null;
+  const unmappedReadoutRequestCount = Number.isFinite(Number(readoutRequestPlan?.unmappedCount))
+    ? Number(readoutRequestPlan.unmappedCount)
+    : null;
+  const readoutRequestQueueLabel = pendingReadoutRequestCount
+    ? ` / queue ${pendingReadoutRequestCount}${mappedReadoutRequestCount !== null ? ` / mapped ${mappedReadoutRequestCount}` : ""}${unmappedReadoutRequestCount ? ` / unmapped ${unmappedReadoutRequestCount}` : ""}`
+    : "";
+  const readoutRequestTone = unmappedReadoutRequestCount ? "blocked" : nextReadoutRequest?.executionEnabled === true ? "ready" : "";
   const nextReadoutRequestLabel = nextReadoutRequest?.bridgeIntent
-    ? `${nextReadoutRequest.bridgeIntent}${nextReadoutRequest.serviceMode ? ` / Mode ${nextReadoutRequest.serviceMode}` : ""}${pendingReadoutRequestCount ? ` / queue ${pendingReadoutRequestCount}${mappedReadoutRequestCount !== null ? ` / mapped ${mappedReadoutRequestCount}` : ""}` : ""}`
-    : NO_DATA;
+    ? `${nextReadoutRequest.bridgeIntent}${nextReadoutRequest.serviceMode ? ` / Mode ${nextReadoutRequest.serviceMode}` : ""}${readoutRequestQueueLabel}`
+    : pendingReadoutRequestCount ? `queue ${pendingReadoutRequestCount}${mappedReadoutRequestCount !== null ? ` / mapped ${mappedReadoutRequestCount}` : ""}${unmappedReadoutRequestCount ? ` / unmapped ${unmappedReadoutRequestCount}` : ""}` : NO_DATA;
   const blockerIds = Array.isArray(flow.blockingReasonIds)
     ? flow.blockingReasonIds
     : Array.isArray(core.analysisBlockers) ? core.analysisBlockers : [];
@@ -5336,7 +5343,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "現在地", statusLabel, canStartAnalysis ? "ready" : "pending");
   addObdDiagnosticFlowMetric(grid, "読取進捗", completionPercent === null ? NO_DATA : `${completionPercent}%`);
   addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
-  addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel, nextReadoutRequest?.executionEnabled === true ? "ready" : "");
+  addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel, readoutRequestTone);
   addObdDiagnosticFlowMetric(grid, "保留理由", blockerLabel, analysisBlocked ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
