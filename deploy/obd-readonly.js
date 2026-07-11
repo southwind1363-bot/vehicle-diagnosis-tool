@@ -2346,6 +2346,7 @@
       .map((id) => readoutStateById[id])
       .filter(Boolean)
       .map((item) => ({ ...item }));
+    const pendingReadoutStateById = Object.fromEntries(pendingReadoutStates.map((item) => [item.id, { ...item }]));
     const readoutStatesByStatus = {
       captured: readoutStates.filter((item) => item.status === "captured").map((item) => ({ ...item })),
       empty: readoutStates.filter((item) => item.status === "empty").map((item) => ({ ...item })),
@@ -2431,6 +2432,7 @@
       emptyReadoutIds,
       pendingReadoutIds,
       pendingReadoutStates,
+      pendingReadoutStateById,
       readoutStates,
       readoutStateById,
       readoutStatesByStatus,
