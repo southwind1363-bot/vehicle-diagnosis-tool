@@ -1789,6 +1789,7 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
+    const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
 
     return {
       source: "local_bridge",
@@ -1817,6 +1818,7 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
       diagnosticFlowSummary,
+      readoutCompletionSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
@@ -3196,6 +3198,7 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
+    const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
 
     return {
       source,
@@ -3228,6 +3231,7 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
       diagnosticFlowSummary,
+      readoutCompletionSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
@@ -5008,6 +5012,7 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
+    const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
 
     return {
       schemaVersion: "scan_session_v1",
@@ -5034,6 +5039,7 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
       diagnosticFlowSummary,
+      readoutCompletionSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
