@@ -2478,6 +2478,17 @@
       })
       .filter(Boolean);
     const pendingReadoutRequestQueueById = Object.fromEntries(pendingReadoutRequestQueue.map((item) => [item.readoutId, { ...item }]));
+    const pendingReadoutRequestPlan = {
+      schemaVersion: "read_only_readout_request_plan_v1",
+      totalCount: pendingReadoutRequestQueue.length,
+      nextRequest: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
+      requestIds: pendingReadoutRequestQueue.map((item) => item.readoutId),
+      bridgeIntents: [...new Set(pendingReadoutRequestQueue.map((item) => item.bridgeIntent).filter(Boolean))],
+      executionEnabled: false,
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
     Object.assign(pendingReadoutQueueSummary, {
       recommendedReadoutId: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
@@ -2650,6 +2661,7 @@
       pendingReadoutQueueSummary,
       pendingReadoutRequestQueue,
       pendingReadoutRequestQueueById,
+      pendingReadoutRequestPlan,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
@@ -2712,6 +2724,17 @@
     const pendingReadoutRequestQueue = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
       ? coreSessionStatus.pendingReadoutRequestQueue.map((item) => ({ ...item }))
       : [];
+    const pendingReadoutRequestPlan = coreSessionStatus?.pendingReadoutRequestPlan || {
+      schemaVersion: "read_only_readout_request_plan_v1",
+      totalCount: pendingReadoutRequestQueue.length,
+      nextRequest: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
+      requestIds: pendingReadoutRequestQueue.map((item) => item.readoutId),
+      bridgeIntents: [...new Set(pendingReadoutRequestQueue.map((item) => item.bridgeIntent).filter(Boolean))],
+      executionEnabled: false,
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
@@ -2730,6 +2753,7 @@
       pendingReadoutRequestCount: pendingReadoutRequestQueue.length,
       pendingReadoutRequestQueue,
       pendingReadoutRequestNext: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
+      pendingReadoutRequestPlan,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,

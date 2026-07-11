@@ -5282,9 +5282,12 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const nextReadoutId = flow.recommendedReadoutId || flow.nextReadoutId || core.nextRecommendedReadoutId || null;
   const nextReadoutLabel = flow.nextReadoutLabel || formatCoreReadoutLabel(nextReadoutId, nextReadoutId || NO_DATA);
   const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;
+  const readoutRequestPlan = flow.pendingReadoutRequestPlan || core.pendingReadoutRequestPlan || null;
   const pendingReadoutRequestCount = Number.isFinite(Number(flow.pendingReadoutRequestCount))
     ? Number(flow.pendingReadoutRequestCount)
-    : Array.isArray(core.pendingReadoutRequestQueue) ? core.pendingReadoutRequestQueue.length : 0;
+    : Number.isFinite(Number(readoutRequestPlan?.totalCount))
+      ? Number(readoutRequestPlan.totalCount)
+      : Array.isArray(core.pendingReadoutRequestQueue) ? core.pendingReadoutRequestQueue.length : 0;
   const nextReadoutRequestLabel = nextReadoutRequest?.bridgeIntent
     ? `${nextReadoutRequest.bridgeIntent}${nextReadoutRequest.serviceMode ? ` / Mode ${nextReadoutRequest.serviceMode}` : ""}${pendingReadoutRequestCount ? ` / queue ${pendingReadoutRequestCount}` : ""}`
     : NO_DATA;
