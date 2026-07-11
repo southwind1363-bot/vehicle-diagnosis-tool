@@ -2817,6 +2817,13 @@
     const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
     const importedChecklistPendingCount = readFlowCount(importedFlow, "checklistPendingCount");
     const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
+    const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
+    const importedRequestPlan = readRequestPlan(importedFlow);
+    const currentRequestPlan = readRequestPlan(currentFlow);
+    const importedRequestPlanCount = readFlowCount(importedRequestPlan, "totalCount");
+    const currentRequestPlanCount = readFlowCount(currentRequestPlan, "totalCount");
+    const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
+    const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
     return {
       schemaVersion: "imported_core_comparison_v1",
       importedStatus: importedFlow.status,
@@ -2864,6 +2871,12 @@
       importedChecklistPendingCount,
       currentChecklistPendingCount,
       checklistPendingDelta: currentChecklistPendingCount - importedChecklistPendingCount,
+      importedRequestPlanCount,
+      currentRequestPlanCount,
+      requestPlanCountDelta: currentRequestPlanCount - importedRequestPlanCount,
+      importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
+      currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
+      requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
@@ -2900,6 +2913,13 @@
     const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
     const importedChecklistPendingCount = readFlowCount(importedDiagnosticFlowSummary, "checklistPendingCount");
     const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
+    const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
+    const importedRequestPlan = readRequestPlan(importedDiagnosticFlowSummary);
+    const currentRequestPlan = readRequestPlan(currentFlow);
+    const importedRequestPlanCount = readFlowCount(importedRequestPlan, "totalCount");
+    const currentRequestPlanCount = readFlowCount(currentRequestPlan, "totalCount");
+    const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
+    const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
     return {
       schemaVersion: "imported_diagnostic_flow_comparison_v1",
       importedStatus: importedDiagnosticFlowSummary.status || null,
@@ -2947,6 +2967,12 @@
       importedChecklistPendingCount,
       currentChecklistPendingCount,
       checklistPendingDelta: currentChecklistPendingCount - importedChecklistPendingCount,
+      importedRequestPlanCount,
+      currentRequestPlanCount,
+      requestPlanCountDelta: currentRequestPlanCount - importedRequestPlanCount,
+      importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
+      currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
+      requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
