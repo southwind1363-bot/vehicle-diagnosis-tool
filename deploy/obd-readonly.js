@@ -2657,17 +2657,43 @@
     const currentPendingIds = Array.isArray(currentSummary.pendingIds) ? currentSummary.pendingIds : [];
     const importedEmptyIds = Array.isArray(importedReadoutCompletionSummary.emptyIds) ? importedReadoutCompletionSummary.emptyIds : [];
     const currentEmptyIds = Array.isArray(currentSummary.emptyIds) ? currentSummary.emptyIds : [];
+    const readCount = (summary, ids, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : ids.length;
+    const importedRequiredIds = Array.isArray(importedReadoutCompletionSummary.requiredIds) ? importedReadoutCompletionSummary.requiredIds : [];
+    const currentRequiredIds = Array.isArray(currentSummary.requiredIds) ? currentSummary.requiredIds : [];
+    const importedCapturedIds = Array.isArray(importedReadoutCompletionSummary.capturedIds) ? importedReadoutCompletionSummary.capturedIds : [];
+    const currentCapturedIds = Array.isArray(currentSummary.capturedIds) ? currentSummary.capturedIds : [];
+    const importedMissingIds = Array.isArray(importedReadoutCompletionSummary.missingIds) ? importedReadoutCompletionSummary.missingIds : [];
+    const currentMissingIds = Array.isArray(currentSummary.missingIds) ? currentSummary.missingIds : [];
+    const importedRequiredCount = readCount(importedReadoutCompletionSummary, importedRequiredIds, "requiredCount");
+    const currentRequiredCount = readCount(currentSummary, currentRequiredIds, "requiredCount");
+    const importedCapturedCount = readCount(importedReadoutCompletionSummary, importedCapturedIds, "capturedCount");
+    const currentCapturedCount = readCount(currentSummary, currentCapturedIds, "capturedCount");
+    const importedMissingCount = readCount(importedReadoutCompletionSummary, importedMissingIds, "missingCount");
+    const currentMissingCount = readCount(currentSummary, currentMissingIds, "missingCount");
+    const importedPendingCount = readCount(importedReadoutCompletionSummary, importedPendingIds, "pendingCount");
+    const currentPendingCount = readCount(currentSummary, currentPendingIds, "pendingCount");
+    const importedEmptyCount = readCount(importedReadoutCompletionSummary, importedEmptyIds, "emptyCount");
+    const currentEmptyCount = readCount(currentSummary, currentEmptyIds, "emptyCount");
     return {
       schemaVersion: "imported_readout_completion_comparison_v1",
       importedComplete: importedReadoutCompletionSummary.complete === true,
       currentComplete: currentSummary.complete === true,
       completeChanged: (importedReadoutCompletionSummary.complete === true) !== (currentSummary.complete === true),
-      importedPendingCount: importedPendingIds.length,
-      currentPendingCount: currentPendingIds.length,
-      pendingCountDelta: currentPendingIds.length - importedPendingIds.length,
-      importedEmptyCount: importedEmptyIds.length,
-      currentEmptyCount: currentEmptyIds.length,
-      emptyCountDelta: currentEmptyIds.length - importedEmptyIds.length
+      importedRequiredCount,
+      currentRequiredCount,
+      requiredCountDelta: currentRequiredCount - importedRequiredCount,
+      importedCapturedCount,
+      currentCapturedCount,
+      capturedCountDelta: currentCapturedCount - importedCapturedCount,
+      importedMissingCount,
+      currentMissingCount,
+      missingCountDelta: currentMissingCount - importedMissingCount,
+      importedPendingCount,
+      currentPendingCount,
+      pendingCountDelta: currentPendingCount - importedPendingCount,
+      importedEmptyCount,
+      currentEmptyCount,
+      emptyCountDelta: currentEmptyCount - importedEmptyCount
     };
   }
 
@@ -2728,7 +2754,7 @@
     const changedSectionIds = [
       coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || Number(coreComparison.completionDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
       diagnosticFlowComparison && (diagnosticFlowComparison.statusChanged || diagnosticFlowComparison.readyForAnalysisChanged || diagnosticFlowComparison.nextReadoutChanged || Number(diagnosticFlowComparison.completionDelta || 0) !== 0) ? "diagnostic_flow_summary" : null,
-      readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null,
+      readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.requiredCountDelta || readoutCompletionComparison.capturedCountDelta || readoutCompletionComparison.missingCountDelta || readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null,
       analysisReadinessComparison && (analysisReadinessComparison.readyChanged || analysisReadinessComparison.statusChanged || analysisReadinessComparison.nextReadoutChanged || Number(analysisReadinessComparison.completionDelta || analysisReadinessComparison.blockerCountDelta || analysisReadinessComparison.pendingReadoutDelta || 0) !== 0) ? "analysis_readiness_summary" : null
     ].filter(Boolean);
     return {
@@ -2740,10 +2766,10 @@
       status: changedSectionIds.length > 0 ? "changed" : "unchanged",
       changedSectionCount: changedSectionIds.length,
       statusChanged: comparisons.some((item) => item.statusChanged === true),
-      completionChanged: comparisons.some((item) => Number(item.completionDelta || item.pendingCountDelta || item.pendingReadoutDelta || 0) !== 0),
+      completionChanged: comparisons.some((item) => Number(item.completionDelta || item.requiredCountDelta || item.capturedCountDelta || item.missingCountDelta || item.pendingCountDelta || item.pendingReadoutDelta || 0) !== 0),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true),
-      readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
+      readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       changedSectionIds
     };
   }

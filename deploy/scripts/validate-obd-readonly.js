@@ -564,6 +564,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('function buildImportedCoreComparisonSummary(importedCoreSessionStatus = null, currentCoreSessionStatus = {})') && source.includes('schemaVersion: "imported_core_comparison_v1"'), "obd-readonly should expose imported core comparison summaries");
     check(source.includes('function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {})') && source.includes('schemaVersion: "imported_diagnostic_flow_comparison_v1"'), "obd-readonly should expose imported diagnostic flow comparison summaries");
     check(source.includes('function buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary = null, currentReadoutCompletionSummary = {})') && source.includes('schemaVersion: "imported_readout_completion_comparison_v1"'), "obd-readonly should expose imported readout completion comparison summaries");
+    check(source.includes('const readCount = (summary, ids, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : ids.length;') && source.includes('requiredCountDelta: currentRequiredCount - importedRequiredCount,'), "imported readout completion comparison should support count-only summaries");
     check(source.includes('function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {})') && source.includes('schemaVersion: "imported_analysis_readiness_comparison_v1"'), "obd-readonly should expose imported analysis readiness comparison summaries");
     check(source.includes('function buildImportedSessionComparisonSummary({') && source.includes('schemaVersion: "imported_session_comparison_v1"'), "obd-readonly should expose imported session comparison summaries");
     check(source.includes('hasChanges: changedSectionIds.length > 0') && source.includes('unchanged: changedSectionIds.length === 0'), "imported session comparison summaries should expose a direct change flag");
@@ -7058,6 +7059,20 @@ check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.nextReadoutLabel &
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.complete === false && scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingIds?.length === 5, "Diagnostic scan session did not expose top-level readout completion summary");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingCount === 5 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.missingCount === 4 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyCount === 1, "Diagnostic scan session did not expose readout completion counts");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyIds?.includes("freeze_frame_snapshot") && scanSessionPlainCoverageOverride.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not expose top-level readout completion ids");
+const scanSessionImportedCountOnlyReadoutCompletion = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-imported-count-only-readout-completion",
+  readout_coverage: scanSessionPlainCoverageOverride.readoutCoverage,
+  readout_completion_summary: {
+    complete: false,
+    requiredCount: 7,
+    capturedCount: 2,
+    missingCount: 4,
+    emptyCount: 1,
+    pendingCount: 5
+  }
+});
+check(scanSessionImportedCountOnlyReadoutCompletion.importedReadoutCompletionComparisonSummary?.importedPendingCount === 5 && scanSessionImportedCountOnlyReadoutCompletion.importedReadoutCompletionComparisonSummary?.importedMissingCount === 4, "Diagnostic scan session did not compare imported count-only readout completion summary");
+check(Number.isFinite(scanSessionImportedCountOnlyReadoutCompletion.importedReadoutCompletionComparisonSummary?.requiredCountDelta) && Number.isFinite(scanSessionImportedCountOnlyReadoutCompletion.importedReadoutCompletionComparisonSummary?.capturedCountDelta), "Diagnostic scan session did not expose count-only readout completion deltas");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockers?.includes("missing_readouts") && scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockers?.includes("empty_readouts"), "Diagnostic scan session did not expose analysis blockers for missing and empty readouts");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockerSummary?.missingReadoutCount === 4, "Diagnostic scan session did not expose missing readout blocker count");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysisBlockerSummary?.emptyReadoutCount === 1, "Diagnostic scan session did not expose empty readout blocker count");
@@ -7346,6 +7361,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 565");
+  console.log("OBD read-only safety checks: 568");
   console.log("Errors: 0");
 }
