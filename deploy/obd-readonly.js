@@ -2848,13 +2848,14 @@
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.readyForAnalysisChanged === true
       || comparison.readyChanged === true
       || comparison.nextReadoutChanged === true
       || comparison.nextReadoutDetailsChanged === true
       || comparison.completeChanged === true
-      || Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || 0) !== 0;
+      || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
       comparison.statusChanged === true ? "status" : null,
       comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
@@ -2878,7 +2879,7 @@
           changeReasonIds,
           changeReasonCount: changeReasonIds.length,
           statusChanged: item.comparison.statusChanged === true,
-          completionChanged: Number(item.comparison.completionDelta || item.comparison.requiredCountDelta || item.comparison.capturedCountDelta || item.comparison.missingCountDelta || item.comparison.pendingCountDelta || item.comparison.emptyCountDelta || item.comparison.requiredReadoutDelta || item.comparison.capturedReadoutDelta || item.comparison.missingReadoutDelta || item.comparison.emptyReadoutDelta || item.comparison.blockerCountDelta || item.comparison.pendingReadoutDelta || 0) !== 0,
+          completionChanged: hasComparisonMetricChanges(item.comparison),
           nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
           readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true
         };
@@ -2928,7 +2929,7 @@
       changedReasonCount: changedReasonIds.length,
       primaryChangedReasonId,
       statusChanged: comparisons.some((item) => item.statusChanged === true),
-      completionChanged: comparisons.some((item) => Number(item.completionDelta || item.requiredCountDelta || item.capturedCountDelta || item.missingCountDelta || item.pendingCountDelta || item.requiredReadoutDelta || item.capturedReadoutDelta || item.missingReadoutDelta || item.emptyReadoutDelta || item.blockerCountDelta || item.pendingReadoutDelta || 0) !== 0),
+      completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
