@@ -2541,6 +2541,25 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
+    const requestPlanBlockedReasonIds = Array.isArray(pendingReadoutRequestPlan.blockedReasonIds)
+      ? [...pendingReadoutRequestPlan.blockedReasonIds]
+      : [];
+    const readoutRequestPlanGateSummary = {
+      schemaVersion: "readout_request_plan_gate_v1",
+      state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : requestPlanBlockedReasonIds.length ? "blocked" : "ready",
+      ready: requestPlanBlockedReasonIds.length === 0,
+      blocked: requestPlanBlockedReasonIds.length > 0,
+      blockedReasonIds: [...requestPlanBlockedReasonIds],
+      nextBlockedReasonId: requestPlanBlockedReasonIds[0] || null,
+      totalCount: pendingReadoutRequestPlan.totalCount,
+      mappedCount: pendingReadoutRequestPlan.mappedCount,
+      unmappedCount: pendingReadoutRequestPlan.unmappedCount,
+      safeForBridgePlanning: pendingReadoutRequestPlan.safeForBridgePlanning === true,
+      executionEnabled: false,
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
     Object.assign(pendingReadoutQueueSummary, {
       recommendedReadoutId: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
@@ -2682,6 +2701,7 @@
       checklist: analysisChecklist,
       checklistById: analysisChecklistById,
       checklistSummary: analysisChecklistSummary,
+      readoutRequestPlanGateSummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
       blockingWarningCount: analysisBlockerSummary.blockingWarningCount,
@@ -2714,6 +2734,7 @@
       pendingReadoutRequestQueue,
       pendingReadoutRequestQueueById,
       pendingReadoutRequestPlan,
+      readoutRequestPlanGateSummary,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
@@ -2797,6 +2818,22 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
+    const readoutRequestPlanGateSummary = coreSessionStatus?.readoutRequestPlanGateSummary || readiness.readoutRequestPlanGateSummary || {
+      schemaVersion: "readout_request_plan_gate_v1",
+      state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : pendingReadoutRequestPlan?.safeForBridgePlanning === true ? "ready" : "blocked",
+      ready: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
+      blocked: pendingReadoutRequestPlan?.safeForBridgePlanning !== true && Number(pendingReadoutRequestPlan.totalCount || 0) > 0,
+      blockedReasonIds: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? [...pendingReadoutRequestPlan.blockedReasonIds] : [],
+      nextBlockedReasonId: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? pendingReadoutRequestPlan.blockedReasonIds[0] || null : null,
+      totalCount: Number.isFinite(Number(pendingReadoutRequestPlan?.totalCount)) ? Number(pendingReadoutRequestPlan.totalCount) : 0,
+      mappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedCount)) ? Number(pendingReadoutRequestPlan.mappedCount) : 0,
+      unmappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.unmappedCount)) ? Number(pendingReadoutRequestPlan.unmappedCount) : 0,
+      safeForBridgePlanning: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
+      executionEnabled: false,
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
@@ -2816,6 +2853,7 @@
       pendingReadoutRequestQueue,
       pendingReadoutRequestNext: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
       pendingReadoutRequestPlan,
+      readoutRequestPlanGateSummary,
       requestPlanMappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedCount)) ? Number(pendingReadoutRequestPlan.mappedCount) : 0,
       requestPlanUnmappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.unmappedCount)) ? Number(pendingReadoutRequestPlan.unmappedCount) : 0,
       requestPlanMappedPercent: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedPercent)) ? Number(pendingReadoutRequestPlan.mappedPercent) : 0,
@@ -2826,6 +2864,10 @@
       requestPlanSafeForBridgePlanning: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
       requestPlanBlockedReasonIds: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? [...pendingReadoutRequestPlan.blockedReasonIds] : [],
       requestPlanBlockedReasonById: pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {},
+      requestPlanGateState: readoutRequestPlanGateSummary.state || "unknown",
+      requestPlanGateReady: readoutRequestPlanGateSummary.ready === true,
+      requestPlanGateBlocked: readoutRequestPlanGateSummary.blocked === true,
+      requestPlanNextBlockedReasonId: readoutRequestPlanGateSummary.nextBlockedReasonId || null,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
