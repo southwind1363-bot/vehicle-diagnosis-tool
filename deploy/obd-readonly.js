@@ -3233,32 +3233,79 @@
     };
   }
 
+  function buildImportedReadoutRequestPlanGateComparisonSummary(importedGateSummary = null, currentGateSummary = {}) {
+    if (!importedGateSummary || typeof importedGateSummary !== "object") return null;
+    const currentSummary = currentGateSummary && typeof currentGateSummary === "object" ? currentGateSummary : {};
+    const readCount = (summary, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : 0;
+    const importedBlockedReasonIds = Array.isArray(importedGateSummary.blockedReasonIds) ? importedGateSummary.blockedReasonIds : [];
+    const currentBlockedReasonIds = Array.isArray(currentSummary.blockedReasonIds) ? currentSummary.blockedReasonIds : [];
+    return {
+      schemaVersion: "imported_readout_request_plan_gate_comparison_v1",
+      importedState: importedGateSummary.state || null,
+      currentState: currentSummary.state || null,
+      stateChanged: (importedGateSummary.state || null) !== (currentSummary.state || null),
+      importedReady: importedGateSummary.ready === true,
+      currentReady: currentSummary.ready === true,
+      readyChanged: (importedGateSummary.ready === true) !== (currentSummary.ready === true),
+      importedBlocked: importedGateSummary.blocked === true,
+      currentBlocked: currentSummary.blocked === true,
+      blockedChanged: (importedGateSummary.blocked === true) !== (currentSummary.blocked === true),
+      importedSafeForBridgePlanning: importedGateSummary.safeForBridgePlanning === true,
+      currentSafeForBridgePlanning: currentSummary.safeForBridgePlanning === true,
+      safeForBridgePlanningChanged: (importedGateSummary.safeForBridgePlanning === true) !== (currentSummary.safeForBridgePlanning === true),
+      importedNextBlockedReasonId: importedGateSummary.nextBlockedReasonId || null,
+      currentNextBlockedReasonId: currentSummary.nextBlockedReasonId || null,
+      nextBlockedReasonChanged: (importedGateSummary.nextBlockedReasonId || null) !== (currentSummary.nextBlockedReasonId || null),
+      importedTotalCount: readCount(importedGateSummary, "totalCount"),
+      currentTotalCount: readCount(currentSummary, "totalCount"),
+      totalCountDelta: readCount(currentSummary, "totalCount") - readCount(importedGateSummary, "totalCount"),
+      importedMappedCount: readCount(importedGateSummary, "mappedCount"),
+      currentMappedCount: readCount(currentSummary, "mappedCount"),
+      mappedCountDelta: readCount(currentSummary, "mappedCount") - readCount(importedGateSummary, "mappedCount"),
+      importedUnmappedCount: readCount(importedGateSummary, "unmappedCount"),
+      currentUnmappedCount: readCount(currentSummary, "unmappedCount"),
+      unmappedCountDelta: readCount(currentSummary, "unmappedCount") - readCount(importedGateSummary, "unmappedCount"),
+      importedBlockedReasonIds: [...importedBlockedReasonIds],
+      currentBlockedReasonIds: [...currentBlockedReasonIds],
+      blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|")
+    };
+  }
+
   function buildImportedSessionComparisonSummary({
     coreComparison = null,
     diagnosticFlowComparison = null,
     readoutCompletionComparison = null,
-    analysisReadinessComparison = null
+    analysisReadinessComparison = null,
+    readoutRequestPlanGateComparison = null
   } = {}) {
     const sectionInputs = [
       { id: "core_session_status", comparison: coreComparison },
       { id: "diagnostic_flow_summary", comparison: diagnosticFlowComparison },
       { id: "readout_completion_summary", comparison: readoutCompletionComparison },
-      { id: "analysis_readiness_summary", comparison: analysisReadinessComparison }
+      { id: "analysis_readiness_summary", comparison: analysisReadinessComparison },
+      { id: "readout_request_plan_gate_summary", comparison: readoutRequestPlanGateComparison }
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
+      || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
       || comparison.readyChanged === true
+      || comparison.blockedChanged === true
+      || comparison.safeForBridgePlanningChanged === true
       || comparison.nextReadoutChanged === true
       || comparison.nextReadoutDetailsChanged === true
+      || comparison.nextBlockedReasonChanged === true
+      || comparison.blockedReasonIdsChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
-      comparison.statusChanged === true ? "status" : null,
+      comparison.statusChanged === true || comparison.stateChanged === true ? "status" : null,
       comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
+      comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
+      comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true ? "blocked_reasons" : null,
       comparison.completeChanged === true ? "readout_completion" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
@@ -3266,7 +3313,8 @@
       Number(comparison.missingCountDelta || comparison.missingReadoutDelta || 0) !== 0 ? "missing_readouts" : null,
       Number(comparison.emptyCountDelta || comparison.emptyReadoutDelta || 0) !== 0 ? "empty_readouts" : null,
       Number(comparison.pendingCountDelta || comparison.pendingReadoutDelta || 0) !== 0 ? "pending_readouts" : null,
-      Number(comparison.blockerCountDelta || 0) !== 0 ? "blockers" : null
+      Number(comparison.blockerCountDelta || 0) !== 0 ? "blockers" : null,
+      Number(comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || 0) !== 0 ? "request_plan_counts" : null
     ].filter(Boolean);
     const sectionSummaries = sectionInputs
       .filter((item) => item.comparison)
@@ -3277,10 +3325,14 @@
           changed: hasSectionChanges(item.comparison),
           changeReasonIds,
           changeReasonCount: changeReasonIds.length,
-          statusChanged: item.comparison.statusChanged === true,
+          statusChanged: item.comparison.statusChanged === true || item.comparison.stateChanged === true,
           completionChanged: hasComparisonMetricChanges(item.comparison),
           nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
-          readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true
+          readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true,
+          requestPlanGateChanged: item.comparison.blockedChanged === true
+            || item.comparison.safeForBridgePlanningChanged === true
+            || item.comparison.nextBlockedReasonChanged === true
+            || item.comparison.blockedReasonIdsChanged === true
         };
       });
     const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
@@ -3337,9 +3389,10 @@
       changedReasonCount: changedReasonIds.length,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
-      statusChanged: comparisons.some((item) => item.statusChanged === true),
+      statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
       completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
+      requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.blockedReasonIdsChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       sectionSummaries,
@@ -4047,11 +4100,13 @@
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
+    const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
       readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
-      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary
+      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
+      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary
     });
 
     return {
@@ -4097,6 +4152,7 @@
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
       importedAnalysisReadinessComparisonSummary,
+      importedReadoutRequestPlanGateComparisonSummary,
       importedSessionComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
@@ -5890,11 +5946,13 @@
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
+    const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
       readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
-      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary
+      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
+      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary
     });
 
     return {
@@ -5934,6 +5992,7 @@
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
       importedAnalysisReadinessComparisonSummary,
+      importedReadoutRequestPlanGateComparisonSummary,
       importedSessionComparisonSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
