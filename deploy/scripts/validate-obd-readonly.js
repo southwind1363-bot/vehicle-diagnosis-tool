@@ -563,6 +563,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('nextReadoutLabel: workflow.nextReadoutLabel || readiness.nextReadoutLabel') && source.includes('nextReadoutSource: workflow.nextReadoutSource || readiness.nextReadoutSource'), "diagnostic flow summaries should carry actionable next readout details");
     check(source.includes('requiredReadoutCount: readCount("requiredCount", coreSessionStatus?.requiredReadoutIds),') && source.includes('missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.remainingReadoutIds),'), "diagnostic flow summaries should carry readout completion counts");
     check(source.includes('function buildImportedCoreComparisonSummary(importedCoreSessionStatus = null, currentCoreSessionStatus = {})') && source.includes('schemaVersion: "imported_core_comparison_v1"'), "obd-readonly should expose imported core comparison summaries");
+    check(source.includes('requiredReadoutDelta: currentRequiredCount - importedRequiredCount,') && source.includes('emptyReadoutDelta: currentEmptyCount - importedEmptyCount,'), "imported core comparison should compare readout completion counts");
     check(source.includes('function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {})') && source.includes('schemaVersion: "imported_diagnostic_flow_comparison_v1"'), "obd-readonly should expose imported diagnostic flow comparison summaries");
     check(source.includes('requiredReadoutDelta: currentRequiredCount - importedRequiredCount,') && source.includes('missingReadoutDelta: currentMissingCount - importedMissingCount,'), "imported diagnostic flow comparison should compare readout completion counts");
     check(source.includes('function buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary = null, currentReadoutCompletionSummary = {})') && source.includes('schemaVersion: "imported_readout_completion_comparison_v1"'), "obd-readonly should expose imported readout completion comparison summaries");
@@ -3850,6 +3851,7 @@ check(mergedDiagnosticInputExportPayload.importedReadoutCompletionSummary?.captu
 check(mergedDiagnosticInputExportPayload.importedAnalysisReadinessSummary?.ready === bridgeExportPayload.session.analysis_readiness_summary?.ready, "Combined diagnostic inputs did not preserve imported analysis readiness summary for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Combined diagnostic inputs did not compare imported and recalculated core session status");
 check(Number.isFinite(mergedDiagnosticInputExportPayload.importedCoreComparisonSummary?.completionDelta), "Combined diagnostic inputs did not expose imported core completion delta");
+check(Number.isFinite(mergedDiagnosticInputExportPayload.importedCoreComparisonSummary?.missingReadoutDelta), "Combined diagnostic inputs did not expose imported core readout count delta");
 check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowComparisonSummary?.schemaVersion === "imported_diagnostic_flow_comparison_v1", "Combined diagnostic inputs did not compare imported and recalculated diagnostic flow summary");
 check(Number.isFinite(mergedDiagnosticInputExportPayload.importedDiagnosticFlowComparisonSummary?.completionDelta), "Combined diagnostic inputs did not expose imported diagnostic flow completion delta");
 check(Number.isFinite(mergedDiagnosticInputExportPayload.importedDiagnosticFlowComparisonSummary?.missingReadoutDelta), "Combined diagnostic inputs did not expose imported diagnostic flow readout count delta");
@@ -6587,6 +6589,7 @@ check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionSummary?.c
 check(scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessSummary?.ready === bridgeDiagnosticImport.analysisReadinessSummary?.ready, "Diagnostic scan session did not preserve imported analysis readiness summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
+check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.capturedReadoutDelta), "Diagnostic scan session did not expose imported core captured readout delta");
 check(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.schemaVersion === "imported_diagnostic_flow_comparison_v1", "Diagnostic scan session did not compare imported and recalculated diagnostic flow summary");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.completionDelta), "Diagnostic scan session did not expose imported diagnostic flow completion delta");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported diagnostic flow readout count delta");
@@ -7366,6 +7369,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 573");
+  console.log("OBD read-only safety checks: 576");
   console.log("Errors: 0");
 }

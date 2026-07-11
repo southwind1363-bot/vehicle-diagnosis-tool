@@ -2608,6 +2608,14 @@
     const currentPendingCount = Array.isArray(currentCoreSessionStatus?.pendingReadoutIds)
       ? currentCoreSessionStatus.pendingReadoutIds.length
       : currentFlow.pendingReadoutCount;
+    const importedRequiredCount = Number.isFinite(Number(importedFlow.requiredReadoutCount)) ? Number(importedFlow.requiredReadoutCount) : 0;
+    const currentRequiredCount = Number.isFinite(Number(currentFlow.requiredReadoutCount)) ? Number(currentFlow.requiredReadoutCount) : 0;
+    const importedCapturedCount = Number.isFinite(Number(importedFlow.capturedReadoutCount)) ? Number(importedFlow.capturedReadoutCount) : 0;
+    const currentCapturedCount = Number.isFinite(Number(currentFlow.capturedReadoutCount)) ? Number(currentFlow.capturedReadoutCount) : 0;
+    const importedMissingCount = Number.isFinite(Number(importedFlow.missingReadoutCount)) ? Number(importedFlow.missingReadoutCount) : 0;
+    const currentMissingCount = Number.isFinite(Number(currentFlow.missingReadoutCount)) ? Number(currentFlow.missingReadoutCount) : 0;
+    const importedEmptyCount = Number.isFinite(Number(importedFlow.emptyReadoutCount)) ? Number(importedFlow.emptyReadoutCount) : 0;
+    const currentEmptyCount = Number.isFinite(Number(currentFlow.emptyReadoutCount)) ? Number(currentFlow.emptyReadoutCount) : 0;
     return {
       schemaVersion: "imported_core_comparison_v1",
       importedStatus: importedFlow.status,
@@ -2622,6 +2630,18 @@
       importedNextReadoutId: importedFlow.nextReadoutId,
       currentNextReadoutId: currentFlow.nextReadoutId,
       nextReadoutChanged: importedFlow.nextReadoutId !== currentFlow.nextReadoutId,
+      importedRequiredReadoutCount: importedRequiredCount,
+      currentRequiredReadoutCount: currentRequiredCount,
+      requiredReadoutDelta: currentRequiredCount - importedRequiredCount,
+      importedCapturedReadoutCount: importedCapturedCount,
+      currentCapturedReadoutCount: currentCapturedCount,
+      capturedReadoutDelta: currentCapturedCount - importedCapturedCount,
+      importedMissingReadoutCount: importedMissingCount,
+      currentMissingReadoutCount: currentMissingCount,
+      missingReadoutDelta: currentMissingCount - importedMissingCount,
+      importedEmptyReadoutCount: importedEmptyCount,
+      currentEmptyReadoutCount: currentEmptyCount,
+      emptyReadoutDelta: currentEmptyCount - importedEmptyCount,
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
@@ -2786,7 +2806,7 @@
     const comparisons = [coreComparison, diagnosticFlowComparison, readoutCompletionComparison, analysisReadinessComparison].filter(Boolean);
     if (!comparisons.length) return null;
     const changedSectionIds = [
-      coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || Number(coreComparison.completionDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
+      coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || Number(coreComparison.completionDelta || coreComparison.requiredReadoutDelta || coreComparison.capturedReadoutDelta || coreComparison.missingReadoutDelta || coreComparison.emptyReadoutDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
       diagnosticFlowComparison && (diagnosticFlowComparison.statusChanged || diagnosticFlowComparison.readyForAnalysisChanged || diagnosticFlowComparison.nextReadoutChanged || Number(diagnosticFlowComparison.completionDelta || diagnosticFlowComparison.requiredReadoutDelta || diagnosticFlowComparison.capturedReadoutDelta || diagnosticFlowComparison.missingReadoutDelta || diagnosticFlowComparison.emptyReadoutDelta || diagnosticFlowComparison.pendingReadoutDelta || 0) !== 0) ? "diagnostic_flow_summary" : null,
       readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.requiredCountDelta || readoutCompletionComparison.capturedCountDelta || readoutCompletionComparison.missingCountDelta || readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null,
       analysisReadinessComparison && (analysisReadinessComparison.readyChanged || analysisReadinessComparison.statusChanged || analysisReadinessComparison.nextReadoutChanged || Number(analysisReadinessComparison.completionDelta || analysisReadinessComparison.blockerCountDelta || analysisReadinessComparison.pendingReadoutDelta || 0) !== 0) ? "analysis_readiness_summary" : null
