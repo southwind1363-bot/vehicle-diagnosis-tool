@@ -2361,6 +2361,9 @@
       nextReadoutId: nextPendingReadoutId,
       nextReadoutLabel: nextPendingReadoutState?.label || null,
       nextReadoutStatus: nextPendingReadoutState?.status || null,
+      pendingPercent: readoutStates.length
+        ? Math.round((pendingReadoutQueue.length / readoutStates.length) * 100)
+        : 0,
       remainingAfterNextCount: Math.max(0, pendingReadoutQueue.length - 1)
     };
     const readoutStatesByStatus = {
