@@ -2347,6 +2347,11 @@
       .filter(Boolean)
       .map((item) => ({ ...item }));
     const pendingReadoutStateById = Object.fromEntries(pendingReadoutStates.map((item) => [item.id, { ...item }]));
+    const pendingReadoutQueue = pendingReadoutStates.map((item, index) => ({
+      ...item,
+      position: index + 1,
+      isNext: index === 0
+    }));
     const nextPendingReadoutId = pendingReadoutIds[0] || null;
     const nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
     const readoutStatesByStatus = {
@@ -2435,6 +2440,7 @@
       pendingReadoutIds,
       pendingReadoutStates,
       pendingReadoutStateById,
+      pendingReadoutQueue,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
