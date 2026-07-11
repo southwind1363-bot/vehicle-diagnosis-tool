@@ -490,6 +490,7 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('|| payload?.bridgeSession') && functionBody.includes('|| payload?.bridge_session') && functionBody.includes('|| payload?.session'), "getDiagnosticSessionInput should accept nested session aliases from bridge payloads");
     check(functionBody.includes('...nested,') && functionBody.includes('...base,'), "getDiagnosticSessionInput should layer nested session fields before base overrides");
     check(functionBody.includes('coreSessionStatus: pickDefined(input.coreSessionStatus, input.core_session_status') && functionBody.includes('nested.coreSessionStatus, nested.core_session_status'), "getDiagnosticSessionInput should preserve imported core session status aliases");
+    check(functionBody.includes('diagnosticFlowSummary: pickDefined(input.diagnosticFlowSummary, input.diagnostic_flow_summary') && functionBody.includes('nested.diagnosticFlowSummary, nested.diagnostic_flow_summary'), "getDiagnosticSessionInput should preserve imported diagnostic flow aliases");
     check(functionBody.includes('readoutCompletionSummary: pickDefined(input.readoutCompletionSummary, input.readout_completion_summary') && functionBody.includes('nested.readoutCompletionSummary, nested.readout_completion_summary'), "getDiagnosticSessionInput should preserve imported readout completion aliases");
   }
 };
@@ -1436,6 +1437,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     const functionBody = diagnosticScanSessionFunctionSource[0];
     check(functionBody.includes('const sessionInput = getDiagnosticSessionInput(input);') && functionBody.includes('const metadataOverrides = getSessionMetadataOverrides(sessionInput);'), "buildDiagnosticScanSession should normalize session input and metadata overrides first");
     check(functionBody.includes('const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;') && functionBody.includes('importedCoreSessionStatus,'), "buildDiagnosticScanSession should expose imported core session status separately from recalculated status");
+    check(functionBody.includes('const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "buildDiagnosticScanSession should expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;') && functionBody.includes('importedReadoutCompletionSummary,'), "buildDiagnosticScanSession should expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('sessionInput.livePidSnapshot') && functionBody.includes('sessionInput.live_pid_response') && functionBody.includes('sessionInput.live_pids'), "buildDiagnosticScanSession should accept live PID snapshot and response aliases");
     check(functionBody.includes('sessionInput.freezeFrameSnapshot') && functionBody.includes('sessionInput.freeze_frame_response') && functionBody.includes('sessionInput.freeze_frame'), "buildDiagnosticScanSession should accept freeze-frame snapshot and response aliases");
@@ -6523,6 +6525,7 @@ check(scanSessionBridgeDiagnosticImportAlias.adapterIdentity?.adapterFamily === 
 check(scanSessionBridgeDiagnosticImportAlias.readoutCoverage?.progressPercent === bridgeDiagnosticImport.readoutCoverage?.progressPercent, "Diagnostic scan session did not carry readoutCoverage from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importClassification?.bucketCounts?.storedDtcResponses === bridgeDiagnosticImport.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not carry importClassification from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Diagnostic scan session did not preserve imported core session status from bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Diagnostic scan session did not preserve imported diagnostic flow summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not preserve imported readout completion summary from bridge_diagnostic_import alias input");
 const scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates = obd.buildDiagnosticScanSession({
   bridge_diagnostic_import: bridgeDiagnosticImportPopulatedManualExplicitCandidates,
@@ -7271,6 +7274,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 490");
+  console.log("OBD read-only safety checks: 493");
   console.log("Errors: 0");
 }
