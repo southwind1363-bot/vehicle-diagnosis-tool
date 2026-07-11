@@ -2885,6 +2885,7 @@
         };
       });
     const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
+    const unchangedSectionSummaries = sectionSummaries.filter((item) => !item.changed);
     const sectionSummaryById = sectionSummaries.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -2893,7 +2894,13 @@
       byId[item.id] = item;
       return byId;
     }, {});
+    const unchangedSectionSummaryById = unchangedSectionSummaries.reduce((byId, item) => {
+      byId[item.id] = item;
+      return byId;
+    }, {});
+    const comparedSectionIds = sectionSummaries.map((item) => item.id);
     const changedSectionIds = changedSectionSummaries.map((item) => item.id);
+    const unchangedSectionIds = unchangedSectionSummaries.map((item) => item.id);
     const changedReasonIds = [...new Set(changedSectionSummaries.flatMap((item) => item.changeReasonIds || []))];
     const changedReasonCountsById = changedReasonIds.reduce((counts, reasonId) => {
       counts[reasonId] = changedSectionSummaries.filter((item) => (item.changeReasonIds || []).includes(reasonId)).length;
@@ -2935,14 +2942,18 @@
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       sectionSummaries,
       changedSectionSummaries,
+      unchangedSectionSummaries,
       sectionSummaryById,
       changedSectionSummaryById,
+      unchangedSectionSummaryById,
       changedReasonIds,
       changedReasonCountsById,
       changedSectionsByReasonId,
       changedReasonSummaries,
       changedReasonSummaryById,
-      changedSectionIds
+      comparedSectionIds,
+      changedSectionIds,
+      unchangedSectionIds
     };
   }
 
