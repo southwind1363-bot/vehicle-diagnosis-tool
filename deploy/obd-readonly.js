@@ -2381,6 +2381,7 @@
       missingCount: remainingReadoutIds.length,
       pendingCount: pendingReadoutIds.length,
       capturedPercent: capturedReadoutPercent,
+      pendingPercent: pendingReadoutQueueSummary.pendingPercent,
       attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length,
       attemptedPercent: readoutStates.length
         ? Math.round(((capturedReadoutIds.length + emptyReadoutIds.length) / readoutStates.length) * 100)
