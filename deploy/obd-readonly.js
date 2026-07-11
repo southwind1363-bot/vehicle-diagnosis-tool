@@ -2352,6 +2352,7 @@
       position: index + 1,
       isNext: index === 0
     }));
+    const pendingReadoutQueueById = Object.fromEntries(pendingReadoutQueue.map((item) => [item.id, { ...item }]));
     const nextPendingReadoutId = pendingReadoutIds[0] || null;
     const nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
     const readoutStatesByStatus = {
@@ -2441,6 +2442,7 @@
       pendingReadoutStates,
       pendingReadoutStateById,
       pendingReadoutQueue,
+      pendingReadoutQueueById,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
