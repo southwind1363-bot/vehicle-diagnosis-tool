@@ -1788,6 +1788,7 @@
       warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
+    const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
 
     return {
       source: "local_bridge",
@@ -1815,6 +1816,7 @@
       warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
+      diagnosticFlowSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
@@ -2543,6 +2545,31 @@
     };
   }
 
+  function buildDiagnosticFlowSummary(coreSessionStatus = {}) {
+    const workflow = coreSessionStatus?.coreWorkflowSummary || {};
+    const readiness = coreSessionStatus?.analysisReadinessSummary || {};
+    const progress = coreSessionStatus?.readoutProgressSummary || {};
+    return {
+      schemaVersion: "diagnostic_flow_summary_v1",
+      stage: coreSessionStatus?.stage || "diagnostic_core",
+      status: coreSessionStatus?.status || workflow.status || "not_started",
+      currentStep: workflow.currentStep || null,
+      nextAction: workflow.nextAction || null,
+      nextReadoutId: workflow.nextReadoutId || readiness.nextReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
+      nextReadoutStatus: workflow.nextReadoutStatus || readiness.nextReadoutStatus || coreSessionStatus?.nextReadoutState?.status || null,
+      readyForAnalysis: coreSessionStatus?.readyForAnalysis === true,
+      completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
+        ? Number(coreSessionStatus.completionPercent)
+        : Number(progress.completionPercent) || 0,
+      pendingReadoutCount: Number.isFinite(Number(progress.pendingCount))
+        ? Number(progress.pendingCount)
+        : Array.isArray(coreSessionStatus?.pendingReadoutIds) ? coreSessionStatus.pendingReadoutIds.length : 0,
+      blockerCount: Number.isFinite(Number(readiness.blockerCount))
+        ? Number(readiness.blockerCount)
+        : Array.isArray(coreSessionStatus?.analysisBlockers) ? coreSessionStatus.analysisBlockers.length : 0
+    };
+  }
+
   function resolveImportClassification(input = null) {
     return input && typeof input === "object" ? { ...input } : null;
   }
@@ -3131,6 +3158,7 @@
       warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
+    const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
 
     return {
       source,
@@ -3162,6 +3190,7 @@
       warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
+      diagnosticFlowSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
@@ -4941,6 +4970,7 @@
       warnings: resolvedWarnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
+    const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
 
     return {
       schemaVersion: "scan_session_v1",
@@ -4966,6 +4996,7 @@
       readoutCoverage,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
+      diagnosticFlowSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
