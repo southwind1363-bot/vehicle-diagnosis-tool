@@ -2380,6 +2380,7 @@
       emptyCount: emptyReadoutIds.length,
       missingCount: remainingReadoutIds.length,
       pendingCount: pendingReadoutIds.length,
+      openCount: pendingReadoutIds.length,
       capturedPercent: capturedReadoutPercent,
       pendingPercent: pendingReadoutQueueSummary.pendingPercent,
       attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length,
