@@ -2855,16 +2855,34 @@
       || comparison.nextReadoutDetailsChanged === true
       || comparison.completeChanged === true
       || Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || 0) !== 0;
+    const getSectionChangeReasonIds = (comparison = {}) => [
+      comparison.statusChanged === true ? "status" : null,
+      comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
+      comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
+      comparison.completeChanged === true ? "readout_completion" : null,
+      Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
+      Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
+      Number(comparison.capturedCountDelta || comparison.capturedReadoutDelta || 0) !== 0 ? "captured_readouts" : null,
+      Number(comparison.missingCountDelta || comparison.missingReadoutDelta || 0) !== 0 ? "missing_readouts" : null,
+      Number(comparison.emptyCountDelta || comparison.emptyReadoutDelta || 0) !== 0 ? "empty_readouts" : null,
+      Number(comparison.pendingCountDelta || comparison.pendingReadoutDelta || 0) !== 0 ? "pending_readouts" : null,
+      Number(comparison.blockerCountDelta || 0) !== 0 ? "blockers" : null
+    ].filter(Boolean);
     const sectionSummaries = sectionInputs
       .filter((item) => item.comparison)
-      .map((item) => ({
-        id: item.id,
-        changed: hasSectionChanges(item.comparison),
-        statusChanged: item.comparison.statusChanged === true,
-        completionChanged: Number(item.comparison.completionDelta || item.comparison.requiredCountDelta || item.comparison.capturedCountDelta || item.comparison.missingCountDelta || item.comparison.pendingCountDelta || item.comparison.emptyCountDelta || item.comparison.requiredReadoutDelta || item.comparison.capturedReadoutDelta || item.comparison.missingReadoutDelta || item.comparison.emptyReadoutDelta || item.comparison.blockerCountDelta || item.comparison.pendingReadoutDelta || 0) !== 0,
-        nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
-        readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true
-      }));
+      .map((item) => {
+        const changeReasonIds = getSectionChangeReasonIds(item.comparison);
+        return {
+          id: item.id,
+          changed: hasSectionChanges(item.comparison),
+          changeReasonIds,
+          changeReasonCount: changeReasonIds.length,
+          statusChanged: item.comparison.statusChanged === true,
+          completionChanged: Number(item.comparison.completionDelta || item.comparison.requiredCountDelta || item.comparison.capturedCountDelta || item.comparison.missingCountDelta || item.comparison.pendingCountDelta || item.comparison.emptyCountDelta || item.comparison.requiredReadoutDelta || item.comparison.capturedReadoutDelta || item.comparison.missingReadoutDelta || item.comparison.emptyReadoutDelta || item.comparison.blockerCountDelta || item.comparison.pendingReadoutDelta || 0) !== 0,
+          nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
+          readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true
+        };
+      });
     const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
     const changedSectionIds = changedSectionSummaries.map((item) => item.id);
     return {
