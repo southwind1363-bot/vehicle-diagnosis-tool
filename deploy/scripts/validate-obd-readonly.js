@@ -554,6 +554,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const analysisReadinessSummary = {') && functionBody.includes('blockerIds: [...analysisBlockers],') && functionBody.includes('nextReadoutId: nextReadoutSummary?.id || null,'), "buildCoreSessionStatus should expose one analysis readiness summary");
     check(source.includes('function buildDiagnosticFlowSummary(coreSessionStatus = {})') && source.includes('schemaVersion: "diagnostic_flow_summary_v1"'), "obd-readonly should expose a stable diagnostic flow summary builder");
     check(source.includes('function buildImportedCoreComparisonSummary(importedCoreSessionStatus = null, currentCoreSessionStatus = {})') && source.includes('schemaVersion: "imported_core_comparison_v1"'), "obd-readonly should expose imported core comparison summaries");
+    check(source.includes('function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {})') && source.includes('schemaVersion: "imported_diagnostic_flow_comparison_v1"'), "obd-readonly should expose imported diagnostic flow comparison summaries");
     check(functionBody.includes('const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);'), "buildCoreSessionStatus should calculate direct completion from captured core readouts");
     check(functionBody.includes('Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)'), "buildCoreSessionStatus should preserve explicit readout coverage completion progress");
     check(functionBody.includes('const hasReadoutProgress = capturedReadoutIds.length > 0') && functionBody.includes('|| normalizedCoverage.availableCategories > 0;'), "buildCoreSessionStatus should treat explicit readout coverage progress as collecting readouts");
@@ -695,6 +696,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "mergeDiagnosticInputs should expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;') && functionBody.includes('importedReadoutCompletionSummary,'), "mergeDiagnosticInputs should expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);') && functionBody.includes('importedCoreComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated core session status");
+    check(functionBody.includes('const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);') && functionBody.includes('importedDiagnosticFlowComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated diagnostic flow summary");
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "mergeDiagnosticInputs should build core session status from merged diagnostic inputs");
     check(functionBody.includes('const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);') && functionBody.includes('diagnosticFlowSummary,'), "mergeDiagnosticInputs should expose a top-level diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;') && functionBody.includes('readoutCompletionSummary,'), "mergeDiagnosticInputs should expose a top-level readout completion summary");
@@ -3816,6 +3818,8 @@ check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowSummary?.schemaVe
 check(mergedDiagnosticInputExportPayload.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not preserve imported readout completion summary for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Combined diagnostic inputs did not compare imported and recalculated core session status");
 check(Number.isFinite(mergedDiagnosticInputExportPayload.importedCoreComparisonSummary?.completionDelta), "Combined diagnostic inputs did not expose imported core completion delta");
+check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowComparisonSummary?.schemaVersion === "imported_diagnostic_flow_comparison_v1", "Combined diagnostic inputs did not compare imported and recalculated diagnostic flow summary");
+check(Number.isFinite(mergedDiagnosticInputExportPayload.importedDiagnosticFlowComparisonSummary?.completionDelta), "Combined diagnostic inputs did not expose imported diagnostic flow completion delta");
 check(Array.isArray(mergedDiagnosticInputExportPayload.coreSessionStatus?.blockingWarningIds), "Combined diagnostic inputs did not expose coreSessionStatus blockingWarningIds");
 const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
@@ -6539,6 +6543,8 @@ check(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowSummary?.sche
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not preserve imported readout completion summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
+check(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.schemaVersion === "imported_diagnostic_flow_comparison_v1", "Diagnostic scan session did not compare imported and recalculated diagnostic flow summary");
+check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.completionDelta), "Diagnostic scan session did not expose imported diagnostic flow completion delta");
 const scanSessionBridgeDiagnosticImportPopulatedManualExplicitCandidates = obd.buildDiagnosticScanSession({
   bridge_diagnostic_import: bridgeDiagnosticImportPopulatedManualExplicitCandidates,
   session_id: "shop-test-bridge-import-populated-manual-explicit-candidates"
@@ -7286,6 +7292,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 505");
+  console.log("OBD read-only safety checks: 511");
   console.log("Errors: 0");
 }

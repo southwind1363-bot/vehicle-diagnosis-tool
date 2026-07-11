@@ -2602,6 +2602,34 @@
     };
   }
 
+  function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {}) {
+    if (!importedDiagnosticFlowSummary || typeof importedDiagnosticFlowSummary !== "object") return null;
+    const currentFlow = currentDiagnosticFlowSummary && typeof currentDiagnosticFlowSummary === "object"
+      ? currentDiagnosticFlowSummary
+      : {};
+    const importedCompletion = Number.isFinite(Number(importedDiagnosticFlowSummary.completionPercent))
+      ? Number(importedDiagnosticFlowSummary.completionPercent)
+      : 0;
+    const currentCompletion = Number.isFinite(Number(currentFlow.completionPercent))
+      ? Number(currentFlow.completionPercent)
+      : 0;
+    return {
+      schemaVersion: "imported_diagnostic_flow_comparison_v1",
+      importedStatus: importedDiagnosticFlowSummary.status || null,
+      currentStatus: currentFlow.status || null,
+      statusChanged: (importedDiagnosticFlowSummary.status || null) !== (currentFlow.status || null),
+      importedCompletionPercent: importedCompletion,
+      currentCompletionPercent: currentCompletion,
+      completionDelta: currentCompletion - importedCompletion,
+      importedNextReadoutId: importedDiagnosticFlowSummary.nextReadoutId || null,
+      currentNextReadoutId: currentFlow.nextReadoutId || null,
+      nextReadoutChanged: (importedDiagnosticFlowSummary.nextReadoutId || null) !== (currentFlow.nextReadoutId || null),
+      importedReadyForAnalysis: importedDiagnosticFlowSummary.readyForAnalysis === true,
+      currentReadyForAnalysis: currentFlow.readyForAnalysis === true,
+      readyForAnalysisChanged: (importedDiagnosticFlowSummary.readyForAnalysis === true) !== (currentFlow.readyForAnalysis === true)
+    };
+  }
+
   function buildCoreSessionStatusFromSummary(summary = {}, {
     vehicleApplicability = null,
     warnings = null,
@@ -3254,6 +3282,7 @@
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
+    const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
 
     return {
       source,
@@ -3291,6 +3320,7 @@
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,
       importedCoreComparisonSummary,
+      importedDiagnosticFlowComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
@@ -5076,6 +5106,7 @@
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
+    const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
 
     return {
       schemaVersion: "scan_session_v1",
@@ -5107,6 +5138,7 @@
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,
       importedCoreComparisonSummary,
+      importedDiagnosticFlowComparisonSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
