@@ -439,12 +439,14 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);'), "buildBridgeSessionExportPayload should rebuild diagnostic flow summary from core session status");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;'), "buildBridgeSessionExportPayload should rebuild readout completion summary from core session status");
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;'), "buildBridgeSessionExportPayload should rebuild analysis readiness summary from core session status");
+    check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('coreSessionStatus.readoutRequestPlanGateSummary'), "buildBridgeSessionExportPayload should rebuild readout request plan gate summary from core session status");
     check(functionBody.includes('core_session_status: coreSessionStatus,'), "buildBridgeSessionExportPayload should serialize core session status");
     check(functionBody.includes('schema_version: \"bridge_session_export_v1\"'), "buildBridgeSessionExportPayload should emit bridge session export schema version");
     check(functionBody.includes('readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),'), "buildBridgeSessionExportPayload should normalize readout coverage into export payload");
     check(functionBody.includes('diagnostic_flow_summary: diagnosticFlowSummary,'), "buildBridgeSessionExportPayload should serialize diagnostic flow summary");
     check(functionBody.includes('readout_completion_summary: readoutCompletionSummary,'), "buildBridgeSessionExportPayload should serialize readout completion summary");
     check(functionBody.includes('analysis_readiness_summary: analysisReadinessSummary,'), "buildBridgeSessionExportPayload should serialize analysis readiness summary");
+    check(functionBody.includes('readout_request_plan_gate_summary: readoutRequestPlanGateSummary,'), "buildBridgeSessionExportPayload should serialize readout request plan gate summary");
   }
 };
 const bridgeDiagnosticImportFunctionChecks = () => {
@@ -459,6 +461,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary') && functionBody.includes('diagnosticFlowSummary,'), "buildBridgeDiagnosticImport should preserve diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary') && functionBody.includes('readoutCompletionSummary,'), "buildBridgeDiagnosticImport should preserve readout completion summary");
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary') && functionBody.includes('analysisReadinessSummary,'), "buildBridgeDiagnosticImport should preserve analysis readiness summary");
+    check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "buildBridgeDiagnosticImport should preserve readout request plan gate summary");
   }
 };
 const sessionMetadataOverridesFunctionChecks = () => {
@@ -496,6 +499,7 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('diagnosticFlowSummary: pickDefined(input.diagnosticFlowSummary, input.diagnostic_flow_summary') && functionBody.includes('nested.diagnosticFlowSummary, nested.diagnostic_flow_summary'), "getDiagnosticSessionInput should preserve imported diagnostic flow aliases");
     check(functionBody.includes('readoutCompletionSummary: pickDefined(input.readoutCompletionSummary, input.readout_completion_summary') && functionBody.includes('nested.readoutCompletionSummary, nested.readout_completion_summary'), "getDiagnosticSessionInput should preserve imported readout completion aliases");
     check(functionBody.includes('analysisReadinessSummary: pickDefined(input.analysisReadinessSummary, input.analysis_readiness_summary') && functionBody.includes('nested.analysisReadinessSummary, nested.analysis_readiness_summary'), "getDiagnosticSessionInput should preserve imported analysis readiness aliases");
+    check(functionBody.includes('readoutRequestPlanGateSummary: pickDefined(input.readoutRequestPlanGateSummary, input.readout_request_plan_gate_summary') && functionBody.includes('nested.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary'), "getDiagnosticSessionInput should preserve imported readout request plan gate aliases");
   }
 };
 const resolvedSessionMetadataFunctionChecks = () => {
@@ -652,6 +656,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('analysisBlockerSummary,'), "buildCoreSessionStatus should expose analysis blocker summary");
     check(functionBody.includes('analysisChecklist,') && functionBody.includes('analysisChecklistById,') && functionBody.includes('analysisChecklistSummary,'), "buildCoreSessionStatus should return analysis checklist details");
     check(functionBody.includes('analysisReadinessSummary,'), "buildCoreSessionStatus should return analysis readiness summary");
+    check(functionBody.includes('readoutRequestPlanGateSummary,') && functionBody.includes('analysisReadinessSummary,'), "buildCoreSessionStatus should return readout request plan gate summary");
   }
 };
 const nextReadoutCandidatesFunctionChecks = () => {
@@ -763,6 +768,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "mergeDiagnosticInputs should expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;') && functionBody.includes('importedReadoutCompletionSummary,'), "mergeDiagnosticInputs should expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;') && functionBody.includes('importedAnalysisReadinessSummary,'), "mergeDiagnosticInputs should expose imported analysis readiness summary separately from recalculated status");
+    check(functionBody.includes('const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary || bridgeSession?.readoutRequestPlanGateSummary || null;') && functionBody.includes('importedReadoutRequestPlanGateSummary,'), "mergeDiagnosticInputs should expose imported readout request plan gate summary separately");
     check(functionBody.includes('const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);') && functionBody.includes('importedCoreComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated core session status");
     check(functionBody.includes('const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);') && functionBody.includes('importedDiagnosticFlowComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated diagnostic flow summary");
     check(functionBody.includes('const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);') && functionBody.includes('importedReadoutCompletionComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated readout completion summary");
@@ -772,6 +778,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);') && functionBody.includes('diagnosticFlowSummary,'), "mergeDiagnosticInputs should expose a top-level diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;') && functionBody.includes('readoutCompletionSummary,'), "mergeDiagnosticInputs should expose a top-level readout completion summary");
     check(functionBody.includes('const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;') && functionBody.includes('analysisReadinessSummary,'), "mergeDiagnosticInputs should expose a top-level analysis readiness summary");
+    check(functionBody.includes('const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "mergeDiagnosticInputs should expose a top-level readout request plan gate summary");
     check(functionBody.includes('onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,'), "mergeDiagnosticInputs should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "mergeDiagnosticInputs should remain read-only and avoid raw text retention");
   }
@@ -1519,6 +1526,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "buildDiagnosticScanSession should expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;') && functionBody.includes('importedReadoutCompletionSummary,'), "buildDiagnosticScanSession should expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;') && functionBody.includes('importedAnalysisReadinessSummary,'), "buildDiagnosticScanSession should expose imported analysis readiness summary separately from recalculated status");
+    check(functionBody.includes('const importedReadoutRequestPlanGateSummary = sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null;') && functionBody.includes('importedReadoutRequestPlanGateSummary,'), "buildDiagnosticScanSession should expose imported readout request plan gate summary separately");
     check(functionBody.includes('sessionInput.livePidSnapshot') && functionBody.includes('sessionInput.live_pid_response') && functionBody.includes('sessionInput.live_pids'), "buildDiagnosticScanSession should accept live PID snapshot and response aliases");
     check(functionBody.includes('sessionInput.freezeFrameSnapshot') && functionBody.includes('sessionInput.freeze_frame_response') && functionBody.includes('sessionInput.freeze_frame'), "buildDiagnosticScanSession should accept freeze-frame snapshot and response aliases");
     check(functionBody.includes('sessionInput.readinessSnapshot') && functionBody.includes('sessionInput.readiness_response'), "buildDiagnosticScanSession should accept readiness snapshot and response aliases");
@@ -1539,6 +1547,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);') && functionBody.includes('diagnosticFlowSummary,'), "buildDiagnosticScanSession should expose a top-level diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;') && functionBody.includes('readoutCompletionSummary,'), "buildDiagnosticScanSession should expose a top-level readout completion summary");
     check(functionBody.includes('const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;') && functionBody.includes('analysisReadinessSummary,'), "buildDiagnosticScanSession should expose a top-level analysis readiness summary");
+    check(functionBody.includes('const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "buildDiagnosticScanSession should expose a top-level readout request plan gate summary");
     check(functionBody.includes('const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);') && functionBody.includes('importedAnalysisReadinessComparisonSummary,'), "buildDiagnosticScanSession should compare imported and recalculated analysis readiness summary");
     check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildDiagnosticScanSession should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('schemaVersion: "scan_session_v1"') && functionBody.includes('sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80)'), "buildDiagnosticScanSession should emit a bounded scan session identity");
@@ -2593,6 +2602,7 @@ check(bridgeSummary.readoutCoverage.items.some((item) => item.id === "ecu_info_s
 check(bridgeSummary.coreSessionStatus?.stage === "diagnostic_core", "Bridge session summary did not expose coreSessionStatus stage");
 check(bridgeSummary.coreSessionStatus?.schemaVersion === "core_session_status_v1", "Bridge session summary did not expose coreSessionStatus schema version");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.remainingReadoutIds), "Bridge session summary did not expose coreSessionStatus remainingReadoutIds");
+check(bridgeSummary.readoutRequestPlanGateSummary?.state === bridgeSummary.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Bridge session summary did not expose top-level readout request plan gate summary");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.missingReadoutIds), "Bridge session summary did not expose coreSessionStatus missingReadoutIds");
 check(Array.isArray(bridgeSummary.coreSessionStatus?.emptyReadoutIds), "Bridge session summary did not expose coreSessionStatus emptyReadoutIds");
 check(bridgeSummary.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Bridge session summary did not expose top-level readout completion captured ids");
@@ -3076,6 +3086,7 @@ check(bridgeExportPayload.session.readout_completion_summary?.capturedIds?.inclu
 check(Array.isArray(bridgeExportPayload.session.readout_completion_summary?.pendingIds), "Bridge export did not carry readout completion summary pending ids");
 check(bridgeExportPayload.session.readout_completion_summary?.capturedCount === bridgeExportPayload.session.readout_completion_summary?.capturedIds?.length, "Bridge export did not carry readout completion captured count");
 check(bridgeExportPayload.session.analysis_readiness_summary?.ready === bridgeExportPayload.session.core_session_status?.analysisReadinessSummary?.ready, "Bridge export did not carry analysis readiness summary");
+check(bridgeExportPayload.session.readout_request_plan_gate_summary?.state === bridgeExportPayload.session.core_session_status?.readoutRequestPlanGateSummary?.state, "Bridge export did not carry readout request plan gate summary");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
 check(bridgeExportPayload.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export did not carry tool_hints");
@@ -3300,6 +3311,8 @@ check(bridgeDiagnosticImport.readoutCompletionSummary?.capturedIds?.includes("dt
 check(bridgeDiagnosticImport.bridgeSession?.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Bridge diagnostic import did not retain readout completion summary on bridgeSession");
 check(bridgeDiagnosticImport.analysisReadinessSummary?.ready === bridgeDiagnosticImport.coreSessionStatus?.analysisReadinessSummary?.ready, "Bridge diagnostic import did not carry top-level analysis readiness summary");
 check(bridgeDiagnosticImport.bridgeSession?.analysisReadinessSummary?.ready === bridgeDiagnosticImport.bridgeSession?.coreSessionStatus?.analysisReadinessSummary?.ready, "Bridge diagnostic import did not retain analysis readiness summary on bridgeSession");
+check(bridgeDiagnosticImport.readoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Bridge diagnostic import did not carry top-level readout request plan gate summary");
+check(bridgeDiagnosticImport.bridgeSession?.readoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.bridgeSession?.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Bridge diagnostic import did not retain readout request plan gate summary on bridgeSession");
 check(bridgeDiagnosticImport.freezeFrameSnapshot.monitorValues.length === 2, "ブリッジ診断取込へフリーズフレームを引き継げません");
 check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取込へ相関ヒントを引き継げません");
 check(bridgeDiagnosticImport.connectionStatus.displayStatus === "読取準備モデル", "Bridge diagnostic import did not expose top-level connection status");
@@ -3908,7 +3921,9 @@ check(mergedDiagnosticInputExportPayload.diagnosticFlowSummary?.stage === "diagn
 check(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not expose top-level readout completion captured ids for bridge_session_export_v1 bridge_import input");
 check(Array.isArray(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.pendingIds), "Combined diagnostic inputs did not expose top-level readout completion pending ids for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.analysisReadinessSummary?.ready === mergedDiagnosticInputExportPayload.coreSessionStatus?.analysisReadinessSummary?.ready, "Combined diagnostic inputs did not expose top-level analysis readiness summary");
+check(mergedDiagnosticInputExportPayload.readoutRequestPlanGateSummary?.state === mergedDiagnosticInputExportPayload.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Combined diagnostic inputs did not expose top-level readout request plan gate summary");
 check(mergedDiagnosticInputExportPayload.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Combined diagnostic inputs did not preserve imported core session status for bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.importedReadoutRequestPlanGateSummary?.state === bridgeExportPayload.session.readout_request_plan_gate_summary?.state, "Combined diagnostic inputs did not preserve imported readout request plan gate summary");
 check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Combined diagnostic inputs did not preserve imported diagnostic flow summary for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not preserve imported readout completion summary for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.importedAnalysisReadinessSummary?.ready === bridgeExportPayload.session.analysis_readiness_summary?.ready, "Combined diagnostic inputs did not preserve imported analysis readiness summary for bridge_session_export_v1 bridge_import input");
@@ -6667,10 +6682,12 @@ check(scanSessionBridgeDiagnosticImportAlias.adapterIdentity?.adapterFamily === 
 check(scanSessionBridgeDiagnosticImportAlias.readoutCoverage?.progressPercent === bridgeDiagnosticImport.readoutCoverage?.progressPercent, "Diagnostic scan session did not carry readoutCoverage from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importClassification?.bucketCounts?.storedDtcResponses === bridgeDiagnosticImport.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not carry importClassification from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.analysisReadinessSummary?.ready === scanSessionBridgeDiagnosticImportAlias.coreSessionStatus?.analysisReadinessSummary?.ready, "Diagnostic scan session did not expose top-level analysis readiness summary");
+check(scanSessionBridgeDiagnosticImportAlias.readoutRequestPlanGateSummary?.state === scanSessionBridgeDiagnosticImportAlias.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Diagnostic scan session did not expose top-level readout request plan gate summary");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Diagnostic scan session did not preserve imported core session status from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Diagnostic scan session did not preserve imported diagnostic flow summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not preserve imported readout completion summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessSummary?.ready === bridgeDiagnosticImport.analysisReadinessSummary?.ready, "Diagnostic scan session did not preserve imported analysis readiness summary from bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.readoutRequestPlanGateSummary?.state, "Diagnostic scan session did not preserve imported readout request plan gate summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.capturedReadoutDelta), "Diagnostic scan session did not expose imported core captured readout delta");
@@ -7514,6 +7531,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 694");
+  console.log("OBD read-only safety checks: 711");
   console.log("Errors: 0");
 }
