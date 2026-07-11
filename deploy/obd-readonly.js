@@ -1624,6 +1624,20 @@
     const mappedCount = Math.max(0, totalCount - unmappedCount);
     const allReadOnly = safeEntries.every((item) => item?.readOnly === true);
     const allNonTransmitting = safeEntries.every((item) => item?.wouldTransmit !== true && item?.vehicleCommandEnabled !== true && item?.executionEnabled !== true);
+    const nonReadOnlyRequestIds = safeEntries
+      .filter((item) => item?.readOnly !== true)
+      .map((item) => item?.readoutId)
+      .filter(Boolean);
+    const transmittingRequestIds = safeEntries
+      .filter((item) => item?.wouldTransmit === true || item?.vehicleCommandEnabled === true || item?.executionEnabled === true)
+      .map((item) => item?.readoutId)
+      .filter(Boolean);
+    const blockedReasonIds = [
+      ...(unmappedCount > 0 ? ["unmapped_readout_requests"] : []),
+      ...(nonReadOnlyRequestIds.length ? ["non_read_only_requests"] : []),
+      ...(transmittingRequestIds.length ? ["transmitting_requests"] : [])
+    ];
+    const safeForBridgePlanning = blockedReasonIds.length === 0;
     return {
       mappedPercent: totalCount ? Math.round((mappedCount / totalCount) * 100) : 100,
       unmappedPercent: totalCount ? Math.round((unmappedCount / totalCount) * 100) : 0,
@@ -1631,7 +1645,13 @@
       mappingStatus: unmappedCount > 0 ? "partial" : "mapped",
       allReadOnly,
       allNonTransmitting,
-      safeForBridgePlanning: allReadOnly && allNonTransmitting && unmappedCount === 0
+      safeForBridgePlanning,
+      blockedReasonIds,
+      blockedReasonById: {
+        unmapped_readout_requests: { count: unmappedCount, readoutIds: [...safeUnmappedRequestIds] },
+        non_read_only_requests: { count: nonReadOnlyRequestIds.length, readoutIds: [...nonReadOnlyRequestIds] },
+        transmitting_requests: { count: transmittingRequestIds.length, readoutIds: [...transmittingRequestIds] }
+      }
     };
   }
 
@@ -2804,6 +2824,8 @@
       requestPlanAllReadOnly: pendingReadoutRequestPlan?.allReadOnly === true,
       requestPlanAllNonTransmitting: pendingReadoutRequestPlan?.allNonTransmitting === true,
       requestPlanSafeForBridgePlanning: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
+      requestPlanBlockedReasonIds: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? [...pendingReadoutRequestPlan.blockedReasonIds] : [],
+      requestPlanBlockedReasonById: pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {},
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
