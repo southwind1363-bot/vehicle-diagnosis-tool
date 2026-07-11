@@ -2357,7 +2357,10 @@
     const nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
     const pendingReadoutQueueSummary = {
       totalCount: pendingReadoutQueue.length,
+      hasPendingReadouts: pendingReadoutQueue.length > 0,
       nextReadoutId: nextPendingReadoutId,
+      nextReadoutLabel: nextPendingReadoutState?.label || null,
+      nextReadoutStatus: nextPendingReadoutState?.status || null,
       remainingAfterNextCount: Math.max(0, pendingReadoutQueue.length - 1)
     };
     const readoutStatesByStatus = {
