@@ -2435,6 +2435,14 @@
       isMissing: remainingReadoutIds.includes(nextRecommendedReadoutId),
       isEmpty: emptyReadoutIds.includes(nextRecommendedReadoutId)
     } : null;
+    Object.assign(pendingReadoutQueueSummary, {
+      recommendedReadoutId: nextReadoutSummary?.id || null,
+      recommendedReadoutLabel: nextReadoutSummary?.label || null,
+      recommendedReadoutStatus: nextReadoutSummary?.status || null,
+      recommendedReadoutSource: nextReadoutSummary?.source || null,
+      recommendedReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
+      recommendedReadoutIsPending: nextReadoutSummary?.isPending === true
+    });
     const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
     const completionPercent = normalizedCoverage.totalCategories > 0
       ? Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)
