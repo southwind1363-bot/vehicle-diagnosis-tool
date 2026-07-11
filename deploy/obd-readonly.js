@@ -2444,6 +2444,19 @@
       pendingPercent: readoutStateSummary.pendingPercent,
       completionPercent
     };
+    const readoutCompletionSummary = {
+      complete: pendingReadoutIds.length === 0,
+      hasAnyReadout: capturedReadoutIds.length > 0 || emptyReadoutIds.length > 0,
+      hasCapturedReadouts: capturedReadoutIds.length > 0,
+      hasMissingReadouts: remainingReadoutIds.length > 0,
+      hasEmptyReadouts: emptyReadoutIds.length > 0,
+      requiredIds: [...requiredReadoutIds],
+      capturedIds: [...capturedReadoutIds],
+      missingIds: [...remainingReadoutIds],
+      emptyIds: [...emptyReadoutIds],
+      pendingIds: [...pendingReadoutIds],
+      completionPercent
+    };
     const analysisBlockers = [
       ...(remainingReadoutIds.length ? ["missing_readouts"] : []),
       ...(emptyReadoutIds.length ? ["empty_readouts"] : []),
@@ -2514,6 +2527,7 @@
       readoutStatesByStatus,
       readoutStateSummary,
       readoutProgressSummary,
+      readoutCompletionSummary,
       coreWorkflowSummary,
       nextReadoutCandidate,
       nextRecommendedReadoutId,

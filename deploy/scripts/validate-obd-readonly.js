@@ -527,6 +527,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const capturedReadoutPercent = readoutStates.length') && functionBody.includes('capturedPercent: capturedReadoutPercent,') && functionBody.includes('pendingPercent: pendingReadoutQueueSummary.pendingPercent,'), "buildCoreSessionStatus should expose direct readout state percents");
     check(functionBody.includes('attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length') && functionBody.includes('attemptedPercent:'), "buildCoreSessionStatus should expose attempted readout progress");
     check(functionBody.includes('const readoutProgressSummary = {') && functionBody.includes('requiredCount: requiredReadoutIds.length') && functionBody.includes('completionPercent'), "buildCoreSessionStatus should expose one consolidated readout progress summary");
+    check(functionBody.includes('const readoutCompletionSummary = {') && functionBody.includes('complete: pendingReadoutIds.length === 0,') && functionBody.includes('pendingIds: [...pendingReadoutIds],'), "buildCoreSessionStatus should expose grouped readout completion details");
     check(functionBody.includes('const blockingWarningIds = resolveWarningList(warnings).filter((warning) => ('), "buildCoreSessionStatus should derive blocking warning ids from normalized warnings");
     check(functionBody.includes('const fallbackNextRecommendedReadoutId = fallbackCandidateIds'), "buildCoreSessionStatus should derive fallback next recommended readout id");
     check(functionBody.includes('const nextReadoutCandidate = nextReadoutCandidates[0] ? { ...nextReadoutCandidates[0] } : null;'), "buildCoreSessionStatus should preserve the resolved next readout candidate details");
@@ -559,6 +560,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('readoutStatesByStatus,'), "buildCoreSessionStatus should expose per-readout states grouped by status");
     check(functionBody.includes('readoutStateSummary,'), "buildCoreSessionStatus should expose per-readout state summary");
     check(functionBody.includes('readoutProgressSummary,'), "buildCoreSessionStatus should return consolidated readout progress summary");
+    check(functionBody.includes('readoutCompletionSummary,'), "buildCoreSessionStatus should return grouped readout completion details");
     check(functionBody.includes('coreWorkflowSummary,'), "buildCoreSessionStatus should return core workflow summary");
     check(functionBody.includes('nextReadoutCandidate,'), "buildCoreSessionStatus should expose the resolved next readout candidate");
     check(functionBody.includes('nextRecommendedReadoutId,'), "buildCoreSessionStatus should expose the resolved next recommended readout id");
@@ -6986,6 +6988,9 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.a
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutProgressSummary?.requiredCount === 7, "Diagnostic scan session did not expose readout progress required count");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutProgressSummary?.capturedPercent === 29 && scanSessionPlainCoverageOverride.coreSessionStatus?.readoutProgressSummary?.pendingPercent === 71, "Diagnostic scan session did not expose readout progress percents");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutProgressSummary?.completionPercent === 29, "Diagnostic scan session did not expose readout progress completion percent");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutCompletionSummary?.complete === false && scanSessionPlainCoverageOverride.coreSessionStatus.readoutCompletionSummary?.hasMissingReadouts === true, "Diagnostic scan session did not expose incomplete readout completion summary");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutCompletionSummary?.hasEmptyReadouts === true && scanSessionPlainCoverageOverride.coreSessionStatus.readoutCompletionSummary?.emptyIds?.includes("freeze_frame_snapshot"), "Diagnostic scan session did not expose empty ids in readout completion summary");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutCompletionSummary?.pendingIds?.length === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not expose grouped readout completion ids");
 check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve plain-object coverage override emptyReadoutIds");
 const scanSessionCamelCoverageOverride = obd.buildDiagnosticScanSession({
   sessionId: "shop-test-camel-coverage-override",
