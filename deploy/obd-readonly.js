@@ -2464,6 +2464,19 @@
     const hasReadoutProgress = capturedReadoutIds.length > 0
       || emptyReadoutIds.length > 0
       || normalizedCoverage.availableCategories > 0;
+    const analysisReadinessSummary = {
+      ready: readyForAnalysis,
+      status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",
+      blockerCount: analysisBlockers.length,
+      blockerIds: [...analysisBlockers],
+      missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
+      emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
+      blockingWarningCount: analysisBlockerSummary.blockingWarningCount,
+      pendingReadoutCount: readoutProgressSummary.pendingCount,
+      completionPercent: readoutProgressSummary.completionPercent,
+      nextReadoutId: nextReadoutSummary?.id || null,
+      nextReadoutStatus: nextReadoutSummary?.status || null
+    };
     return {
       schemaVersion: "core_session_status_v1",
       stage: "diagnostic_core",
@@ -2497,6 +2510,7 @@
       analysisBlockers,
       analysisBlockerById,
       analysisBlockerSummary,
+      analysisReadinessSummary,
       blockingWarningIds,
       readyForAnalysis
     };
