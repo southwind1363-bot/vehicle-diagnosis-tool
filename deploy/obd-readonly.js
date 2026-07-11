@@ -1655,6 +1655,36 @@
     };
   }
 
+  function buildReadoutRequestPlanGateActionQueue(blockedReasonIds = [], blockedReasonById = {}) {
+    const actionIdByReasonId = {
+      unmapped_readout_requests: "map_readout_request",
+      non_read_only_requests: "require_read_only_request",
+      transmitting_requests: "block_transmitting_request"
+    };
+    const actionLabelByReasonId = {
+      unmapped_readout_requests: "Map readout request before bridge planning",
+      non_read_only_requests: "Keep readout request read-only",
+      transmitting_requests: "Block transmitting request before planning"
+    };
+    return (Array.isArray(blockedReasonIds) ? blockedReasonIds : [])
+      .map((reasonId, index) => {
+        const detail = blockedReasonById && typeof blockedReasonById === "object" ? blockedReasonById[reasonId] : null;
+        const readoutIds = Array.isArray(detail?.readoutIds) ? detail.readoutIds.filter(Boolean) : [];
+        return {
+          id: actionIdByReasonId[reasonId] || "review_readout_request_plan",
+          reasonId,
+          label: actionLabelByReasonId[reasonId] || "Review readout request plan",
+          priority: index + 1,
+          count: Number.isFinite(Number(detail?.count)) ? Number(detail.count) : readoutIds.length,
+          readoutIds: [...readoutIds],
+          readOnly: true,
+          executionEnabled: false,
+          wouldTransmit: false,
+          vehicleCommandEnabled: false
+        };
+      });
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
@@ -2559,6 +2589,8 @@
     const requestPlanBlockedReasonById = pendingReadoutRequestPlan.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object"
       ? { ...pendingReadoutRequestPlan.blockedReasonById }
       : {};
+    const readoutRequestPlanGateActionQueue = buildReadoutRequestPlanGateActionQueue(requestPlanBlockedReasonIds, requestPlanBlockedReasonById);
+    const readoutRequestPlanGateActionQueueById = Object.fromEntries(readoutRequestPlanGateActionQueue.map((item) => [item.id, { ...item }]));
     const readoutRequestPlanGateSummary = {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : requestPlanBlockedReasonIds.length ? "blocked" : "ready",
@@ -2568,6 +2600,12 @@
       blockedReasonIds: [...requestPlanBlockedReasonIds],
       blockedReasonById: requestPlanBlockedReasonById,
       nextBlockedReasonId: requestPlanBlockedReasonIds[0] || null,
+      actionRequired: readoutRequestPlanGateActionQueue.length > 0,
+      actionQueue: readoutRequestPlanGateActionQueue,
+      actionQueueById: readoutRequestPlanGateActionQueueById,
+      nextActionId: readoutRequestPlanGateActionQueue[0]?.id || null,
+      nextActionReasonId: readoutRequestPlanGateActionQueue[0]?.reasonId || null,
+      nextActionReadoutIds: readoutRequestPlanGateActionQueue[0]?.readoutIds ? [...readoutRequestPlanGateActionQueue[0].readoutIds] : [],
       totalCount: pendingReadoutRequestPlan.totalCount,
       mappedCount: pendingReadoutRequestPlan.mappedCount,
       unmappedCount: pendingReadoutRequestPlan.unmappedCount,
@@ -2835,15 +2873,25 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
+    const fallbackRequestPlanBlockedReasonIds = Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? [...pendingReadoutRequestPlan.blockedReasonIds] : [];
+    const fallbackRequestPlanBlockedReasonById = pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {};
+    const fallbackRequestPlanGateActionQueue = buildReadoutRequestPlanGateActionQueue(fallbackRequestPlanBlockedReasonIds, fallbackRequestPlanBlockedReasonById);
+    const fallbackRequestPlanGateActionQueueById = Object.fromEntries(fallbackRequestPlanGateActionQueue.map((item) => [item.id, { ...item }]));
     const readoutRequestPlanGateSummary = coreSessionStatus?.readoutRequestPlanGateSummary || readiness.readoutRequestPlanGateSummary || {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : pendingReadoutRequestPlan?.safeForBridgePlanning === true ? "ready" : "blocked",
       ready: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
       blocked: pendingReadoutRequestPlan?.safeForBridgePlanning !== true && Number(pendingReadoutRequestPlan.totalCount || 0) > 0,
-      blockedReasonCount: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? pendingReadoutRequestPlan.blockedReasonIds.length : 0,
-      blockedReasonIds: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? [...pendingReadoutRequestPlan.blockedReasonIds] : [],
-      blockedReasonById: pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {},
-      nextBlockedReasonId: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? pendingReadoutRequestPlan.blockedReasonIds[0] || null : null,
+      blockedReasonCount: fallbackRequestPlanBlockedReasonIds.length,
+      blockedReasonIds: [...fallbackRequestPlanBlockedReasonIds],
+      blockedReasonById: fallbackRequestPlanBlockedReasonById,
+      nextBlockedReasonId: fallbackRequestPlanBlockedReasonIds[0] || null,
+      actionRequired: fallbackRequestPlanGateActionQueue.length > 0,
+      actionQueue: fallbackRequestPlanGateActionQueue,
+      actionQueueById: fallbackRequestPlanGateActionQueueById,
+      nextActionId: fallbackRequestPlanGateActionQueue[0]?.id || null,
+      nextActionReasonId: fallbackRequestPlanGateActionQueue[0]?.reasonId || null,
+      nextActionReadoutIds: fallbackRequestPlanGateActionQueue[0]?.readoutIds ? [...fallbackRequestPlanGateActionQueue[0].readoutIds] : [],
       totalCount: Number.isFinite(Number(pendingReadoutRequestPlan?.totalCount)) ? Number(pendingReadoutRequestPlan.totalCount) : 0,
       mappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedCount)) ? Number(pendingReadoutRequestPlan.mappedCount) : 0,
       unmappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.unmappedCount)) ? Number(pendingReadoutRequestPlan.unmappedCount) : 0,
@@ -2888,6 +2936,11 @@
       requestPlanGateBlocked: readoutRequestPlanGateSummary.blocked === true,
       requestPlanGateBlockedReasonCount: Number.isFinite(Number(readoutRequestPlanGateSummary.blockedReasonCount)) ? Number(readoutRequestPlanGateSummary.blockedReasonCount) : 0,
       requestPlanNextBlockedReasonId: readoutRequestPlanGateSummary.nextBlockedReasonId || null,
+      requestPlanGateActionRequired: readoutRequestPlanGateSummary.actionRequired === true,
+      requestPlanGateNextActionId: readoutRequestPlanGateSummary.nextActionId || null,
+      requestPlanGateNextActionReasonId: readoutRequestPlanGateSummary.nextActionReasonId || null,
+      requestPlanGateNextActionReadoutIds: Array.isArray(readoutRequestPlanGateSummary.nextActionReadoutIds) ? [...readoutRequestPlanGateSummary.nextActionReadoutIds] : [],
+      requestPlanGateActionQueue: Array.isArray(readoutRequestPlanGateSummary.actionQueue) ? readoutRequestPlanGateSummary.actionQueue.map((item) => ({ ...item })) : [],
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
@@ -3247,6 +3300,8 @@
     const readCount = (summary, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : 0;
     const importedBlockedReasonIds = Array.isArray(importedGateSummary.blockedReasonIds) ? importedGateSummary.blockedReasonIds : [];
     const currentBlockedReasonIds = Array.isArray(currentSummary.blockedReasonIds) ? currentSummary.blockedReasonIds : [];
+    const importedActionQueue = Array.isArray(importedGateSummary.actionQueue) ? importedGateSummary.actionQueue : [];
+    const currentActionQueue = Array.isArray(currentSummary.actionQueue) ? currentSummary.actionQueue : [];
     return {
       schemaVersion: "imported_readout_request_plan_gate_comparison_v1",
       importedState: importedGateSummary.state || null,
@@ -3264,6 +3319,12 @@
       importedNextBlockedReasonId: importedGateSummary.nextBlockedReasonId || null,
       currentNextBlockedReasonId: currentSummary.nextBlockedReasonId || null,
       nextBlockedReasonChanged: (importedGateSummary.nextBlockedReasonId || null) !== (currentSummary.nextBlockedReasonId || null),
+      importedActionRequired: importedGateSummary.actionRequired === true,
+      currentActionRequired: currentSummary.actionRequired === true,
+      actionRequiredChanged: (importedGateSummary.actionRequired === true) !== (currentSummary.actionRequired === true),
+      importedNextActionId: importedGateSummary.nextActionId || null,
+      currentNextActionId: currentSummary.nextActionId || null,
+      nextActionChanged: (importedGateSummary.nextActionId || null) !== (currentSummary.nextActionId || null),
       importedTotalCount: readCount(importedGateSummary, "totalCount"),
       currentTotalCount: readCount(currentSummary, "totalCount"),
       totalCountDelta: readCount(currentSummary, "totalCount") - readCount(importedGateSummary, "totalCount"),
@@ -3279,7 +3340,10 @@
       currentBlockedReasonCount: Number.isFinite(Number(currentSummary.blockedReasonCount)) ? Number(currentSummary.blockedReasonCount) : currentBlockedReasonIds.length,
       blockedReasonCountDelta: (Number.isFinite(Number(currentSummary.blockedReasonCount)) ? Number(currentSummary.blockedReasonCount) : currentBlockedReasonIds.length)
         - (Number.isFinite(Number(importedGateSummary.blockedReasonCount)) ? Number(importedGateSummary.blockedReasonCount) : importedBlockedReasonIds.length),
-      blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|")
+      blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|"),
+      importedActionQueueCount: importedActionQueue.length,
+      currentActionQueueCount: currentActionQueue.length,
+      actionQueueCountDelta: currentActionQueue.length - importedActionQueue.length
     };
   }
 
@@ -3299,7 +3363,7 @@
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
@@ -3309,6 +3373,8 @@
       || comparison.nextReadoutChanged === true
       || comparison.nextReadoutDetailsChanged === true
       || comparison.nextBlockedReasonChanged === true
+      || comparison.actionRequiredChanged === true
+      || comparison.nextActionChanged === true
       || comparison.blockedReasonIdsChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
@@ -3318,6 +3384,7 @@
       comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
+      comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || Number(comparison.actionQueueCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.completeChanged === true ? "readout_completion" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
