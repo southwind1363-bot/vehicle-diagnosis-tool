@@ -2653,6 +2653,30 @@
     };
   }
 
+  function buildImportedSessionComparisonSummary({
+    coreComparison = null,
+    diagnosticFlowComparison = null,
+    readoutCompletionComparison = null
+  } = {}) {
+    const comparisons = [coreComparison, diagnosticFlowComparison, readoutCompletionComparison].filter(Boolean);
+    if (!comparisons.length) return null;
+    return {
+      schemaVersion: "imported_session_comparison_v1",
+      hasImportedSessionState: true,
+      comparedSectionCount: comparisons.length,
+      statusChanged: comparisons.some((item) => item.statusChanged === true),
+      completionChanged: comparisons.some((item) => Number(item.completionDelta || item.pendingCountDelta || item.pendingReadoutDelta || 0) !== 0),
+      readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true),
+      nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true),
+      readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
+      changedSectionIds: [
+        coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || Number(coreComparison.completionDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
+        diagnosticFlowComparison && (diagnosticFlowComparison.statusChanged || diagnosticFlowComparison.readyForAnalysisChanged || diagnosticFlowComparison.nextReadoutChanged || Number(diagnosticFlowComparison.completionDelta || 0) !== 0) ? "diagnostic_flow_summary" : null,
+        readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null
+      ].filter(Boolean)
+    };
+  }
+
   function buildCoreSessionStatusFromSummary(summary = {}, {
     vehicleApplicability = null,
     warnings = null,
@@ -3307,6 +3331,11 @@
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
+    const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
+      coreComparison: importedCoreComparisonSummary,
+      diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
+      readoutCompletionComparison: importedReadoutCompletionComparisonSummary
+    });
 
     return {
       source,
@@ -3346,6 +3375,7 @@
       importedCoreComparisonSummary,
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
+      importedSessionComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
@@ -5133,6 +5163,11 @@
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
+    const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
+      coreComparison: importedCoreComparisonSummary,
+      diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
+      readoutCompletionComparison: importedReadoutCompletionComparisonSummary
+    });
 
     return {
       schemaVersion: "scan_session_v1",
@@ -5166,6 +5201,7 @@
       importedCoreComparisonSummary,
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
+      importedSessionComparisonSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
         ...freezeFrameSnapshot.monitorValues
