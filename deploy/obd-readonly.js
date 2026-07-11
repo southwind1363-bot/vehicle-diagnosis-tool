@@ -2575,6 +2575,7 @@
     const readiness = coreSessionStatus?.analysisReadinessSummary || {};
     const progress = coreSessionStatus?.readoutProgressSummary || {};
     const completion = coreSessionStatus?.readoutCompletionSummary || {};
+    const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || {};
     const readCount = (field, fallbackIds = []) => Number.isFinite(Number(completion[field]))
       ? Number(completion[field])
       : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
@@ -2589,6 +2590,13 @@
       nextReadoutStatus: workflow.nextReadoutStatus || readiness.nextReadoutStatus || coreSessionStatus?.nextReadoutState?.status || null,
       nextReadoutSource: workflow.nextReadoutSource || readiness.nextReadoutSource || coreSessionStatus?.nextReadoutSource || null,
       nextReadoutQueuePosition: workflow.nextReadoutQueuePosition || readiness.nextReadoutQueuePosition || coreSessionStatus?.nextReadoutSummary?.queuePosition || null,
+      pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
+      pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
+      recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
+      recommendedReadoutStatus: queueSummary.recommendedReadoutStatus || coreSessionStatus?.nextReadoutSummary?.status || null,
+      recommendedReadoutSource: queueSummary.recommendedReadoutSource || coreSessionStatus?.nextReadoutSource || null,
+      recommendedReadoutQueuePosition: queueSummary.recommendedReadoutQueuePosition || coreSessionStatus?.nextReadoutSummary?.queuePosition || null,
+      recommendedReadoutIsPending: queueSummary.recommendedReadoutIsPending === true,
       readyForAnalysis: coreSessionStatus?.readyForAnalysis === true,
       completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
         ? Number(coreSessionStatus.completionPercent)
