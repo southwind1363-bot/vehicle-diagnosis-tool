@@ -1699,6 +1699,7 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.current_basis.includes("貼り付け解析入口")), "メーカー固有DTCの貼り付け解析入口が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.done.includes("Techstream等の読取結果貼り付けを先行解析する方針")), "メーカー固有DTCの貼り付け解析方針が不足しています");
 const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const styleCss = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
 const nextStepFunctionSource = appSource.match(/function formatCoreNextStepSummary[\s\S]*?\r?\n\}/);
 check(Boolean(nextStepFunctionSource), "formatCoreNextStepSummary is missing from script.js");
 if (nextStepFunctionSource) {
@@ -1708,6 +1709,10 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
+check(indexHtml.includes('id="obdDiagnosticFlowPanel"'), "OBD diagnostic flow panel container is missing from index.html");
+check(appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('renderObdDiagnosticFlowPanel(session);'), "OBD diagnostic flow panel renderer is missing from script.js");
+check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
+check(styleCss.includes(".obd-diagnostic-flow-panel") && styleCss.includes(".obd-diagnostic-flow-grid"), "OBD diagnostic flow panel styles are missing from style.css");
 check(indexHtml.includes("Techstream/J2534") && indexHtml.includes("Current/Pending/Permanent") && indexHtml.includes("CONSULT") && indexHtml.includes("HDS") && indexHtml.includes("IDS"), "OBD import helper text in index.html is out of date");
 check(indexHtml.includes("obdImportToolHints"), "OBD import tool hint container is missing from index.html");
 check(diagnosticCapabilityStatus.every((item) => item.safety_gate), "診断機能完成度に安全ゲートがありません");

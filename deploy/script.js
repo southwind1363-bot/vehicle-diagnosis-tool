@@ -430,6 +430,7 @@ const obdDevBridgeFreezeFrameButton = document.querySelector("#obdDevBridgeFreez
 const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton");
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
+const obdDiagnosticFlowPanel = document.querySelector("#obdDiagnosticFlowPanel");
 const obdDevSessionSummary = document.querySelector("#obdDevSessionSummary");
 const obdDevSessionDetails = document.querySelector("#obdDevSessionDetails");
 const obdNextReadoutPanel = document.querySelector("#obdNextReadoutPanel");
@@ -5237,7 +5238,110 @@ function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
   };
 }
 
+function formatDiagnosticFlowBlockerLabel(reasonId = "") {
+  return {
+    missing_readouts: "未取得の読取あり",
+    empty_readouts: "空応答の読取あり",
+    blocking_warnings: "保留要因あり"
+  }[reasonId] || formatObdBridgeWarningLabel(reasonId) || reasonId;
+}
+
+function addObdDiagnosticFlowMetric(container, label, value, tone = "") {
+  const item = document.createElement("article");
+  item.className = `obd-diagnostic-flow-card${tone ? ` obd-diagnostic-flow-${tone}` : ""}`;
+  const title = document.createElement("span");
+  title.textContent = label;
+  const body = document.createElement("strong");
+  body.textContent = value || NO_DATA;
+  item.append(title, body);
+  container.appendChild(item);
+}
+
+function renderObdDiagnosticFlowPanel(session = null) {
+  if (!obdDiagnosticFlowPanel) return;
+  obdDiagnosticFlowPanel.innerHTML = "";
+  if (!session || typeof session !== "object") {
+    obdDiagnosticFlowPanel.hidden = true;
+    return;
+  }
+  const flow = session.diagnosticFlowSummary || {};
+  const core = session.coreSessionStatus || {};
+  const canStartAnalysis = flow.canStartAnalysis === true || core.readyForAnalysis === true;
+  const analysisBlocked = flow.analysisBlocked === true || (core.readyForAnalysis === false && !canStartAnalysis);
+  const collectionRequired = flow.readoutCollectionRequired === true || (Array.isArray(core.pendingReadoutIds) && core.pendingReadoutIds.length > 0);
+  const completionPercent = Number.isFinite(Number(flow.completionPercent))
+    ? Math.max(0, Math.min(100, Math.round(Number(flow.completionPercent))))
+    : Number.isFinite(Number(core.completionPercent)) ? Math.max(0, Math.min(100, Math.round(Number(core.completionPercent)))) : null;
+  const pendingCount = Number.isFinite(Number(flow.pendingReadoutCount))
+    ? Number(flow.pendingReadoutCount)
+    : Array.isArray(core.pendingReadoutIds) ? core.pendingReadoutIds.length : 0;
+  const nextReadoutId = flow.recommendedReadoutId || flow.nextReadoutId || core.nextRecommendedReadoutId || null;
+  const nextReadoutLabel = flow.nextReadoutLabel || formatCoreReadoutLabel(nextReadoutId, nextReadoutId || NO_DATA);
+  const blockerIds = Array.isArray(flow.blockingReasonIds)
+    ? flow.blockingReasonIds
+    : Array.isArray(core.analysisBlockers) ? core.analysisBlockers : [];
+  const blockerLabel = blockerIds.length
+    ? blockerIds.slice(0, 3).map((item) => formatDiagnosticFlowBlockerLabel(item)).join(" / ")
+    : canStartAnalysis ? "なし" : NO_DATA;
+  const statusLabel = canStartAnalysis
+    ? "解析へ進めます"
+    : collectionRequired
+      ? "読取を継続"
+      : analysisBlocked ? "確認が必要" : "待機中";
+
+  const header = document.createElement("div");
+  header.className = "obd-diagnostic-flow-head";
+  const titleBlock = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow obd-eyebrow";
+  eyebrow.textContent = "DIAGNOSTIC FLOW";
+  const title = document.createElement("h4");
+  title.textContent = "診断セッションの現在地";
+  titleBlock.append(eyebrow, title);
+  const badge = document.createElement("span");
+  badge.className = "confidence-badge";
+  badge.textContent = canStartAnalysis ? "解析可能" : "read-only確認中";
+  header.append(titleBlock, badge);
+
+  const grid = document.createElement("div");
+  grid.className = "obd-diagnostic-flow-grid";
+  addObdDiagnosticFlowMetric(grid, "現在地", statusLabel, canStartAnalysis ? "ready" : "pending");
+  addObdDiagnosticFlowMetric(grid, "読取進捗", completionPercent === null ? NO_DATA : `${completionPercent}%`);
+  addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
+  addObdDiagnosticFlowMetric(grid, "保留理由", blockerLabel, analysisBlocked ? "blocked" : "");
+  addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
+  addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
+
+  const note = document.createElement("p");
+  note.className = "obd-diagnostic-flow-note";
+  note.textContent = canStartAnalysis
+    ? "主要読取は揃っています。解析結果を確認する前に、保存済みDTCとフリーズフレームを残してください。"
+    : "まだ車両へ書き込みません。表示された次の読取を確認し、必要なデータを揃えてから解析へ進みます。";
+
+  const actions = document.createElement("div");
+  actions.className = "button-row obd-diagnostic-flow-actions";
+  if (nextReadoutId) {
+    const action = OBD_NEXT_READOUT_ACTIONS[nextReadoutId] || null;
+    const targetButton = action?.button?.() || null;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.textContent = targetButton ? "該当読取ボタンへ移動" : "詳細読取メニューを確認";
+    button.addEventListener("click", () => {
+      renderObdStageView("details");
+      const target = targetButton || obdDevControls || obdDevSessionSummary;
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (targetButton) targetButton.focus();
+    });
+    actions.appendChild(button);
+  }
+
+  obdDiagnosticFlowPanel.append(header, grid, note, actions);
+  obdDiagnosticFlowPanel.hidden = false;
+}
+
 function renderObdDeveloperSessionSummary(session = null) {
+  renderObdDiagnosticFlowPanel(session);
   obdDevSessionSummary.innerHTML = "";
   const connectionStatus = session?.connectionStatus
     ? { ...(obdDevSession.bridgeStatus || {}), ...session.connectionStatus }
