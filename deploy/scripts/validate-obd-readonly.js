@@ -625,6 +625,8 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('actionQueueCountDelta: currentActionQueue.length - importedActionQueue.length') && source.includes('request_plan_actions'), "imported session comparison should track request plan action changes");
     check(source.includes('function buildImportedSessionComparisonSummary({') && source.includes('schemaVersion: "imported_session_comparison_v1"'), "obd-readonly should expose imported session comparison summaries");
     check(source.includes('{ id: "readout_request_plan_gate_summary", comparison: readoutRequestPlanGateComparison }') && source.includes('requestPlanGateChanged: comparisons.some'), "imported session comparison should include readout request plan gate section summaries");
+    check(source.includes('item.comparison.actionRequiredChanged === true') && source.includes('Number(item.comparison.actionQueueCountDelta || 0) !== 0'), "imported session section summaries should treat request plan action changes as gate changes");
+    check(source.includes('item.actionRequiredChanged === true || item.nextActionChanged === true') && source.includes('Number(item.actionQueueCountDelta || 0) !== 0'), "imported session top-level summaries should treat request plan action changes as gate changes");
     check(source.includes('const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta') && source.includes('comparison.unmappedCountDelta') && source.includes('completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item))'), "imported session comparison summaries should use one metric-change helper for section and top-level completion flags");
     check(source.includes('const sectionSummaries = sectionInputs') && source.includes('const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);'), "imported session comparison summaries should expose section summaries");
     check(source.includes('const unchangedSectionSummaries = sectionSummaries.filter((item) => !item.changed);') && source.includes('unchangedSectionSummaryById,'), "imported session comparison summaries should expose unchanged section maps");
@@ -6726,6 +6728,8 @@ check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedAnalysisRea
 check("nextReadoutDetailsChanged" in scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessComparisonSummary, "Diagnostic scan session did not expose imported analysis readiness next readout detail change flag");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary?.schemaVersion === "imported_readout_request_plan_gate_comparison_v1", "Diagnostic scan session did not compare imported and recalculated readout request plan gate summary");
 check("safeForBridgePlanningChanged" in scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary?.mappedCountDelta), "Diagnostic scan session did not expose imported readout request plan gate comparison details");
+check("actionRequiredChanged" in scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary && "nextActionChanged" in scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary, "Diagnostic scan session did not expose imported readout request plan gate action comparison flags");
+check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary?.actionQueueCountDelta), "Diagnostic scan session did not expose imported readout request plan gate action queue delta");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Diagnostic scan session did not summarize imported session comparison results");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionIds), "Diagnostic scan session did not expose imported session changed section ids");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.comparedSectionIds) && Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.unchangedSectionIds), "Diagnostic scan session did not expose imported session compared and unchanged section ids");
@@ -7558,6 +7562,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 738");
+  console.log("OBD read-only safety checks: 742");
   console.log("Errors: 0");
 }

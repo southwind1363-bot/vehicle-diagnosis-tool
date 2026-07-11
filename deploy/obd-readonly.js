@@ -3411,6 +3411,9 @@
           requestPlanGateChanged: item.comparison.blockedChanged === true
             || item.comparison.safeForBridgePlanningChanged === true
             || item.comparison.nextBlockedReasonChanged === true
+            || item.comparison.actionRequiredChanged === true
+            || item.comparison.nextActionChanged === true
+            || Number(item.comparison.actionQueueCountDelta || 0) !== 0
             || item.comparison.blockedReasonIdsChanged === true
         };
       });
@@ -3471,7 +3474,7 @@
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
       completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
-      requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.blockedReasonIdsChanged === true),
+      requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || Number(item.actionQueueCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       sectionSummaries,
