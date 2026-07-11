@@ -2489,7 +2489,10 @@
       status: coreStatus,
       nextAction: readyForAnalysis ? "start_analysis" : nextReadoutSummary ? "collect_next_readout" : "start_core_readouts",
       nextReadoutId: nextReadoutSummary?.id || null,
+      nextReadoutLabel: nextReadoutSummary?.label || null,
       nextReadoutStatus: nextReadoutSummary?.status || null,
+      nextReadoutSource: nextReadoutSummary?.source || null,
+      nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
       readyForAnalysis,
       completionPercent: readoutProgressSummary.completionPercent,
       blockerCount: analysisBlockers.length,
@@ -2500,13 +2503,18 @@
       status: coreStatus,
       blockerCount: analysisBlockers.length,
       blockerIds: [...analysisBlockers],
+      blockerSummary: analysisBlockerSummary,
+      blockersById: analysisBlockerById,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
       blockingWarningCount: analysisBlockerSummary.blockingWarningCount,
       pendingReadoutCount: readoutProgressSummary.pendingCount,
       completionPercent: readoutProgressSummary.completionPercent,
       nextReadoutId: nextReadoutSummary?.id || null,
-      nextReadoutStatus: nextReadoutSummary?.status || null
+      nextReadoutLabel: nextReadoutSummary?.label || null,
+      nextReadoutStatus: nextReadoutSummary?.status || null,
+      nextReadoutSource: nextReadoutSummary?.source || null,
+      nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null
     };
     return {
       schemaVersion: "core_session_status_v1",
@@ -2560,7 +2568,10 @@
       currentStep: workflow.currentStep || null,
       nextAction: workflow.nextAction || null,
       nextReadoutId: workflow.nextReadoutId || readiness.nextReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
+      nextReadoutLabel: workflow.nextReadoutLabel || readiness.nextReadoutLabel || coreSessionStatus?.nextReadoutSummary?.label || null,
       nextReadoutStatus: workflow.nextReadoutStatus || readiness.nextReadoutStatus || coreSessionStatus?.nextReadoutState?.status || null,
+      nextReadoutSource: workflow.nextReadoutSource || readiness.nextReadoutSource || coreSessionStatus?.nextReadoutSource || null,
+      nextReadoutQueuePosition: workflow.nextReadoutQueuePosition || readiness.nextReadoutQueuePosition || coreSessionStatus?.nextReadoutSummary?.queuePosition || null,
       readyForAnalysis: coreSessionStatus?.readyForAnalysis === true,
       completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
         ? Number(coreSessionStatus.completionPercent)
