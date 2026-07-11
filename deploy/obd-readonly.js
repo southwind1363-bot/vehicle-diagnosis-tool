@@ -2334,6 +2334,7 @@
     const remainingReadoutIds = requiredReadouts
       .filter((item) => !item.captured && !emptyReadoutIds.includes(item.id))
       .map((item) => item.id);
+    const pendingReadoutIds = [...remainingReadoutIds, ...emptyReadoutIds];
     const readoutStates = requiredReadouts.map((item) => ({
       id: item.id,
       label: coverageLabelById.get(item.id) || item.id,
@@ -2354,6 +2355,7 @@
       capturedCount: capturedReadoutIds.length,
       emptyCount: emptyReadoutIds.length,
       missingCount: remainingReadoutIds.length,
+      pendingCount: pendingReadoutIds.length,
       capturedPercent: capturedReadoutPercent,
       attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length,
       attemptedPercent: readoutStates.length
@@ -2423,6 +2425,7 @@
       missingReadoutIds: remainingReadoutIds,
       remainingReadoutIds,
       emptyReadoutIds,
+      pendingReadoutIds,
       readoutStates,
       readoutStateById,
       readoutStatesByStatus,
