@@ -2632,6 +2632,15 @@
       importedNextReadoutId: importedFlow.nextReadoutId,
       currentNextReadoutId: currentFlow.nextReadoutId,
       nextReadoutChanged: importedFlow.nextReadoutId !== currentFlow.nextReadoutId,
+      importedNextReadoutLabel: importedFlow.nextReadoutLabel || null,
+      currentNextReadoutLabel: currentFlow.nextReadoutLabel || null,
+      importedNextReadoutSource: importedFlow.nextReadoutSource || null,
+      currentNextReadoutSource: currentFlow.nextReadoutSource || null,
+      importedNextReadoutQueuePosition: importedFlow.nextReadoutQueuePosition || null,
+      currentNextReadoutQueuePosition: currentFlow.nextReadoutQueuePosition || null,
+      nextReadoutDetailsChanged: (importedFlow.nextReadoutLabel || null) !== (currentFlow.nextReadoutLabel || null)
+        || (importedFlow.nextReadoutSource || null) !== (currentFlow.nextReadoutSource || null)
+        || (importedFlow.nextReadoutQueuePosition || null) !== (currentFlow.nextReadoutQueuePosition || null),
       importedRequiredReadoutCount: importedRequiredCount,
       currentRequiredReadoutCount: currentRequiredCount,
       requiredReadoutDelta: currentRequiredCount - importedRequiredCount,
@@ -2688,6 +2697,15 @@
       importedNextReadoutId: importedDiagnosticFlowSummary.nextReadoutId || null,
       currentNextReadoutId: currentFlow.nextReadoutId || null,
       nextReadoutChanged: (importedDiagnosticFlowSummary.nextReadoutId || null) !== (currentFlow.nextReadoutId || null),
+      importedNextReadoutLabel: importedDiagnosticFlowSummary.nextReadoutLabel || null,
+      currentNextReadoutLabel: currentFlow.nextReadoutLabel || null,
+      importedNextReadoutSource: importedDiagnosticFlowSummary.nextReadoutSource || null,
+      currentNextReadoutSource: currentFlow.nextReadoutSource || null,
+      importedNextReadoutQueuePosition: importedDiagnosticFlowSummary.nextReadoutQueuePosition || null,
+      currentNextReadoutQueuePosition: currentFlow.nextReadoutQueuePosition || null,
+      nextReadoutDetailsChanged: (importedDiagnosticFlowSummary.nextReadoutLabel || null) !== (currentFlow.nextReadoutLabel || null)
+        || (importedDiagnosticFlowSummary.nextReadoutSource || null) !== (currentFlow.nextReadoutSource || null)
+        || (importedDiagnosticFlowSummary.nextReadoutQueuePosition || null) !== (currentFlow.nextReadoutQueuePosition || null),
       importedReadyForAnalysis: importedDiagnosticFlowSummary.readyForAnalysis === true,
       currentReadyForAnalysis: currentFlow.readyForAnalysis === true,
       readyForAnalysisChanged: (importedDiagnosticFlowSummary.readyForAnalysis === true) !== (currentFlow.readyForAnalysis === true),
@@ -2803,7 +2821,16 @@
       pendingReadoutDelta: currentPendingCount - importedPendingCount,
       importedNextReadoutId: importedAnalysisReadinessSummary.nextReadoutId || null,
       currentNextReadoutId: currentSummary.nextReadoutId || null,
-      nextReadoutChanged: (importedAnalysisReadinessSummary.nextReadoutId || null) !== (currentSummary.nextReadoutId || null)
+      nextReadoutChanged: (importedAnalysisReadinessSummary.nextReadoutId || null) !== (currentSummary.nextReadoutId || null),
+      importedNextReadoutLabel: importedAnalysisReadinessSummary.nextReadoutLabel || null,
+      currentNextReadoutLabel: currentSummary.nextReadoutLabel || null,
+      importedNextReadoutSource: importedAnalysisReadinessSummary.nextReadoutSource || null,
+      currentNextReadoutSource: currentSummary.nextReadoutSource || null,
+      importedNextReadoutQueuePosition: importedAnalysisReadinessSummary.nextReadoutQueuePosition || null,
+      currentNextReadoutQueuePosition: currentSummary.nextReadoutQueuePosition || null,
+      nextReadoutDetailsChanged: (importedAnalysisReadinessSummary.nextReadoutLabel || null) !== (currentSummary.nextReadoutLabel || null)
+        || (importedAnalysisReadinessSummary.nextReadoutSource || null) !== (currentSummary.nextReadoutSource || null)
+        || (importedAnalysisReadinessSummary.nextReadoutQueuePosition || null) !== (currentSummary.nextReadoutQueuePosition || null)
     };
   }
 
@@ -2816,10 +2843,10 @@
     const comparisons = [coreComparison, diagnosticFlowComparison, readoutCompletionComparison, analysisReadinessComparison].filter(Boolean);
     if (!comparisons.length) return null;
     const changedSectionIds = [
-      coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || Number(coreComparison.completionDelta || coreComparison.requiredReadoutDelta || coreComparison.capturedReadoutDelta || coreComparison.missingReadoutDelta || coreComparison.emptyReadoutDelta || coreComparison.blockerCountDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
-      diagnosticFlowComparison && (diagnosticFlowComparison.statusChanged || diagnosticFlowComparison.readyForAnalysisChanged || diagnosticFlowComparison.nextReadoutChanged || Number(diagnosticFlowComparison.completionDelta || diagnosticFlowComparison.requiredReadoutDelta || diagnosticFlowComparison.capturedReadoutDelta || diagnosticFlowComparison.missingReadoutDelta || diagnosticFlowComparison.emptyReadoutDelta || diagnosticFlowComparison.blockerCountDelta || diagnosticFlowComparison.pendingReadoutDelta || 0) !== 0) ? "diagnostic_flow_summary" : null,
+      coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || coreComparison.nextReadoutDetailsChanged || Number(coreComparison.completionDelta || coreComparison.requiredReadoutDelta || coreComparison.capturedReadoutDelta || coreComparison.missingReadoutDelta || coreComparison.emptyReadoutDelta || coreComparison.blockerCountDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
+      diagnosticFlowComparison && (diagnosticFlowComparison.statusChanged || diagnosticFlowComparison.readyForAnalysisChanged || diagnosticFlowComparison.nextReadoutChanged || diagnosticFlowComparison.nextReadoutDetailsChanged || Number(diagnosticFlowComparison.completionDelta || diagnosticFlowComparison.requiredReadoutDelta || diagnosticFlowComparison.capturedReadoutDelta || diagnosticFlowComparison.missingReadoutDelta || diagnosticFlowComparison.emptyReadoutDelta || diagnosticFlowComparison.blockerCountDelta || diagnosticFlowComparison.pendingReadoutDelta || 0) !== 0) ? "diagnostic_flow_summary" : null,
       readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.requiredCountDelta || readoutCompletionComparison.capturedCountDelta || readoutCompletionComparison.missingCountDelta || readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null,
-      analysisReadinessComparison && (analysisReadinessComparison.readyChanged || analysisReadinessComparison.statusChanged || analysisReadinessComparison.nextReadoutChanged || Number(analysisReadinessComparison.completionDelta || analysisReadinessComparison.blockerCountDelta || analysisReadinessComparison.pendingReadoutDelta || 0) !== 0) ? "analysis_readiness_summary" : null
+      analysisReadinessComparison && (analysisReadinessComparison.readyChanged || analysisReadinessComparison.statusChanged || analysisReadinessComparison.nextReadoutChanged || analysisReadinessComparison.nextReadoutDetailsChanged || Number(analysisReadinessComparison.completionDelta || analysisReadinessComparison.blockerCountDelta || analysisReadinessComparison.pendingReadoutDelta || 0) !== 0) ? "analysis_readiness_summary" : null
     ].filter(Boolean);
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -2832,7 +2859,7 @@
       statusChanged: comparisons.some((item) => item.statusChanged === true),
       completionChanged: comparisons.some((item) => Number(item.completionDelta || item.requiredCountDelta || item.capturedCountDelta || item.missingCountDelta || item.pendingCountDelta || item.requiredReadoutDelta || item.capturedReadoutDelta || item.missingReadoutDelta || item.emptyReadoutDelta || item.blockerCountDelta || item.pendingReadoutDelta || 0) !== 0),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
-      nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true),
+      nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       changedSectionIds
     };
