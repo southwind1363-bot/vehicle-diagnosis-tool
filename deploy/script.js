@@ -430,7 +430,7 @@ const obdDevBridgeFreezeFrameButton = document.querySelector("#obdDevBridgeFreez
 const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton");
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
-const obdDiagnosticFlowPanel = document.querySelector("#obdDiagnosticFlowPanel");
+const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");
 const obdDevSessionSummary = document.querySelector("#obdDevSessionSummary");
 const obdDevSessionDetails = document.querySelector("#obdDevSessionDetails");
 const obdNextReadoutPanel = document.querySelector("#obdNextReadoutPanel");
@@ -5258,10 +5258,14 @@ function addObdDiagnosticFlowMetric(container, label, value, tone = "") {
 }
 
 function renderObdDiagnosticFlowPanel(session = null) {
-  if (!obdDiagnosticFlowPanel) return;
-  obdDiagnosticFlowPanel.innerHTML = "";
+  if (!obdDiagnosticFlowPanels.length) return;
+  obdDiagnosticFlowPanels.forEach((panel) => {
+    panel.innerHTML = "";
+  });
   if (!session || typeof session !== "object") {
-    obdDiagnosticFlowPanel.hidden = true;
+    obdDiagnosticFlowPanels.forEach((panel) => {
+      panel.hidden = true;
+    });
     return;
   }
   const flow = session.diagnosticFlowSummary || {};
@@ -5289,6 +5293,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
       ? "読取を継続"
       : analysisBlocked ? "確認が必要" : "待機中";
 
+  const renderPanel = (obdDiagnosticFlowPanel) => {
   const header = document.createElement("div");
   header.className = "obd-diagnostic-flow-head";
   const titleBlock = document.createElement("div");
@@ -5338,6 +5343,9 @@ function renderObdDiagnosticFlowPanel(session = null) {
 
   obdDiagnosticFlowPanel.append(header, grid, note, actions);
   obdDiagnosticFlowPanel.hidden = false;
+  };
+
+  obdDiagnosticFlowPanels.forEach(renderPanel);
 }
 
 function renderObdDeveloperSessionSummary(session = null) {
