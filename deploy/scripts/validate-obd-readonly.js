@@ -515,6 +515,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('priority: fallbackPriorityById[item.id] || 0,'), "buildCoreSessionStatus should expose per-readout fallback priority");
     check(functionBody.includes('status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"'), "buildCoreSessionStatus should classify per-readout state as captured, empty, or missing");
     check(functionBody.includes('const readoutStateById = Object.fromEntries(readoutStates.map((item) => [item.id, { ...item }]));'), "buildCoreSessionStatus should index per-readout states by id");
+    check(functionBody.includes('const pendingReadoutStates = pendingReadoutIds') && functionBody.includes('.map((id) => readoutStateById[id])'), "buildCoreSessionStatus should expose pending readout state entries");
     check(functionBody.includes('const readoutStatesByStatus = {') && functionBody.includes('captured: readoutStates.filter((item) => item.status === "captured").map((item) => ({ ...item }))') && functionBody.includes('missing: readoutStates.filter((item) => item.status === "missing").map((item) => ({ ...item }))'), "buildCoreSessionStatus should group per-readout states by status");
     check(functionBody.includes('const readoutStateSummary = {'), "buildCoreSessionStatus should summarize per-readout states");
     check(functionBody.includes('capturedCount: capturedReadoutIds.length') && functionBody.includes('emptyCount: emptyReadoutIds.length') && functionBody.includes('missingCount: remainingReadoutIds.length') && functionBody.includes('pendingCount: pendingReadoutIds.length'), "buildCoreSessionStatus should expose readout state counts");
@@ -538,6 +539,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('requiredReadoutIds,'), "buildCoreSessionStatus should return required core readout ids");
     check(functionBody.includes('missingReadoutIds: remainingReadoutIds,'), "buildCoreSessionStatus should expose missingReadoutIds as an explicit scan-session field");
     check(functionBody.includes('pendingReadoutIds,'), "buildCoreSessionStatus should expose pending readout ids");
+    check(functionBody.includes('pendingReadoutStates,'), "buildCoreSessionStatus should expose pending readout state entries");
     check(functionBody.includes('readoutStates,'), "buildCoreSessionStatus should expose per-readout state entries");
     check(functionBody.includes('readoutStateById,'), "buildCoreSessionStatus should expose per-readout states by id");
     check(functionBody.includes('readoutStatesByStatus,'), "buildCoreSessionStatus should expose per-readout states grouped by status");
@@ -6926,6 +6928,7 @@ check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.
 check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("freeze_frame_snapshot"), "Diagnostic scan session kept coverage-empty readouts in remaining ids");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.requiredReadoutIds?.length === 7 && scanSessionPlainCoverageOverride.coreSessionStatus.requiredReadoutIds.includes("onboard_monitor_snapshot"), "Diagnostic scan session did not expose required core readout ids");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutIds?.length === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutIds.includes("freeze_frame_snapshot"), "Diagnostic scan session did not expose pending readout ids");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutStates?.length === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutStates.some((item) => item.id === "freeze_frame_snapshot" && item.status === "empty"), "Diagnostic scan session did not expose pending readout states");
 check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.missingReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.missingReadoutIds.length === scanSessionPlainCoverageOverride.coreSessionStatus.remainingReadoutIds.length, "Diagnostic scan session did not expose missingReadoutIds alongside remainingReadoutIds");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStates?.find((item) => item.id === "dtc_snapshot")?.status === "captured", "Diagnostic scan session did not expose captured readout state");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStates?.find((item) => item.id === "dtc_snapshot")?.label === "DTC", "Diagnostic scan session did not preserve readout state label from coverage item");
