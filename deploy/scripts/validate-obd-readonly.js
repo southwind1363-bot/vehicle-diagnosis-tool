@@ -438,6 +438,7 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });'), "buildBridgeSessionExportPayload should rebuild summary metadata in snake_case for export");
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);'), "buildBridgeSessionExportPayload should rebuild diagnostic flow summary from core session status");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;'), "buildBridgeSessionExportPayload should rebuild readout completion summary from core session status");
+    check(functionBody.includes('core_session_status: coreSessionStatus,'), "buildBridgeSessionExportPayload should serialize core session status");
     check(functionBody.includes('schema_version: \"bridge_session_export_v1\"'), "buildBridgeSessionExportPayload should emit bridge session export schema version");
     check(functionBody.includes('readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),'), "buildBridgeSessionExportPayload should normalize readout coverage into export payload");
     check(functionBody.includes('diagnostic_flow_summary: diagnosticFlowSummary,'), "buildBridgeSessionExportPayload should serialize diagnostic flow summary");
@@ -452,6 +453,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary);'), "buildBridgeDiagnosticImport should rebuild normalized summary metadata");
     check(functionBody.includes('const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});'), "buildBridgeDiagnosticImport should derive nested bridge session metadata overrides");
     check(functionBody.includes('const exportPayload = buildBridgeSessionExportPayload(summary);'), "buildBridgeDiagnosticImport should rebuild bridge export payload from resolved summary");
+    check(functionBody.includes('const coreSessionStatus = summary.coreSessionStatus') && functionBody.includes('coreSessionStatus,'), "buildBridgeDiagnosticImport should preserve core session status");
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary') && functionBody.includes('diagnosticFlowSummary,'), "buildBridgeDiagnosticImport should preserve diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary') && functionBody.includes('readoutCompletionSummary,'), "buildBridgeDiagnosticImport should preserve readout completion summary");
   }
@@ -2963,6 +2965,8 @@ check(bridgeExportPayload.session.readiness_snapshot.incompleteCount === 1, "Bri
 check(bridgeExportPayload.session.ecu_info_snapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge export did not carry ECU info");
 check(bridgeExportPayload.session.onboard_monitor_snapshot.failedCount === 1, "Bridge export did not carry Mode 06");
 check(bridgeExportPayload.session.readout_coverage.progressPercent >= 80, "Bridge export did not carry readout coverage");
+check(bridgeExportPayload.session.core_session_status?.schemaVersion === "core_session_status_v1", "Bridge export did not carry core session status");
+check(bridgeExportPayload.session.core_session_status?.stage === "diagnostic_core", "Bridge export did not carry core session status stage");
 check(bridgeExportPayload.session.diagnostic_flow_summary?.schemaVersion === "diagnostic_flow_summary_v1", "Bridge export did not carry diagnostic flow summary");
 check(bridgeExportPayload.session.diagnostic_flow_summary?.stage === "diagnostic_core", "Bridge export did not carry diagnostic flow summary stage");
 check(bridgeExportPayload.session.readout_completion_summary?.capturedIds?.includes("dtc_snapshot"), "Bridge export did not carry readout completion summary captured ids");
@@ -3183,6 +3187,8 @@ check(bridgeDiagnosticImport.supportedPidMatrix.supportedPids.includes("05"), "ã
 check(bridgeDiagnosticImport.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge diagnostic import did not carry ECU info");
 check(bridgeDiagnosticImport.onboardMonitorSnapshot.failedCount === 1, "Bridge diagnostic import did not carry Mode 06");
 check(bridgeDiagnosticImport.readoutCoverage.progressPercent >= 80, "Bridge diagnostic import did not carry readout coverage");
+check(bridgeDiagnosticImport.coreSessionStatus?.schemaVersion === "core_session_status_v1", "Bridge diagnostic import did not carry top-level core session status");
+check(bridgeDiagnosticImport.bridgeSession?.coreSessionStatus?.stage === "diagnostic_core", "Bridge diagnostic import did not retain core session status on bridgeSession");
 check(bridgeDiagnosticImport.diagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Bridge diagnostic import did not carry top-level diagnostic flow summary");
 check(bridgeDiagnosticImport.bridgeSession?.diagnosticFlowSummary?.stage === "diagnostic_core", "Bridge diagnostic import did not retain diagnostic flow summary on bridgeSession");
 check(bridgeDiagnosticImport.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Bridge diagnostic import did not carry top-level readout completion summary");
@@ -7259,6 +7265,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 478");
+  console.log("OBD read-only safety checks: 484");
   console.log("Errors: 0");
 }

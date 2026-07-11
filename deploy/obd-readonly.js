@@ -2957,6 +2957,7 @@
         tool_hints: metadataFields.tool_hints,
         warnings: metadataFields.warnings,
         next_readout_candidates: metadataFields.next_readout_candidates,
+        core_session_status: coreSessionStatus,
         diagnostic_flow_summary: diagnosticFlowSummary,
         readout_completion_summary: readoutCompletionSummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
@@ -3006,14 +3007,18 @@
         : metadataFields.sourceLength
     };
     const exportPayload = buildBridgeSessionExportPayload(summary);
-    const diagnosticFlowSummary = summary.diagnosticFlowSummary
-      || summary.diagnostic_flow_summary
-      || exportPayload.session?.diagnostic_flow_summary
-      || buildDiagnosticFlowSummary(buildCoreSessionStatusFromSummary(summary, {
+    const coreSessionStatus = summary.coreSessionStatus
+      || summary.core_session_status
+      || exportPayload.session?.core_session_status
+      || buildCoreSessionStatusFromSummary(summary, {
         vehicleApplicability: metadataFields.vehicleApplicability,
         warnings: metadataFields.warnings,
         nextReadoutCandidates: metadataFields.nextReadoutCandidates
-      }));
+      });
+    const diagnosticFlowSummary = summary.diagnosticFlowSummary
+      || summary.diagnostic_flow_summary
+      || exportPayload.session?.diagnostic_flow_summary
+      || buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = summary.readoutCompletionSummary
       || summary.readout_completion_summary
       || exportPayload.session?.readout_completion_summary
@@ -3049,6 +3054,7 @@
       toolHints: metadataFields.toolHints,
       warnings: metadataFields.warnings,
       nextReadoutCandidates: metadataFields.nextReadoutCandidates,
+      coreSessionStatus,
       diagnosticFlowSummary,
       readoutCompletionSummary,
       bridgeSession: {
@@ -3076,6 +3082,7 @@
         toolHints: bridgeSessionMetadataFields.toolHints,
         warnings: bridgeSessionMetadataFields.warnings,
         nextReadoutCandidates: bridgeSessionMetadataFields.nextReadoutCandidates,
+        coreSessionStatus,
         diagnosticFlowSummary,
         readoutCompletionSummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
