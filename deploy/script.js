@@ -5291,6 +5291,12 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
     : NO_DATA;
+  const applicabilityStatus = flow.applicabilityStatus || core.applicabilityStatus || session.vehicleApplicability?.status || null;
+  const applicabilityChecklist = core.analysisChecklistById?.vehicle_applicability || core.analysisReadinessSummary?.checklistById?.vehicle_applicability || null;
+  const applicabilityLabel = formatVehicleApplicabilitySummary(session.vehicleApplicability || { status: applicabilityStatus }, applicabilityStatus || NO_DATA) || NO_DATA;
+  const applicabilityTone = flow.vehicleApplicabilityBlocking === true || applicabilityChecklist?.blocking === true
+    ? "blocked"
+    : flow.vehicleApplicabilityReviewRequired === true || applicabilityChecklist?.state === "review" ? "pending" : "";
   const statusLabel = canStartAnalysis
     ? "解析へ進めます"
     : collectionRequired
@@ -5319,6 +5325,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
   addObdDiagnosticFlowMetric(grid, "保留理由", blockerLabel, analysisBlocked ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
 

@@ -2638,6 +2638,15 @@
     const completion = coreSessionStatus?.readoutCompletionSummary || {};
     const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || {};
     const checklistSummary = coreSessionStatus?.analysisChecklistSummary || readiness.checklistSummary || {};
+    const checklistById = coreSessionStatus?.analysisChecklistById || readiness.checklistById || {};
+    const vehicleApplicabilityChecklist = checklistById.vehicle_applicability || null;
+    const applicabilityStatus = coreSessionStatus?.applicabilityStatus || vehicleApplicabilityChecklist?.applicabilityStatus || "unknown";
+    const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
+      || applicabilityStatus === "partial"
+      || applicabilityStatus === "manual"
+      || applicabilityStatus === "unlisted";
+    const vehicleApplicabilityBlocking = vehicleApplicabilityChecklist?.blocking === true
+      || (Array.isArray(checklistSummary?.blockedIds) && checklistSummary.blockedIds.includes("vehicle_applicability"));
     const readCount = (field, fallbackIds = []) => Number.isFinite(Number(completion[field]))
       ? Number(completion[field])
       : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
@@ -2674,6 +2683,9 @@
       readyForAnalysis,
       canStartAnalysis: readyForAnalysis,
       analysisBlocked: !readyForAnalysis,
+      applicabilityStatus,
+      vehicleApplicabilityReviewRequired,
+      vehicleApplicabilityBlocking,
       blockingReasonIds,
       readoutCollectionRequired: pendingReadoutCount > 0,
       completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
