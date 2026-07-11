@@ -2907,6 +2907,16 @@
     const primaryChangedReasonId = changedReasonIds
       .slice()
       .sort((left, right) => (changedReasonCountsById[right] || 0) - (changedReasonCountsById[left] || 0) || left.localeCompare(right))[0] || null;
+    const changedReasonSummaries = changedReasonIds.map((reasonId) => ({
+      id: reasonId,
+      sectionIds: changedSectionsByReasonId[reasonId] || [],
+      sectionCount: changedReasonCountsById[reasonId] || 0,
+      primary: reasonId === primaryChangedReasonId
+    }));
+    const changedReasonSummaryById = changedReasonSummaries.reduce((byId, item) => {
+      byId[item.id] = item;
+      return byId;
+    }, {});
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -2929,6 +2939,8 @@
       changedReasonIds,
       changedReasonCountsById,
       changedSectionsByReasonId,
+      changedReasonSummaries,
+      changedReasonSummaryById,
       changedSectionIds
     };
   }
