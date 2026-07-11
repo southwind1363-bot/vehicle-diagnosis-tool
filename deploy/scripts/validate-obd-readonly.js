@@ -690,6 +690,9 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const codes = [...new Set([') && functionBody.includes('...scannerAnalysis.codes') && functionBody.includes('...(bridgeImport?.codes || bridgeSession?.codes || [])'), "mergeDiagnosticInputs should deduplicate scanner and bridge DTC codes");
     check(functionBody.includes('const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);'), "mergeDiagnosticInputs should recalculate monitor summaries and insights from merged values");
     check(functionBody.includes('const source = bridgeImport') && functionBody.includes('"scanner_text_and_local_bridge"') && functionBody.includes('"local_bridge"') && functionBody.includes('"scanner_text"'), "mergeDiagnosticInputs should classify merged input source");
+    check(functionBody.includes('const importedCoreSessionStatus = bridgeImport?.coreSessionStatus || bridgeSession?.coreSessionStatus || null;') && functionBody.includes('importedCoreSessionStatus,'), "mergeDiagnosticInputs should expose imported core session status separately from recalculated status");
+    check(functionBody.includes('const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "mergeDiagnosticInputs should expose imported diagnostic flow summary separately from recalculated status");
+    check(functionBody.includes('const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;') && functionBody.includes('importedReadoutCompletionSummary,'), "mergeDiagnosticInputs should expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "mergeDiagnosticInputs should build core session status from merged diagnostic inputs");
     check(functionBody.includes('const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);') && functionBody.includes('diagnosticFlowSummary,'), "mergeDiagnosticInputs should expose a top-level diagnostic flow summary");
     check(functionBody.includes('const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;') && functionBody.includes('readoutCompletionSummary,'), "mergeDiagnosticInputs should expose a top-level readout completion summary");
@@ -3806,6 +3809,9 @@ check(mergedDiagnosticInputExportPayload.diagnosticFlowSummary?.schemaVersion ==
 check(mergedDiagnosticInputExportPayload.diagnosticFlowSummary?.stage === "diagnostic_core", "Combined diagnostic inputs did not expose diagnosticFlowSummary stage for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not expose top-level readout completion captured ids for bridge_session_export_v1 bridge_import input");
 check(Array.isArray(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.pendingIds), "Combined diagnostic inputs did not expose top-level readout completion pending ids for bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Combined diagnostic inputs did not preserve imported core session status for bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Combined diagnostic inputs did not preserve imported diagnostic flow summary for bridge_session_export_v1 bridge_import input");
+check(mergedDiagnosticInputExportPayload.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not preserve imported readout completion summary for bridge_session_export_v1 bridge_import input");
 check(Array.isArray(mergedDiagnosticInputExportPayload.coreSessionStatus?.blockingWarningIds), "Combined diagnostic inputs did not expose coreSessionStatus blockingWarningIds");
 const mergedDiagnosticInputExportPayloadAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
@@ -7274,6 +7280,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 493");
+  console.log("OBD read-only safety checks: 499");
   console.log("Errors: 0");
 }

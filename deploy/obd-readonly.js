@@ -3129,6 +3129,9 @@
         : null;
     const monitorById = new Map();
     const bridgeSession = bridgeImport?.bridgeSession || null;
+    const importedCoreSessionStatus = bridgeImport?.coreSessionStatus || bridgeSession?.coreSessionStatus || null;
+    const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;
+    const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;
     const selectPreferredMonitorValue = (current, candidate) => {
       if (!current) return candidate;
       if (!candidate) return current;
@@ -3253,6 +3256,9 @@
       coreSessionStatus,
       diagnosticFlowSummary,
       readoutCompletionSummary,
+      importedCoreSessionStatus,
+      importedDiagnosticFlowSummary,
+      importedReadoutCompletionSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
