@@ -2556,12 +2556,17 @@
     const requestPlanBlockedReasonIds = Array.isArray(pendingReadoutRequestPlan.blockedReasonIds)
       ? [...pendingReadoutRequestPlan.blockedReasonIds]
       : [];
+    const requestPlanBlockedReasonById = pendingReadoutRequestPlan.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object"
+      ? { ...pendingReadoutRequestPlan.blockedReasonById }
+      : {};
     const readoutRequestPlanGateSummary = {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : requestPlanBlockedReasonIds.length ? "blocked" : "ready",
       ready: requestPlanBlockedReasonIds.length === 0,
       blocked: requestPlanBlockedReasonIds.length > 0,
+      blockedReasonCount: requestPlanBlockedReasonIds.length,
       blockedReasonIds: [...requestPlanBlockedReasonIds],
+      blockedReasonById: requestPlanBlockedReasonById,
       nextBlockedReasonId: requestPlanBlockedReasonIds[0] || null,
       totalCount: pendingReadoutRequestPlan.totalCount,
       mappedCount: pendingReadoutRequestPlan.mappedCount,
@@ -2835,7 +2840,9 @@
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : pendingReadoutRequestPlan?.safeForBridgePlanning === true ? "ready" : "blocked",
       ready: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
       blocked: pendingReadoutRequestPlan?.safeForBridgePlanning !== true && Number(pendingReadoutRequestPlan.totalCount || 0) > 0,
+      blockedReasonCount: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? pendingReadoutRequestPlan.blockedReasonIds.length : 0,
       blockedReasonIds: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? [...pendingReadoutRequestPlan.blockedReasonIds] : [],
+      blockedReasonById: pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {},
       nextBlockedReasonId: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? pendingReadoutRequestPlan.blockedReasonIds[0] || null : null,
       totalCount: Number.isFinite(Number(pendingReadoutRequestPlan?.totalCount)) ? Number(pendingReadoutRequestPlan.totalCount) : 0,
       mappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedCount)) ? Number(pendingReadoutRequestPlan.mappedCount) : 0,
@@ -2879,6 +2886,7 @@
       requestPlanGateState: readoutRequestPlanGateSummary.state || "unknown",
       requestPlanGateReady: readoutRequestPlanGateSummary.ready === true,
       requestPlanGateBlocked: readoutRequestPlanGateSummary.blocked === true,
+      requestPlanGateBlockedReasonCount: Number.isFinite(Number(readoutRequestPlanGateSummary.blockedReasonCount)) ? Number(readoutRequestPlanGateSummary.blockedReasonCount) : 0,
       requestPlanNextBlockedReasonId: readoutRequestPlanGateSummary.nextBlockedReasonId || null,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
@@ -3267,6 +3275,10 @@
       unmappedCountDelta: readCount(currentSummary, "unmappedCount") - readCount(importedGateSummary, "unmappedCount"),
       importedBlockedReasonIds: [...importedBlockedReasonIds],
       currentBlockedReasonIds: [...currentBlockedReasonIds],
+      importedBlockedReasonCount: Number.isFinite(Number(importedGateSummary.blockedReasonCount)) ? Number(importedGateSummary.blockedReasonCount) : importedBlockedReasonIds.length,
+      currentBlockedReasonCount: Number.isFinite(Number(currentSummary.blockedReasonCount)) ? Number(currentSummary.blockedReasonCount) : currentBlockedReasonIds.length,
+      blockedReasonCountDelta: (Number.isFinite(Number(currentSummary.blockedReasonCount)) ? Number(currentSummary.blockedReasonCount) : currentBlockedReasonIds.length)
+        - (Number.isFinite(Number(importedGateSummary.blockedReasonCount)) ? Number(importedGateSummary.blockedReasonCount) : importedBlockedReasonIds.length),
       blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|")
     };
   }
@@ -3287,7 +3299,7 @@
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
@@ -3305,7 +3317,7 @@
       comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
       comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
-      comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true ? "blocked_reasons" : null,
+      comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.completeChanged === true ? "readout_completion" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
