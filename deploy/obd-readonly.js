@@ -2464,9 +2464,21 @@
     const hasReadoutProgress = capturedReadoutIds.length > 0
       || emptyReadoutIds.length > 0
       || normalizedCoverage.availableCategories > 0;
+    const coreStatus = readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started";
+    const coreWorkflowSummary = {
+      currentStep: readyForAnalysis ? "analysis" : hasReadoutProgress ? "readout_collection" : "readout_start",
+      status: coreStatus,
+      nextAction: readyForAnalysis ? "start_analysis" : nextReadoutSummary ? "collect_next_readout" : "start_core_readouts",
+      nextReadoutId: nextReadoutSummary?.id || null,
+      nextReadoutStatus: nextReadoutSummary?.status || null,
+      readyForAnalysis,
+      completionPercent: readoutProgressSummary.completionPercent,
+      blockerCount: analysisBlockers.length,
+      pendingReadoutCount: readoutProgressSummary.pendingCount
+    };
     const analysisReadinessSummary = {
       ready: readyForAnalysis,
-      status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",
+      status: coreStatus,
       blockerCount: analysisBlockers.length,
       blockerIds: [...analysisBlockers],
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
@@ -2480,7 +2492,7 @@
     return {
       schemaVersion: "core_session_status_v1",
       stage: "diagnostic_core",
-      status: readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started",
+      status: coreStatus,
       completionPercent,
       applicabilityStatus: applicability.status || "unknown",
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
@@ -2502,6 +2514,7 @@
       readoutStatesByStatus,
       readoutStateSummary,
       readoutProgressSummary,
+      coreWorkflowSummary,
       nextReadoutCandidate,
       nextRecommendedReadoutId,
       nextReadoutSource,
