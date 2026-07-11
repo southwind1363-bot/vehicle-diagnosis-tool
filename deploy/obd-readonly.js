@@ -2655,17 +2655,65 @@
     };
   }
 
+  function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
+    if (!importedAnalysisReadinessSummary || typeof importedAnalysisReadinessSummary !== "object") return null;
+    const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
+      ? currentAnalysisReadinessSummary
+      : {};
+    const importedBlockerCount = Number.isFinite(Number(importedAnalysisReadinessSummary.blockerCount))
+      ? Number(importedAnalysisReadinessSummary.blockerCount)
+      : Array.isArray(importedAnalysisReadinessSummary.blockerIds) ? importedAnalysisReadinessSummary.blockerIds.length : 0;
+    const currentBlockerCount = Number.isFinite(Number(currentSummary.blockerCount))
+      ? Number(currentSummary.blockerCount)
+      : Array.isArray(currentSummary.blockerIds) ? currentSummary.blockerIds.length : 0;
+    const importedPendingCount = Number.isFinite(Number(importedAnalysisReadinessSummary.pendingReadoutCount))
+      ? Number(importedAnalysisReadinessSummary.pendingReadoutCount)
+      : Array.isArray(importedAnalysisReadinessSummary.pendingReadoutIds) ? importedAnalysisReadinessSummary.pendingReadoutIds.length : 0;
+    const currentPendingCount = Number.isFinite(Number(currentSummary.pendingReadoutCount))
+      ? Number(currentSummary.pendingReadoutCount)
+      : Array.isArray(currentSummary.pendingReadoutIds) ? currentSummary.pendingReadoutIds.length : 0;
+    const importedCompletion = Number.isFinite(Number(importedAnalysisReadinessSummary.completionPercent))
+      ? Number(importedAnalysisReadinessSummary.completionPercent)
+      : 0;
+    const currentCompletion = Number.isFinite(Number(currentSummary.completionPercent))
+      ? Number(currentSummary.completionPercent)
+      : 0;
+    return {
+      schemaVersion: "imported_analysis_readiness_comparison_v1",
+      importedReady: importedAnalysisReadinessSummary.ready === true,
+      currentReady: currentSummary.ready === true,
+      readyChanged: (importedAnalysisReadinessSummary.ready === true) !== (currentSummary.ready === true),
+      importedStatus: importedAnalysisReadinessSummary.status || null,
+      currentStatus: currentSummary.status || null,
+      statusChanged: (importedAnalysisReadinessSummary.status || null) !== (currentSummary.status || null),
+      importedCompletionPercent: importedCompletion,
+      currentCompletionPercent: currentCompletion,
+      completionDelta: currentCompletion - importedCompletion,
+      importedBlockerCount,
+      currentBlockerCount,
+      blockerCountDelta: currentBlockerCount - importedBlockerCount,
+      importedPendingReadoutCount: importedPendingCount,
+      currentPendingReadoutCount: currentPendingCount,
+      pendingReadoutDelta: currentPendingCount - importedPendingCount,
+      importedNextReadoutId: importedAnalysisReadinessSummary.nextReadoutId || null,
+      currentNextReadoutId: currentSummary.nextReadoutId || null,
+      nextReadoutChanged: (importedAnalysisReadinessSummary.nextReadoutId || null) !== (currentSummary.nextReadoutId || null)
+    };
+  }
+
   function buildImportedSessionComparisonSummary({
     coreComparison = null,
     diagnosticFlowComparison = null,
-    readoutCompletionComparison = null
+    readoutCompletionComparison = null,
+    analysisReadinessComparison = null
   } = {}) {
-    const comparisons = [coreComparison, diagnosticFlowComparison, readoutCompletionComparison].filter(Boolean);
+    const comparisons = [coreComparison, diagnosticFlowComparison, readoutCompletionComparison, analysisReadinessComparison].filter(Boolean);
     if (!comparisons.length) return null;
     const changedSectionIds = [
       coreComparison && (coreComparison.statusChanged || coreComparison.readyForAnalysisChanged || coreComparison.nextReadoutChanged || Number(coreComparison.completionDelta || coreComparison.pendingReadoutDelta || 0) !== 0) ? "core_session_status" : null,
       diagnosticFlowComparison && (diagnosticFlowComparison.statusChanged || diagnosticFlowComparison.readyForAnalysisChanged || diagnosticFlowComparison.nextReadoutChanged || Number(diagnosticFlowComparison.completionDelta || 0) !== 0) ? "diagnostic_flow_summary" : null,
-      readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null
+      readoutCompletionComparison && (readoutCompletionComparison.completeChanged || Number(readoutCompletionComparison.pendingCountDelta || readoutCompletionComparison.emptyCountDelta || 0) !== 0) ? "readout_completion_summary" : null,
+      analysisReadinessComparison && (analysisReadinessComparison.readyChanged || analysisReadinessComparison.statusChanged || analysisReadinessComparison.nextReadoutChanged || Number(analysisReadinessComparison.completionDelta || analysisReadinessComparison.blockerCountDelta || analysisReadinessComparison.pendingReadoutDelta || 0) !== 0) ? "analysis_readiness_summary" : null
     ].filter(Boolean);
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -2677,7 +2725,7 @@
       changedSectionCount: changedSectionIds.length,
       statusChanged: comparisons.some((item) => item.statusChanged === true),
       completionChanged: comparisons.some((item) => Number(item.completionDelta || item.pendingCountDelta || item.pendingReadoutDelta || 0) !== 0),
-      readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true),
+      readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       changedSectionIds
@@ -2820,6 +2868,8 @@
       diagnostic_flow_summary: pickDefined(input.diagnostic_flow_summary, input.diagnosticFlowSummary, payload?.diagnostic_flow_summary, payload?.diagnosticFlowSummary, nested.diagnostic_flow_summary, nested.diagnosticFlowSummary, null),
       readoutCompletionSummary: pickDefined(input.readoutCompletionSummary, input.readout_completion_summary, payload?.readoutCompletionSummary, payload?.readout_completion_summary, nested.readoutCompletionSummary, nested.readout_completion_summary, null),
       readout_completion_summary: pickDefined(input.readout_completion_summary, input.readoutCompletionSummary, payload?.readout_completion_summary, payload?.readoutCompletionSummary, nested.readout_completion_summary, nested.readoutCompletionSummary, null),
+      analysisReadinessSummary: pickDefined(input.analysisReadinessSummary, input.analysis_readiness_summary, payload?.analysisReadinessSummary, payload?.analysis_readiness_summary, nested.analysisReadinessSummary, nested.analysis_readiness_summary, null),
+      analysis_readiness_summary: pickDefined(input.analysis_readiness_summary, input.analysisReadinessSummary, payload?.analysis_readiness_summary, payload?.analysisReadinessSummary, nested.analysis_readiness_summary, nested.analysisReadinessSummary, null),
       dtcSnapshot: pickDefined(input.dtcSnapshot, input.dtc_snapshot, payload?.dtcSnapshot, payload?.dtc_snapshot, nested.dtcSnapshot, nested.dtc_snapshot, null),
       dtc_snapshot: pickDefined(input.dtc_snapshot, input.dtcSnapshot, payload?.dtc_snapshot, payload?.dtcSnapshot, nested.dtc_snapshot, nested.dtcSnapshot, null),
       livePidSnapshot: pickDefined(input.livePidSnapshot, input.live_pid_snapshot, payload?.livePidSnapshot, payload?.live_pid_snapshot, nested.livePidSnapshot, nested.live_pid_snapshot, null),
@@ -3253,6 +3303,7 @@
     const importedCoreSessionStatus = bridgeImport?.coreSessionStatus || bridgeSession?.coreSessionStatus || null;
     const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;
     const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;
+    const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;
     const selectPreferredMonitorValue = (current, candidate) => {
       if (!current) return candidate;
       if (!candidate) return current;
@@ -3348,10 +3399,12 @@
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
+    const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
-      readoutCompletionComparison: importedReadoutCompletionComparisonSummary
+      readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
+      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary
     });
 
     return {
@@ -3390,9 +3443,11 @@
       importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,
+      importedAnalysisReadinessSummary,
       importedCoreComparisonSummary,
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
+      importedAnalysisReadinessComparisonSummary,
       importedSessionComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
@@ -4976,6 +5031,7 @@
     const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;
     const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;
     const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;
+    const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
@@ -5182,10 +5238,12 @@
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
+    const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
-      readoutCompletionComparison: importedReadoutCompletionComparisonSummary
+      readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
+      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary
     });
 
     return {
@@ -5218,9 +5276,11 @@
       importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,
+      importedAnalysisReadinessSummary,
       importedCoreComparisonSummary,
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
+      importedAnalysisReadinessComparisonSummary,
       importedSessionComparisonSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
