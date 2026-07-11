@@ -2637,8 +2637,12 @@
     const progress = coreSessionStatus?.readoutProgressSummary || {};
     const completion = coreSessionStatus?.readoutCompletionSummary || {};
     const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || {};
+    const checklistSummary = coreSessionStatus?.analysisChecklistSummary || readiness.checklistSummary || {};
     const readCount = (field, fallbackIds = []) => Number.isFinite(Number(completion[field]))
       ? Number(completion[field])
+      : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
+    const readChecklistCount = (field, fallbackIds = []) => Number.isFinite(Number(checklistSummary?.[field]))
+      ? Number(checklistSummary[field])
       : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
     const readyForAnalysis = typeof coreSessionStatus?.readyForAnalysis === "boolean"
       ? coreSessionStatus.readyForAnalysis
@@ -2680,6 +2684,13 @@
       missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.remainingReadoutIds),
       emptyReadoutCount: readCount("emptyCount", coreSessionStatus?.emptyReadoutIds),
       pendingReadoutCount,
+      checklistTotalCount: readChecklistCount("totalCount"),
+      checklistCompleteCount: readChecklistCount("completeCount"),
+      checklistBlockingCount: readChecklistCount("blockingCount", checklistSummary?.blockedIds),
+      checklistReviewCount: readChecklistCount("reviewCount", checklistSummary?.reviewIds),
+      checklistPendingCount: readChecklistCount("pendingCount"),
+      checklistBlockedIds: Array.isArray(checklistSummary?.blockedIds) ? [...checklistSummary.blockedIds] : [],
+      checklistReviewIds: Array.isArray(checklistSummary?.reviewIds) ? [...checklistSummary.reviewIds] : [],
       blockerCount: Number.isFinite(Number(readiness.blockerCount))
         ? Number(readiness.blockerCount)
         : Array.isArray(coreSessionStatus?.analysisBlockers) ? coreSessionStatus.analysisBlockers.length : 0
@@ -2696,6 +2707,7 @@
     const currentPendingCount = Array.isArray(currentCoreSessionStatus?.pendingReadoutIds)
       ? currentCoreSessionStatus.pendingReadoutIds.length
       : currentFlow.pendingReadoutCount;
+    const readFlowCount = (summary, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : 0;
     const importedRequiredCount = Number.isFinite(Number(importedFlow.requiredReadoutCount)) ? Number(importedFlow.requiredReadoutCount) : 0;
     const currentRequiredCount = Number.isFinite(Number(currentFlow.requiredReadoutCount)) ? Number(currentFlow.requiredReadoutCount) : 0;
     const importedCapturedCount = Number.isFinite(Number(importedFlow.capturedReadoutCount)) ? Number(importedFlow.capturedReadoutCount) : 0;
@@ -2706,6 +2718,12 @@
     const currentEmptyCount = Number.isFinite(Number(currentFlow.emptyReadoutCount)) ? Number(currentFlow.emptyReadoutCount) : 0;
     const importedBlockerCount = Number.isFinite(Number(importedFlow.blockerCount)) ? Number(importedFlow.blockerCount) : 0;
     const currentBlockerCount = Number.isFinite(Number(currentFlow.blockerCount)) ? Number(currentFlow.blockerCount) : 0;
+    const importedChecklistCompleteCount = readFlowCount(importedFlow, "checklistCompleteCount");
+    const currentChecklistCompleteCount = readFlowCount(currentFlow, "checklistCompleteCount");
+    const importedChecklistBlockingCount = readFlowCount(importedFlow, "checklistBlockingCount");
+    const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
+    const importedChecklistPendingCount = readFlowCount(importedFlow, "checklistPendingCount");
+    const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
     return {
       schemaVersion: "imported_core_comparison_v1",
       importedStatus: importedFlow.status,
@@ -2744,6 +2762,15 @@
       importedBlockerCount,
       currentBlockerCount,
       blockerCountDelta: currentBlockerCount - importedBlockerCount,
+      importedChecklistCompleteCount,
+      currentChecklistCompleteCount,
+      checklistCompleteDelta: currentChecklistCompleteCount - importedChecklistCompleteCount,
+      importedChecklistBlockingCount,
+      currentChecklistBlockingCount,
+      checklistBlockingDelta: currentChecklistBlockingCount - importedChecklistBlockingCount,
+      importedChecklistPendingCount,
+      currentChecklistPendingCount,
+      checklistPendingDelta: currentChecklistPendingCount - importedChecklistPendingCount,
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
@@ -2774,6 +2801,12 @@
     const currentPendingCount = readFlowCount(currentFlow, "pendingReadoutCount");
     const importedBlockerCount = readFlowCount(importedDiagnosticFlowSummary, "blockerCount");
     const currentBlockerCount = readFlowCount(currentFlow, "blockerCount");
+    const importedChecklistCompleteCount = readFlowCount(importedDiagnosticFlowSummary, "checklistCompleteCount");
+    const currentChecklistCompleteCount = readFlowCount(currentFlow, "checklistCompleteCount");
+    const importedChecklistBlockingCount = readFlowCount(importedDiagnosticFlowSummary, "checklistBlockingCount");
+    const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
+    const importedChecklistPendingCount = readFlowCount(importedDiagnosticFlowSummary, "checklistPendingCount");
+    const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
     return {
       schemaVersion: "imported_diagnostic_flow_comparison_v1",
       importedStatus: importedDiagnosticFlowSummary.status || null,
@@ -2812,6 +2845,15 @@
       importedBlockerCount,
       currentBlockerCount,
       blockerCountDelta: currentBlockerCount - importedBlockerCount,
+      importedChecklistCompleteCount,
+      currentChecklistCompleteCount,
+      checklistCompleteDelta: currentChecklistCompleteCount - importedChecklistCompleteCount,
+      importedChecklistBlockingCount,
+      currentChecklistBlockingCount,
+      checklistBlockingDelta: currentChecklistBlockingCount - importedChecklistBlockingCount,
+      importedChecklistPendingCount,
+      currentChecklistPendingCount,
+      checklistPendingDelta: currentChecklistPendingCount - importedChecklistPendingCount,
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
