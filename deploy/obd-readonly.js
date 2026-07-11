@@ -2925,6 +2925,7 @@
       byId[item.id] = item;
       return byId;
     }, {});
+    const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -2933,8 +2934,10 @@
       unchanged: changedSectionIds.length === 0,
       status: changedSectionIds.length > 0 ? "changed" : "unchanged",
       changedSectionCount: changedSectionIds.length,
+      unchangedSectionCount: unchangedSectionIds.length,
       changedReasonCount: changedReasonIds.length,
       primaryChangedReasonId,
+      primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true),
       completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
