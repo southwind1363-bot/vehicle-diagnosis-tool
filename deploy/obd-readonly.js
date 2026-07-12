@@ -3821,9 +3821,10 @@
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
       mixed: { ids: mixedChangedIdSummaries.map((item) => item.id), count: mixedChangedIdSummaries.length, summaries: mixedChangedIdSummaries }
     };
+    const changedIdDirectionPriority = { mixed: 0, added: 1, removed: 2 };
     const primaryChangedIdDirection = changedIdSummaries.length > 0
       ? ["mixed", "added", "removed"]
-        .sort((left, right) => (changedIdDirectionSummary[right]?.count || 0) - (changedIdDirectionSummary[left]?.count || 0) || left.localeCompare(right))[0] || null
+        .sort((left, right) => (changedIdDirectionSummary[right]?.count || 0) - (changedIdDirectionSummary[left]?.count || 0) || changedIdDirectionPriority[left] - changedIdDirectionPriority[right])[0] || null
       : null;
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
