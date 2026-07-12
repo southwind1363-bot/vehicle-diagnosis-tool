@@ -3092,6 +3092,13 @@
     const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
     const importedChecklistPendingCount = readFlowCount(importedFlow, "checklistPendingCount");
     const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
+    const readStringList = (summary = {}, field) => (Array.isArray(summary?.[field]) ? summary[field].filter(Boolean).map(String).sort() : []);
+    const importedChecklistBlockedIds = readStringList(importedFlow, "checklistBlockedIds");
+    const currentChecklistBlockedIds = readStringList(currentFlow, "checklistBlockedIds");
+    const importedChecklistReviewIds = readStringList(importedFlow, "checklistReviewIds");
+    const currentChecklistReviewIds = readStringList(currentFlow, "checklistReviewIds");
+    const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
+    const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
     const importedRequestPlan = readRequestPlan(importedFlow);
     const currentRequestPlan = readRequestPlan(currentFlow);
@@ -3150,6 +3157,15 @@
       importedChecklistPendingCount,
       currentChecklistPendingCount,
       checklistPendingDelta: currentChecklistPendingCount - importedChecklistPendingCount,
+      importedChecklistBlockedIds: [...importedChecklistBlockedIds],
+      currentChecklistBlockedIds: [...currentChecklistBlockedIds],
+      checklistBlockedIdsChanged: importedChecklistBlockedIds.join("|") !== currentChecklistBlockedIds.join("|"),
+      importedChecklistReviewIds: [...importedChecklistReviewIds],
+      currentChecklistReviewIds: [...currentChecklistReviewIds],
+      checklistReviewIdsChanged: importedChecklistReviewIds.join("|") !== currentChecklistReviewIds.join("|"),
+      importedVehicleApplicabilityChecklistState,
+      currentVehicleApplicabilityChecklistState,
+      vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
       importedRequestPlanCount,
       currentRequestPlanCount,
       requestPlanCountDelta: currentRequestPlanCount - importedRequestPlanCount,
@@ -3200,6 +3216,13 @@
     const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
     const importedChecklistPendingCount = readFlowCount(importedDiagnosticFlowSummary, "checklistPendingCount");
     const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
+    const readStringList = (summary = {}, field) => (Array.isArray(summary?.[field]) ? summary[field].filter(Boolean).map(String).sort() : []);
+    const importedChecklistBlockedIds = readStringList(importedDiagnosticFlowSummary, "checklistBlockedIds");
+    const currentChecklistBlockedIds = readStringList(currentFlow, "checklistBlockedIds");
+    const importedChecklistReviewIds = readStringList(importedDiagnosticFlowSummary, "checklistReviewIds");
+    const currentChecklistReviewIds = readStringList(currentFlow, "checklistReviewIds");
+    const importedVehicleApplicabilityChecklistState = importedDiagnosticFlowSummary.vehicleApplicabilityChecklist?.state || null;
+    const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
     const importedRequestPlan = readRequestPlan(importedDiagnosticFlowSummary);
     const currentRequestPlan = readRequestPlan(currentFlow);
@@ -3258,6 +3281,15 @@
       importedChecklistPendingCount,
       currentChecklistPendingCount,
       checklistPendingDelta: currentChecklistPendingCount - importedChecklistPendingCount,
+      importedChecklistBlockedIds: [...importedChecklistBlockedIds],
+      currentChecklistBlockedIds: [...currentChecklistBlockedIds],
+      checklistBlockedIdsChanged: importedChecklistBlockedIds.join("|") !== currentChecklistBlockedIds.join("|"),
+      importedChecklistReviewIds: [...importedChecklistReviewIds],
+      currentChecklistReviewIds: [...currentChecklistReviewIds],
+      checklistReviewIdsChanged: importedChecklistReviewIds.join("|") !== currentChecklistReviewIds.join("|"),
+      importedVehicleApplicabilityChecklistState,
+      currentVehicleApplicabilityChecklistState,
+      vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
       importedRequestPlanCount,
       currentRequestPlanCount,
       requestPlanCountDelta: currentRequestPlanCount - importedRequestPlanCount,
@@ -3517,6 +3549,9 @@
       || comparison.actionReasonIdsChanged === true
       || comparison.actionReadoutIdsChanged === true
       || comparison.blockedReasonIdsChanged === true
+      || comparison.checklistBlockedIdsChanged === true
+      || comparison.checklistReviewIdsChanged === true
+      || comparison.vehicleApplicabilityChecklistChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -3526,6 +3561,7 @@
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
+      comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true ? "analysis_checklist" : null,
       comparison.completeChanged === true ? "readout_completion" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
@@ -3549,6 +3585,9 @@
           completionChanged: hasComparisonMetricChanges(item.comparison),
           nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
           readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true,
+          analysisChecklistChanged: item.comparison.checklistBlockedIdsChanged === true
+            || item.comparison.checklistReviewIdsChanged === true
+            || item.comparison.vehicleApplicabilityChecklistChanged === true,
           requestPlanGateChanged: item.comparison.blockedChanged === true
             || item.comparison.safeForBridgePlanningChanged === true
             || item.comparison.nextBlockedReasonChanged === true
@@ -3619,6 +3658,7 @@
       completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
+      analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       sectionSummaries,
