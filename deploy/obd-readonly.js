@@ -2591,6 +2591,7 @@
       : {};
     const readoutRequestPlanGateActionQueue = buildReadoutRequestPlanGateActionQueue(requestPlanBlockedReasonIds, requestPlanBlockedReasonById);
     const readoutRequestPlanGateActionQueueById = Object.fromEntries(readoutRequestPlanGateActionQueue.map((item) => [item.id, { ...item }]));
+    const readoutRequestPlanGateActionQueueByReasonId = Object.fromEntries(readoutRequestPlanGateActionQueue.map((item) => [item.reasonId, { ...item }]));
     const readoutRequestPlanGateActionIds = readoutRequestPlanGateActionQueue.map((item) => item.id).filter(Boolean);
     const readoutRequestPlanGateActionReasonIds = readoutRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const readoutRequestPlanGateSummary = {
@@ -2608,6 +2609,7 @@
       actionReasonIds: [...readoutRequestPlanGateActionReasonIds],
       actionQueue: readoutRequestPlanGateActionQueue,
       actionQueueById: readoutRequestPlanGateActionQueueById,
+      actionQueueByReasonId: readoutRequestPlanGateActionQueueByReasonId,
       nextAction: readoutRequestPlanGateActionQueue[0] ? { ...readoutRequestPlanGateActionQueue[0] } : null,
       nextActionId: readoutRequestPlanGateActionQueue[0]?.id || null,
       nextActionReasonId: readoutRequestPlanGateActionQueue[0]?.reasonId || null,
@@ -2883,6 +2885,7 @@
     const fallbackRequestPlanBlockedReasonById = pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {};
     const fallbackRequestPlanGateActionQueue = buildReadoutRequestPlanGateActionQueue(fallbackRequestPlanBlockedReasonIds, fallbackRequestPlanBlockedReasonById);
     const fallbackRequestPlanGateActionQueueById = Object.fromEntries(fallbackRequestPlanGateActionQueue.map((item) => [item.id, { ...item }]));
+    const fallbackRequestPlanGateActionQueueByReasonId = Object.fromEntries(fallbackRequestPlanGateActionQueue.map((item) => [item.reasonId, { ...item }]));
     const fallbackRequestPlanGateActionIds = fallbackRequestPlanGateActionQueue.map((item) => item.id).filter(Boolean);
     const fallbackRequestPlanGateActionReasonIds = fallbackRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const readoutRequestPlanGateSummary = coreSessionStatus?.readoutRequestPlanGateSummary || readiness.readoutRequestPlanGateSummary || {
@@ -2900,6 +2903,7 @@
       actionReasonIds: [...fallbackRequestPlanGateActionReasonIds],
       actionQueue: fallbackRequestPlanGateActionQueue,
       actionQueueById: fallbackRequestPlanGateActionQueueById,
+      actionQueueByReasonId: fallbackRequestPlanGateActionQueueByReasonId,
       nextAction: fallbackRequestPlanGateActionQueue[0] ? { ...fallbackRequestPlanGateActionQueue[0] } : null,
       nextActionId: fallbackRequestPlanGateActionQueue[0]?.id || null,
       nextActionReasonId: fallbackRequestPlanGateActionQueue[0]?.reasonId || null,
@@ -2957,6 +2961,7 @@
       requestPlanGateNextActionReasonId: readoutRequestPlanGateSummary.nextActionReasonId || null,
       requestPlanGateNextActionReadoutIds: Array.isArray(readoutRequestPlanGateSummary.nextActionReadoutIds) ? [...readoutRequestPlanGateSummary.nextActionReadoutIds] : [],
       requestPlanGateActionQueue: Array.isArray(readoutRequestPlanGateSummary.actionQueue) ? readoutRequestPlanGateSummary.actionQueue.map((item) => ({ ...item })) : [],
+      requestPlanGateActionByReasonId: readoutRequestPlanGateSummary.actionQueueByReasonId && typeof readoutRequestPlanGateSummary.actionQueueByReasonId === "object" ? { ...readoutRequestPlanGateSummary.actionQueueByReasonId } : {},
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
