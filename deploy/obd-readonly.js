@@ -3727,6 +3727,8 @@
     const comparedSectionIds = sectionSummaries.map((item) => item.id);
     const changedSectionIds = changedSectionSummaries.map((item) => item.id);
     const unchangedSectionIds = unchangedSectionSummaries.map((item) => item.id);
+    const addedIds = [...new Set(changedSectionSummaries.flatMap((item) => item.addedIds || []))];
+    const removedIds = [...new Set(changedSectionSummaries.flatMap((item) => item.removedIds || []))];
     const changedReasonIds = [...new Set(changedSectionSummaries.flatMap((item) => item.changeReasonIds || []))];
     const changedReasonCountsById = changedReasonIds.reduce((counts, reasonId) => {
       counts[reasonId] = changedSectionSummaries.filter((item) => (item.changeReasonIds || []).includes(reasonId)).length;
@@ -3741,12 +3743,21 @@
     const primaryChangedReasonId = changedReasonIds
       .slice()
       .sort((left, right) => (changedReasonCountsById[right] || 0) - (changedReasonCountsById[left] || 0) || left.localeCompare(right))[0] || null;
-    const changedReasonSummaries = changedReasonIds.map((reasonId) => ({
-      id: reasonId,
-      sectionIds: changedSectionsByReasonId[reasonId] || [],
-      sectionCount: changedReasonCountsById[reasonId] || 0,
-      primary: reasonId === primaryChangedReasonId
-    }));
+    const changedReasonSummaries = changedReasonIds.map((reasonId) => {
+      const reasonSectionSummaries = changedSectionSummaries.filter((item) => (item.changeReasonIds || []).includes(reasonId));
+      const reasonAddedIds = [...new Set(reasonSectionSummaries.flatMap((item) => item.addedIds || []))];
+      const reasonRemovedIds = [...new Set(reasonSectionSummaries.flatMap((item) => item.removedIds || []))];
+      return {
+        id: reasonId,
+        sectionIds: changedSectionsByReasonId[reasonId] || [],
+        sectionCount: changedReasonCountsById[reasonId] || 0,
+        addedIds: reasonAddedIds,
+        removedIds: reasonRemovedIds,
+        addedIdCount: reasonAddedIds.length,
+        removedIdCount: reasonRemovedIds.length,
+        primary: reasonId === primaryChangedReasonId
+      };
+    });
     const changedReasonSummaryById = changedReasonSummaries.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -3762,6 +3773,11 @@
       changedSectionCount: changedSectionIds.length,
       unchangedSectionCount: unchangedSectionIds.length,
       changedReasonCount: changedReasonIds.length,
+      addedIds,
+      removedIds,
+      addedIdCount: addedIds.length,
+      removedIdCount: removedIds.length,
+      hasAddedRemovedIds: addedIds.length > 0 || removedIds.length > 0,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
