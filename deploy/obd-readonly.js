@@ -4005,6 +4005,20 @@
     const primaryChangedIdSummary = primaryChangedIdDirection
       ? pickPrimaryChangedIdSummary(changedIdDirectionSummaryByDirection[primaryChangedIdDirection]?.summaries || [])
       : null;
+    const changedIdDisplaySummary = {
+      schemaVersion: "changed_id_display_summary_v1",
+      hasChangedIds: changedIdSummaries.length > 0,
+      primaryChangedId: primaryChangedIdSummary?.id || null,
+      primaryChangedIdDirection,
+      primaryChangedIdKind: primaryChangedIdSummary?.kind || null,
+      changedIdCount: changedIdSummaries.length,
+      readoutChangedIdCount: readoutChangedIdSummary.count || 0,
+      bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
+      readoutAddedChangedIds: [...(readoutChangedIdDirectionSummary.added?.ids || [])],
+      readoutRemovedChangedIds: [...(readoutChangedIdDirectionSummary.removed?.ids || [])],
+      bridgeIntentAddedChangedIds: [...(bridgeIntentChangedIdDirectionSummary.added?.ids || [])],
+      bridgeIntentRemovedChangedIds: [...(bridgeIntentChangedIdDirectionSummary.removed?.ids || [])]
+    };
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -4039,6 +4053,7 @@
       primaryChangedIdSummaryByKind,
       changedIdKindDirectionSummary,
       primaryChangedIdDirectionByKind,
+      changedIdDisplaySummary,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
       bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
       readoutAddedChangedIds: [...(readoutChangedIdDirectionSummary.added?.ids || [])],
