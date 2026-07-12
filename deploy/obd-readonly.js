@@ -3957,6 +3957,14 @@
       byKind[item.kind] = item;
       return byKind;
     }, {});
+    const pickPrimaryChangedIdSummary = (summaries = []) => summaries
+      .slice()
+      .sort((left, right) => (right.sectionCount + right.reasonCount) - (left.sectionCount + left.reasonCount) || left.id.localeCompare(right.id))[0] || null;
+    const primaryChangedIdSummaryByKind = changedIdKindSummaries.reduce((byKind, item) => {
+      byKind[item.kind] = pickPrimaryChangedIdSummary(item.summaries || []);
+      return byKind;
+    }, {});
+    const primaryChangedIdByKind = Object.fromEntries(Object.entries(primaryChangedIdSummaryByKind).map(([kind, summary]) => [kind, summary?.id || null]));
     const changedIdDirectionSummary = {
       added: { ids: addedOnlyChangedIdSummaries.map((item) => item.id), count: addedOnlyChangedIdSummaries.length, summaries: addedOnlyChangedIdSummaries },
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
@@ -3977,9 +3985,7 @@
       return byDirection;
     }, {});
     const primaryChangedIdSummary = primaryChangedIdDirection
-      ? (changedIdDirectionSummaryByDirection[primaryChangedIdDirection]?.summaries || [])
-        .slice()
-        .sort((left, right) => (right.sectionCount + right.reasonCount) - (left.sectionCount + left.reasonCount) || left.id.localeCompare(right.id))[0] || null
+      ? pickPrimaryChangedIdSummary(changedIdDirectionSummaryByDirection[primaryChangedIdDirection]?.summaries || [])
       : null;
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
@@ -4011,6 +4017,8 @@
       changedIdSummaryById,
       changedIdKindSummaries,
       changedIdSummaryByKind,
+      primaryChangedIdByKind,
+      primaryChangedIdSummaryByKind,
       changedIdCount: changedIdSummaries.length,
       addedChangedIdSummaries,
       removedChangedIdSummaries,

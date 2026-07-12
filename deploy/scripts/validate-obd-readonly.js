@@ -680,6 +680,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('const classifyChangedIdKind = (id, reasonIds = []) => {') && source.includes('changedIdKind: kind,'), "imported session comparison summaries should classify changed id kinds");
     check(source.includes('const changedIdSummaries = [...new Set([...addedIds, ...removedIds])].map((id) => {') && source.includes('changedIdSummaryById,'), "imported session comparison summaries should expose changed id summaries");
     check(source.includes('const changedIdKindSummaries = [...new Set(changedIdSummaries.map((item) => item.kind))]') && source.includes('changedIdSummaryByKind,'), "imported session comparison summaries should expose changed id kind summaries");
+    check(source.includes('const primaryChangedIdSummaryByKind = changedIdKindSummaries.reduce((byKind, item) => {') && source.includes('primaryChangedIdByKind,'), "imported session comparison summaries should expose primary changed ids by kind");
     check(source.includes('const addedChangedIdSummaries = changedIdSummaries.filter((item) => item.added);') && source.includes('removedChangedIdCount: removedChangedIdSummaries.length,'), "imported session comparison summaries should split added and removed changed ids");
     check(source.includes('const addedSectionIds = sectionsByAddedId[id] || [];') && source.includes('reasonCount: reasonIds.length,'), "imported session comparison changed id summaries should expose directional owner details");
     check(source.includes('direction: addedIds.includes(id) && removedIds.includes(id) ? "mixed"') && source.includes('removedReasonCount: removedReasonIds.length'), "imported session comparison changed id summaries should expose direction and owner counts");
@@ -1820,7 +1821,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 896+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 899+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4054,6 +4055,7 @@ check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparison
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.requestPlanSummaryChanged === false || Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedIdSummaries), "Combined diagnostic inputs did not carry request plan changed ids into imported session summaries");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.changedIdSummaries.every((item) => typeof item.kind === "string" && item.changedIdKind === item.kind), "Combined diagnostic inputs did not classify imported session changed id kinds");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedIdKindSummaries) && mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedIdSummaryByKind && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.changedIdSummaryByKind === "object", "Combined diagnostic inputs did not expose imported session changed id kind summaries");
+check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.primaryChangedIdByKind && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.primaryChangedIdByKind === "object", "Combined diagnostic inputs did not expose imported session primary changed ids by kind");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.changedIdSummaries.every((item) => Array.isArray(item.addedSectionIds) && Number.isFinite(item.reasonCount)), "Combined diagnostic inputs did not expose imported session changed id owner details");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.changedIdSummaries.every((item) => ["added", "removed", "mixed"].includes(item.direction) && Number.isFinite(item.addedReasonCount)), "Combined diagnostic inputs did not expose imported session changed id direction details");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.mixedChangedIdSummaries) && Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.addedOnlyChangedIds), "Combined diagnostic inputs did not expose imported session changed id direction groups");
@@ -6857,6 +6859,7 @@ check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.r
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedIdSummaries) && scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedIdSummaryById && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.changedIdSummaryById === "object", "Diagnostic scan session did not expose imported session changed id summaries");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.changedIdSummaries.every((item) => typeof item.kind === "string" && item.changedIdKind === item.kind), "Diagnostic scan session did not classify imported session changed id kinds");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedIdKindSummaries) && scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedIdSummaryByKind && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.changedIdSummaryByKind === "object", "Diagnostic scan session did not expose imported session changed id kind summaries");
+check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.primaryChangedIdSummaryByKind && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.primaryChangedIdSummaryByKind === "object", "Diagnostic scan session did not expose imported session primary changed id summaries by kind");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.changedIdSummaries.every((item) => Array.isArray(item.removedReasonIds) && Number.isFinite(item.sectionCount)), "Diagnostic scan session did not expose imported session changed id owner details");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.changedIdSummaries.every((item) => ["added", "removed", "mixed"].includes(item.direction) && Number.isFinite(item.removedSectionCount)), "Diagnostic scan session did not expose imported session changed id direction details");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.mixedChangedIds) && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.removedOnlyChangedIdCount), "Diagnostic scan session did not expose imported session changed id direction groups");
@@ -7715,6 +7718,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 896");
+  console.log("OBD read-only safety checks: 899");
   console.log("Errors: 0");
 }
