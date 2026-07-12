@@ -3821,6 +3821,8 @@
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
       mixed: { ids: mixedChangedIdSummaries.map((item) => item.id), count: mixedChangedIdSummaries.length, summaries: mixedChangedIdSummaries }
     };
+    const primaryChangedIdDirection = ["mixed", "added", "removed"]
+      .sort((left, right) => (changedIdDirectionSummary[right]?.count || 0) - (changedIdDirectionSummary[left]?.count || 0) || left.localeCompare(right))[0] || null;
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -3862,6 +3864,8 @@
       removedOnlyChangedIds: removedOnlyChangedIdSummaries.map((item) => item.id),
       mixedChangedIds: mixedChangedIdSummaries.map((item) => item.id),
       changedIdDirectionSummary,
+      primaryChangedIdDirection,
+      primaryChangedIdDirectionSummary: primaryChangedIdDirection ? changedIdDirectionSummary[primaryChangedIdDirection] || null : null,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
