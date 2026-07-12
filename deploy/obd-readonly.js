@@ -3148,8 +3148,11 @@
     const currentRequestPlanMappedCount = readFlowCount(currentRequestPlan, "mappedCount");
     const importedRequestPlanUnmappedCount = readFlowCount(importedRequestPlan, "unmappedCount");
     const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
-    const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
-    const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
+    const readSortedStringList = (value) => (Array.isArray(value) ? value.filter(Boolean).map(String).sort() : []);
+    const importedRequestPlanIds = readSortedStringList(importedRequestPlan.requestIds);
+    const currentRequestPlanIds = readSortedStringList(currentRequestPlan.requestIds);
+    const importedRequestPlanIntents = readSortedStringList(importedRequestPlan.bridgeIntents);
+    const currentRequestPlanIntents = readSortedStringList(currentRequestPlan.bridgeIntents);
     const toSingletonIdList = (value) => value ? [String(value)] : [];
     const importedRequestPlanNextRequestIds = toSingletonIdList(importedRequestPlanSummary.nextRequestId);
     const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
@@ -3229,6 +3232,13 @@
       importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
       currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
       requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),
+      importedRequestPlanIds: [...importedRequestPlanIds],
+      currentRequestPlanIds: [...currentRequestPlanIds],
+      requestPlanIdsChanged: importedRequestPlanIds.join("|") !== currentRequestPlanIds.join("|"),
+      requestPlanAddedIds: diffIds(currentRequestPlanIds, importedRequestPlanIds),
+      requestPlanRemovedIds: diffIds(importedRequestPlanIds, currentRequestPlanIds),
+      requestPlanBridgeIntentAddedIds: diffIds(currentRequestPlanIntents, importedRequestPlanIntents),
+      requestPlanBridgeIntentRemovedIds: diffIds(importedRequestPlanIntents, currentRequestPlanIntents),
       importedRequestPlanState: importedRequestPlanSummary.state || null,
       currentRequestPlanState: currentRequestPlanSummary.state || null,
       requestPlanStateChanged: (importedRequestPlanSummary.state || null) !== (currentRequestPlanSummary.state || null),
@@ -3298,8 +3308,11 @@
     const currentRequestPlanMappedCount = readFlowCount(currentRequestPlan, "mappedCount");
     const importedRequestPlanUnmappedCount = readFlowCount(importedRequestPlan, "unmappedCount");
     const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
-    const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
-    const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
+    const readSortedStringList = (value) => (Array.isArray(value) ? value.filter(Boolean).map(String).sort() : []);
+    const importedRequestPlanIds = readSortedStringList(importedRequestPlan.requestIds);
+    const currentRequestPlanIds = readSortedStringList(currentRequestPlan.requestIds);
+    const importedRequestPlanIntents = readSortedStringList(importedRequestPlan.bridgeIntents);
+    const currentRequestPlanIntents = readSortedStringList(currentRequestPlan.bridgeIntents);
     const toSingletonIdList = (value) => value ? [String(value)] : [];
     const importedRequestPlanNextRequestIds = toSingletonIdList(importedRequestPlanSummary.nextRequestId);
     const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
@@ -3379,6 +3392,13 @@
       importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
       currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
       requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),
+      importedRequestPlanIds: [...importedRequestPlanIds],
+      currentRequestPlanIds: [...currentRequestPlanIds],
+      requestPlanIdsChanged: importedRequestPlanIds.join("|") !== currentRequestPlanIds.join("|"),
+      requestPlanAddedIds: diffIds(currentRequestPlanIds, importedRequestPlanIds),
+      requestPlanRemovedIds: diffIds(importedRequestPlanIds, currentRequestPlanIds),
+      requestPlanBridgeIntentAddedIds: diffIds(currentRequestPlanIntents, importedRequestPlanIntents),
+      requestPlanBridgeIntentRemovedIds: diffIds(importedRequestPlanIntents, currentRequestPlanIntents),
       importedRequestPlanState: importedRequestPlanSummary.state || null,
       currentRequestPlanState: currentRequestPlanSummary.state || null,
       requestPlanStateChanged: (importedRequestPlanSummary.state || null) !== (currentRequestPlanSummary.state || null),
@@ -3751,12 +3771,14 @@
       "checklistBlockedAddedIds", "checklistReviewAddedIds",
       "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds",
       "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
+      "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
       "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds"
     ]);
     const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
       "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds",
       "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
+      "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
       "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds"
     ]);
     const sectionSummaries = sectionInputs
