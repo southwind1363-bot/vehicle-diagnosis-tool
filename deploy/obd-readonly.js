@@ -4008,9 +4008,14 @@
     const changedIdDisplaySummary = {
       schemaVersion: "changed_id_display_summary_v1",
       hasChangedIds: changedIdSummaries.length > 0,
+      empty: changedIdSummaries.length === 0,
+      status: changedIdSummaries.length > 0 ? "changed" : "unchanged",
       primaryChangedId: primaryChangedIdSummary?.id || null,
       primaryChangedIdDirection,
       primaryChangedIdKind: primaryChangedIdSummary?.kind || null,
+      primaryChangedIdKey: primaryChangedIdSummary?.id && primaryChangedIdSummary?.kind
+        ? `${primaryChangedIdSummary.kind}:${primaryChangedIdSummary.id}`
+        : null,
       changedIdCount: changedIdSummaries.length,
       readoutChangedIdCount: readoutChangedIdSummary.count || 0,
       bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
