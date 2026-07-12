@@ -218,6 +218,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-thinkcar-bluetooth": "local_bridge",
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
+const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
+  validationCheckLabel: "OBD安全検証 788+件",
+  bridgeValidationCheckLabel: "bridge検証 142件",
+  recentMilestone: "request gate / action queue / import比較をscan sessionへ反映",
+  scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
+});
 const APP_VERSION = "2.360.0";
 const APP_LAST_UPDATED = "2026-07-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
@@ -3742,6 +3748,41 @@ function startGeneralBridgeCheck() {
   probeObdLocalBridge();
 }
 
+function buildDiagnosticCoreProgressSnapshot() {
+  const checks = [
+    { id: "dtc_status", label: "DTC状態別保持", available: hasBridgeDtcSupport() },
+    { id: "pid_live_data", label: "PID / ライブデータ", available: hasBridgeLivePidSupport() && hasBridgeSupportedPidSupport() },
+    { id: "freeze_frame", label: "フリーズフレーム", available: hasBridgeFreezeFrameSupport() },
+    { id: "readiness", label: "レディネス", available: hasBridgeReadinessSupport() },
+    { id: "ecu_info_mode09", label: "ECU情報 / Mode09", available: hasBridgeEcuInfoSupport() },
+    { id: "mode06", label: "Mode06監視結果", available: hasBridgeOnboardMonitorSupport() },
+    { id: "diagnostic_import", label: "診断取込 / export", available: hasBridgeDiagnosticImportPipelineSupport() },
+    { id: "scan_session", label: "scan session構造", available: typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function" },
+    {
+      id: "request_gate_actions",
+      label: "request gate / action",
+      available: typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function"
+        && typeof window.ObdReadOnly?.mergeDiagnosticInputs === "function"
+    }
+  ];
+  const doneLabels = checks.filter((check) => check.available).map((check) => check.label);
+  const missingLabels = checks.filter((check) => !check.available).map((check) => check.label);
+  const doneCount = doneLabels.length;
+  const totalCount = checks.length;
+  const progressPercent = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
+  const nextLabel = missingLabels[0] || "実機読取差分の確認";
+
+  return {
+    ...OBD_CORE_PROGRESS_SNAPSHOT,
+    doneCount,
+    totalCount,
+    progressPercent,
+    doneLabels,
+    missingLabels,
+    nextLabel
+  };
+}
+
 function renderObdProgressOverview() {
   if (!obdProgressGrid) return;
 
@@ -3799,8 +3840,16 @@ function renderObdProgressOverview() {
   ].filter((value) => typeof value === "string" && value.length > 0);
   const q3Targets = allEtas.filter((value) => value.startsWith("2026-Q3")).length;
   const q4Targets = allEtas.filter((value) => value.startsWith("2026-Q4")).length;
+  const coreSnapshot = buildDiagnosticCoreProgressSnapshot();
 
   const cards = [
+    {
+      tone: "breakdown",
+      trackingId: "diagnostic_core_progress",
+      title: "診断コア進捗",
+      primary: `内部構造 ${coreSnapshot.doneCount}/${coreSnapshot.totalCount}項目 (${coreSnapshot.progressPercent}%) / ${coreSnapshot.validationCheckLabel}`,
+      detail: `${coreSnapshot.recentMilestone}。${coreSnapshot.bridgeValidationCheckLabel}。${coreSnapshot.scopeNote}。次: ${coreSnapshot.nextLabel}`
+    },
     {
       tone: "score",
       highlight: true,
