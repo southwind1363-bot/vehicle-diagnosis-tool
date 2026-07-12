@@ -3339,10 +3339,15 @@
     const readActionReasonIds = (summary = {}, queue = []) => Array.isArray(summary?.actionReasonIds)
       ? summary.actionReasonIds.filter(Boolean)
       : queue.map((item) => item?.reasonId).filter(Boolean);
+    const readActionReadoutIds = (summary = {}, queue = []) => Array.isArray(summary?.actionReadoutIds)
+      ? summary.actionReadoutIds.filter(Boolean)
+      : [...new Set(queue.flatMap((item) => Array.isArray(item?.readoutIds) ? item.readoutIds : []).filter(Boolean))];
     const importedActionIds = readActionIds(importedGateSummary, importedActionQueue);
     const currentActionIds = readActionIds(currentSummary, currentActionQueue);
     const importedActionReasonIds = readActionReasonIds(importedGateSummary, importedActionQueue);
     const currentActionReasonIds = readActionReasonIds(currentSummary, currentActionQueue);
+    const importedActionReadoutIds = readActionReadoutIds(importedGateSummary, importedActionQueue);
+    const currentActionReadoutIds = readActionReadoutIds(currentSummary, currentActionQueue);
     return {
       schemaVersion: "imported_readout_request_plan_gate_comparison_v1",
       importedState: importedGateSummary.state || null,
@@ -3388,6 +3393,9 @@
       importedActionReasonIds: [...importedActionReasonIds],
       currentActionReasonIds: [...currentActionReasonIds],
       actionReasonIdsChanged: importedActionReasonIds.join("|") !== currentActionReasonIds.join("|"),
+      importedActionReadoutIds: [...importedActionReadoutIds],
+      currentActionReadoutIds: [...currentActionReadoutIds],
+      actionReadoutIdsChanged: importedActionReadoutIds.join("|") !== currentActionReadoutIds.join("|"),
       importedActionQueueCount: importedActionQueue.length,
       currentActionQueueCount: currentActionQueue.length,
       actionQueueCountDelta: currentActionQueue.length - importedActionQueue.length
@@ -3424,6 +3432,7 @@
       || comparison.nextActionChanged === true
       || comparison.actionIdsChanged === true
       || comparison.actionReasonIdsChanged === true
+      || comparison.actionReadoutIdsChanged === true
       || comparison.blockedReasonIdsChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
@@ -3433,7 +3442,7 @@
       comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
-      comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || Number(comparison.actionQueueCountDelta || 0) !== 0 ? "request_plan_actions" : null,
+      comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.completeChanged === true ? "readout_completion" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
@@ -3464,6 +3473,7 @@
             || item.comparison.nextActionChanged === true
             || item.comparison.actionIdsChanged === true
             || item.comparison.actionReasonIdsChanged === true
+            || item.comparison.actionReadoutIdsChanged === true
             || Number(item.comparison.actionQueueCountDelta || 0) !== 0
             || item.comparison.blockedReasonIdsChanged === true
         };
@@ -3525,7 +3535,7 @@
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
       completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
-      requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || Number(item.actionQueueCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
+      requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       sectionSummaries,
