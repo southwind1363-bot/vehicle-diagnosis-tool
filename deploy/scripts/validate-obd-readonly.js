@@ -610,7 +610,8 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('requestPlanGateActionSummary: readoutRequestPlanGateSummary.actionSummary') && source.includes('typeof readoutRequestPlanGateSummary.actionSummary === "object"'), "diagnostic flow summaries should expose request plan gate action summary");
     check(source.includes('requiredReadoutCount: readCount("requiredCount", coreSessionStatus?.requiredReadoutIds),') && source.includes('missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.remainingReadoutIds),'), "diagnostic flow summaries should carry readout completion counts");
     check(source.includes('const checklistSummary = coreSessionStatus?.analysisChecklistSummary || readiness.checklistSummary || {};') && source.includes('checklistCompleteCount: readChecklistCount("completeCount"),') && source.includes('checklistBlockedIds: Array.isArray(checklistSummary?.blockedIds) ? [...checklistSummary.blockedIds] : [],'), "diagnostic flow summaries should carry analysis checklist counts and ids");
-    check(source.includes('const checklistById = coreSessionStatus?.analysisChecklistById || readiness.checklistById || {};') && source.includes('const vehicleApplicabilityChecklist = checklistById.vehicle_applicability || null;'), "diagnostic flow summaries should read vehicle applicability checklist state");
+    check(source.includes('const diagnosticChecklistById = {') && source.includes('const vehicleApplicabilityChecklist = diagnosticChecklistById.vehicle_applicability || null;'), "diagnostic flow summaries should read vehicle applicability checklist state from normalized checklist details");
+    check(source.includes('analysisChecklist: diagnosticChecklist,') && source.includes('requiredReadoutsChecklist: diagnosticChecklistById.required_readouts || null,'), "diagnostic flow summaries should expose direct analysis checklist details");
     check(source.includes('vehicleApplicabilityReviewRequired,') && source.includes('vehicleApplicabilityBlocking,'), "diagnostic flow summaries should expose vehicle applicability review and blocking flags");
     check(source.includes('function buildImportedCoreComparisonSummary(importedCoreSessionStatus = null, currentCoreSessionStatus = {})') && source.includes('schemaVersion: "imported_core_comparison_v1"'), "obd-readonly should expose imported core comparison summaries");
     check(source.includes('requiredReadoutDelta: currentRequiredCount - importedRequiredCount,') && source.includes('emptyReadoutDelta: currentEmptyCount - importedEmptyCount,'), "imported core comparison should compare readout completion counts");
@@ -1785,7 +1786,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 788+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 793+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -7271,6 +7272,10 @@ check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.readoutCollectionR
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.missingReadoutCount === 4 && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.emptyReadoutCount === 1 && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.pendingReadoutCount === 5, "Diagnostic scan session did not expose diagnostic flow readout completion counts");
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.checklistTotalCount === 3 && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.checklistPendingCount === 1, "Diagnostic scan session did not expose diagnostic flow checklist counts");
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.checklistBlockedIds?.includes("required_readouts"), "Diagnostic scan session did not expose diagnostic flow checklist blocked ids");
+check(Array.isArray(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.analysisChecklist) && scanSessionPlainCoverageOverride.diagnosticFlowSummary.analysisChecklist.length === 3, "Diagnostic scan session did not expose diagnostic flow checklist details");
+check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.analysisChecklistById?.required_readouts?.pendingCount === 5, "Diagnostic scan session did not expose diagnostic flow checklist details by id");
+check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.requiredReadoutsChecklist?.missingCount === 4 && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.blockingWarningsChecklist?.warningCount === 0, "Diagnostic scan session did not expose direct diagnostic flow checklist shortcuts");
+check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.vehicleApplicabilityChecklist?.state === "complete" && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.analysisChecklistSummary?.pendingCount === 1, "Diagnostic scan session did not expose vehicle applicability checklist and summary");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.complete === false && scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingIds?.length === 5, "Diagnostic scan session did not expose top-level readout completion summary");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingCount === 5 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.missingCount === 4 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyCount === 1, "Diagnostic scan session did not expose readout completion counts");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyIds?.includes("freeze_frame_snapshot") && scanSessionPlainCoverageOverride.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not expose top-level readout completion ids");
@@ -7605,6 +7610,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 788");
+  console.log("OBD read-only safety checks: 793");
   console.log("Errors: 0");
 }

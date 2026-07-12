@@ -2853,7 +2853,25 @@
     const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || {};
     const checklistSummary = coreSessionStatus?.analysisChecklistSummary || readiness.checklistSummary || {};
     const checklistById = coreSessionStatus?.analysisChecklistById || readiness.checklistById || {};
-    const vehicleApplicabilityChecklist = checklistById.vehicle_applicability || null;
+    const checklistItems = Array.isArray(coreSessionStatus?.analysisChecklist)
+      ? coreSessionStatus.analysisChecklist
+      : Array.isArray(readiness.checklist)
+        ? readiness.checklist
+        : Object.values(checklistById || {});
+    const diagnosticChecklist = checklistItems
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({ ...item }));
+    const diagnosticChecklistById = {
+      ...Object.fromEntries(
+        Object.entries(checklistById || {})
+          .filter(([, item]) => item && typeof item === "object")
+          .map(([id, item]) => [id, { ...item }])
+      )
+    };
+    diagnosticChecklist.forEach((item) => {
+      if (item.id && !diagnosticChecklistById[item.id]) diagnosticChecklistById[item.id] = { ...item };
+    });
+    const vehicleApplicabilityChecklist = diagnosticChecklistById.vehicle_applicability || null;
     const applicabilityStatus = coreSessionStatus?.applicabilityStatus || vehicleApplicabilityChecklist?.applicabilityStatus || "unknown";
     const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
       || applicabilityStatus === "partial"
@@ -3005,6 +3023,12 @@
       requestPlanGateActionQueue: Array.isArray(readoutRequestPlanGateSummary.actionQueue) ? readoutRequestPlanGateSummary.actionQueue.map((item) => ({ ...item })) : [],
       requestPlanGateActionByReasonId: readoutRequestPlanGateSummary.actionQueueByReasonId && typeof readoutRequestPlanGateSummary.actionQueueByReasonId === "object" ? { ...readoutRequestPlanGateSummary.actionQueueByReasonId } : {},
       requestPlanGateActionByReadoutId: readoutRequestPlanGateSummary.actionQueueByReadoutId && typeof readoutRequestPlanGateSummary.actionQueueByReadoutId === "object" ? { ...readoutRequestPlanGateSummary.actionQueueByReadoutId } : {},
+      analysisChecklist: diagnosticChecklist,
+      analysisChecklistById: diagnosticChecklistById,
+      analysisChecklistSummary: checklistSummary && typeof checklistSummary === "object" ? { ...checklistSummary } : {},
+      requiredReadoutsChecklist: diagnosticChecklistById.required_readouts || null,
+      blockingWarningsChecklist: diagnosticChecklistById.blocking_warnings || null,
+      vehicleApplicabilityChecklist: diagnosticChecklistById.vehicle_applicability || null,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
       recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
