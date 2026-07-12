@@ -1376,6 +1376,8 @@
       missing_readouts: { id: "missing_readouts", count: missingItems.length, readoutIds: missingItems.map((item) => item.id), readoutLabels: missingItems.map((item) => item.label) },
       empty_readouts: { id: "empty_readouts", count: emptyItems.length, readoutIds: emptyItems.map((item) => item.id), readoutLabels: emptyItems.map((item) => item.label) }
     };
+    const primaryBlockingReasonId = blockingReasonIds[0] || null;
+    const primaryBlockingReason = primaryBlockingReasonId ? blockingReasonById[primaryBlockingReasonId] : null;
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1395,6 +1397,10 @@
       blockingReasonCount: blockingReasonIds.length,
       blockingReasonById,
       blockingReasonDetails: blockingReasonIds.map((id) => blockingReasonById[id]),
+      primaryBlockingReasonId,
+      primaryBlockingReason,
+      primaryBlockingReadoutId: primaryBlockingReason?.readoutIds?.[0] || null,
+      primaryBlockingReadoutLabel: primaryBlockingReason?.readoutLabels?.[0] || null,
       hasPendingReadouts: pendingItems.length > 0,
       hasMissingReadouts: missingItems.length > 0,
       hasEmptyReadouts: emptyItems.length > 0,
@@ -1499,6 +1505,8 @@
       missing_readouts: { id: "missing_readouts", count: normalizedMissingIds.length, readoutIds: normalizedMissingIds, readoutLabels: normalizedMissingLabels },
       empty_readouts: { id: "empty_readouts", count: normalizedEmptyIds.length, readoutIds: normalizedEmptyIds, readoutLabels: normalizedEmptyLabels }
     };
+    const normalizedPrimaryBlockingReasonId = normalizedBlockingReasonIds[0] || null;
+    const normalizedPrimaryBlockingReason = normalizedPrimaryBlockingReasonId ? normalizedBlockingReasonById[normalizedPrimaryBlockingReasonId] : null;
     const completionSummaryInput = pickDefined(input.completionSummary, input.completion_summary, {});
     const coverageCompletionSummary = {
       ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
@@ -1511,6 +1519,10 @@
       blockingReasonCount: normalizedBlockingReasonIds.length,
       blockingReasonById: normalizedBlockingReasonById,
       blockingReasonDetails: normalizedBlockingReasonIds.map((id) => normalizedBlockingReasonById[id]),
+      primaryBlockingReasonId: normalizedPrimaryBlockingReasonId,
+      primaryBlockingReason: normalizedPrimaryBlockingReason,
+      primaryBlockingReadoutId: normalizedPrimaryBlockingReason?.readoutIds?.[0] || null,
+      primaryBlockingReadoutLabel: normalizedPrimaryBlockingReason?.readoutLabels?.[0] || null,
       hasPendingReadouts: normalizedPendingIds.length > 0,
       hasMissingReadouts: normalizedMissingIds.length > 0,
       hasEmptyReadouts: normalizedEmptyIds.length > 0,
