@@ -3793,8 +3793,14 @@
       id,
       added: addedIds.includes(id),
       removed: removedIds.includes(id),
+      addedSectionIds: sectionsByAddedId[id] || [],
+      removedSectionIds: sectionsByRemovedId[id] || [],
       sectionIds: [...new Set([...(sectionsByAddedId[id] || []), ...(sectionsByRemovedId[id] || [])])],
-      reasonIds: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])]
+      sectionCount: [...new Set([...(sectionsByAddedId[id] || []), ...(sectionsByRemovedId[id] || [])])].length,
+      addedReasonIds: reasonsByAddedId[id] || [],
+      removedReasonIds: reasonsByRemovedId[id] || [],
+      reasonIds: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])],
+      reasonCount: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])].length
     }));
     const changedIdSummaryById = changedIdSummaries.reduce((byId, item) => {
       byId[item.id] = item;
