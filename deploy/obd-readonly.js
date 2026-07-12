@@ -1364,6 +1364,7 @@
     const capturedLabels = capturedItems.map((item) => item.label);
     const pendingIds = pendingItems.map((item) => item.id);
     const pendingLabels = pendingItems.map((item) => item.label);
+    const nextPendingItem = pendingItems[0] || null;
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1377,11 +1378,17 @@
       schemaVersion: "readout_coverage_completion_v1",
       complete: pendingItems.length === 0,
       status: pendingItems.length === 0 ? "complete" : "collecting_readouts",
+      hasPendingReadouts: pendingItems.length > 0,
+      hasMissingReadouts: missingItems.length > 0,
+      hasEmptyReadouts: emptyItems.length > 0,
       requiredCount: items.length,
       capturedCount: capturedItems.length,
       emptyCount: emptyItems.length,
       missingCount: missingItems.length,
       pendingCount: pendingItems.length,
+      nextPendingId: nextPendingItem?.id || null,
+      nextPendingLabel: nextPendingItem?.label || null,
+      nextPendingStatus: nextPendingItem?.status || null,
       capturedIds,
       pendingIds,
       emptyIds: emptyItems.map((item) => item.id),
@@ -1441,17 +1448,28 @@
     const normalizedCapturedLabels = Array.isArray(pickDefined(input.capturedLabels, input.captured_labels)) ? [...pickDefined(input.capturedLabels, input.captured_labels)] : capturedItems.map((item) => item.label);
     const normalizedPendingIds = Array.isArray(pickDefined(input.pendingIds, input.pending_ids)) ? [...pickDefined(input.pendingIds, input.pending_ids)] : [...normalizedEmptyIds, ...normalizedMissingIds].length > 0 ? [...normalizedEmptyIds, ...normalizedMissingIds] : pendingItems.map((item) => item.id);
     const normalizedPendingLabels = Array.isArray(pickDefined(input.pendingLabels, input.pending_labels)) ? [...pickDefined(input.pendingLabels, input.pending_labels)] : [...normalizedEmptyLabels, ...normalizedMissingLabels].length > 0 ? [...normalizedEmptyLabels, ...normalizedMissingLabels] : pendingItems.map((item) => item.label);
+    const normalizedNextPendingId = normalizedPendingIds[0] || null;
+    const normalizedNextPendingItem = normalizedNextPendingId ? itemById[normalizedNextPendingId] || null : null;
+    const normalizedNextPendingStatus = normalizedNextPendingItem?.status
+      || (normalizedNextPendingId && normalizedEmptyIds.includes(normalizedNextPendingId) ? "empty" : null)
+      || (normalizedNextPendingId && normalizedMissingIds.includes(normalizedNextPendingId) ? "missing" : null);
     const completionSummaryInput = pickDefined(input.completionSummary, input.completion_summary, {});
     const coverageCompletionSummary = {
       ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
       schemaVersion: "readout_coverage_completion_v1",
       complete: normalizedPendingIds.length === 0,
       status: normalizedPendingIds.length === 0 ? "complete" : "collecting_readouts",
+      hasPendingReadouts: normalizedPendingIds.length > 0,
+      hasMissingReadouts: normalizedMissingIds.length > 0,
+      hasEmptyReadouts: normalizedEmptyIds.length > 0,
       requiredCount: totalCategories,
       capturedCount: capturedCategories,
       emptyCount: emptyCategories,
       missingCount: missingCategories,
       pendingCount: normalizedPendingIds.length,
+      nextPendingId: normalizedNextPendingId,
+      nextPendingLabel: normalizedPendingLabels[0] || normalizedNextPendingItem?.label || null,
+      nextPendingStatus: normalizedNextPendingStatus,
       capturedIds: normalizedCapturedIds,
       pendingIds: normalizedPendingIds,
       emptyIds: normalizedEmptyIds,
