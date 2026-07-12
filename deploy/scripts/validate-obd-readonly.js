@@ -69,7 +69,7 @@ const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBrid
 const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgePidValueFunctionSource = source.match(/function normalizeBridgePidValue[\s\S]*?sourceLine: index \+ 1\r?\n    \};\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
-const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: Array\.isArray\(pickDefined\(input\.missingLabels, input\.missing_labels\)\) \? \[\.\.\.pickDefined\(input\.missingLabels, input\.missing_labels\)\] : \[\]\r?\n    \};\r?\n  \}/);
+const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: normalizedMissingLabels\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
 const vehicleApplicabilityWarningsFunctionSource = source.match(/function appendVehicleApplicabilityWarnings[\s\S]*?vehicle_profile_manual"\);\r?\n    \}\r?\n  \}/);
@@ -199,8 +199,9 @@ const normalizeReadoutCoverageFunctionChecks = () => {
     check(functionBody.includes('includeInfrastructure: pickDefined(input.includeInfrastructure, input.include_infrastructure) === true,'), "normalizeReadoutCoverageSnapshot should normalize includeInfrastructure aliases as explicit true");
     check(functionBody.includes('capturedPercent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent)))') && functionBody.includes(': computedCapturedPercent,'), "normalizeReadoutCoverageSnapshot should clamp capturedPercent and fall back to computed captured percent");
     check(functionBody.includes('progressPercent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent)))') && functionBody.includes(': computedProgressPercent,'), "normalizeReadoutCoverageSnapshot should clamp progressPercent and fall back to computed progress percent");
-    check(functionBody.includes('emptyIds: Array.isArray(pickDefined(input.emptyIds, input.empty_ids)) ? [...pickDefined(input.emptyIds, input.empty_ids)] : [],') && functionBody.includes('missingLabels: Array.isArray(pickDefined(input.missingLabels, input.missing_labels)) ? [...pickDefined(input.missingLabels, input.missing_labels)] : []'), "normalizeReadoutCoverageSnapshot should normalize snake_case coverage label and id aliases");
+    check(functionBody.includes('const normalizedEmptyIds = Array.isArray(pickDefined(input.emptyIds, input.empty_ids)) ? [...pickDefined(input.emptyIds, input.empty_ids)] : [];') && functionBody.includes('missingLabels: normalizedMissingLabels'), "normalizeReadoutCoverageSnapshot should normalize snake_case coverage label and id aliases");
     check(functionBody.includes('const itemById = normalizedItems.reduce((byId, item) => {') && functionBody.includes('itemsByStatus,'), "normalizeReadoutCoverageSnapshot should expose readout coverage item indexes");
+    check(functionBody.includes('capturedIds: Array.isArray(pickDefined(input.capturedIds, input.captured_ids))') && functionBody.includes('pendingLabels: Array.isArray(pickDefined(input.pendingLabels, input.pending_labels))'), "normalizeReadoutCoverageSnapshot should expose captured and pending readout coverage ids");
   }
 };
 const vehicleApplicabilityFunctionChecks = () => {
@@ -1835,7 +1836,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 941+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 944+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -7367,6 +7368,7 @@ const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
 check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve plain-object capturedPercent override");
 check(scanSessionPlainCoverageOverride.readoutCoverage.itemById?.dtc_snapshot?.status === "captured" && Array.isArray(scanSessionPlainCoverageOverride.readoutCoverage.itemsByStatus?.empty), "Diagnostic scan session did not expose readout coverage item indexes");
+check(scanSessionPlainCoverageOverride.readoutCoverage.capturedIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.readoutCoverage.pendingIds?.includes("readiness_snapshot"), "Diagnostic scan session did not expose readout coverage captured and pending ids");
 check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly treated plain-object coverage override with empty and missing readouts as analysis-ready");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot from plain-object coverage override emptyIds");
@@ -7759,6 +7761,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 941");
+  console.log("OBD read-only safety checks: 944");
   console.log("Errors: 0");
 }

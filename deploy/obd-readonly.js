@@ -1359,6 +1359,7 @@
     const capturedItems = items.filter((item) => item.status === "captured");
     const emptyItems = items.filter((item) => item.status === "empty");
     const missingItems = items.filter((item) => !item.available);
+    const pendingItems = [...emptyItems, ...missingItems];
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1382,6 +1383,10 @@
       items,
       itemById,
       itemsByStatus,
+      capturedIds: capturedItems.map((item) => item.id),
+      capturedLabels: capturedItems.map((item) => item.label),
+      pendingIds: pendingItems.map((item) => item.id),
+      pendingLabels: pendingItems.map((item) => item.label),
       emptyIds: emptyItems.map((item) => item.id),
       emptyLabels: emptyItems.map((item) => item.label),
       missingIds: missingItems.map((item) => item.id),
@@ -1407,6 +1412,12 @@
       byStatus[status] = normalizedItems.filter((item) => item && typeof item === "object" && item.status === status);
       return byStatus;
     }, {});
+    const capturedItems = itemsByStatus.captured || [];
+    const pendingItems = [...(itemsByStatus.empty || []), ...(itemsByStatus.missing || [])];
+    const normalizedEmptyIds = Array.isArray(pickDefined(input.emptyIds, input.empty_ids)) ? [...pickDefined(input.emptyIds, input.empty_ids)] : [];
+    const normalizedEmptyLabels = Array.isArray(pickDefined(input.emptyLabels, input.empty_labels)) ? [...pickDefined(input.emptyLabels, input.empty_labels)] : [];
+    const normalizedMissingIds = Array.isArray(pickDefined(input.missingIds, input.missing_ids)) ? [...pickDefined(input.missingIds, input.missing_ids)] : [];
+    const normalizedMissingLabels = Array.isArray(pickDefined(input.missingLabels, input.missing_labels)) ? [...pickDefined(input.missingLabels, input.missing_labels)] : [];
     return {
       ...input,
       schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",
@@ -1421,10 +1432,14 @@
       items: normalizedItems,
       itemById,
       itemsByStatus,
-      emptyIds: Array.isArray(pickDefined(input.emptyIds, input.empty_ids)) ? [...pickDefined(input.emptyIds, input.empty_ids)] : [],
-      emptyLabels: Array.isArray(pickDefined(input.emptyLabels, input.empty_labels)) ? [...pickDefined(input.emptyLabels, input.empty_labels)] : [],
-      missingIds: Array.isArray(pickDefined(input.missingIds, input.missing_ids)) ? [...pickDefined(input.missingIds, input.missing_ids)] : [],
-      missingLabels: Array.isArray(pickDefined(input.missingLabels, input.missing_labels)) ? [...pickDefined(input.missingLabels, input.missing_labels)] : []
+      capturedIds: Array.isArray(pickDefined(input.capturedIds, input.captured_ids)) ? [...pickDefined(input.capturedIds, input.captured_ids)] : capturedItems.map((item) => item.id),
+      capturedLabels: Array.isArray(pickDefined(input.capturedLabels, input.captured_labels)) ? [...pickDefined(input.capturedLabels, input.captured_labels)] : capturedItems.map((item) => item.label),
+      pendingIds: Array.isArray(pickDefined(input.pendingIds, input.pending_ids)) ? [...pickDefined(input.pendingIds, input.pending_ids)] : [...normalizedEmptyIds, ...normalizedMissingIds].length > 0 ? [...normalizedEmptyIds, ...normalizedMissingIds] : pendingItems.map((item) => item.id),
+      pendingLabels: Array.isArray(pickDefined(input.pendingLabels, input.pending_labels)) ? [...pickDefined(input.pendingLabels, input.pending_labels)] : [...normalizedEmptyLabels, ...normalizedMissingLabels].length > 0 ? [...normalizedEmptyLabels, ...normalizedMissingLabels] : pendingItems.map((item) => item.label),
+      emptyIds: normalizedEmptyIds,
+      emptyLabels: normalizedEmptyLabels,
+      missingIds: normalizedMissingIds,
+      missingLabels: normalizedMissingLabels
     };
   }
 
