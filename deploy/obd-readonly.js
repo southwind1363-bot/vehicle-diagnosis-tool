@@ -2900,6 +2900,18 @@
       empty_readouts: { count: emptyReadoutIds.length, readoutIds: [...emptyReadoutIds] },
       blocking_warnings: { count: blockingWarningIds.length, warningIds: [...blockingWarningIds] }
     };
+    const primaryBlockingReasonId = analysisBlockers[0] || null;
+    const primaryBlockingReason = primaryBlockingReasonId ? analysisBlockerById[primaryBlockingReasonId] || null : null;
+    const primaryBlockingReadoutId = primaryBlockingReason?.readoutIds?.[0] || null;
+    const primaryBlockingReadoutLabel = primaryBlockingReadoutId
+      ? readoutStateById[primaryBlockingReadoutId]?.label || coverageLabelById.get(primaryBlockingReadoutId) || primaryBlockingReadoutId
+      : null;
+    Object.assign(readoutCompletionSummary, {
+      primaryBlockingReasonId,
+      primaryBlockingReason,
+      primaryBlockingReadoutId,
+      primaryBlockingReadoutLabel
+    });
     const analysisBlockerSummary = {
       totalCount: analysisBlockers.length,
       missingReadoutCount: remainingReadoutIds.length,
@@ -2978,7 +2990,10 @@
       readyForAnalysis,
       completionPercent: readoutProgressSummary.completionPercent,
       blockerCount: analysisBlockers.length,
-      pendingReadoutCount: readoutProgressSummary.pendingCount
+      pendingReadoutCount: readoutProgressSummary.pendingCount,
+      primaryBlockingReasonId,
+      primaryBlockingReadoutId,
+      primaryBlockingReadoutLabel
     };
     const analysisReadinessSummary = {
       ready: readyForAnalysis,
@@ -2994,6 +3009,10 @@
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
       blockingWarningCount: analysisBlockerSummary.blockingWarningCount,
+      primaryBlockingReasonId,
+      primaryBlockingReason,
+      primaryBlockingReadoutId,
+      primaryBlockingReadoutLabel,
       pendingReadoutCount: readoutProgressSummary.pendingCount,
       completionPercent: readoutProgressSummary.completionPercent,
       nextReadoutId: nextReadoutSummary?.id || null,
@@ -3043,6 +3062,10 @@
       analysisBlockers,
       analysisBlockerById,
       analysisBlockerSummary,
+      primaryBlockingReasonId,
+      primaryBlockingReason,
+      primaryBlockingReadoutId,
+      primaryBlockingReadoutLabel,
       analysisChecklist,
       analysisChecklistById,
       analysisChecklistSummary,
@@ -3101,6 +3124,27 @@
     const blockingReasonIds = Array.isArray(readiness.blockerIds)
       ? [...readiness.blockerIds]
       : Array.isArray(coreSessionStatus?.analysisBlockers) ? [...coreSessionStatus.analysisBlockers] : [];
+    const primaryBlockingReasonId = readiness.primaryBlockingReasonId
+      || completion.primaryBlockingReasonId
+      || coreSessionStatus?.primaryBlockingReasonId
+      || blockingReasonIds[0]
+      || null;
+    const primaryBlockingReason = readiness.primaryBlockingReason
+      || completion.primaryBlockingReason
+      || coreSessionStatus?.primaryBlockingReason
+      || (primaryBlockingReasonId && coreSessionStatus?.analysisBlockerById ? coreSessionStatus.analysisBlockerById[primaryBlockingReasonId] : null)
+      || null;
+    const primaryBlockingReadoutId = readiness.primaryBlockingReadoutId
+      || completion.primaryBlockingReadoutId
+      || coreSessionStatus?.primaryBlockingReadoutId
+      || primaryBlockingReason?.readoutIds?.[0]
+      || null;
+    const primaryBlockingReadoutLabel = readiness.primaryBlockingReadoutLabel
+      || completion.primaryBlockingReadoutLabel
+      || coreSessionStatus?.primaryBlockingReadoutLabel
+      || (primaryBlockingReadoutId && coreSessionStatus?.readoutStateById ? coreSessionStatus.readoutStateById[primaryBlockingReadoutId]?.label : null)
+      || primaryBlockingReadoutId
+      || null;
     const nextReadoutRequest = coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.nextReadoutSummary?.readoutRequest || null;
     const pendingReadoutRequestQueue = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
       ? coreSessionStatus.pendingReadoutRequestQueue.map((item) => ({ ...item }))
@@ -3252,6 +3296,10 @@
       vehicleApplicabilityReviewRequired,
       vehicleApplicabilityBlocking,
       blockingReasonIds,
+      primaryBlockingReasonId,
+      primaryBlockingReason,
+      primaryBlockingReadoutId,
+      primaryBlockingReadoutLabel,
       readoutCollectionRequired: pendingReadoutCount > 0,
       completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
         ? Number(coreSessionStatus.completionPercent)
