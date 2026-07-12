@@ -3687,6 +3687,9 @@
       || comparison.readyChanged === true
       || comparison.blockedChanged === true
       || comparison.safeForBridgePlanningChanged === true
+      || comparison.requestPlanStateChanged === true
+      || comparison.requestPlanNextRequestChanged === true
+      || comparison.requestPlanNextBridgeIntentChanged === true
       || comparison.nextReadoutChanged === true
       || comparison.nextReadoutDetailsChanged === true
       || comparison.nextBlockedReasonChanged === true
@@ -3710,6 +3713,7 @@
       comparison.statusChanged === true || comparison.stateChanged === true ? "status" : null,
       comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
       comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
+      comparison.requestPlanStateChanged === true || comparison.requestPlanNextRequestChanged === true || comparison.requestPlanNextBridgeIntentChanged === true ? "request_plan_summary" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
@@ -3767,7 +3771,10 @@
             || item.comparison.actionReasonIdsChanged === true
             || item.comparison.actionReadoutIdsChanged === true
             || Number(item.comparison.actionQueueCountDelta || item.comparison.actionSummaryCountDelta || item.comparison.actionSummaryReasonCountDelta || item.comparison.actionSummaryReadoutCountDelta || 0) !== 0
-            || item.comparison.blockedReasonIdsChanged === true
+            || item.comparison.blockedReasonIdsChanged === true,
+          requestPlanSummaryChanged: item.comparison.requestPlanStateChanged === true
+            || item.comparison.requestPlanNextRequestChanged === true
+            || item.comparison.requestPlanNextBridgeIntentChanged === true
         };
       });
     const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
@@ -3961,6 +3968,7 @@
       completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
+      requestPlanSummaryChanged: comparisons.some((item) => item.requestPlanStateChanged === true || item.requestPlanNextRequestChanged === true || item.requestPlanNextBridgeIntentChanged === true),
       analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || item.requiredIdsChanged === true || item.capturedIdsChanged === true || item.missingIdsChanged === true || item.pendingIdsChanged === true || item.emptyIdsChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
