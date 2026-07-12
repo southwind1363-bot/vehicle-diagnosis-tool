@@ -2591,6 +2591,8 @@
       : {};
     const readoutRequestPlanGateActionQueue = buildReadoutRequestPlanGateActionQueue(requestPlanBlockedReasonIds, requestPlanBlockedReasonById);
     const readoutRequestPlanGateActionQueueById = Object.fromEntries(readoutRequestPlanGateActionQueue.map((item) => [item.id, { ...item }]));
+    const readoutRequestPlanGateActionIds = readoutRequestPlanGateActionQueue.map((item) => item.id).filter(Boolean);
+    const readoutRequestPlanGateActionReasonIds = readoutRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const readoutRequestPlanGateSummary = {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : requestPlanBlockedReasonIds.length ? "blocked" : "ready",
@@ -2601,8 +2603,12 @@
       blockedReasonById: requestPlanBlockedReasonById,
       nextBlockedReasonId: requestPlanBlockedReasonIds[0] || null,
       actionRequired: readoutRequestPlanGateActionQueue.length > 0,
+      actionCount: readoutRequestPlanGateActionQueue.length,
+      actionIds: [...readoutRequestPlanGateActionIds],
+      actionReasonIds: [...readoutRequestPlanGateActionReasonIds],
       actionQueue: readoutRequestPlanGateActionQueue,
       actionQueueById: readoutRequestPlanGateActionQueueById,
+      nextAction: readoutRequestPlanGateActionQueue[0] ? { ...readoutRequestPlanGateActionQueue[0] } : null,
       nextActionId: readoutRequestPlanGateActionQueue[0]?.id || null,
       nextActionReasonId: readoutRequestPlanGateActionQueue[0]?.reasonId || null,
       nextActionReadoutIds: readoutRequestPlanGateActionQueue[0]?.readoutIds ? [...readoutRequestPlanGateActionQueue[0].readoutIds] : [],
@@ -2877,6 +2883,8 @@
     const fallbackRequestPlanBlockedReasonById = pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {};
     const fallbackRequestPlanGateActionQueue = buildReadoutRequestPlanGateActionQueue(fallbackRequestPlanBlockedReasonIds, fallbackRequestPlanBlockedReasonById);
     const fallbackRequestPlanGateActionQueueById = Object.fromEntries(fallbackRequestPlanGateActionQueue.map((item) => [item.id, { ...item }]));
+    const fallbackRequestPlanGateActionIds = fallbackRequestPlanGateActionQueue.map((item) => item.id).filter(Boolean);
+    const fallbackRequestPlanGateActionReasonIds = fallbackRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const readoutRequestPlanGateSummary = coreSessionStatus?.readoutRequestPlanGateSummary || readiness.readoutRequestPlanGateSummary || {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : pendingReadoutRequestPlan?.safeForBridgePlanning === true ? "ready" : "blocked",
@@ -2887,8 +2895,12 @@
       blockedReasonById: fallbackRequestPlanBlockedReasonById,
       nextBlockedReasonId: fallbackRequestPlanBlockedReasonIds[0] || null,
       actionRequired: fallbackRequestPlanGateActionQueue.length > 0,
+      actionCount: fallbackRequestPlanGateActionQueue.length,
+      actionIds: [...fallbackRequestPlanGateActionIds],
+      actionReasonIds: [...fallbackRequestPlanGateActionReasonIds],
       actionQueue: fallbackRequestPlanGateActionQueue,
       actionQueueById: fallbackRequestPlanGateActionQueueById,
+      nextAction: fallbackRequestPlanGateActionQueue[0] ? { ...fallbackRequestPlanGateActionQueue[0] } : null,
       nextActionId: fallbackRequestPlanGateActionQueue[0]?.id || null,
       nextActionReasonId: fallbackRequestPlanGateActionQueue[0]?.reasonId || null,
       nextActionReadoutIds: fallbackRequestPlanGateActionQueue[0]?.readoutIds ? [...fallbackRequestPlanGateActionQueue[0].readoutIds] : [],
@@ -2937,6 +2949,10 @@
       requestPlanGateBlockedReasonCount: Number.isFinite(Number(readoutRequestPlanGateSummary.blockedReasonCount)) ? Number(readoutRequestPlanGateSummary.blockedReasonCount) : 0,
       requestPlanNextBlockedReasonId: readoutRequestPlanGateSummary.nextBlockedReasonId || null,
       requestPlanGateActionRequired: readoutRequestPlanGateSummary.actionRequired === true,
+      requestPlanGateActionCount: Number.isFinite(Number(readoutRequestPlanGateSummary.actionCount)) ? Number(readoutRequestPlanGateSummary.actionCount) : 0,
+      requestPlanGateActionIds: Array.isArray(readoutRequestPlanGateSummary.actionIds) ? [...readoutRequestPlanGateSummary.actionIds] : [],
+      requestPlanGateActionReasonIds: Array.isArray(readoutRequestPlanGateSummary.actionReasonIds) ? [...readoutRequestPlanGateSummary.actionReasonIds] : [],
+      requestPlanGateNextAction: readoutRequestPlanGateSummary.nextAction && typeof readoutRequestPlanGateSummary.nextAction === "object" ? { ...readoutRequestPlanGateSummary.nextAction } : null,
       requestPlanGateNextActionId: readoutRequestPlanGateSummary.nextActionId || null,
       requestPlanGateNextActionReasonId: readoutRequestPlanGateSummary.nextActionReasonId || null,
       requestPlanGateNextActionReadoutIds: Array.isArray(readoutRequestPlanGateSummary.nextActionReadoutIds) ? [...readoutRequestPlanGateSummary.nextActionReadoutIds] : [],
