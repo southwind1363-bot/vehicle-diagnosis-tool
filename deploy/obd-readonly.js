@@ -4036,10 +4036,18 @@
       .map((kind) => buildChangedIdDisplayGroup(kind, changedIdDisplayRows.filter((row) => row.kind === kind)));
     const changedIdDisplayGroupsByDirection = ["mixed", "added", "removed"]
       .map((direction) => buildChangedIdDisplayGroup(direction, changedIdDisplayRows.filter((row) => row.direction === direction)));
+    const indexChangedIdDisplayGroups = (groups = []) => groups.reduce((byValue, group) => {
+      byValue[group.value] = group;
+      return byValue;
+    }, {});
+    const changedIdDisplayGroupByKind = indexChangedIdDisplayGroups(changedIdDisplayGroupsByKind);
+    const changedIdDisplayGroupByDirection = indexChangedIdDisplayGroups(changedIdDisplayGroupsByDirection);
     const changedIdDisplayGroupSummary = {
       schemaVersion: "changed_id_display_group_summary_v1",
       byKind: changedIdDisplayGroupsByKind,
       byDirection: changedIdDisplayGroupsByDirection,
+      byKindValue: changedIdDisplayGroupByKind,
+      byDirectionValue: changedIdDisplayGroupByDirection,
       kindCount: changedIdDisplayGroupsByKind.length,
       directionCount: changedIdDisplayGroupsByDirection.length
     };
@@ -4100,6 +4108,8 @@
       changedIdKindDirectionSummary,
       primaryChangedIdDirectionByKind,
       changedIdDisplayRows,
+      changedIdDisplayGroupByKind,
+      changedIdDisplayGroupByDirection,
       changedIdDisplayGroupSummary,
       changedIdDisplaySummary,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
