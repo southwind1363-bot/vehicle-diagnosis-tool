@@ -3727,6 +3727,9 @@
     const comparedSectionIds = sectionSummaries.map((item) => item.id);
     const changedSectionIds = changedSectionSummaries.map((item) => item.id);
     const unchangedSectionIds = unchangedSectionSummaries.map((item) => item.id);
+    const primaryChangedSectionSummary = changedSectionSummaries
+      .slice()
+      .sort((left, right) => (right.changeReasonCount + right.addedIdCount + right.removedIdCount) - (left.changeReasonCount + left.addedIdCount + left.removedIdCount) || left.id.localeCompare(right.id))[0] || null;
     const addedIdsBySectionId = changedSectionSummaries.reduce((byId, item) => {
       byId[item.id] = Array.isArray(item.addedIds) ? [...item.addedIds] : [];
       return byId;
@@ -3850,6 +3853,8 @@
       status: changedSectionIds.length > 0 ? "changed" : "unchanged",
       changedSectionCount: changedSectionIds.length,
       unchangedSectionCount: unchangedSectionIds.length,
+      primaryChangedSectionId: primaryChangedSectionSummary?.id || null,
+      primaryChangedSectionSummary,
       changedReasonCount: changedReasonIds.length,
       addedIds,
       removedIds,
