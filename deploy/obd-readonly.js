@@ -3150,6 +3150,11 @@
     const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
     const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
     const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
+    const toSingletonIdList = (value) => value ? [String(value)] : [];
+    const importedRequestPlanNextRequestIds = toSingletonIdList(importedRequestPlanSummary.nextRequestId);
+    const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
+    const importedRequestPlanNextBridgeIntents = toSingletonIdList(importedRequestPlanSummary.nextBridgeIntent);
+    const currentRequestPlanNextBridgeIntents = toSingletonIdList(currentRequestPlanSummary.nextBridgeIntent);
     return {
       schemaVersion: "imported_core_comparison_v1",
       importedStatus: importedFlow.status,
@@ -3230,9 +3235,13 @@
       importedRequestPlanNextRequestId: importedRequestPlanSummary.nextRequestId || null,
       currentRequestPlanNextRequestId: currentRequestPlanSummary.nextRequestId || null,
       requestPlanNextRequestChanged: (importedRequestPlanSummary.nextRequestId || null) !== (currentRequestPlanSummary.nextRequestId || null),
+      requestPlanNextRequestAddedIds: diffIds(currentRequestPlanNextRequestIds, importedRequestPlanNextRequestIds),
+      requestPlanNextRequestRemovedIds: diffIds(importedRequestPlanNextRequestIds, currentRequestPlanNextRequestIds),
       importedRequestPlanNextBridgeIntent: importedRequestPlanSummary.nextBridgeIntent || null,
       currentRequestPlanNextBridgeIntent: currentRequestPlanSummary.nextBridgeIntent || null,
       requestPlanNextBridgeIntentChanged: (importedRequestPlanSummary.nextBridgeIntent || null) !== (currentRequestPlanSummary.nextBridgeIntent || null),
+      requestPlanNextBridgeIntentAddedIds: diffIds(currentRequestPlanNextBridgeIntents, importedRequestPlanNextBridgeIntents),
+      requestPlanNextBridgeIntentRemovedIds: diffIds(importedRequestPlanNextBridgeIntents, currentRequestPlanNextBridgeIntents),
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
@@ -3291,6 +3300,11 @@
     const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
     const importedRequestPlanIntents = Array.isArray(importedRequestPlan.bridgeIntents) ? importedRequestPlan.bridgeIntents : [];
     const currentRequestPlanIntents = Array.isArray(currentRequestPlan.bridgeIntents) ? currentRequestPlan.bridgeIntents : [];
+    const toSingletonIdList = (value) => value ? [String(value)] : [];
+    const importedRequestPlanNextRequestIds = toSingletonIdList(importedRequestPlanSummary.nextRequestId);
+    const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
+    const importedRequestPlanNextBridgeIntents = toSingletonIdList(importedRequestPlanSummary.nextBridgeIntent);
+    const currentRequestPlanNextBridgeIntents = toSingletonIdList(currentRequestPlanSummary.nextBridgeIntent);
     return {
       schemaVersion: "imported_diagnostic_flow_comparison_v1",
       importedStatus: importedDiagnosticFlowSummary.status || null,
@@ -3371,9 +3385,13 @@
       importedRequestPlanNextRequestId: importedRequestPlanSummary.nextRequestId || null,
       currentRequestPlanNextRequestId: currentRequestPlanSummary.nextRequestId || null,
       requestPlanNextRequestChanged: (importedRequestPlanSummary.nextRequestId || null) !== (currentRequestPlanSummary.nextRequestId || null),
+      requestPlanNextRequestAddedIds: diffIds(currentRequestPlanNextRequestIds, importedRequestPlanNextRequestIds),
+      requestPlanNextRequestRemovedIds: diffIds(importedRequestPlanNextRequestIds, currentRequestPlanNextRequestIds),
       importedRequestPlanNextBridgeIntent: importedRequestPlanSummary.nextBridgeIntent || null,
       currentRequestPlanNextBridgeIntent: currentRequestPlanSummary.nextBridgeIntent || null,
       requestPlanNextBridgeIntentChanged: (importedRequestPlanSummary.nextBridgeIntent || null) !== (currentRequestPlanSummary.nextBridgeIntent || null),
+      requestPlanNextBridgeIntentAddedIds: diffIds(currentRequestPlanNextBridgeIntents, importedRequestPlanNextBridgeIntents),
+      requestPlanNextBridgeIntentRemovedIds: diffIds(importedRequestPlanNextBridgeIntents, currentRequestPlanNextBridgeIntents),
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
@@ -3732,12 +3750,14 @@
     const readAddedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedAddedIds", "checklistReviewAddedIds",
       "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds",
-      "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds"
+      "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
+      "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds"
     ]);
     const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
       "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds",
-      "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds"
+      "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
+      "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds"
     ]);
     const sectionSummaries = sectionInputs
       .filter((item) => item.comparison)
