@@ -3793,14 +3793,19 @@
       id,
       added: addedIds.includes(id),
       removed: removedIds.includes(id),
+      direction: addedIds.includes(id) && removedIds.includes(id) ? "mixed" : addedIds.includes(id) ? "added" : "removed",
       addedSectionIds: sectionsByAddedId[id] || [],
       removedSectionIds: sectionsByRemovedId[id] || [],
       sectionIds: [...new Set([...(sectionsByAddedId[id] || []), ...(sectionsByRemovedId[id] || [])])],
       sectionCount: [...new Set([...(sectionsByAddedId[id] || []), ...(sectionsByRemovedId[id] || [])])].length,
+      addedSectionCount: (sectionsByAddedId[id] || []).length,
+      removedSectionCount: (sectionsByRemovedId[id] || []).length,
       addedReasonIds: reasonsByAddedId[id] || [],
       removedReasonIds: reasonsByRemovedId[id] || [],
       reasonIds: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])],
-      reasonCount: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])].length
+      reasonCount: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])].length,
+      addedReasonCount: (reasonsByAddedId[id] || []).length,
+      removedReasonCount: (reasonsByRemovedId[id] || []).length
     }));
     const changedIdSummaryById = changedIdSummaries.reduce((byId, item) => {
       byId[item.id] = item;
