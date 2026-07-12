@@ -3097,6 +3097,7 @@
     const currentChecklistBlockedIds = readStringList(currentFlow, "checklistBlockedIds");
     const importedChecklistReviewIds = readStringList(importedFlow, "checklistReviewIds");
     const currentChecklistReviewIds = readStringList(currentFlow, "checklistReviewIds");
+    const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
@@ -3160,9 +3161,13 @@
       importedChecklistBlockedIds: [...importedChecklistBlockedIds],
       currentChecklistBlockedIds: [...currentChecklistBlockedIds],
       checklistBlockedIdsChanged: importedChecklistBlockedIds.join("|") !== currentChecklistBlockedIds.join("|"),
+      checklistBlockedAddedIds: diffIds(currentChecklistBlockedIds, importedChecklistBlockedIds),
+      checklistBlockedRemovedIds: diffIds(importedChecklistBlockedIds, currentChecklistBlockedIds),
       importedChecklistReviewIds: [...importedChecklistReviewIds],
       currentChecklistReviewIds: [...currentChecklistReviewIds],
       checklistReviewIdsChanged: importedChecklistReviewIds.join("|") !== currentChecklistReviewIds.join("|"),
+      checklistReviewAddedIds: diffIds(currentChecklistReviewIds, importedChecklistReviewIds),
+      checklistReviewRemovedIds: diffIds(importedChecklistReviewIds, currentChecklistReviewIds),
       importedVehicleApplicabilityChecklistState,
       currentVehicleApplicabilityChecklistState,
       vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
@@ -3221,6 +3226,7 @@
     const currentChecklistBlockedIds = readStringList(currentFlow, "checklistBlockedIds");
     const importedChecklistReviewIds = readStringList(importedDiagnosticFlowSummary, "checklistReviewIds");
     const currentChecklistReviewIds = readStringList(currentFlow, "checklistReviewIds");
+    const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedVehicleApplicabilityChecklistState = importedDiagnosticFlowSummary.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
@@ -3284,9 +3290,13 @@
       importedChecklistBlockedIds: [...importedChecklistBlockedIds],
       currentChecklistBlockedIds: [...currentChecklistBlockedIds],
       checklistBlockedIdsChanged: importedChecklistBlockedIds.join("|") !== currentChecklistBlockedIds.join("|"),
+      checklistBlockedAddedIds: diffIds(currentChecklistBlockedIds, importedChecklistBlockedIds),
+      checklistBlockedRemovedIds: diffIds(importedChecklistBlockedIds, currentChecklistBlockedIds),
       importedChecklistReviewIds: [...importedChecklistReviewIds],
       currentChecklistReviewIds: [...currentChecklistReviewIds],
       checklistReviewIdsChanged: importedChecklistReviewIds.join("|") !== currentChecklistReviewIds.join("|"),
+      checklistReviewAddedIds: diffIds(currentChecklistReviewIds, importedChecklistReviewIds),
+      checklistReviewRemovedIds: diffIds(importedChecklistReviewIds, currentChecklistReviewIds),
       importedVehicleApplicabilityChecklistState,
       currentVehicleApplicabilityChecklistState,
       vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
@@ -3425,6 +3435,7 @@
     const currentChecklistBlockedIds = readChecklistIds(currentSummary, "blockedIds");
     const importedChecklistReviewIds = readChecklistIds(importedAnalysisReadinessSummary, "reviewIds");
     const currentChecklistReviewIds = readChecklistIds(currentSummary, "reviewIds");
+    const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedVehicleApplicabilityChecklistState = importedAnalysisReadinessSummary.checklistById?.vehicle_applicability?.state || null;
     const currentVehicleApplicabilityChecklistState = currentSummary.checklistById?.vehicle_applicability?.state || null;
     return {
@@ -3447,9 +3458,13 @@
       importedChecklistBlockedIds: [...importedChecklistBlockedIds],
       currentChecklistBlockedIds: [...currentChecklistBlockedIds],
       checklistBlockedIdsChanged: importedChecklistBlockedIds.join("|") !== currentChecklistBlockedIds.join("|"),
+      checklistBlockedAddedIds: diffIds(currentChecklistBlockedIds, importedChecklistBlockedIds),
+      checklistBlockedRemovedIds: diffIds(importedChecklistBlockedIds, currentChecklistBlockedIds),
       importedChecklistReviewIds: [...importedChecklistReviewIds],
       currentChecklistReviewIds: [...currentChecklistReviewIds],
       checklistReviewIdsChanged: importedChecklistReviewIds.join("|") !== currentChecklistReviewIds.join("|"),
+      checklistReviewAddedIds: diffIds(currentChecklistReviewIds, importedChecklistReviewIds),
+      checklistReviewRemovedIds: diffIds(importedChecklistReviewIds, currentChecklistReviewIds),
       importedVehicleApplicabilityChecklistState,
       currentVehicleApplicabilityChecklistState,
       vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
