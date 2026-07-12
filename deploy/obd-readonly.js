@@ -3789,6 +3789,17 @@
     const sectionsByRemovedId = buildIdOwnerIndex(changedSectionSummaries, "removedIds");
     const reasonsByAddedId = buildIdOwnerIndex(changedReasonSummaries, "addedIds");
     const reasonsByRemovedId = buildIdOwnerIndex(changedReasonSummaries, "removedIds");
+    const changedIdSummaries = [...new Set([...addedIds, ...removedIds])].map((id) => ({
+      id,
+      added: addedIds.includes(id),
+      removed: removedIds.includes(id),
+      sectionIds: [...new Set([...(sectionsByAddedId[id] || []), ...(sectionsByRemovedId[id] || [])])],
+      reasonIds: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])]
+    }));
+    const changedIdSummaryById = changedIdSummaries.reduce((byId, item) => {
+      byId[item.id] = item;
+      return byId;
+    }, {});
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -3813,6 +3824,8 @@
       sectionsByRemovedId,
       reasonsByAddedId,
       reasonsByRemovedId,
+      changedIdSummaries,
+      changedIdSummaryById,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
