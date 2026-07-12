@@ -4068,10 +4068,15 @@
         removedCount: byDirection.removed.count
       };
     });
+    const changedIdDisplayMatrixRowByKind = changedIdDisplayMatrixRows.reduce((byKind, row) => {
+      byKind[row.kind] = row;
+      return byKind;
+    }, {});
     const changedIdDisplayMatrixSummary = {
       schemaVersion: "changed_id_display_matrix_summary_v1",
       directions: changedIdDisplayMatrixDirections,
       rows: changedIdDisplayMatrixRows,
+      rowByKind: changedIdDisplayMatrixRowByKind,
       rowCount: changedIdDisplayMatrixRows.length,
       totalChangedIdCount: changedIdDisplayRows.length
     };
@@ -4151,6 +4156,7 @@
       changedIdDisplayGroupByKind,
       changedIdDisplayGroupByDirection,
       changedIdDisplayGroupSummary,
+      changedIdDisplayMatrixRowByKind,
       changedIdDisplayMatrixSummary,
       changedIdDisplaySummary,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
