@@ -4471,6 +4471,24 @@
       bridgeIntentRemovedChangedIds: [...(bridgeIntentChangedIdDirectionSummary.removed?.ids || [])]
     };
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
+    const primaryBlockerReasonSummary = changedReasonSummaryById.primary_blocker || null;
+    const primaryBlockerChangedIds = primaryBlockerReasonSummary
+      ? [...new Set([...(primaryBlockerReasonSummary.addedIds || []), ...(primaryBlockerReasonSummary.removedIds || [])])]
+      : [];
+    const primaryBlockerChangeSummary = {
+      schemaVersion: "primary_blocker_change_summary_v1",
+      changed: Boolean(primaryBlockerReasonSummary),
+      reasonId: "primary_blocker",
+      sectionIds: primaryBlockerReasonSummary?.sectionIds || [],
+      sectionCount: primaryBlockerReasonSummary?.sectionCount || 0,
+      addedIds: primaryBlockerReasonSummary?.addedIds || [],
+      removedIds: primaryBlockerReasonSummary?.removedIds || [],
+      changedIds: primaryBlockerChangedIds,
+      addedIdCount: primaryBlockerReasonSummary?.addedIdCount || 0,
+      removedIdCount: primaryBlockerReasonSummary?.removedIdCount || 0,
+      changedIdCount: primaryBlockerChangedIds.length,
+      primaryChangedId: primaryBlockerChangedIds[0] || null
+    };
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -4562,6 +4580,9 @@
       primaryChangedIdSummary,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
+      primaryBlockerChangeSummary,
+      primaryBlockerChangedIds,
+      primaryBlockerChangedIdCount: primaryBlockerChangedIds.length,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
       completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item)),
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
