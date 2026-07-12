@@ -4024,6 +4024,15 @@
       }))
       .sort((left, right) => Number(right.primary) - Number(left.primary) || left.directionRank - right.directionRank || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id))
       .map((item, index) => ({ ...item, displayOrder: index + 1 }));
+    const changedIdDisplayRowByKey = changedIdDisplayRows.reduce((byKey, row) => {
+      byKey[row.key] = row;
+      return byKey;
+    }, {});
+    const changedIdDisplayRowById = changedIdDisplayRows.reduce((byId, row) => {
+      byId[row.id] = row;
+      return byId;
+    }, {});
+    const primaryChangedIdDisplayRow = changedIdDisplayRows.find((row) => row.primary) || null;
     const buildChangedIdDisplayGroup = (value, rows = []) => ({
       value,
       keys: rows.map((row) => row.key),
@@ -4089,6 +4098,9 @@
       changedIdCount: changedIdSummaries.length,
       displayRowCount: changedIdDisplayRows.length,
       rows: changedIdDisplayRows,
+      rowByKey: changedIdDisplayRowByKey,
+      rowById: changedIdDisplayRowById,
+      primaryRow: primaryChangedIdDisplayRow,
       groups: changedIdDisplayGroupSummary,
       matrix: changedIdDisplayMatrixSummary,
       readoutChangedIdCount: readoutChangedIdSummary.count || 0,
@@ -4133,6 +4145,9 @@
       changedIdKindDirectionSummary,
       primaryChangedIdDirectionByKind,
       changedIdDisplayRows,
+      changedIdDisplayRowByKey,
+      changedIdDisplayRowById,
+      primaryChangedIdDisplayRow,
       changedIdDisplayGroupByKind,
       changedIdDisplayGroupByDirection,
       changedIdDisplayGroupSummary,
