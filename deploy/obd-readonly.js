@@ -1368,6 +1368,10 @@
     const nextEmptyItem = emptyItems[0] || null;
     const nextMissingItem = missingItems[0] || null;
     const recommendedNextItem = nextMissingItem || nextEmptyItem || null;
+    const blockingReasonIds = [
+      missingItems.length > 0 ? "missing_readouts" : null,
+      emptyItems.length > 0 ? "empty_readouts" : null
+    ].filter(Boolean);
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1381,6 +1385,10 @@
       schemaVersion: "readout_coverage_completion_v1",
       complete: pendingItems.length === 0,
       status: pendingItems.length === 0 ? "complete" : "collecting_readouts",
+      analysisReady: pendingItems.length === 0,
+      analysisBlocked: pendingItems.length > 0,
+      blockingReasonIds,
+      blockingReasonCount: blockingReasonIds.length,
       hasPendingReadouts: pendingItems.length > 0,
       hasMissingReadouts: missingItems.length > 0,
       hasEmptyReadouts: emptyItems.length > 0,
@@ -1477,12 +1485,20 @@
     const normalizedRecommendedNextReadoutStatus = normalizedRecommendedNextReadoutItem?.status
       || (normalizedRecommendedNextReadoutId && normalizedMissingIds.includes(normalizedRecommendedNextReadoutId) ? "missing" : null)
       || (normalizedRecommendedNextReadoutId && normalizedEmptyIds.includes(normalizedRecommendedNextReadoutId) ? "empty" : null);
+    const normalizedBlockingReasonIds = [
+      normalizedMissingIds.length > 0 ? "missing_readouts" : null,
+      normalizedEmptyIds.length > 0 ? "empty_readouts" : null
+    ].filter(Boolean);
     const completionSummaryInput = pickDefined(input.completionSummary, input.completion_summary, {});
     const coverageCompletionSummary = {
       ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
       schemaVersion: "readout_coverage_completion_v1",
       complete: normalizedPendingIds.length === 0,
       status: normalizedPendingIds.length === 0 ? "complete" : "collecting_readouts",
+      analysisReady: normalizedPendingIds.length === 0,
+      analysisBlocked: normalizedPendingIds.length > 0,
+      blockingReasonIds: normalizedBlockingReasonIds,
+      blockingReasonCount: normalizedBlockingReasonIds.length,
       hasPendingReadouts: normalizedPendingIds.length > 0,
       hasMissingReadouts: normalizedMissingIds.length > 0,
       hasEmptyReadouts: normalizedEmptyIds.length > 0,
