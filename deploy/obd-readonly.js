@@ -3901,24 +3901,45 @@
     const sectionsByRemovedId = buildIdOwnerIndex(changedSectionSummaries, "removedIds");
     const reasonsByAddedId = buildIdOwnerIndex(changedReasonSummaries, "addedIds");
     const reasonsByRemovedId = buildIdOwnerIndex(changedReasonSummaries, "removedIds");
-    const changedIdSummaries = [...new Set([...addedIds, ...removedIds])].map((id) => ({
-      id,
-      added: addedIds.includes(id),
-      removed: removedIds.includes(id),
-      direction: addedIds.includes(id) && removedIds.includes(id) ? "mixed" : addedIds.includes(id) ? "added" : "removed",
-      addedSectionIds: sectionsByAddedId[id] || [],
-      removedSectionIds: sectionsByRemovedId[id] || [],
-      sectionIds: [...new Set([...(sectionsByAddedId[id] || []), ...(sectionsByRemovedId[id] || [])])],
-      sectionCount: [...new Set([...(sectionsByAddedId[id] || []), ...(sectionsByRemovedId[id] || [])])].length,
-      addedSectionCount: (sectionsByAddedId[id] || []).length,
-      removedSectionCount: (sectionsByRemovedId[id] || []).length,
-      addedReasonIds: reasonsByAddedId[id] || [],
-      removedReasonIds: reasonsByRemovedId[id] || [],
-      reasonIds: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])],
-      reasonCount: [...new Set([...(reasonsByAddedId[id] || []), ...(reasonsByRemovedId[id] || [])])].length,
-      addedReasonCount: (reasonsByAddedId[id] || []).length,
-      removedReasonCount: (reasonsByRemovedId[id] || []).length
-    }));
+    const knownReadoutChangedIds = new Set(["dtc_snapshot", "freeze_frame_snapshot", "readiness_snapshot", "ecu_info_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix", "live_pid_snapshot"]);
+    const knownBridgeIntentChangedIds = new Set(["read_stored_dtc", "read_freeze_frame", "read_live_pid_snapshot", "read_ecu_info", "read_onboard_monitor", "read_supported_pids"]);
+    const classifyChangedIdKind = (id, reasonIds = []) => {
+      if (knownBridgeIntentChangedIds.has(id) || String(id).startsWith("read_")) return "bridge_intent";
+      if (knownReadoutChangedIds.has(id)) return "readout_id";
+      if (reasonIds.includes("request_plan_actions")) return "request_plan_action";
+      if (reasonIds.includes("blocked_reasons")) return "blocked_reason";
+      if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
+      return "other";
+    };
+    const changedIdSummaries = [...new Set([...addedIds, ...removedIds])].map((id) => {
+      const addedSectionIds = sectionsByAddedId[id] || [];
+      const removedSectionIds = sectionsByRemovedId[id] || [];
+      const sectionIds = [...new Set([...addedSectionIds, ...removedSectionIds])];
+      const addedReasonIds = reasonsByAddedId[id] || [];
+      const removedReasonIds = reasonsByRemovedId[id] || [];
+      const reasonIds = [...new Set([...addedReasonIds, ...removedReasonIds])];
+      const kind = classifyChangedIdKind(id, reasonIds);
+      return {
+        id,
+        kind,
+        changedIdKind: kind,
+        added: addedIds.includes(id),
+        removed: removedIds.includes(id),
+        direction: addedIds.includes(id) && removedIds.includes(id) ? "mixed" : addedIds.includes(id) ? "added" : "removed",
+        addedSectionIds,
+        removedSectionIds,
+        sectionIds,
+        sectionCount: sectionIds.length,
+        addedSectionCount: addedSectionIds.length,
+        removedSectionCount: removedSectionIds.length,
+        addedReasonIds,
+        removedReasonIds,
+        reasonIds,
+        reasonCount: reasonIds.length,
+        addedReasonCount: addedReasonIds.length,
+        removedReasonCount: removedReasonIds.length
+      };
+    });
     const changedIdSummaryById = changedIdSummaries.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -3928,6 +3949,14 @@
     const addedOnlyChangedIdSummaries = changedIdSummaries.filter((item) => item.direction === "added");
     const removedOnlyChangedIdSummaries = changedIdSummaries.filter((item) => item.direction === "removed");
     const mixedChangedIdSummaries = changedIdSummaries.filter((item) => item.direction === "mixed");
+    const changedIdKindSummaries = [...new Set(changedIdSummaries.map((item) => item.kind))].sort().map((kind) => {
+      const summaries = changedIdSummaries.filter((item) => item.kind === kind);
+      return { kind, ids: summaries.map((item) => item.id), count: summaries.length, summaries };
+    });
+    const changedIdSummaryByKind = changedIdKindSummaries.reduce((byKind, item) => {
+      byKind[item.kind] = item;
+      return byKind;
+    }, {});
     const changedIdDirectionSummary = {
       added: { ids: addedOnlyChangedIdSummaries.map((item) => item.id), count: addedOnlyChangedIdSummaries.length, summaries: addedOnlyChangedIdSummaries },
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
@@ -3980,6 +4009,8 @@
       reasonsByRemovedId,
       changedIdSummaries,
       changedIdSummaryById,
+      changedIdKindSummaries,
+      changedIdSummaryByKind,
       changedIdCount: changedIdSummaries.length,
       addedChangedIdSummaries,
       removedChangedIdSummaries,
