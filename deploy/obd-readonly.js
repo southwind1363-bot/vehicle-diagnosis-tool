@@ -1360,6 +1360,10 @@
     const emptyItems = items.filter((item) => item.status === "empty");
     const missingItems = items.filter((item) => !item.available);
     const pendingItems = [...emptyItems, ...missingItems];
+    const capturedIds = capturedItems.map((item) => item.id);
+    const capturedLabels = capturedItems.map((item) => item.label);
+    const pendingIds = pendingItems.map((item) => item.id);
+    const pendingLabels = pendingItems.map((item) => item.label);
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1368,6 +1372,20 @@
       captured: capturedItems,
       empty: emptyItems,
       missing: missingItems
+    };
+    const coverageCompletionSummary = {
+      schemaVersion: "readout_coverage_completion_v1",
+      complete: pendingItems.length === 0,
+      status: pendingItems.length === 0 ? "complete" : "collecting_readouts",
+      requiredCount: items.length,
+      capturedCount: capturedItems.length,
+      emptyCount: emptyItems.length,
+      missingCount: missingItems.length,
+      pendingCount: pendingItems.length,
+      capturedIds,
+      pendingIds,
+      emptyIds: emptyItems.map((item) => item.id),
+      missingIds: missingItems.map((item) => item.id)
     };
 
     return {
@@ -1383,10 +1401,11 @@
       items,
       itemById,
       itemsByStatus,
-      capturedIds: capturedItems.map((item) => item.id),
-      capturedLabels: capturedItems.map((item) => item.label),
-      pendingIds: pendingItems.map((item) => item.id),
-      pendingLabels: pendingItems.map((item) => item.label),
+      completionSummary: coverageCompletionSummary,
+      capturedIds,
+      capturedLabels,
+      pendingIds,
+      pendingLabels,
       emptyIds: emptyItems.map((item) => item.id),
       emptyLabels: emptyItems.map((item) => item.label),
       missingIds: missingItems.map((item) => item.id),
@@ -1418,6 +1437,26 @@
     const normalizedEmptyLabels = Array.isArray(pickDefined(input.emptyLabels, input.empty_labels)) ? [...pickDefined(input.emptyLabels, input.empty_labels)] : [];
     const normalizedMissingIds = Array.isArray(pickDefined(input.missingIds, input.missing_ids)) ? [...pickDefined(input.missingIds, input.missing_ids)] : [];
     const normalizedMissingLabels = Array.isArray(pickDefined(input.missingLabels, input.missing_labels)) ? [...pickDefined(input.missingLabels, input.missing_labels)] : [];
+    const normalizedCapturedIds = Array.isArray(pickDefined(input.capturedIds, input.captured_ids)) ? [...pickDefined(input.capturedIds, input.captured_ids)] : capturedItems.map((item) => item.id);
+    const normalizedCapturedLabels = Array.isArray(pickDefined(input.capturedLabels, input.captured_labels)) ? [...pickDefined(input.capturedLabels, input.captured_labels)] : capturedItems.map((item) => item.label);
+    const normalizedPendingIds = Array.isArray(pickDefined(input.pendingIds, input.pending_ids)) ? [...pickDefined(input.pendingIds, input.pending_ids)] : [...normalizedEmptyIds, ...normalizedMissingIds].length > 0 ? [...normalizedEmptyIds, ...normalizedMissingIds] : pendingItems.map((item) => item.id);
+    const normalizedPendingLabels = Array.isArray(pickDefined(input.pendingLabels, input.pending_labels)) ? [...pickDefined(input.pendingLabels, input.pending_labels)] : [...normalizedEmptyLabels, ...normalizedMissingLabels].length > 0 ? [...normalizedEmptyLabels, ...normalizedMissingLabels] : pendingItems.map((item) => item.label);
+    const completionSummaryInput = pickDefined(input.completionSummary, input.completion_summary, {});
+    const coverageCompletionSummary = {
+      ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
+      schemaVersion: "readout_coverage_completion_v1",
+      complete: normalizedPendingIds.length === 0,
+      status: normalizedPendingIds.length === 0 ? "complete" : "collecting_readouts",
+      requiredCount: totalCategories,
+      capturedCount: capturedCategories,
+      emptyCount: emptyCategories,
+      missingCount: missingCategories,
+      pendingCount: normalizedPendingIds.length,
+      capturedIds: normalizedCapturedIds,
+      pendingIds: normalizedPendingIds,
+      emptyIds: normalizedEmptyIds,
+      missingIds: normalizedMissingIds
+    };
     return {
       ...input,
       schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",
@@ -1432,10 +1471,11 @@
       items: normalizedItems,
       itemById,
       itemsByStatus,
-      capturedIds: Array.isArray(pickDefined(input.capturedIds, input.captured_ids)) ? [...pickDefined(input.capturedIds, input.captured_ids)] : capturedItems.map((item) => item.id),
-      capturedLabels: Array.isArray(pickDefined(input.capturedLabels, input.captured_labels)) ? [...pickDefined(input.capturedLabels, input.captured_labels)] : capturedItems.map((item) => item.label),
-      pendingIds: Array.isArray(pickDefined(input.pendingIds, input.pending_ids)) ? [...pickDefined(input.pendingIds, input.pending_ids)] : [...normalizedEmptyIds, ...normalizedMissingIds].length > 0 ? [...normalizedEmptyIds, ...normalizedMissingIds] : pendingItems.map((item) => item.id),
-      pendingLabels: Array.isArray(pickDefined(input.pendingLabels, input.pending_labels)) ? [...pickDefined(input.pendingLabels, input.pending_labels)] : [...normalizedEmptyLabels, ...normalizedMissingLabels].length > 0 ? [...normalizedEmptyLabels, ...normalizedMissingLabels] : pendingItems.map((item) => item.label),
+      completionSummary: coverageCompletionSummary,
+      capturedIds: normalizedCapturedIds,
+      capturedLabels: normalizedCapturedLabels,
+      pendingIds: normalizedPendingIds,
+      pendingLabels: normalizedPendingLabels,
       emptyIds: normalizedEmptyIds,
       emptyLabels: normalizedEmptyLabels,
       missingIds: normalizedMissingIds,
