@@ -3816,6 +3816,11 @@
     const addedOnlyChangedIdSummaries = changedIdSummaries.filter((item) => item.direction === "added");
     const removedOnlyChangedIdSummaries = changedIdSummaries.filter((item) => item.direction === "removed");
     const mixedChangedIdSummaries = changedIdSummaries.filter((item) => item.direction === "mixed");
+    const changedIdDirectionSummary = {
+      added: { ids: addedOnlyChangedIdSummaries.map((item) => item.id), count: addedOnlyChangedIdSummaries.length, summaries: addedOnlyChangedIdSummaries },
+      removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
+      mixed: { ids: mixedChangedIdSummaries.map((item) => item.id), count: mixedChangedIdSummaries.length, summaries: mixedChangedIdSummaries }
+    };
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -3856,6 +3861,7 @@
       addedOnlyChangedIds: addedOnlyChangedIdSummaries.map((item) => item.id),
       removedOnlyChangedIds: removedOnlyChangedIdSummaries.map((item) => item.id),
       mixedChangedIds: mixedChangedIdSummaries.map((item) => item.id),
+      changedIdDirectionSummary,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
