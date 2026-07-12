@@ -3835,6 +3835,11 @@
       byDirection[item.direction] = item;
       return byDirection;
     }, {});
+    const primaryChangedIdSummary = primaryChangedIdDirection
+      ? (changedIdDirectionSummaryByDirection[primaryChangedIdDirection]?.summaries || [])
+        .slice()
+        .sort((left, right) => (right.sectionCount + right.reasonCount) - (left.sectionCount + left.reasonCount) || left.id.localeCompare(right.id))[0] || null
+      : null;
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -3883,6 +3888,8 @@
       changedIdDirectionSummaryByDirection,
       primaryChangedIdDirection,
       primaryChangedIdDirectionSummary: primaryChangedIdDirection ? changedIdDirectionSummaryByDirection[primaryChangedIdDirection] || null : null,
+      primaryChangedId: primaryChangedIdSummary?.id || null,
+      primaryChangedIdSummary,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
