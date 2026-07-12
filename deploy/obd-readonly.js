@@ -2596,6 +2596,21 @@
     const readoutRequestPlanGateActionIds = readoutRequestPlanGateActionQueue.map((item) => item.id).filter(Boolean);
     const readoutRequestPlanGateActionReasonIds = readoutRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const readoutRequestPlanGateActionReadoutIds = [...new Set(readoutRequestPlanGateActionQueue.flatMap((item) => Array.isArray(item.readoutIds) ? item.readoutIds : []).filter(Boolean))];
+    const readoutRequestPlanGateActionSummary = {
+      actionRequired: readoutRequestPlanGateActionQueue.length > 0,
+      actionCount: readoutRequestPlanGateActionQueue.length,
+      reasonCount: readoutRequestPlanGateActionReasonIds.length,
+      readoutCount: readoutRequestPlanGateActionReadoutIds.length,
+      actionIds: [...readoutRequestPlanGateActionIds],
+      reasonIds: [...readoutRequestPlanGateActionReasonIds],
+      readoutIds: [...readoutRequestPlanGateActionReadoutIds],
+      nextActionId: readoutRequestPlanGateActionQueue[0]?.id || null,
+      nextActionReasonId: readoutRequestPlanGateActionQueue[0]?.reasonId || null,
+      nextActionReadoutIds: readoutRequestPlanGateActionQueue[0]?.readoutIds ? [...readoutRequestPlanGateActionQueue[0].readoutIds] : [],
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
     const readoutRequestPlanGateSummary = {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : requestPlanBlockedReasonIds.length ? "blocked" : "ready",
@@ -2610,6 +2625,7 @@
       actionIds: [...readoutRequestPlanGateActionIds],
       actionReasonIds: [...readoutRequestPlanGateActionReasonIds],
       actionReadoutIds: [...readoutRequestPlanGateActionReadoutIds],
+      actionSummary: readoutRequestPlanGateActionSummary,
       actionQueue: readoutRequestPlanGateActionQueue,
       actionQueueById: readoutRequestPlanGateActionQueueById,
       actionQueueByReasonId: readoutRequestPlanGateActionQueueByReasonId,
@@ -2894,6 +2910,21 @@
     const fallbackRequestPlanGateActionIds = fallbackRequestPlanGateActionQueue.map((item) => item.id).filter(Boolean);
     const fallbackRequestPlanGateActionReasonIds = fallbackRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const fallbackRequestPlanGateActionReadoutIds = [...new Set(fallbackRequestPlanGateActionQueue.flatMap((item) => Array.isArray(item.readoutIds) ? item.readoutIds : []).filter(Boolean))];
+    const fallbackRequestPlanGateActionSummary = {
+      actionRequired: fallbackRequestPlanGateActionQueue.length > 0,
+      actionCount: fallbackRequestPlanGateActionQueue.length,
+      reasonCount: fallbackRequestPlanGateActionReasonIds.length,
+      readoutCount: fallbackRequestPlanGateActionReadoutIds.length,
+      actionIds: [...fallbackRequestPlanGateActionIds],
+      reasonIds: [...fallbackRequestPlanGateActionReasonIds],
+      readoutIds: [...fallbackRequestPlanGateActionReadoutIds],
+      nextActionId: fallbackRequestPlanGateActionQueue[0]?.id || null,
+      nextActionReasonId: fallbackRequestPlanGateActionQueue[0]?.reasonId || null,
+      nextActionReadoutIds: fallbackRequestPlanGateActionQueue[0]?.readoutIds ? [...fallbackRequestPlanGateActionQueue[0].readoutIds] : [],
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
     const readoutRequestPlanGateSummary = coreSessionStatus?.readoutRequestPlanGateSummary || readiness.readoutRequestPlanGateSummary || {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : pendingReadoutRequestPlan?.safeForBridgePlanning === true ? "ready" : "blocked",
@@ -2908,6 +2939,7 @@
       actionIds: [...fallbackRequestPlanGateActionIds],
       actionReasonIds: [...fallbackRequestPlanGateActionReasonIds],
       actionReadoutIds: [...fallbackRequestPlanGateActionReadoutIds],
+      actionSummary: fallbackRequestPlanGateActionSummary,
       actionQueue: fallbackRequestPlanGateActionQueue,
       actionQueueById: fallbackRequestPlanGateActionQueueById,
       actionQueueByReasonId: fallbackRequestPlanGateActionQueueByReasonId,
@@ -2965,6 +2997,7 @@
       requestPlanGateActionIds: Array.isArray(readoutRequestPlanGateSummary.actionIds) ? [...readoutRequestPlanGateSummary.actionIds] : [],
       requestPlanGateActionReasonIds: Array.isArray(readoutRequestPlanGateSummary.actionReasonIds) ? [...readoutRequestPlanGateSummary.actionReasonIds] : [],
       requestPlanGateActionReadoutIds: Array.isArray(readoutRequestPlanGateSummary.actionReadoutIds) ? [...readoutRequestPlanGateSummary.actionReadoutIds] : [],
+      requestPlanGateActionSummary: readoutRequestPlanGateSummary.actionSummary && typeof readoutRequestPlanGateSummary.actionSummary === "object" ? { ...readoutRequestPlanGateSummary.actionSummary } : null,
       requestPlanGateNextAction: readoutRequestPlanGateSummary.nextAction && typeof readoutRequestPlanGateSummary.nextAction === "object" ? { ...readoutRequestPlanGateSummary.nextAction } : null,
       requestPlanGateNextActionId: readoutRequestPlanGateSummary.nextActionId || null,
       requestPlanGateNextActionReasonId: readoutRequestPlanGateSummary.nextActionReasonId || null,
