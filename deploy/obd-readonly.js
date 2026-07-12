@@ -1365,6 +1365,8 @@
     const pendingIds = pendingItems.map((item) => item.id);
     const pendingLabels = pendingItems.map((item) => item.label);
     const nextPendingItem = pendingItems[0] || null;
+    const nextEmptyItem = emptyItems[0] || null;
+    const nextMissingItem = missingItems[0] || null;
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1389,6 +1391,10 @@
       nextPendingId: nextPendingItem?.id || null,
       nextPendingLabel: nextPendingItem?.label || null,
       nextPendingStatus: nextPendingItem?.status || null,
+      nextEmptyId: nextEmptyItem?.id || null,
+      nextEmptyLabel: nextEmptyItem?.label || null,
+      nextMissingId: nextMissingItem?.id || null,
+      nextMissingLabel: nextMissingItem?.label || null,
       capturedIds,
       pendingIds,
       emptyIds: emptyItems.map((item) => item.id),
@@ -1453,6 +1459,10 @@
     const normalizedNextPendingStatus = normalizedNextPendingItem?.status
       || (normalizedNextPendingId && normalizedEmptyIds.includes(normalizedNextPendingId) ? "empty" : null)
       || (normalizedNextPendingId && normalizedMissingIds.includes(normalizedNextPendingId) ? "missing" : null);
+    const normalizedNextEmptyId = normalizedEmptyIds[0] || null;
+    const normalizedNextMissingId = normalizedMissingIds[0] || null;
+    const normalizedNextEmptyItem = normalizedNextEmptyId ? itemById[normalizedNextEmptyId] || null : null;
+    const normalizedNextMissingItem = normalizedNextMissingId ? itemById[normalizedNextMissingId] || null : null;
     const completionSummaryInput = pickDefined(input.completionSummary, input.completion_summary, {});
     const coverageCompletionSummary = {
       ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
@@ -1470,6 +1480,10 @@
       nextPendingId: normalizedNextPendingId,
       nextPendingLabel: normalizedPendingLabels[0] || normalizedNextPendingItem?.label || null,
       nextPendingStatus: normalizedNextPendingStatus,
+      nextEmptyId: normalizedNextEmptyId,
+      nextEmptyLabel: normalizedEmptyLabels[0] || normalizedNextEmptyItem?.label || null,
+      nextMissingId: normalizedNextMissingId,
+      nextMissingLabel: normalizedMissingLabels[0] || normalizedNextMissingItem?.label || null,
       capturedIds: normalizedCapturedIds,
       pendingIds: normalizedPendingIds,
       emptyIds: normalizedEmptyIds,
