@@ -1359,6 +1359,15 @@
     const capturedItems = items.filter((item) => item.status === "captured");
     const emptyItems = items.filter((item) => item.status === "empty");
     const missingItems = items.filter((item) => !item.available);
+    const itemById = items.reduce((byId, item) => {
+      byId[item.id] = item;
+      return byId;
+    }, {});
+    const itemsByStatus = {
+      captured: capturedItems,
+      empty: emptyItems,
+      missing: missingItems
+    };
 
     return {
       schemaVersion: "readout_coverage_v1",
@@ -1371,6 +1380,8 @@
       capturedPercent: Math.round((capturedItems.length / items.length) * 100),
       progressPercent: Math.round((availableCount / items.length) * 100),
       items,
+      itemById,
+      itemsByStatus,
       emptyIds: emptyItems.map((item) => item.id),
       emptyLabels: emptyItems.map((item) => item.label),
       missingIds: missingItems.map((item) => item.id),
@@ -1387,6 +1398,15 @@
     const missingCategories = Number.isFinite(Number(pickDefined(input.missingCategories, input.missing_categories))) ? Math.max(0, Math.round(Number(pickDefined(input.missingCategories, input.missing_categories)))) : 0;
     const computedCapturedPercent = totalCategories > 0 ? Math.round((capturedCategories / totalCategories) * 100) : 0;
     const computedProgressPercent = totalCategories > 0 ? Math.round((availableCategories / totalCategories) * 100) : 0;
+    const normalizedItems = Array.isArray(input.items) ? input.items.map((item) => (item && typeof item === "object" ? { ...item } : item)) : [];
+    const itemById = normalizedItems.reduce((byId, item) => {
+      if (item && typeof item === "object" && item.id) byId[item.id] = item;
+      return byId;
+    }, {});
+    const itemsByStatus = ["captured", "empty", "missing"].reduce((byStatus, status) => {
+      byStatus[status] = normalizedItems.filter((item) => item && typeof item === "object" && item.status === status);
+      return byStatus;
+    }, {});
     return {
       ...input,
       schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",
@@ -1398,7 +1418,9 @@
       missingCategories,
       capturedPercent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent))) ? Math.max(0, Math.min(100, Math.round(Number(pickDefined(input.capturedPercent, input.captured_percent))))) : computedCapturedPercent,
       progressPercent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent))) ? Math.max(0, Math.min(100, Math.round(Number(pickDefined(input.progressPercent, input.progress_percent))))) : computedProgressPercent,
-      items: Array.isArray(input.items) ? input.items.map((item) => (item && typeof item === "object" ? { ...item } : item)) : [],
+      items: normalizedItems,
+      itemById,
+      itemsByStatus,
       emptyIds: Array.isArray(pickDefined(input.emptyIds, input.empty_ids)) ? [...pickDefined(input.emptyIds, input.empty_ids)] : [],
       emptyLabels: Array.isArray(pickDefined(input.emptyLabels, input.empty_labels)) ? [...pickDefined(input.emptyLabels, input.empty_labels)] : [],
       missingIds: Array.isArray(pickDefined(input.missingIds, input.missing_ids)) ? [...pickDefined(input.missingIds, input.missing_ids)] : [],
