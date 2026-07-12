@@ -3137,8 +3137,11 @@
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
+    const readRequestPlanSummary = (flow = {}) => (flow.readoutRequestPlanSummary && typeof flow.readoutRequestPlanSummary === "object" ? flow.readoutRequestPlanSummary : {});
     const importedRequestPlan = readRequestPlan(importedFlow);
     const currentRequestPlan = readRequestPlan(currentFlow);
+    const importedRequestPlanSummary = readRequestPlanSummary(importedFlow);
+    const currentRequestPlanSummary = readRequestPlanSummary(currentFlow);
     const importedRequestPlanCount = readFlowCount(importedRequestPlan, "totalCount");
     const currentRequestPlanCount = readFlowCount(currentRequestPlan, "totalCount");
     const importedRequestPlanMappedCount = readFlowCount(importedRequestPlan, "mappedCount");
@@ -3221,6 +3224,15 @@
       importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
       currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
       requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),
+      importedRequestPlanState: importedRequestPlanSummary.state || null,
+      currentRequestPlanState: currentRequestPlanSummary.state || null,
+      requestPlanStateChanged: (importedRequestPlanSummary.state || null) !== (currentRequestPlanSummary.state || null),
+      importedRequestPlanNextRequestId: importedRequestPlanSummary.nextRequestId || null,
+      currentRequestPlanNextRequestId: currentRequestPlanSummary.nextRequestId || null,
+      requestPlanNextRequestChanged: (importedRequestPlanSummary.nextRequestId || null) !== (currentRequestPlanSummary.nextRequestId || null),
+      importedRequestPlanNextBridgeIntent: importedRequestPlanSummary.nextBridgeIntent || null,
+      currentRequestPlanNextBridgeIntent: currentRequestPlanSummary.nextBridgeIntent || null,
+      requestPlanNextBridgeIntentChanged: (importedRequestPlanSummary.nextBridgeIntent || null) !== (currentRequestPlanSummary.nextBridgeIntent || null),
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
@@ -3266,8 +3278,11 @@
     const importedVehicleApplicabilityChecklistState = importedDiagnosticFlowSummary.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
+    const readRequestPlanSummary = (flow = {}) => (flow.readoutRequestPlanSummary && typeof flow.readoutRequestPlanSummary === "object" ? flow.readoutRequestPlanSummary : {});
     const importedRequestPlan = readRequestPlan(importedDiagnosticFlowSummary);
     const currentRequestPlan = readRequestPlan(currentFlow);
+    const importedRequestPlanSummary = readRequestPlanSummary(importedDiagnosticFlowSummary);
+    const currentRequestPlanSummary = readRequestPlanSummary(currentFlow);
     const importedRequestPlanCount = readFlowCount(importedRequestPlan, "totalCount");
     const currentRequestPlanCount = readFlowCount(currentRequestPlan, "totalCount");
     const importedRequestPlanMappedCount = readFlowCount(importedRequestPlan, "mappedCount");
@@ -3350,6 +3365,15 @@
       importedRequestPlanBridgeIntents: [...importedRequestPlanIntents],
       currentRequestPlanBridgeIntents: [...currentRequestPlanIntents],
       requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),
+      importedRequestPlanState: importedRequestPlanSummary.state || null,
+      currentRequestPlanState: currentRequestPlanSummary.state || null,
+      requestPlanStateChanged: (importedRequestPlanSummary.state || null) !== (currentRequestPlanSummary.state || null),
+      importedRequestPlanNextRequestId: importedRequestPlanSummary.nextRequestId || null,
+      currentRequestPlanNextRequestId: currentRequestPlanSummary.nextRequestId || null,
+      requestPlanNextRequestChanged: (importedRequestPlanSummary.nextRequestId || null) !== (currentRequestPlanSummary.nextRequestId || null),
+      importedRequestPlanNextBridgeIntent: importedRequestPlanSummary.nextBridgeIntent || null,
+      currentRequestPlanNextBridgeIntent: currentRequestPlanSummary.nextBridgeIntent || null,
+      requestPlanNextBridgeIntentChanged: (importedRequestPlanSummary.nextBridgeIntent || null) !== (currentRequestPlanSummary.nextBridgeIntent || null),
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount
