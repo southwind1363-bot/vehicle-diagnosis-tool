@@ -1681,8 +1681,40 @@
           executionEnabled: false,
           wouldTransmit: false,
           vehicleCommandEnabled: false
-        };
-      });
+      };
+    });
+  }
+
+  function buildReadoutRequestPlanSummary(plan = {}, gateSummary = {}, nextReadoutRequest = null) {
+    const nextRequest = plan?.nextRequest || nextReadoutRequest || null;
+    const totalCount = Number.isFinite(Number(plan?.totalCount)) ? Number(plan.totalCount) : 0;
+    const mappedCount = Number.isFinite(Number(plan?.mappedCount)) ? Number(plan.mappedCount) : 0;
+    const unmappedCount = Number.isFinite(Number(plan?.unmappedCount)) ? Number(plan.unmappedCount) : 0;
+    return {
+      schemaVersion: "readout_request_plan_summary_v1",
+      state: gateSummary?.state || (totalCount === 0 ? "idle" : plan?.safeForBridgePlanning === true ? "ready" : "blocked"),
+      ready: gateSummary?.ready === true || (totalCount > 0 && plan?.safeForBridgePlanning === true),
+      blocked: gateSummary?.blocked === true || (totalCount > 0 && plan?.safeForBridgePlanning !== true),
+      totalCount,
+      mappedCount,
+      unmappedCount,
+      mappedPercent: Number.isFinite(Number(plan?.mappedPercent)) ? Number(plan.mappedPercent) : 0,
+      unmappedPercent: Number.isFinite(Number(plan?.unmappedPercent)) ? Number(plan.unmappedPercent) : 0,
+      mappingStatus: plan?.mappingStatus || "unknown",
+      safeForBridgePlanning: plan?.safeForBridgePlanning === true,
+      blockedReasonCount: Number.isFinite(Number(gateSummary?.blockedReasonCount)) ? Number(gateSummary.blockedReasonCount) : 0,
+      blockedReasonIds: Array.isArray(gateSummary?.blockedReasonIds) ? [...gateSummary.blockedReasonIds] : Array.isArray(plan?.blockedReasonIds) ? [...plan.blockedReasonIds] : [],
+      nextBlockedReasonId: gateSummary?.nextBlockedReasonId || null,
+      nextRequestId: nextRequest?.readoutId || null,
+      nextBridgeIntent: nextRequest?.bridgeIntent || null,
+      nextServiceMode: nextRequest?.serviceMode || null,
+      nextExecutionEnabled: nextRequest?.executionEnabled === true,
+      actionRequired: gateSummary?.actionRequired === true,
+      nextActionId: gateSummary?.nextActionId || null,
+      readOnly: true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
   }
 
   function buildBridgeSessionSummary(parts = {}) {
@@ -2643,6 +2675,7 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
+    const readoutRequestPlanSummary = buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
     Object.assign(pendingReadoutQueueSummary, {
       recommendedReadoutId: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
@@ -2818,6 +2851,7 @@
       pendingReadoutRequestQueueById,
       pendingReadoutRequestPlan,
       readoutRequestPlanGateSummary,
+      readoutRequestPlanSummary,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
@@ -2975,6 +3009,7 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
+    const readoutRequestPlanSummary = coreSessionStatus?.readoutRequestPlanSummary || buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
@@ -2995,6 +3030,7 @@
       pendingReadoutRequestNext: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
       pendingReadoutRequestPlan,
       readoutRequestPlanGateSummary,
+      readoutRequestPlanSummary,
       requestPlanMappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedCount)) ? Number(pendingReadoutRequestPlan.mappedCount) : 0,
       requestPlanUnmappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.unmappedCount)) ? Number(pendingReadoutRequestPlan.unmappedCount) : 0,
       requestPlanMappedPercent: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedPercent)) ? Number(pendingReadoutRequestPlan.mappedPercent) : 0,
