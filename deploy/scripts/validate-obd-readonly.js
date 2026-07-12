@@ -630,6 +630,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('function buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary = null, currentReadoutCompletionSummary = {})') && source.includes('schemaVersion: "imported_readout_completion_comparison_v1"'), "obd-readonly should expose imported readout completion comparison summaries");
     check(source.includes('const readCount = (summary, ids, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : ids.length;') && source.includes('requiredCountDelta: currentRequiredCount - importedRequiredCount,'), "imported readout completion comparison should support count-only summaries");
     check(source.includes('requiredIdsChanged: normalizedImportedRequiredIds.join("|") !== normalizedCurrentRequiredIds.join("|"),') && source.includes('emptyIdsChanged: normalizedImportedEmptyIds.join("|") !== normalizedCurrentEmptyIds.join("|")'), "imported readout completion comparison should compare readout id lists");
+    check(source.includes('const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));') && source.includes('emptyRemovedIds: diffIds(normalizedImportedEmptyIds, normalizedCurrentEmptyIds)'), "imported readout completion comparison should expose added and removed readout ids");
     check(source.includes('function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {})') && source.includes('schemaVersion: "imported_analysis_readiness_comparison_v1"'), "obd-readonly should expose imported analysis readiness comparison summaries");
     check(source.includes('importedNextReadoutLabel: importedAnalysisReadinessSummary.nextReadoutLabel || null,') && source.includes('nextReadoutDetailsChanged: (importedAnalysisReadinessSummary.nextReadoutLabel || null) !== (currentSummary.nextReadoutLabel || null)'), "imported analysis readiness comparison should compare next readout details");
     check(source.includes('const readChecklistIds = (summary = {}, field) => readStringList(summary?.checklistSummary || {}, field);') && source.includes('vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,'), "imported analysis readiness comparison should compare checklist ids and vehicle applicability state");
@@ -1792,7 +1793,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 807+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 810+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3991,6 +3992,7 @@ check("nextReadoutDetailsChanged" in mergedDiagnosticInputExportPayload.imported
 check(mergedDiagnosticInputExportPayload.importedReadoutCompletionComparisonSummary?.schemaVersion === "imported_readout_completion_comparison_v1", "Combined diagnostic inputs did not compare imported and recalculated readout completion summary");
 check(Number.isFinite(mergedDiagnosticInputExportPayload.importedReadoutCompletionComparisonSummary?.pendingCountDelta), "Combined diagnostic inputs did not expose imported readout completion pending delta");
 check("pendingIdsChanged" in mergedDiagnosticInputExportPayload.importedReadoutCompletionComparisonSummary && "emptyIdsChanged" in mergedDiagnosticInputExportPayload.importedReadoutCompletionComparisonSummary, "Combined diagnostic inputs did not expose imported readout completion id change flags");
+check(Array.isArray(mergedDiagnosticInputExportPayload.importedReadoutCompletionComparisonSummary?.pendingAddedIds) && Array.isArray(mergedDiagnosticInputExportPayload.importedReadoutCompletionComparisonSummary?.emptyRemovedIds), "Combined diagnostic inputs did not expose imported readout completion added and removed ids");
 check(mergedDiagnosticInputExportPayload.importedAnalysisReadinessComparisonSummary?.schemaVersion === "imported_analysis_readiness_comparison_v1", "Combined diagnostic inputs did not compare imported and recalculated analysis readiness summary");
 check(Number.isFinite(mergedDiagnosticInputExportPayload.importedAnalysisReadinessComparisonSummary?.blockerCountDelta), "Combined diagnostic inputs did not expose imported analysis readiness blocker delta");
 check("checklistBlockedIdsChanged" in mergedDiagnosticInputExportPayload.importedAnalysisReadinessComparisonSummary && "vehicleApplicabilityChecklistChanged" in mergedDiagnosticInputExportPayload.importedAnalysisReadinessComparisonSummary, "Combined diagnostic inputs did not expose imported analysis readiness checklist state change flags");
@@ -6758,6 +6760,7 @@ check("nextReadoutDetailsChanged" in scanSessionBridgeDiagnosticImportAlias.impo
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary?.schemaVersion === "imported_readout_completion_comparison_v1", "Diagnostic scan session did not compare imported and recalculated readout completion summary");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary?.pendingCountDelta), "Diagnostic scan session did not expose imported readout completion pending delta");
 check("missingIdsChanged" in scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary && "capturedIdsChanged" in scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary, "Diagnostic scan session did not expose imported readout completion id change flags");
+check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary?.capturedAddedIds) && Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary?.missingRemovedIds), "Diagnostic scan session did not expose imported readout completion added and removed ids");
 check(scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessComparisonSummary?.schemaVersion === "imported_analysis_readiness_comparison_v1", "Diagnostic scan session did not compare imported and recalculated analysis readiness summary");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported analysis readiness pending readout delta");
 check("checklistReviewIdsChanged" in scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessComparisonSummary && "vehicleApplicabilityChecklistChanged" in scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessComparisonSummary, "Diagnostic scan session did not expose imported analysis readiness checklist state change flags");
@@ -7624,6 +7627,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 807");
+  console.log("OBD read-only safety checks: 810");
   console.log("Errors: 0");
 }

@@ -3347,6 +3347,7 @@
     const normalizedCurrentPendingIds = normalizeIds(currentPendingIds);
     const normalizedImportedEmptyIds = normalizeIds(importedEmptyIds);
     const normalizedCurrentEmptyIds = normalizeIds(currentEmptyIds);
+    const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     return {
       schemaVersion: "imported_readout_completion_comparison_v1",
       importedComplete: importedReadoutCompletionSummary.complete === true,
@@ -3358,30 +3359,40 @@
       importedRequiredIds: [...normalizedImportedRequiredIds],
       currentRequiredIds: [...normalizedCurrentRequiredIds],
       requiredIdsChanged: normalizedImportedRequiredIds.join("|") !== normalizedCurrentRequiredIds.join("|"),
+      requiredAddedIds: diffIds(normalizedCurrentRequiredIds, normalizedImportedRequiredIds),
+      requiredRemovedIds: diffIds(normalizedImportedRequiredIds, normalizedCurrentRequiredIds),
       importedCapturedCount,
       currentCapturedCount,
       capturedCountDelta: currentCapturedCount - importedCapturedCount,
       importedCapturedIds: [...normalizedImportedCapturedIds],
       currentCapturedIds: [...normalizedCurrentCapturedIds],
       capturedIdsChanged: normalizedImportedCapturedIds.join("|") !== normalizedCurrentCapturedIds.join("|"),
+      capturedAddedIds: diffIds(normalizedCurrentCapturedIds, normalizedImportedCapturedIds),
+      capturedRemovedIds: diffIds(normalizedImportedCapturedIds, normalizedCurrentCapturedIds),
       importedMissingCount,
       currentMissingCount,
       missingCountDelta: currentMissingCount - importedMissingCount,
       importedMissingIds: [...normalizedImportedMissingIds],
       currentMissingIds: [...normalizedCurrentMissingIds],
       missingIdsChanged: normalizedImportedMissingIds.join("|") !== normalizedCurrentMissingIds.join("|"),
+      missingAddedIds: diffIds(normalizedCurrentMissingIds, normalizedImportedMissingIds),
+      missingRemovedIds: diffIds(normalizedImportedMissingIds, normalizedCurrentMissingIds),
       importedPendingCount,
       currentPendingCount,
       pendingCountDelta: currentPendingCount - importedPendingCount,
       importedPendingIds: [...normalizedImportedPendingIds],
       currentPendingIds: [...normalizedCurrentPendingIds],
       pendingIdsChanged: normalizedImportedPendingIds.join("|") !== normalizedCurrentPendingIds.join("|"),
+      pendingAddedIds: diffIds(normalizedCurrentPendingIds, normalizedImportedPendingIds),
+      pendingRemovedIds: diffIds(normalizedImportedPendingIds, normalizedCurrentPendingIds),
       importedEmptyCount,
       currentEmptyCount,
       emptyCountDelta: currentEmptyCount - importedEmptyCount,
       importedEmptyIds: [...normalizedImportedEmptyIds],
       currentEmptyIds: [...normalizedCurrentEmptyIds],
-      emptyIdsChanged: normalizedImportedEmptyIds.join("|") !== normalizedCurrentEmptyIds.join("|")
+      emptyIdsChanged: normalizedImportedEmptyIds.join("|") !== normalizedCurrentEmptyIds.join("|"),
+      emptyAddedIds: diffIds(normalizedCurrentEmptyIds, normalizedImportedEmptyIds),
+      emptyRemovedIds: diffIds(normalizedImportedEmptyIds, normalizedCurrentEmptyIds)
     };
   }
 
