@@ -3965,12 +3965,26 @@
       return byKind;
     }, {});
     const primaryChangedIdByKind = Object.fromEntries(Object.entries(primaryChangedIdSummaryByKind).map(([kind, summary]) => [kind, summary?.id || null]));
+    const changedIdDirectionPriority = { mixed: 0, added: 1, removed: 2 };
+    const changedIdKindDirectionSummary = changedIdKindSummaries.reduce((byKind, item) => {
+      byKind[item.kind] = ["mixed", "added", "removed"].reduce((byDirection, direction) => {
+        const summaries = (item.summaries || []).filter((summary) => summary.direction === direction);
+        byDirection[direction] = { ids: summaries.map((summary) => summary.id), count: summaries.length, summaries };
+        return byDirection;
+      }, {});
+      return byKind;
+    }, {});
+    const primaryChangedIdDirectionByKind = Object.fromEntries(changedIdKindSummaries.map((item) => {
+      const summary = changedIdKindDirectionSummary[item.kind] || {};
+      const direction = ["mixed", "added", "removed"]
+        .sort((left, right) => (summary[right]?.count || 0) - (summary[left]?.count || 0) || changedIdDirectionPriority[left] - changedIdDirectionPriority[right])[0] || null;
+      return [item.kind, direction && (summary[direction]?.count || 0) > 0 ? direction : null];
+    }));
     const changedIdDirectionSummary = {
       added: { ids: addedOnlyChangedIdSummaries.map((item) => item.id), count: addedOnlyChangedIdSummaries.length, summaries: addedOnlyChangedIdSummaries },
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
       mixed: { ids: mixedChangedIdSummaries.map((item) => item.id), count: mixedChangedIdSummaries.length, summaries: mixedChangedIdSummaries }
     };
-    const changedIdDirectionPriority = { mixed: 0, added: 1, removed: 2 };
     const primaryChangedIdDirection = changedIdSummaries.length > 0
       ? ["mixed", "added", "removed"]
         .sort((left, right) => (changedIdDirectionSummary[right]?.count || 0) - (changedIdDirectionSummary[left]?.count || 0) || changedIdDirectionPriority[left] - changedIdDirectionPriority[right])[0] || null
@@ -4019,6 +4033,8 @@
       changedIdSummaryByKind,
       primaryChangedIdByKind,
       primaryChangedIdSummaryByKind,
+      changedIdKindDirectionSummary,
+      primaryChangedIdDirectionByKind,
       changedIdCount: changedIdSummaries.length,
       addedChangedIdSummaries,
       removedChangedIdSummaries,
