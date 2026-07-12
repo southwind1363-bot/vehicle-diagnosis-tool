@@ -2906,11 +2906,21 @@
     const primaryBlockingReadoutLabel = primaryBlockingReadoutId
       ? readoutStateById[primaryBlockingReadoutId]?.label || coverageLabelById.get(primaryBlockingReadoutId) || primaryBlockingReadoutId
       : null;
+    const primaryBlockingReadoutState = primaryBlockingReadoutId ? readoutStateById[primaryBlockingReadoutId] || null : null;
+    const primaryBlockingReadoutRequest = primaryBlockingReadoutId
+      ? buildReadOnlyNextReadoutRequest({
+        id: primaryBlockingReadoutId,
+        label: primaryBlockingReadoutLabel || primaryBlockingReadoutId,
+        status: primaryBlockingReadoutState?.status || null,
+        source: "primary_blocker"
+      })
+      : null;
     Object.assign(readoutCompletionSummary, {
       primaryBlockingReasonId,
       primaryBlockingReason,
       primaryBlockingReadoutId,
-      primaryBlockingReadoutLabel
+      primaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest
     });
     const analysisBlockerSummary = {
       totalCount: analysisBlockers.length,
@@ -2993,7 +3003,8 @@
       pendingReadoutCount: readoutProgressSummary.pendingCount,
       primaryBlockingReasonId,
       primaryBlockingReadoutId,
-      primaryBlockingReadoutLabel
+      primaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest
     };
     const analysisReadinessSummary = {
       ready: readyForAnalysis,
@@ -3013,6 +3024,7 @@
       primaryBlockingReason,
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest,
       pendingReadoutCount: readoutProgressSummary.pendingCount,
       completionPercent: readoutProgressSummary.completionPercent,
       nextReadoutId: nextReadoutSummary?.id || null,
@@ -3066,6 +3078,7 @@
       primaryBlockingReason,
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest,
       analysisChecklist,
       analysisChecklistById,
       analysisChecklistSummary,
@@ -3144,6 +3157,10 @@
       || coreSessionStatus?.primaryBlockingReadoutLabel
       || (primaryBlockingReadoutId && coreSessionStatus?.readoutStateById ? coreSessionStatus.readoutStateById[primaryBlockingReadoutId]?.label : null)
       || primaryBlockingReadoutId
+      || null;
+    const primaryBlockingReadoutRequest = readiness.primaryBlockingReadoutRequest
+      || completion.primaryBlockingReadoutRequest
+      || coreSessionStatus?.primaryBlockingReadoutRequest
       || null;
     const nextReadoutRequest = coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.nextReadoutSummary?.readoutRequest || null;
     const pendingReadoutRequestQueue = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
@@ -3300,6 +3317,11 @@
       primaryBlockingReason,
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest,
+      primaryBlockingReadoutBridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+      primaryBlockingReadoutServiceMode: primaryBlockingReadoutRequest?.serviceMode || null,
+      primaryBlockingReadoutExecutionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
+      primaryBlockingReadoutWouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
       readoutCollectionRequired: pendingReadoutCount > 0,
       completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
         ? Number(coreSessionStatus.completionPercent)

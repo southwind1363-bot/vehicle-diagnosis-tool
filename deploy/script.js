@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 973+件",
+  validationCheckLabel: "OBD安全検証 978+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.418.0";
+const APP_VERSION = "2.419.0";
 const APP_LAST_UPDATED = "2026-07-12";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5362,6 +5362,10 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const primaryBlockingLabel = primaryBlockingReasonId
     ? `${formatDiagnosticFlowBlockerLabel(primaryBlockingReasonId)}${primaryBlockingReadoutLabel ? ` / ${primaryBlockingReadoutLabel}` : ""}`
     : NO_DATA;
+  const primaryBlockingReadoutRequest = flow.primaryBlockingReadoutRequest || core.primaryBlockingReadoutRequest || core.analysisReadinessSummary?.primaryBlockingReadoutRequest || core.readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
+  const primaryBlockingReadoutRequestLabel = primaryBlockingReadoutRequest?.bridgeIntent
+    ? `${primaryBlockingReadoutRequest.bridgeIntent}${primaryBlockingReadoutRequest.serviceMode ? ` / Mode ${primaryBlockingReadoutRequest.serviceMode}` : ""}`
+    : NO_DATA;
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5401,6 +5405,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel, readoutRequestTone);
   addObdDiagnosticFlowMetric(grid, "保留理由", blockerLabel, analysisBlocked ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "主保留", primaryBlockingLabel, primaryBlockingReasonId ? "blocked" : "");
+  addObdDiagnosticFlowMetric(grid, "主保留要求", primaryBlockingReadoutRequestLabel, primaryBlockingReadoutRequest?.executionEnabled === true ? "ready" : primaryBlockingReadoutRequest ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
