@@ -4005,21 +4005,25 @@
     const primaryChangedIdSummary = primaryChangedIdDirection
       ? pickPrimaryChangedIdSummary(changedIdDirectionSummaryByDirection[primaryChangedIdDirection]?.summaries || [])
       : null;
-    const changedIdDisplayRows = changedIdSummaries.map((item) => ({
-      key: `${item.kind}:${item.id}`,
-      id: item.id,
-      kind: item.kind,
-      direction: item.direction,
-      primary: item.id === primaryChangedIdSummary?.id && item.kind === primaryChangedIdSummary?.kind,
-      added: item.added,
-      removed: item.removed,
-      sectionCount: item.sectionCount,
-      reasonCount: item.reasonCount,
-      addedSectionCount: item.addedSectionCount,
-      removedSectionCount: item.removedSectionCount,
-      addedReasonCount: item.addedReasonCount,
-      removedReasonCount: item.removedReasonCount
-    }));
+    const changedIdDisplayRows = changedIdSummaries
+      .map((item) => ({
+        key: `${item.kind}:${item.id}`,
+        id: item.id,
+        kind: item.kind,
+        direction: item.direction,
+        directionRank: changedIdDirectionPriority[item.direction] ?? 99,
+        primary: item.id === primaryChangedIdSummary?.id && item.kind === primaryChangedIdSummary?.kind,
+        added: item.added,
+        removed: item.removed,
+        sectionCount: item.sectionCount,
+        reasonCount: item.reasonCount,
+        addedSectionCount: item.addedSectionCount,
+        removedSectionCount: item.removedSectionCount,
+        addedReasonCount: item.addedReasonCount,
+        removedReasonCount: item.removedReasonCount
+      }))
+      .sort((left, right) => Number(right.primary) - Number(left.primary) || left.directionRank - right.directionRank || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id))
+      .map((item, index) => ({ ...item, displayOrder: index + 1 }));
     const changedIdDisplaySummary = {
       schemaVersion: "changed_id_display_summary_v1",
       hasChangedIds: changedIdSummaries.length > 0,
