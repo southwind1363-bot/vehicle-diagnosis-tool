@@ -3770,6 +3770,14 @@
       byId[item.id] = item;
       return byId;
     }, {});
+    const addedIdsByReasonId = changedReasonSummaries.reduce((byId, item) => {
+      byId[item.id] = Array.isArray(item.addedIds) ? [...item.addedIds] : [];
+      return byId;
+    }, {});
+    const removedIdsByReasonId = changedReasonSummaries.reduce((byId, item) => {
+      byId[item.id] = Array.isArray(item.removedIds) ? [...item.removedIds] : [];
+      return byId;
+    }, {});
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -3788,6 +3796,8 @@
       hasAddedRemovedIds: addedIds.length > 0 || removedIds.length > 0,
       addedIdsBySectionId,
       removedIdsBySectionId,
+      addedIdsByReasonId,
+      removedIdsByReasonId,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
