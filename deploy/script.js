@@ -219,13 +219,13 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 999+件",
+  validationCheckLabel: "OBD安全検証 1004+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.423.0";
-const APP_LAST_UPDATED = "2026-07-12";
+const APP_VERSION = "2.424.0";
+const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -5295,6 +5295,28 @@ function formatDiagnosticFlowBlockerLabel(reasonId = "") {
   }[reasonId] || formatObdBridgeWarningLabel(reasonId) || reasonId;
 }
 
+function formatPrimaryBlockerChangeSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  if (summary.changed !== true) return "変更なし";
+  const changedIds = Array.isArray(summary.changedIds)
+    ? summary.changedIds
+    : [...new Set([...(summary.addedIds || []), ...(summary.removedIds || [])])];
+  const labels = changedIds
+    .slice(0, 3)
+    .map((id) => formatCoreReadoutLabel(id, formatDiagnosticFlowBlockerLabel(id)))
+    .filter(Boolean);
+  const parts = [];
+  const changedIdCount = Number.isFinite(Number(summary.changedIdCount))
+    ? Number(summary.changedIdCount)
+    : changedIds.length;
+  if (changedIdCount > 0) parts.push(`${changedIdCount}件`);
+  if (labels.length) parts.push(labels.join(" / "));
+  if (summary.addedIdCount || summary.removedIdCount) {
+    parts.push(`追加${Number(summary.addedIdCount || 0)} / 解除${Number(summary.removedIdCount || 0)}`);
+  }
+  return parts.length ? parts.join(" / ") : "変更あり";
+}
+
 function addObdDiagnosticFlowMetric(container, label, value, tone = "") {
   const item = document.createElement("article");
   item.className = `obd-diagnostic-flow-card${tone ? ` obd-diagnostic-flow-${tone}` : ""}`;
@@ -5366,6 +5388,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const primaryBlockingReadoutRequestLabel = primaryBlockingReadoutRequest?.bridgeIntent
     ? `${primaryBlockingReadoutRequest.bridgeIntent}${primaryBlockingReadoutRequest.serviceMode ? ` / Mode ${primaryBlockingReadoutRequest.serviceMode}` : ""}`
     : NO_DATA;
+  const primaryBlockerComparisonSummary = session.importedSessionComparisonSummary?.primaryBlockerChangeSummary || null;
+  const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(primaryBlockerComparisonSummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5406,6 +5430,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "保留理由", blockerLabel, analysisBlocked ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "主保留", primaryBlockingLabel, primaryBlockingReasonId ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "主保留要求", primaryBlockingReadoutRequestLabel, primaryBlockingReadoutRequest?.executionEnabled === true ? "ready" : primaryBlockingReadoutRequest ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "主保留比較", primaryBlockerComparisonLabel, primaryBlockerComparisonSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
@@ -5464,6 +5489,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
   const emptyReadoutLabel = formatCoreEmptyReadoutSummary(session?.coreSessionStatus, 2, NO_DATA);
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
+  const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(session?.importedSessionComparisonSummary?.primaryBlockerChangeSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -5527,7 +5553,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["次操作", nextReadoutLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["次操作", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
@@ -6031,6 +6057,10 @@ function analyzeObdScannerImport() {
   }
   if (analysisNextStepLabel) {
     notes.push(`次操作 ${analysisNextStepLabel}`);
+  }
+  const primaryBlockerComparisonNote = formatPrimaryBlockerChangeSummary(summarySource.importedSessionComparisonSummary?.primaryBlockerChangeSummary, "");
+  if (primaryBlockerComparisonNote) {
+    notes.push(`主保留比較 ${primaryBlockerComparisonNote}`);
   }
   if (Array.isArray(summarySource.coreSessionStatus?.blockingWarningIds) && summarySource.coreSessionStatus.blockingWarningIds.length > 0) {
     notes.push(`保留要因 ${summarySource.coreSessionStatus.blockingWarningIds.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
