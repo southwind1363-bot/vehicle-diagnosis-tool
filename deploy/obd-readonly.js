@@ -3664,15 +3664,33 @@
       Number(comparison.blockerCountDelta || 0) !== 0 ? "blockers" : null,
       Number(comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || 0) !== 0 ? "request_plan_counts" : null
     ].filter(Boolean);
+    const readChangedIds = (comparison = {}, fields = []) => [...new Set(fields.flatMap((field) => Array.isArray(comparison[field]) ? comparison[field] : []).filter(Boolean))];
+    const readAddedIds = (comparison = {}) => readChangedIds(comparison, [
+      "checklistBlockedAddedIds", "checklistReviewAddedIds",
+      "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds",
+      "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds"
+    ]);
+    const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
+      "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
+      "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds",
+      "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds"
+    ]);
     const sectionSummaries = sectionInputs
       .filter((item) => item.comparison)
       .map((item) => {
         const changeReasonIds = getSectionChangeReasonIds(item.comparison);
+        const addedIds = readAddedIds(item.comparison);
+        const removedIds = readRemovedIds(item.comparison);
         return {
           id: item.id,
           changed: hasSectionChanges(item.comparison),
           changeReasonIds,
           changeReasonCount: changeReasonIds.length,
+          addedIds,
+          removedIds,
+          addedIdCount: addedIds.length,
+          removedIdCount: removedIds.length,
+          hasAddedRemovedIds: addedIds.length > 0 || removedIds.length > 0,
           statusChanged: item.comparison.statusChanged === true || item.comparison.stateChanged === true,
           completionChanged: hasComparisonMetricChanges(item.comparison),
           nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
