@@ -2915,12 +2915,29 @@
         source: "primary_blocker"
       })
       : null;
+    const primaryBlockingSummary = primaryBlockingReasonId ? {
+      schemaVersion: "primary_readout_blocker_v1",
+      reasonId: primaryBlockingReasonId,
+      reason: primaryBlockingReason,
+      readoutId: primaryBlockingReadoutId,
+      readoutLabel: primaryBlockingReadoutLabel,
+      readoutStatus: primaryBlockingReadoutState?.status || null,
+      request: primaryBlockingReadoutRequest,
+      bridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+      serviceMode: primaryBlockingReadoutRequest?.serviceMode || null,
+      requestMapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
+      executionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
+      readOnly: primaryBlockingReadoutRequest ? primaryBlockingReadoutRequest.readOnly !== false : true,
+      wouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
+      vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
+    } : null;
     Object.assign(readoutCompletionSummary, {
       primaryBlockingReasonId,
       primaryBlockingReason,
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
-      primaryBlockingReadoutRequest
+      primaryBlockingReadoutRequest,
+      primaryBlockingSummary
     });
     const analysisBlockerSummary = {
       totalCount: analysisBlockers.length,
@@ -3004,7 +3021,8 @@
       primaryBlockingReasonId,
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
-      primaryBlockingReadoutRequest
+      primaryBlockingReadoutRequest,
+      primaryBlockingSummary
     };
     const analysisReadinessSummary = {
       ready: readyForAnalysis,
@@ -3025,6 +3043,7 @@
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
       pendingReadoutCount: readoutProgressSummary.pendingCount,
       completionPercent: readoutProgressSummary.completionPercent,
       nextReadoutId: nextReadoutSummary?.id || null,
@@ -3079,6 +3098,7 @@
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
       analysisChecklist,
       analysisChecklistById,
       analysisChecklistSummary,
@@ -3162,6 +3182,24 @@
       || completion.primaryBlockingReadoutRequest
       || coreSessionStatus?.primaryBlockingReadoutRequest
       || null;
+    const primaryBlockingSummary = readiness.primaryBlockingSummary
+      || completion.primaryBlockingSummary
+      || coreSessionStatus?.primaryBlockingSummary
+      || (primaryBlockingReasonId ? {
+        schemaVersion: "primary_readout_blocker_v1",
+        reasonId: primaryBlockingReasonId,
+        reason: primaryBlockingReason,
+        readoutId: primaryBlockingReadoutId,
+        readoutLabel: primaryBlockingReadoutLabel,
+        request: primaryBlockingReadoutRequest,
+        bridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+        serviceMode: primaryBlockingReadoutRequest?.serviceMode || null,
+        requestMapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
+        executionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
+        readOnly: primaryBlockingReadoutRequest ? primaryBlockingReadoutRequest.readOnly !== false : true,
+        wouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
+        vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
+      } : null);
     const nextReadoutRequest = coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.nextReadoutSummary?.readoutRequest || null;
     const pendingReadoutRequestQueue = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
       ? coreSessionStatus.pendingReadoutRequestQueue.map((item) => ({ ...item }))
@@ -3318,6 +3356,7 @@
       primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
       primaryBlockingReadoutBridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
       primaryBlockingReadoutServiceMode: primaryBlockingReadoutRequest?.serviceMode || null,
       primaryBlockingReadoutExecutionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
