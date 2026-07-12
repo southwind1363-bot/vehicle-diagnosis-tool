@@ -4005,6 +4005,21 @@
     const primaryChangedIdSummary = primaryChangedIdDirection
       ? pickPrimaryChangedIdSummary(changedIdDirectionSummaryByDirection[primaryChangedIdDirection]?.summaries || [])
       : null;
+    const changedIdDisplayRows = changedIdSummaries.map((item) => ({
+      key: `${item.kind}:${item.id}`,
+      id: item.id,
+      kind: item.kind,
+      direction: item.direction,
+      primary: item.id === primaryChangedIdSummary?.id && item.kind === primaryChangedIdSummary?.kind,
+      added: item.added,
+      removed: item.removed,
+      sectionCount: item.sectionCount,
+      reasonCount: item.reasonCount,
+      addedSectionCount: item.addedSectionCount,
+      removedSectionCount: item.removedSectionCount,
+      addedReasonCount: item.addedReasonCount,
+      removedReasonCount: item.removedReasonCount
+    }));
     const changedIdDisplaySummary = {
       schemaVersion: "changed_id_display_summary_v1",
       hasChangedIds: changedIdSummaries.length > 0,
@@ -4017,6 +4032,8 @@
         ? `${primaryChangedIdSummary.kind}:${primaryChangedIdSummary.id}`
         : null,
       changedIdCount: changedIdSummaries.length,
+      displayRowCount: changedIdDisplayRows.length,
+      rows: changedIdDisplayRows,
       readoutChangedIdCount: readoutChangedIdSummary.count || 0,
       bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
       readoutAddedChangedIds: [...(readoutChangedIdDirectionSummary.added?.ids || [])],
@@ -4058,6 +4075,7 @@
       primaryChangedIdSummaryByKind,
       changedIdKindDirectionSummary,
       primaryChangedIdDirectionByKind,
+      changedIdDisplayRows,
       changedIdDisplaySummary,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
       bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
