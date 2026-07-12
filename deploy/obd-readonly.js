@@ -3982,6 +3982,8 @@
     }));
     const readoutChangedIdSummary = changedIdSummaryByKind.readout_id || { ids: [], count: 0, summaries: [] };
     const bridgeIntentChangedIdSummary = changedIdSummaryByKind.bridge_intent || { ids: [], count: 0, summaries: [] };
+    const readoutChangedIdDirectionSummary = changedIdKindDirectionSummary.readout_id || {};
+    const bridgeIntentChangedIdDirectionSummary = changedIdKindDirectionSummary.bridge_intent || {};
     const changedIdDirectionSummary = {
       added: { ids: addedOnlyChangedIdSummaries.map((item) => item.id), count: addedOnlyChangedIdSummaries.length, summaries: addedOnlyChangedIdSummaries },
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
@@ -4041,8 +4043,18 @@
       bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
       readoutChangedIdCount: readoutChangedIdSummary.count || 0,
       bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
+      readoutAddedChangedIdCount: readoutChangedIdDirectionSummary.added?.count || 0,
+      readoutRemovedChangedIdCount: readoutChangedIdDirectionSummary.removed?.count || 0,
+      readoutMixedChangedIdCount: readoutChangedIdDirectionSummary.mixed?.count || 0,
+      bridgeIntentAddedChangedIdCount: bridgeIntentChangedIdDirectionSummary.added?.count || 0,
+      bridgeIntentRemovedChangedIdCount: bridgeIntentChangedIdDirectionSummary.removed?.count || 0,
+      bridgeIntentMixedChangedIdCount: bridgeIntentChangedIdDirectionSummary.mixed?.count || 0,
       hasReadoutChangedIds: (readoutChangedIdSummary.count || 0) > 0,
       hasBridgeIntentChangedIds: (bridgeIntentChangedIdSummary.count || 0) > 0,
+      hasAddedReadoutChangedIds: (readoutChangedIdDirectionSummary.added?.count || 0) > 0,
+      hasRemovedReadoutChangedIds: (readoutChangedIdDirectionSummary.removed?.count || 0) > 0,
+      hasAddedBridgeIntentChangedIds: (bridgeIntentChangedIdDirectionSummary.added?.count || 0) > 0,
+      hasRemovedBridgeIntentChangedIds: (bridgeIntentChangedIdDirectionSummary.removed?.count || 0) > 0,
       changedIdCount: changedIdSummaries.length,
       addedChangedIdSummaries,
       removedChangedIdSummaries,
