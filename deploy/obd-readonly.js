@@ -3449,6 +3449,12 @@
     const currentPrimaryBlockingReadoutId = currentPrimaryBlocker.readoutId || currentFlow.primaryBlockingReadoutId || null;
     const importedPrimaryBlockingBridgeIntent = importedPrimaryBlocker.bridgeIntent || importedFlow.primaryBlockingReadoutBridgeIntent || null;
     const currentPrimaryBlockingBridgeIntent = currentPrimaryBlocker.bridgeIntent || currentFlow.primaryBlockingReadoutBridgeIntent || null;
+    const importedPrimaryBlockingReasonIds = toSingletonIdList(importedPrimaryBlockingReasonId);
+    const currentPrimaryBlockingReasonIds = toSingletonIdList(currentPrimaryBlockingReasonId);
+    const importedPrimaryBlockingReadoutIds = toSingletonIdList(importedPrimaryBlockingReadoutId);
+    const currentPrimaryBlockingReadoutIds = toSingletonIdList(currentPrimaryBlockingReadoutId);
+    const importedPrimaryBlockingBridgeIntents = toSingletonIdList(importedPrimaryBlockingBridgeIntent);
+    const currentPrimaryBlockingBridgeIntents = toSingletonIdList(currentPrimaryBlockingBridgeIntent);
     return {
       schemaVersion: "imported_core_comparison_v1",
       importedStatus: importedFlow.status,
@@ -3490,12 +3496,18 @@
       importedPrimaryBlockingReasonId,
       currentPrimaryBlockingReasonId,
       primaryBlockingReasonChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId,
+      primaryBlockingReasonAddedIds: diffIds(currentPrimaryBlockingReasonIds, importedPrimaryBlockingReasonIds),
+      primaryBlockingReasonRemovedIds: diffIds(importedPrimaryBlockingReasonIds, currentPrimaryBlockingReasonIds),
       importedPrimaryBlockingReadoutId,
       currentPrimaryBlockingReadoutId,
       primaryBlockingReadoutChanged: importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId,
+      primaryBlockingReadoutAddedIds: diffIds(currentPrimaryBlockingReadoutIds, importedPrimaryBlockingReadoutIds),
+      primaryBlockingReadoutRemovedIds: diffIds(importedPrimaryBlockingReadoutIds, currentPrimaryBlockingReadoutIds),
       importedPrimaryBlockingBridgeIntent,
       currentPrimaryBlockingBridgeIntent,
       primaryBlockingBridgeIntentChanged: importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
+      primaryBlockingBridgeIntentAddedIds: diffIds(currentPrimaryBlockingBridgeIntents, importedPrimaryBlockingBridgeIntents),
+      primaryBlockingBridgeIntentRemovedIds: diffIds(importedPrimaryBlockingBridgeIntents, currentPrimaryBlockingBridgeIntents),
       primaryBlockingChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId
         || importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId
         || importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
@@ -3630,6 +3642,12 @@
     const currentPrimaryBlockingReadoutId = currentPrimaryBlocker.readoutId || currentFlow.primaryBlockingReadoutId || null;
     const importedPrimaryBlockingBridgeIntent = importedPrimaryBlocker.bridgeIntent || importedDiagnosticFlowSummary.primaryBlockingReadoutBridgeIntent || null;
     const currentPrimaryBlockingBridgeIntent = currentPrimaryBlocker.bridgeIntent || currentFlow.primaryBlockingReadoutBridgeIntent || null;
+    const importedPrimaryBlockingReasonIds = toSingletonIdList(importedPrimaryBlockingReasonId);
+    const currentPrimaryBlockingReasonIds = toSingletonIdList(currentPrimaryBlockingReasonId);
+    const importedPrimaryBlockingReadoutIds = toSingletonIdList(importedPrimaryBlockingReadoutId);
+    const currentPrimaryBlockingReadoutIds = toSingletonIdList(currentPrimaryBlockingReadoutId);
+    const importedPrimaryBlockingBridgeIntents = toSingletonIdList(importedPrimaryBlockingBridgeIntent);
+    const currentPrimaryBlockingBridgeIntents = toSingletonIdList(currentPrimaryBlockingBridgeIntent);
     return {
       schemaVersion: "imported_diagnostic_flow_comparison_v1",
       importedStatus: importedDiagnosticFlowSummary.status || null,
@@ -3671,12 +3689,18 @@
       importedPrimaryBlockingReasonId,
       currentPrimaryBlockingReasonId,
       primaryBlockingReasonChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId,
+      primaryBlockingReasonAddedIds: diffIds(currentPrimaryBlockingReasonIds, importedPrimaryBlockingReasonIds),
+      primaryBlockingReasonRemovedIds: diffIds(importedPrimaryBlockingReasonIds, currentPrimaryBlockingReasonIds),
       importedPrimaryBlockingReadoutId,
       currentPrimaryBlockingReadoutId,
       primaryBlockingReadoutChanged: importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId,
+      primaryBlockingReadoutAddedIds: diffIds(currentPrimaryBlockingReadoutIds, importedPrimaryBlockingReadoutIds),
+      primaryBlockingReadoutRemovedIds: diffIds(importedPrimaryBlockingReadoutIds, currentPrimaryBlockingReadoutIds),
       importedPrimaryBlockingBridgeIntent,
       currentPrimaryBlockingBridgeIntent,
       primaryBlockingBridgeIntentChanged: importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
+      primaryBlockingBridgeIntentAddedIds: diffIds(currentPrimaryBlockingBridgeIntents, importedPrimaryBlockingBridgeIntents),
+      primaryBlockingBridgeIntentRemovedIds: diffIds(importedPrimaryBlockingBridgeIntents, currentPrimaryBlockingBridgeIntents),
       primaryBlockingChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId
         || importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId
         || importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
@@ -4101,14 +4125,16 @@
       "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds",
       "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
       "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
-      "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds"
+      "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
+      "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds"
     ]);
     const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
       "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds",
       "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
       "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
-      "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds"
+      "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
+      "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds"
     ]);
     const sectionSummaries = sectionInputs
       .filter((item) => item.comparison)
