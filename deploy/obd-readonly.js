@@ -4024,6 +4024,25 @@
       }))
       .sort((left, right) => Number(right.primary) - Number(left.primary) || left.directionRank - right.directionRank || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id))
       .map((item, index) => ({ ...item, displayOrder: index + 1 }));
+    const buildChangedIdDisplayGroup = (value, rows = []) => ({
+      value,
+      keys: rows.map((row) => row.key),
+      ids: rows.map((row) => row.id),
+      count: rows.length,
+      primaryKey: rows.find((row) => row.primary)?.key || null
+    });
+    const changedIdDisplayGroupsByKind = [...new Set(changedIdDisplayRows.map((row) => row.kind))]
+      .sort()
+      .map((kind) => buildChangedIdDisplayGroup(kind, changedIdDisplayRows.filter((row) => row.kind === kind)));
+    const changedIdDisplayGroupsByDirection = ["mixed", "added", "removed"]
+      .map((direction) => buildChangedIdDisplayGroup(direction, changedIdDisplayRows.filter((row) => row.direction === direction)));
+    const changedIdDisplayGroupSummary = {
+      schemaVersion: "changed_id_display_group_summary_v1",
+      byKind: changedIdDisplayGroupsByKind,
+      byDirection: changedIdDisplayGroupsByDirection,
+      kindCount: changedIdDisplayGroupsByKind.length,
+      directionCount: changedIdDisplayGroupsByDirection.length
+    };
     const changedIdDisplaySummary = {
       schemaVersion: "changed_id_display_summary_v1",
       hasChangedIds: changedIdSummaries.length > 0,
@@ -4038,6 +4057,7 @@
       changedIdCount: changedIdSummaries.length,
       displayRowCount: changedIdDisplayRows.length,
       rows: changedIdDisplayRows,
+      groups: changedIdDisplayGroupSummary,
       readoutChangedIdCount: readoutChangedIdSummary.count || 0,
       bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
       readoutAddedChangedIds: [...(readoutChangedIdDirectionSummary.added?.ids || [])],
@@ -4080,6 +4100,7 @@
       changedIdKindDirectionSummary,
       primaryChangedIdDirectionByKind,
       changedIdDisplayRows,
+      changedIdDisplayGroupSummary,
       changedIdDisplaySummary,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
       bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
