@@ -3511,12 +3511,22 @@
       : Array.isArray(summary?.actionSummary?.readoutIds)
         ? summary.actionSummary.readoutIds.filter(Boolean)
       : [...new Set(queue.flatMap((item) => Array.isArray(item?.readoutIds) ? item.readoutIds : []).filter(Boolean))];
+    const normalizeIds = (ids = []) => (Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : []);
+    const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedActionIds = readActionIds(importedGateSummary, importedActionQueue);
     const currentActionIds = readActionIds(currentSummary, currentActionQueue);
     const importedActionReasonIds = readActionReasonIds(importedGateSummary, importedActionQueue);
     const currentActionReasonIds = readActionReasonIds(currentSummary, currentActionQueue);
     const importedActionReadoutIds = readActionReadoutIds(importedGateSummary, importedActionQueue);
     const currentActionReadoutIds = readActionReadoutIds(currentSummary, currentActionQueue);
+    const normalizedImportedBlockedReasonIds = normalizeIds(importedBlockedReasonIds);
+    const normalizedCurrentBlockedReasonIds = normalizeIds(currentBlockedReasonIds);
+    const normalizedImportedActionIds = normalizeIds(importedActionIds);
+    const normalizedCurrentActionIds = normalizeIds(currentActionIds);
+    const normalizedImportedActionReasonIds = normalizeIds(importedActionReasonIds);
+    const normalizedCurrentActionReasonIds = normalizeIds(currentActionReasonIds);
+    const normalizedImportedActionReadoutIds = normalizeIds(importedActionReadoutIds);
+    const normalizedCurrentActionReadoutIds = normalizeIds(currentActionReadoutIds);
     const importedActionSummaryCount = readActionCount(importedGateSummary, importedActionQueue, "actionCount");
     const currentActionSummaryCount = readActionCount(currentSummary, currentActionQueue, "actionCount");
     const importedActionSummaryReasonCount = readActionCount(importedGateSummary, importedActionQueue, "reasonCount");
@@ -3562,15 +3572,23 @@
       blockedReasonCountDelta: (Number.isFinite(Number(currentSummary.blockedReasonCount)) ? Number(currentSummary.blockedReasonCount) : currentBlockedReasonIds.length)
         - (Number.isFinite(Number(importedGateSummary.blockedReasonCount)) ? Number(importedGateSummary.blockedReasonCount) : importedBlockedReasonIds.length),
       blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|"),
+      blockedReasonAddedIds: diffIds(normalizedCurrentBlockedReasonIds, normalizedImportedBlockedReasonIds),
+      blockedReasonRemovedIds: diffIds(normalizedImportedBlockedReasonIds, normalizedCurrentBlockedReasonIds),
       importedActionIds: [...importedActionIds],
       currentActionIds: [...currentActionIds],
       actionIdsChanged: importedActionIds.join("|") !== currentActionIds.join("|"),
+      actionAddedIds: diffIds(normalizedCurrentActionIds, normalizedImportedActionIds),
+      actionRemovedIds: diffIds(normalizedImportedActionIds, normalizedCurrentActionIds),
       importedActionReasonIds: [...importedActionReasonIds],
       currentActionReasonIds: [...currentActionReasonIds],
       actionReasonIdsChanged: importedActionReasonIds.join("|") !== currentActionReasonIds.join("|"),
+      actionReasonAddedIds: diffIds(normalizedCurrentActionReasonIds, normalizedImportedActionReasonIds),
+      actionReasonRemovedIds: diffIds(normalizedImportedActionReasonIds, normalizedCurrentActionReasonIds),
       importedActionReadoutIds: [...importedActionReadoutIds],
       currentActionReadoutIds: [...currentActionReadoutIds],
       actionReadoutIdsChanged: importedActionReadoutIds.join("|") !== currentActionReadoutIds.join("|"),
+      actionReadoutAddedIds: diffIds(normalizedCurrentActionReadoutIds, normalizedImportedActionReadoutIds),
+      actionReadoutRemovedIds: diffIds(normalizedImportedActionReadoutIds, normalizedCurrentActionReadoutIds),
       importedActionSummaryCount,
       currentActionSummaryCount,
       actionSummaryCountDelta: currentActionSummaryCount - importedActionSummaryCount,
