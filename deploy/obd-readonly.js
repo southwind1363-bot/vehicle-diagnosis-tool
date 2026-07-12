@@ -3778,6 +3778,17 @@
       byId[item.id] = Array.isArray(item.removedIds) ? [...item.removedIds] : [];
       return byId;
     }, {});
+    const buildIdOwnerIndex = (items = [], idField = "addedIds") => items.reduce((byId, item) => {
+      (Array.isArray(item[idField]) ? item[idField] : []).forEach((id) => {
+        if (!byId[id]) byId[id] = [];
+        byId[id].push(item.id);
+      });
+      return byId;
+    }, {});
+    const sectionsByAddedId = buildIdOwnerIndex(changedSectionSummaries, "addedIds");
+    const sectionsByRemovedId = buildIdOwnerIndex(changedSectionSummaries, "removedIds");
+    const reasonsByAddedId = buildIdOwnerIndex(changedReasonSummaries, "addedIds");
+    const reasonsByRemovedId = buildIdOwnerIndex(changedReasonSummaries, "removedIds");
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -3798,6 +3809,10 @@
       removedIdsBySectionId,
       addedIdsByReasonId,
       removedIdsByReasonId,
+      sectionsByAddedId,
+      sectionsByRemovedId,
+      reasonsByAddedId,
+      reasonsByRemovedId,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
