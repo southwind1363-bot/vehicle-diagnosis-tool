@@ -3727,6 +3727,14 @@
     const comparedSectionIds = sectionSummaries.map((item) => item.id);
     const changedSectionIds = changedSectionSummaries.map((item) => item.id);
     const unchangedSectionIds = unchangedSectionSummaries.map((item) => item.id);
+    const addedIdsBySectionId = changedSectionSummaries.reduce((byId, item) => {
+      byId[item.id] = Array.isArray(item.addedIds) ? [...item.addedIds] : [];
+      return byId;
+    }, {});
+    const removedIdsBySectionId = changedSectionSummaries.reduce((byId, item) => {
+      byId[item.id] = Array.isArray(item.removedIds) ? [...item.removedIds] : [];
+      return byId;
+    }, {});
     const addedIds = [...new Set(changedSectionSummaries.flatMap((item) => item.addedIds || []))];
     const removedIds = [...new Set(changedSectionSummaries.flatMap((item) => item.removedIds || []))];
     const changedReasonIds = [...new Set(changedSectionSummaries.flatMap((item) => item.changeReasonIds || []))];
@@ -3778,6 +3786,8 @@
       addedIdCount: addedIds.length,
       removedIdCount: removedIds.length,
       hasAddedRemovedIds: addedIds.length > 0 || removedIds.length > 0,
+      addedIdsBySectionId,
+      removedIdsBySectionId,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),

@@ -665,6 +665,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('const readAddedIds = (comparison = {}) => readChangedIds(comparison, [') && source.includes('hasAddedRemovedIds: addedIds.length > 0 || removedIds.length > 0,'), "imported session comparison section summaries should expose added and removed ids");
     check(source.includes('const changedReasonIds = [...new Set(changedSectionSummaries.flatMap((item) => item.changeReasonIds || []))];') && source.includes('changedReasonCount: changedReasonIds.length,'), "imported session comparison summaries should expose top-level change reasons");
     check(source.includes('const addedIds = [...new Set(changedSectionSummaries.flatMap((item) => item.addedIds || []))];') && source.includes('hasAddedRemovedIds: addedIds.length > 0 || removedIds.length > 0,'), "imported session comparison summaries should expose top-level added and removed ids");
+    check(source.includes('const addedIdsBySectionId = changedSectionSummaries.reduce((byId, item) => {') && source.includes('removedIdsBySectionId,'), "imported session comparison summaries should expose added and removed ids by section");
     check(source.includes('const changedReasonCountsById = changedReasonIds.reduce((counts, reasonId) => {') && source.includes('primaryChangedReasonId,'), "imported session comparison summaries should expose reason counts and primary reason");
     check(source.includes('const changedSectionsByReasonId = changedReasonIds.reduce((sectionsByReason, reasonId) => {') && source.includes('changedSectionsByReasonId,'), "imported session comparison summaries should expose sections by change reason");
     check(source.includes('const changedReasonSummaries = changedReasonIds.map((reasonId) => {') && source.includes('addedIdCount: reasonAddedIds.length,'), "imported session comparison summaries should expose reason summary maps");
@@ -1799,7 +1800,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 830+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 833+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4019,6 +4020,7 @@ check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.secti
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.sectionSummaries?.[0]?.changeReasonIds), "Combined diagnostic inputs did not expose imported session section change reasons");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.sectionSummaries?.[0]?.addedIds) && Number.isFinite(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.sectionSummaries?.[0]?.removedIdCount), "Combined diagnostic inputs did not expose imported session section added and removed ids");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.addedIds) && Number.isFinite(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.removedIdCount), "Combined diagnostic inputs did not expose imported session top-level added and removed ids");
+check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.addedIdsBySectionId && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.addedIdsBySectionId === "object", "Combined diagnostic inputs did not expose imported session added ids by section");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedReasonIds) && Number.isInteger(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedReasonCount), "Combined diagnostic inputs did not expose imported session top-level change reasons");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedReasonCountsById && "primaryChangedReasonId" in mergedDiagnosticInputExportPayload.importedSessionComparisonSummary, "Combined diagnostic inputs did not expose imported session reason counts");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionsByReasonId && typeof mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.changedSectionsByReasonId === "object", "Combined diagnostic inputs did not expose imported session sections by reason");
@@ -6801,6 +6803,7 @@ check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.s
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.sectionSummaries?.[0]?.changeReasonIds), "Diagnostic scan session did not expose imported session section change reasons");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.sectionSummaries?.[0]?.removedIds) && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.sectionSummaries?.[0]?.addedIdCount), "Diagnostic scan session did not expose imported session section added and removed ids");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.removedIds) && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.addedIdCount), "Diagnostic scan session did not expose imported session top-level added and removed ids");
+check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.removedIdsBySectionId && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.removedIdsBySectionId === "object", "Diagnostic scan session did not expose imported session removed ids by section");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedReasonIds) && Number.isInteger(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedReasonCount), "Diagnostic scan session did not expose imported session top-level change reasons");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedReasonCountsById && "primaryChangedReasonId" in scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary, "Diagnostic scan session did not expose imported session reason counts");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionsByReasonId && typeof scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.changedSectionsByReasonId === "object", "Diagnostic scan session did not expose imported session sections by reason");
@@ -7647,6 +7650,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 830");
+  console.log("OBD read-only safety checks: 833");
   console.log("Errors: 0");
 }
