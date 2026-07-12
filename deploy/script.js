@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1004+件",
+  validationCheckLabel: "OBD安全検証 1009+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.424.0";
+const APP_VERSION = "2.425.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5317,6 +5317,38 @@ function formatPrimaryBlockerChangeSummary(summary, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : "変更あり";
 }
 
+function formatChangedIdDisplaySummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  if (summary.status === "unchanged" || summary.empty === true) return "変更なし";
+  const row = summary.primaryRow || null;
+  const primaryId = row?.id || summary.primaryChangedId || null;
+  const primaryKind = row?.kind || summary.primaryChangedIdKind || null;
+  const primaryDirection = row?.direction || summary.primaryChangedIdDirection || null;
+  const kindLabel = {
+    readout_id: "読取",
+    bridge_intent: "ブリッジ要求",
+    request_plan_action: "要求計画",
+    blocked_reason: "保留理由",
+    analysis_checklist_id: "確認項目"
+  }[primaryKind] || primaryKind || "";
+  const directionLabel = {
+    added: "追加",
+    removed: "解除",
+    mixed: "変更"
+  }[primaryDirection] || primaryDirection || "";
+  const primaryLabel = primaryId
+    ? formatCoreReadoutLabel(primaryId, formatDiagnosticFlowBlockerLabel(primaryId))
+    : "";
+  const count = Number.isFinite(Number(summary.displayRowCount))
+    ? Number(summary.displayRowCount)
+    : Number.isFinite(Number(summary.changedIdCount)) ? Number(summary.changedIdCount) : 0;
+  const parts = [];
+  if (count > 0) parts.push(`${count}件`);
+  if (primaryLabel) parts.push(`${kindLabel ? `${kindLabel}: ` : ""}${primaryLabel}`);
+  if (directionLabel) parts.push(directionLabel);
+  return parts.length ? parts.join(" / ") : "変更あり";
+}
+
 function addObdDiagnosticFlowMetric(container, label, value, tone = "") {
   const item = document.createElement("article");
   item.className = `obd-diagnostic-flow-card${tone ? ` obd-diagnostic-flow-${tone}` : ""}`;
@@ -5390,6 +5422,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
     : NO_DATA;
   const primaryBlockerComparisonSummary = session.importedSessionComparisonSummary?.primaryBlockerChangeSummary || null;
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(primaryBlockerComparisonSummary, NO_DATA);
+  const changedIdDisplaySummary = session.importedSessionComparisonSummary?.changedIdDisplaySummary || null;
+  const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5431,6 +5465,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "主保留", primaryBlockingLabel, primaryBlockingReasonId ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "主保留要求", primaryBlockingReadoutRequestLabel, primaryBlockingReadoutRequest?.executionEnabled === true ? "ready" : primaryBlockingReadoutRequest ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "主保留比較", primaryBlockerComparisonLabel, primaryBlockerComparisonSummary?.changed === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "読取差分", changedIdDisplayLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
@@ -5490,6 +5525,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const emptyReadoutLabel = formatCoreEmptyReadoutSummary(session?.coreSessionStatus, 2, NO_DATA);
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(session?.importedSessionComparisonSummary?.primaryBlockerChangeSummary, NO_DATA);
+  const changedIdDisplayLabel = formatChangedIdDisplaySummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -5553,7 +5589,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["次操作", nextReadoutLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["次操作", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
@@ -6061,6 +6097,10 @@ function analyzeObdScannerImport() {
   const primaryBlockerComparisonNote = formatPrimaryBlockerChangeSummary(summarySource.importedSessionComparisonSummary?.primaryBlockerChangeSummary, "");
   if (primaryBlockerComparisonNote) {
     notes.push(`主保留比較 ${primaryBlockerComparisonNote}`);
+  }
+  const changedIdDisplayNote = formatChangedIdDisplaySummary(summarySource.importedSessionComparisonSummary?.changedIdDisplaySummary, "");
+  if (changedIdDisplayNote) {
+    notes.push(`読取差分 ${changedIdDisplayNote}`);
   }
   if (Array.isArray(summarySource.coreSessionStatus?.blockingWarningIds) && summarySource.coreSessionStatus.blockingWarningIds.length > 0) {
     notes.push(`保留要因 ${summarySource.coreSessionStatus.blockingWarningIds.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
