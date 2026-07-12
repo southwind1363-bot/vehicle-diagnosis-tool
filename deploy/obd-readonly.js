@@ -3980,6 +3980,8 @@
         .sort((left, right) => (summary[right]?.count || 0) - (summary[left]?.count || 0) || changedIdDirectionPriority[left] - changedIdDirectionPriority[right])[0] || null;
       return [item.kind, direction && (summary[direction]?.count || 0) > 0 ? direction : null];
     }));
+    const readoutChangedIdSummary = changedIdSummaryByKind.readout_id || { ids: [], count: 0, summaries: [] };
+    const bridgeIntentChangedIdSummary = changedIdSummaryByKind.bridge_intent || { ids: [], count: 0, summaries: [] };
     const changedIdDirectionSummary = {
       added: { ids: addedOnlyChangedIdSummaries.map((item) => item.id), count: addedOnlyChangedIdSummaries.length, summaries: addedOnlyChangedIdSummaries },
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
@@ -4035,6 +4037,12 @@
       primaryChangedIdSummaryByKind,
       changedIdKindDirectionSummary,
       primaryChangedIdDirectionByKind,
+      readoutChangedIds: [...readoutChangedIdSummary.ids],
+      bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
+      readoutChangedIdCount: readoutChangedIdSummary.count || 0,
+      bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
+      hasReadoutChangedIds: (readoutChangedIdSummary.count || 0) > 0,
+      hasBridgeIntentChangedIds: (bridgeIntentChangedIdSummary.count || 0) > 0,
       changedIdCount: changedIdSummaries.length,
       addedChangedIdSummaries,
       removedChangedIdSummaries,
