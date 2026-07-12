@@ -3382,6 +3382,14 @@
     const currentCompletion = Number.isFinite(Number(currentSummary.completionPercent))
       ? Number(currentSummary.completionPercent)
       : 0;
+    const readStringList = (summary = {}, field) => (Array.isArray(summary?.[field]) ? summary[field].filter(Boolean).map(String).sort() : []);
+    const readChecklistIds = (summary = {}, field) => readStringList(summary?.checklistSummary || {}, field);
+    const importedChecklistBlockedIds = readChecklistIds(importedAnalysisReadinessSummary, "blockedIds");
+    const currentChecklistBlockedIds = readChecklistIds(currentSummary, "blockedIds");
+    const importedChecklistReviewIds = readChecklistIds(importedAnalysisReadinessSummary, "reviewIds");
+    const currentChecklistReviewIds = readChecklistIds(currentSummary, "reviewIds");
+    const importedVehicleApplicabilityChecklistState = importedAnalysisReadinessSummary.checklistById?.vehicle_applicability?.state || null;
+    const currentVehicleApplicabilityChecklistState = currentSummary.checklistById?.vehicle_applicability?.state || null;
     return {
       schemaVersion: "imported_analysis_readiness_comparison_v1",
       importedReady: importedAnalysisReadinessSummary.ready === true,
@@ -3399,6 +3407,15 @@
       importedPendingReadoutCount: importedPendingCount,
       currentPendingReadoutCount: currentPendingCount,
       pendingReadoutDelta: currentPendingCount - importedPendingCount,
+      importedChecklistBlockedIds: [...importedChecklistBlockedIds],
+      currentChecklistBlockedIds: [...currentChecklistBlockedIds],
+      checklistBlockedIdsChanged: importedChecklistBlockedIds.join("|") !== currentChecklistBlockedIds.join("|"),
+      importedChecklistReviewIds: [...importedChecklistReviewIds],
+      currentChecklistReviewIds: [...currentChecklistReviewIds],
+      checklistReviewIdsChanged: importedChecklistReviewIds.join("|") !== currentChecklistReviewIds.join("|"),
+      importedVehicleApplicabilityChecklistState,
+      currentVehicleApplicabilityChecklistState,
+      vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
       importedNextReadoutId: importedAnalysisReadinessSummary.nextReadoutId || null,
       currentNextReadoutId: currentSummary.nextReadoutId || null,
       nextReadoutChanged: (importedAnalysisReadinessSummary.nextReadoutId || null) !== (currentSummary.nextReadoutId || null),
