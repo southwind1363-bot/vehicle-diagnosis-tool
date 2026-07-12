@@ -3826,6 +3826,15 @@
       ? ["mixed", "added", "removed"]
         .sort((left, right) => (changedIdDirectionSummary[right]?.count || 0) - (changedIdDirectionSummary[left]?.count || 0) || changedIdDirectionPriority[left] - changedIdDirectionPriority[right])[0] || null
       : null;
+    const changedIdDirectionSummaries = ["mixed", "added", "removed"].map((direction) => ({
+      direction,
+      primary: direction === primaryChangedIdDirection,
+      ...(changedIdDirectionSummary[direction] || { ids: [], count: 0, summaries: [] })
+    }));
+    const changedIdDirectionSummaryByDirection = changedIdDirectionSummaries.reduce((byDirection, item) => {
+      byDirection[item.direction] = item;
+      return byDirection;
+    }, {});
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
     return {
       schemaVersion: "imported_session_comparison_v1",
@@ -3870,8 +3879,10 @@
       removedOnlyChangedIds: removedOnlyChangedIdSummaries.map((item) => item.id),
       mixedChangedIds: mixedChangedIdSummaries.map((item) => item.id),
       changedIdDirectionSummary,
+      changedIdDirectionSummaries,
+      changedIdDirectionSummaryByDirection,
       primaryChangedIdDirection,
-      primaryChangedIdDirectionSummary: primaryChangedIdDirection ? changedIdDirectionSummary[primaryChangedIdDirection] || null : null,
+      primaryChangedIdDirectionSummary: primaryChangedIdDirection ? changedIdDirectionSummaryByDirection[primaryChangedIdDirection] || null : null,
       primaryChangedReasonId,
       primaryChangedReasonSummary,
       statusChanged: comparisons.some((item) => item.statusChanged === true || item.stateChanged === true),
