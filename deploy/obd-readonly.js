@@ -3440,6 +3440,15 @@
     const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
     const importedRequestPlanNextBridgeIntents = toSingletonIdList(importedRequestPlanSummary.nextBridgeIntent);
     const currentRequestPlanNextBridgeIntents = toSingletonIdList(currentRequestPlanSummary.nextBridgeIntent);
+    const readPrimaryBlocker = (flow = {}) => (flow.primaryBlockingSummary && typeof flow.primaryBlockingSummary === "object" ? flow.primaryBlockingSummary : {});
+    const importedPrimaryBlocker = readPrimaryBlocker(importedFlow);
+    const currentPrimaryBlocker = readPrimaryBlocker(currentFlow);
+    const importedPrimaryBlockingReasonId = importedPrimaryBlocker.reasonId || importedFlow.primaryBlockingReasonId || null;
+    const currentPrimaryBlockingReasonId = currentPrimaryBlocker.reasonId || currentFlow.primaryBlockingReasonId || null;
+    const importedPrimaryBlockingReadoutId = importedPrimaryBlocker.readoutId || importedFlow.primaryBlockingReadoutId || null;
+    const currentPrimaryBlockingReadoutId = currentPrimaryBlocker.readoutId || currentFlow.primaryBlockingReadoutId || null;
+    const importedPrimaryBlockingBridgeIntent = importedPrimaryBlocker.bridgeIntent || importedFlow.primaryBlockingReadoutBridgeIntent || null;
+    const currentPrimaryBlockingBridgeIntent = currentPrimaryBlocker.bridgeIntent || currentFlow.primaryBlockingReadoutBridgeIntent || null;
     return {
       schemaVersion: "imported_core_comparison_v1",
       importedStatus: importedFlow.status,
@@ -3478,6 +3487,18 @@
       importedBlockerCount,
       currentBlockerCount,
       blockerCountDelta: currentBlockerCount - importedBlockerCount,
+      importedPrimaryBlockingReasonId,
+      currentPrimaryBlockingReasonId,
+      primaryBlockingReasonChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId,
+      importedPrimaryBlockingReadoutId,
+      currentPrimaryBlockingReadoutId,
+      primaryBlockingReadoutChanged: importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId,
+      importedPrimaryBlockingBridgeIntent,
+      currentPrimaryBlockingBridgeIntent,
+      primaryBlockingBridgeIntentChanged: importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
+      primaryBlockingChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId
+        || importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId
+        || importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
       importedChecklistCompleteCount,
       currentChecklistCompleteCount,
       checklistCompleteDelta: currentChecklistCompleteCount - importedChecklistCompleteCount,
@@ -3600,6 +3621,15 @@
     const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
     const importedRequestPlanNextBridgeIntents = toSingletonIdList(importedRequestPlanSummary.nextBridgeIntent);
     const currentRequestPlanNextBridgeIntents = toSingletonIdList(currentRequestPlanSummary.nextBridgeIntent);
+    const readPrimaryBlocker = (flow = {}) => (flow.primaryBlockingSummary && typeof flow.primaryBlockingSummary === "object" ? flow.primaryBlockingSummary : {});
+    const importedPrimaryBlocker = readPrimaryBlocker(importedDiagnosticFlowSummary);
+    const currentPrimaryBlocker = readPrimaryBlocker(currentFlow);
+    const importedPrimaryBlockingReasonId = importedPrimaryBlocker.reasonId || importedDiagnosticFlowSummary.primaryBlockingReasonId || null;
+    const currentPrimaryBlockingReasonId = currentPrimaryBlocker.reasonId || currentFlow.primaryBlockingReasonId || null;
+    const importedPrimaryBlockingReadoutId = importedPrimaryBlocker.readoutId || importedDiagnosticFlowSummary.primaryBlockingReadoutId || null;
+    const currentPrimaryBlockingReadoutId = currentPrimaryBlocker.readoutId || currentFlow.primaryBlockingReadoutId || null;
+    const importedPrimaryBlockingBridgeIntent = importedPrimaryBlocker.bridgeIntent || importedDiagnosticFlowSummary.primaryBlockingReadoutBridgeIntent || null;
+    const currentPrimaryBlockingBridgeIntent = currentPrimaryBlocker.bridgeIntent || currentFlow.primaryBlockingReadoutBridgeIntent || null;
     return {
       schemaVersion: "imported_diagnostic_flow_comparison_v1",
       importedStatus: importedDiagnosticFlowSummary.status || null,
@@ -3638,6 +3668,18 @@
       importedBlockerCount,
       currentBlockerCount,
       blockerCountDelta: currentBlockerCount - importedBlockerCount,
+      importedPrimaryBlockingReasonId,
+      currentPrimaryBlockingReasonId,
+      primaryBlockingReasonChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId,
+      importedPrimaryBlockingReadoutId,
+      currentPrimaryBlockingReadoutId,
+      primaryBlockingReadoutChanged: importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId,
+      importedPrimaryBlockingBridgeIntent,
+      currentPrimaryBlockingBridgeIntent,
+      primaryBlockingBridgeIntentChanged: importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
+      primaryBlockingChanged: importedPrimaryBlockingReasonId !== currentPrimaryBlockingReasonId
+        || importedPrimaryBlockingReadoutId !== currentPrimaryBlockingReadoutId
+        || importedPrimaryBlockingBridgeIntent !== currentPrimaryBlockingBridgeIntent,
       importedChecklistCompleteCount,
       currentChecklistCompleteCount,
       checklistCompleteDelta: currentChecklistCompleteCount - importedChecklistCompleteCount,
@@ -4010,6 +4052,10 @@
       || comparison.requestPlanStateChanged === true
       || comparison.requestPlanNextRequestChanged === true
       || comparison.requestPlanNextBridgeIntentChanged === true
+      || comparison.primaryBlockingChanged === true
+      || comparison.primaryBlockingReasonChanged === true
+      || comparison.primaryBlockingReadoutChanged === true
+      || comparison.primaryBlockingBridgeIntentChanged === true
       || comparison.nextReadoutChanged === true
       || comparison.nextReadoutDetailsChanged === true
       || comparison.nextBlockedReasonChanged === true
@@ -4034,6 +4080,7 @@
       comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
       comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
       comparison.requestPlanStateChanged === true || comparison.requestPlanNextRequestChanged === true || comparison.requestPlanNextBridgeIntentChanged === true ? "request_plan_summary" : null,
+      comparison.primaryBlockingChanged === true || comparison.primaryBlockingReasonChanged === true || comparison.primaryBlockingReadoutChanged === true || comparison.primaryBlockingBridgeIntentChanged === true ? "primary_blocker" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
@@ -4494,6 +4541,7 @@
       readyForAnalysisChanged: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
       requestPlanSummaryChanged: comparisons.some((item) => item.requestPlanStateChanged === true || item.requestPlanNextRequestChanged === true || item.requestPlanNextBridgeIntentChanged === true),
+      primaryBlockerChanged: comparisons.some((item) => item.primaryBlockingChanged === true || item.primaryBlockingReasonChanged === true || item.primaryBlockingReadoutChanged === true || item.primaryBlockingBridgeIntentChanged === true),
       analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || item.requiredIdsChanged === true || item.capturedIdsChanged === true || item.missingIdsChanged === true || item.pendingIdsChanged === true || item.emptyIdsChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
