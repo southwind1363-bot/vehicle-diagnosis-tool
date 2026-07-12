@@ -1372,6 +1372,10 @@
       missingItems.length > 0 ? "missing_readouts" : null,
       emptyItems.length > 0 ? "empty_readouts" : null
     ].filter(Boolean);
+    const blockingReasonById = {
+      missing_readouts: { id: "missing_readouts", count: missingItems.length, readoutIds: missingItems.map((item) => item.id), readoutLabels: missingItems.map((item) => item.label) },
+      empty_readouts: { id: "empty_readouts", count: emptyItems.length, readoutIds: emptyItems.map((item) => item.id), readoutLabels: emptyItems.map((item) => item.label) }
+    };
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1389,6 +1393,8 @@
       analysisBlocked: pendingItems.length > 0,
       blockingReasonIds,
       blockingReasonCount: blockingReasonIds.length,
+      blockingReasonById,
+      blockingReasonDetails: blockingReasonIds.map((id) => blockingReasonById[id]),
       hasPendingReadouts: pendingItems.length > 0,
       hasMissingReadouts: missingItems.length > 0,
       hasEmptyReadouts: emptyItems.length > 0,
@@ -1489,6 +1495,10 @@
       normalizedMissingIds.length > 0 ? "missing_readouts" : null,
       normalizedEmptyIds.length > 0 ? "empty_readouts" : null
     ].filter(Boolean);
+    const normalizedBlockingReasonById = {
+      missing_readouts: { id: "missing_readouts", count: normalizedMissingIds.length, readoutIds: normalizedMissingIds, readoutLabels: normalizedMissingLabels },
+      empty_readouts: { id: "empty_readouts", count: normalizedEmptyIds.length, readoutIds: normalizedEmptyIds, readoutLabels: normalizedEmptyLabels }
+    };
     const completionSummaryInput = pickDefined(input.completionSummary, input.completion_summary, {});
     const coverageCompletionSummary = {
       ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
@@ -1499,6 +1509,8 @@
       analysisBlocked: normalizedPendingIds.length > 0,
       blockingReasonIds: normalizedBlockingReasonIds,
       blockingReasonCount: normalizedBlockingReasonIds.length,
+      blockingReasonById: normalizedBlockingReasonById,
+      blockingReasonDetails: normalizedBlockingReasonIds.map((id) => normalizedBlockingReasonById[id]),
       hasPendingReadouts: normalizedPendingIds.length > 0,
       hasMissingReadouts: normalizedMissingIds.length > 0,
       hasEmptyReadouts: normalizedEmptyIds.length > 0,
