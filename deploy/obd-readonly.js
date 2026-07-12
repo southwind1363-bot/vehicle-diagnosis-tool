@@ -1367,6 +1367,7 @@
     const nextPendingItem = pendingItems[0] || null;
     const nextEmptyItem = emptyItems[0] || null;
     const nextMissingItem = missingItems[0] || null;
+    const recommendedNextItem = nextMissingItem || nextEmptyItem || null;
     const itemById = items.reduce((byId, item) => {
       byId[item.id] = item;
       return byId;
@@ -1395,6 +1396,12 @@
       nextEmptyLabel: nextEmptyItem?.label || null,
       nextMissingId: nextMissingItem?.id || null,
       nextMissingLabel: nextMissingItem?.label || null,
+      recommendedNextReadoutId: recommendedNextItem?.id || null,
+      recommendedNextReadoutLabel: recommendedNextItem?.label || null,
+      recommendedNextReadoutStatus: recommendedNextItem?.status || null,
+      recommendedNextReadoutReason: recommendedNextItem
+        ? recommendedNextItem.status === "missing" ? "missing_readout" : "empty_readout"
+        : null,
       capturedIds,
       pendingIds,
       emptyIds: emptyItems.map((item) => item.id),
@@ -1463,6 +1470,11 @@
     const normalizedNextMissingId = normalizedMissingIds[0] || null;
     const normalizedNextEmptyItem = normalizedNextEmptyId ? itemById[normalizedNextEmptyId] || null : null;
     const normalizedNextMissingItem = normalizedNextMissingId ? itemById[normalizedNextMissingId] || null : null;
+    const normalizedRecommendedNextReadoutId = normalizedNextMissingId || normalizedNextEmptyId || null;
+    const normalizedRecommendedNextReadoutItem = normalizedRecommendedNextReadoutId ? itemById[normalizedRecommendedNextReadoutId] || null : null;
+    const normalizedRecommendedNextReadoutStatus = normalizedRecommendedNextReadoutItem?.status
+      || (normalizedRecommendedNextReadoutId && normalizedMissingIds.includes(normalizedRecommendedNextReadoutId) ? "missing" : null)
+      || (normalizedRecommendedNextReadoutId && normalizedEmptyIds.includes(normalizedRecommendedNextReadoutId) ? "empty" : null);
     const completionSummaryInput = pickDefined(input.completionSummary, input.completion_summary, {});
     const coverageCompletionSummary = {
       ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
@@ -1484,6 +1496,14 @@
       nextEmptyLabel: normalizedEmptyLabels[0] || normalizedNextEmptyItem?.label || null,
       nextMissingId: normalizedNextMissingId,
       nextMissingLabel: normalizedMissingLabels[0] || normalizedNextMissingItem?.label || null,
+      recommendedNextReadoutId: normalizedRecommendedNextReadoutId,
+      recommendedNextReadoutLabel: normalizedRecommendedNextReadoutStatus === "missing"
+        ? normalizedMissingLabels[0] || normalizedRecommendedNextReadoutItem?.label || null
+        : normalizedEmptyLabels[0] || normalizedRecommendedNextReadoutItem?.label || null,
+      recommendedNextReadoutStatus: normalizedRecommendedNextReadoutStatus,
+      recommendedNextReadoutReason: normalizedRecommendedNextReadoutStatus
+        ? normalizedRecommendedNextReadoutStatus === "missing" ? "missing_readout" : "empty_readout"
+        : null,
       capturedIds: normalizedCapturedIds,
       pendingIds: normalizedPendingIds,
       emptyIds: normalizedEmptyIds,

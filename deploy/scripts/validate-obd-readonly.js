@@ -205,6 +205,7 @@ const normalizeReadoutCoverageFunctionChecks = () => {
     check(functionBody.includes('const coverageCompletionSummary = {') && functionBody.includes('schemaVersion: "readout_coverage_completion_v1"') && functionBody.includes('completionSummary: coverageCompletionSummary,'), "normalizeReadoutCoverageSnapshot should expose a compact readout coverage completion summary");
     check(functionBody.includes('hasPendingReadouts: normalizedPendingIds.length > 0,') && functionBody.includes('nextPendingStatus: normalizedNextPendingStatus,'), "normalizeReadoutCoverageSnapshot should expose actionable readout coverage completion flags");
     check(functionBody.includes('nextEmptyId: normalizedNextEmptyId,') && functionBody.includes('nextMissingId: normalizedNextMissingId,'), "normalizeReadoutCoverageSnapshot should expose separate empty and missing readout cursors");
+    check(functionBody.includes('recommendedNextReadoutId: normalizedRecommendedNextReadoutId,') && functionBody.includes('recommendedNextReadoutReason:'), "normalizeReadoutCoverageSnapshot should expose recommended next readout cursor");
   }
 };
 const vehicleApplicabilityFunctionChecks = () => {
@@ -1839,7 +1840,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 953+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 956+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -7375,6 +7376,7 @@ check(scanSessionPlainCoverageOverride.readoutCoverage.capturedIds?.includes("dt
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.schemaVersion === "readout_coverage_completion_v1" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.pendingCount === 5, "Diagnostic scan session did not expose readout coverage completion summary");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.hasPendingReadouts === true && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextPendingId === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextPendingStatus === "empty", "Diagnostic scan session did not expose actionable readout coverage completion flags");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextEmptyId === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextMissingId === "readiness_snapshot", "Diagnostic scan session did not expose separate empty and missing readout cursors");
+check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.recommendedNextReadoutId === "readiness_snapshot" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.recommendedNextReadoutReason === "missing_readout", "Diagnostic scan session did not expose recommended next readout cursor");
 check(!scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_incomplete") && !scanSessionPlainCoverageOverride.warnings.includes("bridge_readout_empty_sections"), "Diagnostic scan session emitted bridge readout warnings when plain-object coverage disabled infrastructure");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly treated plain-object coverage override with empty and missing readouts as analysis-ready");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot from plain-object coverage override emptyIds");
@@ -7767,6 +7769,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 953");
+  console.log("OBD read-only safety checks: 956");
   console.log("Errors: 0");
 }
