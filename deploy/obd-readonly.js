@@ -3336,6 +3336,17 @@
     const currentPendingCount = readCount(currentSummary, currentPendingIds, "pendingCount");
     const importedEmptyCount = readCount(importedReadoutCompletionSummary, importedEmptyIds, "emptyCount");
     const currentEmptyCount = readCount(currentSummary, currentEmptyIds, "emptyCount");
+    const normalizeIds = (ids = []) => (Array.isArray(ids) ? ids.filter(Boolean).map(String).sort() : []);
+    const normalizedImportedRequiredIds = normalizeIds(importedRequiredIds);
+    const normalizedCurrentRequiredIds = normalizeIds(currentRequiredIds);
+    const normalizedImportedCapturedIds = normalizeIds(importedCapturedIds);
+    const normalizedCurrentCapturedIds = normalizeIds(currentCapturedIds);
+    const normalizedImportedMissingIds = normalizeIds(importedMissingIds);
+    const normalizedCurrentMissingIds = normalizeIds(currentMissingIds);
+    const normalizedImportedPendingIds = normalizeIds(importedPendingIds);
+    const normalizedCurrentPendingIds = normalizeIds(currentPendingIds);
+    const normalizedImportedEmptyIds = normalizeIds(importedEmptyIds);
+    const normalizedCurrentEmptyIds = normalizeIds(currentEmptyIds);
     return {
       schemaVersion: "imported_readout_completion_comparison_v1",
       importedComplete: importedReadoutCompletionSummary.complete === true,
@@ -3344,18 +3355,33 @@
       importedRequiredCount,
       currentRequiredCount,
       requiredCountDelta: currentRequiredCount - importedRequiredCount,
+      importedRequiredIds: [...normalizedImportedRequiredIds],
+      currentRequiredIds: [...normalizedCurrentRequiredIds],
+      requiredIdsChanged: normalizedImportedRequiredIds.join("|") !== normalizedCurrentRequiredIds.join("|"),
       importedCapturedCount,
       currentCapturedCount,
       capturedCountDelta: currentCapturedCount - importedCapturedCount,
+      importedCapturedIds: [...normalizedImportedCapturedIds],
+      currentCapturedIds: [...normalizedCurrentCapturedIds],
+      capturedIdsChanged: normalizedImportedCapturedIds.join("|") !== normalizedCurrentCapturedIds.join("|"),
       importedMissingCount,
       currentMissingCount,
       missingCountDelta: currentMissingCount - importedMissingCount,
+      importedMissingIds: [...normalizedImportedMissingIds],
+      currentMissingIds: [...normalizedCurrentMissingIds],
+      missingIdsChanged: normalizedImportedMissingIds.join("|") !== normalizedCurrentMissingIds.join("|"),
       importedPendingCount,
       currentPendingCount,
       pendingCountDelta: currentPendingCount - importedPendingCount,
+      importedPendingIds: [...normalizedImportedPendingIds],
+      currentPendingIds: [...normalizedCurrentPendingIds],
+      pendingIdsChanged: normalizedImportedPendingIds.join("|") !== normalizedCurrentPendingIds.join("|"),
       importedEmptyCount,
       currentEmptyCount,
-      emptyCountDelta: currentEmptyCount - importedEmptyCount
+      emptyCountDelta: currentEmptyCount - importedEmptyCount,
+      importedEmptyIds: [...normalizedImportedEmptyIds],
+      currentEmptyIds: [...normalizedCurrentEmptyIds],
+      emptyIdsChanged: normalizedImportedEmptyIds.join("|") !== normalizedCurrentEmptyIds.join("|")
     };
   }
 
@@ -3569,6 +3595,11 @@
       || comparison.checklistBlockedIdsChanged === true
       || comparison.checklistReviewIdsChanged === true
       || comparison.vehicleApplicabilityChecklistChanged === true
+      || comparison.requiredIdsChanged === true
+      || comparison.capturedIdsChanged === true
+      || comparison.missingIdsChanged === true
+      || comparison.pendingIdsChanged === true
+      || comparison.emptyIdsChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -3579,7 +3610,7 @@
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true ? "analysis_checklist" : null,
-      comparison.completeChanged === true ? "readout_completion" : null,
+      comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true ? "readout_completion" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
       Number(comparison.capturedCountDelta || comparison.capturedReadoutDelta || 0) !== 0 ? "captured_readouts" : null,
@@ -3677,7 +3708,7 @@
       requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
       analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
-      readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
+      readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || item.requiredIdsChanged === true || item.capturedIdsChanged === true || item.missingIdsChanged === true || item.pendingIdsChanged === true || item.emptyIdsChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
       sectionSummaries,
       changedSectionSummaries,
       unchangedSectionSummaries,
