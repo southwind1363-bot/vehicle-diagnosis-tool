@@ -6016,6 +6016,7 @@
       importedReadoutRequestPlanGateComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
+      imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedSessionComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
@@ -7884,6 +7885,7 @@
       importedReadoutRequestPlanGateComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
+      imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedSessionComparisonSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
