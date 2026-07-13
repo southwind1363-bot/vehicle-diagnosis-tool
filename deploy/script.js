@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1053+件",
+  validationCheckLabel: "OBD安全検証 1055+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.433.0";
+const APP_VERSION = "2.434.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5317,13 +5317,27 @@ function formatPrimaryBlockerChangeSummary(summary, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : "変更あり";
 }
 
+function formatChangedIdReviewTargetLabel(reviewTarget = "") {
+  return {
+    readout_review: "review:readout",
+    bridge_contract_review: "review:bridge",
+    request_plan_review: "review:request-plan",
+    blocked_reason_review: "review:blocker",
+    analysis_checklist_review: "review:checklist",
+    session_review: "review:session"
+  }[reviewTarget] || reviewTarget || "";
+}
+
 function formatChangedIdDisplaySummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   if (summary.status === "unchanged" || summary.empty === true) return "変更なし";
   const row = summary.primaryRow || null;
+  const impactSummary = summary.primaryChangedIdImpactSummary || {};
   const primaryId = row?.id || summary.primaryChangedId || null;
   const primaryKind = row?.kind || summary.primaryChangedIdKind || null;
   const primaryDirection = row?.direction || summary.primaryChangedIdDirection || null;
+  const reviewTarget = impactSummary.reviewTarget || impactSummary.primaryChangedIdReviewTarget || summary.primaryChangedIdReviewTarget || "";
+  const reviewTargetLabel = formatChangedIdReviewTargetLabel(reviewTarget);
   const kindLabel = {
     readout_id: "読取",
     bridge_intent: "ブリッジ要求",
@@ -5382,6 +5396,7 @@ function formatChangedIdDisplaySummary(summary, fallback = NO_DATA) {
   if (mixedDeltaCount > 0) parts.push(`変更${mixedDeltaCount}`);
   if (primaryLabel) parts.push(`${kindLabel ? `${kindLabel}: ` : ""}${primaryLabel}`);
   if (directionLabel) parts.push(directionLabel);
+  if (reviewTargetLabel) parts.push(reviewTargetLabel);
   return parts.length ? parts.join(" / ") : "変更あり";
 }
 
