@@ -5323,6 +5323,8 @@
       readout_quality_summary: pickDefined(input.readout_quality_summary, input.readoutQualitySummary, payload?.readout_quality_summary, payload?.readoutQualitySummary, nested.readout_quality_summary, nested.readoutQualitySummary, null),
       readoutRequestPlanGateSummary: pickDefined(input.readoutRequestPlanGateSummary, input.readout_request_plan_gate_summary, payload?.readoutRequestPlanGateSummary, payload?.readout_request_plan_gate_summary, nested.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary, null),
       readout_request_plan_gate_summary: pickDefined(input.readout_request_plan_gate_summary, input.readoutRequestPlanGateSummary, payload?.readout_request_plan_gate_summary, payload?.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary, nested.readoutRequestPlanGateSummary, null),
+      importedReadoutQualityReviewRequestPlanSummary: pickDefined(input.importedReadoutQualityReviewRequestPlanSummary, input.imported_readout_quality_review_request_plan_summary, payload?.importedReadoutQualityReviewRequestPlanSummary, payload?.imported_readout_quality_review_request_plan_summary, nested.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary, null),
+      imported_readout_quality_review_request_plan_summary: pickDefined(input.imported_readout_quality_review_request_plan_summary, input.importedReadoutQualityReviewRequestPlanSummary, payload?.imported_readout_quality_review_request_plan_summary, payload?.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary, nested.importedReadoutQualityReviewRequestPlanSummary, null),
       dtcSnapshot: pickDefined(input.dtcSnapshot, input.dtc_snapshot, payload?.dtcSnapshot, payload?.dtc_snapshot, nested.dtcSnapshot, nested.dtc_snapshot, null),
       dtc_snapshot: pickDefined(input.dtc_snapshot, input.dtcSnapshot, payload?.dtc_snapshot, payload?.dtcSnapshot, nested.dtc_snapshot, nested.dtcSnapshot, null),
       livePidSnapshot: pickDefined(input.livePidSnapshot, input.live_pid_snapshot, payload?.livePidSnapshot, payload?.live_pid_snapshot, nested.livePidSnapshot, nested.live_pid_snapshot, null),
@@ -5934,7 +5936,12 @@
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
-    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary || null;
+    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || bridgeImport?.importedReadoutQualityReviewRequestPlanSummary
+      || bridgeImport?.imported_readout_quality_review_request_plan_summary
+      || bridgeSession?.importedReadoutQualityReviewRequestPlanSummary
+      || bridgeSession?.imported_readout_quality_review_request_plan_summary
+      || null;
 
     return {
       source,
@@ -7805,7 +7812,10 @@
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
-    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary || null;
+    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || sessionInput.importedReadoutQualityReviewRequestPlanSummary
+      || sessionInput.imported_readout_quality_review_request_plan_summary
+      || null;
 
     return {
       schemaVersion: "scan_session_v1",
