@@ -4360,12 +4360,21 @@
     const primaryChangedIdSummary = primaryChangedIdDirection
       ? pickPrimaryChangedIdSummary(changedIdDirectionSummaryByDirection[primaryChangedIdDirection]?.summaries || [])
       : null;
+    const changedIdReviewTargetByKind = {
+      readout_id: "readout_review",
+      bridge_intent: "bridge_contract_review",
+      request_plan_action: "request_plan_review",
+      blocked_reason: "blocked_reason_review",
+      analysis_checklist_id: "analysis_checklist_review",
+      other: "session_review"
+    };
     const changedIdDisplayRows = changedIdSummaries
       .map((item) => ({
         key: `${item.kind}:${item.id}`,
         id: item.id,
         kind: item.kind,
         direction: item.direction,
+        reviewTarget: changedIdReviewTargetByKind[item.kind] || "session_review",
         directionRank: changedIdDirectionPriority[item.direction] ?? 99,
         primary: item.id === primaryChangedIdSummary?.id && item.kind === primaryChangedIdSummary?.kind,
         added: item.added,
@@ -4400,12 +4409,16 @@
       .map((kind) => buildChangedIdDisplayGroup(kind, changedIdDisplayRows.filter((row) => row.kind === kind)));
     const changedIdDisplayGroupsByDirection = ["mixed", "added", "removed"]
       .map((direction) => buildChangedIdDisplayGroup(direction, changedIdDisplayRows.filter((row) => row.direction === direction)));
+    const changedIdDisplayGroupsByReviewTarget = [...new Set(changedIdDisplayRows.map((row) => row.reviewTarget || "session_review"))]
+      .sort()
+      .map((reviewTarget) => buildChangedIdDisplayGroup(reviewTarget, changedIdDisplayRows.filter((row) => row.reviewTarget === reviewTarget)));
     const indexChangedIdDisplayGroups = (groups = []) => groups.reduce((byValue, group) => {
       byValue[group.value] = group;
       return byValue;
     }, {});
     const changedIdDisplayGroupByKind = indexChangedIdDisplayGroups(changedIdDisplayGroupsByKind);
     const changedIdDisplayGroupByDirection = indexChangedIdDisplayGroups(changedIdDisplayGroupsByDirection);
+    const changedIdDisplayGroupByReviewTarget = indexChangedIdDisplayGroups(changedIdDisplayGroupsByReviewTarget);
     const changedIdDisplayMatrixDirections = ["mixed", "added", "removed"];
     const changedIdDisplayMatrixRows = changedIdDisplayGroupsByKind.map((group) => {
       const byDirection = changedIdDisplayMatrixDirections.reduce((directionGroups, direction) => {
@@ -4445,16 +4458,8 @@
     const primaryChangedKindDirectionCounts = primaryChangedIdSummary?.kind
       ? changedIdDisplayKindDirectionCounts[primaryChangedIdSummary.kind] || buildKindDirectionCountSummary(primaryChangedIdSummary.kind)
       : null;
-    const primaryChangedIdReviewTargetByKind = {
-      readout_id: "readout_review",
-      bridge_intent: "bridge_contract_review",
-      request_plan_action: "request_plan_review",
-      blocked_reason: "blocked_reason_review",
-      analysis_checklist_id: "analysis_checklist_review",
-      other: "session_review"
-    };
     const primaryChangedIdReviewTarget = primaryChangedIdSummary?.kind
-      ? primaryChangedIdReviewTargetByKind[primaryChangedIdSummary.kind] || "session_review"
+      ? changedIdReviewTargetByKind[primaryChangedIdSummary.kind] || "session_review"
       : null;
     const primaryChangedIdImpactSummary = {
       schemaVersion: "primary_changed_id_impact_summary_v1",
@@ -4490,10 +4495,21 @@
       schemaVersion: "changed_id_display_group_summary_v1",
       byKind: changedIdDisplayGroupsByKind,
       byDirection: changedIdDisplayGroupsByDirection,
+      byReviewTarget: changedIdDisplayGroupsByReviewTarget,
       byKindValue: changedIdDisplayGroupByKind,
       byDirectionValue: changedIdDisplayGroupByDirection,
+      byReviewTargetValue: changedIdDisplayGroupByReviewTarget,
       kindCount: changedIdDisplayGroupsByKind.length,
-      directionCount: changedIdDisplayGroupsByDirection.length
+      directionCount: changedIdDisplayGroupsByDirection.length,
+      reviewTargetCount: changedIdDisplayGroupsByReviewTarget.length
+    };
+    const changedIdReviewTargetSummary = {
+      schemaVersion: "changed_id_review_target_summary_v1",
+      groups: changedIdDisplayGroupsByReviewTarget,
+      byTarget: changedIdDisplayGroupByReviewTarget,
+      targetCount: changedIdDisplayGroupsByReviewTarget.length,
+      totalChangedIdCount: changedIdDisplayRows.length,
+      primaryTarget: primaryChangedIdReviewTarget
     };
     const changedIdDisplaySummary = {
       schemaVersion: "changed_id_display_summary_v1",
@@ -4523,6 +4539,9 @@
       rowById: changedIdDisplayRowById,
       primaryRow: primaryChangedIdDisplayRow,
       groups: changedIdDisplayGroupSummary,
+      reviewTargets: changedIdReviewTargetSummary,
+      reviewTargetGroups: changedIdDisplayGroupsByReviewTarget,
+      reviewTargetCount: changedIdDisplayGroupsByReviewTarget.length,
       matrix: changedIdDisplayMatrixSummary,
       kindDirectionCounts: changedIdDisplayKindDirectionCounts,
       readoutKindDirectionCounts: changedIdDisplayKindDirectionCounts.readout_id,
