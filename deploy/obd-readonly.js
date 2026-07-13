@@ -3940,6 +3940,83 @@
     };
   }
 
+  function buildImportedCoreReadoutInventoryComparisonSummary(importedInventory = null, currentInventory = {}) {
+    if (!importedInventory || typeof importedInventory !== "object") return null;
+    const currentSummary = currentInventory && typeof currentInventory === "object" ? currentInventory : {};
+    const readCount = (summary, field, idsField = null) => Number.isFinite(Number(summary?.[field]))
+      ? Number(summary[field])
+      : idsField && Array.isArray(summary?.[idsField]) ? summary[idsField].length : 0;
+    const readIds = (summary, field) => Array.isArray(summary?.[field])
+      ? [...new Set(summary[field].filter(Boolean).map(String))].sort()
+      : [];
+    const readCountsById = (summary = {}) => summary.countsById && typeof summary.countsById === "object"
+      ? { ...summary.countsById }
+      : {};
+    const importedCountsById = readCountsById(importedInventory);
+    const currentCountsById = readCountsById(currentSummary);
+    const valueCountIds = [...new Set([...Object.keys(importedCountsById), ...Object.keys(currentCountsById)])].sort();
+    const valueCountDeltaById = valueCountIds.reduce((byId, id) => {
+      const importedCount = Number.isFinite(Number(importedCountsById[id])) ? Number(importedCountsById[id]) : 0;
+      const currentCount = Number.isFinite(Number(currentCountsById[id])) ? Number(currentCountsById[id]) : 0;
+      byId[id] = currentCount - importedCount;
+      return byId;
+    }, {});
+    const changedValueCountIds = valueCountIds.filter((id) => valueCountDeltaById[id] !== 0);
+    const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
+    const importedCapturedIds = readIds(importedInventory, "capturedIds");
+    const currentCapturedIds = readIds(currentSummary, "capturedIds");
+    const importedEmptyIds = readIds(importedInventory, "emptyIds");
+    const currentEmptyIds = readIds(currentSummary, "emptyIds");
+    const importedMissingIds = readIds(importedInventory, "missingIds");
+    const currentMissingIds = readIds(currentSummary, "missingIds");
+    const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
+    const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
+    const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
+    const currentCapturedReadoutCount = readCount(currentSummary, "capturedReadoutCount", "capturedIds");
+    const importedEmptyReadoutCount = readCount(importedInventory, "emptyReadoutCount", "emptyIds");
+    const currentEmptyReadoutCount = readCount(currentSummary, "emptyReadoutCount", "emptyIds");
+    const importedMissingReadoutCount = readCount(importedInventory, "missingReadoutCount", "missingIds");
+    const currentMissingReadoutCount = readCount(currentSummary, "missingReadoutCount", "missingIds");
+    return {
+      schemaVersion: "imported_core_readout_inventory_comparison_v1",
+      importedTotalValueCount,
+      currentTotalValueCount,
+      totalValueCountDelta: currentTotalValueCount - importedTotalValueCount,
+      importedCapturedReadoutCount,
+      currentCapturedReadoutCount,
+      capturedReadoutDelta: currentCapturedReadoutCount - importedCapturedReadoutCount,
+      importedEmptyReadoutCount,
+      currentEmptyReadoutCount,
+      emptyReadoutDelta: currentEmptyReadoutCount - importedEmptyReadoutCount,
+      importedMissingReadoutCount,
+      currentMissingReadoutCount,
+      missingReadoutDelta: currentMissingReadoutCount - importedMissingReadoutCount,
+      importedCapturedIds,
+      currentCapturedIds,
+      capturedIdsChanged: importedCapturedIds.join("|") !== currentCapturedIds.join("|"),
+      capturedAddedIds: diffIds(currentCapturedIds, importedCapturedIds),
+      capturedRemovedIds: diffIds(importedCapturedIds, currentCapturedIds),
+      importedEmptyIds,
+      currentEmptyIds,
+      emptyIdsChanged: importedEmptyIds.join("|") !== currentEmptyIds.join("|"),
+      emptyAddedIds: diffIds(currentEmptyIds, importedEmptyIds),
+      emptyRemovedIds: diffIds(importedEmptyIds, currentEmptyIds),
+      importedMissingIds,
+      currentMissingIds,
+      missingIdsChanged: importedMissingIds.join("|") !== currentMissingIds.join("|"),
+      missingAddedIds: diffIds(currentMissingIds, importedMissingIds),
+      missingRemovedIds: diffIds(importedMissingIds, currentMissingIds),
+      importedCountsById,
+      currentCountsById,
+      valueCountDeltaById,
+      changedValueCountIds,
+      valueCountsChanged: changedValueCountIds.length > 0,
+      readinessIncompleteDelta: readCount(currentSummary, "readinessIncompleteCount") - readCount(importedInventory, "readinessIncompleteCount"),
+      ecuInfoMissingKeyDelta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
+      rawPidUndecodedDelta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount")
+    };
+  }
+
   function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
     if (!importedAnalysisReadinessSummary || typeof importedAnalysisReadinessSummary !== "object") return null;
     const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
@@ -4143,18 +4220,20 @@
     diagnosticFlowComparison = null,
     readoutCompletionComparison = null,
     analysisReadinessComparison = null,
-    readoutRequestPlanGateComparison = null
+    readoutRequestPlanGateComparison = null,
+    coreReadoutInventoryComparison = null
   } = {}) {
     const sectionInputs = [
       { id: "core_session_status", comparison: coreComparison },
       { id: "diagnostic_flow_summary", comparison: diagnosticFlowComparison },
       { id: "readout_completion_summary", comparison: readoutCompletionComparison },
       { id: "analysis_readiness_summary", comparison: analysisReadinessComparison },
-      { id: "readout_request_plan_gate_summary", comparison: readoutRequestPlanGateComparison }
+      { id: "readout_request_plan_gate_summary", comparison: readoutRequestPlanGateComparison },
+      { id: "core_readout_inventory_summary", comparison: coreReadoutInventoryComparison }
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
@@ -4185,6 +4264,7 @@
       || comparison.missingIdsChanged === true
       || comparison.pendingIdsChanged === true
       || comparison.emptyIdsChanged === true
+      || comparison.valueCountsChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -4198,6 +4278,7 @@
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true ? "analysis_checklist" : null,
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true ? "readout_completion" : null,
+      comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
       Number(comparison.capturedCountDelta || comparison.capturedReadoutDelta || 0) !== 0 ? "captured_readouts" : null,
@@ -4205,12 +4286,16 @@
       Number(comparison.emptyCountDelta || comparison.emptyReadoutDelta || 0) !== 0 ? "empty_readouts" : null,
       Number(comparison.pendingCountDelta || comparison.pendingReadoutDelta || 0) !== 0 ? "pending_readouts" : null,
       Number(comparison.blockerCountDelta || 0) !== 0 ? "blockers" : null,
+      Number(comparison.rawPidUndecodedDelta || 0) !== 0 ? "raw_pid_undecoded" : null,
+      Number(comparison.readinessIncompleteDelta || 0) !== 0 ? "readiness_incomplete" : null,
+      Number(comparison.ecuInfoMissingKeyDelta || 0) !== 0 ? "ecu_info_key_items" : null,
       Number(comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || 0) !== 0 ? "request_plan_counts" : null
     ].filter(Boolean);
     const readChangedIds = (comparison = {}, fields = []) => [...new Set(fields.flatMap((field) => Array.isArray(comparison[field]) ? comparison[field] : []).filter(Boolean))];
     const readAddedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedAddedIds", "checklistReviewAddedIds",
       "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds",
+      "changedValueCountIds",
       "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
       "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
       "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
@@ -4219,6 +4304,7 @@
     const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
       "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds",
+      "changedValueCountIds",
       "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
       "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
       "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
@@ -5479,6 +5565,7 @@
     const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;
     const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;
     const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary || bridgeSession?.readoutRequestPlanGateSummary || null;
+    const importedCoreReadoutInventorySummary = bridgeImport?.coreReadoutInventorySummary || bridgeSession?.coreReadoutInventorySummary || null;
     const selectPreferredMonitorValue = (current, candidate) => {
       if (!current) return candidate;
       if (!candidate) return current;
@@ -5587,12 +5674,14 @@
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
       readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
-      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary
+      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
 
     return {
@@ -5635,11 +5724,13 @@
       importedReadoutCompletionSummary,
       importedAnalysisReadinessSummary,
       importedReadoutRequestPlanGateSummary,
+      importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
       importedAnalysisReadinessComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
+      importedCoreReadoutInventoryComparisonSummary,
       importedSessionComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
@@ -7225,6 +7316,7 @@
     const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;
     const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
     const importedReadoutRequestPlanGateSummary = sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null;
+    const importedCoreReadoutInventorySummary = sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null;
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
@@ -7444,12 +7536,14 @@
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
       readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
-      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary
+      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
 
     return {
@@ -7486,11 +7580,13 @@
       importedReadoutCompletionSummary,
       importedAnalysisReadinessSummary,
       importedReadoutRequestPlanGateSummary,
+      importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
       importedAnalysisReadinessComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
+      importedCoreReadoutInventoryComparisonSummary,
       importedSessionComparisonSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
