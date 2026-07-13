@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1241+件",
+  validationCheckLabel: "OBD安全検証 1246+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.477.0";
+const APP_VERSION = "2.478.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1846,9 +1846,10 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId(capability);
   const currentSession = obdDevSession.lastSession || null;
-  const nextReadoutLabels = getTopNextReadoutLabels(currentSession?.nextReadoutCandidates, 2);
-  const nextReadoutLabel = formatTopNextReadoutLabel(currentSession?.nextReadoutCandidates, 2);
-  const coreSessionStatus = currentSession?.coreSessionStatus || null;
+  const currentNextReadoutCandidates = currentSession?.nextReadoutCandidates || currentSession?.next_readout_candidates;
+  const nextReadoutLabels = getTopNextReadoutLabels(currentNextReadoutCandidates, 2);
+  const nextReadoutLabel = formatTopNextReadoutLabel(currentNextReadoutCandidates, 2);
+  const coreSessionStatus = currentSession?.coreSessionStatus || currentSession?.core_session_status || null;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
   const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
@@ -1900,7 +1901,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
       ? `${nextReadoutLabel} 繧帝・↓遒ｺ隱・`
       : `${nextReadoutLabel} 繧堤｢ｺ隱・`;
   }
-  if (coreSessionStatus?.readyForAnalysis === true && !nextReadoutLabels.length && !emptyReadoutSummary) {
+  if (readCoreSessionAliasValue(coreSessionStatus, "readyForAnalysis", "ready_for_analysis") === true && !nextReadoutLabels.length && !emptyReadoutSummary) {
     nextAction = "コア読取が揃ったため解析結果の確認へ進行可能";
   }
   const readoutPath = connected
@@ -4712,18 +4713,34 @@ function getReadoutCoverageDisplay(coverage = null) {
   };
 }
 
+function readCoreSessionAliasValue(coreSessionStatus, camelKey, snakeKey) {
+  if (!coreSessionStatus || typeof coreSessionStatus !== "object") return undefined;
+  return coreSessionStatus[camelKey] ?? coreSessionStatus[snakeKey];
+}
+
+function readCoreSessionAliasArray(coreSessionStatus, camelKey, snakeKey) {
+  const camelValue = coreSessionStatus?.[camelKey];
+  if (Array.isArray(camelValue)) return camelValue;
+  const snakeValue = coreSessionStatus?.[snakeKey];
+  return Array.isArray(snakeValue) ? snakeValue : [];
+}
+
 function formatCoreSessionStatusSummary(coreSessionStatus, fallback = NO_DATA) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
-  const completionPercent = Number.isFinite(Number(coreSessionStatus.completionPercent))
-    ? Math.max(0, Math.min(100, Math.round(Number(coreSessionStatus.completionPercent))))
+  const completionPercentValue = readCoreSessionAliasValue(coreSessionStatus, "completionPercent", "completion_percent");
+  const completionPercent = Number.isFinite(Number(completionPercentValue))
+    ? Math.max(0, Math.min(100, Math.round(Number(completionPercentValue))))
     : null;
   const rawStatusLabel = {
     analysis_ready: "解析へ進行可能",
     collecting_readouts: "コア読取を継続",
     not_started: "読取待ち"
   }[coreSessionStatus.status] || coreSessionStatus.status || "";
-  const remainingCount = Array.isArray(coreSessionStatus.remainingReadoutIds) ? coreSessionStatus.remainingReadoutIds.length : 0;
-  const emptyCount = Array.isArray(coreSessionStatus.emptyReadoutIds) ? coreSessionStatus.emptyReadoutIds.length : 0;
+  const remainingReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "remainingReadoutIds", "remaining_readout_ids");
+  const emptyReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "emptyReadoutIds", "empty_readout_ids");
+  const readyForAnalysis = readCoreSessionAliasValue(coreSessionStatus, "readyForAnalysis", "ready_for_analysis");
+  const remainingCount = remainingReadoutIds.length;
+  const emptyCount = emptyReadoutIds.length;
   const statusLabel = coreSessionStatus.status === "analysis_ready" && emptyCount > 0
     ? "コア読取完了"
     : rawStatusLabel;
@@ -4732,7 +4749,7 @@ function formatCoreSessionStatusSummary(coreSessionStatus, fallback = NO_DATA) {
   if (statusLabel) parts.push(statusLabel);
   if (emptyCount > 0) parts.push(`空応答${emptyCount}件`);
   if (remainingCount > 0) parts.push(`残り${remainingCount}項目`);
-  if (coreSessionStatus.readyForAnalysis === true && emptyCount === 0) parts.push("解析準備完了");
+  if (readyForAnalysis === true && emptyCount === 0) parts.push("解析準備完了");
   return parts.join(" / ") || fallback;
 }
 
@@ -4757,9 +4774,11 @@ function buildCoreReadinessHeadline(coreSessionStatus) {
   if (emptyReadoutSummary) return `空応答再確認: ${emptyReadoutSummary}。`;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
   if (blockingSummary) return `保留要因確認: ${blockingSummary}。`;
-  if (coreSessionStatus.readyForAnalysis === true) return "解析準備完了。";
-  if (!Array.isArray(coreSessionStatus.remainingReadoutIds) || !coreSessionStatus.remainingReadoutIds.length) return "";
-  const labels = coreSessionStatus.remainingReadoutIds
+  const readyForAnalysis = readCoreSessionAliasValue(coreSessionStatus, "readyForAnalysis", "ready_for_analysis");
+  if (readyForAnalysis === true) return "解析準備完了。";
+  const remainingReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "remainingReadoutIds", "remaining_readout_ids");
+  if (!remainingReadoutIds.length) return "";
+  const labels = remainingReadoutIds
     .slice(0, 2)
     .map((item) => formatCoreReadoutLabel(item, item))
     .filter(Boolean);
@@ -4768,8 +4787,9 @@ function buildCoreReadinessHeadline(coreSessionStatus) {
 
 function formatCoreBlockingWarningSummary(coreSessionStatus, limit = 2, fallback = "") {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
-  if (!Array.isArray(coreSessionStatus.blockingWarningIds) || !coreSessionStatus.blockingWarningIds.length) return fallback;
-  const labels = coreSessionStatus.blockingWarningIds
+  const blockingWarningIds = readCoreSessionAliasArray(coreSessionStatus, "blockingWarningIds", "blocking_warning_ids");
+  if (!blockingWarningIds.length) return fallback;
+  const labels = blockingWarningIds
     .slice(0, Math.max(1, limit))
     .map((item) => formatObdBridgeWarningLabel(item))
     .filter(Boolean);
@@ -4778,7 +4798,8 @@ function formatCoreBlockingWarningSummary(coreSessionStatus, limit = 2, fallback
 
 function getNonBlockingWarningLabels(source = null, limit = 4) {
   if (!source || !Array.isArray(source.warnings) || !source.warnings.length) return [];
-  const blocked = new Set(Array.isArray(source.coreSessionStatus?.blockingWarningIds) ? source.coreSessionStatus.blockingWarningIds : []);
+  const coreSessionStatus = source.coreSessionStatus || source.core_session_status || null;
+  const blocked = new Set(readCoreSessionAliasArray(coreSessionStatus, "blockingWarningIds", "blocking_warning_ids"));
   return source.warnings
     .filter((item) => !blocked.has(item))
     .map((item) => formatObdBridgeWarningLabel(item))
@@ -4788,8 +4809,9 @@ function getNonBlockingWarningLabels(source = null, limit = 4) {
 
 function formatCoreEmptyReadoutSummary(coreSessionStatus, limit = 2, fallback = "") {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
-  if (!Array.isArray(coreSessionStatus.emptyReadoutIds) || !coreSessionStatus.emptyReadoutIds.length) return fallback;
-  const labels = coreSessionStatus.emptyReadoutIds
+  const emptyReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "emptyReadoutIds", "empty_readout_ids");
+  if (!emptyReadoutIds.length) return fallback;
+  const labels = emptyReadoutIds
     .slice(0, Math.max(1, limit))
     .map((item) => formatCoreReadoutLabel(item, item))
     .filter(Boolean);
@@ -4803,7 +4825,7 @@ function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fal
   if (emptyReadoutSummary) return "空応答再確認";
   const nextReadoutSummary = formatNextReadoutSummary(nextReadoutCandidates, { limit: 2, fallback: "" });
   if (nextReadoutSummary) return nextReadoutSummary;
-  if (coreSessionStatus?.readyForAnalysis === true) return "解析結果確認";
+  if (readCoreSessionAliasValue(coreSessionStatus, "readyForAnalysis", "ready_for_analysis") === true) return "解析結果確認";
   return fallback;
 }
 
@@ -4813,11 +4835,12 @@ function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
   if (blockingSummary) return `解析保留: ${blockingSummary}。`;
   const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   if (emptyReadoutSummary) return `解析保留: ${emptyReadoutSummary} を再確認してください。`;
-  if (coreSessionStatus.readyForAnalysis === true) {
+  if (readCoreSessionAliasValue(coreSessionStatus, "readyForAnalysis", "ready_for_analysis") === true) {
     return "解析待ち: コア読取は完了しています。解析結果の確認へ進めます。";
   }
-  if (Array.isArray(coreSessionStatus.remainingReadoutIds) && coreSessionStatus.remainingReadoutIds.length > 0) {
-    const labels = coreSessionStatus.remainingReadoutIds
+  const remainingReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "remainingReadoutIds", "remaining_readout_ids");
+  if (remainingReadoutIds.length > 0) {
+    const labels = remainingReadoutIds
       .slice(0, 2)
       .map((item) => formatCoreReadoutLabel(item, item))
       .filter(Boolean);
@@ -4829,19 +4852,24 @@ function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
 function buildCoreSessionStatusLines(coreSessionStatus) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return [];
   const lines = [`進捗: ${formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA)}`];
-  if (coreSessionStatus.applicabilityStatus) {
-    const applicabilityLabel = formatVehicleApplicabilitySummary({ status: coreSessionStatus.applicabilityStatus }, coreSessionStatus.applicabilityStatus);
+  const applicabilityStatus = readCoreSessionAliasValue(coreSessionStatus, "applicabilityStatus", "applicability_status");
+  const nextRecommendedReadoutId = readCoreSessionAliasValue(coreSessionStatus, "nextRecommendedReadoutId", "next_recommended_readout_id");
+  const emptyReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "emptyReadoutIds", "empty_readout_ids");
+  const remainingReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "remainingReadoutIds", "remaining_readout_ids");
+  const blockingWarningIds = readCoreSessionAliasArray(coreSessionStatus, "blockingWarningIds", "blocking_warning_ids");
+  if (applicabilityStatus) {
+    const applicabilityLabel = formatVehicleApplicabilitySummary({ status: applicabilityStatus }, applicabilityStatus);
     lines.push(`適用判定: ${applicabilityLabel}`);
   }
-  if (coreSessionStatus.nextRecommendedReadoutId) lines.push(`次操作: ${formatCoreReadoutLabel(coreSessionStatus.nextRecommendedReadoutId, coreSessionStatus.nextRecommendedReadoutId)}`);
-  if (Array.isArray(coreSessionStatus.emptyReadoutIds) && coreSessionStatus.emptyReadoutIds.length) {
-    lines.push(`空応答: ${coreSessionStatus.emptyReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
+  if (nextRecommendedReadoutId) lines.push(`次操作: ${formatCoreReadoutLabel(nextRecommendedReadoutId, nextRecommendedReadoutId)}`);
+  if (emptyReadoutIds.length) {
+    lines.push(`空応答: ${emptyReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
   }
-  if (Array.isArray(coreSessionStatus.remainingReadoutIds) && coreSessionStatus.remainingReadoutIds.length) {
-    lines.push(`残件: ${coreSessionStatus.remainingReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
+  if (remainingReadoutIds.length) {
+    lines.push(`残件: ${remainingReadoutIds.slice(0, 4).map((item) => formatCoreReadoutLabel(item, item)).join(" / ")}`);
   }
-  if (Array.isArray(coreSessionStatus.blockingWarningIds) && coreSessionStatus.blockingWarningIds.length) {
-    lines.push(`保留要因: ${coreSessionStatus.blockingWarningIds.slice(0, 4).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
+  if (blockingWarningIds.length) {
+    lines.push(`保留要因: ${blockingWarningIds.slice(0, 4).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
   }
   return lines;
 }
@@ -4977,16 +5005,17 @@ function formatObdNextReadoutCandidateReason(candidate = null) {
 function renderObdNextReadoutActions(session = null) {
   if (!obdNextReadoutPanel || !obdNextReadoutList) return;
   obdNextReadoutList.innerHTML = "";
-  const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates, 4);
-  const blockingSummary = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, "");
-  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(session?.coreSessionStatus, 2, "");
+  const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;
+  const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates || session?.next_readout_candidates, 4);
+  const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   if (blockingSummary) {
     const holdCard = document.createElement("article");
     holdCard.className = "obd-operation-card";
     const holdHead = document.createElement("strong");
     holdHead.textContent = "保留要因あり";
     const holdStatus = document.createElement("p");
-    holdStatus.textContent = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+    holdStatus.textContent = formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA);
     const holdReason = document.createElement("p");
     holdReason.textContent = `解析前に ${blockingSummary} を確認してください。`;
     holdCard.append(holdHead, holdStatus, holdReason);
@@ -4998,20 +5027,20 @@ function renderObdNextReadoutActions(session = null) {
     const emptyHead = document.createElement("strong");
     emptyHead.textContent = "空応答あり";
     const emptyStatus = document.createElement("p");
-    emptyStatus.textContent = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+    emptyStatus.textContent = formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA);
     const emptyReason = document.createElement("p");
     emptyReason.textContent = `空応答だった ${emptyReadoutSummary} を再確認してください。`;
     emptyCard.append(emptyHead, emptyStatus, emptyReason);
     obdNextReadoutList.appendChild(emptyCard);
   }
   if (!candidates.length) {
-    if (session?.coreSessionStatus?.readyForAnalysis === true && !emptyReadoutSummary) {
+    if (readCoreSessionAliasValue(coreSessionStatus, "readyForAnalysis", "ready_for_analysis") === true && !emptyReadoutSummary) {
       const card = document.createElement("article");
       card.className = "obd-operation-card";
       const head = document.createElement("strong");
       head.textContent = "解析へ進行可能";
       const status = document.createElement("p");
-      status.textContent = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
+      status.textContent = formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA);
       const reason = document.createElement("p");
       reason.textContent = "コア読取が揃っています。次操作候補がない場合は解析結果の確認へ進めます。";
       card.append(head, status, reason);
@@ -5093,8 +5122,9 @@ function renderObdBridgeSessionDetails(session = null) {
   const endedAt = session?.endedAt || NO_DATA;
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, NO_DATA) || NO_DATA;
   const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
-  const nextReadoutSummary = formatCoreNextStepSummary(session?.coreSessionStatus, session?.nextReadoutCandidates, NO_DATA);
-  const coreSessionLines = buildCoreSessionStatusLines(session?.coreSessionStatus);
+  const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;
+  const nextReadoutSummary = formatCoreNextStepSummary(coreSessionStatus, session?.nextReadoutCandidates || session?.next_readout_candidates, NO_DATA);
+  const coreSessionLines = buildCoreSessionStatusLines(coreSessionStatus);
   const warningLines = getNonBlockingWarningLabels(session, 4);
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || coreSessionLines.length || warningLines.length)) {
     sections.push(["読取メタ", [
@@ -5780,6 +5810,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
 function renderObdDeveloperSessionSummary(session = null) {
   renderObdDiagnosticFlowPanel(session);
   obdDevSessionSummary.innerHTML = "";
+  const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;
   const connectionStatus = session?.connectionStatus
     ? { ...(obdDevSession.bridgeStatus || {}), ...session.connectionStatus }
     : obdDevSession.bridgeStatus;
@@ -5795,10 +5826,10 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
-  const nextReadoutLabel = formatCoreNextStepSummary(session?.coreSessionStatus, session?.nextReadoutCandidates, NO_DATA);
-  const coreSessionStatusLabel = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
-  const emptyReadoutLabel = formatCoreEmptyReadoutSummary(session?.coreSessionStatus, 2, NO_DATA);
-  const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
+  const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, session?.nextReadoutCandidates || session?.next_readout_candidates, NO_DATA);
+  const coreSessionStatusLabel = formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA);
+  const emptyReadoutLabel = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, NO_DATA);
+  const blockingSummaryLabel = formatCoreBlockingWarningSummary(coreSessionStatus, 2, NO_DATA);
   const importedSessionComparisonSummary = session?.importedSessionComparisonSummary || session?.imported_session_comparison_summary || null;
   const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary, NO_DATA);
@@ -5806,7 +5837,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary || session?.core_readout_inventory_summary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary, NO_DATA);
-  const readoutQualityLabel = formatReadoutQualitySummary(session?.coreSessionStatus?.readoutQualitySummary || session?.coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
+  const readoutQualityLabel = formatReadoutQualitySummary(coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
@@ -6361,9 +6392,11 @@ function analyzeObdScannerImport() {
   if (summarySource.protocol) notes.push(`Protocol ${summarySource.protocol}`);
   const analysisVehicleLabel = formatVehicleProfileLabel(summarySource.vehicleProfile);
   const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summarySource.vehicleApplicability);
-  const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summarySource.coreSessionStatus, "");
-  const analysisEmptyReadoutLabel = formatCoreEmptyReadoutSummary(summarySource.coreSessionStatus, 2, "");
-  const analysisNextStepLabel = formatCoreNextStepSummary(summarySource.coreSessionStatus, summarySource.nextReadoutCandidates, "");
+  const summaryCoreSessionStatus = summarySource.coreSessionStatus || summarySource.core_session_status || null;
+  const summaryNextReadoutCandidates = summarySource.nextReadoutCandidates || summarySource.next_readout_candidates;
+  const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summaryCoreSessionStatus, "");
+  const analysisEmptyReadoutLabel = formatCoreEmptyReadoutSummary(summaryCoreSessionStatus, 2, "");
+  const analysisNextStepLabel = formatCoreNextStepSummary(summaryCoreSessionStatus, summaryNextReadoutCandidates, "");
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
   }
@@ -6381,7 +6414,7 @@ function analyzeObdScannerImport() {
   if (coreReadoutInventoryComparisonNote) {
     notes.push(`在庫比較 ${coreReadoutInventoryComparisonNote}`);
   }
-  const readoutQualityNote = formatReadoutQualitySummary(summarySource.coreSessionStatus?.readoutQualitySummary || summarySource.coreSessionStatus?.readout_quality_summary || summarySource.diagnosticFlowSummary?.readoutQualitySummary || summarySource.diagnosticFlowSummary?.readout_quality_summary, "");
+  const readoutQualityNote = formatReadoutQualitySummary(summaryCoreSessionStatus?.readoutQualitySummary || summaryCoreSessionStatus?.readout_quality_summary || summarySource.diagnosticFlowSummary?.readoutQualitySummary || summarySource.diagnosticFlowSummary?.readout_quality_summary, "");
   if (readoutQualityNote) {
     notes.push(`読取品質 ${readoutQualityNote}`);
   }
@@ -6413,8 +6446,9 @@ function analyzeObdScannerImport() {
   if (changedIdReviewTargetActionNote) {
     notes.push(`差分確認 ${changedIdReviewTargetActionNote}`);
   }
-  if (Array.isArray(summarySource.coreSessionStatus?.blockingWarningIds) && summarySource.coreSessionStatus.blockingWarningIds.length > 0) {
-    notes.push(`保留要因 ${summarySource.coreSessionStatus.blockingWarningIds.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
+  const summaryBlockingWarningIds = readCoreSessionAliasArray(summaryCoreSessionStatus, "blockingWarningIds", "blocking_warning_ids");
+  if (summaryBlockingWarningIds.length > 0) {
+    notes.push(`保留要因 ${summaryBlockingWarningIds.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
   }
   if (summarySource.startedAt) {
     notes.push(`開始 ${formatDateTime(summarySource.startedAt)}`);
@@ -6499,7 +6533,7 @@ function analyzeObdScannerImport() {
       ? "貼り付け結果とローカルブリッジ読取を統合し、"
       : "ローカルブリッジ読取結果を反映し、"
     : "";
-  const coreReadinessHeadline = buildCoreReadinessHeadline(summarySource.coreSessionStatus);
+  const coreReadinessHeadline = buildCoreReadinessHeadline(summaryCoreSessionStatus);
   const detailNote = notes.length ? ` ${notes.join(" / ")}。` : "";
 
   if (!mergedCodes.length) {

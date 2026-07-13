@@ -1730,8 +1730,8 @@ const readinessHeadlineFunctionChecks = () => {
     check(functionBody.includes('const emptyReadoutSummary = formatCoreEmptyReadoutSummary'), "buildCoreReadinessHeadline should derive empty readout summary");
     check(functionBody.includes('const blockingSummary = formatCoreBlockingWarningSummary'), "buildCoreReadinessHeadline should derive blocking warnings");
     check(functionBody.indexOf('const emptyReadoutSummary = formatCoreEmptyReadoutSummary') < functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary'), "buildCoreReadinessHeadline should evaluate empty readouts before blocking warnings");
-    check(functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary') < functionBody.indexOf('if (coreSessionStatus.readyForAnalysis === true)'), "buildCoreReadinessHeadline should evaluate blocking warnings before analysis-ready status");
-    check(functionBody.indexOf('if (coreSessionStatus.readyForAnalysis === true)') < functionBody.indexOf('const labels = coreSessionStatus.remainingReadoutIds'), "buildCoreReadinessHeadline should evaluate analysis-ready status before remaining readout labels");
+    check(functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary') < functionBody.indexOf('const readyForAnalysis = readCoreSessionAliasValue'), "buildCoreReadinessHeadline should evaluate blocking warnings before analysis-ready status");
+    check(functionBody.indexOf('if (readyForAnalysis === true)') < functionBody.indexOf('const labels = remainingReadoutIds'), "buildCoreReadinessHeadline should evaluate analysis-ready status before remaining readout labels");
   }
 };
 const coreSummaryFunctionChecks = () => {
@@ -1743,7 +1743,7 @@ const coreSummaryFunctionChecks = () => {
     check(functionBody.includes('const nextReadoutSummary = formatNextReadoutSummary'), "formatCoreNextStepSummary should derive next readout summary");
     check(functionBody.indexOf('const blockingSummary = formatCoreBlockingWarningSummary') < functionBody.indexOf('const emptyReadoutSummary = formatCoreEmptyReadoutSummary'), "formatCoreNextStepSummary should evaluate blocking warnings before empty readouts");
     check(functionBody.indexOf('const emptyReadoutSummary = formatCoreEmptyReadoutSummary') < functionBody.indexOf('const nextReadoutSummary = formatNextReadoutSummary'), "formatCoreNextStepSummary should evaluate empty readouts before explicit next-readout summary");
-    check(functionBody.indexOf('const nextReadoutSummary = formatNextReadoutSummary') < functionBody.indexOf('if (coreSessionStatus?.readyForAnalysis === true)'), "formatCoreNextStepSummary should evaluate explicit next-readout summary before analysis-ready status");
+    check(functionBody.indexOf('const nextReadoutSummary = formatNextReadoutSummary') < functionBody.indexOf('readCoreSessionAliasValue(coreSessionStatus, "readyForAnalysis", "ready_for_analysis") === true'), "formatCoreNextStepSummary should evaluate explicit next-readout summary before analysis-ready status");
   }
 };
 
@@ -1919,7 +1919,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1241+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1246+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1987,11 +1987,11 @@ check(appSource.includes('session?.core_readout_inventory_summary') && appSource
 check(appSource.includes('session?.imported_core_readout_inventory_comparison_summary') && appSource.includes('summarySource.imported_core_readout_inventory_comparison_summary'), "OBD UI should accept imported core readout inventory comparison snake_case aliases");
 check(appSource.includes('coreReadoutInventorySummary?.missing_readout_count') && appSource.includes('coreReadoutInventoryComparisonSummary?.value_counts_changed'), "OBD diagnostic flow panel should use snake_case core readout inventory pending states");
 check(appSource.includes('const readoutQualitySummary = core.readoutQualitySummary || core.readout_quality_summary || flow.readoutQualitySummary || flow.readout_quality_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取品質", readoutQualityLabel'), "OBD diagnostic flow panel should show readout quality summaries");
-check(appSource.includes('session?.coreSessionStatus?.readout_quality_summary') && appSource.includes('summarySource.coreSessionStatus?.readout_quality_summary'), "OBD UI should accept readout quality snake_case summary aliases");
+check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSource.includes('summaryCoreSessionStatus?.readout_quality_summary'), "OBD UI should accept readout quality snake_case summary aliases");
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.477.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for diagnostic flow state aliases");
+check(appSource.includes('const APP_VERSION = "2.478.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for core session summary aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -1999,6 +1999,11 @@ check(appSource.includes('flow.analysis_blocked === true') && appSource.includes
 check(appSource.includes('const flowCompletionPercentValue = flow.completionPercent ?? flow.completion_percent;') && appSource.includes('const pendingReadoutCountValue = flow.pendingReadoutCount ?? flow.pending_readout_count;'), "OBD diagnostic flow panel should accept snake_case progress counts");
 check(appSource.includes('Array.isArray(core.pending_readout_ids)') && appSource.includes('Array.isArray(core.analysis_blockers)'), "OBD diagnostic flow panel should accept snake_case pending readout and blocker arrays");
 check(appSource.includes('flow.recommended_readout_id') && appSource.includes('flow.next_readout_label') && appSource.includes('core.next_recommended_readout_id'), "OBD diagnostic flow panel should accept snake_case next readout cursors");
+check(appSource.includes('function readCoreSessionAliasValue(coreSessionStatus, camelKey, snakeKey)') && appSource.includes('function readCoreSessionAliasArray(coreSessionStatus, camelKey, snakeKey)'), "OBD UI should centralize core session alias readers");
+check(appSource.includes('const completionPercentValue = readCoreSessionAliasValue(coreSessionStatus, "completionPercent", "completion_percent");') && appSource.includes('const remainingReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "remainingReadoutIds", "remaining_readout_ids");'), "OBD core session summary should accept snake_case progress aliases");
+check(appSource.includes('const blockingWarningIds = readCoreSessionAliasArray(coreSessionStatus, "blockingWarningIds", "blocking_warning_ids");') && appSource.includes('const emptyReadoutIds = readCoreSessionAliasArray(coreSessionStatus, "emptyReadoutIds", "empty_readout_ids");'), "OBD core session warning and empty summaries should accept snake_case aliases");
+check(appSource.includes('const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;') && appSource.includes('session?.nextReadoutCandidates || session?.next_readout_candidates'), "OBD session displays should accept snake_case core status and next readout candidates");
+check(appSource.includes('const summaryCoreSessionStatus = summarySource.coreSessionStatus || summarySource.core_session_status || null;') && appSource.includes('const summaryBlockingWarningIds = readCoreSessionAliasArray(summaryCoreSessionStatus, "blockingWarningIds", "blocking_warning_ids");'), "OBD analysis notes should accept snake_case core session status aliases");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || flow.next_readout_request || core.nextReadoutRequest || core.next_readout_request') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
 check(appSource.includes('const pendingReadoutRequestCountValue = flow.pendingReadoutRequestCount ?? flow.pending_readout_request_count;') && appSource.includes('const readoutRequestQueueLabel = pendingReadoutRequestCount'), "OBD diagnostic flow panel should show pending readout request queue count");
 check(appSource.includes('const readoutRequestPlan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan || core.pendingReadoutRequestPlan || core.pending_readout_request_plan || null;') && appSource.includes('readoutRequestPlan?.total_count'), "OBD diagnostic flow panel should use readout request plan counts when available");
@@ -8047,6 +8052,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1241");
+  console.log("OBD read-only safety checks: 1246");
   console.log("Errors: 0");
 }
