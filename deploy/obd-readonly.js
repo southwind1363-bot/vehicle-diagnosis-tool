@@ -4445,12 +4445,30 @@
     const primaryChangedKindDirectionCounts = primaryChangedIdSummary?.kind
       ? changedIdDisplayKindDirectionCounts[primaryChangedIdSummary.kind] || buildKindDirectionCountSummary(primaryChangedIdSummary.kind)
       : null;
+    const primaryChangedIdReviewTargetByKind = {
+      readout_id: "readout_review",
+      bridge_intent: "bridge_contract_review",
+      request_plan_action: "request_plan_review",
+      blocked_reason: "blocked_reason_review",
+      analysis_checklist_id: "analysis_checklist_review",
+      other: "session_review"
+    };
+    const primaryChangedIdReviewTarget = primaryChangedIdSummary?.kind
+      ? primaryChangedIdReviewTargetByKind[primaryChangedIdSummary.kind] || "session_review"
+      : null;
     const primaryChangedIdImpactSummary = {
       schemaVersion: "primary_changed_id_impact_summary_v1",
       changed: Boolean(primaryChangedIdSummary),
       primaryChangedId: primaryChangedIdSummary?.id || null,
       primaryChangedIdKind: primaryChangedIdSummary?.kind || null,
       primaryChangedIdDirection,
+      primaryChangedIdReviewTarget,
+      reviewTarget: primaryChangedIdReviewTarget,
+      requiresReadoutReview: primaryChangedIdReviewTarget === "readout_review",
+      requiresBridgeContractReview: primaryChangedIdReviewTarget === "bridge_contract_review",
+      requiresRequestPlanReview: primaryChangedIdReviewTarget === "request_plan_review",
+      requiresBlockedReasonReview: primaryChangedIdReviewTarget === "blocked_reason_review",
+      requiresAnalysisChecklistReview: primaryChangedIdReviewTarget === "analysis_checklist_review",
       primaryChangedIdKey: primaryChangedIdSummary?.id && primaryChangedIdSummary?.kind
         ? `${primaryChangedIdSummary.kind}:${primaryChangedIdSummary.id}`
         : null,
@@ -4485,6 +4503,7 @@
       primaryChangedId: primaryChangedIdSummary?.id || null,
       primaryChangedIdDirection,
       primaryChangedIdKind: primaryChangedIdSummary?.kind || null,
+      primaryChangedIdReviewTarget,
       primaryChangedKindDirectionCounts,
       primaryChangedKindTotalCount: primaryChangedKindDirectionCounts?.total || 0,
       primaryChangedKindAddedCount: primaryChangedKindDirectionCounts?.added || 0,
