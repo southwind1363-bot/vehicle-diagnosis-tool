@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1224+件",
+  validationCheckLabel: "OBD安全検証 1226+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.472.0";
+const APP_VERSION = "2.473.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5530,11 +5530,11 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
 
 function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
-  const issueDeltaValue = summary.issueCountDelta || summary.issue_count_delta;
-  const rawDeltaValue = summary.rawPidUndecodedDelta || summary.raw_pid_undecoded_delta;
-  const readinessDeltaValue = summary.readinessIncompleteDelta || summary.readiness_incomplete_delta;
-  const ecuDeltaValue = summary.ecuInfoMissingKeyDelta || summary.ecu_info_missing_key_delta;
-  const mode06DeltaValue = summary.onboardMonitorFailedDelta || summary.onboard_monitor_failed_delta;
+  const issueDeltaValue = summary.issueCountDelta ?? summary.issue_count_delta;
+  const rawDeltaValue = summary.rawPidUndecodedDelta ?? summary.raw_pid_undecoded_delta;
+  const readinessDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
+  const ecuDeltaValue = summary.ecuInfoMissingKeyDelta ?? summary.ecu_info_missing_key_delta;
+  const mode06DeltaValue = summary.onboardMonitorFailedDelta ?? summary.onboard_monitor_failed_delta;
   const issueDelta = Number.isFinite(Number(issueDeltaValue)) ? Number(issueDeltaValue) : 0;
   const rawDelta = Number.isFinite(Number(rawDeltaValue)) ? Number(rawDeltaValue) : 0;
   const readinessDelta = Number.isFinite(Number(readinessDeltaValue)) ? Number(readinessDeltaValue) : 0;
@@ -5578,7 +5578,7 @@ function formatReadoutQualityReviewRequestSummary(summary, fallback = NO_DATA) {
   const bridgeIntent = request.bridgeIntent || request.bridge_intent || request.actionId || request.action_id || "";
   const serviceModeValue = request.serviceMode || request.service_mode || "";
   const serviceMode = serviceModeValue ? `Mode ${serviceModeValue}` : "";
-  const requestCountValue = planSummary?.requestCount || planSummary?.request_count || summary.requestCount || summary.request_count || summary.readoutQualityReviewRequestCount || summary.readout_quality_review_request_count;
+  const requestCountValue = planSummary?.requestCount ?? planSummary?.request_count ?? summary.requestCount ?? summary.request_count ?? summary.readoutQualityReviewRequestCount ?? summary.readout_quality_review_request_count;
   const requestCount = Number.isFinite(Number(requestCountValue))
     ? Number(requestCountValue)
     : 0;

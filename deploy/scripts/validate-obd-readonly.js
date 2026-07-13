@@ -1919,7 +1919,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1224+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1226+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1960,10 +1960,12 @@ check(appSource.includes('function formatReadoutQualitySummary(summary, fallback
 check(appSource.includes('summary.raw_pid_undecoded_count') && appSource.includes('summary.onboard_monitor_failed_count') && appSource.includes('summary.issue_count'), "OBD app should format snake_case readout quality summaries");
 check(appSource.includes('function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA)') && appSource.includes('rawPidUndecodedDelta') && appSource.includes('onboardMonitorFailedDelta'), "OBD app should format imported readout quality comparison summaries");
 check(appSource.includes('summary.raw_pid_undecoded_delta') && appSource.includes('summary.onboard_monitor_failed_delta') && appSource.includes('summary.primary_review_target_readout_id'), "OBD app should format snake_case imported readout quality comparisons");
+check(appSource.includes('const issueDeltaValue = summary.issueCountDelta ?? summary.issue_count_delta;') && appSource.includes('const mode06DeltaValue = summary.onboardMonitorFailedDelta ?? summary.onboard_monitor_failed_delta;'), "OBD app should preserve zero-valued readout quality comparison aliases");
 check(appSource.includes('const reviewActionSummary = summary.reviewActionSummary || summary.review_action_summary || null;') && appSource.includes('reviewActionSummary?.primary_readout_id'), "OBD app should format imported readout quality review targets");
 check(appSource.includes('function formatReadoutQualityReviewRequestSummary(summary, fallback = NO_DATA)') && appSource.includes('primaryReadoutQualityReviewRequest') && appSource.includes('summary.primaryRequest') && appSource.includes('const planSummary = summary.readoutQualityReviewRequestPlanSummary') && appSource.includes('read-only'), "OBD app should format readout quality review request summaries");
 check(appSource.includes('summary.primary_readout_quality_review_request') && appSource.includes('summary.primary_request') && appSource.includes('summary.readout_quality_review_request_summaries?.[0]'), "OBD app should format snake_case readout quality review request aliases");
 check(appSource.includes('summary.readout_quality_review_request_plan_summary') && appSource.includes('request.vehicle_command_enabled === false') && appSource.includes('request.would_transmit === false'), "OBD app should format snake_case readout quality review request safety aliases");
+check(appSource.includes('planSummary?.requestCount ?? planSummary?.request_count') && appSource.includes('summary.readoutQualityReviewRequestCount ?? summary.readout_quality_review_request_count'), "OBD app should preserve zero-valued readout quality review request counts");
 check(appSource.includes('planSummary?.primaryRequest') && appSource.includes('planSummary?.primary_request') && appSource.includes('planSummary?.readout_quality_review_request_summaries?.[0]'), "OBD app should format nested readout quality review request plan aliases");
 check(appSource.includes('planSummary?.vehicle_command_enabled === false') && appSource.includes('planSummary?.would_transmit === false'), "OBD app should format nested readout quality review request safety aliases");
 check(appSource.includes('const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);') && appSource.includes('addObdDiagnosticFlowMetric(grid, "品質比較", readoutQualityComparisonLabel'), "OBD diagnostic flow panel should show imported readout quality comparisons");
@@ -1983,7 +1985,7 @@ check(appSource.includes('session?.coreSessionStatus?.readout_quality_summary') 
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.472.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for core readout inventory UI aliases");
+check(appSource.includes('const APP_VERSION = "2.473.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for readout quality zero-value aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
@@ -8028,6 +8030,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1224");
+  console.log("OBD read-only safety checks: 1226");
   console.log("Errors: 0");
 }
