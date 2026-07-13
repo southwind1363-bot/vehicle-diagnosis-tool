@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1246+件",
+  validationCheckLabel: "OBD安全検証 1252+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.478.0";
+const APP_VERSION = "2.479.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4876,12 +4876,14 @@ function buildCoreSessionStatusLines(coreSessionStatus) {
 
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
-  const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage);
-  const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability);
-  const nextStepLabel = formatCoreNextStepSummary(analysis.coreSessionStatus, analysis.nextReadoutCandidates, "");
-  const coreSessionSummary = formatCoreSessionStatusSummary(analysis.coreSessionStatus, "");
-  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(analysis.coreSessionStatus, 2, "");
-  const blockingSummary = formatCoreBlockingWarningSummary(analysis.coreSessionStatus, 2, "");
+  const analysisCoreSessionStatus = analysis.coreSessionStatus || analysis.core_session_status || null;
+  const analysisNextReadoutCandidates = analysis.nextReadoutCandidates || analysis.next_readout_candidates;
+  const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage || analysis.readout_coverage);
+  const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability || analysis.vehicle_applicability);
+  const nextStepLabel = formatCoreNextStepSummary(analysisCoreSessionStatus, analysisNextReadoutCandidates, "");
+  const coreSessionSummary = formatCoreSessionStatusSummary(analysisCoreSessionStatus, "");
+  const emptyReadoutSummary = formatCoreEmptyReadoutSummary(analysisCoreSessionStatus, 2, "");
+  const blockingSummary = formatCoreBlockingWarningSummary(analysisCoreSessionStatus, 2, "");
   if (coreSessionSummary) {
     parts.push(`コア進捗 ${coreSessionSummary}`);
   }
@@ -4910,13 +4912,23 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
     }
   }
   const readinessSummary = formatObdBridgeReadinessSummary(
-    analysis.readinessSnapshot,
+    analysis.readinessSnapshot || analysis.readiness_snapshot,
     { includeObservedCount: includeReadinessCount }
   );
   if (readinessSummary !== NO_DATA) {
     parts.push(`レディネス${readinessSummary}`);
   }
-  if (analysis.monitorValueSummary?.totalCount > 0) {
+  const monitorValueSummary = analysis.monitorValueSummary || analysis.monitor_value_summary || null;
+  const supportedPidMatrix = analysis.supportedPidMatrix || analysis.supported_pid_matrix || null;
+  const ecuInfoSnapshot = analysis.ecuInfoSnapshot || analysis.ecu_info_snapshot || null;
+  const mode06Snapshot = analysis.mode06Snapshot || analysis.mode06_snapshot || null;
+  const freezeFrameSnapshot = analysis.freezeFrameSnapshot || analysis.freeze_frame_snapshot || null;
+  if (!analysis.monitorValueSummary && monitorValueSummary) analysis.monitorValueSummary = monitorValueSummary;
+  if (!analysis.supportedPidMatrix && supportedPidMatrix) analysis.supportedPidMatrix = supportedPidMatrix;
+  if (!analysis.ecuInfoSnapshot && ecuInfoSnapshot) analysis.ecuInfoSnapshot = ecuInfoSnapshot;
+  if (!analysis.mode06Snapshot && mode06Snapshot) analysis.mode06Snapshot = mode06Snapshot;
+  if (!analysis.freezeFrameSnapshot && freezeFrameSnapshot) analysis.freezeFrameSnapshot = freezeFrameSnapshot;
+  if (monitorValueSummary?.totalCount > 0) {
     parts.push(`ライブ要約${formatObdBridgeMonitorSummary(analysis.monitorValueSummary)}`);
   }
   if (analysis.supportedPidMatrix?.supportedCount > 0) parts.push(`対応PID${analysis.supportedPidMatrix.supportedCount}件`);
