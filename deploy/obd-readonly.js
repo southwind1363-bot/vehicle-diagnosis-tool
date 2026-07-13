@@ -5068,7 +5068,7 @@
       readinessSnapshot: summary.readinessSnapshot || summary.readiness_snapshot || null,
       ecuInfoSnapshot: summary.ecuInfoSnapshot || summary.ecu_info_snapshot || null,
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || summary.onboard_monitor_snapshot || null,
-      livePidSnapshot: summary.livePidSnapshot || summary.live_pid_snapshot || { monitorValues: summary.monitorValues || summary.monitor_values || [] },
+      livePidSnapshot: summary.livePidSnapshot || summary.live_pid_snapshot || { monitorValues: summary.monitorValues || summary.monitor_values || [], monitorValueSummary: summary.monitorValueSummary || summary.monitor_value_summary || null },
       supportedPidMatrix: summary.supportedPidMatrix || summary.supported_pid_matrix || null,
       warnings: warnings || summary.warnings || summary.warning_flags || [],
       nextReadoutCandidates: nextReadoutCandidates || summary.nextReadoutCandidates || summary.next_readout_candidates || []
@@ -5193,6 +5193,8 @@
       readout_completion_summary: pickDefined(input.readout_completion_summary, input.readoutCompletionSummary, payload?.readout_completion_summary, payload?.readoutCompletionSummary, nested.readout_completion_summary, nested.readoutCompletionSummary, null),
       analysisReadinessSummary: pickDefined(input.analysisReadinessSummary, input.analysis_readiness_summary, payload?.analysisReadinessSummary, payload?.analysis_readiness_summary, nested.analysisReadinessSummary, nested.analysis_readiness_summary, null),
       analysis_readiness_summary: pickDefined(input.analysis_readiness_summary, input.analysisReadinessSummary, payload?.analysis_readiness_summary, payload?.analysisReadinessSummary, nested.analysis_readiness_summary, nested.analysisReadinessSummary, null),
+      readoutQualitySummary: pickDefined(input.readoutQualitySummary, input.readout_quality_summary, payload?.readoutQualitySummary, payload?.readout_quality_summary, nested.readoutQualitySummary, nested.readout_quality_summary, null),
+      readout_quality_summary: pickDefined(input.readout_quality_summary, input.readoutQualitySummary, payload?.readout_quality_summary, payload?.readoutQualitySummary, nested.readout_quality_summary, nested.readoutQualitySummary, null),
       readoutRequestPlanGateSummary: pickDefined(input.readoutRequestPlanGateSummary, input.readout_request_plan_gate_summary, payload?.readoutRequestPlanGateSummary, payload?.readout_request_plan_gate_summary, nested.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary, null),
       readout_request_plan_gate_summary: pickDefined(input.readout_request_plan_gate_summary, input.readoutRequestPlanGateSummary, payload?.readout_request_plan_gate_summary, payload?.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary, nested.readoutRequestPlanGateSummary, null),
       dtcSnapshot: pickDefined(input.dtcSnapshot, input.dtc_snapshot, payload?.dtcSnapshot, payload?.dtc_snapshot, nested.dtcSnapshot, nested.dtc_snapshot, null),
@@ -5417,6 +5419,7 @@
     const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;
+    const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
       || summary.readout_request_plan_gate_summary
       || coreSessionStatus.readoutRequestPlanGateSummary
@@ -5473,6 +5476,7 @@
         diagnostic_flow_summary: diagnosticFlowSummary,
         readout_completion_summary: readoutCompletionSummary,
         analysis_readiness_summary: analysisReadinessSummary,
+        readout_quality_summary: readoutQualitySummary,
         readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
         core_readout_inventory_summary: coreReadoutInventorySummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
@@ -5543,6 +5547,12 @@
       || exportPayload.session?.analysis_readiness_summary
       || coreSessionStatus.analysisReadinessSummary
       || null;
+    const readoutQualitySummary = summary.readoutQualitySummary
+      || summary.readout_quality_summary
+      || exportPayload.session?.readout_quality_summary
+      || coreSessionStatus.readoutQualitySummary
+      || diagnosticFlowSummary.readoutQualitySummary
+      || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
       || summary.readout_request_plan_gate_summary
       || exportPayload.session?.readout_request_plan_gate_summary
@@ -5598,6 +5608,7 @@
       diagnosticFlowSummary,
       readoutCompletionSummary,
       analysisReadinessSummary,
+      readoutQualitySummary,
       readoutRequestPlanGateSummary,
       coreReadoutInventorySummary,
       bridgeSession: {
@@ -5629,6 +5640,7 @@
         diagnosticFlowSummary,
         readoutCompletionSummary,
         analysisReadinessSummary,
+        readoutQualitySummary,
         readoutRequestPlanGateSummary,
         coreReadoutInventorySummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
@@ -5673,6 +5685,7 @@
     const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;
     const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;
     const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;
+    const importedReadoutQualitySummary = bridgeImport?.readoutQualitySummary || bridgeSession?.readoutQualitySummary || null;
     const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary || bridgeSession?.readoutRequestPlanGateSummary || null;
     const importedCoreReadoutInventorySummary = bridgeImport?.coreReadoutInventorySummary || bridgeSession?.coreReadoutInventorySummary || null;
     const selectPreferredMonitorValue = (current, candidate) => {
@@ -5759,7 +5772,7 @@
       readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
       ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
       onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
-      livePidSnapshot: { monitorValues },
+      livePidSnapshot: { monitorValues, monitorValueSummary },
       supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null,
       warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
@@ -5767,6 +5780,7 @@
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
+    const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
@@ -5826,12 +5840,14 @@
       diagnosticFlowSummary,
       readoutCompletionSummary,
       analysisReadinessSummary,
+      readoutQualitySummary,
       readoutRequestPlanGateSummary,
       coreReadoutInventorySummary,
       importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,
       importedAnalysisReadinessSummary,
+      importedReadoutQualitySummary,
       importedReadoutRequestPlanGateSummary,
       importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
@@ -7424,6 +7440,7 @@
     const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;
     const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;
     const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
+    const importedReadoutQualitySummary = sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null;
     const importedReadoutRequestPlanGateSummary = sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null;
     const importedCoreReadoutInventorySummary = sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null;
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
@@ -7639,6 +7656,7 @@
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
+    const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
@@ -7683,11 +7701,13 @@
       diagnosticFlowSummary,
       readoutCompletionSummary,
       analysisReadinessSummary,
+      readoutQualitySummary,
       readoutRequestPlanGateSummary,
       importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,
       importedAnalysisReadinessSummary,
+      importedReadoutQualitySummary,
       importedReadoutRequestPlanGateSummary,
       importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
