@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1209+件",
+  validationCheckLabel: "OBD安全検証 1211+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.467.0";
+const APP_VERSION = "2.468.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5505,11 +5505,16 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
 
 function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
-  const issueDelta = Number.isFinite(Number(summary.issueCountDelta)) ? Number(summary.issueCountDelta) : 0;
-  const rawDelta = Number.isFinite(Number(summary.rawPidUndecodedDelta)) ? Number(summary.rawPidUndecodedDelta) : 0;
-  const readinessDelta = Number.isFinite(Number(summary.readinessIncompleteDelta)) ? Number(summary.readinessIncompleteDelta) : 0;
-  const ecuDelta = Number.isFinite(Number(summary.ecuInfoMissingKeyDelta)) ? Number(summary.ecuInfoMissingKeyDelta) : 0;
-  const mode06Delta = Number.isFinite(Number(summary.onboardMonitorFailedDelta)) ? Number(summary.onboardMonitorFailedDelta) : 0;
+  const issueDeltaValue = summary.issueCountDelta || summary.issue_count_delta;
+  const rawDeltaValue = summary.rawPidUndecodedDelta || summary.raw_pid_undecoded_delta;
+  const readinessDeltaValue = summary.readinessIncompleteDelta || summary.readiness_incomplete_delta;
+  const ecuDeltaValue = summary.ecuInfoMissingKeyDelta || summary.ecu_info_missing_key_delta;
+  const mode06DeltaValue = summary.onboardMonitorFailedDelta || summary.onboard_monitor_failed_delta;
+  const issueDelta = Number.isFinite(Number(issueDeltaValue)) ? Number(issueDeltaValue) : 0;
+  const rawDelta = Number.isFinite(Number(rawDeltaValue)) ? Number(rawDeltaValue) : 0;
+  const readinessDelta = Number.isFinite(Number(readinessDeltaValue)) ? Number(readinessDeltaValue) : 0;
+  const ecuDelta = Number.isFinite(Number(ecuDeltaValue)) ? Number(ecuDeltaValue) : 0;
+  const mode06Delta = Number.isFinite(Number(mode06DeltaValue)) ? Number(mode06DeltaValue) : 0;
   const parts = [];
   if (issueDelta !== 0) parts.push(`品質${issueDelta > 0 ? "+" : ""}${issueDelta}`);
   if (rawDelta !== 0) parts.push(`RAW${rawDelta > 0 ? "+" : ""}${rawDelta}`);
@@ -5518,7 +5523,8 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   if (mode06Delta !== 0) parts.push(`M06${mode06Delta > 0 ? "+" : ""}${mode06Delta}`);
   if (summary.issueIdsChanged === true) parts.push("項目変化");
   if (summary.reviewRequiredChanged === true) parts.push("確認状態変化");
-  const primaryReviewTarget = summary.primaryReviewTargetReadoutId || summary.reviewActionSummary?.primaryReadoutId || "";
+  const reviewActionSummary = summary.reviewActionSummary || summary.review_action_summary || null;
+  const primaryReviewTarget = summary.primaryReviewTargetReadoutId || summary.primary_review_target_readout_id || reviewActionSummary?.primaryReadoutId || reviewActionSummary?.primary_readout_id || "";
   if (primaryReviewTarget) parts.push(`確認:${formatCoreReadoutLabel(primaryReviewTarget, primaryReviewTarget)}`);
   return parts.length ? parts.join(" / ") : "変化なし";
 }
@@ -5637,7 +5643,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session.coreReadoutInventorySummary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(core.readoutQualitySummary || flow.readoutQualitySummary, NO_DATA);
-  const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary, NO_DATA);
+  const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedReadoutQualityReviewRequestPlanSummary || session.imported_readout_quality_review_request_plan_summary || session.importedSessionComparisonSummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
@@ -5751,7 +5757,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(session?.coreSessionStatus?.readoutQualitySummary || session?.diagnosticFlowSummary?.readoutQualitySummary, NO_DATA);
-  const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary, NO_DATA);
+  const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || session?.importedSessionComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
@@ -6329,7 +6335,7 @@ function analyzeObdScannerImport() {
   if (readoutQualityNote) {
     notes.push(`読取品質 ${readoutQualityNote}`);
   }
-  const readoutQualityComparisonNote = formatReadoutQualityComparisonSummary(summarySource.importedReadoutQualityComparisonSummary, "");
+  const readoutQualityComparisonNote = formatReadoutQualityComparisonSummary(summarySource.importedReadoutQualityComparisonSummary || summarySource.imported_readout_quality_comparison_summary, "");
   if (readoutQualityComparisonNote) {
     notes.push(`品質比較 ${readoutQualityComparisonNote}`);
   }
