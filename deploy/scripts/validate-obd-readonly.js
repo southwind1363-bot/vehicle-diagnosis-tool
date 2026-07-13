@@ -42,7 +42,7 @@ const normalizeNextReadoutCandidatesFunctionSource = source.match(/function norm
 const nextReadoutCandidatesFunctionSource = source.match(/function buildNextReadoutCandidates[\s\S]*?\.slice\(0, 5\);\r?\n  \}/);
 const coreSessionStatusFunctionSource = source.match(/function buildCoreSessionStatus[\s\S]*?readyForAnalysis\r?\n    \};\r?\n  \}/);
 const resolvedSessionMetadataFunctionSource = source.match(/function buildResolvedSessionMetadata[\s\S]*?sourceLength: Number\.isFinite\(Number\(metadataOverrides\.sourceLength\)\)\r?\n[\s\S]*?\r?\n  \}/);
-const diagnosticSessionInputFunctionSource = source.match(/function getDiagnosticSessionInput[\s\S]*?source: base\.source \|\| nested\.source \|\| \"diagnostic_core\",\r?\n[\s\S]*?\r?\n  \}/);
+const diagnosticSessionInputFunctionSource = source.match(/function getDiagnosticSessionInput[\s\S]*?source: base\.source \|\| base\.source_type \|\| nested\.source \|\| nested\.source_type \|\| \"diagnostic_core\",\r?\n[\s\S]*?\r?\n  \}/);
 const nestedSessionMetadataMergeFunctionSource = source.match(/function mergeNestedSessionMetadata[\s\S]*?had_sensitive_identifier:[\s\S]*?\r?\n  \}/);
 const sessionMetadataOverridesFunctionSource = source.match(/function getSessionMetadataOverrides[\s\S]*?hadSensitiveIdentifier\r?\n    \};\r?\n  \}/);
 const bridgeDiagnosticImportFunctionSource = source.match(/function buildBridgeDiagnosticImport[\s\S]*?const exportPayload = buildBridgeSessionExportPayload\(summary\);\r?\n[\s\S]*?\r?\n  \}/);
@@ -435,7 +435,8 @@ const summaryMetadataFieldsFunctionChecks = () => {
   if (summaryMetadataFieldsFunctionSource) {
     const functionBody = summaryMetadataFieldsFunctionSource[0];
     check(functionBody.includes('const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints);'), "buildSummaryMetadataFields should merge camelCase and snake_case tool hints");
-    check(functionBody.includes('const warnings = resolveWarningList(summary.warnings, summary.warning_flags, summary.warningFlags);'), "buildSummaryMetadataFields should normalize warning aliases");
+    check(functionBody.includes('const warnings = resolveWarningList(summary.warnings, summary.warning_ids, summary.warning_flags, summary.warningFlags);'), "buildSummaryMetadataFields should normalize warning aliases");
+    check(functionBody.includes('warning_ids: warnings,') && functionBody.includes('warningIds: warnings,'), "buildSummaryMetadataFields should preserve warning id aliases in exports");
     check(functionBody.includes('const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);'), "buildSummaryMetadataFields should normalize next-readout candidate aliases");
     check(functionBody.includes('const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, 0);'), "buildSummaryMetadataFields should normalize source length aliases");
   }
@@ -488,7 +489,7 @@ const sessionMetadataOverridesFunctionChecks = () => {
     check(functionBody.includes('vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
     check(functionBody.includes('readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,'), "getSessionMetadataOverrides should normalize readout coverage aliases");
     check(functionBody.includes('toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints),'), "getSessionMetadataOverrides should merge tool hint aliases");
-    check(functionBody.includes('warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_flags, sessionInput.warningFlags),'), "getSessionMetadataOverrides should merge warning aliases");
+    check(functionBody.includes('warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_ids, sessionInput.warning_flags, sessionInput.warningFlags),'), "getSessionMetadataOverrides should merge warning aliases");
     check(functionBody.includes('sourceLength: pickDefined(sessionInput.source_length, sessionInput.sourceLength, null),'), "getSessionMetadataOverrides should normalize source length aliases");
   }
 };
@@ -498,7 +499,10 @@ const nestedSessionMetadataMergeFunctionChecks = () => {
     const functionBody = nestedSessionMetadataMergeFunctionSource[0];
     check(functionBody.includes('readoutCoverage: pickDefined(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),'), "mergeNestedSessionMetadata should prefer outer readout coverage before nested aliases");
     check(functionBody.includes('toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, nested.toolHints, nested.tool_hints),'), "mergeNestedSessionMetadata should merge outer and nested tool hints");
-    check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),'), "mergeNestedSessionMetadata should merge outer and nested warning aliases");
+    check(functionBody.includes('source: base.source || base.source_type || nested.source || nested.source_type || null,'), "mergeNestedSessionMetadata should merge outer and nested source aliases");
+    check(functionBody.includes('protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,'), "mergeNestedSessionMetadata should merge outer and nested protocol aliases");
+    check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),'), "mergeNestedSessionMetadata should merge outer and nested warning aliases");
+    check(functionBody.includes('warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),'), "mergeNestedSessionMetadata should preserve warning_ids aliases");
     check(functionBody.includes('sourceLength: pickDefined(base.sourceLength, base.source_length, nested.sourceLength, nested.source_length, null),'), "mergeNestedSessionMetadata should prefer outer source length before nested aliases");
     check(functionBody.includes('].some((value) => value === true)\r\n        ? true'), "mergeNestedSessionMetadata should preserve true hadSensitiveIdentifier across outer and nested metadata");
   }
@@ -512,6 +516,9 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('const nested = input.session') && functionBody.includes('|| input.scan_session') && functionBody.includes('|| input.bridge_session'), "getDiagnosticSessionInput should accept nested session aliases from outer input");
     check(functionBody.includes('|| payload?.bridgeSession') && functionBody.includes('|| payload?.bridge_session') && functionBody.includes('|| payload?.session'), "getDiagnosticSessionInput should accept nested session aliases from bridge payloads");
     check(functionBody.includes('...nested,') && functionBody.includes('...base,'), "getDiagnosticSessionInput should layer nested session fields before base overrides");
+    check(functionBody.includes('source: base.source || base.source_type || nested.source || nested.source_type || "diagnostic_core",') && functionBody.includes('source_type: base.source_type || base.source || nested.source_type || nested.source || "diagnostic_core",'), "getDiagnosticSessionInput should normalize source type aliases");
+    check(functionBody.includes('protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,') && functionBody.includes('obd_protocol: base.obd_protocol || base.protocol || nested.obd_protocol || nested.protocol || null,'), "getDiagnosticSessionInput should normalize protocol aliases");
+    check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),') && functionBody.includes('warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),'), "getDiagnosticSessionInput should normalize warning id aliases");
     check(functionBody.includes('coreSessionStatus: pickDefined(input.coreSessionStatus, input.core_session_status') && functionBody.includes('nested.coreSessionStatus, nested.core_session_status'), "getDiagnosticSessionInput should preserve imported core session status aliases");
     check(functionBody.includes('diagnosticFlowSummary: pickDefined(input.diagnosticFlowSummary, input.diagnostic_flow_summary') && functionBody.includes('nested.diagnosticFlowSummary, nested.diagnostic_flow_summary'), "getDiagnosticSessionInput should preserve imported diagnostic flow aliases");
     check(functionBody.includes('readoutCompletionSummary: pickDefined(input.readoutCompletionSummary, input.readout_completion_summary') && functionBody.includes('nested.readoutCompletionSummary, nested.readout_completion_summary'), "getDiagnosticSessionInput should preserve imported readout completion aliases");
@@ -856,7 +863,8 @@ const sessionTemporalContextFunctionChecks = () => {
   check(Boolean(sessionTemporalContextFunctionSource), "resolveSessionTemporalContext is missing from obd-readonly.js");
   if (sessionTemporalContextFunctionSource) {
     const functionBody = sessionTemporalContextFunctionSource[0];
-    check(functionBody.includes('protocol: input.protocol') && functionBody.includes('|| dtcSnapshot.protocol') && functionBody.includes('|| supportedPidMatrix.protocol'), "resolveSessionTemporalContext should derive protocol from input before readout snapshots");
+    check(functionBody.includes('protocol: input.protocol') && functionBody.includes('|| input.obd_protocol') && functionBody.includes('|| dtcSnapshot.protocol') && functionBody.includes('|| supportedPidMatrix.protocol'), "resolveSessionTemporalContext should derive protocol from input before readout snapshots");
+    check(functionBody.includes('|| dtcSnapshot.obd_protocol') && functionBody.includes('|| supportedPidMatrix.obd_protocol'), "resolveSessionTemporalContext should derive protocol from obd_protocol aliases");
     check(functionBody.includes('capturedAt: input.capturedAt') && functionBody.includes('|| input.captured_at'), "resolveSessionTemporalContext should normalize capturedAt aliases from direct input");
     check(functionBody.includes('|| dtcSnapshot.capturedAt') && functionBody.includes('|| supportedPidMatrix.capturedAt'), "resolveSessionTemporalContext should derive capturedAt from readout snapshots");
     check(functionBody.indexOf('protocol: input.protocol') < functionBody.indexOf('capturedAt: input.capturedAt'), "resolveSessionTemporalContext should resolve protocol before capturedAt metadata");
@@ -1680,6 +1688,8 @@ const diagnosticScanSessionFunctionChecks = () => {
   if (diagnosticScanSessionFunctionSource) {
     const functionBody = diagnosticScanSessionFunctionSource[0];
     check(functionBody.includes('const sessionInput = getDiagnosticSessionInput(input);') && functionBody.includes('const metadataOverrides = getSessionMetadataOverrides(sessionInput);'), "buildDiagnosticScanSession should normalize session input and metadata overrides first");
+    check(functionBody.includes('source: sessionInput.source || sessionInput.source_type || "diagnostic_core",') && functionBody.includes('source_type: sessionInput.source_type || sessionInput.source || "diagnostic_core",'), "buildDiagnosticScanSession should emit source type aliases");
+    check(functionBody.includes('obd_protocol: protocol,'), "buildDiagnosticScanSession should emit obd_protocol aliases");
     check(functionBody.includes('const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;') && functionBody.includes('importedCoreSessionStatus,'), "buildDiagnosticScanSession should expose imported core session status separately from recalculated status");
     check(functionBody.includes('const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "buildDiagnosticScanSession should expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;') && functionBody.includes('importedReadoutCompletionSummary,'), "buildDiagnosticScanSession should expose imported readout completion summary separately from recalculated status");
@@ -1919,7 +1929,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1284+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1297+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1991,7 +2001,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.483.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for session source metadata aliases");
+check(appSource.includes('const APP_VERSION = "2.484.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core source metadata aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7392,6 +7402,19 @@ check(scanSessionBridgeExportPayloadAlias.connectionStatus.vehicleConnected === 
 check(scanSessionBridgeExportPayloadAlias.vehicleProfile?.model === bridgeExportPayload.session.vehicle_profile?.model, "Diagnostic scan session did not carry vehicle_profile from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not carry warnings from bridge_export_payload alias input");
+const scanSessionCoreMetadataAliases = obd.buildDiagnosticScanSession({
+  source_type: "local_bridge",
+  obd_protocol: "CAN_11_500",
+  warning_ids: ["negative_obd_response_present"],
+  scan_session: {
+    source: "nested_source",
+    protocol: "nested_protocol",
+    warning_flags: ["freeze_frame_available"]
+  }
+});
+check(scanSessionCoreMetadataAliases.source === "local_bridge" && scanSessionCoreMetadataAliases.source_type === "local_bridge", "Diagnostic scan session did not preserve source_type aliases");
+check(scanSessionCoreMetadataAliases.protocol === "CAN_11_500" && scanSessionCoreMetadataAliases.obd_protocol === "CAN_11_500", "Diagnostic scan session did not preserve obd_protocol aliases");
+check(scanSessionCoreMetadataAliases.warnings.includes("negative_obd_response_present") && scanSessionCoreMetadataAliases.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge warning_ids aliases");
 const scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeExportPayloadPopulatedPartialExplicitCandidates,
   session_id: "shop-test-bridge-export-populated-partial-explicit-candidates"
@@ -8090,6 +8113,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1284");
+  console.log("OBD read-only safety checks: 1297");
   console.log("Errors: 0");
 }

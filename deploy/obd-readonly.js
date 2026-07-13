@@ -2353,12 +2353,14 @@
     return {
       ...nested,
       ...parts,
-      source: parts.source || nested.source || "local_bridge",
+      source: parts.source || parts.source_type || nested.source || nested.source_type || "local_bridge",
+      source_type: parts.source_type || parts.source || nested.source_type || nested.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || nested.startedAt || nested.started_at || null,
       endedAt: parts.endedAt || parts.ended_at || nested.endedAt || nested.ended_at || null,
       captured_at: parts.captured_at || parts.capturedAt || nested.captured_at || nested.capturedAt || null,
       capturedAt: parts.capturedAt || parts.captured_at || nested.capturedAt || nested.captured_at || null,
-      protocol: parts.protocol || nested.protocol || null,
+      protocol: parts.protocol || parts.obd_protocol || nested.protocol || nested.obd_protocol || null,
+      obd_protocol: parts.obd_protocol || parts.protocol || nested.obd_protocol || nested.protocol || null,
       ...mergedMetadata
     };
   }
@@ -2644,14 +2646,23 @@
   } = {}) {
     return {
       protocol: input.protocol
+        || input.obd_protocol
         || dtcSnapshot.protocol
+        || dtcSnapshot.obd_protocol
         || livePidSnapshot.protocol
+        || livePidSnapshot.obd_protocol
         || freezeFrameSnapshot.protocol
+        || freezeFrameSnapshot.obd_protocol
         || readinessSnapshot.protocol
+        || readinessSnapshot.obd_protocol
         || ecuInfoSnapshot.protocol
+        || ecuInfoSnapshot.obd_protocol
         || onboardMonitorSnapshot.protocol
+        || onboardMonitorSnapshot.obd_protocol
         || ecuResponseSummary.protocol
+        || ecuResponseSummary.obd_protocol
         || supportedPidMatrix.protocol
+        || supportedPidMatrix.obd_protocol
         || null,
       capturedAt: input.capturedAt
         || input.captured_at
@@ -5256,9 +5267,14 @@
       next_readout_candidates: pickDefined(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       importClassification: pickDefined(base.importClassification, base.import_classification, nested.importClassification, nested.import_classification, null),
       import_classification: pickDefined(base.import_classification, base.importClassification, nested.import_classification, nested.importClassification, null),
+      source: base.source || base.source_type || nested.source || nested.source_type || null,
+      source_type: base.source_type || base.source || nested.source_type || nested.source || null,
+      protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,
+      obd_protocol: base.obd_protocol || base.protocol || nested.obd_protocol || nested.protocol || null,
       toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, nested.toolHints, nested.tool_hints),
       tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
-      warnings: mergeUniqueStrings(base.warnings, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
+      warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),
+      warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),
       sourceLength: pickDefined(base.sourceLength, base.source_length, nested.sourceLength, nested.source_length, null),
       source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
       hadSensitiveIdentifier: [
@@ -5304,13 +5320,15 @@
     return {
       ...nested,
       ...base,
-      source: base.source || nested.source || "diagnostic_core",
+      source: base.source || base.source_type || nested.source || nested.source_type || "diagnostic_core",
+      source_type: base.source_type || base.source || nested.source_type || nested.source || "diagnostic_core",
       session_id: base.session_id || base.sessionId || nested.session_id || nested.sessionId || "local_scan_session",
       started_at: base.started_at || base.startedAt || nested.started_at || nested.startedAt || null,
       ended_at: base.ended_at || base.endedAt || nested.ended_at || nested.endedAt || null,
       captured_at: base.captured_at || base.capturedAt || nested.captured_at || nested.capturedAt || null,
       capturedAt: base.captured_at || base.capturedAt || nested.captured_at || nested.capturedAt || null,
-      protocol: base.protocol || nested.protocol || null,
+      protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,
+      obd_protocol: base.obd_protocol || base.protocol || nested.obd_protocol || nested.protocol || null,
       vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
       vehicle_applicability: base.vehicle_applicability || base.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
       connectionStatus: pickDefined(input.connectionStatus, input.connection_status, payload?.connectionStatus, payload?.connection_status, nested.connectionStatus, nested.connection_status, null),
@@ -5351,7 +5369,8 @@
       supported_pid_matrix: pickDefined(input.supported_pid_matrix, input.supportedPidMatrix, payload?.supported_pid_matrix, payload?.supportedPidMatrix, nested.supported_pid_matrix, nested.supportedPidMatrix, null),
       next_readout_candidates: pickDefined(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
-      warnings: mergeUniqueStrings(base.warnings, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_flags, nested.warningFlags),
+      warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),
+      warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),
       import_classification: pickDefined(base.import_classification, base.importClassification, nested.import_classification, nested.importClassification, null),
       sourceLength: pickDefined(input.sourceLength, input.source_length, payload?.sourceLength, payload?.source_length, nested.sourceLength, nested.source_length, null),
       source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
@@ -5390,7 +5409,7 @@
       nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,
       importClassification: sessionInput.import_classification || sessionInput.importClassification || null,
       toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints),
-      warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_flags, sessionInput.warningFlags),
+      warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_ids, sessionInput.warning_flags, sessionInput.warningFlags),
       sourceLength: pickDefined(sessionInput.source_length, sessionInput.sourceLength, null),
       hadSensitiveIdentifier
     };
@@ -5403,7 +5422,7 @@
     const importClassificationInput = summary.importClassification || summary.import_classification;
     const importClassification = resolveImportClassification(importClassificationInput);
     const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints);
-    const warnings = resolveWarningList(summary.warnings, summary.warning_flags, summary.warningFlags);
+    const warnings = resolveWarningList(summary.warnings, summary.warning_ids, summary.warning_flags, summary.warningFlags);
     const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);
     const hadSensitiveIdentifier = summary.hadSensitiveIdentifier === true
       || summary.had_sensitive_identifier === true
@@ -5419,6 +5438,7 @@
         import_classification: importClassification,
         tool_hints: toolHints,
         warnings,
+        warning_ids: warnings,
         next_readout_candidates: nextReadoutCandidates,
         had_sensitive_identifier: hadSensitiveIdentifier,
         source_length: sourceLength
@@ -5428,6 +5448,7 @@
         importClassification,
         toolHints,
         warnings,
+        warningIds: warnings,
         nextReadoutCandidates,
         hadSensitiveIdentifier,
         sourceLength
@@ -7615,9 +7636,9 @@
       || sessionInput.live_pids
       || (Array.isArray(sessionInput.monitorValues) || Array.isArray(sessionInput.monitor_values)
         ? {
-          source: sessionInput.source || "local_bridge",
+          source: sessionInput.source || sessionInput.source_type || "local_bridge",
           captured_at: sessionInput.captured_at || sessionInput.capturedAt || null,
-          protocol: sessionInput.protocol || null,
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           monitor_values: sessionInput.monitorValues || sessionInput.monitor_values || [],
           monitor_value_summary: sessionInput.monitorValueSummary || sessionInput.monitor_value_summary || null,
           monitor_insights: sessionInput.monitorInsights || sessionInput.monitor_insights || []
@@ -7635,7 +7656,7 @@
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
             ...livePidSnapshotInput.data,
-            protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.protocol || sessionInput.protocol || null,
+            protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.data.obd_protocol || livePidSnapshotInput.protocol || livePidSnapshotInput.obd_protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
             captured_at: livePidSnapshotInput.data.captured_at || livePidSnapshotInput.data.capturedAt || livePidSnapshotInput.captured_at || livePidSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
           }
           : livePidSnapshotInput)
@@ -7649,7 +7670,7 @@
       ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
           ? {
             ...supportedPidMatrixInput.data,
-            protocol: supportedPidMatrixInput.data.protocol || supportedPidMatrixInput.protocol || sessionInput.protocol || null,
+            protocol: supportedPidMatrixInput.data.protocol || supportedPidMatrixInput.data.obd_protocol || supportedPidMatrixInput.protocol || supportedPidMatrixInput.obd_protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
             captured_at: supportedPidMatrixInput.data.captured_at || supportedPidMatrixInput.data.capturedAt || supportedPidMatrixInput.captured_at || supportedPidMatrixInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
           }
           : supportedPidMatrixInput)
@@ -7658,7 +7679,7 @@
       ? (readinessSnapshotInput.data && typeof readinessSnapshotInput.data === "object"
           ? {
             ...readinessSnapshotInput.data,
-            protocol: readinessSnapshotInput.data.protocol || readinessSnapshotInput.protocol || sessionInput.protocol || null,
+            protocol: readinessSnapshotInput.data.protocol || readinessSnapshotInput.data.obd_protocol || readinessSnapshotInput.protocol || readinessSnapshotInput.obd_protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
             captured_at: readinessSnapshotInput.data.captured_at || readinessSnapshotInput.data.capturedAt || readinessSnapshotInput.captured_at || readinessSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
           }
           : readinessSnapshotInput)
@@ -7667,7 +7688,7 @@
       ? (freezeFrameSnapshotInput.data && typeof freezeFrameSnapshotInput.data === "object"
           ? {
             ...freezeFrameSnapshotInput.data,
-            protocol: freezeFrameSnapshotInput.data.protocol || freezeFrameSnapshotInput.protocol || sessionInput.protocol || null,
+            protocol: freezeFrameSnapshotInput.data.protocol || freezeFrameSnapshotInput.data.obd_protocol || freezeFrameSnapshotInput.protocol || freezeFrameSnapshotInput.obd_protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
             captured_at: freezeFrameSnapshotInput.data.captured_at || freezeFrameSnapshotInput.data.capturedAt || freezeFrameSnapshotInput.captured_at || freezeFrameSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
           }
           : freezeFrameSnapshotInput)
@@ -7676,7 +7697,7 @@
       ? (onboardMonitorSnapshotInput.data && typeof onboardMonitorSnapshotInput.data === "object"
           ? {
             ...onboardMonitorSnapshotInput.data,
-            protocol: onboardMonitorSnapshotInput.data.protocol || onboardMonitorSnapshotInput.protocol || sessionInput.protocol || null,
+            protocol: onboardMonitorSnapshotInput.data.protocol || onboardMonitorSnapshotInput.data.obd_protocol || onboardMonitorSnapshotInput.protocol || onboardMonitorSnapshotInput.obd_protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
             captured_at: onboardMonitorSnapshotInput.data.captured_at || onboardMonitorSnapshotInput.data.capturedAt || onboardMonitorSnapshotInput.captured_at || onboardMonitorSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
           }
           : onboardMonitorSnapshotInput)
@@ -7685,7 +7706,7 @@
       ? (ecuInfoSnapshotInput.data && typeof ecuInfoSnapshotInput.data === "object"
           ? {
             ...ecuInfoSnapshotInput.data,
-            protocol: ecuInfoSnapshotInput.data.protocol || ecuInfoSnapshotInput.protocol || sessionInput.protocol || null,
+            protocol: ecuInfoSnapshotInput.data.protocol || ecuInfoSnapshotInput.data.obd_protocol || ecuInfoSnapshotInput.protocol || ecuInfoSnapshotInput.obd_protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
             captured_at: ecuInfoSnapshotInput.data.captured_at || ecuInfoSnapshotInput.data.capturedAt || ecuInfoSnapshotInput.captured_at || ecuInfoSnapshotInput.capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null
           }
           : ecuInfoSnapshotInput)
@@ -7844,12 +7865,14 @@
 
     return {
       schemaVersion: "scan_session_v1",
-      source: sessionInput.source || "diagnostic_core",
+      source: sessionInput.source || sessionInput.source_type || "diagnostic_core",
+      source_type: sessionInput.source_type || sessionInput.source || "diagnostic_core",
       sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80),
       startedAt: sessionInput.started_at || sessionInput.startedAt || null,
       endedAt: sessionInput.ended_at || sessionInput.endedAt || null,
       capturedAt,
       protocol,
+      obd_protocol: protocol,
       vehicleProfile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       connectionStatus,
