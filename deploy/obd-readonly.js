@@ -4427,6 +4427,21 @@
       byKind[row.kind] = row;
       return byKind;
     }, {});
+    const buildKindDirectionCountSummary = (kind) => {
+      const row = changedIdDisplayMatrixRowByKind[kind] || {};
+      return {
+        kind,
+        total: row.count || 0,
+        mixed: row.mixedCount || 0,
+        added: row.addedCount || 0,
+        removed: row.removedCount || 0
+      };
+    };
+    const changedIdDisplayKindDirectionCounts = ["readout_id", "bridge_intent", "request_plan_action", "blocked_reason", "analysis_checklist_id", "other"]
+      .reduce((counts, kind) => {
+        counts[kind] = buildKindDirectionCountSummary(kind);
+        return counts;
+      }, {});
     const changedIdDisplayMatrixSummary = {
       schemaVersion: "changed_id_display_matrix_summary_v1",
       directions: changedIdDisplayMatrixDirections,
@@ -4466,6 +4481,12 @@
       primaryRow: primaryChangedIdDisplayRow,
       groups: changedIdDisplayGroupSummary,
       matrix: changedIdDisplayMatrixSummary,
+      kindDirectionCounts: changedIdDisplayKindDirectionCounts,
+      readoutKindDirectionCounts: changedIdDisplayKindDirectionCounts.readout_id,
+      bridgeIntentKindDirectionCounts: changedIdDisplayKindDirectionCounts.bridge_intent,
+      requestPlanActionKindDirectionCounts: changedIdDisplayKindDirectionCounts.request_plan_action,
+      blockedReasonKindDirectionCounts: changedIdDisplayKindDirectionCounts.blocked_reason,
+      analysisChecklistKindDirectionCounts: changedIdDisplayKindDirectionCounts.analysis_checklist_id,
       readoutChangedIdCount: readoutChangedIdSummary.count || 0,
       bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
       requestPlanActionChangedIdCount: changedIdSummaryByKind.request_plan_action?.count || 0,
