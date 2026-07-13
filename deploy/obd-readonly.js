@@ -4445,6 +4445,21 @@
     const primaryChangedKindDirectionCounts = primaryChangedIdSummary?.kind
       ? changedIdDisplayKindDirectionCounts[primaryChangedIdSummary.kind] || buildKindDirectionCountSummary(primaryChangedIdSummary.kind)
       : null;
+    const primaryChangedIdImpactSummary = {
+      schemaVersion: "primary_changed_id_impact_summary_v1",
+      changed: Boolean(primaryChangedIdSummary),
+      primaryChangedId: primaryChangedIdSummary?.id || null,
+      primaryChangedIdKind: primaryChangedIdSummary?.kind || null,
+      primaryChangedIdDirection,
+      primaryChangedIdKey: primaryChangedIdSummary?.id && primaryChangedIdSummary?.kind
+        ? `${primaryChangedIdSummary.kind}:${primaryChangedIdSummary.id}`
+        : null,
+      kindDirectionCounts: primaryChangedKindDirectionCounts,
+      kindTotalCount: primaryChangedKindDirectionCounts?.total || 0,
+      kindAddedCount: primaryChangedKindDirectionCounts?.added || 0,
+      kindRemovedCount: primaryChangedKindDirectionCounts?.removed || 0,
+      kindMixedCount: primaryChangedKindDirectionCounts?.mixed || 0
+    };
     const changedIdDisplayMatrixSummary = {
       schemaVersion: "changed_id_display_matrix_summary_v1",
       directions: changedIdDisplayMatrixDirections,
@@ -4475,6 +4490,7 @@
       primaryChangedKindAddedCount: primaryChangedKindDirectionCounts?.added || 0,
       primaryChangedKindRemovedCount: primaryChangedKindDirectionCounts?.removed || 0,
       primaryChangedKindMixedCount: primaryChangedKindDirectionCounts?.mixed || 0,
+      primaryChangedIdImpactSummary,
       primaryChangedIdKey: primaryChangedIdSummary?.id && primaryChangedIdSummary?.kind
         ? `${primaryChangedIdSummary.kind}:${primaryChangedIdSummary.id}`
         : null,
