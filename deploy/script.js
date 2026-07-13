@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1180+件",
+  validationCheckLabel: "OBD安全検証 1183+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.456.0";
+const APP_VERSION = "2.457.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5523,6 +5523,20 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : "変化なし";
 }
 
+function formatReadoutQualityReviewRequestSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const request = summary.primaryReadoutQualityReviewRequest || summary.readoutQualityReviewRequestSummaries?.[0] || summary.readoutQualityReviewActionSummary || null;
+  if (!request || typeof request !== "object") return fallback;
+  const readoutId = request.readoutId || request.primaryReadoutId || summary.primaryReadoutQualityReviewTargetReadoutId || "";
+  const label = readoutId ? formatCoreReadoutLabel(readoutId, readoutId) : "";
+  const bridgeIntent = request.bridgeIntent || request.actionId || "";
+  const serviceMode = request.serviceMode ? `Mode ${request.serviceMode}` : "";
+  const parts = [label, bridgeIntent, serviceMode].filter(Boolean);
+  if (!parts.length) return fallback;
+  if (request.vehicleCommandEnabled === false || request.wouldTransmit === false) parts.push("read-only");
+  return parts.join(" / ");
+}
+
 function addObdDiagnosticFlowMetric(container, label, value, tone = "") {
   const item = document.createElement("article");
   item.className = `obd-diagnostic-flow-card${tone ? ` obd-diagnostic-flow-${tone}` : ""}`;
@@ -5603,6 +5617,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(core.readoutQualitySummary || flow.readoutQualitySummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary, NO_DATA);
+  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedSessionComparisonSummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5637,6 +5652,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const grid = document.createElement("div");
   grid.className = "obd-diagnostic-flow-grid";
   addObdDiagnosticFlowMetric(grid, "品質比較", readoutQualityComparisonLabel, session.importedReadoutQualityComparisonSummary?.issueIdsChanged === true || session.importedReadoutQualityComparisonSummary?.issueCountsChanged === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "品質確認要求", readoutQualityReviewRequestLabel, session.importedSessionComparisonSummary?.readoutQualityReviewRequired === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "現在地", statusLabel, canStartAnalysis ? "ready" : "pending");
   addObdDiagnosticFlowMetric(grid, "読取進捗", completionPercent === null ? NO_DATA : `${completionPercent}%`);
   addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
@@ -5715,6 +5731,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(session?.coreSessionStatus?.readoutQualitySummary || session?.diagnosticFlowSummary?.readoutQualitySummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary, NO_DATA);
+  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedSessionComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -5780,6 +5797,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
   values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel]);
   values.splice(10, 0, ["品質比較", readoutQualityComparisonLabel]);
+  values.splice(11, 0, ["品質確認要求", readoutQualityReviewRequestLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
@@ -6293,6 +6311,10 @@ function analyzeObdScannerImport() {
   const readoutQualityComparisonNote = formatReadoutQualityComparisonSummary(summarySource.importedReadoutQualityComparisonSummary, "");
   if (readoutQualityComparisonNote) {
     notes.push(`品質比較 ${readoutQualityComparisonNote}`);
+  }
+  const readoutQualityReviewRequestNote = formatReadoutQualityReviewRequestSummary(summarySource.importedSessionComparisonSummary, "");
+  if (readoutQualityReviewRequestNote) {
+    notes.push(`品質確認要求 ${readoutQualityReviewRequestNote}`);
   }
   if (analysisEmptyReadoutLabel) {
     notes.push(`空応答 ${analysisEmptyReadoutLabel}`);
