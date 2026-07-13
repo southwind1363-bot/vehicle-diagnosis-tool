@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1079+件",
+  validationCheckLabel: "OBD安全検証 1083+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.438.0";
+const APP_VERSION = "2.439.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5400,6 +5400,33 @@ function formatChangedIdDisplaySummary(summary, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : "変更あり";
 }
 
+function formatChangedIdReviewTargetActionSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  if (summary.status === "unchanged" || summary.empty === true) return "変更なし";
+  const impactSummary = summary.primaryChangedIdImpactSummary || {};
+  const reviewTarget = impactSummary.reviewTarget || impactSummary.primaryChangedIdReviewTarget || summary.primaryChangedIdReviewTarget || "";
+  const reviewTargetLabel = formatChangedIdReviewTargetLabel(reviewTarget);
+  const totalCount = Number.isFinite(Number(summary.primaryChangedReviewTargetTotalCount))
+    ? Number(summary.primaryChangedReviewTargetTotalCount)
+    : Number.isFinite(Number(impactSummary.reviewTargetTotalCount)) ? Number(impactSummary.reviewTargetTotalCount) : 0;
+  const addedIds = Array.isArray(summary.primaryChangedReviewTargetAddedIds)
+    ? summary.primaryChangedReviewTargetAddedIds
+    : Array.isArray(impactSummary.reviewTargetAddedIds) ? impactSummary.reviewTargetAddedIds : [];
+  const removedIds = Array.isArray(summary.primaryChangedReviewTargetRemovedIds)
+    ? summary.primaryChangedReviewTargetRemovedIds
+    : Array.isArray(impactSummary.reviewTargetRemovedIds) ? impactSummary.reviewTargetRemovedIds : [];
+  const mixedIds = Array.isArray(summary.primaryChangedReviewTargetMixedIds)
+    ? summary.primaryChangedReviewTargetMixedIds
+    : Array.isArray(impactSummary.reviewTargetMixedIds) ? impactSummary.reviewTargetMixedIds : [];
+  const parts = [];
+  if (reviewTargetLabel) parts.push(reviewTargetLabel);
+  if (totalCount > 0) parts.push(`${totalCount} ids`);
+  if (addedIds.length) parts.push(`+${addedIds.slice(0, 3).join(",")}`);
+  if (removedIds.length) parts.push(`-${removedIds.slice(0, 3).join(",")}`);
+  if (mixedIds.length) parts.push(`~${mixedIds.slice(0, 3).join(",")}`);
+  return parts.length ? parts.join(" / ") : fallback;
+}
+
 function addObdDiagnosticFlowMetric(container, label, value, tone = "") {
   const item = document.createElement("article");
   item.className = `obd-diagnostic-flow-card${tone ? ` obd-diagnostic-flow-${tone}` : ""}`;
@@ -5475,6 +5502,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(primaryBlockerComparisonSummary, NO_DATA);
   const changedIdDisplaySummary = session.importedSessionComparisonSummary?.changedIdDisplaySummary || null;
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
+  const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5517,6 +5545,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "主保留要求", primaryBlockingReadoutRequestLabel, primaryBlockingReadoutRequest?.executionEnabled === true ? "ready" : primaryBlockingReadoutRequest ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "主保留比較", primaryBlockerComparisonLabel, primaryBlockerComparisonSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取差分", changedIdDisplayLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
@@ -5577,6 +5606,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(session?.importedSessionComparisonSummary?.primaryBlockerChangeSummary, NO_DATA);
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);
+  const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -5640,7 +5670,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["次操作", nextReadoutLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
