@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1121+件",
+  validationCheckLabel: "OBD安全検証 1132+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.449.0";
+const APP_VERSION = "2.450.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5444,9 +5444,13 @@ function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
   const counts = summary.countsById && typeof summary.countsById === "object" ? summary.countsById : {};
   const totalValueCount = Number.isFinite(Number(summary.totalValueCount)) ? Number(summary.totalValueCount) : 0;
   const captured = Number.isFinite(Number(summary.capturedReadoutCount)) ? Number(summary.capturedReadoutCount) : 0;
+  const attempted = Number.isFinite(Number(summary.attemptedReadoutCount)) ? Number(summary.attemptedReadoutCount) : captured;
+  const pending = Number.isFinite(Number(summary.pendingReadoutCount)) ? Number(summary.pendingReadoutCount) : 0;
   const total = Number.isFinite(Number(summary.totalReadoutCount)) ? Number(summary.totalReadoutCount) : 0;
   const parts = [];
   if (total) parts.push(`${captured}/${total}読取`);
+  if (total && attempted !== captured) parts.push(`試行${attempted}/${total}`);
+  if (pending > 0) parts.push(`保留${pending}`);
   parts.push(`${totalValueCount}値`);
   [
     ["DTC", "dtc_snapshot"],
@@ -5467,11 +5471,16 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (!summary || typeof summary !== "object") return fallback;
   const totalDelta = Number.isFinite(Number(summary.totalValueCountDelta)) ? Number(summary.totalValueCountDelta) : 0;
   const capturedDelta = Number.isFinite(Number(summary.capturedReadoutDelta)) ? Number(summary.capturedReadoutDelta) : 0;
+  const attemptedDelta = Number.isFinite(Number(summary.attemptedReadoutDelta)) ? Number(summary.attemptedReadoutDelta) : 0;
+  const pendingDelta = Number.isFinite(Number(summary.pendingReadoutDelta)) ? Number(summary.pendingReadoutDelta) : 0;
   const changedIds = Array.isArray(summary.changedValueCountIds) ? summary.changedValueCountIds : [];
   const parts = [];
   if (totalDelta !== 0) parts.push(`値${totalDelta > 0 ? "+" : ""}${totalDelta}`);
   if (capturedDelta !== 0) parts.push(`読取${capturedDelta > 0 ? "+" : ""}${capturedDelta}`);
+  if (attemptedDelta !== 0) parts.push(`試行${attemptedDelta > 0 ? "+" : ""}${attemptedDelta}`);
+  if (pendingDelta !== 0) parts.push(`保留${pendingDelta > 0 ? "+" : ""}${pendingDelta}`);
   if (changedIds.length) parts.push(changedIds.slice(0, 3).map((id) => formatCoreReadoutLabel(id, id)).join(","));
+  if (summary.nextPendingReadoutChanged === true) parts.push(`次${formatCoreReadoutLabel(summary.currentNextPendingReadoutId, summary.currentNextPendingReadoutId || "なし")}`);
   if (summary.rawPidUndecodedDelta) parts.push(`raw${summary.rawPidUndecodedDelta > 0 ? "+" : ""}${summary.rawPidUndecodedDelta}`);
   if (summary.readinessIncompleteDelta) parts.push(`RDY未完${summary.readinessIncompleteDelta > 0 ? "+" : ""}${summary.readinessIncompleteDelta}`);
   if (summary.ecuInfoMissingKeyDelta) parts.push(`ECU不足${summary.ecuInfoMissingKeyDelta > 0 ? "+" : ""}${summary.ecuInfoMissingKeyDelta}`);

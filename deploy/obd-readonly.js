@@ -1505,20 +1505,42 @@
     const capturedIds = items.filter((item) => item.captured).map((item) => item.id);
     const emptyIds = items.filter((item) => item.empty).map((item) => item.id);
     const missingIds = items.filter((item) => item.missing).map((item) => item.id);
+    const pendingIds = [...missingIds, ...emptyIds];
+    const attemptedIds = [...capturedIds, ...emptyIds];
+    const nextPendingReadoutId = pendingIds[0] || null;
+    const nextPendingReadout = nextPendingReadoutId ? itemById[nextPendingReadoutId] || null : null;
     const totalValueCount = items.reduce((total, item) => total + item.count, 0);
+    const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
       totalReadoutCount: items.length,
       capturedReadoutCount: capturedIds.length,
       emptyReadoutCount: emptyIds.length,
       missingReadoutCount: missingIds.length,
+      pendingReadoutCount: pendingIds.length,
+      attemptedReadoutCount: attemptedIds.length,
+      capturedReadoutPercent: percent(capturedIds.length),
+      attemptedReadoutPercent: percent(attemptedIds.length),
+      pendingReadoutPercent: percent(pendingIds.length),
       totalValueCount,
       countsById,
       itemById,
+      itemsByStatus: {
+        captured: items.filter((item) => item.captured),
+        empty: items.filter((item) => item.empty),
+        missing: items.filter((item) => item.missing)
+      },
       items,
       capturedIds,
       emptyIds,
       missingIds,
+      pendingIds,
+      attemptedIds,
+      nextPendingReadoutId,
+      nextPendingReadoutStatus: nextPendingReadout?.status || null,
+      nextPendingReadoutLabel: nextPendingReadout?.label || null,
+      allReadoutsAttempted: missingIds.length === 0,
+      valueCaptureComplete: pendingIds.length === 0,
       hasDtcCodes: countsById.dtc_snapshot > 0,
       hasLivePidValues: countsById.live_pid_snapshot > 0,
       hasFreezeFrameValues: countsById.freeze_frame_snapshot > 0,
@@ -3969,6 +3991,10 @@
     const currentEmptyIds = readIds(currentSummary, "emptyIds");
     const importedMissingIds = readIds(importedInventory, "missingIds");
     const currentMissingIds = readIds(currentSummary, "missingIds");
+    const importedPendingIds = readIds(importedInventory, "pendingIds");
+    const currentPendingIds = readIds(currentSummary, "pendingIds");
+    const importedAttemptedIds = readIds(importedInventory, "attemptedIds");
+    const currentAttemptedIds = readIds(currentSummary, "attemptedIds");
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
     const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
     const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
@@ -3977,6 +4003,10 @@
     const currentEmptyReadoutCount = readCount(currentSummary, "emptyReadoutCount", "emptyIds");
     const importedMissingReadoutCount = readCount(importedInventory, "missingReadoutCount", "missingIds");
     const currentMissingReadoutCount = readCount(currentSummary, "missingReadoutCount", "missingIds");
+    const importedPendingReadoutCount = readCount(importedInventory, "pendingReadoutCount", "pendingIds");
+    const currentPendingReadoutCount = readCount(currentSummary, "pendingReadoutCount", "pendingIds");
+    const importedAttemptedReadoutCount = readCount(importedInventory, "attemptedReadoutCount", "attemptedIds");
+    const currentAttemptedReadoutCount = readCount(currentSummary, "attemptedReadoutCount", "attemptedIds");
     return {
       schemaVersion: "imported_core_readout_inventory_comparison_v1",
       importedTotalValueCount,
@@ -3991,6 +4021,12 @@
       importedMissingReadoutCount,
       currentMissingReadoutCount,
       missingReadoutDelta: currentMissingReadoutCount - importedMissingReadoutCount,
+      importedPendingReadoutCount,
+      currentPendingReadoutCount,
+      pendingReadoutDelta: currentPendingReadoutCount - importedPendingReadoutCount,
+      importedAttemptedReadoutCount,
+      currentAttemptedReadoutCount,
+      attemptedReadoutDelta: currentAttemptedReadoutCount - importedAttemptedReadoutCount,
       importedCapturedIds,
       currentCapturedIds,
       capturedIdsChanged: importedCapturedIds.join("|") !== currentCapturedIds.join("|"),
@@ -4006,6 +4042,19 @@
       missingIdsChanged: importedMissingIds.join("|") !== currentMissingIds.join("|"),
       missingAddedIds: diffIds(currentMissingIds, importedMissingIds),
       missingRemovedIds: diffIds(importedMissingIds, currentMissingIds),
+      importedPendingIds,
+      currentPendingIds,
+      pendingIdsChanged: importedPendingIds.join("|") !== currentPendingIds.join("|"),
+      pendingAddedIds: diffIds(currentPendingIds, importedPendingIds),
+      pendingRemovedIds: diffIds(importedPendingIds, currentPendingIds),
+      importedAttemptedIds,
+      currentAttemptedIds,
+      attemptedIdsChanged: importedAttemptedIds.join("|") !== currentAttemptedIds.join("|"),
+      attemptedAddedIds: diffIds(currentAttemptedIds, importedAttemptedIds),
+      attemptedRemovedIds: diffIds(importedAttemptedIds, currentAttemptedIds),
+      importedNextPendingReadoutId: importedInventory.nextPendingReadoutId || null,
+      currentNextPendingReadoutId: currentSummary.nextPendingReadoutId || null,
+      nextPendingReadoutChanged: (importedInventory.nextPendingReadoutId || null) !== (currentSummary.nextPendingReadoutId || null),
       importedCountsById,
       currentCountsById,
       valueCountDeltaById,
@@ -4233,7 +4282,7 @@
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.blockerCountDelta || comparison.pendingReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.pendingReadoutDelta || comparison.attemptedReadoutDelta || comparison.blockerCountDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
@@ -4264,6 +4313,8 @@
       || comparison.missingIdsChanged === true
       || comparison.pendingIdsChanged === true
       || comparison.emptyIdsChanged === true
+      || comparison.attemptedIdsChanged === true
+      || comparison.nextPendingReadoutChanged === true
       || comparison.valueCountsChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
@@ -4277,7 +4328,8 @@
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true ? "analysis_checklist" : null,
-      comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true ? "readout_completion" : null,
+      comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
+      comparison.nextPendingReadoutChanged === true ? "next_readout" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
@@ -4285,6 +4337,7 @@
       Number(comparison.missingCountDelta || comparison.missingReadoutDelta || 0) !== 0 ? "missing_readouts" : null,
       Number(comparison.emptyCountDelta || comparison.emptyReadoutDelta || 0) !== 0 ? "empty_readouts" : null,
       Number(comparison.pendingCountDelta || comparison.pendingReadoutDelta || 0) !== 0 ? "pending_readouts" : null,
+      Number(comparison.attemptedReadoutDelta || 0) !== 0 ? "attempted_readouts" : null,
       Number(comparison.blockerCountDelta || 0) !== 0 ? "blockers" : null,
       Number(comparison.rawPidUndecodedDelta || 0) !== 0 ? "raw_pid_undecoded" : null,
       Number(comparison.readinessIncompleteDelta || 0) !== 0 ? "readiness_incomplete" : null,
@@ -4294,7 +4347,7 @@
     const readChangedIds = (comparison = {}, fields = []) => [...new Set(fields.flatMap((field) => Array.isArray(comparison[field]) ? comparison[field] : []).filter(Boolean))];
     const readAddedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedAddedIds", "checklistReviewAddedIds",
-      "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds",
+      "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds", "attemptedAddedIds",
       "changedValueCountIds",
       "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
       "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
@@ -4303,7 +4356,7 @@
     ]);
     const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
-      "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds",
+      "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds", "attemptedRemovedIds",
       "changedValueCountIds",
       "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
       "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
