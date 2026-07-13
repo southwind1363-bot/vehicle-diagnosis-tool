@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1268+件",
+  validationCheckLabel: "OBD安全検証 1276+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.481.0";
+const APP_VERSION = "2.482.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5118,10 +5118,15 @@ function renderObdBridgeSessionDetails(session = null) {
   obdDevSessionDetails.innerHTML = "";
 
   const sections = [];
-  const connectionStatus = session?.connectionStatus
-    ? { ...(obdDevSession.bridgeStatus || {}), ...session.connectionStatus }
+  const sessionConnectionStatus = session?.connectionStatus || session?.connection_status || null;
+  const sessionAdapterIdentity = session?.adapterIdentity || session?.adapter_identity || null;
+  const sessionVciDevices = session?.vciDevices || session?.vci_devices || session?.vciList?.devices || session?.vci_list?.devices || null;
+  const sessionVehicleProfile = session?.vehicleProfile || session?.vehicle_profile || null;
+  const sessionVehicleApplicability = session?.vehicleApplicability || session?.vehicle_applicability || null;
+  const connectionStatus = sessionConnectionStatus
+    ? { ...(obdDevSession.bridgeStatus || {}), ...sessionConnectionStatus }
     : obdDevSession.bridgeStatus;
-  const vciDevices = session?.vciDevices || obdDevSession.bridgeVciList?.devices || [];
+  const vciDevices = sessionVciDevices || obdDevSession.bridgeVciList?.devices || [];
   const selectedVci = vciDevices.find((item) => item?.selected) || vciDevices[0] || null;
   const vciDriverStatus = selectedVci?.driverStatus || obdDevSession.bridgeVciList?.driverStatus || NO_DATA;
   if (connectionStatus?.displayStatus || vciDevices.length) {
@@ -5140,8 +5145,8 @@ function renderObdBridgeSessionDetails(session = null) {
   const capturedAt = session?.capturedAt || NO_DATA;
   const startedAt = session?.startedAt || NO_DATA;
   const endedAt = session?.endedAt || NO_DATA;
-  const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, NO_DATA) || NO_DATA;
-  const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
+  const vehicleLabel = formatVehicleProfileLabel(sessionVehicleProfile, NO_DATA) || NO_DATA;
+  const vehicleApplicabilitySummary = formatVehicleApplicabilitySummary(sessionVehicleApplicability, NO_DATA) || NO_DATA;
   const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;
   const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
   const ecuInfoSnapshot = session?.ecuInfoSnapshot || session?.ecu_info_snapshot || null;
@@ -5228,8 +5233,8 @@ function renderObdBridgeSessionDetails(session = null) {
     })]);
   }
 
-  const adapterIdentity = session?.adapterIdentity
-    ? { ...(obdDevSession.adapterIdentity || {}), ...session.adapterIdentity }
+  const adapterIdentity = sessionAdapterIdentity
+    ? { ...(obdDevSession.adapterIdentity || {}), ...sessionAdapterIdentity }
     : obdDevSession.adapterIdentity;
   if (adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion) {
     sections.push(["アダプター", [
@@ -5837,14 +5842,19 @@ function renderObdDeveloperSessionSummary(session = null) {
   renderObdDiagnosticFlowPanel(session);
   obdDevSessionSummary.innerHTML = "";
   const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;
-  const connectionStatus = session?.connectionStatus
-    ? { ...(obdDevSession.bridgeStatus || {}), ...session.connectionStatus }
+  const sessionConnectionStatus = session?.connectionStatus || session?.connection_status || null;
+  const sessionAdapterIdentity = session?.adapterIdentity || session?.adapter_identity || null;
+  const sessionVciDevices = session?.vciDevices || session?.vci_devices || session?.vciList?.devices || session?.vci_list?.devices || null;
+  const sessionVehicleProfile = session?.vehicleProfile || session?.vehicle_profile || null;
+  const sessionVehicleApplicability = session?.vehicleApplicability || session?.vehicle_applicability || null;
+  const connectionStatus = sessionConnectionStatus
+    ? { ...(obdDevSession.bridgeStatus || {}), ...sessionConnectionStatus }
     : obdDevSession.bridgeStatus;
-  const adapterIdentity = session?.adapterIdentity
-    ? { ...(obdDevSession.adapterIdentity || {}), ...session.adapterIdentity }
+  const adapterIdentity = sessionAdapterIdentity
+    ? { ...(obdDevSession.adapterIdentity || {}), ...sessionAdapterIdentity }
     : obdDevSession.adapterIdentity;
-  const bridgeDeviceCount = Array.isArray(session?.vciDevices)
-    ? session.vciDevices.length
+  const bridgeDeviceCount = Array.isArray(sessionVciDevices)
+    ? sessionVciDevices.length
     : (obdDevSession.bridgeVciList?.deviceCount ?? 0);
   const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
   const ecuInfoSnapshot = session?.ecuInfoSnapshot || session?.ecu_info_snapshot || null;
@@ -5857,8 +5867,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coverage = getReadoutCoverageDisplay(session?.readoutCoverage || session?.readout_coverage);
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
-  const vehicleLabel = formatVehicleProfileLabel(session?.vehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
-  const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(session?.vehicleApplicability, NO_DATA) || NO_DATA;
+  const vehicleLabel = formatVehicleProfileLabel(sessionVehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
+  const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(sessionVehicleApplicability, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, session?.nextReadoutCandidates || session?.next_readout_candidates, NO_DATA);
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA);
   const emptyReadoutLabel = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, NO_DATA);
@@ -5874,18 +5884,23 @@ function renderObdDeveloperSessionSummary(session = null) {
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
-  const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
-  const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
-  const startedAtLabel = session?.startedAt
-    ? formatDateTime(session.startedAt)
+  const sourceLengthValue = session?.sourceLength ?? session?.source_length;
+  const hadSensitiveIdentifier = session?.hadSensitiveIdentifier === true || session?.had_sensitive_identifier === true;
+  const startedAtValue = session?.startedAt || session?.started_at;
+  const endedAtValue = session?.endedAt || session?.ended_at;
+  const capturedAtValue = session?.capturedAt || session?.captured_at;
+  const sourceLengthLabel = sourceLengthValue ? `${sourceLengthValue}文字` : NO_DATA;
+  const sensitiveLabel = hadSensitiveIdentifier ? "検出" : "なし";
+  const startedAtLabel = startedAtValue
+    ? formatDateTime(startedAtValue)
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
-  const endedAtLabel = session?.endedAt ? formatDateTime(session.endedAt) : NO_DATA;
-  const capturedAtLabel = session?.capturedAt ? formatDateTime(session.capturedAt) : NO_DATA;
+  const endedAtLabel = endedAtValue ? formatDateTime(endedAtValue) : NO_DATA;
+  const capturedAtLabel = capturedAtValue ? formatDateTime(capturedAtValue) : NO_DATA;
   const hasRecoveredBridgeSession = Boolean(
-    session?.connectionStatus?.displayStatus
-    || (Array.isArray(session?.vciDevices) && session.vciDevices.length > 0)
-    || session?.adapterIdentity?.adapterFamily
-    || session?.adapterIdentity?.adapterName
+    sessionConnectionStatus?.displayStatus
+    || (Array.isArray(sessionVciDevices) && sessionVciDevices.length > 0)
+    || sessionAdapterIdentity?.adapterFamily
+    || sessionAdapterIdentity?.adapterName
   );
   const connectionLabel = obdDevSession.port
     ? selectedInterfaceId === "user-vci-elm327"
@@ -6369,17 +6384,27 @@ function analyzeObdScannerImport() {
   const currentEcuResponseSummary = currentSession?.ecuResponseSummary || currentSession?.ecu_response_summary || null;
   const currentReadoutCoverage = currentSession?.readoutCoverage || currentSession?.readout_coverage || null;
   const currentNextReadoutCandidates = currentSession?.nextReadoutCandidates || currentSession?.next_readout_candidates || null;
+  const currentStartedAt = currentSession?.startedAt || currentSession?.started_at;
+  const currentEndedAt = currentSession?.endedAt || currentSession?.ended_at;
+  const currentCapturedAt = currentSession?.capturedAt || currentSession?.captured_at;
+  const currentVehicleProfile = currentSession?.vehicleProfile || currentSession?.vehicle_profile || null;
+  const currentVehicleApplicability = currentSession?.vehicleApplicability || currentSession?.vehicle_applicability || null;
+  const currentConnectionStatus = currentSession?.connectionStatus || currentSession?.connection_status || null;
+  const currentVciDevices = currentSession?.vciDevices || currentSession?.vci_devices || currentSession?.vciList?.devices || currentSession?.vci_list?.devices || [];
+  const currentAdapterIdentity = currentSession?.adapterIdentity || currentSession?.adapter_identity || null;
+  const currentSourceLength = currentSession?.sourceLength ?? currentSession?.source_length;
+  const currentHadSensitiveIdentifier = currentSession?.hadSensitiveIdentifier === true || currentSession?.had_sensitive_identifier === true;
   const bridgeImport = currentSession && hasBridgeDiagnosticImportPipelineSupport()
     ? window.ObdReadOnly.buildBridgeDiagnosticImport({
-      startedAt: currentSession.startedAt,
-      endedAt: currentSession.endedAt,
+      startedAt: currentStartedAt,
+      endedAt: currentEndedAt,
       protocol: currentSession.protocol,
-      capturedAt: currentSession.capturedAt,
-      vehicleProfile: currentSession.vehicleProfile,
-      vehicleApplicability: currentSession.vehicleApplicability,
-      connectionStatus: currentSession.connectionStatus,
-      vciList: { devices: currentSession.vciDevices || [] },
-      adapterIdentity: currentSession.adapterIdentity,
+      capturedAt: currentCapturedAt,
+      vehicleProfile: currentVehicleProfile,
+      vehicleApplicability: currentVehicleApplicability,
+      connectionStatus: currentConnectionStatus,
+      vciList: { devices: currentVciDevices },
+      adapterIdentity: currentAdapterIdentity,
       dtcSnapshot: currentDtcSnapshot,
       livePidSnapshot: currentLivePidSnapshot,
       freezeFrameSnapshot: currentFreezeFrameSnapshot,
@@ -6392,8 +6417,8 @@ function analyzeObdScannerImport() {
       nextReadoutCandidates: currentNextReadoutCandidates,
       warnings: currentSession.warnings,
       toolHints: currentSession.toolHints,
-      sourceLength: currentSession.sourceLength,
-      hadSensitiveIdentifier: currentSession.hadSensitiveIdentifier === true
+      sourceLength: currentSourceLength,
+      hadSensitiveIdentifier: currentHadSensitiveIdentifier
     })
     : null;
   const analysis = bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
@@ -6433,8 +6458,15 @@ function analyzeObdScannerImport() {
     }
   }
   if (summarySource.protocol) notes.push(`Protocol ${summarySource.protocol}`);
-  const analysisVehicleLabel = formatVehicleProfileLabel(summarySource.vehicleProfile);
-  const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summarySource.vehicleApplicability);
+  const summaryVehicleProfile = summarySource.vehicleProfile || summarySource.vehicle_profile || null;
+  const summaryVehicleApplicability = summarySource.vehicleApplicability || summarySource.vehicle_applicability || null;
+  const summaryConnectionStatus = summarySource.connectionStatus || summarySource.connection_status || null;
+  const summaryAdapterIdentity = summarySource.adapterIdentity || summarySource.adapter_identity || null;
+  const summaryVciDevices = summarySource.vciDevices || summarySource.vci_devices || summarySource.vciList?.devices || summarySource.vci_list?.devices || null;
+  const summaryStartedAt = summarySource.startedAt || summarySource.started_at;
+  const summaryEndedAt = summarySource.endedAt || summarySource.ended_at;
+  const analysisVehicleLabel = formatVehicleProfileLabel(summaryVehicleProfile);
+  const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summaryVehicleApplicability);
   const summaryCoreSessionStatus = summarySource.coreSessionStatus || summarySource.core_session_status || null;
   const summaryNextReadoutCandidates = summarySource.nextReadoutCandidates || summarySource.next_readout_candidates;
   const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summaryCoreSessionStatus, "");
@@ -6493,24 +6525,24 @@ function analyzeObdScannerImport() {
   if (summaryBlockingWarningIds.length > 0) {
     notes.push(`保留要因 ${summaryBlockingWarningIds.slice(0, 2).map((item) => formatObdBridgeWarningLabel(item)).join(" / ")}`);
   }
-  if (summarySource.startedAt) {
-    notes.push(`開始 ${formatDateTime(summarySource.startedAt)}`);
+  if (summaryStartedAt) {
+    notes.push(`開始 ${formatDateTime(summaryStartedAt)}`);
   }
-  if (summarySource.endedAt) {
-    notes.push(`終了 ${formatDateTime(summarySource.endedAt)}`);
+  if (summaryEndedAt) {
+    notes.push(`終了 ${formatDateTime(summaryEndedAt)}`);
   }
-  if (summarySource.connectionStatus?.displayStatus) {
-    notes.push(`状態 ${summarySource.connectionStatus.displayStatus}`);
+  if (summaryConnectionStatus?.displayStatus) {
+    notes.push(`状態 ${summaryConnectionStatus.displayStatus}`);
   }
   if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
     notes.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
-  } else if (summarySource.adapterIdentity?.adapterFamily || summarySource.adapterIdentity?.adapterName) {
-    notes.push(`Adapter ${summarySource.adapterIdentity.adapterFamily || summarySource.adapterIdentity.adapterName}`);
+  } else if (summaryAdapterIdentity?.adapterFamily || summaryAdapterIdentity?.adapterName) {
+    notes.push(`Adapter ${summaryAdapterIdentity.adapterFamily || summaryAdapterIdentity.adapterName}`);
   }
   if (Array.isArray(mergedSession?.vciDevices) && mergedSession.vciDevices.length > 0) {
     notes.push(`VCI ${mergedSession.vciDevices.length}件`);
-  } else if (Array.isArray(summarySource.vciDevices) && summarySource.vciDevices.length > 0) {
-    notes.push(`VCI ${summarySource.vciDevices.length}件`);
+  } else if (Array.isArray(summaryVciDevices) && summaryVciDevices.length > 0) {
+    notes.push(`VCI ${summaryVciDevices.length}件`);
   }
   if (mergedSession?.sourceLength > 0) {
     notes.push(`入力長 ${mergedSession.sourceLength}文字`);
@@ -6615,14 +6647,14 @@ function analyzeObdScannerImport() {
     if (analysisVehicleLabel) {
       summary.push(`車両 ${analysisVehicleLabel}`);
     }
-    if (summarySource.startedAt) summary.push(`開始 ${formatDateTime(summarySource.startedAt)}`);
-    if (summarySource.endedAt) summary.push(`終了 ${formatDateTime(summarySource.endedAt)}`);
+    if (summaryStartedAt) summary.push(`開始 ${formatDateTime(summaryStartedAt)}`);
+    if (summaryEndedAt) summary.push(`終了 ${formatDateTime(summaryEndedAt)}`);
     if (Array.isArray(mergedSession?.vciDevices) && mergedSession.vciDevices.length > 0) summary.push(`VCI ${mergedSession.vciDevices.length}件`);
-    else if (Array.isArray(summarySource.vciDevices) && summarySource.vciDevices.length > 0) summary.push(`VCI ${summarySource.vciDevices.length}件`);
+    else if (Array.isArray(summaryVciDevices) && summaryVciDevices.length > 0) summary.push(`VCI ${summaryVciDevices.length}件`);
     if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
-    } else if (summarySource.adapterIdentity?.adapterFamily || summarySource.adapterIdentity?.adapterName) {
-      summary.push(`Adapter ${summarySource.adapterIdentity.adapterFamily || summarySource.adapterIdentity.adapterName}`);
+    } else if (summaryAdapterIdentity?.adapterFamily || summaryAdapterIdentity?.adapterName) {
+      summary.push(`Adapter ${summaryAdapterIdentity.adapterFamily || summaryAdapterIdentity.adapterName}`);
     }
     appendObdAnalysisReadoutSummary(summary, summarySource);
     obdMonitorStatus.textContent = `${coreReadinessHeadline}${summary.join(" / ")}。`;
@@ -6633,14 +6665,14 @@ function analyzeObdScannerImport() {
     if (analysisVehicleLabel) {
       summary.push(`車両 ${analysisVehicleLabel}`);
     }
-    if (summarySource.startedAt) summary.push(`開始 ${formatDateTime(summarySource.startedAt)}`);
-    if (summarySource.endedAt) summary.push(`終了 ${formatDateTime(summarySource.endedAt)}`);
+    if (summaryStartedAt) summary.push(`開始 ${formatDateTime(summaryStartedAt)}`);
+    if (summaryEndedAt) summary.push(`終了 ${formatDateTime(summaryEndedAt)}`);
     if (Array.isArray(mergedSession?.vciDevices) && mergedSession.vciDevices.length > 0) summary.push(`VCI ${mergedSession.vciDevices.length}件`);
-    else if (Array.isArray(summarySource.vciDevices) && summarySource.vciDevices.length > 0) summary.push(`VCI ${summarySource.vciDevices.length}件`);
+    else if (Array.isArray(summaryVciDevices) && summaryVciDevices.length > 0) summary.push(`VCI ${summaryVciDevices.length}件`);
     if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
       summary.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
-    } else if (summarySource.adapterIdentity?.adapterFamily || summarySource.adapterIdentity?.adapterName) {
-      summary.push(`Adapter ${summarySource.adapterIdentity.adapterFamily || summarySource.adapterIdentity.adapterName}`);
+    } else if (summaryAdapterIdentity?.adapterFamily || summaryAdapterIdentity?.adapterName) {
+      summary.push(`Adapter ${summaryAdapterIdentity.adapterFamily || summaryAdapterIdentity.adapterName}`);
     }
     appendObdAnalysisReadoutSummary(summary, summarySource, { includeReadinessCount: true });
     obdMonitorStatus.textContent = `${coreReadinessHeadline}${summary.join(" / ")}。`;
