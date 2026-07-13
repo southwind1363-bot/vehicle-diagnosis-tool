@@ -5030,6 +5030,18 @@
       .map((readoutId) => buildReadOnlyNextReadoutRequest({ id: readoutId, label: readoutId, status: "review" }))
       .filter(Boolean);
     const primaryReadoutQualityReviewRequest = readoutQualityReviewRequestSummaries[0] || null;
+    const readoutQualityReviewRequestSafetySummary = buildReadoutRequestPlanSafetySummary(readoutQualityReviewRequestSummaries, []);
+    const readoutQualityReviewRequestPlanSummary = {
+      schemaVersion: "readout_quality_review_request_plan_v1",
+      requestCount: readoutQualityReviewRequestSummaries.length,
+      readoutIds: readoutQualityReviewRequestSummaries.map((item) => item.readoutId).filter(Boolean),
+      bridgeIntents: [...new Set(readoutQualityReviewRequestSummaries.map((item) => item.bridgeIntent).filter(Boolean))],
+      primaryRequest: primaryReadoutQualityReviewRequest,
+      ...readoutQualityReviewRequestSafetySummary,
+      readOnly: readoutQualityReviewRequestSafetySummary.allReadOnly === true,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -5089,6 +5101,7 @@
         return byId;
       }, {}),
       primaryReadoutQualityReviewRequest,
+      readoutQualityReviewRequestPlanSummary,
       readoutQualityReviewIssueIds,
       readoutQualityReviewIssueCount: readoutQualityReviewIssueIds.length,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
