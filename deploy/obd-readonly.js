@@ -3065,6 +3065,35 @@
     const vehicleApplicabilityNeedsReview = applicability.status === "partial"
       || applicability.status === "manual"
       || applicability.status === "unlisted";
+    const readCount = (...values) => {
+      for (const value of values) {
+        if (Number.isFinite(Number(value))) return Math.max(0, Math.round(Number(value)));
+      }
+      return 0;
+    };
+    const rawPidUndecodedCount = readCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount)
+      + readCount(freezeFrameSnapshot?.monitorValueSummary?.undecodedRawCount);
+    const readinessIncompleteCount = readCount(readinessSnapshot?.incompleteCount);
+    const ecuInfoMissingKeyCount = readCount(ecuInfoSnapshot?.keyItemSummary?.missingCount);
+    const onboardMonitorFailedCount = readCount(onboardMonitorSnapshot?.failedCount);
+    const readoutQualityIssues = [
+      rawPidUndecodedCount > 0 ? { id: "raw_pid_values_need_conversion", count: rawPidUndecodedCount, severity: "review" } : null,
+      readinessIncompleteCount > 0 ? { id: "readiness_incomplete", count: readinessIncompleteCount, severity: "review" } : null,
+      ecuInfoMissingKeyCount > 0 ? { id: "mode09_key_items_missing", count: ecuInfoMissingKeyCount, severity: "review" } : null,
+      onboardMonitorFailedCount > 0 ? { id: "onboard_monitor_test_failed", count: onboardMonitorFailedCount, severity: "review" } : null
+    ].filter(Boolean);
+    const readoutQualitySummary = {
+      schemaVersion: "readout_quality_summary_v1",
+      issueCount: readoutQualityIssues.length,
+      issueIds: readoutQualityIssues.map((item) => item.id),
+      issues: readoutQualityIssues,
+      reviewRequired: readoutQualityIssues.length > 0,
+      readyForInterpretation: readoutQualityIssues.length === 0,
+      rawPidUndecodedCount,
+      readinessIncompleteCount,
+      ecuInfoMissingKeyCount,
+      onboardMonitorFailedCount
+    };
     const analysisChecklist = [
       {
         id: "required_readouts",
@@ -3086,6 +3115,19 @@
         blocking: blockingWarningIds.length > 0,
         warningCount: blockingWarningIds.length,
         warningIds: [...blockingWarningIds]
+      },
+      {
+        id: "readout_quality",
+        label: "Readout quality",
+        state: readoutQualitySummary.reviewRequired ? "review" : "complete",
+        complete: !readoutQualitySummary.reviewRequired,
+        blocking: false,
+        issueCount: readoutQualitySummary.issueCount,
+        issueIds: [...readoutQualitySummary.issueIds],
+        rawPidUndecodedCount,
+        readinessIncompleteCount,
+        ecuInfoMissingKeyCount,
+        onboardMonitorFailedCount
       },
       {
         id: "vehicle_applicability",
@@ -3145,9 +3187,11 @@
       checklistById: analysisChecklistById,
       checklistSummary: analysisChecklistSummary,
       readoutRequestPlanGateSummary,
+      readoutQualitySummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
       blockingWarningCount: analysisBlockerSummary.blockingWarningCount,
+      readoutQualityIssueCount: readoutQualitySummary.issueCount,
       primaryBlockingReasonId,
       primaryBlockingReason,
       primaryBlockingReadoutId,
@@ -3185,6 +3229,7 @@
       pendingReadoutRequestPlan,
       readoutRequestPlanGateSummary,
       readoutRequestPlanSummary,
+      readoutQualitySummary,
       nextPendingReadoutId,
       nextPendingReadoutState,
       readoutStates,
@@ -3245,6 +3290,8 @@
       if (item.id && !diagnosticChecklistById[item.id]) diagnosticChecklistById[item.id] = { ...item };
     });
     const vehicleApplicabilityChecklist = diagnosticChecklistById.vehicle_applicability || null;
+    const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || readiness.readoutQualitySummary || {};
+    const readoutQualityChecklist = diagnosticChecklistById.readout_quality || null;
     const applicabilityStatus = coreSessionStatus?.applicabilityStatus || vehicleApplicabilityChecklist?.applicabilityStatus || "unknown";
     const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
       || applicabilityStatus === "partial"
@@ -3446,6 +3493,15 @@
       analysisChecklistSummary: checklistSummary && typeof checklistSummary === "object" ? { ...checklistSummary } : {},
       requiredReadoutsChecklist: diagnosticChecklistById.required_readouts || null,
       blockingWarningsChecklist: diagnosticChecklistById.blocking_warnings || null,
+      readoutQualityChecklist,
+      readoutQualitySummary: readoutQualitySummary && typeof readoutQualitySummary === "object" ? { ...readoutQualitySummary } : {},
+      readoutQualityReviewRequired: readoutQualitySummary?.reviewRequired === true || readoutQualityChecklist?.state === "review",
+      readoutQualityIssueCount: Number.isFinite(Number(readoutQualitySummary?.issueCount)) ? Number(readoutQualitySummary.issueCount) : 0,
+      readoutQualityIssueIds: Array.isArray(readoutQualitySummary?.issueIds) ? [...readoutQualitySummary.issueIds] : [],
+      rawPidUndecodedCount: Number.isFinite(Number(readoutQualitySummary?.rawPidUndecodedCount)) ? Number(readoutQualitySummary.rawPidUndecodedCount) : 0,
+      readinessIncompleteCount: Number.isFinite(Number(readoutQualitySummary?.readinessIncompleteCount)) ? Number(readoutQualitySummary.readinessIncompleteCount) : 0,
+      ecuInfoMissingKeyCount: Number.isFinite(Number(readoutQualitySummary?.ecuInfoMissingKeyCount)) ? Number(readoutQualitySummary.ecuInfoMissingKeyCount) : 0,
+      onboardMonitorFailedCount: Number.isFinite(Number(readoutQualitySummary?.onboardMonitorFailedCount)) ? Number(readoutQualitySummary.onboardMonitorFailedCount) : 0,
       vehicleApplicabilityChecklist: diagnosticChecklistById.vehicle_applicability || null,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
