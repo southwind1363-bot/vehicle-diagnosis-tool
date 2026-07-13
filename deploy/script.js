@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1226+件",
+  validationCheckLabel: "OBD安全検証 1229+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.473.0";
+const APP_VERSION = "2.474.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5660,9 +5660,10 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const primaryBlockingReadoutRequestLabel = primaryBlockingReadoutRequest?.bridgeIntent
     ? `${primaryBlockingReadoutRequest.bridgeIntent}${primaryBlockingReadoutRequest.serviceMode ? ` / Mode ${primaryBlockingReadoutRequest.serviceMode}` : ""}`
     : NO_DATA;
-  const primaryBlockerComparisonSummary = session.importedSessionComparisonSummary?.primaryBlockerChangeSummary || null;
+  const importedSessionComparisonSummary = session.importedSessionComparisonSummary || session.imported_session_comparison_summary || null;
+  const primaryBlockerComparisonSummary = importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary || null;
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(primaryBlockerComparisonSummary, NO_DATA);
-  const changedIdDisplaySummary = session.importedSessionComparisonSummary?.changedIdDisplaySummary || null;
+  const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventorySummary = session.coreReadoutInventorySummary || session.core_readout_inventory_summary || null;
@@ -5672,7 +5673,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const readoutQualitySummary = core.readoutQualitySummary || core.readout_quality_summary || flow.readoutQualitySummary || flow.readout_quality_summary || null;
   const readoutQualityLabel = formatReadoutQualitySummary(readoutQualitySummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);
-  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedReadoutQualityReviewRequestPlanSummary || session.imported_readout_quality_review_request_plan_summary || session.importedSessionComparisonSummary, NO_DATA);
+  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedReadoutQualityReviewRequestPlanSummary || session.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5707,7 +5708,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const grid = document.createElement("div");
   grid.className = "obd-diagnostic-flow-grid";
   addObdDiagnosticFlowMetric(grid, "品質比較", readoutQualityComparisonLabel, session.importedReadoutQualityComparisonSummary?.issueIdsChanged === true || session.importedReadoutQualityComparisonSummary?.issueCountsChanged === true ? "pending" : "");
-  addObdDiagnosticFlowMetric(grid, "品質確認要求", readoutQualityReviewRequestLabel, session.importedSessionComparisonSummary?.readoutQualityReviewRequired === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "品質確認要求", readoutQualityReviewRequestLabel, importedSessionComparisonSummary?.readoutQualityReviewRequired === true || importedSessionComparisonSummary?.readout_quality_review_required === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "現在地", statusLabel, canStartAnalysis ? "ready" : "pending");
   addObdDiagnosticFlowMetric(grid, "読取進捗", completionPercent === null ? NO_DATA : `${completionPercent}%`);
   addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
@@ -5779,14 +5780,16 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(session?.coreSessionStatus, NO_DATA);
   const emptyReadoutLabel = formatCoreEmptyReadoutSummary(session?.coreSessionStatus, 2, NO_DATA);
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(session?.coreSessionStatus, 2, NO_DATA);
-  const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(session?.importedSessionComparisonSummary?.primaryBlockerChangeSummary, NO_DATA);
-  const changedIdDisplayLabel = formatChangedIdDisplaySummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);
-  const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);
+  const importedSessionComparisonSummary = session?.importedSessionComparisonSummary || session?.imported_session_comparison_summary || null;
+  const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
+  const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary, NO_DATA);
+  const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
+  const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary || session?.core_readout_inventory_summary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(session?.coreSessionStatus?.readoutQualitySummary || session?.coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
-  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || session?.importedSessionComparisonSummary, NO_DATA);
+  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -6367,7 +6370,8 @@ function analyzeObdScannerImport() {
   if (readoutQualityComparisonNote) {
     notes.push(`品質比較 ${readoutQualityComparisonNote}`);
   }
-  const readoutQualityReviewRequestNote = formatReadoutQualityReviewRequestSummary(summarySource.importedReadoutQualityReviewRequestPlanSummary || summarySource.imported_readout_quality_review_request_plan_summary || summarySource.importedSessionComparisonSummary, "");
+  const importedSessionComparisonSummary = summarySource.importedSessionComparisonSummary || summarySource.imported_session_comparison_summary || null;
+  const readoutQualityReviewRequestNote = formatReadoutQualityReviewRequestSummary(summarySource.importedReadoutQualityReviewRequestPlanSummary || summarySource.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, "");
   if (readoutQualityReviewRequestNote) {
     notes.push(`品質確認要求 ${readoutQualityReviewRequestNote}`);
   }
@@ -6377,15 +6381,16 @@ function analyzeObdScannerImport() {
   if (analysisNextStepLabel) {
     notes.push(`次操作 ${analysisNextStepLabel}`);
   }
-  const primaryBlockerComparisonNote = formatPrimaryBlockerChangeSummary(summarySource.importedSessionComparisonSummary?.primaryBlockerChangeSummary, "");
+  const primaryBlockerComparisonNote = formatPrimaryBlockerChangeSummary(importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary, "");
   if (primaryBlockerComparisonNote) {
     notes.push(`主保留比較 ${primaryBlockerComparisonNote}`);
   }
-  const changedIdDisplayNote = formatChangedIdDisplaySummary(summarySource.importedSessionComparisonSummary?.changedIdDisplaySummary, "");
+  const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
+  const changedIdDisplayNote = formatChangedIdDisplaySummary(changedIdDisplaySummary, "");
   if (changedIdDisplayNote) {
     notes.push(`読取差分 ${changedIdDisplayNote}`);
   }
-  const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(summarySource.importedSessionComparisonSummary?.changedIdDisplaySummary, "");
+  const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, "");
   if (changedIdReviewTargetActionNote) {
     notes.push(`差分確認 ${changedIdReviewTargetActionNote}`);
   }
