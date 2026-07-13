@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1233+件",
+  validationCheckLabel: "OBD安全検証 1237+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.475.0";
+const APP_VERSION = "2.476.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5651,21 +5651,28 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const nextReadoutRequestLabel = nextReadoutRequestBridgeIntent
     ? `${nextReadoutRequestBridgeIntent}${nextReadoutRequestServiceMode ? ` / Mode ${nextReadoutRequestServiceMode}` : ""}${readoutRequestQueueLabel}`
     : pendingReadoutRequestCount ? `queue ${pendingReadoutRequestCount}${mappedReadoutRequestCount !== null ? ` / mapped ${mappedReadoutRequestCount}` : ""}${unmappedReadoutRequestCount ? ` / unmapped ${unmappedReadoutRequestCount}` : ""}` : NO_DATA;
+  const analysisReadinessSummary = core.analysisReadinessSummary || core.analysis_readiness_summary || null;
+  const readoutCompletionSummary = core.readoutCompletionSummary || core.readout_completion_summary || null;
   const blockerIds = Array.isArray(flow.blockingReasonIds)
     ? flow.blockingReasonIds
+    : Array.isArray(flow.blocking_reason_ids)
+      ? flow.blocking_reason_ids
     : Array.isArray(core.analysisBlockers) ? core.analysisBlockers : [];
   const blockerLabel = blockerIds.length
     ? blockerIds.slice(0, 3).map((item) => formatDiagnosticFlowBlockerLabel(item)).join(" / ")
     : canStartAnalysis ? "なし" : NO_DATA;
-  const primaryBlockingReasonId = flow.primaryBlockingReasonId || core.primaryBlockingReasonId || core.analysisReadinessSummary?.primaryBlockingReasonId || core.readoutCompletionSummary?.primaryBlockingReasonId || null;
-  const primaryBlockingReadoutId = flow.primaryBlockingReadoutId || core.primaryBlockingReadoutId || core.analysisReadinessSummary?.primaryBlockingReadoutId || core.readoutCompletionSummary?.primaryBlockingReadoutId || null;
-  const primaryBlockingReadoutLabel = flow.primaryBlockingReadoutLabel || core.primaryBlockingReadoutLabel || core.analysisReadinessSummary?.primaryBlockingReadoutLabel || core.readoutCompletionSummary?.primaryBlockingReadoutLabel || formatCoreReadoutLabel(primaryBlockingReadoutId, primaryBlockingReadoutId || "");
+  const primaryBlockingReasonId = flow.primaryBlockingReasonId || flow.primary_blocking_reason_id || core.primaryBlockingReasonId || core.primary_blocking_reason_id || analysisReadinessSummary?.primaryBlockingReasonId || analysisReadinessSummary?.primary_blocking_reason_id || readoutCompletionSummary?.primaryBlockingReasonId || readoutCompletionSummary?.primary_blocking_reason_id || null;
+  const primaryBlockingReadoutId = flow.primaryBlockingReadoutId || flow.primary_blocking_readout_id || core.primaryBlockingReadoutId || core.primary_blocking_readout_id || analysisReadinessSummary?.primaryBlockingReadoutId || analysisReadinessSummary?.primary_blocking_readout_id || readoutCompletionSummary?.primaryBlockingReadoutId || readoutCompletionSummary?.primary_blocking_readout_id || null;
+  const primaryBlockingReadoutLabel = flow.primaryBlockingReadoutLabel || flow.primary_blocking_readout_label || core.primaryBlockingReadoutLabel || core.primary_blocking_readout_label || analysisReadinessSummary?.primaryBlockingReadoutLabel || analysisReadinessSummary?.primary_blocking_readout_label || readoutCompletionSummary?.primaryBlockingReadoutLabel || readoutCompletionSummary?.primary_blocking_readout_label || formatCoreReadoutLabel(primaryBlockingReadoutId, primaryBlockingReadoutId || "");
   const primaryBlockingLabel = primaryBlockingReasonId
     ? `${formatDiagnosticFlowBlockerLabel(primaryBlockingReasonId)}${primaryBlockingReadoutLabel ? ` / ${primaryBlockingReadoutLabel}` : ""}`
     : NO_DATA;
-  const primaryBlockingReadoutRequest = flow.primaryBlockingReadoutRequest || core.primaryBlockingReadoutRequest || core.analysisReadinessSummary?.primaryBlockingReadoutRequest || core.readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
-  const primaryBlockingReadoutRequestLabel = primaryBlockingReadoutRequest?.bridgeIntent
-    ? `${primaryBlockingReadoutRequest.bridgeIntent}${primaryBlockingReadoutRequest.serviceMode ? ` / Mode ${primaryBlockingReadoutRequest.serviceMode}` : ""}`
+  const primaryBlockingReadoutRequest = flow.primaryBlockingReadoutRequest || flow.primary_blocking_readout_request || core.primaryBlockingReadoutRequest || core.primary_blocking_readout_request || analysisReadinessSummary?.primaryBlockingReadoutRequest || analysisReadinessSummary?.primary_blocking_readout_request || readoutCompletionSummary?.primaryBlockingReadoutRequest || readoutCompletionSummary?.primary_blocking_readout_request || null;
+  const primaryBlockingBridgeIntent = primaryBlockingReadoutRequest?.bridgeIntent || primaryBlockingReadoutRequest?.bridge_intent || "";
+  const primaryBlockingServiceMode = primaryBlockingReadoutRequest?.serviceMode || primaryBlockingReadoutRequest?.service_mode || "";
+  const primaryBlockingExecutionEnabled = primaryBlockingReadoutRequest?.executionEnabled === true || primaryBlockingReadoutRequest?.execution_enabled === true;
+  const primaryBlockingReadoutRequestLabel = primaryBlockingBridgeIntent
+    ? `${primaryBlockingBridgeIntent}${primaryBlockingServiceMode ? ` / Mode ${primaryBlockingServiceMode}` : ""}`
     : NO_DATA;
   const importedSessionComparisonSummary = session.importedSessionComparisonSummary || session.imported_session_comparison_summary || null;
   const primaryBlockerComparisonSummary = importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary || null;
@@ -5681,13 +5688,13 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const readoutQualityLabel = formatReadoutQualitySummary(readoutQualitySummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedReadoutQualityReviewRequestPlanSummary || session.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
-  const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
+  const checklistSummary = core.analysisChecklistSummary || core.analysis_checklist_summary || analysisReadinessSummary?.checklistSummary || analysisReadinessSummary?.checklist_summary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
     : NO_DATA;
-  const applicabilityStatus = flow.applicabilityStatus || core.applicabilityStatus || session.vehicleApplicability?.status || null;
-  const applicabilityChecklist = core.analysisChecklistById?.vehicle_applicability || core.analysisReadinessSummary?.checklistById?.vehicle_applicability || null;
-  const applicabilityLabel = formatVehicleApplicabilitySummary(session.vehicleApplicability || { status: applicabilityStatus }, applicabilityStatus || NO_DATA) || NO_DATA;
+  const applicabilityStatus = flow.applicabilityStatus || flow.applicability_status || core.applicabilityStatus || core.applicability_status || session.vehicleApplicability?.status || session.vehicle_applicability?.status || null;
+  const applicabilityChecklist = core.analysisChecklistById?.vehicle_applicability || core.analysis_checklist_by_id?.vehicle_applicability || analysisReadinessSummary?.checklistById?.vehicle_applicability || analysisReadinessSummary?.checklist_by_id?.vehicle_applicability || null;
+  const applicabilityLabel = formatVehicleApplicabilitySummary(session.vehicleApplicability || session.vehicle_applicability || { status: applicabilityStatus }, applicabilityStatus || NO_DATA) || NO_DATA;
   const applicabilityTone = flow.vehicleApplicabilityBlocking === true || applicabilityChecklist?.blocking === true
     ? "blocked"
     : flow.vehicleApplicabilityReviewRequired === true || applicabilityChecklist?.state === "review" ? "pending" : "";
@@ -5722,7 +5729,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel, readoutRequestTone);
   addObdDiagnosticFlowMetric(grid, "保留理由", blockerLabel, analysisBlocked ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "主保留", primaryBlockingLabel, primaryBlockingReasonId ? "blocked" : "");
-  addObdDiagnosticFlowMetric(grid, "主保留要求", primaryBlockingReadoutRequestLabel, primaryBlockingReadoutRequest?.executionEnabled === true ? "ready" : primaryBlockingReadoutRequest ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "主保留要求", primaryBlockingReadoutRequestLabel, primaryBlockingExecutionEnabled ? "ready" : primaryBlockingReadoutRequest ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "主保留比較", primaryBlockerComparisonLabel, primaryBlockerComparisonSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取差分", changedIdDisplayLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
