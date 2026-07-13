@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1260+件",
+  validationCheckLabel: "OBD安全検証 1268+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.480.0";
+const APP_VERSION = "2.481.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2971,15 +2971,23 @@ function initializeObdReadOnlyPanel() {
 }
 
 function getObdAutoStage() {
+  const lastSession = obdDevSession.lastSession || null;
+  const dtcSnapshot = lastSession?.dtcSnapshot || lastSession?.dtc_snapshot || null;
+  const livePidSnapshot = lastSession?.livePidSnapshot || lastSession?.live_pid_snapshot || null;
+  const freezeFrameSnapshot = lastSession?.freezeFrameSnapshot || lastSession?.freeze_frame_snapshot || null;
+  const ecuInfoSnapshot = lastSession?.ecuInfoSnapshot || lastSession?.ecu_info_snapshot || null;
+  const readinessSnapshot = lastSession?.readinessSnapshot || lastSession?.readiness_snapshot || null;
+  const onboardMonitorSnapshot = lastSession?.onboardMonitorSnapshot || lastSession?.onboard_monitor_snapshot || null;
+  const nextReadoutCandidates = lastSession?.nextReadoutCandidates || lastSession?.next_readout_candidates || [];
   const hasReadout = Boolean(
-    obdDevSession.lastSession?.dtcSnapshot?.dtcs?.length
-    || obdDevSession.lastSession?.livePidSnapshot?.monitorValues?.length
-    || obdDevSession.lastSession?.freezeFrameSnapshot?.monitorValues?.length
-    || obdDevSession.lastSession?.ecuInfoSnapshot?.itemCount
-    || obdDevSession.lastSession?.readinessSnapshot?.monitorCount
-    || obdDevSession.lastSession?.onboardMonitorSnapshot?.testCount
+    dtcSnapshot?.dtcs?.length
+    || livePidSnapshot?.monitorValues?.length
+    || freezeFrameSnapshot?.monitorValues?.length
+    || ecuInfoSnapshot?.itemCount
+    || readinessSnapshot?.monitorCount
+    || onboardMonitorSnapshot?.testCount
   );
-  const hasPendingReadoutCandidates = Boolean(obdDevSession.lastSession?.nextReadoutCandidates?.length);
+  const hasPendingReadoutCandidates = Boolean(nextReadoutCandidates.length);
   if (hasPendingReadoutCandidates) return "results";
   if (obdDevModeUnlocked) return "details";
   if (hasReadout) return "results";
@@ -6351,6 +6359,16 @@ function analyzeObdScannerImport() {
   const scannerText = obdScannerText.value;
   const hasScannerText = scannerText.trim().length > 0;
   const currentSession = obdDevSession.lastSession;
+  const currentDtcSnapshot = currentSession?.dtcSnapshot || currentSession?.dtc_snapshot || null;
+  const currentLivePidSnapshot = currentSession?.livePidSnapshot || currentSession?.live_pid_snapshot || null;
+  const currentFreezeFrameSnapshot = currentSession?.freezeFrameSnapshot || currentSession?.freeze_frame_snapshot || null;
+  const currentReadinessSnapshot = currentSession?.readinessSnapshot || currentSession?.readiness_snapshot || null;
+  const currentEcuInfoSnapshot = currentSession?.ecuInfoSnapshot || currentSession?.ecu_info_snapshot || null;
+  const currentOnboardMonitorSnapshot = currentSession?.onboardMonitorSnapshot || currentSession?.onboard_monitor_snapshot || null;
+  const currentSupportedPidMatrix = currentSession?.supportedPidMatrix || currentSession?.supported_pid_matrix || null;
+  const currentEcuResponseSummary = currentSession?.ecuResponseSummary || currentSession?.ecu_response_summary || null;
+  const currentReadoutCoverage = currentSession?.readoutCoverage || currentSession?.readout_coverage || null;
+  const currentNextReadoutCandidates = currentSession?.nextReadoutCandidates || currentSession?.next_readout_candidates || null;
   const bridgeImport = currentSession && hasBridgeDiagnosticImportPipelineSupport()
     ? window.ObdReadOnly.buildBridgeDiagnosticImport({
       startedAt: currentSession.startedAt,
@@ -6362,16 +6380,16 @@ function analyzeObdScannerImport() {
       connectionStatus: currentSession.connectionStatus,
       vciList: { devices: currentSession.vciDevices || [] },
       adapterIdentity: currentSession.adapterIdentity,
-      dtcSnapshot: currentSession.dtcSnapshot,
-      livePidSnapshot: currentSession.livePidSnapshot,
-      freezeFrameSnapshot: currentSession.freezeFrameSnapshot,
-      readinessSnapshot: currentSession.readinessSnapshot,
-      ecuInfoSnapshot: currentSession.ecuInfoSnapshot,
-      onboardMonitorSnapshot: currentSession.onboardMonitorSnapshot,
-      supportedPidMatrix: currentSession.supportedPidMatrix,
-      ecuResponseSummary: currentSession.ecuResponseSummary,
-      readoutCoverage: currentSession.readoutCoverage,
-      nextReadoutCandidates: currentSession.nextReadoutCandidates,
+      dtcSnapshot: currentDtcSnapshot,
+      livePidSnapshot: currentLivePidSnapshot,
+      freezeFrameSnapshot: currentFreezeFrameSnapshot,
+      readinessSnapshot: currentReadinessSnapshot,
+      ecuInfoSnapshot: currentEcuInfoSnapshot,
+      onboardMonitorSnapshot: currentOnboardMonitorSnapshot,
+      supportedPidMatrix: currentSupportedPidMatrix,
+      ecuResponseSummary: currentEcuResponseSummary,
+      readoutCoverage: currentReadoutCoverage,
+      nextReadoutCandidates: currentNextReadoutCandidates,
       warnings: currentSession.warnings,
       toolHints: currentSession.toolHints,
       sourceLength: currentSession.sourceLength,
