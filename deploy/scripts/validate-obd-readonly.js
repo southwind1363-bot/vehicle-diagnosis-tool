@@ -1874,7 +1874,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1083+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1085+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1902,7 +1902,8 @@ check(appSource.includes('const reviewTarget = impactSummary.reviewTarget || imp
 check(appSource.includes('function formatChangedIdReviewTargetActionSummary(summary, fallback = NO_DATA)') && appSource.includes('const addedIds = Array.isArray(summary.primaryChangedReviewTargetAddedIds)'), "OBD changed id display summaries should format primary review target action ids");
 check(appSource.includes('const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);') && appSource.includes('addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel'), "OBD diagnostic flow panel should show primary review target action ids");
 check(appSource.includes('const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);') && appSource.includes('["差分確認", changedIdReviewTargetActionLabel]'), "OBD session summary should show primary review target action ids");
-check(appSource.includes('const APP_VERSION = "2.439.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for primary review target action display");
+check(appSource.includes('const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(summarySource.importedSessionComparisonSummary?.changedIdDisplaySummary, "");') && appSource.includes('notes.push(`差分確認 ${changedIdReviewTargetActionNote}`);'), "OBD analysis notes should include primary review target action ids");
+check(appSource.includes('const APP_VERSION = "2.440.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for primary review target action notes");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
@@ -7884,6 +7885,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1083");
+  console.log("OBD read-only safety checks: 1085");
   console.log("Errors: 0");
 }
