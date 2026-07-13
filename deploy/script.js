@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1276+件",
+  validationCheckLabel: "OBD安全検証 1284+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.482.0";
+const APP_VERSION = "2.483.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5141,7 +5141,7 @@ function renderObdBridgeSessionDetails(session = null) {
     sections.push(["読取", lines]);
   }
 
-  const readoutProtocol = session?.protocol || NO_DATA;
+  const readoutProtocol = session?.protocol || session?.obd_protocol || NO_DATA;
   const capturedAt = session?.capturedAt || NO_DATA;
   const startedAt = session?.startedAt || NO_DATA;
   const endedAt = session?.endedAt || NO_DATA;
@@ -5883,7 +5883,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const readoutQualityLabel = formatReadoutQualitySummary(coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
-  const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
+  const sourceLabel = formatObdSessionSourceLabel(session?.source || session?.source_type, NO_DATA);
   const sourceLengthValue = session?.sourceLength ?? session?.source_length;
   const hadSensitiveIdentifier = session?.hadSensitiveIdentifier === true || session?.had_sensitive_identifier === true;
   const startedAtValue = session?.startedAt || session?.started_at;
@@ -6394,11 +6394,14 @@ function analyzeObdScannerImport() {
   const currentAdapterIdentity = currentSession?.adapterIdentity || currentSession?.adapter_identity || null;
   const currentSourceLength = currentSession?.sourceLength ?? currentSession?.source_length;
   const currentHadSensitiveIdentifier = currentSession?.hadSensitiveIdentifier === true || currentSession?.had_sensitive_identifier === true;
+  const currentProtocol = currentSession?.protocol || currentSession?.obd_protocol || null;
+  const currentWarnings = currentSession?.warnings || currentSession?.warning_ids || [];
+  const currentToolHints = currentSession?.toolHints || currentSession?.tool_hints || [];
   const bridgeImport = currentSession && hasBridgeDiagnosticImportPipelineSupport()
     ? window.ObdReadOnly.buildBridgeDiagnosticImport({
       startedAt: currentStartedAt,
       endedAt: currentEndedAt,
-      protocol: currentSession.protocol,
+      protocol: currentProtocol,
       capturedAt: currentCapturedAt,
       vehicleProfile: currentVehicleProfile,
       vehicleApplicability: currentVehicleApplicability,
@@ -6415,8 +6418,8 @@ function analyzeObdScannerImport() {
       ecuResponseSummary: currentEcuResponseSummary,
       readoutCoverage: currentReadoutCoverage,
       nextReadoutCandidates: currentNextReadoutCandidates,
-      warnings: currentSession.warnings,
-      toolHints: currentSession.toolHints,
+      warnings: currentWarnings,
+      toolHints: currentToolHints,
       sourceLength: currentSourceLength,
       hadSensitiveIdentifier: currentHadSensitiveIdentifier
     })
@@ -6434,11 +6437,14 @@ function analyzeObdScannerImport() {
   const mergedCodes = mergedSession?.dtcSnapshot?.codes || analysis.codes;
   const mergedMonitorValues = mergedSession?.livePidSnapshot?.monitorValues || analysis.monitorValues;
   const summarySource = mergedSession || analysis;
+  const summaryToolHints = summarySource.toolHints || summarySource.tool_hints || [];
+  const summaryProtocol = summarySource.protocol || summarySource.obd_protocol || null;
+  const summarySourceType = summarySource.source || summarySource.source_type || null;
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
-  renderObdImportToolHints(summarySource.toolHints);
+  renderObdImportToolHints(summaryToolHints);
 
   if (!hasScannerText && !bridgeImport) {
     obdImportStatus.textContent = buildCoreAnalysisPendingStatus(
@@ -6451,13 +6457,13 @@ function analyzeObdScannerImport() {
   }
 
   const notes = [];
-  if (Array.isArray(summarySource.toolHints) && summarySource.toolHints.length > 0) {
-    notes.push(`入力元 ${summarySource.toolHints.join(" / ")}`);
-    if (summarySource.toolHints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
+  if (Array.isArray(summaryToolHints) && summaryToolHints.length > 0) {
+    notes.push(`入力元 ${summaryToolHints.join(" / ")}`);
+    if (summaryToolHints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
       notes.push("メーカー固有候補は未確認扱い");
     }
   }
-  if (summarySource.protocol) notes.push(`Protocol ${summarySource.protocol}`);
+  if (summaryProtocol) notes.push(`Protocol ${summaryProtocol}`);
   const summaryVehicleProfile = summarySource.vehicleProfile || summarySource.vehicle_profile || null;
   const summaryVehicleApplicability = summarySource.vehicleApplicability || summarySource.vehicle_applicability || null;
   const summaryConnectionStatus = summarySource.connectionStatus || summarySource.connection_status || null;
@@ -6639,7 +6645,7 @@ function analyzeObdScannerImport() {
   if (bridgeImport && mergedMonitorValues.length) {
     const bridgeValueCount = mergedMonitorValues.filter((item) => item.source === "local_bridge").length;
     const scannerValueCount = mergedMonitorValues.filter((item) => item.source === "scanner_text").length;
-    const summary = [summarySource.source === "local_bridge"
+    const summary = [summarySourceType === "local_bridge"
       ? `ローカルブリッジ読取で${mergedMonitorValues.length}項目を表示しています。`
       : `統合入力で${mergedMonitorValues.length}項目を表示しています。`];
     if (bridgeValueCount > 0) summary.push(`ブリッジ${bridgeValueCount}項目`);
@@ -6659,7 +6665,7 @@ function analyzeObdScannerImport() {
     appendObdAnalysisReadoutSummary(summary, summarySource);
     obdMonitorStatus.textContent = `${coreReadinessHeadline}${summary.join(" / ")}。`;
   } else if (bridgeImport && !mergedMonitorValues.length) {
-    const summary = [summarySource.source === "local_bridge"
+    const summary = [summarySourceType === "local_bridge"
       ? "ローカルブリッジ読取の計測値は0項目です。"
       : "計測値は0項目です。"];
     if (analysisVehicleLabel) {

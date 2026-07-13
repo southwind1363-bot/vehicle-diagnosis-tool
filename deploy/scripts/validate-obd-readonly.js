@@ -1919,7 +1919,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1276+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1284+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1991,7 +1991,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.482.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for session metadata aliases");
+check(appSource.includes('const APP_VERSION = "2.483.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for session source metadata aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2034,6 +2034,14 @@ check(appSource.includes('const currentVciDevices = currentSession?.vciDevices |
 check(appSource.includes('const currentSourceLength = currentSession?.sourceLength ?? currentSession?.source_length;') && appSource.includes('const currentHadSensitiveIdentifier = currentSession?.hadSensitiveIdentifier === true || currentSession?.had_sensitive_identifier === true;'), "OBD bridge diagnostic import should accept snake_case source metadata aliases");
 check(appSource.includes('const summaryVehicleProfile = summarySource.vehicleProfile || summarySource.vehicle_profile || null;') && appSource.includes('const summaryVehicleApplicability = summarySource.vehicleApplicability || summarySource.vehicle_applicability || null;'), "OBD analysis notes should accept snake_case vehicle metadata aliases");
 check(appSource.includes('const summaryConnectionStatus = summarySource.connectionStatus || summarySource.connection_status || null;') && appSource.includes('const summaryVciDevices = summarySource.vciDevices || summarySource.vci_devices || summarySource.vciList?.devices || summarySource.vci_list?.devices || null;'), "OBD analysis notes should accept snake_case connection and VCI metadata aliases");
+check(appSource.includes('const currentProtocol = currentSession?.protocol || currentSession?.obd_protocol || null;') && appSource.includes('protocol: currentProtocol,'), "OBD bridge diagnostic import should accept protocol aliases");
+check(appSource.includes('const currentWarnings = currentSession?.warnings || currentSession?.warning_ids || [];') && appSource.includes('warnings: currentWarnings,'), "OBD bridge diagnostic import should accept warning aliases");
+check(appSource.includes('const currentToolHints = currentSession?.toolHints || currentSession?.tool_hints || [];') && appSource.includes('toolHints: currentToolHints,'), "OBD bridge diagnostic import should accept tool hint aliases");
+check(appSource.includes('const summaryToolHints = summarySource.toolHints || summarySource.tool_hints || [];') && appSource.includes('renderObdImportToolHints(summaryToolHints);'), "OBD import UI should accept snake_case tool hints");
+check(appSource.includes('const summaryProtocol = summarySource.protocol || summarySource.obd_protocol || null;') && appSource.includes('if (summaryProtocol) notes.push(`Protocol ${summaryProtocol}`);'), "OBD analysis notes should accept protocol aliases");
+check(appSource.includes('const summarySourceType = summarySource.source || summarySource.source_type || null;') && appSource.includes('summarySourceType === "local_bridge"'), "OBD monitor summaries should accept source type aliases");
+check(appSource.includes('const readoutProtocol = session?.protocol || session?.obd_protocol || NO_DATA;'), "OBD session details should accept protocol aliases");
+check(appSource.includes('const sourceLabel = formatObdSessionSourceLabel(session?.source || session?.source_type, NO_DATA);'), "OBD session summary should accept source type aliases");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || flow.next_readout_request || core.nextReadoutRequest || core.next_readout_request') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
 check(appSource.includes('const pendingReadoutRequestCountValue = flow.pendingReadoutRequestCount ?? flow.pending_readout_request_count;') && appSource.includes('const readoutRequestQueueLabel = pendingReadoutRequestCount'), "OBD diagnostic flow panel should show pending readout request queue count");
 check(appSource.includes('const readoutRequestPlan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan || core.pendingReadoutRequestPlan || core.pending_readout_request_plan || null;') && appSource.includes('readoutRequestPlan?.total_count'), "OBD diagnostic flow panel should use readout request plan counts when available");
@@ -8082,6 +8090,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1276");
+  console.log("OBD read-only safety checks: 1284");
   console.log("Errors: 0");
 }
