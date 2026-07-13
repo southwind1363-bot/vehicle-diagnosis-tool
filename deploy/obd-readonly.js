@@ -5018,6 +5018,14 @@
       changedIdCount: primaryBlockerChangedIds.length,
       primaryChangedId: primaryBlockerChangedIds[0] || null
     };
+    const readoutQualitySectionSummary = sectionSummaryById.readout_quality_summary || null;
+    const readoutQualityReviewActionSummary = readoutQualityComparison?.reviewActionSummary || null;
+    const readoutQualityReviewTargetReadoutIds = Array.isArray(readoutQualityComparison?.reviewTargetReadoutIds)
+      ? [...readoutQualityComparison.reviewTargetReadoutIds]
+      : [];
+    const readoutQualityReviewIssueIds = Array.isArray(readoutQualityComparison?.reviewIssueIds)
+      ? [...readoutQualityComparison.reviewIssueIds]
+      : [];
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -5064,6 +5072,14 @@
       changedIdReviewTargetMatrixRowByTarget,
       changedIdReviewTargetSummary,
       changedIdDisplaySummary,
+      readoutQualityChanged: readoutQualitySectionSummary?.changed === true,
+      readoutQualityReviewRequired: readoutQualityReviewActionSummary?.actionRequired === true,
+      readoutQualityReviewActionSummary,
+      readoutQualityReviewTargetReadoutIds,
+      readoutQualityReviewTargetReadoutCount: readoutQualityReviewTargetReadoutIds.length,
+      primaryReadoutQualityReviewTargetReadoutId: readoutQualityReviewActionSummary?.primaryReadoutId || readoutQualityReviewTargetReadoutIds[0] || null,
+      readoutQualityReviewIssueIds,
+      readoutQualityReviewIssueCount: readoutQualityReviewIssueIds.length,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
       bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
       readoutAddedChangedIds: [...(readoutChangedIdDirectionSummary.added?.ids || [])],
