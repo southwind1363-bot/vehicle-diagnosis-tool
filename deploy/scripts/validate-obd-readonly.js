@@ -1857,7 +1857,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1013+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1017+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1870,10 +1870,12 @@ check(appSource.includes('const primaryBlockerComparisonNote = formatPrimaryBloc
 check(appSource.includes('function formatChangedIdDisplaySummary(summary, fallback = NO_DATA)') && appSource.includes('summary.primaryRow') && appSource.includes('formatCoreReadoutLabel(primaryId, formatDiagnosticFlowBlockerLabel(primaryId))'), "OBD app should format changed id display summaries for UI");
 check(appSource.includes('const readoutDeltaCount = Number.isFinite(Number(summary.readoutChangedIdCount))') && appSource.includes('parts.push(`読取${readoutDeltaCount}`);'), "OBD changed id display summaries should expose readout delta counts");
 check(appSource.includes('const bridgeIntentDeltaCount = Number.isFinite(Number(summary.bridgeIntentChangedIdCount))') && appSource.includes('parts.push(`要求${bridgeIntentDeltaCount}`);'), "OBD changed id display summaries should expose bridge intent delta counts");
+check(appSource.includes('const addedDeltaCount = Number.isFinite(Number(summary.groups?.byDirectionValue?.added?.count))') && appSource.includes('parts.push(`追加${addedDeltaCount}`);'), "OBD changed id display summaries should expose added delta counts");
+check(appSource.includes('const removedDeltaCount = Number.isFinite(Number(summary.groups?.byDirectionValue?.removed?.count))') && appSource.includes('parts.push(`解除${removedDeltaCount}`);'), "OBD changed id display summaries should expose removed delta counts");
 check(appSource.includes('const changedIdDisplaySummary = session.importedSessionComparisonSummary?.changedIdDisplaySummary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取差分", changedIdDisplayLabel'), "OBD diagnostic flow panel should render imported session changed id display summaries");
 check(appSource.includes('const changedIdDisplayLabel = formatChangedIdDisplaySummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);') && appSource.includes('["読取差分", changedIdDisplayLabel]'), "OBD session summary should expose imported session changed id display state");
 check(appSource.includes('const changedIdDisplayNote = formatChangedIdDisplaySummary(summarySource.importedSessionComparisonSummary?.changedIdDisplaySummary, "");') && appSource.includes('notes.push(`読取差分 ${changedIdDisplayNote}`);'), "OBD analysis notes should include imported session changed id display state");
-check(appSource.includes('const APP_VERSION = "2.426.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for changed id display delta counts");
+check(appSource.includes('const APP_VERSION = "2.427.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for changed id direction counts");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
@@ -7825,6 +7827,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1013");
+  console.log("OBD read-only safety checks: 1017");
   console.log("Errors: 0");
 }
