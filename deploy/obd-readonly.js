@@ -4219,6 +4219,32 @@
       .filter(([, delta]) => delta !== 0)
       .map(([id]) => id)
       .sort();
+    const issueReviewReadoutMap = {
+      raw_pid_values_need_conversion: "live_pid_snapshot",
+      readiness_incomplete: "readiness_snapshot",
+      mode09_key_items_missing: "ecu_info_snapshot",
+      onboard_monitor_test_failed: "onboard_monitor_snapshot"
+    };
+    const issueAddedIds = diffIds(currentIssueIds, importedIssueIds);
+    const issueRemovedIds = diffIds(importedIssueIds, currentIssueIds);
+    const reviewIssueIds = [...new Set([
+      ...issueAddedIds,
+      ...issueRemovedIds,
+      ...changedIssueCountIds,
+      ...((importedQualitySummary.reviewRequired === true) !== (currentSummary.reviewRequired === true) ? currentIssueIds : [])
+    ].filter(Boolean))].sort();
+    const reviewTargetReadoutIds = [...new Set(reviewIssueIds.map((id) => issueReviewReadoutMap[id]).filter(Boolean))];
+    const primaryReviewTargetReadoutId = reviewTargetReadoutIds[0] || null;
+    const reviewActionSummary = {
+      schemaVersion: "readout_quality_review_action_v1",
+      actionId: "review_readout_quality_change",
+      actionRequired: reviewTargetReadoutIds.length > 0 || changedIssueCountIds.length > 0 || importedIssueIds.join("|") !== currentIssueIds.join("|"),
+      reasonIds: reviewIssueIds,
+      readoutIds: reviewTargetReadoutIds,
+      primaryReadoutId: primaryReviewTargetReadoutId,
+      vehicleCommandEnabled: false,
+      wouldTransmit: false
+    };
     return {
       schemaVersion: "imported_readout_quality_comparison_v1",
       importedReviewRequired: importedQualitySummary.reviewRequired === true,
@@ -4233,11 +4259,15 @@
       importedIssueIds,
       currentIssueIds,
       issueIdsChanged: importedIssueIds.join("|") !== currentIssueIds.join("|"),
-      issueAddedIds: diffIds(currentIssueIds, importedIssueIds),
-      issueRemovedIds: diffIds(importedIssueIds, currentIssueIds),
+      issueAddedIds,
+      issueRemovedIds,
       issueFieldDeltas,
       changedIssueCountIds,
       issueCountsChanged: changedIssueCountIds.length > 0,
+      reviewIssueIds,
+      reviewTargetReadoutIds,
+      primaryReviewTargetReadoutId,
+      reviewActionSummary,
       rawPidUndecodedDelta: issueFieldDeltas.raw_pid_values_need_conversion,
       readinessIncompleteDelta: issueFieldDeltas.readiness_incomplete,
       ecuInfoMissingKeyDelta: issueFieldDeltas.mode09_key_items_missing,
