@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1155+件",
+  validationCheckLabel: "OBD安全検証 1169+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.452.0";
+const APP_VERSION = "2.453.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5503,6 +5503,24 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : `${issueCount}件`;
 }
 
+function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const issueDelta = Number.isFinite(Number(summary.issueCountDelta)) ? Number(summary.issueCountDelta) : 0;
+  const rawDelta = Number.isFinite(Number(summary.rawPidUndecodedDelta)) ? Number(summary.rawPidUndecodedDelta) : 0;
+  const readinessDelta = Number.isFinite(Number(summary.readinessIncompleteDelta)) ? Number(summary.readinessIncompleteDelta) : 0;
+  const ecuDelta = Number.isFinite(Number(summary.ecuInfoMissingKeyDelta)) ? Number(summary.ecuInfoMissingKeyDelta) : 0;
+  const mode06Delta = Number.isFinite(Number(summary.onboardMonitorFailedDelta)) ? Number(summary.onboardMonitorFailedDelta) : 0;
+  const parts = [];
+  if (issueDelta !== 0) parts.push(`品質${issueDelta > 0 ? "+" : ""}${issueDelta}`);
+  if (rawDelta !== 0) parts.push(`RAW${rawDelta > 0 ? "+" : ""}${rawDelta}`);
+  if (readinessDelta !== 0) parts.push(`RDY${readinessDelta > 0 ? "+" : ""}${readinessDelta}`);
+  if (ecuDelta !== 0) parts.push(`ECU${ecuDelta > 0 ? "+" : ""}${ecuDelta}`);
+  if (mode06Delta !== 0) parts.push(`M06${mode06Delta > 0 ? "+" : ""}${mode06Delta}`);
+  if (summary.issueIdsChanged === true) parts.push("項目変化");
+  if (summary.reviewRequiredChanged === true) parts.push("確認状態変化");
+  return parts.length ? parts.join(" / ") : "変化なし";
+}
+
 function addObdDiagnosticFlowMetric(container, label, value, tone = "") {
   const item = document.createElement("article");
   item.className = `obd-diagnostic-flow-card${tone ? ` obd-diagnostic-flow-${tone}` : ""}`;
@@ -5582,6 +5600,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session.coreReadoutInventorySummary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(core.readoutQualitySummary || flow.readoutQualitySummary, NO_DATA);
+  const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5615,6 +5634,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
 
   const grid = document.createElement("div");
   grid.className = "obd-diagnostic-flow-grid";
+  addObdDiagnosticFlowMetric(grid, "品質比較", readoutQualityComparisonLabel, session.importedReadoutQualityComparisonSummary?.issueIdsChanged === true || session.importedReadoutQualityComparisonSummary?.issueCountsChanged === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "現在地", statusLabel, canStartAnalysis ? "ready" : "pending");
   addObdDiagnosticFlowMetric(grid, "読取進捗", completionPercent === null ? NO_DATA : `${completionPercent}%`);
   addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
@@ -5692,6 +5712,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(session?.coreSessionStatus?.readoutQualitySummary || session?.diagnosticFlowSummary?.readoutQualitySummary, NO_DATA);
+  const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -5756,6 +5777,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
   values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel]);
+  values.splice(10, 0, ["品質比較", readoutQualityComparisonLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
@@ -6265,6 +6287,10 @@ function analyzeObdScannerImport() {
   const readoutQualityNote = formatReadoutQualitySummary(summarySource.coreSessionStatus?.readoutQualitySummary || summarySource.diagnosticFlowSummary?.readoutQualitySummary, "");
   if (readoutQualityNote) {
     notes.push(`読取品質 ${readoutQualityNote}`);
+  }
+  const readoutQualityComparisonNote = formatReadoutQualityComparisonSummary(summarySource.importedReadoutQualityComparisonSummary, "");
+  if (readoutQualityComparisonNote) {
+    notes.push(`品質比較 ${readoutQualityComparisonNote}`);
   }
   if (analysisEmptyReadoutLabel) {
     notes.push(`空応答 ${analysisEmptyReadoutLabel}`);

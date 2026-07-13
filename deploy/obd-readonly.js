@@ -4199,6 +4199,52 @@
     };
   }
 
+  function buildImportedReadoutQualityComparisonSummary(importedQualitySummary = null, currentQualitySummary = {}) {
+    if (!importedQualitySummary || typeof importedQualitySummary !== "object") return null;
+    const currentSummary = currentQualitySummary && typeof currentQualitySummary === "object" ? currentQualitySummary : {};
+    const readCount = (summary = {}, field, fallbackIds = []) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : fallbackIds.length;
+    const readIds = (summary = {}, field) => Array.isArray(summary?.[field])
+      ? [...new Set(summary[field].filter(Boolean).map(String))].sort()
+      : [];
+    const importedIssueIds = readIds(importedQualitySummary, "issueIds");
+    const currentIssueIds = readIds(currentSummary, "issueIds");
+    const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
+    const issueFieldDeltas = {
+      raw_pid_values_need_conversion: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedQualitySummary, "rawPidUndecodedCount"),
+      readiness_incomplete: readCount(currentSummary, "readinessIncompleteCount") - readCount(importedQualitySummary, "readinessIncompleteCount"),
+      mode09_key_items_missing: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedQualitySummary, "ecuInfoMissingKeyCount"),
+      onboard_monitor_test_failed: readCount(currentSummary, "onboardMonitorFailedCount") - readCount(importedQualitySummary, "onboardMonitorFailedCount")
+    };
+    const changedIssueCountIds = Object.entries(issueFieldDeltas)
+      .filter(([, delta]) => delta !== 0)
+      .map(([id]) => id)
+      .sort();
+    return {
+      schemaVersion: "imported_readout_quality_comparison_v1",
+      importedReviewRequired: importedQualitySummary.reviewRequired === true,
+      currentReviewRequired: currentSummary.reviewRequired === true,
+      reviewRequiredChanged: (importedQualitySummary.reviewRequired === true) !== (currentSummary.reviewRequired === true),
+      importedReadyForInterpretation: importedQualitySummary.readyForInterpretation === true,
+      currentReadyForInterpretation: currentSummary.readyForInterpretation === true,
+      readyForInterpretationChanged: (importedQualitySummary.readyForInterpretation === true) !== (currentSummary.readyForInterpretation === true),
+      importedIssueCount: readCount(importedQualitySummary, "issueCount", importedIssueIds),
+      currentIssueCount: readCount(currentSummary, "issueCount", currentIssueIds),
+      issueCountDelta: readCount(currentSummary, "issueCount", currentIssueIds) - readCount(importedQualitySummary, "issueCount", importedIssueIds),
+      importedIssueIds,
+      currentIssueIds,
+      issueIdsChanged: importedIssueIds.join("|") !== currentIssueIds.join("|"),
+      issueAddedIds: diffIds(currentIssueIds, importedIssueIds),
+      issueRemovedIds: diffIds(importedIssueIds, currentIssueIds),
+      issueFieldDeltas,
+      changedIssueCountIds,
+      issueCountsChanged: changedIssueCountIds.length > 0,
+      rawPidUndecodedDelta: issueFieldDeltas.raw_pid_values_need_conversion,
+      readinessIncompleteDelta: issueFieldDeltas.readiness_incomplete,
+      ecuInfoMissingKeyDelta: issueFieldDeltas.mode09_key_items_missing,
+      onboardMonitorFailedDelta: issueFieldDeltas.onboard_monitor_test_failed
+    };
+  }
+
   function buildImportedReadoutRequestPlanGateComparisonSummary(importedGateSummary = null, currentGateSummary = {}) {
     if (!importedGateSummary || typeof importedGateSummary !== "object") return null;
     const currentSummary = currentGateSummary && typeof currentGateSummary === "object" ? currentGateSummary : {};
@@ -4325,6 +4371,7 @@
     diagnosticFlowComparison = null,
     readoutCompletionComparison = null,
     analysisReadinessComparison = null,
+    readoutQualityComparison = null,
     readoutRequestPlanGateComparison = null,
     coreReadoutInventoryComparison = null
   } = {}) {
@@ -4333,12 +4380,13 @@
       { id: "diagnostic_flow_summary", comparison: diagnosticFlowComparison },
       { id: "readout_completion_summary", comparison: readoutCompletionComparison },
       { id: "analysis_readiness_summary", comparison: analysisReadinessComparison },
+      { id: "readout_quality_summary", comparison: readoutQualityComparison },
       { id: "readout_request_plan_gate_summary", comparison: readoutRequestPlanGateComparison },
       { id: "core_readout_inventory_summary", comparison: coreReadoutInventoryComparison }
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.pendingReadoutDelta || comparison.attemptedReadoutDelta || comparison.blockerCountDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.pendingReadoutDelta || comparison.attemptedReadoutDelta || comparison.blockerCountDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.issueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || comparison.onboardMonitorFailedDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
@@ -4364,6 +4412,10 @@
       || comparison.checklistBlockedIdsChanged === true
       || comparison.checklistReviewIdsChanged === true
       || comparison.vehicleApplicabilityChecklistChanged === true
+      || comparison.reviewRequiredChanged === true
+      || comparison.readyForInterpretationChanged === true
+      || comparison.issueIdsChanged === true
+      || comparison.issueCountsChanged === true
       || comparison.requiredIdsChanged === true
       || comparison.capturedIdsChanged === true
       || comparison.missingIdsChanged === true
@@ -4384,6 +4436,7 @@
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true ? "analysis_checklist" : null,
+      comparison.reviewRequiredChanged === true || comparison.readyForInterpretationChanged === true || comparison.issueIdsChanged === true || comparison.issueCountsChanged === true || Number(comparison.issueCountDelta || 0) !== 0 ? "readout_quality" : null,
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.nextPendingReadoutChanged === true ? "next_readout" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
@@ -4398,11 +4451,13 @@
       Number(comparison.rawPidUndecodedDelta || 0) !== 0 ? "raw_pid_undecoded" : null,
       Number(comparison.readinessIncompleteDelta || 0) !== 0 ? "readiness_incomplete" : null,
       Number(comparison.ecuInfoMissingKeyDelta || 0) !== 0 ? "ecu_info_key_items" : null,
+      Number(comparison.onboardMonitorFailedDelta || 0) !== 0 ? "onboard_monitor_failed" : null,
       Number(comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || 0) !== 0 ? "request_plan_counts" : null
     ].filter(Boolean);
     const readChangedIds = (comparison = {}, fields = []) => [...new Set(fields.flatMap((field) => Array.isArray(comparison[field]) ? comparison[field] : []).filter(Boolean))];
     const readAddedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedAddedIds", "checklistReviewAddedIds",
+      "issueAddedIds", "changedIssueCountIds",
       "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds", "attemptedAddedIds",
       "changedValueCountIds",
       "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
@@ -4412,6 +4467,7 @@
     ]);
     const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
       "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
+      "issueRemovedIds", "changedIssueCountIds",
       "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds", "attemptedRemovedIds",
       "changedValueCountIds",
       "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
@@ -5796,6 +5852,7 @@
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
+    const importedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
     const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
@@ -5803,6 +5860,7 @@
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
       readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
+      readoutQualityComparison: importedReadoutQualityComparisonSummary,
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
@@ -5854,6 +5912,7 @@
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
       importedAnalysisReadinessComparisonSummary,
+      importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       importedSessionComparisonSummary,
@@ -7662,6 +7721,7 @@
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
+    const importedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
     const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
     const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
@@ -7669,6 +7729,7 @@
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
       readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
+      readoutQualityComparison: importedReadoutQualityComparisonSummary,
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
@@ -7714,6 +7775,7 @@
       importedDiagnosticFlowComparisonSummary,
       importedReadoutCompletionComparisonSummary,
       importedAnalysisReadinessComparisonSummary,
+      importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       importedSessionComparisonSummary,
