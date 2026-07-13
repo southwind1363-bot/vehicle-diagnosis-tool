@@ -475,6 +475,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary') && functionBody.includes('readoutCompletionSummary,'), "buildBridgeDiagnosticImport should preserve readout completion summary");
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary') && functionBody.includes('analysisReadinessSummary,'), "buildBridgeDiagnosticImport should preserve analysis readiness summary");
     check(functionBody.includes('const readoutQualitySummary = summary.readoutQualitySummary') && functionBody.includes('readoutQualitySummary,'), "buildBridgeDiagnosticImport should preserve readout quality summary");
+    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('exportPayload.session?.imported_readout_quality_review_request_plan_summary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should preserve imported readout quality review request plan summaries");
     check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "buildBridgeDiagnosticImport should preserve readout request plan gate summary");
     check(functionBody.includes('const coreReadoutInventorySummary = summary.coreReadoutInventorySummary') && functionBody.includes('coreReadoutInventorySummary,'), "buildBridgeDiagnosticImport should preserve core readout inventory summary");
   }
@@ -1912,7 +1913,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1194+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1198+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1963,7 +1964,7 @@ check(appSource.includes('const readoutQualityLabel = formatReadoutQualitySummar
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.461.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for readout quality request plan export");
+check(appSource.includes('const APP_VERSION = "2.462.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for readout quality request plan import preservation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
@@ -3507,7 +3508,22 @@ const bridgeDiagnosticImportApplicabilityPartial = obd.buildBridgeDiagnosticImpo
 const bridgeDiagnosticImportUnknownApplicability = obd.buildBridgeDiagnosticImport({
   bridge_export_payload: bridgeExportUnknownApplicability
 });
+const bridgeDiagnosticImportQualityReviewPlan = obd.buildBridgeDiagnosticImport({
+  imported_readout_quality_review_request_plan_summary: {
+    schemaVersion: "readout_quality_review_request_plan_v1",
+    requestCount: 1,
+    readoutIds: ["dtc_snapshot"],
+    bridgeIntents: ["read_stored_dtcs"],
+    readOnly: true,
+    wouldTransmit: false,
+    vehicleCommandEnabled: false
+  },
+  dtcSnapshot: bridgeDtcSnapshot
+});
 check(bridgeDiagnosticImportUnknownApplicability.vehicleApplicability?.status === "unknown", "Bridge diagnostic import did not preserve unknown vehicle applicability from bridge export payload");
+check(bridgeDiagnosticImportQualityReviewPlan.importedReadoutQualityReviewRequestPlanSummary?.schemaVersion === "readout_quality_review_request_plan_v1", "Bridge diagnostic import did not expose imported readout quality review request plan summary");
+check(bridgeDiagnosticImportQualityReviewPlan.bridgeSession?.importedReadoutQualityReviewRequestPlanSummary?.vehicleCommandEnabled === false, "Bridge diagnostic import did not retain imported readout quality review request plan summary on bridgeSession");
+check(bridgeDiagnosticImportQualityReviewPlan.exportPayload.session.imported_readout_quality_review_request_plan_summary?.wouldTransmit === false, "Bridge diagnostic import did not retain imported readout quality review request plan summary on export payload");
 check(bridgeDiagnosticImport.importType === "bridge_diagnostic_snapshot", "ブリッジ診断取込の種別が不正です");
 check(bridgeDiagnosticImport.codes.join(",") === "P0171,P0300", "ブリッジ診断取込へDTCを引き継げません");
 check(bridgeDiagnosticImport.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge diagnostic import did not carry ECU response summary");
@@ -7986,6 +8002,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1194");
+  console.log("OBD read-only safety checks: 1198");
   console.log("Errors: 0");
 }

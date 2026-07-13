@@ -2203,6 +2203,9 @@
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
+    const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
+      || parts.imported_readout_quality_review_request_plan_summary
+      || null;
 
     return {
       source: "local_bridge",
@@ -2234,6 +2237,8 @@
       diagnosticFlowSummary,
       readoutCompletionSummary,
       analysisReadinessSummary,
+      importedReadoutQualityReviewRequestPlanSummary,
+      imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       readoutRequestPlanGateSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
@@ -2476,6 +2481,9 @@
       || parts.diagnosticFlowSummary?.readoutRequestPlanGateSummary
       || parts.diagnostic_flow_summary?.readoutRequestPlanGateSummary
       || null;
+    const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
+      || parts.imported_readout_quality_review_request_plan_summary
+      || null;
     return {
       source: parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,
@@ -2518,6 +2526,8 @@
           )
       ),
       readoutRequestPlanGateSummary,
+      importedReadoutQualityReviewRequestPlanSummary,
+      imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
@@ -5685,6 +5695,10 @@
       || coreSessionStatus.readoutQualitySummary
       || diagnosticFlowSummary.readoutQualitySummary
       || null;
+    const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary
+      || summary.imported_readout_quality_review_request_plan_summary
+      || exportPayload.session?.imported_readout_quality_review_request_plan_summary
+      || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
       || summary.readout_request_plan_gate_summary
       || exportPayload.session?.readout_request_plan_gate_summary
@@ -5741,6 +5755,7 @@
       readoutCompletionSummary,
       analysisReadinessSummary,
       readoutQualitySummary,
+      importedReadoutQualityReviewRequestPlanSummary,
       readoutRequestPlanGateSummary,
       coreReadoutInventorySummary,
       bridgeSession: {
@@ -5773,6 +5788,7 @@
         readoutCompletionSummary,
         analysisReadinessSummary,
         readoutQualitySummary,
+        importedReadoutQualityReviewRequestPlanSummary,
         readoutRequestPlanGateSummary,
         coreReadoutInventorySummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
