@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1229+件",
+  validationCheckLabel: "OBD安全検証 1233+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.474.0";
+const APP_VERSION = "2.475.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5611,8 +5611,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
     });
     return;
   }
-  const flow = session.diagnosticFlowSummary || {};
-  const core = session.coreSessionStatus || {};
+  const flow = session.diagnosticFlowSummary || session.diagnostic_flow_summary || {};
+  const core = session.coreSessionStatus || session.core_session_status || {};
   const canStartAnalysis = flow.canStartAnalysis === true || core.readyForAnalysis === true;
   const analysisBlocked = flow.analysisBlocked === true || (core.readyForAnalysis === false && !canStartAnalysis);
   const collectionRequired = flow.readoutCollectionRequired === true || (Array.isArray(core.pendingReadoutIds) && core.pendingReadoutIds.length > 0);
@@ -5624,25 +5624,32 @@ function renderObdDiagnosticFlowPanel(session = null) {
     : Array.isArray(core.pendingReadoutIds) ? core.pendingReadoutIds.length : 0;
   const nextReadoutId = flow.recommendedReadoutId || flow.nextReadoutId || core.nextRecommendedReadoutId || null;
   const nextReadoutLabel = flow.nextReadoutLabel || formatCoreReadoutLabel(nextReadoutId, nextReadoutId || NO_DATA);
-  const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;
-  const readoutRequestPlan = flow.pendingReadoutRequestPlan || core.pendingReadoutRequestPlan || null;
-  const pendingReadoutRequestCount = Number.isFinite(Number(flow.pendingReadoutRequestCount))
-    ? Number(flow.pendingReadoutRequestCount)
-    : Number.isFinite(Number(readoutRequestPlan?.totalCount))
-      ? Number(readoutRequestPlan.totalCount)
-      : Array.isArray(core.pendingReadoutRequestQueue) ? core.pendingReadoutRequestQueue.length : 0;
-  const mappedReadoutRequestCount = Number.isFinite(Number(readoutRequestPlan?.mappedCount))
-    ? Number(readoutRequestPlan.mappedCount)
+  const nextReadoutRequest = flow.nextReadoutRequest || flow.next_readout_request || core.nextReadoutRequest || core.next_readout_request || core.nextReadoutSummary?.readoutRequest || core.next_readout_summary?.readout_request || null;
+  const readoutRequestPlan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan || core.pendingReadoutRequestPlan || core.pending_readout_request_plan || null;
+  const pendingReadoutRequestCountValue = flow.pendingReadoutRequestCount ?? flow.pending_readout_request_count;
+  const readoutRequestPlanTotalCountValue = readoutRequestPlan?.totalCount ?? readoutRequestPlan?.total_count;
+  const mappedReadoutRequestCountValue = readoutRequestPlan?.mappedCount ?? readoutRequestPlan?.mapped_count;
+  const unmappedReadoutRequestCountValue = readoutRequestPlan?.unmappedCount ?? readoutRequestPlan?.unmapped_count;
+  const pendingReadoutRequestCount = Number.isFinite(Number(pendingReadoutRequestCountValue))
+    ? Number(pendingReadoutRequestCountValue)
+    : Number.isFinite(Number(readoutRequestPlanTotalCountValue))
+      ? Number(readoutRequestPlanTotalCountValue)
+      : Array.isArray(core.pendingReadoutRequestQueue) ? core.pendingReadoutRequestQueue.length : Array.isArray(core.pending_readout_request_queue) ? core.pending_readout_request_queue.length : 0;
+  const mappedReadoutRequestCount = Number.isFinite(Number(mappedReadoutRequestCountValue))
+    ? Number(mappedReadoutRequestCountValue)
     : null;
-  const unmappedReadoutRequestCount = Number.isFinite(Number(readoutRequestPlan?.unmappedCount))
-    ? Number(readoutRequestPlan.unmappedCount)
+  const unmappedReadoutRequestCount = Number.isFinite(Number(unmappedReadoutRequestCountValue))
+    ? Number(unmappedReadoutRequestCountValue)
     : null;
   const readoutRequestQueueLabel = pendingReadoutRequestCount
     ? ` / queue ${pendingReadoutRequestCount}${mappedReadoutRequestCount !== null ? ` / mapped ${mappedReadoutRequestCount}` : ""}${unmappedReadoutRequestCount ? ` / unmapped ${unmappedReadoutRequestCount}` : ""}`
     : "";
-  const readoutRequestTone = unmappedReadoutRequestCount ? "blocked" : nextReadoutRequest?.executionEnabled === true ? "ready" : "";
-  const nextReadoutRequestLabel = nextReadoutRequest?.bridgeIntent
-    ? `${nextReadoutRequest.bridgeIntent}${nextReadoutRequest.serviceMode ? ` / Mode ${nextReadoutRequest.serviceMode}` : ""}${readoutRequestQueueLabel}`
+  const nextReadoutRequestBridgeIntent = nextReadoutRequest?.bridgeIntent || nextReadoutRequest?.bridge_intent || "";
+  const nextReadoutRequestServiceMode = nextReadoutRequest?.serviceMode || nextReadoutRequest?.service_mode || "";
+  const nextReadoutRequestExecutionEnabled = nextReadoutRequest?.executionEnabled === true || nextReadoutRequest?.execution_enabled === true;
+  const readoutRequestTone = unmappedReadoutRequestCount ? "blocked" : nextReadoutRequestExecutionEnabled ? "ready" : "";
+  const nextReadoutRequestLabel = nextReadoutRequestBridgeIntent
+    ? `${nextReadoutRequestBridgeIntent}${nextReadoutRequestServiceMode ? ` / Mode ${nextReadoutRequestServiceMode}` : ""}${readoutRequestQueueLabel}`
     : pendingReadoutRequestCount ? `queue ${pendingReadoutRequestCount}${mappedReadoutRequestCount !== null ? ` / mapped ${mappedReadoutRequestCount}` : ""}${unmappedReadoutRequestCount ? ` / unmapped ${unmappedReadoutRequestCount}` : ""}` : NO_DATA;
   const blockerIds = Array.isArray(flow.blockingReasonIds)
     ? flow.blockingReasonIds
