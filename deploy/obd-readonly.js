@@ -4487,6 +4487,21 @@
     const primaryChangedReviewTargetAddedIds = primaryChangedReviewTargetDirectionCounts?.byDirection?.added?.ids || [];
     const primaryChangedReviewTargetRemovedIds = primaryChangedReviewTargetDirectionCounts?.byDirection?.removed?.ids || [];
     const primaryChangedReviewTargetMixedIds = primaryChangedReviewTargetDirectionCounts?.byDirection?.mixed?.ids || [];
+    const primaryChangedReviewTargetActionSummary = {
+      schemaVersion: "changed_id_review_target_action_summary_v1",
+      reviewTarget: primaryChangedIdReviewTarget,
+      changed: Boolean(primaryChangedIdReviewTarget),
+      totalCount: primaryChangedReviewTargetDirectionCounts?.count || 0,
+      addedCount: primaryChangedReviewTargetDirectionCounts?.addedCount || 0,
+      removedCount: primaryChangedReviewTargetDirectionCounts?.removedCount || 0,
+      mixedCount: primaryChangedReviewTargetDirectionCounts?.mixedCount || 0,
+      addedIds: [...primaryChangedReviewTargetAddedIds],
+      removedIds: [...primaryChangedReviewTargetRemovedIds],
+      mixedIds: [...primaryChangedReviewTargetMixedIds],
+      hasAddedIds: primaryChangedReviewTargetAddedIds.length > 0,
+      hasRemovedIds: primaryChangedReviewTargetRemovedIds.length > 0,
+      hasMixedIds: primaryChangedReviewTargetMixedIds.length > 0
+    };
     const primaryChangedIdImpactSummary = {
       schemaVersion: "primary_changed_id_impact_summary_v1",
       changed: Boolean(primaryChangedIdSummary),
@@ -4503,6 +4518,7 @@
       reviewTargetAddedIds: primaryChangedReviewTargetAddedIds,
       reviewTargetRemovedIds: primaryChangedReviewTargetRemovedIds,
       reviewTargetMixedIds: primaryChangedReviewTargetMixedIds,
+      reviewTargetActionSummary: primaryChangedReviewTargetActionSummary,
       requiresReadoutReview: primaryChangedIdReviewTarget === "readout_review",
       requiresBridgeContractReview: primaryChangedIdReviewTarget === "bridge_contract_review",
       requiresRequestPlanReview: primaryChangedIdReviewTarget === "request_plan_review",
@@ -4553,7 +4569,8 @@
       primaryTargetMixedCount: primaryChangedReviewTargetDirectionCounts?.mixedCount || 0,
       primaryTargetAddedIds: primaryChangedReviewTargetAddedIds,
       primaryTargetRemovedIds: primaryChangedReviewTargetRemovedIds,
-      primaryTargetMixedIds: primaryChangedReviewTargetMixedIds
+      primaryTargetMixedIds: primaryChangedReviewTargetMixedIds,
+      primaryTargetActionSummary: primaryChangedReviewTargetActionSummary
     };
     const changedIdDisplaySummary = {
       schemaVersion: "changed_id_display_summary_v1",
@@ -4572,6 +4589,7 @@
       primaryChangedReviewTargetAddedIds,
       primaryChangedReviewTargetRemovedIds,
       primaryChangedReviewTargetMixedIds,
+      primaryChangedReviewTargetActionSummary,
       primaryChangedKindDirectionCounts,
       primaryChangedKindTotalCount: primaryChangedKindDirectionCounts?.total || 0,
       primaryChangedKindAddedCount: primaryChangedKindDirectionCounts?.added || 0,
