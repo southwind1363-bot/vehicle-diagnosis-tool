@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1187+件",
+  validationCheckLabel: "OBD安全検証 1191+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.458.0";
+const APP_VERSION = "2.459.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5525,14 +5525,14 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
 
 function formatReadoutQualityReviewRequestSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
-  const request = summary.primaryReadoutQualityReviewRequest || summary.readoutQualityReviewRequestSummaries?.[0] || summary.readoutQualityReviewActionSummary || null;
+  const request = summary.primaryReadoutQualityReviewRequest || summary.primaryRequest || summary.readoutQualityReviewRequestSummaries?.[0] || summary.readoutQualityReviewActionSummary || null;
   if (!request || typeof request !== "object") return fallback;
   const readoutId = request.readoutId || request.primaryReadoutId || summary.primaryReadoutQualityReviewTargetReadoutId || "";
   const label = readoutId ? formatCoreReadoutLabel(readoutId, readoutId) : "";
   const bridgeIntent = request.bridgeIntent || request.actionId || "";
   const serviceMode = request.serviceMode ? `Mode ${request.serviceMode}` : "";
-  const requestCount = Number.isFinite(Number(summary.readoutQualityReviewRequestPlanSummary?.requestCount || summary.readoutQualityReviewRequestCount))
-    ? Number(summary.readoutQualityReviewRequestPlanSummary?.requestCount || summary.readoutQualityReviewRequestCount)
+  const requestCount = Number.isFinite(Number(summary.readoutQualityReviewRequestPlanSummary?.requestCount || summary.requestCount || summary.readoutQualityReviewRequestCount))
+    ? Number(summary.readoutQualityReviewRequestPlanSummary?.requestCount || summary.requestCount || summary.readoutQualityReviewRequestCount)
     : 0;
   const parts = [label, bridgeIntent, serviceMode].filter(Boolean);
   if (requestCount > 1) parts.push(`${requestCount}件`);
@@ -5621,7 +5621,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(core.readoutQualitySummary || flow.readoutQualitySummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary, NO_DATA);
-  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedSessionComparisonSummary, NO_DATA);
+  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedReadoutQualityReviewRequestPlanSummary || session.importedSessionComparisonSummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysisReadinessSummary?.checklistSummary || null;
   const checklistLabel = checklistSummary && Number.isFinite(Number(checklistSummary.totalCount))
     ? `${Number(checklistSummary.completeCount || 0)}/${Number(checklistSummary.totalCount)}`
@@ -5735,7 +5735,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(session?.coreSessionStatus?.readoutQualitySummary || session?.diagnosticFlowSummary?.readoutQualitySummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary, NO_DATA);
-  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedSessionComparisonSummary, NO_DATA);
+  const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.importedSessionComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source, NO_DATA);
   const sourceLengthLabel = session?.sourceLength ? `${session.sourceLength}文字` : NO_DATA;
   const sensitiveLabel = session?.hadSensitiveIdentifier === true ? "検出" : "なし";
@@ -6316,7 +6316,7 @@ function analyzeObdScannerImport() {
   if (readoutQualityComparisonNote) {
     notes.push(`品質比較 ${readoutQualityComparisonNote}`);
   }
-  const readoutQualityReviewRequestNote = formatReadoutQualityReviewRequestSummary(summarySource.importedSessionComparisonSummary, "");
+  const readoutQualityReviewRequestNote = formatReadoutQualityReviewRequestSummary(summarySource.importedReadoutQualityReviewRequestPlanSummary || summarySource.importedSessionComparisonSummary, "");
   if (readoutQualityReviewRequestNote) {
     notes.push(`品質確認要求 ${readoutQualityReviewRequestNote}`);
   }

@@ -5934,6 +5934,7 @@
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
+    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary || null;
 
     return {
       source,
@@ -5985,6 +5986,7 @@
       importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
+      importedReadoutQualityReviewRequestPlanSummary,
       importedSessionComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
@@ -7803,6 +7805,7 @@
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
+    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary || null;
 
     return {
       schemaVersion: "scan_session_v1",
@@ -7848,6 +7851,7 @@
       importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
+      importedReadoutQualityReviewRequestPlanSummary,
       importedSessionComparisonSummary,
       monitorValueSummary: resolveMonitorValueSummary([
         ...livePidSnapshot.monitorValues,
