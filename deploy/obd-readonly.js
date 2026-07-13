@@ -1455,6 +1455,83 @@
     };
   }
 
+  function buildCoreReadoutInventorySummary({
+    readoutCoverage = null,
+    dtcSnapshot = {},
+    livePidSnapshot = {},
+    freezeFrameSnapshot = {},
+    readinessSnapshot = {},
+    ecuInfoSnapshot = {},
+    onboardMonitorSnapshot = {},
+    supportedPidMatrix = {}
+  } = {}) {
+    const coverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
+    const countItems = (items) => Array.isArray(items) ? items.length : 0;
+    const numericCount = (...values) => {
+      for (const value of values) {
+        if (Number.isFinite(Number(value))) return Math.max(0, Math.round(Number(value)));
+      }
+      return 0;
+    };
+    const definitions = [
+      { id: "dtc_snapshot", count: countItems(dtcSnapshot?.codes), valueKey: "dtcCount" },
+      { id: "live_pid_snapshot", count: countItems(livePidSnapshot?.monitorValues), valueKey: "livePidValueCount" },
+      { id: "freeze_frame_snapshot", count: countItems(freezeFrameSnapshot?.monitorValues), valueKey: "freezeFrameValueCount" },
+      { id: "readiness_snapshot", count: numericCount(readinessSnapshot?.monitorCount, countItems(readinessSnapshot?.monitors)), valueKey: "readinessMonitorCount" },
+      { id: "ecu_info_snapshot", count: numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), valueKey: "ecuInfoItemCount" },
+      { id: "onboard_monitor_snapshot", count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)), valueKey: "onboardMonitorTestCount" },
+      { id: "supported_pid_matrix", count: numericCount(supportedPidMatrix?.supportedCount, countItems(supportedPidMatrix?.supportedPids)), valueKey: "supportedPidCount" }
+    ];
+    const items = definitions.map((item) => {
+      const coverageItem = coverage.itemById?.[item.id] || null;
+      const status = item.count > 0 ? "captured" : coverageItem?.status || "missing";
+      return {
+        ...item,
+        label: coverageItem?.label || item.id,
+        status,
+        captured: status === "captured",
+        empty: status === "empty",
+        missing: status === "missing"
+      };
+    });
+    const itemById = items.reduce((byId, item) => {
+      byId[item.id] = item;
+      return byId;
+    }, {});
+    const countsById = items.reduce((counts, item) => {
+      counts[item.id] = item.count;
+      return counts;
+    }, {});
+    const capturedIds = items.filter((item) => item.captured).map((item) => item.id);
+    const emptyIds = items.filter((item) => item.empty).map((item) => item.id);
+    const missingIds = items.filter((item) => item.missing).map((item) => item.id);
+    const totalValueCount = items.reduce((total, item) => total + item.count, 0);
+    return {
+      schemaVersion: "core_readout_inventory_v1",
+      totalReadoutCount: items.length,
+      capturedReadoutCount: capturedIds.length,
+      emptyReadoutCount: emptyIds.length,
+      missingReadoutCount: missingIds.length,
+      totalValueCount,
+      countsById,
+      itemById,
+      items,
+      capturedIds,
+      emptyIds,
+      missingIds,
+      hasDtcCodes: countsById.dtc_snapshot > 0,
+      hasLivePidValues: countsById.live_pid_snapshot > 0,
+      hasFreezeFrameValues: countsById.freeze_frame_snapshot > 0,
+      hasReadinessMonitors: countsById.readiness_snapshot > 0,
+      hasEcuInfoItems: countsById.ecu_info_snapshot > 0,
+      hasOnboardMonitorTests: countsById.onboard_monitor_snapshot > 0,
+      hasSupportedPids: countsById.supported_pid_matrix > 0,
+      readinessIncompleteCount: numericCount(readinessSnapshot?.incompleteCount),
+      ecuInfoMissingKeyCount: numericCount(ecuInfoSnapshot?.keyItemSummary?.missingCount),
+      rawPidUndecodedCount: numericCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount) + numericCount(freezeFrameSnapshot?.monitorValueSummary?.undecodedRawCount)
+    };
+  }
+
   function normalizeReadoutCoverageSnapshot(input = {}) {
     if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();
     const totalCategories = Number.isFinite(Number(pickDefined(input.totalCategories, input.total_categories))) ? Math.max(0, Math.round(Number(pickDefined(input.totalCategories, input.total_categories)))) : 0;
@@ -2067,6 +2144,16 @@
       supportedPidMatrix
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
+    const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
+      readoutCoverage,
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
+    });
     appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
@@ -2113,6 +2200,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       readoutCoverage,
+      coreReadoutInventorySummary,
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: resolveMonitorValueSummary(livePidSnapshot.monitorValues, livePidSnapshot.monitorValueSummary),
       monitorInsights: livePidSnapshot.monitorInsights,
@@ -7272,6 +7360,16 @@
       supportedPidMatrix
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
+    const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
+      readoutCoverage,
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
+    });
     appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const explicitWarnings = resolveWarningList(metadataOverrides.warnings);
@@ -7337,6 +7435,7 @@
       livePidSnapshot,
       supportedPidMatrix,
       readoutCoverage,
+      coreReadoutInventorySummary,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
       diagnosticFlowSummary,

@@ -1664,6 +1664,8 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });'), "buildDiagnosticScanSession should resolve metadata after ECU info normalization");
     check(functionBody.includes('resolveSessionTemporalContext({') && functionBody.includes('supportedPidMatrix'), "buildDiagnosticScanSession should derive temporal context from all normalized snapshots");
     check(functionBody.includes('includeInfrastructure: hasBridgeInfrastructureContext'), "buildDiagnosticScanSession should derive readout coverage with bridge infrastructure context");
+    check(source.includes('function buildCoreReadoutInventorySummary({') && source.includes('schemaVersion: "core_readout_inventory_v1"'), "buildDiagnosticScanSession should have a core readout inventory summary builder");
+    check(functionBody.includes('const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({') && functionBody.includes('coreReadoutInventorySummary,'), "buildDiagnosticScanSession should expose core readout inventory summaries");
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should append bridge readout warnings through bridge context guard");
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should resolve readout coverage before appending bridge readout warnings");
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "buildDiagnosticScanSession should build core session status from resolved readout candidates");
@@ -1875,7 +1877,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1094+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1100+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1908,7 +1910,7 @@ check(appSource.includes('const addedLabel = formatChangedIdReviewTargetIds(adde
 check(appSource.includes('const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);') && appSource.includes('addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel'), "OBD diagnostic flow panel should show primary review target action ids");
 check(appSource.includes('const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);') && appSource.includes('["差分確認", changedIdReviewTargetActionLabel]'), "OBD session summary should show primary review target action ids");
 check(appSource.includes('const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(summarySource.importedSessionComparisonSummary?.changedIdDisplaySummary, "");') && appSource.includes('notes.push(`差分確認 ${changedIdReviewTargetActionNote}`);'), "OBD analysis notes should include primary review target action ids");
-check(appSource.includes('const APP_VERSION = "2.445.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for primary review target action summaries");
+check(appSource.includes('const APP_VERSION = "2.446.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for core readout inventory summaries");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
@@ -5195,6 +5197,8 @@ check(populatedScanSession.coreSessionStatus?.completionPercent === 100, "Diagno
 check(populatedScanSession.coreSessionStatus?.readyForAnalysis === true, "Diagnostic scan session did not mark populated inputs as ready for analysis");
 check(Array.isArray(populatedScanSession.coreSessionStatus?.remainingReadoutIds) && populatedScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session did not clear remaining core readouts for populated inputs");
 check(Array.isArray(populatedScanSession.coreSessionStatus?.emptyReadoutIds) && populatedScanSession.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session did not clear emptyReadoutIds for populated inputs");
+check(populatedScanSession.coreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1" && populatedScanSession.coreReadoutInventorySummary?.capturedReadoutCount === 7, "Diagnostic scan session did not expose populated core readout inventory summary");
+check(populatedScanSession.coreReadoutInventorySummary?.countsById?.dtc_snapshot === bridgeDtcSnapshot.codes.length && populatedScanSession.coreReadoutInventorySummary?.itemById?.freeze_frame_snapshot?.count === bridgeFreezeFrameSnapshot.monitorValues.length, "Diagnostic scan session did not align core readout inventory counts with normalized snapshots");
 const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-empty-readout-scan-session",
   dtcSnapshot: { blocked: false, capturedAt: "2026-07-06T00:00:00Z", codes: [], dtcs: [] },
@@ -5211,6 +5215,8 @@ check(emptyReadoutScanSession.coreSessionStatus?.readyForAnalysis === false, "Di
 check(emptyReadoutScanSession.coreSessionStatus?.status === "collecting_readouts", "Diagnostic scan session did not keep empty completed core readouts in collecting_readouts status");
 check(emptyReadoutScanSession.coreSessionStatus?.applicabilityStatus === "unknown", "Diagnostic scan session did not expose unknown applicability status when vehicle applicability is absent");
 check(emptyReadoutScanSession.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not prioritize dtc_snapshot for completed empty core readouts without vehicle applicability");
+check(emptyReadoutScanSession.coreReadoutInventorySummary?.emptyReadoutCount === 7 && emptyReadoutScanSession.coreReadoutInventorySummary?.missingReadoutCount === 0, "Diagnostic scan session did not distinguish empty completed readouts from missing inventory readouts");
+check(emptyReadoutScanSession.coreReadoutInventorySummary?.totalValueCount === 0 && emptyReadoutScanSession.coreReadoutInventorySummary?.hasDtcCodes === false, "Diagnostic scan session did not expose empty core readout inventory value counts");
 const emptyManualApplicabilityScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-empty-manual-applicability-scan-session",
   vehicle_applicability: { status: "manual" },
@@ -7892,6 +7898,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1094");
+  console.log("OBD read-only safety checks: 1100");
   console.log("Errors: 0");
 }
