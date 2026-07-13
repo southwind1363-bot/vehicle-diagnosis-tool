@@ -4442,6 +4442,9 @@
         counts[kind] = buildKindDirectionCountSummary(kind);
         return counts;
       }, {});
+    const primaryChangedKindDirectionCounts = primaryChangedIdSummary?.kind
+      ? changedIdDisplayKindDirectionCounts[primaryChangedIdSummary.kind] || buildKindDirectionCountSummary(primaryChangedIdSummary.kind)
+      : null;
     const changedIdDisplayMatrixSummary = {
       schemaVersion: "changed_id_display_matrix_summary_v1",
       directions: changedIdDisplayMatrixDirections,
@@ -4467,6 +4470,11 @@
       primaryChangedId: primaryChangedIdSummary?.id || null,
       primaryChangedIdDirection,
       primaryChangedIdKind: primaryChangedIdSummary?.kind || null,
+      primaryChangedKindDirectionCounts,
+      primaryChangedKindTotalCount: primaryChangedKindDirectionCounts?.total || 0,
+      primaryChangedKindAddedCount: primaryChangedKindDirectionCounts?.added || 0,
+      primaryChangedKindRemovedCount: primaryChangedKindDirectionCounts?.removed || 0,
+      primaryChangedKindMixedCount: primaryChangedKindDirectionCounts?.mixed || 0,
       primaryChangedIdKey: primaryChangedIdSummary?.id && primaryChangedIdSummary?.kind
         ? `${primaryChangedIdSummary.kind}:${primaryChangedIdSummary.id}`
         : null,
