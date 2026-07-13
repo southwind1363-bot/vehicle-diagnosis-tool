@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1207+件",
+  validationCheckLabel: "OBD安全検証 1209+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.466.0";
+const APP_VERSION = "2.467.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5525,22 +5525,28 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
 
 function formatReadoutQualityReviewRequestSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
+  const planSummary = summary.readoutQualityReviewRequestPlanSummary || summary.readout_quality_review_request_plan_summary || null;
   const request = summary.primaryReadoutQualityReviewRequest
     || summary.primary_readout_quality_review_request
     || summary.primaryRequest
     || summary.primary_request
+    || planSummary?.primaryReadoutQualityReviewRequest
+    || planSummary?.primary_readout_quality_review_request
+    || planSummary?.primaryRequest
+    || planSummary?.primary_request
     || summary.readoutQualityReviewRequestSummaries?.[0]
     || summary.readout_quality_review_request_summaries?.[0]
+    || planSummary?.readoutQualityReviewRequestSummaries?.[0]
+    || planSummary?.readout_quality_review_request_summaries?.[0]
     || summary.readoutQualityReviewActionSummary
     || summary.readout_quality_review_action_summary
     || null;
   if (!request || typeof request !== "object") return fallback;
-  const readoutId = request.readoutId || request.readout_id || request.primaryReadoutId || request.primary_readout_id || summary.primaryReadoutQualityReviewTargetReadoutId || summary.primary_readout_quality_review_target_readout_id || "";
+  const readoutId = request.readoutId || request.readout_id || request.primaryReadoutId || request.primary_readout_id || summary.primaryReadoutQualityReviewTargetReadoutId || summary.primary_readout_quality_review_target_readout_id || planSummary?.primaryReadoutQualityReviewTargetReadoutId || planSummary?.primary_readout_quality_review_target_readout_id || "";
   const label = readoutId ? formatCoreReadoutLabel(readoutId, readoutId) : "";
   const bridgeIntent = request.bridgeIntent || request.bridge_intent || request.actionId || request.action_id || "";
   const serviceModeValue = request.serviceMode || request.service_mode || "";
   const serviceMode = serviceModeValue ? `Mode ${serviceModeValue}` : "";
-  const planSummary = summary.readoutQualityReviewRequestPlanSummary || summary.readout_quality_review_request_plan_summary || null;
   const requestCountValue = planSummary?.requestCount || planSummary?.request_count || summary.requestCount || summary.request_count || summary.readoutQualityReviewRequestCount || summary.readout_quality_review_request_count;
   const requestCount = Number.isFinite(Number(requestCountValue))
     ? Number(requestCountValue)
@@ -5548,7 +5554,7 @@ function formatReadoutQualityReviewRequestSummary(summary, fallback = NO_DATA) {
   const parts = [label, bridgeIntent, serviceMode].filter(Boolean);
   if (requestCount > 1) parts.push(`${requestCount}件`);
   if (!parts.length) return fallback;
-  if (request.vehicleCommandEnabled === false || request.vehicle_command_enabled === false || request.wouldTransmit === false || request.would_transmit === false) parts.push("read-only");
+  if (request.vehicleCommandEnabled === false || request.vehicle_command_enabled === false || request.wouldTransmit === false || request.would_transmit === false || planSummary?.vehicleCommandEnabled === false || planSummary?.vehicle_command_enabled === false || planSummary?.wouldTransmit === false || planSummary?.would_transmit === false) parts.push("read-only");
   return parts.join(" / ");
 }
 
