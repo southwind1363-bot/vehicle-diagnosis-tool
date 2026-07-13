@@ -5026,6 +5026,10 @@
     const readoutQualityReviewIssueIds = Array.isArray(readoutQualityComparison?.reviewIssueIds)
       ? [...readoutQualityComparison.reviewIssueIds]
       : [];
+    const readoutQualityReviewRequestSummaries = readoutQualityReviewTargetReadoutIds
+      .map((readoutId) => buildReadOnlyNextReadoutRequest({ id: readoutId, label: readoutId, status: "review" }))
+      .filter(Boolean);
+    const primaryReadoutQualityReviewRequest = readoutQualityReviewRequestSummaries[0] || null;
     return {
       schemaVersion: "imported_session_comparison_v1",
       hasImportedSessionState: true,
@@ -5078,6 +5082,13 @@
       readoutQualityReviewTargetReadoutIds,
       readoutQualityReviewTargetReadoutCount: readoutQualityReviewTargetReadoutIds.length,
       primaryReadoutQualityReviewTargetReadoutId: readoutQualityReviewActionSummary?.primaryReadoutId || readoutQualityReviewTargetReadoutIds[0] || null,
+      readoutQualityReviewRequestSummaries,
+      readoutQualityReviewRequestCount: readoutQualityReviewRequestSummaries.length,
+      readoutQualityReviewRequestByReadoutId: readoutQualityReviewRequestSummaries.reduce((byId, item) => {
+        byId[item.readoutId] = item;
+        return byId;
+      }, {}),
+      primaryReadoutQualityReviewRequest,
       readoutQualityReviewIssueIds,
       readoutQualityReviewIssueCount: readoutQualityReviewIssueIds.length,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
