@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1087+件",
+  validationCheckLabel: "OBD安全検証 1088+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.441.0";
+const APP_VERSION = "2.442.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5319,12 +5319,12 @@ function formatPrimaryBlockerChangeSummary(summary, fallback = NO_DATA) {
 
 function formatChangedIdReviewTargetLabel(reviewTarget = "") {
   return {
-    readout_review: "review:readout",
-    bridge_contract_review: "review:bridge",
-    request_plan_review: "review:request-plan",
-    blocked_reason_review: "review:blocker",
-    analysis_checklist_review: "review:checklist",
-    session_review: "review:session"
+    readout_review: "確認:読取",
+    bridge_contract_review: "確認:ブリッジ",
+    request_plan_review: "確認:要求計画",
+    blocked_reason_review: "確認:保留要因",
+    analysis_checklist_review: "確認:解析前",
+    session_review: "確認:セッション"
   }[reviewTarget] || reviewTarget || "";
 }
 
