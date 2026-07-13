@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1221+件",
+  validationCheckLabel: "OBD安全検証 1224+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "import比較 / request plan summaryをscan sessionへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.471.0";
+const APP_VERSION = "2.472.0";
 const APP_LAST_UPDATED = "2026-07-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5441,12 +5441,18 @@ function formatChangedIdReviewTargetActionSummary(summary, fallback = NO_DATA) {
 
 function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
-  const counts = summary.countsById && typeof summary.countsById === "object" ? summary.countsById : {};
-  const totalValueCount = Number.isFinite(Number(summary.totalValueCount)) ? Number(summary.totalValueCount) : 0;
-  const captured = Number.isFinite(Number(summary.capturedReadoutCount)) ? Number(summary.capturedReadoutCount) : 0;
-  const attempted = Number.isFinite(Number(summary.attemptedReadoutCount)) ? Number(summary.attemptedReadoutCount) : captured;
-  const pending = Number.isFinite(Number(summary.pendingReadoutCount)) ? Number(summary.pendingReadoutCount) : 0;
-  const total = Number.isFinite(Number(summary.totalReadoutCount)) ? Number(summary.totalReadoutCount) : 0;
+  const countsSource = summary.countsById || summary.counts_by_id || {};
+  const counts = countsSource && typeof countsSource === "object" ? countsSource : {};
+  const totalValueCountValue = summary.totalValueCount ?? summary.total_value_count;
+  const capturedReadoutCountValue = summary.capturedReadoutCount ?? summary.captured_readout_count;
+  const attemptedReadoutCountValue = summary.attemptedReadoutCount ?? summary.attempted_readout_count;
+  const pendingReadoutCountValue = summary.pendingReadoutCount ?? summary.pending_readout_count;
+  const totalReadoutCountValue = summary.totalReadoutCount ?? summary.total_readout_count;
+  const totalValueCount = Number.isFinite(Number(totalValueCountValue)) ? Number(totalValueCountValue) : 0;
+  const captured = Number.isFinite(Number(capturedReadoutCountValue)) ? Number(capturedReadoutCountValue) : 0;
+  const attempted = Number.isFinite(Number(attemptedReadoutCountValue)) ? Number(attemptedReadoutCountValue) : captured;
+  const pending = Number.isFinite(Number(pendingReadoutCountValue)) ? Number(pendingReadoutCountValue) : 0;
+  const total = Number.isFinite(Number(totalReadoutCountValue)) ? Number(totalReadoutCountValue) : 0;
   const parts = [];
   if (total) parts.push(`${captured}/${total}読取`);
   if (total && attempted !== captured) parts.push(`試行${attempted}/${total}`);
@@ -5469,21 +5475,35 @@ function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
 
 function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
-  const totalDelta = Number.isFinite(Number(summary.totalValueCountDelta)) ? Number(summary.totalValueCountDelta) : 0;
-  const capturedDelta = Number.isFinite(Number(summary.capturedReadoutDelta)) ? Number(summary.capturedReadoutDelta) : 0;
-  const attemptedDelta = Number.isFinite(Number(summary.attemptedReadoutDelta)) ? Number(summary.attemptedReadoutDelta) : 0;
-  const pendingDelta = Number.isFinite(Number(summary.pendingReadoutDelta)) ? Number(summary.pendingReadoutDelta) : 0;
-  const changedIds = Array.isArray(summary.changedValueCountIds) ? summary.changedValueCountIds : [];
+  const totalValueCountDeltaValue = summary.totalValueCountDelta ?? summary.total_value_count_delta;
+  const capturedReadoutDeltaValue = summary.capturedReadoutDelta ?? summary.captured_readout_delta;
+  const attemptedReadoutDeltaValue = summary.attemptedReadoutDelta ?? summary.attempted_readout_delta;
+  const pendingReadoutDeltaValue = summary.pendingReadoutDelta ?? summary.pending_readout_delta;
+  const totalDelta = Number.isFinite(Number(totalValueCountDeltaValue)) ? Number(totalValueCountDeltaValue) : 0;
+  const capturedDelta = Number.isFinite(Number(capturedReadoutDeltaValue)) ? Number(capturedReadoutDeltaValue) : 0;
+  const attemptedDelta = Number.isFinite(Number(attemptedReadoutDeltaValue)) ? Number(attemptedReadoutDeltaValue) : 0;
+  const pendingDelta = Number.isFinite(Number(pendingReadoutDeltaValue)) ? Number(pendingReadoutDeltaValue) : 0;
+  const changedIds = Array.isArray(summary.changedValueCountIds) ? summary.changedValueCountIds : Array.isArray(summary.changed_value_count_ids) ? summary.changed_value_count_ids : [];
+  const snakeNextPendingReadoutChanged = summary.next_pending_readout_changed === true && summary.nextPendingReadoutChanged !== true;
+  const rawPidUndecodedDeltaValue = summary.rawPidUndecodedDelta ?? summary.raw_pid_undecoded_delta;
+  const readinessIncompleteDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
+  const ecuInfoMissingKeyDeltaValue = summary.ecuInfoMissingKeyDelta ?? summary.ecu_info_missing_key_delta;
+  const rawDelta = Number.isFinite(Number(rawPidUndecodedDeltaValue)) ? Number(rawPidUndecodedDeltaValue) : 0;
+  const readinessDelta = Number.isFinite(Number(readinessIncompleteDeltaValue)) ? Number(readinessIncompleteDeltaValue) : 0;
+  const ecuDelta = Number.isFinite(Number(ecuInfoMissingKeyDeltaValue)) ? Number(ecuInfoMissingKeyDeltaValue) : 0;
   const parts = [];
   if (totalDelta !== 0) parts.push(`値${totalDelta > 0 ? "+" : ""}${totalDelta}`);
   if (capturedDelta !== 0) parts.push(`読取${capturedDelta > 0 ? "+" : ""}${capturedDelta}`);
   if (attemptedDelta !== 0) parts.push(`試行${attemptedDelta > 0 ? "+" : ""}${attemptedDelta}`);
   if (pendingDelta !== 0) parts.push(`保留${pendingDelta > 0 ? "+" : ""}${pendingDelta}`);
   if (changedIds.length) parts.push(changedIds.slice(0, 3).map((id) => formatCoreReadoutLabel(id, id)).join(","));
-  if (summary.nextPendingReadoutChanged === true) parts.push(`次${formatCoreReadoutLabel(summary.currentNextPendingReadoutId, summary.currentNextPendingReadoutId || "なし")}`);
-  if (summary.rawPidUndecodedDelta) parts.push(`raw${summary.rawPidUndecodedDelta > 0 ? "+" : ""}${summary.rawPidUndecodedDelta}`);
-  if (summary.readinessIncompleteDelta) parts.push(`RDY未完${summary.readinessIncompleteDelta > 0 ? "+" : ""}${summary.readinessIncompleteDelta}`);
-  if (summary.ecuInfoMissingKeyDelta) parts.push(`ECU不足${summary.ecuInfoMissingKeyDelta > 0 ? "+" : ""}${summary.ecuInfoMissingKeyDelta}`);
+  if (summary.nextPendingReadoutChanged === true || snakeNextPendingReadoutChanged) {
+    const nextId = summary.currentNextPendingReadoutId ?? summary.current_next_pending_readout_id;
+    parts.push(`次${formatCoreReadoutLabel(nextId, nextId || "なし")}`);
+  }
+  if (rawDelta) parts.push(`raw${rawDelta > 0 ? "+" : ""}${rawDelta}`);
+  if (readinessDelta) parts.push(`RDY未完${readinessDelta > 0 ? "+" : ""}${readinessDelta}`);
+  if (ecuDelta) parts.push(`ECU不足${ecuDelta > 0 ? "+" : ""}${ecuDelta}`);
   return parts.length ? parts.join(" / ") : "変化なし";
 }
 
@@ -5645,8 +5665,10 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const changedIdDisplaySummary = session.importedSessionComparisonSummary?.changedIdDisplaySummary || null;
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
-  const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session.coreReadoutInventorySummary, NO_DATA);
-  const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
+  const coreReadoutInventorySummary = session.coreReadoutInventorySummary || session.core_readout_inventory_summary || null;
+  const coreReadoutInventoryComparisonSummary = session.importedCoreReadoutInventoryComparisonSummary || session.imported_core_readout_inventory_comparison_summary || null;
+  const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(coreReadoutInventorySummary, NO_DATA);
+  const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(coreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualitySummary = core.readoutQualitySummary || core.readout_quality_summary || flow.readoutQualitySummary || flow.readout_quality_summary || null;
   const readoutQualityLabel = formatReadoutQualitySummary(readoutQualitySummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);
@@ -5696,8 +5718,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "主保留比較", primaryBlockerComparisonLabel, primaryBlockerComparisonSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取差分", changedIdDisplayLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
-  addObdDiagnosticFlowMetric(grid, "読取内訳", coreReadoutInventoryLabel, session.coreReadoutInventorySummary?.missingReadoutCount ? "pending" : "");
-  addObdDiagnosticFlowMetric(grid, "在庫比較", coreReadoutInventoryComparisonLabel, session.importedCoreReadoutInventoryComparisonSummary?.valueCountsChanged === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "読取内訳", coreReadoutInventoryLabel, coreReadoutInventorySummary?.missingReadoutCount || coreReadoutInventorySummary?.missing_readout_count ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "在庫比較", coreReadoutInventoryComparisonLabel, coreReadoutInventoryComparisonSummary?.valueCountsChanged === true || coreReadoutInventoryComparisonSummary?.value_counts_changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取品質", readoutQualityLabel, readoutQualitySummary?.reviewRequired || readoutQualitySummary?.review_required ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
@@ -5760,8 +5782,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(session?.importedSessionComparisonSummary?.primaryBlockerChangeSummary, NO_DATA);
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);
-  const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary, NO_DATA);
-  const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary, NO_DATA);
+  const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary || session?.core_readout_inventory_summary, NO_DATA);
+  const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(session?.coreSessionStatus?.readoutQualitySummary || session?.coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || session?.importedSessionComparisonSummary, NO_DATA);
@@ -6329,11 +6351,11 @@ function analyzeObdScannerImport() {
   if (analysisCoreStatusLabel) {
     notes.push(`コア ${analysisCoreStatusLabel}`);
   }
-  const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary, "");
+  const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");
   if (coreReadoutInventoryNote) {
     notes.push(`読取内訳 ${coreReadoutInventoryNote}`);
   }
-  const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary, "");
+  const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");
   if (coreReadoutInventoryComparisonNote) {
     notes.push(`在庫比較 ${coreReadoutInventoryComparisonNote}`);
   }
