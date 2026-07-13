@@ -5228,6 +5228,18 @@
       || analysisReadinessSummary?.readoutRequestPlanGateSummary
       || diagnosticFlowSummary.readoutRequestPlanGateSummary
       || null;
+    const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
+      || summary.core_readout_inventory_summary
+      || buildCoreReadoutInventorySummary({
+        readoutCoverage: summary.readoutCoverage,
+        dtcSnapshot: { codes: summary.codes || [] },
+        livePidSnapshot: { monitorValues: summary.monitorValues || [], monitorValueSummary: summary.monitorValueSummary || null },
+        freezeFrameSnapshot: summary.freezeFrameSnapshot,
+        readinessSnapshot: summary.readinessSnapshot,
+        ecuInfoSnapshot: summary.ecuInfoSnapshot,
+        onboardMonitorSnapshot: summary.onboardMonitorSnapshot,
+        supportedPidMatrix: summary.supportedPidMatrix
+      });
     return {
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
@@ -5267,6 +5279,7 @@
         readout_completion_summary: readoutCompletionSummary,
         analysis_readiness_summary: analysisReadinessSummary,
         readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+        core_readout_inventory_summary: coreReadoutInventorySummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
         source_length: metadataFields.source_length
       },
@@ -5342,6 +5355,19 @@
       || analysisReadinessSummary?.readoutRequestPlanGateSummary
       || diagnosticFlowSummary.readoutRequestPlanGateSummary
       || null;
+    const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
+      || summary.core_readout_inventory_summary
+      || exportPayload.session?.core_readout_inventory_summary
+      || buildCoreReadoutInventorySummary({
+        readoutCoverage: summary.readoutCoverage,
+        dtcSnapshot: { codes: summary.codes || [] },
+        livePidSnapshot: { monitorValues: summary.monitorValues || [], monitorValueSummary: summary.monitorValueSummary || null },
+        freezeFrameSnapshot: summary.freezeFrameSnapshot,
+        readinessSnapshot: summary.readinessSnapshot,
+        ecuInfoSnapshot: summary.ecuInfoSnapshot,
+        onboardMonitorSnapshot: summary.onboardMonitorSnapshot,
+        supportedPidMatrix: summary.supportedPidMatrix
+      });
     const codes = cloneBridgeArrayItems(summary.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
     const monitorInsights = cloneBridgeArrayItems(summary.monitorInsights);
@@ -5378,6 +5404,7 @@
       readoutCompletionSummary,
       analysisReadinessSummary,
       readoutRequestPlanGateSummary,
+      coreReadoutInventorySummary,
       bridgeSession: {
         startedAt: summary.startedAt || null,
         endedAt: summary.endedAt || null,
@@ -5408,6 +5435,7 @@
         readoutCompletionSummary,
         analysisReadinessSummary,
         readoutRequestPlanGateSummary,
+        coreReadoutInventorySummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
         sourceLength: bridgeSessionMetadataFields.sourceLength,
         exportRequired: true
@@ -5544,6 +5572,16 @@
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
+    const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
+      readoutCoverage: mergedBridgeMetadata.readoutCoverage,
+      dtcSnapshot: { codes },
+      livePidSnapshot: { monitorValues, monitorValueSummary },
+      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
+      readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
+      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
+      onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
+      supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null
+    });
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
@@ -5591,6 +5629,7 @@
       readoutCompletionSummary,
       analysisReadinessSummary,
       readoutRequestPlanGateSummary,
+      coreReadoutInventorySummary,
       importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
       importedReadoutCompletionSummary,

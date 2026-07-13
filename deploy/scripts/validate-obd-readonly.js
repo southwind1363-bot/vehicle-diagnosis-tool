@@ -457,6 +457,7 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('readout_completion_summary: readoutCompletionSummary,'), "buildBridgeSessionExportPayload should serialize readout completion summary");
     check(functionBody.includes('analysis_readiness_summary: analysisReadinessSummary,'), "buildBridgeSessionExportPayload should serialize analysis readiness summary");
     check(functionBody.includes('readout_request_plan_gate_summary: readoutRequestPlanGateSummary,'), "buildBridgeSessionExportPayload should serialize readout request plan gate summary");
+    check(functionBody.includes('const coreReadoutInventorySummary = summary.coreReadoutInventorySummary') && functionBody.includes('core_readout_inventory_summary: coreReadoutInventorySummary,'), "buildBridgeSessionExportPayload should serialize core readout inventory summaries");
   }
 };
 const bridgeDiagnosticImportFunctionChecks = () => {
@@ -472,6 +473,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary') && functionBody.includes('readoutCompletionSummary,'), "buildBridgeDiagnosticImport should preserve readout completion summary");
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary') && functionBody.includes('analysisReadinessSummary,'), "buildBridgeDiagnosticImport should preserve analysis readiness summary");
     check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "buildBridgeDiagnosticImport should preserve readout request plan gate summary");
+    check(functionBody.includes('const coreReadoutInventorySummary = summary.coreReadoutInventorySummary') && functionBody.includes('coreReadoutInventorySummary,'), "buildBridgeDiagnosticImport should preserve core readout inventory summary");
   }
 };
 const sessionMetadataOverridesFunctionChecks = () => {
@@ -902,6 +904,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;') && functionBody.includes('readoutCompletionSummary,'), "mergeDiagnosticInputs should expose a top-level readout completion summary");
     check(functionBody.includes('const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;') && functionBody.includes('analysisReadinessSummary,'), "mergeDiagnosticInputs should expose a top-level analysis readiness summary");
     check(functionBody.includes('const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "mergeDiagnosticInputs should expose a top-level readout request plan gate summary");
+    check(functionBody.includes('const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({') && functionBody.includes('coreReadoutInventorySummary,'), "mergeDiagnosticInputs should expose a top-level core readout inventory summary");
     check(functionBody.includes('onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,'), "mergeDiagnosticInputs should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "mergeDiagnosticInputs should remain read-only and avoid raw text retention");
   }
@@ -1877,7 +1880,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1100+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1106+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -1910,7 +1913,7 @@ check(appSource.includes('const addedLabel = formatChangedIdReviewTargetIds(adde
 check(appSource.includes('const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);') && appSource.includes('addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel'), "OBD diagnostic flow panel should show primary review target action ids");
 check(appSource.includes('const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(session?.importedSessionComparisonSummary?.changedIdDisplaySummary, NO_DATA);') && appSource.includes('["差分確認", changedIdReviewTargetActionLabel]'), "OBD session summary should show primary review target action ids");
 check(appSource.includes('const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(summarySource.importedSessionComparisonSummary?.changedIdDisplaySummary, "");') && appSource.includes('notes.push(`差分確認 ${changedIdReviewTargetActionNote}`);'), "OBD analysis notes should include primary review target action ids");
-check(appSource.includes('const APP_VERSION = "2.446.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for core readout inventory summaries");
+check(appSource.includes('const APP_VERSION = "2.447.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-13";'), "OBD app version should advance for core readout inventory export paths");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('const nextReadoutRequest = flow.nextReadoutRequest || core.nextReadoutRequest || core.nextReadoutSummary?.readoutRequest || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel'), "OBD diagnostic flow panel should show read-only next readout request metadata");
@@ -3246,6 +3249,7 @@ check(Array.isArray(bridgeExportPayload.session.readout_completion_summary?.pend
 check(bridgeExportPayload.session.readout_completion_summary?.capturedCount === bridgeExportPayload.session.readout_completion_summary?.capturedIds?.length, "Bridge export did not carry readout completion captured count");
 check(bridgeExportPayload.session.analysis_readiness_summary?.ready === bridgeExportPayload.session.core_session_status?.analysisReadinessSummary?.ready, "Bridge export did not carry analysis readiness summary");
 check(bridgeExportPayload.session.readout_request_plan_gate_summary?.state === bridgeExportPayload.session.core_session_status?.readoutRequestPlanGateSummary?.state, "Bridge export did not carry readout request plan gate summary");
+check(bridgeExportPayload.session.core_readout_inventory_summary?.schemaVersion === "core_readout_inventory_v1" && bridgeExportPayload.session.core_readout_inventory_summary?.countsById?.dtc_snapshot === bridgeDtcSnapshot.codes.length, "Bridge export did not carry core readout inventory summary");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
 check(bridgeExportPayload.session.monitor_values.length === 3, "ブリッジエクスポートへPID値を引き継げません");
 check(bridgeExportPayload.session.tool_hints.join(",") === "Techstream,J2534", "Bridge export did not carry tool_hints");
@@ -3472,6 +3476,7 @@ check(bridgeDiagnosticImport.analysisReadinessSummary?.ready === bridgeDiagnosti
 check(bridgeDiagnosticImport.bridgeSession?.analysisReadinessSummary?.ready === bridgeDiagnosticImport.bridgeSession?.coreSessionStatus?.analysisReadinessSummary?.ready, "Bridge diagnostic import did not retain analysis readiness summary on bridgeSession");
 check(bridgeDiagnosticImport.readoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Bridge diagnostic import did not carry top-level readout request plan gate summary");
 check(bridgeDiagnosticImport.bridgeSession?.readoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.bridgeSession?.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Bridge diagnostic import did not retain readout request plan gate summary on bridgeSession");
+check(bridgeDiagnosticImport.coreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1" && bridgeDiagnosticImport.bridgeSession?.coreReadoutInventorySummary?.countsById?.dtc_snapshot === bridgeDtcSnapshot.codes.length, "Bridge diagnostic import did not retain core readout inventory summary");
 check(bridgeDiagnosticImport.freezeFrameSnapshot.monitorValues.length === 2, "ブリッジ診断取込へフリーズフレームを引き継げません");
 check(bridgeDiagnosticImport.monitorInsights.length > 0, "ブリッジ診断取込へ相関ヒントを引き継げません");
 check(bridgeDiagnosticImport.connectionStatus.displayStatus === "読取準備モデル", "Bridge diagnostic import did not expose top-level connection status");
@@ -4081,6 +4086,7 @@ check(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.capturedIds?.
 check(Array.isArray(mergedDiagnosticInputExportPayload.readoutCompletionSummary?.pendingIds), "Combined diagnostic inputs did not expose top-level readout completion pending ids for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.analysisReadinessSummary?.ready === mergedDiagnosticInputExportPayload.coreSessionStatus?.analysisReadinessSummary?.ready, "Combined diagnostic inputs did not expose top-level analysis readiness summary");
 check(mergedDiagnosticInputExportPayload.readoutRequestPlanGateSummary?.state === mergedDiagnosticInputExportPayload.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Combined diagnostic inputs did not expose top-level readout request plan gate summary");
+check(mergedDiagnosticInputExportPayload.coreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1" && mergedDiagnosticInputExportPayload.coreReadoutInventorySummary?.countsById?.dtc_snapshot >= bridgeDtcSnapshot.codes.length, "Combined diagnostic inputs did not expose top-level core readout inventory summary");
 check(mergedDiagnosticInputExportPayload.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Combined diagnostic inputs did not preserve imported core session status for bridge_session_export_v1 bridge_import input");
 check(mergedDiagnosticInputExportPayload.importedReadoutRequestPlanGateSummary?.state === bridgeExportPayload.session.readout_request_plan_gate_summary?.state, "Combined diagnostic inputs did not preserve imported readout request plan gate summary");
 check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Combined diagnostic inputs did not preserve imported diagnostic flow summary for bridge_session_export_v1 bridge_import input");
@@ -7898,6 +7904,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1100");
+  console.log("OBD read-only safety checks: 1106");
   console.log("Errors: 0");
 }
