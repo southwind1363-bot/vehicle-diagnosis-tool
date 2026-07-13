@@ -4436,9 +4436,29 @@
         removedCount: byDirection.removed.count
       };
     });
+    const changedIdReviewTargetMatrixRows = changedIdDisplayGroupsByReviewTarget.map((group) => {
+      const byDirection = changedIdDisplayMatrixDirections.reduce((directionGroups, direction) => {
+        const rows = changedIdDisplayRows.filter((row) => row.reviewTarget === group.value && row.direction === direction);
+        directionGroups[direction] = buildChangedIdDisplayGroup(direction, rows);
+        return directionGroups;
+      }, {});
+      return {
+        reviewTarget: group.value,
+        count: group.count,
+        primaryKey: group.primaryKey,
+        byDirection,
+        mixedCount: byDirection.mixed.count,
+        addedCount: byDirection.added.count,
+        removedCount: byDirection.removed.count
+      };
+    });
     const changedIdDisplayMatrixRowByKind = changedIdDisplayMatrixRows.reduce((byKind, row) => {
       byKind[row.kind] = row;
       return byKind;
+    }, {});
+    const changedIdReviewTargetMatrixRowByTarget = changedIdReviewTargetMatrixRows.reduce((byTarget, row) => {
+      byTarget[row.reviewTarget] = row;
+      return byTarget;
     }, {});
     const buildKindDirectionCountSummary = (kind) => {
       const row = changedIdDisplayMatrixRowByKind[kind] || {};
@@ -4507,6 +4527,8 @@
       schemaVersion: "changed_id_review_target_summary_v1",
       groups: changedIdDisplayGroupsByReviewTarget,
       byTarget: changedIdDisplayGroupByReviewTarget,
+      matrixRows: changedIdReviewTargetMatrixRows,
+      matrixRowByTarget: changedIdReviewTargetMatrixRowByTarget,
       targetCount: changedIdDisplayGroupsByReviewTarget.length,
       totalChangedIdCount: changedIdDisplayRows.length,
       primaryTarget: primaryChangedIdReviewTarget
@@ -4618,9 +4640,12 @@
       primaryChangedIdDisplayRow,
       changedIdDisplayGroupByKind,
       changedIdDisplayGroupByDirection,
+      changedIdDisplayGroupByReviewTarget,
       changedIdDisplayGroupSummary,
       changedIdDisplayMatrixRowByKind,
       changedIdDisplayMatrixSummary,
+      changedIdReviewTargetMatrixRowByTarget,
+      changedIdReviewTargetSummary,
       changedIdDisplaySummary,
       readoutChangedIds: [...readoutChangedIdSummary.ids],
       bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
