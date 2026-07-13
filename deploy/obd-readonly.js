@@ -5756,6 +5756,7 @@
       analysisReadinessSummary,
       readoutQualitySummary,
       importedReadoutQualityReviewRequestPlanSummary,
+      imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       readoutRequestPlanGateSummary,
       coreReadoutInventorySummary,
       bridgeSession: {
@@ -5789,6 +5790,7 @@
         analysisReadinessSummary,
         readoutQualitySummary,
         importedReadoutQualityReviewRequestPlanSummary,
+        imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
         readoutRequestPlanGateSummary,
         coreReadoutInventorySummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
