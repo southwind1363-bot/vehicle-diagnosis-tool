@@ -1949,20 +1949,34 @@
       ...(transmittingRequestIds.length ? ["transmitting_requests"] : [])
     ];
     const safeForBridgePlanning = blockedReasonIds.length === 0;
+    const blockedReasonById = {
+      unmapped_readout_requests: { count: unmappedCount, readoutIds: [...safeUnmappedRequestIds] },
+      non_read_only_requests: { count: nonReadOnlyRequestIds.length, readoutIds: [...nonReadOnlyRequestIds] },
+      transmitting_requests: { count: transmittingRequestIds.length, readoutIds: [...transmittingRequestIds] }
+    };
     return {
       mappedPercent: totalCount ? Math.round((mappedCount / totalCount) * 100) : 100,
+      mapped_percent: totalCount ? Math.round((mappedCount / totalCount) * 100) : 100,
       unmappedPercent: totalCount ? Math.round((unmappedCount / totalCount) * 100) : 0,
+      unmapped_percent: totalCount ? Math.round((unmappedCount / totalCount) * 100) : 0,
       hasUnmappedRequests: unmappedCount > 0,
+      has_unmapped_requests: unmappedCount > 0,
       mappingStatus: unmappedCount > 0 ? "partial" : "mapped",
+      mapping_status: unmappedCount > 0 ? "partial" : "mapped",
       allReadOnly,
+      all_read_only: allReadOnly,
       allNonTransmitting,
+      all_non_transmitting: allNonTransmitting,
       safeForBridgePlanning,
+      safe_for_bridge_planning: safeForBridgePlanning,
+      nonReadOnlyRequestIds,
+      non_read_only_request_ids: nonReadOnlyRequestIds,
+      transmittingRequestIds,
+      transmitting_request_ids: transmittingRequestIds,
       blockedReasonIds,
-      blockedReasonById: {
-        unmapped_readout_requests: { count: unmappedCount, readoutIds: [...safeUnmappedRequestIds] },
-        non_read_only_requests: { count: nonReadOnlyRequestIds.length, readoutIds: [...nonReadOnlyRequestIds] },
-        transmitting_requests: { count: transmittingRequestIds.length, readoutIds: [...transmittingRequestIds] }
-      }
+      blocked_reason_ids: blockedReasonIds,
+      blockedReasonById,
+      blocked_reason_by_id: blockedReasonById
     };
   }
 
