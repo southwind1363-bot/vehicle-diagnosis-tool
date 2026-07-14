@@ -3579,14 +3579,14 @@
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
-      status: coreSessionStatus?.status || workflow.status || "not_started",
-      currentStep: workflow.currentStep || null,
-      nextAction: workflow.nextAction || null,
-      nextReadoutId: workflow.nextReadoutId || readiness.nextReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
-      nextReadoutLabel: workflow.nextReadoutLabel || readiness.nextReadoutLabel || coreSessionStatus?.nextReadoutSummary?.label || null,
-      nextReadoutStatus: workflow.nextReadoutStatus || readiness.nextReadoutStatus || coreSessionStatus?.nextReadoutState?.status || null,
-      nextReadoutSource: workflow.nextReadoutSource || readiness.nextReadoutSource || coreSessionStatus?.nextReadoutSource || null,
-      nextReadoutQueuePosition: workflow.nextReadoutQueuePosition || readiness.nextReadoutQueuePosition || coreSessionStatus?.nextReadoutSummary?.queuePosition || null,
+      status: readAliasValue(coreSessionStatus, "status") || readAliasValue(workflow, "status") || "not_started",
+      currentStep: readAliasValue(workflow, "currentStep") || null,
+      nextAction: readAliasValue(workflow, "nextAction") || null,
+      nextReadoutId: readAliasValue(workflow, "nextReadoutId") || readAliasValue(readiness, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextRecommendedReadoutId") || null,
+      nextReadoutLabel: readAliasValue(workflow, "nextReadoutLabel") || readAliasValue(readiness, "nextReadoutLabel") || coreSessionStatus?.nextReadoutSummary?.label || coreSessionStatus?.next_readout_summary?.label || null,
+      nextReadoutStatus: readAliasValue(workflow, "nextReadoutStatus") || readAliasValue(readiness, "nextReadoutStatus") || coreSessionStatus?.nextReadoutState?.status || coreSessionStatus?.next_readout_state?.status || null,
+      nextReadoutSource: readAliasValue(workflow, "nextReadoutSource") || readAliasValue(readiness, "nextReadoutSource") || readAliasValue(coreSessionStatus, "nextReadoutSource") || null,
+      nextReadoutQueuePosition: readAliasValue(workflow, "nextReadoutQueuePosition") || readAliasValue(readiness, "nextReadoutQueuePosition") || coreSessionStatus?.nextReadoutSummary?.queuePosition || coreSessionStatus?.next_readout_summary?.queue_position || null,
       nextReadoutRequest,
       nextReadoutBridgeIntent: nextReadoutRequest?.bridgeIntent || null,
       nextReadoutServiceMode: nextReadoutRequest?.serviceMode || null,
@@ -3769,29 +3769,43 @@
     const currentPrimaryBlockingReadoutIds = toSingletonIdList(currentPrimaryBlockingReadoutId);
     const importedPrimaryBlockingBridgeIntents = toSingletonIdList(importedPrimaryBlockingBridgeIntent);
     const currentPrimaryBlockingBridgeIntents = toSingletonIdList(currentPrimaryBlockingBridgeIntent);
+    const importedStatus = readAliasValue(importedFlow, "status") || null;
+    const currentStatus = readAliasValue(currentFlow, "status") || null;
+    const importedCompletionPercent = Number.isFinite(Number(readAliasValue(importedFlow, "completionPercent"))) ? Number(readAliasValue(importedFlow, "completionPercent")) : 0;
+    const currentCompletionPercent = Number.isFinite(Number(readAliasValue(currentFlow, "completionPercent"))) ? Number(readAliasValue(currentFlow, "completionPercent")) : 0;
+    const importedReadyForAnalysis = readAliasValue(importedFlow, "readyForAnalysis") === true;
+    const currentReadyForAnalysis = readAliasValue(currentFlow, "readyForAnalysis") === true;
+    const importedNextReadoutId = readAliasValue(importedFlow, "nextReadoutId") || null;
+    const currentNextReadoutId = readAliasValue(currentFlow, "nextReadoutId") || null;
+    const importedNextReadoutLabel = readAliasValue(importedFlow, "nextReadoutLabel") || null;
+    const currentNextReadoutLabel = readAliasValue(currentFlow, "nextReadoutLabel") || null;
+    const importedNextReadoutSource = readAliasValue(importedFlow, "nextReadoutSource") || null;
+    const currentNextReadoutSource = readAliasValue(currentFlow, "nextReadoutSource") || null;
+    const importedNextReadoutQueuePosition = readAliasValue(importedFlow, "nextReadoutQueuePosition") || null;
+    const currentNextReadoutQueuePosition = readAliasValue(currentFlow, "nextReadoutQueuePosition") || null;
     return {
       schemaVersion: "imported_core_comparison_v1",
-      importedStatus: importedFlow.status,
-      currentStatus: currentFlow.status,
-      statusChanged: importedFlow.status !== currentFlow.status,
-      importedCompletionPercent: importedFlow.completionPercent,
-      currentCompletionPercent: currentFlow.completionPercent,
-      completionDelta: currentFlow.completionPercent - importedFlow.completionPercent,
-      importedReadyForAnalysis: importedFlow.readyForAnalysis,
-      currentReadyForAnalysis: currentFlow.readyForAnalysis,
-      readyForAnalysisChanged: importedFlow.readyForAnalysis !== currentFlow.readyForAnalysis,
-      importedNextReadoutId: importedFlow.nextReadoutId,
-      currentNextReadoutId: currentFlow.nextReadoutId,
-      nextReadoutChanged: importedFlow.nextReadoutId !== currentFlow.nextReadoutId,
-      importedNextReadoutLabel: importedFlow.nextReadoutLabel || null,
-      currentNextReadoutLabel: currentFlow.nextReadoutLabel || null,
-      importedNextReadoutSource: importedFlow.nextReadoutSource || null,
-      currentNextReadoutSource: currentFlow.nextReadoutSource || null,
-      importedNextReadoutQueuePosition: importedFlow.nextReadoutQueuePosition || null,
-      currentNextReadoutQueuePosition: currentFlow.nextReadoutQueuePosition || null,
-      nextReadoutDetailsChanged: (importedFlow.nextReadoutLabel || null) !== (currentFlow.nextReadoutLabel || null)
-        || (importedFlow.nextReadoutSource || null) !== (currentFlow.nextReadoutSource || null)
-        || (importedFlow.nextReadoutQueuePosition || null) !== (currentFlow.nextReadoutQueuePosition || null),
+      importedStatus,
+      currentStatus,
+      statusChanged: importedStatus !== currentStatus,
+      importedCompletionPercent,
+      currentCompletionPercent,
+      completionDelta: currentCompletionPercent - importedCompletionPercent,
+      importedReadyForAnalysis,
+      currentReadyForAnalysis,
+      readyForAnalysisChanged: importedReadyForAnalysis !== currentReadyForAnalysis,
+      importedNextReadoutId,
+      currentNextReadoutId,
+      nextReadoutChanged: importedNextReadoutId !== currentNextReadoutId,
+      importedNextReadoutLabel,
+      currentNextReadoutLabel,
+      importedNextReadoutSource,
+      currentNextReadoutSource,
+      importedNextReadoutQueuePosition,
+      currentNextReadoutQueuePosition,
+      nextReadoutDetailsChanged: importedNextReadoutLabel !== currentNextReadoutLabel
+        || importedNextReadoutSource !== currentNextReadoutSource
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
       importedRequiredReadoutCount: importedRequiredCount,
       currentRequiredReadoutCount: currentRequiredCount,
       requiredReadoutDelta: currentRequiredCount - importedRequiredCount,
