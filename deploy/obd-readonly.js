@@ -3242,19 +3242,31 @@
       : null;
     const primaryBlockingSummary = primaryBlockingReasonId ? {
       schemaVersion: "primary_readout_blocker_v1",
+      schema_version: "primary_readout_blocker_v1",
       reasonId: primaryBlockingReasonId,
+      reason_id: primaryBlockingReasonId,
       reason: primaryBlockingReason,
       readoutId: primaryBlockingReadoutId,
+      readout_id: primaryBlockingReadoutId,
       readoutLabel: primaryBlockingReadoutLabel,
+      readout_label: primaryBlockingReadoutLabel,
       readoutStatus: primaryBlockingReadoutState?.status || null,
+      readout_status: primaryBlockingReadoutState?.status || null,
       request: primaryBlockingReadoutRequest,
       bridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+      bridge_intent: primaryBlockingReadoutRequest?.bridgeIntent || null,
       serviceMode: primaryBlockingReadoutRequest?.serviceMode || null,
+      service_mode: primaryBlockingReadoutRequest?.serviceMode || null,
       requestMapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
+      request_mapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
       executionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
+      execution_enabled: primaryBlockingReadoutRequest?.executionEnabled === true,
       readOnly: primaryBlockingReadoutRequest ? primaryBlockingReadoutRequest.readOnly !== false : true,
+      read_only: primaryBlockingReadoutRequest ? primaryBlockingReadoutRequest.readOnly !== false : true,
       wouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
-      vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
+      would_transmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
+      vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true,
+      vehicle_command_enabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
     } : null;
     Object.assign(readoutCompletionSummary, {
       primaryBlockingReasonId,
@@ -3570,12 +3582,19 @@
       return {
         ...item,
         readoutId: item.readoutId || item.readout_id || item.id || null,
+        readout_id: item.readoutId || item.readout_id || item.id || null,
         bridgeIntent: item.bridgeIntent || item.bridge_intent || null,
+        bridge_intent: item.bridgeIntent || item.bridge_intent || null,
         serviceMode: item.serviceMode || item.service_mode || null,
+        service_mode: item.serviceMode || item.service_mode || null,
         executionEnabled: pickDefined(item.executionEnabled, item.execution_enabled) === true,
+        execution_enabled: pickDefined(item.executionEnabled, item.execution_enabled) === true,
         readOnly: pickDefined(item.readOnly, item.read_only) === true,
+        read_only: pickDefined(item.readOnly, item.read_only) === true,
         wouldTransmit: pickDefined(item.wouldTransmit, item.would_transmit) === true,
-        vehicleCommandEnabled: pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true
+        would_transmit: pickDefined(item.wouldTransmit, item.would_transmit) === true,
+        vehicleCommandEnabled: pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true,
+        vehicle_command_enabled: pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true
       };
     };
     const primaryBlockingReadoutRequest = normalizeReadoutRequestEntry(readiness.primaryBlockingReadoutRequest
@@ -3589,18 +3608,29 @@
       || coreSessionStatus?.primary_blocking_summary
       || (primaryBlockingReasonId ? {
         schemaVersion: "primary_readout_blocker_v1",
+        schema_version: "primary_readout_blocker_v1",
         reasonId: primaryBlockingReasonId,
+        reason_id: primaryBlockingReasonId,
         reason: primaryBlockingReason,
         readoutId: primaryBlockingReadoutId,
+        readout_id: primaryBlockingReadoutId,
         readoutLabel: primaryBlockingReadoutLabel,
+        readout_label: primaryBlockingReadoutLabel,
         request: primaryBlockingReadoutRequest,
         bridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+        bridge_intent: primaryBlockingReadoutRequest?.bridgeIntent || null,
         serviceMode: primaryBlockingReadoutRequest?.serviceMode || null,
+        service_mode: primaryBlockingReadoutRequest?.serviceMode || null,
         requestMapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
+        request_mapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
         executionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
+        execution_enabled: primaryBlockingReadoutRequest?.executionEnabled === true,
         readOnly: primaryBlockingReadoutRequest ? primaryBlockingReadoutRequest.readOnly !== false : true,
+        read_only: primaryBlockingReadoutRequest ? primaryBlockingReadoutRequest.readOnly !== false : true,
         wouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
-        vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
+        would_transmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
+        vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true,
+        vehicle_command_enabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
       } : null);
     const nextReadoutSummary = coreSessionStatus?.nextReadoutSummary || coreSessionStatus?.next_readout_summary || null;
     const nextReadoutRequest = normalizeReadoutRequestEntry(coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.next_readout_request || nextReadoutSummary?.readoutRequest || nextReadoutSummary?.readout_request || null);
@@ -3840,16 +3870,27 @@
       vehicleApplicabilityReviewRequired,
       vehicleApplicabilityBlocking,
       blockingReasonIds,
+      blocking_reason_ids: blockingReasonIds,
       primaryBlockingReasonId,
+      primary_blocking_reason_id: primaryBlockingReasonId,
       primaryBlockingReason,
+      primary_blocking_reason: primaryBlockingReason,
       primaryBlockingReadoutId,
+      primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
+      primary_blocking_readout_label: primaryBlockingReadoutLabel,
       primaryBlockingReadoutRequest,
+      primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
+      primary_blocking_summary: primaryBlockingSummary,
       primaryBlockingReadoutBridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+      primary_blocking_readout_bridge_intent: primaryBlockingReadoutRequest?.bridgeIntent || null,
       primaryBlockingReadoutServiceMode: primaryBlockingReadoutRequest?.serviceMode || null,
+      primary_blocking_readout_service_mode: primaryBlockingReadoutRequest?.serviceMode || null,
       primaryBlockingReadoutExecutionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
+      primary_blocking_readout_execution_enabled: primaryBlockingReadoutRequest?.executionEnabled === true,
       primaryBlockingReadoutWouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
+      primary_blocking_readout_would_transmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
       readoutCollectionRequired: pendingReadoutCount > 0,
       completionPercent: Number.isFinite(Number(pickDefined(coreSessionStatus?.completionPercent, coreSessionStatus?.completion_percent)))
         ? Number(pickDefined(coreSessionStatus.completionPercent, coreSessionStatus.completion_percent))
