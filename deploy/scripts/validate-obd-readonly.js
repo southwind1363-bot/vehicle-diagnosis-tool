@@ -196,6 +196,7 @@ const normalizeReadoutCoverageFunctionChecks = () => {
     const functionBody = normalizeReadoutCoverageFunctionSource[0];
     check(functionBody.includes('if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();'), "normalizeReadoutCoverageSnapshot should fall back to empty readout coverage for non-object input");
     check(functionBody.includes('schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",'), "normalizeReadoutCoverageSnapshot should normalize schema version aliases");
+    check(functionBody.includes('schema_version: input.schema_version || input.schemaVersion || "readout_coverage_v1",'), "normalizeReadoutCoverageSnapshot should expose snake_case schema version aliases");
     check(functionBody.includes('includeInfrastructure: pickDefined(input.includeInfrastructure, input.include_infrastructure) === true,'), "normalizeReadoutCoverageSnapshot should normalize includeInfrastructure aliases as explicit true");
     check(functionBody.includes('capturedPercent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent)))') && functionBody.includes(': computedCapturedPercent,'), "normalizeReadoutCoverageSnapshot should clamp capturedPercent and fall back to computed captured percent");
     check(functionBody.includes('progressPercent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent)))') && functionBody.includes(': computedProgressPercent,'), "normalizeReadoutCoverageSnapshot should clamp progressPercent and fall back to computed progress percent");
@@ -203,6 +204,7 @@ const normalizeReadoutCoverageFunctionChecks = () => {
     check(functionBody.includes('const itemById = normalizedItems.reduce((byId, item) => {') && functionBody.includes('itemsByStatus,'), "normalizeReadoutCoverageSnapshot should expose readout coverage item indexes");
     check(functionBody.includes('const capturedIdsInput = pickDefined(input.capturedIds, input.captured_ids, input.capturedReadoutIds, input.captured_readout_ids);') && functionBody.includes('pendingLabels: normalizedPendingLabels,'), "normalizeReadoutCoverageSnapshot should expose captured and pending readout coverage ids");
     check(functionBody.includes('const coverageCompletionSummary = {') && functionBody.includes('schemaVersion: "readout_coverage_completion_v1"') && functionBody.includes('completionSummary: coverageCompletionSummary,'), "normalizeReadoutCoverageSnapshot should expose a compact readout coverage completion summary");
+    check(functionBody.includes('schema_version: "readout_coverage_completion_v1"'), "normalizeReadoutCoverageSnapshot should expose snake_case completion summary schema version");
     check(functionBody.includes('hasPendingReadouts: normalizedPendingIds.length > 0,') && functionBody.includes('nextPendingStatus: normalizedNextPendingStatus,'), "normalizeReadoutCoverageSnapshot should expose actionable readout coverage completion flags");
     check(functionBody.includes('nextEmptyId: normalizedNextEmptyId,') && functionBody.includes('nextMissingId: normalizedNextMissingId,'), "normalizeReadoutCoverageSnapshot should expose separate empty and missing readout cursors");
     check(functionBody.includes('recommendedNextReadoutId: normalizedRecommendedNextReadoutId,') && functionBody.includes('recommendedNextReadoutReason:'), "normalizeReadoutCoverageSnapshot should expose recommended next readout cursor");
@@ -225,6 +227,7 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);'), "normalizeVehicleApplicabilitySnapshot should derive candidate range counts from explicit values or array length");
     check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
     check(functionBody.includes('source.displayLabel') && functionBody.includes('source.display_label') && functionBody.includes('source.summary'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
+    check(functionBody.includes('schema_version: "vehicle_applicability_v1"'), "normalizeVehicleApplicabilitySnapshot should expose snake_case schema version");
   }
 };
 const vehicleApplicabilityWarningsFunctionChecks = () => {
@@ -619,6 +622,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const primaryBlockingSummary = primaryBlockingReasonId ? {') && functionBody.includes('schemaVersion: "primary_readout_blocker_v1"') && functionBody.includes('schema_version: "primary_readout_blocker_v1"'), "buildCoreSessionStatus should expose one primary blocker summary");
     check(functionBody.includes('const analysisChecklist = [') && functionBody.includes('id: "required_readouts"') && functionBody.includes('id: "vehicle_applicability"'), "buildCoreSessionStatus should expose an analysis readiness checklist");
     check(functionBody.includes('const readoutQualitySummary = {') && functionBody.includes('schemaVersion: "readout_quality_summary_v1"'), "buildCoreSessionStatus should expose a readout quality summary");
+    check(functionBody.includes('schema_version: "readout_quality_summary_v1"'), "buildCoreSessionStatus should expose readout quality snake_case schema version");
     check(functionBody.includes('rawPidUndecodedCount > 0 ? { id: "raw_pid_values_need_conversion"') && functionBody.includes('onboardMonitorFailedCount > 0 ? { id: "onboard_monitor_test_failed"'), "buildCoreSessionStatus should classify readout quality issue ids");
     check(functionBody.includes('id: "readout_quality"') && functionBody.includes('state: readoutQualitySummary.reviewRequired ? "review" : "complete"'), "buildCoreSessionStatus should add readout quality to the analysis checklist");
     check(functionBody.includes('readoutQualitySummary,') && functionBody.includes('readoutQualityIssueCount: readoutQualitySummary.issueCount,'), "buildCoreSessionStatus should carry readout quality into analysis readiness");
@@ -1804,6 +1808,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('resolveSessionTemporalContext({') && functionBody.includes('supportedPidMatrix'), "buildDiagnosticScanSession should derive temporal context from all normalized snapshots");
     check(functionBody.includes('includeInfrastructure: hasBridgeInfrastructureContext'), "buildDiagnosticScanSession should derive readout coverage with bridge infrastructure context");
     check(source.includes('function buildCoreReadoutInventorySummary({') && source.includes('schemaVersion: "core_readout_inventory_v1"'), "buildDiagnosticScanSession should have a core readout inventory summary builder");
+    check(source.includes('schema_version: "core_readout_inventory_v1"'), "buildDiagnosticScanSession should expose core readout inventory snake_case schema version");
     check(functionBody.includes('const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({') && functionBody.includes('coreReadoutInventorySummary,'), "buildDiagnosticScanSession should expose core readout inventory summaries");
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should append bridge readout warnings through bridge context guard");
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildDiagnosticScanSession should resolve readout coverage before appending bridge readout warnings");
@@ -2028,7 +2033,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1775+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1787+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2100,7 +2105,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.541.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core snapshot schema aliases");
+check(appSource.includes('const APP_VERSION = "2.542.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for coverage summary schema aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5622,9 +5627,11 @@ check(populatedScanSession.coreSessionStatus?.readyForAnalysis === true, "Diagno
 check(Array.isArray(populatedScanSession.coreSessionStatus?.remainingReadoutIds) && populatedScanSession.coreSessionStatus.remainingReadoutIds.length === 0, "Diagnostic scan session did not clear remaining core readouts for populated inputs");
 check(Array.isArray(populatedScanSession.coreSessionStatus?.emptyReadoutIds) && populatedScanSession.coreSessionStatus.emptyReadoutIds.length === 0, "Diagnostic scan session did not clear emptyReadoutIds for populated inputs");
 check(populatedScanSession.coreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1" && populatedScanSession.coreReadoutInventorySummary?.capturedReadoutCount === 7, "Diagnostic scan session did not expose populated core readout inventory summary");
+check(populatedScanSession.coreReadoutInventorySummary?.schema_version === "core_readout_inventory_v1", "Diagnostic scan session did not expose core readout inventory snake_case schema version");
 check(populatedScanSession.coreReadoutInventorySummary?.countsById?.dtc_snapshot === bridgeDtcSnapshot.codes.length && populatedScanSession.coreReadoutInventorySummary?.itemById?.freeze_frame_snapshot?.count === bridgeFreezeFrameSnapshot.monitorValues.length, "Diagnostic scan session did not align core readout inventory counts with normalized snapshots");
 check(populatedScanSession.coreReadoutInventorySummary?.attemptedReadoutPercent === 100 && populatedScanSession.coreReadoutInventorySummary?.pendingReadoutCount === 0 && populatedScanSession.coreReadoutInventorySummary?.valueCaptureComplete === true, "Diagnostic scan session did not expose complete core readout inventory progress fields");
 check(populatedScanSession.coreSessionStatus?.readoutQualitySummary?.schemaVersion === "readout_quality_summary_v1" && Number.isFinite(populatedScanSession.coreSessionStatus.readoutQualitySummary.issueCount), "Diagnostic scan session did not expose readout quality summary for populated inputs");
+check(populatedScanSession.coreSessionStatus?.readoutQualitySummary?.schema_version === "readout_quality_summary_v1", "Diagnostic scan session did not expose readout quality snake_case schema version");
 check(populatedScanSession.diagnosticFlowSummary?.readoutQualityIssueCount === populatedScanSession.coreSessionStatus.readoutQualitySummary.issueCount && populatedScanSession.diagnosticFlowSummary?.readoutQualityReviewRequired === populatedScanSession.coreSessionStatus.readoutQualitySummary.reviewRequired, "Diagnostic flow summary did not expose readout quality state");
 const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-empty-readout-scan-session",
@@ -7461,12 +7468,14 @@ check(scanSessionBridgeDiagnosticImportAlias.readoutCoverage?.progressPercent ==
 check(scanSessionBridgeDiagnosticImportAlias.importClassification?.bucketCounts?.storedDtcResponses === bridgeDiagnosticImport.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not carry importClassification from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.analysisReadinessSummary?.ready === scanSessionBridgeDiagnosticImportAlias.coreSessionStatus?.analysisReadinessSummary?.ready, "Diagnostic scan session did not expose top-level analysis readiness summary");
 check(scanSessionBridgeDiagnosticImportAlias.readoutQualitySummary?.schemaVersion === "readout_quality_summary_v1", "Diagnostic scan session did not expose top-level readout quality summary");
+check(scanSessionBridgeDiagnosticImportAlias.readoutQualitySummary?.schema_version === "readout_quality_summary_v1", "Diagnostic scan session did not expose top-level readout quality snake_case schema version");
 check(scanSessionBridgeDiagnosticImportAlias.readoutRequestPlanGateSummary?.state === scanSessionBridgeDiagnosticImportAlias.coreSessionStatus?.readoutRequestPlanGateSummary?.state, "Diagnostic scan session did not expose top-level readout request plan gate summary");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreSessionStatus?.schemaVersion === "core_session_status_v1", "Diagnostic scan session did not preserve imported core session status from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Diagnostic scan session did not preserve imported diagnostic flow summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not preserve imported readout completion summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedAnalysisReadinessSummary?.ready === bridgeDiagnosticImport.analysisReadinessSummary?.ready, "Diagnostic scan session did not preserve imported analysis readiness summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutQualitySummary?.schemaVersion === bridgeDiagnosticImport.readoutQualitySummary?.schemaVersion, "Diagnostic scan session did not preserve imported readout quality summary from bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportAlias.importedReadoutQualitySummary?.schema_version === "readout_quality_summary_v1", "Diagnostic scan session did not preserve imported readout quality snake_case schema version");
 check(scanSessionBridgeDiagnosticImportAlias.imported_core_session_status?.schemaVersion === "core_session_status_v1" && scanSessionBridgeDiagnosticImportAlias.imported_diagnostic_flow_summary?.schemaVersion === "diagnostic_flow_summary_v1", "Diagnostic scan session did not expose imported diagnostic summaries as snake_case aliases");
 check(scanSessionBridgeDiagnosticImportAlias.imported_readout_completion_summary?.capturedIds?.includes("dtc_snapshot") && scanSessionBridgeDiagnosticImportAlias.imported_analysis_readiness_summary?.ready === bridgeDiagnosticImport.analysisReadinessSummary?.ready, "Diagnostic scan session did not expose imported completion and readiness summaries as snake_case aliases");
 check(scanSessionBridgeDiagnosticImportAlias.imported_readout_quality_summary?.schemaVersion === bridgeDiagnosticImport.readoutQualitySummary?.schemaVersion, "Diagnostic scan session did not expose imported readout quality snake_case summary");
@@ -7496,6 +7505,7 @@ check(scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSumma
 check(scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.rawPidUndecodedDelta === -3 && scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.onboardMonitorFailedDelta === -1, "Diagnostic scan session did not read snake_case imported readout quality count deltas");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.readoutRequestPlanGateSummary?.state, "Diagnostic scan session did not preserve imported readout request plan gate summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1", "Diagnostic scan session did not preserve imported core readout inventory summary from bridge_diagnostic_import alias input");
+check(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventorySummary?.schema_version === "core_readout_inventory_v1", "Diagnostic scan session did not preserve imported core readout inventory snake_case schema version");
 const scanSessionSnakeCoreReadoutInventoryImport = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-core-readout-inventory-import",
   core_readout_inventory_summary: {
@@ -8351,10 +8361,12 @@ const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
   }
 });
 check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
+check(scanSessionPlainCoverageOverride.readoutCoverage.schema_version === "readout_coverage_v1", "Diagnostic scan session did not expose readout coverage snake_case schema version");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve plain-object capturedPercent override");
 check(scanSessionPlainCoverageOverride.readoutCoverage.itemById?.dtc_snapshot?.status === "captured" && Array.isArray(scanSessionPlainCoverageOverride.readoutCoverage.itemsByStatus?.empty), "Diagnostic scan session did not expose readout coverage item indexes");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.readoutCoverage.pendingIds?.includes("readiness_snapshot"), "Diagnostic scan session did not expose readout coverage captured and pending ids");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.schemaVersion === "readout_coverage_completion_v1" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.pendingCount === 5, "Diagnostic scan session did not expose readout coverage completion summary");
+check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.schema_version === "readout_coverage_completion_v1", "Diagnostic scan session did not expose readout coverage completion snake_case schema version");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.hasPendingReadouts === true && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextPendingId === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextPendingStatus === "empty", "Diagnostic scan session did not expose actionable readout coverage completion flags");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextEmptyId === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextMissingId === "readiness_snapshot", "Diagnostic scan session did not expose separate empty and missing readout cursors");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.recommendedNextReadoutId === "readiness_snapshot" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.recommendedNextReadoutReason === "missing_readout", "Diagnostic scan session did not expose recommended next readout cursor");
@@ -8934,6 +8946,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1775");
+  console.log("OBD read-only safety checks: 1787");
   console.log("Errors: 0");
 }

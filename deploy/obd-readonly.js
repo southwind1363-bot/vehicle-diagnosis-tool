@@ -1399,6 +1399,7 @@
     };
     const coverageCompletionSummary = {
       schemaVersion: "readout_coverage_completion_v1",
+      schema_version: "readout_coverage_completion_v1",
       complete: pendingItems.length === 0,
       status: pendingItems.length === 0 ? "complete" : "collecting_readouts",
       analysisReady: pendingItems.length === 0,
@@ -1442,6 +1443,7 @@
 
     return {
       schemaVersion: "readout_coverage_v1",
+      schema_version: "readout_coverage_v1",
       includeInfrastructure,
       totalCategories: items.length,
       availableCategories: availableCount,
@@ -1523,6 +1525,7 @@
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
+      schema_version: "core_readout_inventory_v1",
       totalReadoutCount: items.length,
       capturedReadoutCount: capturedIds.length,
       emptyReadoutCount: emptyIds.length,
@@ -1633,6 +1636,7 @@
     const coverageCompletionSummary = {
       ...(completionSummaryInput && typeof completionSummaryInput === "object" ? completionSummaryInput : {}),
       schemaVersion: "readout_coverage_completion_v1",
+      schema_version: "readout_coverage_completion_v1",
       complete: normalizedPendingIds.length === 0,
       status: normalizedPendingIds.length === 0 ? "complete" : "collecting_readouts",
       analysisReady: normalizedPendingIds.length === 0,
@@ -1678,6 +1682,7 @@
     return {
       ...input,
       schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",
+      schema_version: input.schema_version || input.schemaVersion || "readout_coverage_v1",
       includeInfrastructure: pickDefined(input.includeInfrastructure, input.include_infrastructure) === true,
       totalCategories,
       availableCategories,
@@ -1741,6 +1746,7 @@
     }
     return {
       schemaVersion: "vehicle_applicability_v1",
+      schema_version: "vehicle_applicability_v1",
       maker,
       model,
       modelCode,
@@ -3377,6 +3383,7 @@
     ].filter(Boolean);
     const readoutQualitySummary = {
       schemaVersion: "readout_quality_summary_v1",
+      schema_version: "readout_quality_summary_v1",
       issueCount: readoutQualityIssues.length,
       issueIds: readoutQualityIssues.map((item) => item.id),
       issues: readoutQualityIssues,
