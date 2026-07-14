@@ -1897,17 +1897,28 @@
     const request = requestByReadoutId[nextReadoutSummary.id] || null;
     return {
       schemaVersion: "read_only_next_readout_request_v1",
+      schema_version: "read_only_next_readout_request_v1",
       readoutId: nextReadoutSummary.id,
+      readout_id: nextReadoutSummary.id,
       label: nextReadoutSummary.label || nextReadoutSummary.id,
       status: nextReadoutSummary.status || null,
       bridgeIntent: request?.bridgeIntent || null,
+      bridge_intent: request?.bridgeIntent || null,
       serviceMode: request?.serviceMode || null,
+      service_mode: request?.serviceMode || null,
       pid: request?.pid || null,
       executionEnabled: false,
+      execution_enabled: false,
       readOnly: true,
+      read_only: true,
+      retainedRawText: false,
+      retained_raw_text: false,
       wouldTransmit: false,
+      would_transmit: false,
       vehicleCommandEnabled: false,
-      requiresUserAction: true
+      vehicle_command_enabled: false,
+      requiresUserAction: true,
+      requires_user_action: true
     };
   }
 
@@ -2993,19 +3004,34 @@
     const readoutRequestPlanSafetySummary = buildReadoutRequestPlanSafetySummary(pendingReadoutRequestPlanEntries, unmappedPendingReadoutRequestIds);
     const pendingReadoutRequestPlan = {
       schemaVersion: "read_only_readout_request_plan_v1",
+      schema_version: "read_only_readout_request_plan_v1",
       totalCount: pendingReadoutRequestPlanEntries.length,
+      total_count: pendingReadoutRequestPlanEntries.length,
       mappedCount: mappedPendingReadoutRequests.length,
+      mapped_count: mappedPendingReadoutRequests.length,
       unmappedCount: unmappedPendingReadoutRequestIds.length,
+      unmapped_count: unmappedPendingReadoutRequestIds.length,
       allMapped: unmappedPendingReadoutRequestIds.length === 0,
+      all_mapped: unmappedPendingReadoutRequestIds.length === 0,
       ...readoutRequestPlanSafetySummary,
       unmappedRequestIds: [...unmappedPendingReadoutRequestIds],
+      unmapped_request_ids: [...unmappedPendingReadoutRequestIds],
       nextRequest: nextReadoutRequest || pendingReadoutRequestPlanEntries.find((item) => item.isNext) || pendingReadoutRequestPlanEntries[0] || null,
+      next_request: nextReadoutRequest || pendingReadoutRequestPlanEntries.find((item) => item.isNext) || pendingReadoutRequestPlanEntries[0] || null,
       requestIds: pendingReadoutRequestPlanEntries.map((item) => item.readoutId),
+      request_ids: pendingReadoutRequestPlanEntries.map((item) => item.readoutId),
       bridgeIntents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],
+      bridge_intents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],
       executionEnabled: false,
+      execution_enabled: false,
       readOnly: true,
+      read_only: true,
+      retainedRawText: false,
+      retained_raw_text: false,
       wouldTransmit: false,
-      vehicleCommandEnabled: false
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
     const requestPlanBlockedReasonIds = Array.isArray(pendingReadoutRequestPlan.blockedReasonIds)
       ? [...pendingReadoutRequestPlan.blockedReasonIds]
