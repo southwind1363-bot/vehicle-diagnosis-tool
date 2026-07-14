@@ -1131,6 +1131,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";'), "normalizeDtcSnapshot should default source from normalized aliases");
     check(functionBody.includes('Array.isArray(sourceInput.dtc_list)') && functionBody.includes('Array.isArray(sourceInput.diagnosticTroubleCodes)'), "normalizeDtcSnapshot should accept DTC array aliases");
     check(functionBody.includes('Array.isArray(sourceInput.stored_dtcs)') && functionBody.includes('Array.isArray(sourceInput.pendingDtcs)') && functionBody.includes('Array.isArray(sourceInput.permanent_dtcs)'), "normalizeDtcSnapshot should accept status-specific DTC arrays");
+    check(functionBody.includes('Array.isArray(sourceInput.stored_dtc_codes)') && functionBody.includes('Array.isArray(sourceInput.pendingDtcCodes)') && functionBody.includes('Array.isArray(sourceInput.permanent_codes)'), "normalizeDtcSnapshot should accept status-specific DTC code array aliases");
     check(functionBody.includes('rowValue.dtc_code') && functionBody.includes('rowValue.dtcCode'), "normalizeDtcSnapshot should normalize row code aliases");
     check(functionBody.includes('row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus'), "normalizeDtcSnapshot should normalize DTC status aliases");
     check(functionBody.includes('rowValue.ecuId') && functionBody.includes('rowValue.module_id') && functionBody.includes('rowValue.freezeFrame === true'), "normalizeDtcSnapshot should preserve ECU and freeze-frame aliases");
@@ -2096,7 +2097,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1933+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1935+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2168,7 +2169,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.568.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core session status alias normalization");
+check(appSource.includes('const APP_VERSION = "2.569.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for DTC status code array alias normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5953,6 +5954,12 @@ check(normalizedDtcAliasSnapshot.dtcs.some((item) => item.code === "P0171" && it
 check(normalizedDtcAliasSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "pending") && normalizedDtcAliasSnapshot.dtcs.some((item) => item.code === "P0420" && item.status === "permanent"), "normalizeDtcSnapshot did not preserve pending and permanent statuses");
 check(normalizedDtcAliasSnapshot.captured_at === "2026-07-07T00:40:00Z" && normalizedDtcAliasSnapshot.dtc_count === 3 && normalizedDtcAliasSnapshot.code_count === 3, "normalizeDtcSnapshot did not expose snake_case capture and count aliases");
 check(normalizedDtcAliasSnapshot.stored_count === 1 && normalizedDtcAliasSnapshot.pending_count === 1 && normalizedDtcAliasSnapshot.permanent_count === 1 && normalizedDtcAliasSnapshot.retained_raw_text === false, "normalizeDtcSnapshot did not expose snake_case status and raw retention aliases");
+const normalizedDtcCodeArrayAliasSnapshot = obd.normalizeDtcSnapshot({
+  stored_dtc_codes: ["P0171"],
+  pendingDtcCodes: ["P0300"],
+  permanent_codes: ["P0420"]
+});
+check(normalizedDtcCodeArrayAliasSnapshot.storedCount === 1 && normalizedDtcCodeArrayAliasSnapshot.pendingCount === 1 && normalizedDtcCodeArrayAliasSnapshot.permanentCount === 1 && normalizedDtcCodeArrayAliasSnapshot.codes.join(",") === "P0171,P0300,P0420", "normalizeDtcSnapshot did not merge status-specific DTC code array aliases");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
@@ -9336,6 +9343,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1933");
+  console.log("OBD read-only safety checks: 1935");
   console.log("Errors: 0");
 }

@@ -8410,10 +8410,22 @@
       ...(Array.isArray(sourceInput.diagnostic_trouble_codes) ? sourceInput.diagnostic_trouble_codes : []),
       ...(Array.isArray(sourceInput.stored_dtcs) ? sourceInput.stored_dtcs.map((row) => ({ value: row, status: "stored" })) : []),
       ...(Array.isArray(sourceInput.storedDtcs) ? sourceInput.storedDtcs.map((row) => ({ value: row, status: "stored" })) : []),
+      ...(Array.isArray(sourceInput.stored_dtc_codes) ? sourceInput.stored_dtc_codes.map((row) => ({ value: row, status: "stored" })) : []),
+      ...(Array.isArray(sourceInput.storedDtcCodes) ? sourceInput.storedDtcCodes.map((row) => ({ value: row, status: "stored" })) : []),
+      ...(Array.isArray(sourceInput.stored_codes) ? sourceInput.stored_codes.map((row) => ({ value: row, status: "stored" })) : []),
+      ...(Array.isArray(sourceInput.storedCodes) ? sourceInput.storedCodes.map((row) => ({ value: row, status: "stored" })) : []),
       ...(Array.isArray(sourceInput.pending_dtcs) ? sourceInput.pending_dtcs.map((row) => ({ value: row, status: "pending" })) : []),
       ...(Array.isArray(sourceInput.pendingDtcs) ? sourceInput.pendingDtcs.map((row) => ({ value: row, status: "pending" })) : []),
+      ...(Array.isArray(sourceInput.pending_dtc_codes) ? sourceInput.pending_dtc_codes.map((row) => ({ value: row, status: "pending" })) : []),
+      ...(Array.isArray(sourceInput.pendingDtcCodes) ? sourceInput.pendingDtcCodes.map((row) => ({ value: row, status: "pending" })) : []),
+      ...(Array.isArray(sourceInput.pending_codes) ? sourceInput.pending_codes.map((row) => ({ value: row, status: "pending" })) : []),
+      ...(Array.isArray(sourceInput.pendingCodes) ? sourceInput.pendingCodes.map((row) => ({ value: row, status: "pending" })) : []),
       ...(Array.isArray(sourceInput.permanent_dtcs) ? sourceInput.permanent_dtcs.map((row) => ({ value: row, status: "permanent" })) : []),
-      ...(Array.isArray(sourceInput.permanentDtcs) ? sourceInput.permanentDtcs.map((row) => ({ value: row, status: "permanent" })) : [])
+      ...(Array.isArray(sourceInput.permanentDtcs) ? sourceInput.permanentDtcs.map((row) => ({ value: row, status: "permanent" })) : []),
+      ...(Array.isArray(sourceInput.permanent_dtc_codes) ? sourceInput.permanent_dtc_codes.map((row) => ({ value: row, status: "permanent" })) : []),
+      ...(Array.isArray(sourceInput.permanentDtcCodes) ? sourceInput.permanentDtcCodes.map((row) => ({ value: row, status: "permanent" })) : []),
+      ...(Array.isArray(sourceInput.permanent_codes) ? sourceInput.permanent_codes.map((row) => ({ value: row, status: "permanent" })) : []),
+      ...(Array.isArray(sourceInput.permanentCodes) ? sourceInput.permanentCodes.map((row) => ({ value: row, status: "permanent" })) : [])
     ];
     const rows = rawRows.flatMap((row) => {
       if (typeof row === "string") {
