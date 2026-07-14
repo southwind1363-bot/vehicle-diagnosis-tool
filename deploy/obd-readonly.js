@@ -2267,6 +2267,10 @@
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
+    const storedDtcSnapshotInput = parts.storedDtcSnapshot || parts.stored_dtc_snapshot || parts.storedDtcResponse || parts.stored_dtc_response || null;
+    const pendingDtcSnapshotInput = parts.pendingDtcSnapshot || parts.pending_dtc_snapshot || parts.pendingDtcResponse || parts.pending_dtc_response || null;
+    const permanentDtcSnapshotInput = parts.permanentDtcSnapshot || parts.permanent_dtc_snapshot || parts.permanentDtcResponse || parts.permanent_dtc_response || null;
+    const hasTypedDtcSnapshotInput = hasObjectContent(storedDtcSnapshotInput) || hasObjectContent(pendingDtcSnapshotInput) || hasObjectContent(permanentDtcSnapshotInput);
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot;
     const livePidSnapshotInput = parts.livePidSnapshot || parts.live_pid_snapshot || parts.livePidResponse || parts.live_pid_response;
     const freezeFrameSnapshotInput = parts.freezeFrameSnapshot || parts.freeze_frame_snapshot || parts.freezeFrameResponse || parts.freeze_frame_response;
@@ -2276,7 +2280,15 @@
     const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
     const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response;
     const readoutCoverageInput = getReadoutCoverageInput(parts);
-    const dtcSnapshot = dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
+    const dtcSnapshot = dtcSnapshotInput?.codes
+      ? dtcSnapshotInput
+      : hasTypedDtcSnapshotInput
+        ? mergeDtcSnapshots(
+          normalizeTypedDtcSnapshotInput(storedDtcSnapshotInput, "stored", "read_stored_dtc"),
+          normalizeTypedDtcSnapshotInput(pendingDtcSnapshotInput, "pending", "read_pending_dtc"),
+          normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")
+        )
+        : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
