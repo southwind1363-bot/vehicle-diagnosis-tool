@@ -1680,9 +1680,9 @@
 
   function normalizeVehicleApplicabilitySnapshot(input = {}) {
     const source = input && typeof input === "object" ? input : {};
-    const candidateRanges = Array.isArray(source.candidateRanges) ? source.candidateRanges : Array.isArray(source.candidate_ranges) ? source.candidate_ranges : [];
-    const applicableRanges = Array.isArray(source.applicableRanges) ? source.applicableRanges : Array.isArray(source.applicable_ranges) ? source.applicable_ranges : [];
-    const supportedEngineCodes = Array.isArray(source.supportedEngineCodes) ? source.supportedEngineCodes : Array.isArray(source.supported_engine_codes) ? source.supported_engine_codes : [];
+    const candidateRanges = Array.isArray(source.candidateRanges) ? source.candidateRanges : Array.isArray(source.candidate_ranges) ? source.candidate_ranges : Array.isArray(source.candidates) ? source.candidates : [];
+    const applicableRanges = Array.isArray(source.applicableRanges) ? source.applicableRanges : Array.isArray(source.applicable_ranges) ? source.applicable_ranges : Array.isArray(source.matchedRanges) ? source.matchedRanges : Array.isArray(source.matched_ranges) ? source.matched_ranges : [];
+    const supportedEngineCodes = Array.isArray(source.supportedEngineCodes) ? source.supportedEngineCodes : Array.isArray(source.supported_engine_codes) ? source.supported_engine_codes : Array.isArray(source.engineCodes) ? source.engineCodes : Array.isArray(source.engine_codes) ? source.engine_codes : [];
     const toCount = (...values) => {
       for (const value of values) {
         const numeric = Number(value);
@@ -1690,20 +1690,20 @@
       }
       return 0;
     };
-    const maker = source.maker || source.make || null;
-    const model = source.model || null;
-    const modelCode = source.modelCode || source.model_code || null;
-    const year = source.year || null;
-    const engineCode = source.engineCode || source.engine_code || null;
-    const catalogMatched = source.catalogMatched === true || source.catalog_matched === true;
-    const yearMatched = source.yearMatched === true || source.year_matched === true;
-    const engineMatched = source.engineMatched === true || source.engine_matched === true;
-    const modelCodeMatched = source.modelCodeMatched === true || source.model_code_matched === true;
+    const maker = source.maker || source.make || source.manufacturer || source.brand || source.oem || null;
+    const model = source.model || source.modelName || source.model_name || source.vehicleModel || source.vehicle_model || null;
+    const modelCode = source.modelCode || source.model_code || source.chassisCode || source.chassis_code || source.frameCode || source.frame_code || null;
+    const year = source.year || source.modelYear || source.model_year || source.registrationYear || source.registration_year || null;
+    const engineCode = source.engineCode || source.engine_code || source.engine || source.engineModel || source.engine_model || null;
+    const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
+    const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
+    const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
+    const modelCodeMatched = source.modelCodeMatched === true || source.model_code_matched === true || source.modelCodeMatch === true || source.model_code_match === true;
     const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);
     const applicableRangeCount = toCount(source.applicableRangeCount, source.applicable_range_count, applicableRanges.length);
     const supportedEngineCodeCount = toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, supportedEngineCodes.length);
-    const providedStatus = typeof source.status === "string" ? source.status.trim() : "";
-    const summaryLabel = source.summaryLabel || source.summary_label || source.label || null;
+    const providedStatus = typeof source.status === "string" ? source.status.trim() : typeof source.applicabilityStatus === "string" ? source.applicabilityStatus.trim() : typeof source.applicability_status === "string" ? source.applicability_status.trim() : "";
+    const summaryLabel = source.summaryLabel || source.summary_label || source.displayLabel || source.display_label || source.summary || source.label || null;
     let status = providedStatus;
     if (!status) {
       if (!maker && !model && !modelCode && !year && !engineCode) {

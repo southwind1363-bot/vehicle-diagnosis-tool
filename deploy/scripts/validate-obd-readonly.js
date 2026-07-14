@@ -216,11 +216,15 @@ const vehicleApplicabilityFunctionChecks = () => {
   check(Boolean(vehicleApplicabilityFunctionSource), "normalizeVehicleApplicabilitySnapshot is missing from obd-readonly.js");
   if (vehicleApplicabilityFunctionSource) {
     const functionBody = vehicleApplicabilityFunctionSource[0];
-    check(functionBody.includes('const candidateRanges = Array.isArray(source.candidateRanges) ? source.candidateRanges : Array.isArray(source.candidate_ranges) ? source.candidate_ranges : [];'), "normalizeVehicleApplicabilitySnapshot should normalize candidate range aliases");
-    check(functionBody.includes('const supportedEngineCodes = Array.isArray(source.supportedEngineCodes) ? source.supportedEngineCodes : Array.isArray(source.supported_engine_codes) ? source.supported_engine_codes : [];'), "normalizeVehicleApplicabilitySnapshot should normalize supported engine code aliases");
+    check(functionBody.includes('Array.isArray(source.candidateRanges)') && functionBody.includes('Array.isArray(source.candidates)'), "normalizeVehicleApplicabilitySnapshot should normalize candidate range aliases");
+    check(functionBody.includes('Array.isArray(source.applicableRanges)') && functionBody.includes('Array.isArray(source.matched_ranges)'), "normalizeVehicleApplicabilitySnapshot should normalize applicable range aliases");
+    check(functionBody.includes('Array.isArray(source.supportedEngineCodes)') && functionBody.includes('Array.isArray(source.engine_codes)'), "normalizeVehicleApplicabilitySnapshot should normalize supported engine code aliases");
+    check(functionBody.includes('source.manufacturer') && functionBody.includes('source.vehicle_model') && functionBody.includes('source.chassis_code'), "normalizeVehicleApplicabilitySnapshot should normalize vehicle identity aliases");
+    check(functionBody.includes('source.model_year') && functionBody.includes('source.registration_year') && functionBody.includes('source.engine_model'), "normalizeVehicleApplicabilitySnapshot should normalize year and engine aliases");
+    check(functionBody.includes('source.catalogMatch === true') && functionBody.includes('source.model_code_match === true'), "normalizeVehicleApplicabilitySnapshot should normalize match flag aliases");
     check(functionBody.includes('const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);'), "normalizeVehicleApplicabilitySnapshot should derive candidate range counts from explicit values or array length");
     check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
-    check(functionBody.includes('const summaryLabel = source.summaryLabel || source.summary_label || source.label || null;'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
+    check(functionBody.includes('source.displayLabel') && functionBody.includes('source.display_label') && functionBody.includes('source.summary'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
   }
 };
 const vehicleApplicabilityWarningsFunctionChecks = () => {
@@ -1937,7 +1941,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1312+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1326+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2009,7 +2013,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.485.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core OBD protocol aliases");
+check(appSource.includes('const APP_VERSION = "2.486.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for vehicle applicability aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3105,6 +3109,26 @@ const normalizedVehicleApplicabilityCamelArrays = obd.normalizeVehicleApplicabil
 check(normalizedVehicleApplicabilityCamelArrays.candidateRangeCount === 3 && normalizedVehicleApplicabilityCamelArrays.applicableRangeCount === 2, "Vehicle applicability normalization did not accept camelCase range aliases");
 check(normalizedVehicleApplicabilityCamelArrays.supportedEngineCodeCount === 1, "Vehicle applicability normalization did not accept camelCase supported engine code aliases");
 check(normalizedVehicleApplicabilityCamelArrays.status === "matched" && normalizedVehicleApplicabilityCamelArrays.modelCodeMatched === true, "Vehicle applicability normalization did not preserve camelCase match flags");
+const normalizedVehicleApplicabilityImportAliases = obd.normalizeVehicleApplicabilitySnapshot({
+  manufacturer: "Toyota",
+  vehicle_model: "Aqua",
+  chassis_code: "NHP10",
+  model_year: "2016",
+  engine: "1NZ-FXE",
+  catalog_match: true,
+  year_match: true,
+  engine_match: true,
+  model_code_match: true,
+  candidates: [{ start: "2012" }, { start: "2015" }],
+  matched_ranges: [{ start: "2015" }],
+  engine_codes: ["1NZ-FXE"],
+  display_label: "Toyota Aqua / import alias match"
+});
+check(normalizedVehicleApplicabilityImportAliases.maker === "Toyota" && normalizedVehicleApplicabilityImportAliases.model === "Aqua", "Vehicle applicability normalization did not accept manufacturer or vehicle_model aliases");
+check(normalizedVehicleApplicabilityImportAliases.modelCode === "NHP10" && normalizedVehicleApplicabilityImportAliases.year === "2016" && normalizedVehicleApplicabilityImportAliases.engineCode === "1NZ-FXE", "Vehicle applicability normalization did not accept chassis_code, model_year, or engine aliases");
+check(normalizedVehicleApplicabilityImportAliases.status === "matched" && normalizedVehicleApplicabilityImportAliases.applicableRangeCount === 1 && normalizedVehicleApplicabilityImportAliases.supportedEngineCodeCount === 1, "Vehicle applicability normalization did not derive imported alias counts or matched status");
+check(normalizedVehicleApplicabilityImportAliases.summaryLabel === "Toyota Aqua / import alias match", "Vehicle applicability normalization did not preserve display label aliases");
+check(obd.normalizeVehicleApplicabilitySnapshot({ applicability_status: "manual" }).status === "manual", "Vehicle applicability normalization did not accept applicability_status aliases");
 const explicitNextReadoutCandidatesSample = [
   {
     id: "custom_snapshot",
@@ -8145,6 +8169,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1312");
+  console.log("OBD read-only safety checks: 1326");
   console.log("Errors: 0");
 }
