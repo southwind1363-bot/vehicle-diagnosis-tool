@@ -1988,7 +1988,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1467+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1475+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2060,7 +2060,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.516.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for scan session imported summary aliases");
+check(appSource.includes('const APP_VERSION = "2.517.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for decoded and text scan snake aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5798,6 +5798,10 @@ check(decodedScanSession.onboardMonitorSnapshot.testCount === 1, "デコード�
 check(decodedScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "デコード済みOBDセッションへECU情報を統合できません");
 check(decodedScanSession.diagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Decoded OBD session did not expose diagnosticFlowSummary");
 check(decodedScanSession.diagnosticFlowSummary?.stage === "diagnostic_core", "Decoded OBD session did not expose diagnosticFlowSummary stage");
+check(decodedScanSession.schema_version === "scan_session_v1" && decodedScanSession.session_id === "decoded-test", "Decoded OBD session did not expose runtime snake_case identity aliases");
+check(decodedScanSession.dtc_snapshot?.codes.includes("P0171") && decodedScanSession.supported_pid_matrix?.supportedPids.includes("40"), "Decoded OBD session did not expose runtime snake_case DTC and PID aliases");
+check(decodedScanSession.freeze_frame_snapshot?.triggerDtc === "P0171" && decodedScanSession.readiness_snapshot?.milOn === true && decodedScanSession.ecu_info_snapshot?.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Decoded OBD session did not expose runtime snake_case snapshot aliases");
+check(decodedScanSession.core_session_status?.schemaVersion === "core_session_status_v1" && decodedScanSession.diagnostic_flow_summary?.schemaVersion === "diagnostic_flow_summary_v1", "Decoded OBD session did not expose runtime snake_case diagnostic summary aliases");
 const decodedScanSessionAliasInputs = obd.buildDecodedObdScanSession({
   session_id: "decoded-alias-test",
   started_at: "2026-06-28T00:12:00Z",
@@ -6373,6 +6377,10 @@ check(textScanSession.ecuInfoSnapshot.items.find((item) => item.id === "calibrat
 check(textScanSession.retainedRawText === false && textScanSession.retainedRawFrames === false && textScanSession.wouldTransmit === false, "OBD text scan session retained raw text/frames or allowed transmit");
 check(textScanSession.diagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "OBD text scan session did not expose diagnosticFlowSummary");
 check(textScanSession.diagnosticFlowSummary?.stage === "diagnostic_core", "OBD text scan session did not expose diagnosticFlowSummary stage");
+check(textScanSession.schema_version === "scan_session_v1" && textScanSession.session_id === "obd-text-test", "OBD text scan session did not expose runtime snake_case identity aliases");
+check(textScanSession.dtc_snapshot?.dtcs.some((item) => item.code === "P0171" && item.status === "stored") && textScanSession.live_pid_snapshot?.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "OBD text scan session did not expose runtime snake_case DTC and live PID aliases");
+check(textScanSession.freeze_frame_snapshot?.triggerDtc === "P0171" && textScanSession.readiness_snapshot?.milOn === true && textScanSession.ecu_info_snapshot?.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "OBD text scan session did not expose runtime snake_case snapshot aliases");
+check(textScanSession.core_session_status?.schemaVersion === "core_session_status_v1" && textScanSession.diagnostic_flow_summary?.schemaVersion === "diagnostic_flow_summary_v1", "OBD text scan session did not expose runtime snake_case diagnostic summary aliases");
 const techstreamTextScanSession = obd.buildScanSessionFromObdText(["Toyota Techstream", "J2534", "7E8 04 43 01 71"].join("\n"), { session_id: "techstream-log" });
 check(techstreamTextScanSession.toolHints.join(",") === "Techstream,J2534", "OBD text scan session did not retain Techstream/J2534 tool hints");
 check(techstreamTextScanSession.importClassification.toolHints.join(",") === "Techstream,J2534", "OBD text scan session import classification did not retain tool hints");
@@ -8703,6 +8711,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1467");
+  console.log("OBD read-only safety checks: 1475");
   console.log("Errors: 0");
 }
