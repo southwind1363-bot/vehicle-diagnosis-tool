@@ -9945,10 +9945,22 @@
       explicitImportClassification,
       detectedToolHints: toolHints
     });
-    const outputDtcSnapshot = mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot;
+    const hasTextDtcCodes = Array.isArray(textDtcSnapshot?.codes) && textDtcSnapshot.codes.length > 0;
+    const outputDtcSnapshot = hasTextDtcCodes && mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot;
+    const outputSession = outputDtcSnapshot === session.dtcSnapshot
+      ? session
+      : buildDiagnosticScanSession({
+        ...session,
+        dtcSnapshot: outputDtcSnapshot,
+        dtc_snapshot: outputDtcSnapshot,
+        readoutCoverage: metadataOverrides.readoutCoverage || null,
+        readout_coverage: metadataOverrides.readoutCoverage || null,
+        coreSessionStatus: null,
+        core_session_status: null
+      });
 
     return {
-      ...session,
+      ...outputSession,
       dtcSnapshot: outputDtcSnapshot,
       dtc_snapshot: outputDtcSnapshot,
       source: "obd_text_import",
