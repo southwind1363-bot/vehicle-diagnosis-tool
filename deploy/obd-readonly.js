@@ -5492,11 +5492,22 @@
   } = {}) {
     const flags = {
       retainedRawText,
-      wouldTransmit
+      retained_raw_text: retainedRawText,
+      wouldTransmit,
+      would_transmit: wouldTransmit
     };
-    if (retainedRawFrames !== undefined) flags.retainedRawFrames = retainedRawFrames;
-    if (vehicleCommandEnabled !== undefined) flags.vehicleCommandEnabled = vehicleCommandEnabled;
-    if (exportRequired !== undefined) flags.exportRequired = exportRequired;
+    if (retainedRawFrames !== undefined) {
+      flags.retainedRawFrames = retainedRawFrames;
+      flags.retained_raw_frames = retainedRawFrames;
+    }
+    if (vehicleCommandEnabled !== undefined) {
+      flags.vehicleCommandEnabled = vehicleCommandEnabled;
+      flags.vehicle_command_enabled = vehicleCommandEnabled;
+    }
+    if (exportRequired !== undefined) {
+      flags.exportRequired = exportRequired;
+      flags.export_required = exportRequired;
+    }
     return flags;
   }
 
