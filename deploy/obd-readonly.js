@@ -4361,9 +4361,12 @@
   function buildImportedReadoutQualityComparisonSummary(importedQualitySummary = null, currentQualitySummary = {}) {
     if (!importedQualitySummary || typeof importedQualitySummary !== "object") return null;
     const currentSummary = currentQualitySummary && typeof currentQualitySummary === "object" ? currentQualitySummary : {};
-    const readCount = (summary = {}, field, fallbackIds = []) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : fallbackIds.length;
-    const readIds = (summary = {}, field) => Array.isArray(summary?.[field])
-      ? [...new Set(summary[field].filter(Boolean).map(String))].sort()
+    const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+    const readAliasValue = (summary = {}, field) => summary && typeof summary === "object" ? pickDefined(summary[field], summary[toSnakeField(field)]) : undefined;
+    const readFlag = (summary = {}, field) => readAliasValue(summary, field) === true;
+    const readCount = (summary = {}, field, fallbackIds = []) => Number.isFinite(Number(readAliasValue(summary, field))) ? Number(readAliasValue(summary, field)) : fallbackIds.length;
+    const readIds = (summary = {}, field) => Array.isArray(readAliasValue(summary, field))
+      ? [...new Set(readAliasValue(summary, field).filter(Boolean).map(String))].sort()
       : [];
     const importedIssueIds = readIds(importedQualitySummary, "issueIds");
     const currentIssueIds = readIds(currentSummary, "issueIds");
@@ -4390,7 +4393,7 @@
       ...issueAddedIds,
       ...issueRemovedIds,
       ...changedIssueCountIds,
-      ...((importedQualitySummary.reviewRequired === true) !== (currentSummary.reviewRequired === true) ? currentIssueIds : [])
+      ...(readFlag(importedQualitySummary, "reviewRequired") !== readFlag(currentSummary, "reviewRequired") ? currentIssueIds : [])
     ].filter(Boolean))].sort();
     const reviewTargetReadoutIds = [...new Set(reviewIssueIds.map((id) => issueReviewReadoutMap[id]).filter(Boolean))];
     const primaryReviewTargetReadoutId = reviewTargetReadoutIds[0] || null;
@@ -4406,12 +4409,12 @@
     };
     return {
       schemaVersion: "imported_readout_quality_comparison_v1",
-      importedReviewRequired: importedQualitySummary.reviewRequired === true,
-      currentReviewRequired: currentSummary.reviewRequired === true,
-      reviewRequiredChanged: (importedQualitySummary.reviewRequired === true) !== (currentSummary.reviewRequired === true),
-      importedReadyForInterpretation: importedQualitySummary.readyForInterpretation === true,
-      currentReadyForInterpretation: currentSummary.readyForInterpretation === true,
-      readyForInterpretationChanged: (importedQualitySummary.readyForInterpretation === true) !== (currentSummary.readyForInterpretation === true),
+      importedReviewRequired: readFlag(importedQualitySummary, "reviewRequired"),
+      currentReviewRequired: readFlag(currentSummary, "reviewRequired"),
+      reviewRequiredChanged: readFlag(importedQualitySummary, "reviewRequired") !== readFlag(currentSummary, "reviewRequired"),
+      importedReadyForInterpretation: readFlag(importedQualitySummary, "readyForInterpretation"),
+      currentReadyForInterpretation: readFlag(currentSummary, "readyForInterpretation"),
+      readyForInterpretationChanged: readFlag(importedQualitySummary, "readyForInterpretation") !== readFlag(currentSummary, "readyForInterpretation"),
       importedIssueCount: readCount(importedQualitySummary, "issueCount", importedIssueIds),
       currentIssueCount: readCount(currentSummary, "issueCount", currentIssueIds),
       issueCountDelta: readCount(currentSummary, "issueCount", currentIssueIds) - readCount(importedQualitySummary, "issueCount", importedIssueIds),
