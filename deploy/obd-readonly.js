@@ -4440,31 +4440,39 @@
   function buildImportedReadoutRequestPlanGateComparisonSummary(importedGateSummary = null, currentGateSummary = {}) {
     if (!importedGateSummary || typeof importedGateSummary !== "object") return null;
     const currentSummary = currentGateSummary && typeof currentGateSummary === "object" ? currentGateSummary : {};
-    const readCount = (summary, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : 0;
-    const importedBlockedReasonIds = Array.isArray(importedGateSummary.blockedReasonIds) ? importedGateSummary.blockedReasonIds : [];
-    const currentBlockedReasonIds = Array.isArray(currentSummary.blockedReasonIds) ? currentSummary.blockedReasonIds : [];
-    const importedActionQueue = Array.isArray(importedGateSummary.actionQueue) ? importedGateSummary.actionQueue : [];
-    const currentActionQueue = Array.isArray(currentSummary.actionQueue) ? currentSummary.actionQueue : [];
-    const importedActionSummary = importedGateSummary.actionSummary && typeof importedGateSummary.actionSummary === "object" ? importedGateSummary.actionSummary : {};
-    const currentActionSummary = currentSummary.actionSummary && typeof currentSummary.actionSummary === "object" ? currentSummary.actionSummary : {};
-    const readActionCount = (summary = {}, queue = [], field = "actionCount") => Number.isFinite(Number(summary?.actionSummary?.[field]))
-      ? Number(summary.actionSummary[field])
+    const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+    const readAliasValue = (summary = {}, field) => summary && typeof summary === "object" ? pickDefined(summary[field], summary[toSnakeField(field)]) : undefined;
+    const readCount = (summary, field) => Number.isFinite(Number(readAliasValue(summary, field))) ? Number(readAliasValue(summary, field)) : 0;
+    const readFlag = (summary = {}, field) => readAliasValue(summary, field) === true;
+    const importedBlockedReasonIds = Array.isArray(readAliasValue(importedGateSummary, "blockedReasonIds")) ? readAliasValue(importedGateSummary, "blockedReasonIds") : [];
+    const currentBlockedReasonIds = Array.isArray(readAliasValue(currentSummary, "blockedReasonIds")) ? readAliasValue(currentSummary, "blockedReasonIds") : [];
+    const importedActionQueue = Array.isArray(readAliasValue(importedGateSummary, "actionQueue")) ? readAliasValue(importedGateSummary, "actionQueue") : [];
+    const currentActionQueue = Array.isArray(readAliasValue(currentSummary, "actionQueue")) ? readAliasValue(currentSummary, "actionQueue") : [];
+    const importedActionSummaryInput = readAliasValue(importedGateSummary, "actionSummary");
+    const currentActionSummaryInput = readAliasValue(currentSummary, "actionSummary");
+    const importedActionSummary = importedActionSummaryInput && typeof importedActionSummaryInput === "object" ? importedActionSummaryInput : {};
+    const currentActionSummary = currentActionSummaryInput && typeof currentActionSummaryInput === "object" ? currentActionSummaryInput : {};
+    const readActionCount = (summary = {}, queue = [], field = "actionCount") => Number.isFinite(Number(readAliasValue(readAliasValue(summary, "actionSummary"), field)))
+      ? Number(readAliasValue(readAliasValue(summary, "actionSummary"), field))
       : queue.length;
-    const readActionIds = (summary = {}, queue = []) => Array.isArray(summary?.actionIds)
-      ? summary.actionIds.filter(Boolean)
-      : Array.isArray(summary?.actionSummary?.actionIds)
-        ? summary.actionSummary.actionIds.filter(Boolean)
+    const readActionIds = (summary = {}, queue = []) => Array.isArray(readAliasValue(summary, "actionIds"))
+      ? readAliasValue(summary, "actionIds").filter(Boolean)
+      : Array.isArray(readAliasValue(readAliasValue(summary, "actionSummary"), "actionIds"))
+        ? readAliasValue(readAliasValue(summary, "actionSummary"), "actionIds").filter(Boolean)
       : queue.map((item) => item?.id).filter(Boolean);
-    const readActionReasonIds = (summary = {}, queue = []) => Array.isArray(summary?.actionReasonIds)
-      ? summary.actionReasonIds.filter(Boolean)
-      : Array.isArray(summary?.actionSummary?.reasonIds)
-        ? summary.actionSummary.reasonIds.filter(Boolean)
-      : queue.map((item) => item?.reasonId).filter(Boolean);
-    const readActionReadoutIds = (summary = {}, queue = []) => Array.isArray(summary?.actionReadoutIds)
-      ? summary.actionReadoutIds.filter(Boolean)
-      : Array.isArray(summary?.actionSummary?.readoutIds)
-        ? summary.actionSummary.readoutIds.filter(Boolean)
-      : [...new Set(queue.flatMap((item) => Array.isArray(item?.readoutIds) ? item.readoutIds : []).filter(Boolean))];
+    const readActionReasonIds = (summary = {}, queue = []) => Array.isArray(readAliasValue(summary, "actionReasonIds"))
+      ? readAliasValue(summary, "actionReasonIds").filter(Boolean)
+      : Array.isArray(readAliasValue(readAliasValue(summary, "actionSummary"), "reasonIds"))
+        ? readAliasValue(readAliasValue(summary, "actionSummary"), "reasonIds").filter(Boolean)
+      : queue.map((item) => item?.reasonId || item?.reason_id).filter(Boolean);
+    const readActionReadoutIds = (summary = {}, queue = []) => Array.isArray(readAliasValue(summary, "actionReadoutIds"))
+      ? readAliasValue(summary, "actionReadoutIds").filter(Boolean)
+      : Array.isArray(readAliasValue(readAliasValue(summary, "actionSummary"), "readoutIds"))
+        ? readAliasValue(readAliasValue(summary, "actionSummary"), "readoutIds").filter(Boolean)
+      : [...new Set(queue.flatMap((item) => {
+        const ids = item?.readoutIds || item?.readout_ids;
+        return Array.isArray(ids) ? ids : [];
+      }).filter(Boolean))];
     const normalizeIds = (ids = []) => (Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : []);
     const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedActionIds = readActionIds(importedGateSummary, importedActionQueue);
@@ -4492,24 +4500,24 @@
       importedState: importedGateSummary.state || null,
       currentState: currentSummary.state || null,
       stateChanged: (importedGateSummary.state || null) !== (currentSummary.state || null),
-      importedReady: importedGateSummary.ready === true,
-      currentReady: currentSummary.ready === true,
-      readyChanged: (importedGateSummary.ready === true) !== (currentSummary.ready === true),
-      importedBlocked: importedGateSummary.blocked === true,
-      currentBlocked: currentSummary.blocked === true,
-      blockedChanged: (importedGateSummary.blocked === true) !== (currentSummary.blocked === true),
-      importedSafeForBridgePlanning: importedGateSummary.safeForBridgePlanning === true,
-      currentSafeForBridgePlanning: currentSummary.safeForBridgePlanning === true,
-      safeForBridgePlanningChanged: (importedGateSummary.safeForBridgePlanning === true) !== (currentSummary.safeForBridgePlanning === true),
-      importedNextBlockedReasonId: importedGateSummary.nextBlockedReasonId || null,
-      currentNextBlockedReasonId: currentSummary.nextBlockedReasonId || null,
-      nextBlockedReasonChanged: (importedGateSummary.nextBlockedReasonId || null) !== (currentSummary.nextBlockedReasonId || null),
-      importedActionRequired: importedGateSummary.actionRequired === true,
-      currentActionRequired: currentSummary.actionRequired === true,
-      actionRequiredChanged: (importedGateSummary.actionRequired === true) !== (currentSummary.actionRequired === true),
-      importedNextActionId: importedGateSummary.nextActionId || importedActionSummary.nextActionId || null,
-      currentNextActionId: currentSummary.nextActionId || currentActionSummary.nextActionId || null,
-      nextActionChanged: (importedGateSummary.nextActionId || importedActionSummary.nextActionId || null) !== (currentSummary.nextActionId || currentActionSummary.nextActionId || null),
+      importedReady: readFlag(importedGateSummary, "ready"),
+      currentReady: readFlag(currentSummary, "ready"),
+      readyChanged: readFlag(importedGateSummary, "ready") !== readFlag(currentSummary, "ready"),
+      importedBlocked: readFlag(importedGateSummary, "blocked"),
+      currentBlocked: readFlag(currentSummary, "blocked"),
+      blockedChanged: readFlag(importedGateSummary, "blocked") !== readFlag(currentSummary, "blocked"),
+      importedSafeForBridgePlanning: readFlag(importedGateSummary, "safeForBridgePlanning"),
+      currentSafeForBridgePlanning: readFlag(currentSummary, "safeForBridgePlanning"),
+      safeForBridgePlanningChanged: readFlag(importedGateSummary, "safeForBridgePlanning") !== readFlag(currentSummary, "safeForBridgePlanning"),
+      importedNextBlockedReasonId: readAliasValue(importedGateSummary, "nextBlockedReasonId") || null,
+      currentNextBlockedReasonId: readAliasValue(currentSummary, "nextBlockedReasonId") || null,
+      nextBlockedReasonChanged: (readAliasValue(importedGateSummary, "nextBlockedReasonId") || null) !== (readAliasValue(currentSummary, "nextBlockedReasonId") || null),
+      importedActionRequired: readFlag(importedGateSummary, "actionRequired"),
+      currentActionRequired: readFlag(currentSummary, "actionRequired"),
+      actionRequiredChanged: readFlag(importedGateSummary, "actionRequired") !== readFlag(currentSummary, "actionRequired"),
+      importedNextActionId: readAliasValue(importedGateSummary, "nextActionId") || readAliasValue(importedActionSummary, "nextActionId") || null,
+      currentNextActionId: readAliasValue(currentSummary, "nextActionId") || readAliasValue(currentActionSummary, "nextActionId") || null,
+      nextActionChanged: (readAliasValue(importedGateSummary, "nextActionId") || readAliasValue(importedActionSummary, "nextActionId") || null) !== (readAliasValue(currentSummary, "nextActionId") || readAliasValue(currentActionSummary, "nextActionId") || null),
       importedTotalCount: readCount(importedGateSummary, "totalCount"),
       currentTotalCount: readCount(currentSummary, "totalCount"),
       totalCountDelta: readCount(currentSummary, "totalCount") - readCount(importedGateSummary, "totalCount"),
@@ -4521,10 +4529,10 @@
       unmappedCountDelta: readCount(currentSummary, "unmappedCount") - readCount(importedGateSummary, "unmappedCount"),
       importedBlockedReasonIds: [...importedBlockedReasonIds],
       currentBlockedReasonIds: [...currentBlockedReasonIds],
-      importedBlockedReasonCount: Number.isFinite(Number(importedGateSummary.blockedReasonCount)) ? Number(importedGateSummary.blockedReasonCount) : importedBlockedReasonIds.length,
-      currentBlockedReasonCount: Number.isFinite(Number(currentSummary.blockedReasonCount)) ? Number(currentSummary.blockedReasonCount) : currentBlockedReasonIds.length,
-      blockedReasonCountDelta: (Number.isFinite(Number(currentSummary.blockedReasonCount)) ? Number(currentSummary.blockedReasonCount) : currentBlockedReasonIds.length)
-        - (Number.isFinite(Number(importedGateSummary.blockedReasonCount)) ? Number(importedGateSummary.blockedReasonCount) : importedBlockedReasonIds.length),
+      importedBlockedReasonCount: Number.isFinite(Number(readAliasValue(importedGateSummary, "blockedReasonCount"))) ? Number(readAliasValue(importedGateSummary, "blockedReasonCount")) : importedBlockedReasonIds.length,
+      currentBlockedReasonCount: Number.isFinite(Number(readAliasValue(currentSummary, "blockedReasonCount"))) ? Number(readAliasValue(currentSummary, "blockedReasonCount")) : currentBlockedReasonIds.length,
+      blockedReasonCountDelta: (Number.isFinite(Number(readAliasValue(currentSummary, "blockedReasonCount"))) ? Number(readAliasValue(currentSummary, "blockedReasonCount")) : currentBlockedReasonIds.length)
+        - (Number.isFinite(Number(readAliasValue(importedGateSummary, "blockedReasonCount"))) ? Number(readAliasValue(importedGateSummary, "blockedReasonCount")) : importedBlockedReasonIds.length),
       blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|"),
       blockedReasonAddedIds: diffIds(normalizedCurrentBlockedReasonIds, normalizedImportedBlockedReasonIds),
       blockedReasonRemovedIds: diffIds(normalizedImportedBlockedReasonIds, normalizedCurrentBlockedReasonIds),

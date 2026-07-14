@@ -701,15 +701,15 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('schemaVersion: "readout_quality_review_action_v1"') && source.includes('vehicleCommandEnabled: false') && source.includes('wouldTransmit: false'), "imported readout quality comparison should expose read-only review actions");
     check(source.includes('raw_pid_values_need_conversion: "live_pid_snapshot"') && source.includes('onboard_monitor_test_failed: "onboard_monitor_snapshot"'), "imported readout quality comparison should map quality issues to review readouts");
     check(source.includes('function buildImportedReadoutRequestPlanGateComparisonSummary(importedGateSummary = null, currentGateSummary = {})') && source.includes('schemaVersion: "imported_readout_request_plan_gate_comparison_v1"'), "obd-readonly should expose imported readout request plan gate comparison summaries");
-    check(source.includes('safeForBridgePlanningChanged: (importedGateSummary.safeForBridgePlanning === true) !== (currentSummary.safeForBridgePlanning === true)') && source.includes('blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|")'), "imported readout request plan gate comparison should compare safety and blocked reasons");
-    check(source.includes('blockedReasonCountDelta: (Number.isFinite(Number(currentSummary.blockedReasonCount))') && source.includes('comparison.blockedReasonCountDelta'), "imported readout request plan gate comparison should compare blocked reason counts");
-    check(source.includes('actionRequiredChanged: (importedGateSummary.actionRequired === true) !== (currentSummary.actionRequired === true)') && source.includes('nextActionChanged: (importedGateSummary.nextActionId || importedActionSummary.nextActionId || null) !== (currentSummary.nextActionId || currentActionSummary.nextActionId || null)'), "imported readout request plan gate comparison should compare next action state");
+    check(source.includes('safeForBridgePlanningChanged: readFlag(importedGateSummary, "safeForBridgePlanning") !== readFlag(currentSummary, "safeForBridgePlanning")') && source.includes('blockedReasonIdsChanged: importedBlockedReasonIds.join("|") !== currentBlockedReasonIds.join("|")'), "imported readout request plan gate comparison should compare safety and blocked reasons");
+    check(source.includes('blockedReasonCountDelta: (Number.isFinite(Number(readAliasValue(currentSummary, "blockedReasonCount")))') && source.includes('comparison.blockedReasonCountDelta'), "imported readout request plan gate comparison should compare blocked reason counts");
+    check(source.includes('actionRequiredChanged: readFlag(importedGateSummary, "actionRequired") !== readFlag(currentSummary, "actionRequired")') && source.includes('nextActionChanged: (readAliasValue(importedGateSummary, "nextActionId")'), "imported readout request plan gate comparison should compare next action state");
     check(source.includes('const importedActionIds = readActionIds(importedGateSummary, importedActionQueue);') && source.includes('actionIdsChanged: importedActionIds.join("|") !== currentActionIds.join("|")'), "imported readout request plan gate comparison should compare action ids");
     check(source.includes('const importedActionReasonIds = readActionReasonIds(importedGateSummary, importedActionQueue);') && source.includes('actionReasonIdsChanged: importedActionReasonIds.join("|") !== currentActionReasonIds.join("|")'), "imported readout request plan gate comparison should compare action reason ids");
     check(source.includes('const importedActionReadoutIds = readActionReadoutIds(importedGateSummary, importedActionQueue);') && source.includes('actionReadoutIdsChanged: importedActionReadoutIds.join("|") !== currentActionReadoutIds.join("|")'), "imported readout request plan gate comparison should compare action readout ids");
     check(source.includes('blockedReasonAddedIds: diffIds(normalizedCurrentBlockedReasonIds, normalizedImportedBlockedReasonIds),') && source.includes('actionReadoutRemovedIds: diffIds(normalizedImportedActionReadoutIds, normalizedCurrentActionReadoutIds),'), "imported readout request plan gate comparison should expose added and removed ids");
-    check(source.includes('const importedActionSummary = importedGateSummary.actionSummary') && source.includes('const currentActionSummary = currentSummary.actionSummary'), "imported readout request plan gate comparison should read action summaries");
-    check(source.includes('summary?.actionSummary?.actionIds') && source.includes('summary?.actionSummary?.readoutIds'), "imported readout request plan gate comparison should fall back to action summary ids");
+    check(source.includes('const importedActionSummaryInput = readAliasValue(importedGateSummary, "actionSummary");') && source.includes('const currentActionSummaryInput = readAliasValue(currentSummary, "actionSummary");'), "imported readout request plan gate comparison should read action summaries");
+    check(source.includes('readAliasValue(readAliasValue(summary, "actionSummary"), "actionIds")') && source.includes('readAliasValue(readAliasValue(summary, "actionSummary"), "readoutIds")'), "imported readout request plan gate comparison should fall back to action summary ids");
     check(source.includes('actionSummaryCountDelta: currentActionSummaryCount - importedActionSummaryCount') && source.includes('actionSummaryReadoutCountDelta: currentActionSummaryReadoutCount - importedActionSummaryReadoutCount'), "imported readout request plan gate comparison should compare action summary counts");
     check(source.includes('actionQueueCountDelta: currentActionQueue.length - importedActionQueue.length') && source.includes('request_plan_actions'), "imported session comparison should track request plan action changes");
     check(source.includes('function buildImportedSessionComparisonSummary({') && source.includes('readoutQualityComparison = null') && source.includes('coreReadoutInventoryComparison = null') && source.includes('readout_quality_summary') && source.includes('core_readout_inventory_summary'), "obd-readonly should expose imported session comparison summaries");
@@ -1957,7 +1957,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1400+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1404+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2029,7 +2029,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.500.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout quality aliases");
+check(appSource.includes('const APP_VERSION = "2.501.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for gate comparison aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7472,6 +7472,49 @@ check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedReadoutReques
 check("actionReadoutIdsChanged" in scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary, "Diagnostic scan session did not expose imported readout request plan gate action readout change flag");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary?.actionSummaryCountDelta) && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary?.actionSummaryReadoutCountDelta), "Diagnostic scan session did not expose imported readout request plan gate action summary deltas");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateComparisonSummary?.actionQueueCountDelta), "Diagnostic scan session did not expose imported readout request plan gate action queue delta");
+const scanSessionSnakeGateImport = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-snake-gate-import",
+  readout_request_plan_gate_summary: {
+    schema_version: "readout_request_plan_gate_v1",
+    state: "blocked",
+    ready: false,
+    blocked: true,
+    safe_for_bridge_planning: false,
+    blocked_reason_count: 1,
+    blocked_reason_ids: ["unmapped_readout_requests"],
+    next_blocked_reason_id: "unmapped_readout_requests",
+    action_required: true,
+    action_count: 1,
+    action_ids: ["map_readout_request"],
+    action_reason_ids: ["unmapped_readout_requests"],
+    action_readout_ids: ["snake_gate_snapshot"],
+    next_action_id: "map_readout_request",
+    action_summary: {
+      action_count: 1,
+      reason_count: 1,
+      readout_count: 1,
+      action_ids: ["map_readout_request"],
+      reason_ids: ["unmapped_readout_requests"],
+      readout_ids: ["snake_gate_snapshot"],
+      next_action_id: "map_readout_request",
+      vehicle_command_enabled: false,
+      would_transmit: false
+    },
+    action_queue: [
+      {
+        id: "map_readout_request",
+        reason_id: "unmapped_readout_requests",
+        readout_ids: ["snake_gate_snapshot"],
+        vehicle_command_enabled: false,
+        would_transmit: false
+      }
+    ]
+  }
+});
+check(scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedBlockedReasonCount === 1 && scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedBlockedReasonIds?.includes("unmapped_readout_requests"), "Diagnostic scan session did not read snake_case imported gate blocked reasons");
+check(scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedActionRequired === true && scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedNextActionId === "map_readout_request", "Diagnostic scan session did not read snake_case imported gate action state");
+check(scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedActionIds?.includes("map_readout_request") && scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedActionReadoutIds?.includes("snake_gate_snapshot"), "Diagnostic scan session did not read snake_case imported gate action ids");
+check(scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedActionSummaryCount === 1 && scanSessionSnakeGateImport.importedReadoutRequestPlanGateComparisonSummary?.importedActionQueueCount === 1, "Diagnostic scan session did not read snake_case imported gate action counts");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventoryComparisonSummary?.schemaVersion === "imported_core_readout_inventory_comparison_v1" && Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventoryComparisonSummary.changedValueCountIds), "Diagnostic scan session did not compare imported core readout inventory summary");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Diagnostic scan session did not summarize imported session comparison results");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionIds), "Diagnostic scan session did not expose imported session changed section ids");
@@ -8503,6 +8546,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1400");
+  console.log("OBD read-only safety checks: 1404");
   console.log("Errors: 0");
 }
