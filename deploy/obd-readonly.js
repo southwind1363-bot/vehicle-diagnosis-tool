@@ -5443,6 +5443,94 @@
     };
   }
 
+  function normalizeAnalysisReadinessSummaryAliases(summary = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const schemaVersion = summary.schemaVersion || summary.schema_version || "analysis_readiness_summary_v1";
+    const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
+    const toCount = (camelKey, snakeKey, fallback = 0) => {
+      const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
+      return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
+    };
+    const blockerIds = normalizeIds(summary.blockerIds || summary.blocker_ids);
+    const checklist = Array.isArray(summary.checklist) ? summary.checklist : [];
+    const blockerSummary = summary.blockerSummary || summary.blocker_summary || null;
+    const blockersById = summary.blockersById || summary.blockers_by_id || {};
+    const checklistById = summary.checklistById || summary.checklist_by_id || {};
+    const checklistSummary = summary.checklistSummary || summary.checklist_summary || null;
+    const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null;
+    const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || null;
+    const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
+    const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
+    const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+    const blockerCount = toCount("blockerCount", "blocker_count", blockerIds.length);
+    const missingReadoutCount = toCount("missingReadoutCount", "missing_readout_count", 0);
+    const emptyReadoutCount = toCount("emptyReadoutCount", "empty_readout_count", 0);
+    const blockingWarningCount = toCount("blockingWarningCount", "blocking_warning_count", 0);
+    const readoutQualityIssueCount = toCount("readoutQualityIssueCount", "readout_quality_issue_count", 0);
+    const pendingReadoutCount = toCount("pendingReadoutCount", "pending_readout_count", missingReadoutCount + emptyReadoutCount);
+    const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
+    const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const ready = pickDefined(summary.ready, summary.readyForAnalysis, summary.ready_for_analysis, false) === true;
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      ready,
+      status: summary.status || null,
+      blockerCount,
+      blocker_count: blockerCount,
+      blockerIds,
+      blocker_ids: blockerIds,
+      blockerSummary,
+      blocker_summary: blockerSummary,
+      blockersById,
+      blockers_by_id: blockersById,
+      checklist,
+      checklistById,
+      checklist_by_id: checklistById,
+      checklistSummary,
+      checklist_summary: checklistSummary,
+      readoutRequestPlanGateSummary,
+      readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+      readoutQualitySummary,
+      readout_quality_summary: readoutQualitySummary,
+      missingReadoutCount,
+      missing_readout_count: missingReadoutCount,
+      emptyReadoutCount,
+      empty_readout_count: emptyReadoutCount,
+      blockingWarningCount,
+      blocking_warning_count: blockingWarningCount,
+      readoutQualityIssueCount,
+      readout_quality_issue_count: readoutQualityIssueCount,
+      primaryBlockingReasonId: pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null),
+      primary_blocking_reason_id: pickDefined(summary.primary_blocking_reason_id, summary.primaryBlockingReasonId, null),
+      primaryBlockingReason,
+      primary_blocking_reason: primaryBlockingReason,
+      primaryBlockingReadoutId: pickDefined(summary.primaryBlockingReadoutId, summary.primary_blocking_readout_id, null),
+      primary_blocking_readout_id: pickDefined(summary.primary_blocking_readout_id, summary.primaryBlockingReadoutId, null),
+      primaryBlockingReadoutLabel: pickDefined(summary.primaryBlockingReadoutLabel, summary.primary_blocking_readout_label, null),
+      primary_blocking_readout_label: pickDefined(summary.primary_blocking_readout_label, summary.primaryBlockingReadoutLabel, null),
+      primaryBlockingReadoutRequest,
+      primary_blocking_readout_request: primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
+      primary_blocking_summary: primaryBlockingSummary,
+      pendingReadoutCount,
+      pending_readout_count: pendingReadoutCount,
+      completionPercent,
+      completion_percent: completionPercent,
+      nextReadoutId: pickDefined(summary.nextReadoutId, summary.next_readout_id, null),
+      next_readout_id: pickDefined(summary.next_readout_id, summary.nextReadoutId, null),
+      nextReadoutLabel: pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
+      next_readout_label: pickDefined(summary.next_readout_label, summary.nextReadoutLabel, null),
+      nextReadoutStatus: pickDefined(summary.nextReadoutStatus, summary.next_readout_status, null),
+      next_readout_status: pickDefined(summary.next_readout_status, summary.nextReadoutStatus, null),
+      nextReadoutSource: pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
+      next_readout_source: pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
+      nextReadoutQueuePosition: pickDefined(summary.nextReadoutQueuePosition, summary.next_readout_queue_position, null),
+      next_readout_queue_position: pickDefined(summary.next_readout_queue_position, summary.nextReadoutQueuePosition, null)
+    };
+  }
+
   function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
     if (!importedAnalysisReadinessSummary || typeof importedAnalysisReadinessSummary !== "object") return null;
     const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
@@ -7675,11 +7763,13 @@
       || bridgeImportInput?.readoutCompletionSummary
       || bridgeImportInput?.readout_completion_summary
       || null);
-    const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary
+    const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(bridgeImport?.analysisReadinessSummary
       || bridgeImport?.analysis_readiness_summary
       || bridgeSession?.analysisReadinessSummary
       || bridgeSession?.analysis_readiness_summary
-      || null;
+      || bridgeImportInput?.analysisReadinessSummary
+      || bridgeImportInput?.analysis_readiness_summary
+      || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(bridgeImport?.readoutQualitySummary
       || bridgeImport?.readout_quality_summary
       || bridgeSession?.readoutQualitySummary
@@ -9825,7 +9915,7 @@
     const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;
     const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null);
-    const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
+    const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
