@@ -3397,14 +3397,22 @@
       schemaVersion: "readout_quality_summary_v1",
       schema_version: "readout_quality_summary_v1",
       issueCount: readoutQualityIssues.length,
+      issue_count: readoutQualityIssues.length,
       issueIds: readoutQualityIssues.map((item) => item.id),
+      issue_ids: readoutQualityIssues.map((item) => item.id),
       issues: readoutQualityIssues,
       reviewRequired: readoutQualityIssues.length > 0,
+      review_required: readoutQualityIssues.length > 0,
       readyForInterpretation: readoutQualityIssues.length === 0,
+      ready_for_interpretation: readoutQualityIssues.length === 0,
       rawPidUndecodedCount,
+      raw_pid_undecoded_count: rawPidUndecodedCount,
       readinessIncompleteCount,
+      readiness_incomplete_count: readinessIncompleteCount,
       ecuInfoMissingKeyCount,
-      onboardMonitorFailedCount
+      ecu_info_missing_key_count: ecuInfoMissingKeyCount,
+      onboardMonitorFailedCount,
+      onboard_monitor_failed_count: onboardMonitorFailedCount
     };
     const analysisChecklist = [
       {

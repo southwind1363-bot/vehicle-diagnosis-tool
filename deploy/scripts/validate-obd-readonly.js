@@ -629,6 +629,8 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const analysisChecklist = [') && functionBody.includes('id: "required_readouts"') && functionBody.includes('id: "vehicle_applicability"'), "buildCoreSessionStatus should expose an analysis readiness checklist");
     check(functionBody.includes('const readoutQualitySummary = {') && functionBody.includes('schemaVersion: "readout_quality_summary_v1"'), "buildCoreSessionStatus should expose a readout quality summary");
     check(functionBody.includes('schema_version: "readout_quality_summary_v1"'), "buildCoreSessionStatus should expose readout quality snake_case schema version");
+    check(functionBody.includes('issue_count: readoutQualityIssues.length,') && functionBody.includes('issue_ids: readoutQualityIssues.map((item) => item.id),'), "buildCoreSessionStatus should expose readout quality snake_case issue aliases");
+    check(functionBody.includes('review_required: readoutQualityIssues.length > 0,') && functionBody.includes('ready_for_interpretation: readoutQualityIssues.length === 0,') && functionBody.includes('raw_pid_undecoded_count: rawPidUndecodedCount,'), "buildCoreSessionStatus should expose readout quality snake_case state and count aliases");
     check(functionBody.includes('rawPidUndecodedCount > 0 ? { id: "raw_pid_values_need_conversion"') && functionBody.includes('onboardMonitorFailedCount > 0 ? { id: "onboard_monitor_test_failed"'), "buildCoreSessionStatus should classify readout quality issue ids");
     check(functionBody.includes('id: "readout_quality"') && functionBody.includes('state: readoutQualitySummary.reviewRequired ? "review" : "complete"'), "buildCoreSessionStatus should add readout quality to the analysis checklist");
     check(functionBody.includes('readoutQualitySummary,') && functionBody.includes('readoutQualityIssueCount: readoutQualitySummary.issueCount,'), "buildCoreSessionStatus should carry readout quality into analysis readiness");
@@ -2042,7 +2044,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1811+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1816+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2114,7 +2116,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.545.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for workflow gate schema aliases");
+check(appSource.includes('const APP_VERSION = "2.546.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout quality snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3598,6 +3600,7 @@ check(bridgeExportPayload.session.readout_completion_summary?.capturedCount === 
 check(bridgeExportPayload.session.analysis_readiness_summary?.ready === bridgeExportPayload.session.core_session_status?.analysisReadinessSummary?.ready, "Bridge export did not carry analysis readiness summary");
 check(bridgeExportPayload.session.analysis_readiness_summary?.schema_version === "analysis_readiness_summary_v1", "Bridge export did not carry analysis readiness snake_case schema version");
 check(bridgeExportPayload.session.readout_quality_summary?.schemaVersion === "readout_quality_summary_v1" && bridgeExportPayload.session.readout_quality_summary.issueIds?.includes("readiness_incomplete"), "Bridge export did not carry readout quality summary");
+check(bridgeExportPayload.session.readout_quality_summary?.issue_count === bridgeExportPayload.session.readout_quality_summary?.issueCount && bridgeExportPayload.session.readout_quality_summary?.issue_ids?.includes("readiness_incomplete"), "Bridge export did not carry readout quality snake_case issue aliases");
 check(bridgeExportPayload.session.readout_request_plan_gate_summary?.state === bridgeExportPayload.session.core_session_status?.readoutRequestPlanGateSummary?.state, "Bridge export did not carry readout request plan gate summary");
 check(bridgeExportPayload.session.core_readout_inventory_summary?.schemaVersion === "core_readout_inventory_v1" && bridgeExportPayload.session.core_readout_inventory_summary?.countsById?.dtc_snapshot === bridgeDtcSnapshot.codes.length, "Bridge export did not carry core readout inventory summary");
 check(bridgeExportPayload.session.freeze_frame_snapshot.triggerDtc === "P0171", "ブリッジエクスポートへフリーズフレームを引き継げません");
@@ -5646,6 +5649,7 @@ check(populatedScanSession.coreReadoutInventorySummary?.attemptedReadoutPercent 
 check(populatedScanSession.coreSessionStatus?.analysisReadinessSummary?.schemaVersion === "analysis_readiness_summary_v1" && populatedScanSession.coreSessionStatus.analysisReadinessSummary?.schema_version === "analysis_readiness_summary_v1", "Diagnostic scan session did not expose analysis readiness schema aliases for populated inputs");
 check(populatedScanSession.coreSessionStatus?.readoutQualitySummary?.schemaVersion === "readout_quality_summary_v1" && Number.isFinite(populatedScanSession.coreSessionStatus.readoutQualitySummary.issueCount), "Diagnostic scan session did not expose readout quality summary for populated inputs");
 check(populatedScanSession.coreSessionStatus?.readoutQualitySummary?.schema_version === "readout_quality_summary_v1", "Diagnostic scan session did not expose readout quality snake_case schema version");
+check(populatedScanSession.coreSessionStatus?.readoutQualitySummary?.issue_count === populatedScanSession.coreSessionStatus.readoutQualitySummary.issueCount && populatedScanSession.coreSessionStatus.readoutQualitySummary?.ready_for_interpretation === populatedScanSession.coreSessionStatus.readoutQualitySummary.readyForInterpretation, "Diagnostic scan session did not expose readout quality snake_case issue and state aliases");
 check(populatedScanSession.diagnosticFlowSummary?.readoutQualityIssueCount === populatedScanSession.coreSessionStatus.readoutQualitySummary.issueCount && populatedScanSession.diagnosticFlowSummary?.readoutQualityReviewRequired === populatedScanSession.coreSessionStatus.readoutQualitySummary.reviewRequired, "Diagnostic flow summary did not expose readout quality state");
 const emptyReadoutScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-empty-readout-scan-session",
@@ -6399,6 +6403,7 @@ const rawPidScanSession = obd.buildDecodedObdScanSession({
 check(rawPidScanSession.monitorValueSummary.undecodedRawCount === 2, "診断セッションへ未換算RAW件数を統合できません");
 check(rawPidScanSession.warnings.includes("raw_pid_values_need_conversion"), "診断セッションへ未換算RAW警告を反映できません");
 check(rawPidScanSession.coreSessionStatus?.readoutQualitySummary?.rawPidUndecodedCount === 2 && rawPidScanSession.coreSessionStatus.readoutQualitySummary.issueIds.includes("raw_pid_values_need_conversion"), "Diagnostic scan session did not expose raw PID readout quality issues");
+check(rawPidScanSession.coreSessionStatus?.readoutQualitySummary?.raw_pid_undecoded_count === 2 && rawPidScanSession.coreSessionStatus.readoutQualitySummary.issue_ids.includes("raw_pid_values_need_conversion"), "Diagnostic scan session did not expose raw PID readout quality snake_case aliases");
 check(rawPidScanSession.diagnosticFlowSummary?.rawPidUndecodedCount === 2 && rawPidScanSession.diagnosticFlowSummary?.readoutQualityReviewRequired === true, "Diagnostic flow summary did not expose raw PID readout quality review state");
 const obdTextLog = [
   ">03",
@@ -8969,6 +8974,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1811");
+  console.log("OBD read-only safety checks: 1816");
   console.log("Errors: 0");
 }
