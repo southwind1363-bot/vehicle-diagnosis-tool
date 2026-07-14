@@ -452,6 +452,7 @@ const mergedBridgeMetadataFunctionChecks = () => {
     check(functionBody.includes('const bridgeSessionMetadata = getSessionMetadataOverrides(bridgeSession || {});'), "buildMergedBridgeMetadata should derive bridge session metadata overrides");
     check(functionBody.includes('const readoutCoverageInput = pickDefined('), "buildMergedBridgeMetadata should prioritize explicit readout coverage inputs from bridge import and bridge session");
     check(functionBody.includes('readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverageInput),'), "buildMergedBridgeMetadata should normalize merged readout coverage input");
+    check(functionBody.includes('const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(pickDefined('), "buildMergedBridgeMetadata should normalize merged vehicle applicability input");
     check(functionBody.includes('toolHints: mergeUniqueStrings(bridgeImportMetadata.toolHints, bridgeSessionMetadata.toolHints),'), "buildMergedBridgeMetadata should merge tool hints from bridge import and bridge session");
     check(functionBody.includes('warnings: resolveWarningList(bridgeImportMetadata.warnings, bridgeSessionMetadata.warnings),'), "buildMergedBridgeMetadata should merge warnings from bridge import and bridge session");
   }
@@ -2088,7 +2089,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1906+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1908+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2160,7 +2161,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.560.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for applicability status warning aliases");
+check(appSource.includes('const APP_VERSION = "2.561.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for bridge applicability metadata normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5071,6 +5072,16 @@ const mergedDiagnosticInputImportClassification = obd.mergeDiagnosticInputs({
   }
 });
 check(mergedDiagnosticInputImportClassification.importClassification?.bucketCounts?.livePidResponses === 4, "Combined diagnostic inputs did not recover import_classification from bridge_session input");
+const mergedDiagnosticInputSnakeApplicabilityMetadata = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    vehicle_applicability: {
+      schemaVersion: "vehicle_applicability_v1",
+      applicability_status: "manual",
+      summary_label: "Bridge import manual applicability"
+    }
+  }
+});
+check(mergedDiagnosticInputSnakeApplicabilityMetadata.vehicleApplicability?.status === "manual" && mergedDiagnosticInputSnakeApplicabilityMetadata.vehicle_applicability?.status === "manual", "Combined diagnostic inputs did not normalize bridge_import vehicle_applicability aliases");
 const mergedDiagnosticInputNestedOuterOverride = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   bridge_diagnostic_import: {
@@ -9076,6 +9087,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1906");
+  console.log("OBD read-only safety checks: 1908");
   console.log("Errors: 0");
 }

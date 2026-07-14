@@ -7015,13 +7015,13 @@
       bridgeSession?.readout_coverage,
       null
     );
-    const vehicleApplicability = pickDefined(
+    const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(pickDefined(
       bridgeImport?.vehicleApplicability,
       bridgeImport?.vehicle_applicability,
       bridgeSession?.vehicleApplicability,
       bridgeSession?.vehicle_applicability,
       null
-    );
+    ) || {});
     const nextReadoutCandidatesInput = pickDefined(
       bridgeImport?.nextReadoutCandidates,
       bridgeImport?.next_readout_candidates,
