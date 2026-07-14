@@ -748,7 +748,7 @@
   }
 
   function readBridgeProtocol(data = {}) {
-    return data.protocol || data.obd_protocol || data.protocol_name || data.protocolName || data.bus_protocol || null;
+    return data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || data.protocol_name || data.protocolName || data.bus_protocol || data.busProtocol || null;
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
@@ -967,7 +967,7 @@
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
-      captured_at: data.captured_at || data.capturedAt || null,
+      captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
       protocol: readBridgeProtocol(data),
       supported_pids: supportedPids
       }),
@@ -2661,33 +2661,72 @@
     return {
       protocol: input.protocol
         || input.obd_protocol
+        || input.communicationProtocol
+        || input.communication_protocol
+        || input.protocolName
+        || input.protocol_name
         || dtcSnapshot.protocol
         || dtcSnapshot.obd_protocol
+        || dtcSnapshot.communicationProtocol
+        || dtcSnapshot.communication_protocol
         || livePidSnapshot.protocol
         || livePidSnapshot.obd_protocol
+        || livePidSnapshot.communicationProtocol
+        || livePidSnapshot.communication_protocol
         || freezeFrameSnapshot.protocol
         || freezeFrameSnapshot.obd_protocol
+        || freezeFrameSnapshot.communicationProtocol
+        || freezeFrameSnapshot.communication_protocol
         || readinessSnapshot.protocol
         || readinessSnapshot.obd_protocol
+        || readinessSnapshot.communicationProtocol
+        || readinessSnapshot.communication_protocol
         || ecuInfoSnapshot.protocol
         || ecuInfoSnapshot.obd_protocol
+        || ecuInfoSnapshot.communicationProtocol
+        || ecuInfoSnapshot.communication_protocol
         || onboardMonitorSnapshot.protocol
         || onboardMonitorSnapshot.obd_protocol
+        || onboardMonitorSnapshot.communicationProtocol
+        || onboardMonitorSnapshot.communication_protocol
         || ecuResponseSummary.protocol
         || ecuResponseSummary.obd_protocol
+        || ecuResponseSummary.communicationProtocol
+        || ecuResponseSummary.communication_protocol
         || supportedPidMatrix.protocol
         || supportedPidMatrix.obd_protocol
+        || supportedPidMatrix.communicationProtocol
+        || supportedPidMatrix.communication_protocol
         || null,
       capturedAt: input.capturedAt
         || input.captured_at
+        || input.timestamp
+        || input.capturedTimestamp
+        || input.captured_timestamp
         || dtcSnapshot.capturedAt
+        || dtcSnapshot.captured_at
+        || dtcSnapshot.timestamp
         || livePidSnapshot.capturedAt
+        || livePidSnapshot.captured_at
+        || livePidSnapshot.timestamp
         || freezeFrameSnapshot.capturedAt
+        || freezeFrameSnapshot.captured_at
+        || freezeFrameSnapshot.timestamp
         || readinessSnapshot.capturedAt
+        || readinessSnapshot.captured_at
+        || readinessSnapshot.timestamp
         || ecuInfoSnapshot.capturedAt
+        || ecuInfoSnapshot.captured_at
+        || ecuInfoSnapshot.timestamp
         || onboardMonitorSnapshot.capturedAt
+        || onboardMonitorSnapshot.captured_at
+        || onboardMonitorSnapshot.timestamp
         || ecuResponseSummary.capturedAt
+        || ecuResponseSummary.captured_at
+        || ecuResponseSummary.timestamp
         || supportedPidMatrix.capturedAt
+        || supportedPidMatrix.captured_at
+        || supportedPidMatrix.timestamp
         || null
     };
   }
