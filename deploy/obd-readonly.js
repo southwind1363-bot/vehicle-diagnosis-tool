@@ -8124,7 +8124,9 @@
       || input.bridgeExportPayload
       || input.bridge_export_payload
       || input.bridgeSession
-      || input.bridge_session;
+      || input.bridge_session
+      || input.scanSession
+      || input.scan_session;
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
     const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
