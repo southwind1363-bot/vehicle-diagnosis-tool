@@ -3402,20 +3402,28 @@
       || applicabilityStatus === "partial"
       || applicabilityStatus === "manual"
       || applicabilityStatus === "unlisted";
+    const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+    const readAliasValue = (source, field) => source && typeof source === "object" ? pickDefined(source[field], source[toSnakeField(field)]) : undefined;
+    const readAliasList = (source, field) => {
+      const value = readAliasValue(source, field);
+      return Array.isArray(value) ? [...value] : [];
+    };
+    const checklistBlockedIds = readAliasList(checklistSummary, "blockedIds");
+    const checklistReviewIds = readAliasList(checklistSummary, "reviewIds");
     const vehicleApplicabilityBlocking = vehicleApplicabilityChecklist?.blocking === true
-      || (Array.isArray(checklistSummary?.blockedIds) && checklistSummary.blockedIds.includes("vehicle_applicability"));
-    const readCount = (field, fallbackIds = []) => Number.isFinite(Number(completion[field]))
-      ? Number(completion[field])
+      || checklistBlockedIds.includes("vehicle_applicability");
+    const readCount = (field, fallbackIds = []) => Number.isFinite(Number(readAliasValue(completion, field)))
+      ? Number(readAliasValue(completion, field))
       : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
-    const readChecklistCount = (field, fallbackIds = []) => Number.isFinite(Number(checklistSummary?.[field]))
-      ? Number(checklistSummary[field])
+    const readChecklistCount = (field, fallbackIds = []) => Number.isFinite(Number(readAliasValue(checklistSummary, field)))
+      ? Number(readAliasValue(checklistSummary, field))
       : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
     const readyForAnalysisInput = pickDefined(coreSessionStatus?.readyForAnalysis, coreSessionStatus?.ready_for_analysis);
     const readyForAnalysis = typeof readyForAnalysisInput === "boolean"
       ? readyForAnalysisInput
       : readiness.ready === true;
-    const pendingReadoutCount = Number.isFinite(Number(progress.pendingCount))
-      ? Number(progress.pendingCount)
+    const pendingReadoutCount = Number.isFinite(Number(readAliasValue(progress, "pendingCount")))
+      ? Number(readAliasValue(progress, "pendingCount"))
       : readCount("pendingCount", coreSessionStatus?.pendingReadoutIds || coreSessionStatus?.pending_readout_ids);
     const blockingReasonIds = Array.isArray(readiness.blockerIds)
       ? [...readiness.blockerIds]
@@ -3657,23 +3665,23 @@
       primaryBlockingReadoutExecutionEnabled: primaryBlockingReadoutRequest?.executionEnabled === true,
       primaryBlockingReadoutWouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
       readoutCollectionRequired: pendingReadoutCount > 0,
-      completionPercent: Number.isFinite(Number(coreSessionStatus?.completionPercent))
-        ? Number(coreSessionStatus.completionPercent)
-        : Number(progress.completionPercent) || 0,
-      requiredReadoutCount: readCount("requiredCount", coreSessionStatus?.requiredReadoutIds),
-      capturedReadoutCount: readCount("capturedCount", coreSessionStatus?.capturedReadoutIds),
-      missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.remainingReadoutIds),
-      emptyReadoutCount: readCount("emptyCount", coreSessionStatus?.emptyReadoutIds),
+      completionPercent: Number.isFinite(Number(pickDefined(coreSessionStatus?.completionPercent, coreSessionStatus?.completion_percent)))
+        ? Number(pickDefined(coreSessionStatus.completionPercent, coreSessionStatus.completion_percent))
+        : Number(readAliasValue(progress, "completionPercent")) || 0,
+      requiredReadoutCount: readCount("requiredCount", coreSessionStatus?.requiredReadoutIds || coreSessionStatus?.required_readout_ids),
+      capturedReadoutCount: readCount("capturedCount", coreSessionStatus?.capturedReadoutIds || coreSessionStatus?.captured_readout_ids),
+      missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.missing_readout_ids || coreSessionStatus?.remainingReadoutIds || coreSessionStatus?.remaining_readout_ids),
+      emptyReadoutCount: readCount("emptyCount", coreSessionStatus?.emptyReadoutIds || coreSessionStatus?.empty_readout_ids),
       pendingReadoutCount,
       checklistTotalCount: readChecklistCount("totalCount"),
       checklistCompleteCount: readChecklistCount("completeCount"),
-      checklistBlockingCount: readChecklistCount("blockingCount", checklistSummary?.blockedIds),
-      checklistReviewCount: readChecklistCount("reviewCount", checklistSummary?.reviewIds),
+      checklistBlockingCount: readChecklistCount("blockingCount", checklistBlockedIds),
+      checklistReviewCount: readChecklistCount("reviewCount", checklistReviewIds),
       checklistPendingCount: readChecklistCount("pendingCount"),
-      checklistBlockedIds: Array.isArray(checklistSummary?.blockedIds) ? [...checklistSummary.blockedIds] : [],
-      checklistReviewIds: Array.isArray(checklistSummary?.reviewIds) ? [...checklistSummary.reviewIds] : [],
-      blockerCount: Number.isFinite(Number(readiness.blockerCount))
-        ? Number(readiness.blockerCount)
+      checklistBlockedIds,
+      checklistReviewIds,
+      blockerCount: Number.isFinite(Number(readAliasValue(readiness, "blockerCount")))
+        ? Number(readAliasValue(readiness, "blockerCount"))
         : Array.isArray(coreSessionStatus?.analysisBlockers) ? coreSessionStatus.analysisBlockers.length : 0
     };
   }
