@@ -2947,14 +2947,23 @@
     const nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
     const pendingReadoutQueueSummary = {
       totalCount: pendingReadoutQueue.length,
+      total_count: pendingReadoutQueue.length,
       hasPendingReadouts: pendingReadoutQueue.length > 0,
+      has_pending_readouts: pendingReadoutQueue.length > 0,
       nextReadoutId: nextPendingReadoutId,
+      next_readout_id: nextPendingReadoutId,
       nextReadoutLabel: nextPendingReadoutState?.label || null,
+      next_readout_label: nextPendingReadoutState?.label || null,
       nextReadoutStatus: nextPendingReadoutState?.status || null,
+      next_readout_status: nextPendingReadoutState?.status || null,
       pendingPercent: readoutStates.length
         ? Math.round((pendingReadoutQueue.length / readoutStates.length) * 100)
         : 0,
-      remainingAfterNextCount: Math.max(0, pendingReadoutQueue.length - 1)
+      pending_percent: readoutStates.length
+        ? Math.round((pendingReadoutQueue.length / readoutStates.length) * 100)
+        : 0,
+      remainingAfterNextCount: Math.max(0, pendingReadoutQueue.length - 1),
+      remaining_after_next_count: Math.max(0, pendingReadoutQueue.length - 1)
     };
     const readoutStatesByStatus = {
       captured: readoutStates.filter((item) => item.status === "captured").map((item) => ({ ...item })),
@@ -2966,15 +2975,27 @@
       : 0;
     const readoutStateSummary = {
       totalCount: readoutStates.length,
+      total_count: readoutStates.length,
       capturedCount: capturedReadoutIds.length,
+      captured_count: capturedReadoutIds.length,
       emptyCount: emptyReadoutIds.length,
+      empty_count: emptyReadoutIds.length,
       missingCount: remainingReadoutIds.length,
+      missing_count: remainingReadoutIds.length,
       pendingCount: pendingReadoutIds.length,
+      pending_count: pendingReadoutIds.length,
       openCount: pendingReadoutIds.length,
+      open_count: pendingReadoutIds.length,
       capturedPercent: capturedReadoutPercent,
+      captured_percent: capturedReadoutPercent,
       pendingPercent: pendingReadoutQueueSummary.pendingPercent,
+      pending_percent: pendingReadoutQueueSummary.pendingPercent,
       attemptedCount: capturedReadoutIds.length + emptyReadoutIds.length,
+      attempted_count: capturedReadoutIds.length + emptyReadoutIds.length,
       attemptedPercent: readoutStates.length
+        ? Math.round(((capturedReadoutIds.length + emptyReadoutIds.length) / readoutStates.length) * 100)
+        : 0,
+      attempted_percent: readoutStates.length
         ? Math.round(((capturedReadoutIds.length + emptyReadoutIds.length) / readoutStates.length) * 100)
         : 0
     };
@@ -3176,11 +3197,17 @@
     const readoutRequestPlanSummary = buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
     Object.assign(pendingReadoutQueueSummary, {
       recommendedReadoutId: nextReadoutSummary?.id || null,
+      recommended_readout_id: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
+      recommended_readout_label: nextReadoutSummary?.label || null,
       recommendedReadoutStatus: nextReadoutSummary?.status || null,
+      recommended_readout_status: nextReadoutSummary?.status || null,
       recommendedReadoutSource: nextReadoutSummary?.source || null,
+      recommended_readout_source: nextReadoutSummary?.source || null,
       recommendedReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
-      recommendedReadoutIsPending: nextReadoutSummary?.isPending === true
+      recommended_readout_queue_position: nextReadoutSummary?.queuePosition || null,
+      recommendedReadoutIsPending: nextReadoutSummary?.isPending === true,
+      recommended_readout_is_pending: nextReadoutSummary?.isPending === true
     });
     const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
     const completionPercent = normalizedCoverage.totalCategories > 0
@@ -3188,32 +3215,56 @@
       : directCompletionPercent;
     const readoutProgressSummary = {
       requiredCount: requiredReadoutIds.length,
+      required_count: requiredReadoutIds.length,
       capturedCount: capturedReadoutIds.length,
+      captured_count: capturedReadoutIds.length,
       attemptedCount: readoutStateSummary.attemptedCount,
+      attempted_count: readoutStateSummary.attemptedCount,
       pendingCount: pendingReadoutIds.length,
+      pending_count: pendingReadoutIds.length,
       openCount: pendingReadoutIds.length,
+      open_count: pendingReadoutIds.length,
       capturedPercent: readoutStateSummary.capturedPercent,
+      captured_percent: readoutStateSummary.capturedPercent,
       attemptedPercent: readoutStateSummary.attemptedPercent,
+      attempted_percent: readoutStateSummary.attemptedPercent,
       pendingPercent: readoutStateSummary.pendingPercent,
-      completionPercent
+      pending_percent: readoutStateSummary.pendingPercent,
+      completionPercent,
+      completion_percent: completionPercent
     };
     const readoutCompletionSummary = {
       complete: pendingReadoutIds.length === 0,
       hasAnyReadout: capturedReadoutIds.length > 0 || emptyReadoutIds.length > 0,
+      has_any_readout: capturedReadoutIds.length > 0 || emptyReadoutIds.length > 0,
       hasCapturedReadouts: capturedReadoutIds.length > 0,
+      has_captured_readouts: capturedReadoutIds.length > 0,
       hasMissingReadouts: remainingReadoutIds.length > 0,
+      has_missing_readouts: remainingReadoutIds.length > 0,
       hasEmptyReadouts: emptyReadoutIds.length > 0,
+      has_empty_readouts: emptyReadoutIds.length > 0,
       requiredCount: requiredReadoutIds.length,
+      required_count: requiredReadoutIds.length,
       capturedCount: capturedReadoutIds.length,
+      captured_count: capturedReadoutIds.length,
       missingCount: remainingReadoutIds.length,
+      missing_count: remainingReadoutIds.length,
       emptyCount: emptyReadoutIds.length,
+      empty_count: emptyReadoutIds.length,
       pendingCount: pendingReadoutIds.length,
+      pending_count: pendingReadoutIds.length,
       requiredIds: [...requiredReadoutIds],
+      required_ids: [...requiredReadoutIds],
       capturedIds: [...capturedReadoutIds],
+      captured_ids: [...capturedReadoutIds],
       missingIds: [...remainingReadoutIds],
+      missing_ids: [...remainingReadoutIds],
       emptyIds: [...emptyReadoutIds],
+      empty_ids: [...emptyReadoutIds],
       pendingIds: [...pendingReadoutIds],
-      completionPercent
+      pending_ids: [...pendingReadoutIds],
+      completionPercent,
+      completion_percent: completionPercent
     };
     const analysisBlockers = [
       ...(remainingReadoutIds.length ? ["missing_readouts"] : []),
@@ -3270,11 +3321,17 @@
     } : null;
     Object.assign(readoutCompletionSummary, {
       primaryBlockingReasonId,
+      primary_blocking_reason_id: primaryBlockingReasonId,
       primaryBlockingReason,
+      primary_blocking_reason: primaryBlockingReason,
       primaryBlockingReadoutId,
+      primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
+      primary_blocking_readout_label: primaryBlockingReadoutLabel,
       primaryBlockingReadoutRequest,
-      primaryBlockingSummary
+      primary_blocking_readout_request: primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
+      primary_blocking_summary: primaryBlockingSummary
     });
     const analysisBlockerSummary = {
       totalCount: analysisBlockers.length,
