@@ -1463,7 +1463,7 @@ const scanSessionFromObdTextFunctionChecks = () => {
     check(functionBody.includes('const classified = classifyObdResponseLines(value);'), "buildScanSessionFromObdText should classify OBD response lines before decoding");
     check(functionBody.includes('const textDtcSnapshot = extractTextDtcSnapshot(value);'), "buildScanSessionFromObdText should preserve text-only DTC extraction");
     check(functionBody.includes('const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";'), "buildScanSessionFromObdText should feed decoded sessions from classified response buckets");
-    check(functionBody.includes('storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses")') && functionBody.includes('ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs");
+    check(functionBody.includes('storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses")') && functionBody.includes('ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs");
     check(functionBody.includes('protocol: sessionInput.protocol || sessionInput.obd_protocol || null'), "buildScanSessionFromObdText should pass obd_protocol aliases into decoded response buckets");
     check(functionBody.includes('const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);'), "buildScanSessionFromObdText should merge decoded and text-extracted DTC snapshots");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('retainedRawFrames: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "buildScanSessionFromObdText should return read-only imports without retaining raw text or frames");
@@ -2112,7 +2112,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1993+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1994+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2184,7 +2184,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.592.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for snake_case saved DTC response intake support");
+check(appSource.includes('const APP_VERSION = "2.593.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for text intake saved DTC response support");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -6935,6 +6935,13 @@ const textScanSessionAliasOptions = obd.buildScanSessionFromObdText(obdTextLog, 
 });
 check(textScanSessionAliasOptions.startedAt === "2026-06-28T00:14:00Z" && textScanSessionAliasOptions.endedAt === "2026-06-28T00:15:00Z", "OBD text scan session did not accept started_at or ended_at option alias input");
 check(textScanSessionAliasOptions.vehicleProfile?.model === "Corolla", "OBD text scan session did not accept vehicle_profile option alias input");
+const textScanSessionSnakeDtcResponseOptions = obd.buildScanSessionFromObdText("NO DTC", {
+  session_id: "obd-text-snake-dtc-response-options",
+  stored_dtc_response: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0171", status: "stored" }] },
+  pending_dtc_response: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0300", status: "pending" }] },
+  permanent_dtc_response: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0420", status: "permanent" }] }
+});
+check(textScanSessionSnakeDtcResponseOptions.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored") && textScanSessionSnakeDtcResponseOptions.dtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "pending") && textScanSessionSnakeDtcResponseOptions.dtcSnapshot.dtcs.some((item) => item.code === "P0420" && item.status === "permanent"), "OBD text scan session did not preserve snake_case saved DTC response options");
 const textScanSessionDirectMixedVehicleMetadata = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-mixed-vehicle-meta",
   vehicleProfile: { maker: "Toyota", model: "Mixed Rize" },
@@ -9587,6 +9594,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1993");
+  console.log("OBD read-only safety checks: 1994");
   console.log("Errors: 0");
 }

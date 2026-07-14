@@ -9905,6 +9905,7 @@
     const textDtcSnapshot = extractTextDtcSnapshot(value);
     const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
+    const readDtcResponseOption = (camelKey, snakeKey, bucketName) => sessionInput[camelKey] || sessionInput[snakeKey] || { raw: firstOrEmpty(bucketName), protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -9926,9 +9927,9 @@
       warnings: metadataOverrides.warnings,
       sourceLength: metadataOverrides.sourceLength,
       hadSensitiveIdentifier: metadataOverrides.hadSensitiveIdentifier,
-      storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
-      pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
-      permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses"),
+      pendingDtcResponse: readDtcResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
+      permanentDtcResponse: readDtcResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
       supportedPidResponse: { raw: firstOrEmpty("supportedPidResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
       livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
       freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
