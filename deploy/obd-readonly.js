@@ -8008,26 +8008,61 @@
                     : Array.isArray(sourceInput.items)
                       ? sourceInput.items
                       : [];
+    const ecus = rows.map((row, index) => {
+      const id = String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
+      const name = row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : null;
+      const address = row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null;
+      const status = row?.status || row?.response_status || row?.responseStatus || "unknown";
+      const dtcCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null;
+      const responseCount = Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.responses) ? row.responses : null;
+      const services = Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
+      const negativeResponseCount = Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negatives) ? row.negatives : 0;
+      const negativeRequestedServices = Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negative_services) ? row.negative_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeServices) ? row.negativeServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
+      const negativeResponseLabels = Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negative_labels) ? row.negative_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeLabels) ? row.negativeLabels.map((item) => String(item)).slice(0, 16) : [];
+      const responseTimeMs = Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null;
+      return {
+        id,
+        name,
+        address,
+        status,
+        dtcCount,
+        dtc_count: dtcCount,
+        responseCount,
+        response_count: responseCount,
+        services,
+        negativeResponseCount,
+        negative_response_count: negativeResponseCount,
+        negativeRequestedServices,
+        negative_requested_services: negativeRequestedServices,
+        negativeResponseLabels,
+        negative_response_labels: negativeResponseLabels,
+        responseTimeMs,
+        response_time_ms: responseTimeMs
+      };
+    });
+    const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
+    const totalDtcCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.dtcCount) ? ecu.dtcCount : 0), 0);
+    const totalResponseCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.responseCount) ? ecu.responseCount : 0), 0);
+    const totalNegativeResponseCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.negativeResponseCount) ? ecu.negativeResponseCount : 0), 0);
     return {
       schemaVersion: "ecu_response_summary_v1",
       schema_version: "ecu_response_summary_v1",
       source,
-      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
-      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
-      ecus: rows.map((row, index) => ({
-        id: String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40),
-        name: row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : null,
-        address: row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null,
-        status: row?.status || row?.response_status || row?.responseStatus || "unknown",
-        dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null,
-        responseCount: Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.responses) ? row.responses : null,
-        services: Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
-        negativeResponseCount: Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negatives) ? row.negatives : 0,
-        negativeRequestedServices: Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negative_services) ? row.negative_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeServices) ? row.negativeServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
-        negativeResponseLabels: Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negative_labels) ? row.negative_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeLabels) ? row.negativeLabels.map((item) => String(item)).slice(0, 16) : [],
-        responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null
-      })),
-      retainedRawText: false
+      capturedAt,
+      captured_at: capturedAt,
+      protocol,
+      ecus,
+      ecuCount: ecus.length,
+      ecu_count: ecus.length,
+      totalDtcCount,
+      total_dtc_count: totalDtcCount,
+      totalResponseCount,
+      total_response_count: totalResponseCount,
+      totalNegativeResponseCount,
+      total_negative_response_count: totalNegativeResponseCount,
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 

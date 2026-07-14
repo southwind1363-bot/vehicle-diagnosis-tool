@@ -92,7 +92,7 @@ const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnost
 const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreezeFrameSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const readinessSnapshotFunctionSource = source.match(/function normalizeReadinessSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
-const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S]*?value: input\[key\]\r?\n      \}\)\);\r?\n  \}/);
 const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
@@ -1175,11 +1175,15 @@ const ecuResponseSummaryFunctionChecks = () => {
     check(functionBody.includes('const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";'), "normalizeEcuResponseSummary should default source from normalized aliases");
     check(functionBody.includes('Array.isArray(sourceInput.ecu_responses)') && functionBody.includes('Array.isArray(sourceInput.ecuResponseRows)') && functionBody.includes('Array.isArray(sourceInput.controllers)'), "normalizeEcuResponseSummary should accept ECU response array aliases");
     check(functionBody.includes('row?.module_id || row?.moduleId') && functionBody.includes('row?.controller_id || row?.controllerId'), "normalizeEcuResponseSummary should normalize ECU id aliases");
-    check(functionBody.includes('dtcCount: Number.isInteger(row?.dtc_count)') && functionBody.includes('Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null'), "normalizeEcuResponseSummary should normalize DTC count aliases and arrays");
-    check(functionBody.includes('negativeResponseCount: Number.isInteger(row?.negative_response_count)') && functionBody.includes('negativeRequestedServices:'), "normalizeEcuResponseSummary should normalize negative response counts and service aliases");
+    check(functionBody.includes('const dtcCount = Number.isInteger(row?.dtc_count)') && functionBody.includes('Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null'), "normalizeEcuResponseSummary should normalize DTC count aliases and arrays");
+    check(functionBody.includes('const negativeResponseCount = Number.isInteger(row?.negative_response_count)') && functionBody.includes('const negativeRequestedServices ='), "normalizeEcuResponseSummary should normalize negative response counts and service aliases");
     check(functionBody.includes('row?.response_status || row?.responseStatus') && functionBody.includes('row?.display_name') && functionBody.includes('row?.displayName'), "normalizeEcuResponseSummary should normalize status and display name aliases");
-    check(functionBody.includes('responseTimeMs: Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('row?.elapsed_ms') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
+    check(functionBody.includes('const responseTimeMs = Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('row?.elapsed_ms') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
     check(functionBody.includes('schema_version: "ecu_response_summary_v1"'), "normalizeEcuResponseSummary should expose snake_case schema version");
+    check(functionBody.includes('dtc_count: dtcCount') && functionBody.includes('response_count: responseCount') && functionBody.includes('negative_response_count: negativeResponseCount'), "normalizeEcuResponseSummary should expose snake_case ECU response count aliases");
+    check(functionBody.includes('negative_requested_services: negativeRequestedServices') && functionBody.includes('negative_response_labels: negativeResponseLabels') && functionBody.includes('response_time_ms: responseTimeMs'), "normalizeEcuResponseSummary should expose snake_case service, label, and timing aliases");
+    check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('ecu_count: ecus.length') && functionBody.includes('retained_raw_text: false'), "normalizeEcuResponseSummary should expose snake_case capture, ECU count, and raw retention aliases");
+    check(functionBody.includes('total_dtc_count: totalDtcCount') && functionBody.includes('total_response_count: totalResponseCount') && functionBody.includes('total_negative_response_count: totalNegativeResponseCount'), "normalizeEcuResponseSummary should expose snake_case ECU response summary total aliases");
   }
 };
 const ecuInfoRowsFunctionChecks = () => {
@@ -2082,7 +2086,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1891+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1899+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2154,7 +2158,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.557.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for DTC snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.558.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for ECU response snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2460,6 +2464,8 @@ const ecuResponseSummaryAliases = obd.normalizeEcuResponseSummary({
   ]
 });
 check(ecuResponseSummaryAliases.ecus[0]?.dtcCount === 2 && ecuResponseSummaryAliases.ecus[0]?.negativeRequestedServices[0] === "09" && ecuResponseSummaryAliases.ecus[0]?.responseTimeMs === 45, "ECU response summary camelCase aliases were not normalized");
+check(ecuResponseSummaryAliases.ecus[0]?.dtc_count === 2 && ecuResponseSummaryAliases.ecus[0]?.negative_requested_services[0] === "09" && ecuResponseSummaryAliases.ecus[0]?.response_time_ms === 45, "ECU response summary snake_case row aliases were not exposed");
+check(ecuResponseSummaryAliases.ecu_count === 1 && ecuResponseSummaryAliases.total_dtc_count === 2 && ecuResponseSummaryAliases.total_negative_response_count === 1, "ECU response summary snake_case totals were not exposed");
 const ecuResponseSummaryRowAliases = obd.normalizeEcuResponseSummary({
   ecuResponseRows: [
     {
@@ -2498,6 +2504,8 @@ const ecuResponseSummaryDataAliases = obd.normalizeEcuResponseSummary({
 check(ecuResponseSummaryDataAliases.source === "bridge_import" && ecuResponseSummaryDataAliases.protocol === "ISO15765-4", "ECU response summary did not preserve data payload source and protocol aliases");
 check(ecuResponseSummaryDataAliases.capturedAt === "2026-07-07T01:00:00Z" && ecuResponseSummaryDataAliases.ecus[0]?.address === "7EA", "ECU response summary did not preserve timestamp and controller aliases");
 check(ecuResponseSummaryDataAliases.ecus[0]?.dtcCount === 2 && ecuResponseSummaryDataAliases.ecus[0]?.responseTimeMs === 71, "ECU response summary did not normalize dtcCodes and elapsed_ms aliases");
+check(ecuResponseSummaryDataAliases.captured_at === "2026-07-07T01:00:00Z" && ecuResponseSummaryDataAliases.ecu_count === 1, "ECU response summary snake_case capture and ECU count aliases were not exposed");
+check(ecuResponseSummaryDataAliases.ecus[0]?.dtc_count === 2 && ecuResponseSummaryDataAliases.ecus[0]?.response_time_ms === 71 && ecuResponseSummaryDataAliases.total_response_count === 0, "ECU response summary snake_case data payload row aliases were not exposed");
 const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_pending_dtc",
   ok: true,
@@ -9050,6 +9058,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1891");
+  console.log("OBD read-only safety checks: 1899");
   console.log("Errors: 0");
 }
