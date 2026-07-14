@@ -985,9 +985,14 @@
   function collectBridgeSupportedPids(data = {}) {
     if (Array.isArray(data.supported_pids)) return data.supported_pids;
     if (Array.isArray(data.supportedPids)) return data.supportedPids;
-    const text = data.supported_pid_list || data.supportedPidsText || data.supported_pids_text || "";
+    if (Array.isArray(data.pids)) return data.pids;
+    if (Array.isArray(data.pid_list)) return data.pid_list;
+    if (Array.isArray(data.pidList)) return data.pidList;
+    if (Array.isArray(data.supported_pid_rows)) return data.supported_pid_rows;
+    if (Array.isArray(data.supportedPidRows)) return data.supportedPidRows;
+    const text = data.supported_pid_list || data.supportedPidList || data.supportedPidsText || data.supported_pids_text || "";
     return typeof text === "string" && text.trim()
-      ? text.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean)
+      ? text.split(/[\s,;|/]+/).map((item) => item.trim()).filter(Boolean)
       : [];
   }
 

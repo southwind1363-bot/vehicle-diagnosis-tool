@@ -338,8 +338,9 @@ const bridgeResponseSafetyFunctionChecks = () => {
     const functionBody = bridgeSupportedPidsFunctionSource[0];
     check(functionBody.includes('if (Array.isArray(data.supported_pids)) return data.supported_pids;'), "collectBridgeSupportedPids should prefer snake_case supported PID arrays");
     check(functionBody.includes('if (Array.isArray(data.supportedPids)) return data.supportedPids;'), "collectBridgeSupportedPids should accept camelCase supported PID arrays");
-    check(functionBody.includes('data.supported_pid_list || data.supportedPidsText || data.supported_pids_text || ""'), "collectBridgeSupportedPids should accept text supported PID aliases");
-    check(functionBody.includes('text.split(/[,\\s]+/).map((item) => item.trim()).filter(Boolean)'), "collectBridgeSupportedPids should split text supported PID lists on commas and whitespace");
+    check(functionBody.includes('if (Array.isArray(data.pid_list)) return data.pid_list;') && functionBody.includes('if (Array.isArray(data.supportedPidRows)) return data.supportedPidRows;'), "collectBridgeSupportedPids should accept generic PID row aliases");
+    check(functionBody.includes('data.supported_pid_list || data.supportedPidList || data.supportedPidsText || data.supported_pids_text || ""'), "collectBridgeSupportedPids should accept text supported PID aliases");
+    check(functionBody.includes('text.split(/[\\s,;|/]+/).map((item) => item.trim()).filter(Boolean)'), "collectBridgeSupportedPids should split text supported PID lists on common separators");
   }
 };
 const bridgeCoreReadoutNormalizerFunctionChecks = () => {
@@ -2097,7 +2098,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1939+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1942+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2169,7 +2170,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.571.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for readiness PID values alias normalization");
+check(appSource.includes('const APP_VERSION = "2.572.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for supported PID list alias normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2670,6 +2671,24 @@ const bridgeTextSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   }
 });
 check(bridgeTextSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "Text bridge supported PID list was not normalized");
+const bridgePidListSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    pidList: ["0c", "05", { pid_id: "40" }]
+  }
+});
+check(bridgePidListSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "Bridge supported PID pidList alias was not normalized");
+const bridgeSupportedPidListTextSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    supportedPidList: "0c;05|40"
+  }
+});
+check(bridgeSupportedPidListTextSnapshot.supportedPids.join(",") === "0C,05,40", "Bridge supported PID supportedPidList text alias was not normalized");
 const supportedPidMatrixAliasInputs = obd.buildSupportedPidMatrix({
   supported_pids: ["0c", "05", "40"],
   captured_at: "2026-06-28T00:01:30Z"
@@ -9373,6 +9392,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1939");
+  console.log("OBD read-only safety checks: 1942");
   console.log("Errors: 0");
 }
