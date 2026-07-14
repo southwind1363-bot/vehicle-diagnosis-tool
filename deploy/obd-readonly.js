@@ -3453,11 +3453,24 @@
       || (primaryBlockingReadoutId && coreSessionStatus?.readoutStateById ? coreSessionStatus.readoutStateById[primaryBlockingReadoutId]?.label : null)
       || primaryBlockingReadoutId
       || null;
-    const primaryBlockingReadoutRequest = readiness.primaryBlockingReadoutRequest
+    const normalizeReadoutRequestEntry = (item) => {
+      if (!item || typeof item !== "object") return item;
+      return {
+        ...item,
+        readoutId: item.readoutId || item.readout_id || item.id || null,
+        bridgeIntent: item.bridgeIntent || item.bridge_intent || null,
+        serviceMode: item.serviceMode || item.service_mode || null,
+        executionEnabled: pickDefined(item.executionEnabled, item.execution_enabled) === true,
+        readOnly: pickDefined(item.readOnly, item.read_only) === true,
+        wouldTransmit: pickDefined(item.wouldTransmit, item.would_transmit) === true,
+        vehicleCommandEnabled: pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true
+      };
+    };
+    const primaryBlockingReadoutRequest = normalizeReadoutRequestEntry(readiness.primaryBlockingReadoutRequest
       || completion.primaryBlockingReadoutRequest
       || coreSessionStatus?.primaryBlockingReadoutRequest
       || coreSessionStatus?.primary_blocking_readout_request
-      || null;
+      || null);
     const primaryBlockingSummary = readiness.primaryBlockingSummary
       || completion.primaryBlockingSummary
       || coreSessionStatus?.primaryBlockingSummary
@@ -3478,19 +3491,6 @@
         vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
       } : null);
     const nextReadoutSummary = coreSessionStatus?.nextReadoutSummary || coreSessionStatus?.next_readout_summary || null;
-    const normalizeReadoutRequestEntry = (item) => {
-      if (!item || typeof item !== "object") return item;
-      return {
-        ...item,
-        readoutId: item.readoutId || item.readout_id || item.id || null,
-        bridgeIntent: item.bridgeIntent || item.bridge_intent || null,
-        serviceMode: item.serviceMode || item.service_mode || null,
-        executionEnabled: pickDefined(item.executionEnabled, item.execution_enabled) === true,
-        readOnly: pickDefined(item.readOnly, item.read_only) === true,
-        wouldTransmit: pickDefined(item.wouldTransmit, item.would_transmit) === true,
-        vehicleCommandEnabled: pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true
-      };
-    };
     const nextReadoutRequest = normalizeReadoutRequestEntry(coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.next_readout_request || nextReadoutSummary?.readoutRequest || nextReadoutSummary?.readout_request || null);
     const pendingReadoutRequestQueueInput = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
       ? coreSessionStatus.pendingReadoutRequestQueue
@@ -3632,13 +3632,13 @@
       blockingWarningsChecklist: diagnosticChecklistById.blocking_warnings || null,
       readoutQualityChecklist,
       readoutQualitySummary: readoutQualitySummary && typeof readoutQualitySummary === "object" ? { ...readoutQualitySummary } : {},
-      readoutQualityReviewRequired: readoutQualitySummary?.reviewRequired === true || readoutQualityChecklist?.state === "review",
-      readoutQualityIssueCount: Number.isFinite(Number(readoutQualitySummary?.issueCount)) ? Number(readoutQualitySummary.issueCount) : 0,
-      readoutQualityIssueIds: Array.isArray(readoutQualitySummary?.issueIds) ? [...readoutQualitySummary.issueIds] : [],
-      rawPidUndecodedCount: Number.isFinite(Number(readoutQualitySummary?.rawPidUndecodedCount)) ? Number(readoutQualitySummary.rawPidUndecodedCount) : 0,
-      readinessIncompleteCount: Number.isFinite(Number(readoutQualitySummary?.readinessIncompleteCount)) ? Number(readoutQualitySummary.readinessIncompleteCount) : 0,
-      ecuInfoMissingKeyCount: Number.isFinite(Number(readoutQualitySummary?.ecuInfoMissingKeyCount)) ? Number(readoutQualitySummary.ecuInfoMissingKeyCount) : 0,
-      onboardMonitorFailedCount: Number.isFinite(Number(readoutQualitySummary?.onboardMonitorFailedCount)) ? Number(readoutQualitySummary.onboardMonitorFailedCount) : 0,
+      readoutQualityReviewRequired: pickDefined(readoutQualitySummary?.reviewRequired, readoutQualitySummary?.review_required) === true || readoutQualityChecklist?.state === "review",
+      readoutQualityIssueCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "issueCount"))) ? Number(readAliasValue(readoutQualitySummary, "issueCount")) : 0,
+      readoutQualityIssueIds: readAliasList(readoutQualitySummary, "issueIds"),
+      rawPidUndecodedCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "rawPidUndecodedCount"))) ? Number(readAliasValue(readoutQualitySummary, "rawPidUndecodedCount")) : 0,
+      readinessIncompleteCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "readinessIncompleteCount"))) ? Number(readAliasValue(readoutQualitySummary, "readinessIncompleteCount")) : 0,
+      ecuInfoMissingKeyCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "ecuInfoMissingKeyCount"))) ? Number(readAliasValue(readoutQualitySummary, "ecuInfoMissingKeyCount")) : 0,
+      onboardMonitorFailedCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "onboardMonitorFailedCount"))) ? Number(readAliasValue(readoutQualitySummary, "onboardMonitorFailedCount")) : 0,
       vehicleApplicabilityChecklist: diagnosticChecklistById.vehicle_applicability || null,
       pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
       pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
@@ -3751,15 +3751,18 @@
     const currentRequestPlanNextRequestIds = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id));
     const importedRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent));
     const currentRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent));
-    const readPrimaryBlocker = (flow = {}) => (flow.primaryBlockingSummary && typeof flow.primaryBlockingSummary === "object" ? flow.primaryBlockingSummary : {});
+    const readPrimaryBlocker = (flow = {}) => {
+      const blocker = flow.primaryBlockingSummary || flow.primary_blocking_summary;
+      return blocker && typeof blocker === "object" ? blocker : {};
+    };
     const importedPrimaryBlocker = readPrimaryBlocker(importedFlow);
     const currentPrimaryBlocker = readPrimaryBlocker(currentFlow);
-    const importedPrimaryBlockingReasonId = importedPrimaryBlocker.reasonId || importedFlow.primaryBlockingReasonId || null;
-    const currentPrimaryBlockingReasonId = currentPrimaryBlocker.reasonId || currentFlow.primaryBlockingReasonId || null;
-    const importedPrimaryBlockingReadoutId = importedPrimaryBlocker.readoutId || importedFlow.primaryBlockingReadoutId || null;
-    const currentPrimaryBlockingReadoutId = currentPrimaryBlocker.readoutId || currentFlow.primaryBlockingReadoutId || null;
-    const importedPrimaryBlockingBridgeIntent = importedPrimaryBlocker.bridgeIntent || importedFlow.primaryBlockingReadoutBridgeIntent || null;
-    const currentPrimaryBlockingBridgeIntent = currentPrimaryBlocker.bridgeIntent || currentFlow.primaryBlockingReadoutBridgeIntent || null;
+    const importedPrimaryBlockingReasonId = pickDefined(importedPrimaryBlocker.reasonId, importedPrimaryBlocker.reason_id, importedFlow.primaryBlockingReasonId, importedFlow.primary_blocking_reason_id, null);
+    const currentPrimaryBlockingReasonId = pickDefined(currentPrimaryBlocker.reasonId, currentPrimaryBlocker.reason_id, currentFlow.primaryBlockingReasonId, currentFlow.primary_blocking_reason_id, null);
+    const importedPrimaryBlockingReadoutId = pickDefined(importedPrimaryBlocker.readoutId, importedPrimaryBlocker.readout_id, importedFlow.primaryBlockingReadoutId, importedFlow.primary_blocking_readout_id, null);
+    const currentPrimaryBlockingReadoutId = pickDefined(currentPrimaryBlocker.readoutId, currentPrimaryBlocker.readout_id, currentFlow.primaryBlockingReadoutId, currentFlow.primary_blocking_readout_id, null);
+    const importedPrimaryBlockingBridgeIntent = pickDefined(importedPrimaryBlocker.bridgeIntent, importedPrimaryBlocker.bridge_intent, importedFlow.primaryBlockingReadoutBridgeIntent, importedFlow.primary_blocking_readout_bridge_intent, null);
+    const currentPrimaryBlockingBridgeIntent = pickDefined(currentPrimaryBlocker.bridgeIntent, currentPrimaryBlocker.bridge_intent, currentFlow.primaryBlockingReadoutBridgeIntent, currentFlow.primary_blocking_readout_bridge_intent, null);
     const importedPrimaryBlockingReasonIds = toSingletonIdList(importedPrimaryBlockingReasonId);
     const currentPrimaryBlockingReasonIds = toSingletonIdList(currentPrimaryBlockingReasonId);
     const importedPrimaryBlockingReadoutIds = toSingletonIdList(importedPrimaryBlockingReadoutId);
@@ -3952,15 +3955,18 @@
     const currentRequestPlanNextRequestIds = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id));
     const importedRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent));
     const currentRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent));
-    const readPrimaryBlocker = (flow = {}) => (flow.primaryBlockingSummary && typeof flow.primaryBlockingSummary === "object" ? flow.primaryBlockingSummary : {});
+    const readPrimaryBlocker = (flow = {}) => {
+      const blocker = flow.primaryBlockingSummary || flow.primary_blocking_summary;
+      return blocker && typeof blocker === "object" ? blocker : {};
+    };
     const importedPrimaryBlocker = readPrimaryBlocker(importedDiagnosticFlowSummary);
     const currentPrimaryBlocker = readPrimaryBlocker(currentFlow);
-    const importedPrimaryBlockingReasonId = importedPrimaryBlocker.reasonId || importedDiagnosticFlowSummary.primaryBlockingReasonId || null;
-    const currentPrimaryBlockingReasonId = currentPrimaryBlocker.reasonId || currentFlow.primaryBlockingReasonId || null;
-    const importedPrimaryBlockingReadoutId = importedPrimaryBlocker.readoutId || importedDiagnosticFlowSummary.primaryBlockingReadoutId || null;
-    const currentPrimaryBlockingReadoutId = currentPrimaryBlocker.readoutId || currentFlow.primaryBlockingReadoutId || null;
-    const importedPrimaryBlockingBridgeIntent = importedPrimaryBlocker.bridgeIntent || importedDiagnosticFlowSummary.primaryBlockingReadoutBridgeIntent || null;
-    const currentPrimaryBlockingBridgeIntent = currentPrimaryBlocker.bridgeIntent || currentFlow.primaryBlockingReadoutBridgeIntent || null;
+    const importedPrimaryBlockingReasonId = pickDefined(importedPrimaryBlocker.reasonId, importedPrimaryBlocker.reason_id, importedDiagnosticFlowSummary.primaryBlockingReasonId, importedDiagnosticFlowSummary.primary_blocking_reason_id, null);
+    const currentPrimaryBlockingReasonId = pickDefined(currentPrimaryBlocker.reasonId, currentPrimaryBlocker.reason_id, currentFlow.primaryBlockingReasonId, currentFlow.primary_blocking_reason_id, null);
+    const importedPrimaryBlockingReadoutId = pickDefined(importedPrimaryBlocker.readoutId, importedPrimaryBlocker.readout_id, importedDiagnosticFlowSummary.primaryBlockingReadoutId, importedDiagnosticFlowSummary.primary_blocking_readout_id, null);
+    const currentPrimaryBlockingReadoutId = pickDefined(currentPrimaryBlocker.readoutId, currentPrimaryBlocker.readout_id, currentFlow.primaryBlockingReadoutId, currentFlow.primary_blocking_readout_id, null);
+    const importedPrimaryBlockingBridgeIntent = pickDefined(importedPrimaryBlocker.bridgeIntent, importedPrimaryBlocker.bridge_intent, importedDiagnosticFlowSummary.primaryBlockingReadoutBridgeIntent, importedDiagnosticFlowSummary.primary_blocking_readout_bridge_intent, null);
+    const currentPrimaryBlockingBridgeIntent = pickDefined(currentPrimaryBlocker.bridgeIntent, currentPrimaryBlocker.bridge_intent, currentFlow.primaryBlockingReadoutBridgeIntent, currentFlow.primary_blocking_readout_bridge_intent, null);
     const importedPrimaryBlockingReasonIds = toSingletonIdList(importedPrimaryBlockingReasonId);
     const currentPrimaryBlockingReasonIds = toSingletonIdList(currentPrimaryBlockingReasonId);
     const importedPrimaryBlockingReadoutIds = toSingletonIdList(importedPrimaryBlockingReadoutId);
