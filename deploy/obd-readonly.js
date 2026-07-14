@@ -9427,17 +9427,30 @@
         supportNote: definition.supportNote
       }));
 
+    const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const supportedPids = [...supported];
+    const supportedCount = items.filter((item) => item.supported).length;
+    const unsupportedCount = items.filter((item) => !item.supported).length;
+    const knownPidCount = items.length;
+
     return {
       schemaVersion: "supported_pid_matrix_v1",
       schema_version: "supported_pid_matrix_v1",
       source,
-      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      capturedAt,
+      captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
-      supportedPids: [...supported],
-      supportedCount: items.filter((item) => item.supported).length,
-      knownPidCount: items.length,
+      supportedPids,
+      supported_pids: supportedPids,
+      supportedCount,
+      supported_count: supportedCount,
+      unsupportedCount,
+      unsupported_count: unsupportedCount,
+      knownPidCount,
+      known_pid_count: knownPidCount,
       items,
-      retainedRawText: false
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 
