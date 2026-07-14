@@ -1239,7 +1239,8 @@ const onboardMonitorSnapshotFunctionChecks = () => {
     check(functionBody.includes('row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId') && functionBody.includes('row.test_id_hex'), "normalizeOnboardMonitorSnapshot should normalize test id aliases");
     check(functionBody.includes('row.component_id || row.componentId || row.cid || row.component') && functionBody.includes('row.measured_value ?? row.measuredValue') && functionBody.includes('row.current_value'), "normalizeOnboardMonitorSnapshot should normalize component and measured value aliases");
     check(functionBody.includes('row.min_limit ?? row.minLimit') && functionBody.includes('row.max_limit ?? row.maxLimit'), "normalizeOnboardMonitorSnapshot should normalize min/max limit aliases");
-    check(functionBody.includes('row.passed === true || row.pass === true || statusText === "pass" || statusText === "passed"'), "normalizeOnboardMonitorSnapshot should derive pass/fail from limits before explicit passed fallback");
+    check(functionBody.includes('row.passed === true || row.pass === true || row.isPassed === true') && functionBody.includes('statusText === "pass" || statusText === "passed"'), "normalizeOnboardMonitorSnapshot should derive pass/fail from limits before explicit passed fallback");
+    check(functionBody.includes('row.failed === true || row.fail === true || row.isFailed === true') && functionBody.includes('["fail", "failed", "not_passed", "not passed", "out_of_range", "out of range"].includes(statusText)'), "normalizeOnboardMonitorSnapshot should preserve explicit failed aliases without limits");
     check(functionBody.includes('const failedCount = tests.filter((test) => test.status === "fail").length') && functionBody.includes('retainedRawText: false'), "normalizeOnboardMonitorSnapshot should count failed tests and never retain raw text");
     check(functionBody.includes('schema_version: "onboard_monitor_snapshot_v1"'), "normalizeOnboardMonitorSnapshot should expose snake_case schema version");
     check(functionBody.includes('test_count: testCount') && functionBody.includes('passed_count: passedCount') && functionBody.includes('failed_count: failedCount') && functionBody.includes('unknown_count: unknownCount'), "normalizeOnboardMonitorSnapshot should expose snake_case Mode 06 count aliases");
@@ -2101,7 +2102,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1952+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1954+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2173,7 +2174,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.574.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for vehicle applicability alias normalization");
+check(appSource.includes('const APP_VERSION = "2.575.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for Mode 06 explicit failed status normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3168,15 +3169,17 @@ const onboardMonitorSnapshotDataAliases = obd.normalizeOnboardMonitorSnapshot({
     communication_protocol: "ISO15765-4",
     onboard_monitor_rows: [
       { test_id_hex: "07", component_id_hex: "02", current_value: 120, min_limit: 100, max_limit: 140 },
-      { testId: "08", componentId: "01", testValue: 10, status: "pass" }
+      { testId: "08", componentId: "01", testValue: 10, status: "pass" },
+      { testId: "09", componentId: "01", testValue: 10, failed: true }
     ],
     captured_at: "2026-07-07T00:50:00Z"
   }
 });
 check(onboardMonitorSnapshotDataAliases.source === "bridge_import" && onboardMonitorSnapshotDataAliases.protocol === "ISO15765-4", "Mode 06 snapshot did not preserve data payload source and protocol aliases");
-check(onboardMonitorSnapshotDataAliases.testCount === 2 && onboardMonitorSnapshotDataAliases.tests[0]?.status === "pass", "Mode 06 snapshot did not accept onboard_monitor_rows data aliases");
-check(onboardMonitorSnapshotDataAliases.tests[1]?.status === "unknown" && onboardMonitorSnapshotDataAliases.tests[1]?.passed === true, "Mode 06 snapshot did not preserve explicit pass status without limits");
-check(onboardMonitorSnapshotDataAliases.test_count === 2 && onboardMonitorSnapshotDataAliases.passed_count === 1 && onboardMonitorSnapshotDataAliases.unknown_count === 1, "Mode 06 snapshot did not expose snake_case data payload count aliases");
+check(onboardMonitorSnapshotDataAliases.testCount === 3 && onboardMonitorSnapshotDataAliases.tests[0]?.status === "pass", "Mode 06 snapshot did not accept onboard_monitor_rows data aliases");
+check(onboardMonitorSnapshotDataAliases.tests[1]?.status === "pass" && onboardMonitorSnapshotDataAliases.tests[1]?.passed === true, "Mode 06 snapshot did not preserve explicit pass status without limits");
+check(onboardMonitorSnapshotDataAliases.tests[2]?.status === "fail" && onboardMonitorSnapshotDataAliases.tests[2]?.passed === false, "Mode 06 snapshot did not preserve explicit failed status without limits");
+check(onboardMonitorSnapshotDataAliases.test_count === 3 && onboardMonitorSnapshotDataAliases.passed_count === 2 && onboardMonitorSnapshotDataAliases.failed_count === 1 && onboardMonitorSnapshotDataAliases.unknown_count === 0, "Mode 06 snapshot did not expose snake_case data payload count aliases");
 check(onboardMonitorSnapshotDataAliases.captured_at === "2026-07-07T00:50:00Z" && onboardMonitorSnapshotDataAliases.retained_raw_text === false, "Mode 06 snapshot did not expose snake_case capture and retention aliases");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
@@ -9428,6 +9431,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1952");
+  console.log("OBD read-only safety checks: 1954");
   console.log("Errors: 0");
 }

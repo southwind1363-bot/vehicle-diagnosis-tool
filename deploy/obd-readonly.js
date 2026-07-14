@@ -8983,8 +8983,11 @@
         const max = Number(row.max ?? row.maximum ?? row.max_value ?? row.maxValue ?? row.max_limit ?? row.maxLimit);
         const hasLimits = Number.isFinite(min) && Number.isFinite(max);
         const statusText = typeof row.status === "string" ? row.status.trim().toLowerCase() : "";
-        const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : row.passed === true || row.pass === true || statusText === "pass" || statusText === "passed";
+        const explicitPassed = row.passed === true || row.pass === true || row.isPassed === true || row.is_passed === true || statusText === "pass" || statusText === "passed";
+        const explicitFailed = row.failed === true || row.fail === true || row.isFailed === true || row.is_failed === true || row.passed === false || row.pass === false || ["fail", "failed", "not_passed", "not passed", "out_of_range", "out of range"].includes(statusText);
+        const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : explicitPassed ? true : explicitFailed ? false : false;
         if (!testId || !componentId || !Number.isFinite(value)) return null;
+        const status = hasLimits ? (passed ? "pass" : "fail") : explicitPassed ? "pass" : explicitFailed ? "fail" : "unknown";
         return {
           testId,
           componentId,
@@ -8992,7 +8995,7 @@
           min: Number.isFinite(min) ? min : null,
           max: Number.isFinite(max) ? max : null,
           passed,
-          status: hasLimits ? (passed ? "pass" : "fail") : "unknown",
+          status,
           sourceIndex: index + 1,
           interpretationNote: "Mode 06 TID/CID meaning and units are vehicle-specific. Confirm the test item in the service manual."
         };
