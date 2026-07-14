@@ -1879,11 +1879,11 @@
       }
       return 0;
     };
-    const maker = source.maker || source.make || source.manufacturer || source.brand || source.oem || null;
-    const model = source.model || source.modelName || source.model_name || source.vehicleModel || source.vehicle_model || null;
-    const modelCode = source.modelCode || source.model_code || source.chassisCode || source.chassis_code || source.frameCode || source.frame_code || null;
-    const year = source.year || source.modelYear || source.model_year || source.registrationYear || source.registration_year || null;
-    const engineCode = source.engineCode || source.engine_code || source.engine || source.engineModel || source.engine_model || null;
+    const maker = source.maker || source.make || source.manufacturer || source.brand || source.oem || source.vehicleMaker || source.vehicle_maker || source.vehicleMake || source.vehicle_make || null;
+    const model = source.model || source.modelName || source.model_name || source.vehicleModel || source.vehicle_model || source.carModel || source.car_model || null;
+    const modelCode = source.modelCode || source.model_code || source.chassisCode || source.chassis_code || source.frameCode || source.frame_code || source.vehicleModelCode || source.vehicle_model_code || source.bodyCode || source.body_code || null;
+    const year = source.year || source.modelYear || source.model_year || source.registrationYear || source.registration_year || source.vehicleYear || source.vehicle_year || null;
+    const engineCode = source.engineCode || source.engine_code || source.engine || source.engineModel || source.engine_model || source.engineType || source.engine_type || source.powertrainCode || source.powertrain_code || null;
     const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
