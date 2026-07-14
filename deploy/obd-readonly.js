@@ -10403,6 +10403,8 @@
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
+    const bridgeSession = sessionInput.bridgeSession || sessionInput.bridge_session || null;
+    const bridgeExportPayload = sessionInput.exportPayload || sessionInput.export_payload || sessionInput.bridgeExportPayload || sessionInput.bridge_export_payload || null;
     const storedDtcSnapshotInput = sessionInput.storedDtcSnapshot || sessionInput.stored_dtc_snapshot || sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || null;
     const pendingDtcSnapshotInput = sessionInput.pendingDtcSnapshot || sessionInput.pending_dtc_snapshot || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || null;
     const permanentDtcSnapshotInput = sessionInput.permanentDtcSnapshot || sessionInput.permanent_dtc_snapshot || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || null;
@@ -10699,6 +10701,10 @@
       supported_pid_matrix: supportedPidMatrix,
       readoutCoverage,
       readout_coverage: readoutCoverage,
+      bridgeSession,
+      bridge_session: bridgeSession,
+      bridgeExportPayload,
+      bridge_export_payload: bridgeExportPayload,
       coreReadoutInventorySummary,
       core_readout_inventory_summary: coreReadoutInventorySummary,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
