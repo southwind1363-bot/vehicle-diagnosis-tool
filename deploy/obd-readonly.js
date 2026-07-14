@@ -8124,6 +8124,7 @@
   function mergeDiagnosticInputs(input = {}) {
     const scannerTextInput = input.scannerText || input.scanner_text || "";
     const bridgeImportInput = input.bridgeImport
+      || input.session
       || input.bridge_import
       || input.bridgeDiagnosticImport
       || input.bridge_diagnostic_import
