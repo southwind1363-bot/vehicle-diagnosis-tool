@@ -6317,8 +6317,16 @@
   }
 
   function normalizeEcuInfoSnapshot(input = {}) {
-    const source = input.source || "diagnostic_core";
-    const rows = collectEcuInfoRows(input);
+    const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
+      ? {
+        ...input.data,
+        source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+      }
+      : input;
+    const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const rows = collectEcuInfoRows(sourceInput);
     const items = rows
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);
@@ -6343,8 +6351,8 @@
     return {
       schemaVersion: "ecu_info_snapshot_v1",
       source,
-      capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || input.obd_protocol || null,
+      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       itemCount: items.length,
       expectedItemCount: expectedItems.length,
       hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
@@ -6434,8 +6442,8 @@
     const rowId = row.id || row.item_id || row.itemId || row.mode09_id || row.mode09Id;
     const catalogItem = ecuInfoItemCatalog.find((item) => item.id === rowId || item.infoType === infoType);
     const id = catalogItem?.id || String(rowId || `ecu_info_${index + 1}`).slice(0, 80);
-    const privacyClass = catalogItem?.privacyClass || row.privacy_class || "unknown";
-    const rawValue = row.value ?? row.text ?? row.data ?? row.raw_value ?? row.rawValue ?? row.decoded_value ?? row.decodedValue ?? "";
+    const privacyClass = catalogItem?.privacyClass || row.privacy_class || row.privacyClass || row.privacy || "unknown";
+    const rawValue = row.value ?? row.info_value ?? row.infoValue ?? row.text ?? row.display_value ?? row.displayValue ?? row.data ?? row.raw_value ?? row.rawValue ?? row.decoded_value ?? row.decodedValue ?? row.decodedText ?? row.ascii ?? "";
     const value = privacyClass === "sensitive_identifier"
       ? maskSensitiveIdentifier(rawValue)
       : sanitizeEcuInfoValue(rawValue);
@@ -6443,13 +6451,13 @@
     if (value === null || value === "") return null;
     return {
       id,
-      label: catalogItem?.label || row.label || id,
-      service: catalogItem?.service || row.service || "09",
+      label: catalogItem?.label || row.label || row.displayLabel || row.display_label || id,
+      service: catalogItem?.service || row.service || row.service_mode || row.serviceMode || "09",
       infoType: catalogItem?.infoType || infoType || null,
       value,
-      valueType: catalogItem?.valueType || row.value_type || row.valueType || "text",
+      valueType: catalogItem?.valueType || row.value_type || row.valueType || row.typeOfValue || "text",
       privacyClass,
-      detected: rawValue !== null && rawValue !== undefined && String(rawValue).length > 0,
+      detected: row.detected === true || row.present === true || (rawValue !== null && rawValue !== undefined && String(rawValue).length > 0),
       retainedRawValue: false,
       diagnosticUse: catalogItem?.diagnosticUse || "",
       storagePolicy: catalogItem?.storagePolicy || ""

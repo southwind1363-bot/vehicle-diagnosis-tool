@@ -1084,8 +1084,9 @@ const ecuInfoSnapshotFunctionChecks = () => {
   check(Boolean(ecuInfoSnapshotFunctionSource), "normalizeEcuInfoSnapshot is missing from obd-readonly.js");
   if (ecuInfoSnapshotFunctionSource) {
     const functionBody = ecuInfoSnapshotFunctionSource[0];
-    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeEcuInfoSnapshot should default source to diagnostic_core");
-    check(functionBody.includes('const rows = collectEcuInfoRows(input);') && functionBody.includes('normalizeEcuInfoValue(row, index)'), "normalizeEcuInfoSnapshot should collect ECU info rows and normalize each value");
+    check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"') && functionBody.includes('input.data.communication_protocol'), "normalizeEcuInfoSnapshot should unwrap data payloads and preserve protocol aliases");
+    check(functionBody.includes('const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";'), "normalizeEcuInfoSnapshot should default source from normalized aliases");
+    check(functionBody.includes('const rows = collectEcuInfoRows(sourceInput);') && functionBody.includes('normalizeEcuInfoValue(row, index)'), "normalizeEcuInfoSnapshot should collect ECU info rows and normalize each value");
     check(functionBody.includes('const expectedItems = ecuInfoItemCatalog.map((item) => ({') && functionBody.includes('captured: items.some((value) => value.id === item.id || value.infoType === item.infoType)'), "normalizeEcuInfoSnapshot should build expected ECU info catalog coverage");
     check(functionBody.includes('const keyItemIds = new Set(["vin", "calibration_id", "calibration_verification_number", "ecu_name"]);'), "normalizeEcuInfoSnapshot should define key Mode 09 item ids");
     check(functionBody.includes('hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),'), "normalizeEcuInfoSnapshot should surface detected sensitive identifiers");
@@ -1113,7 +1114,9 @@ const ecuInfoValueFunctionChecks = () => {
     check(functionBody.includes('row.id || row.item_id || row.itemId || row.mode09_id || row.mode09Id'), "normalizeEcuInfoValue should normalize ECU info row id aliases");
     check(functionBody.includes('ecuInfoItemCatalog.find((item) => item.id === rowId || item.infoType === infoType)'), "normalizeEcuInfoValue should match rows against the ECU info catalog");
     check(functionBody.includes('privacyClass === "sensitive_identifier"') && functionBody.includes('maskSensitiveIdentifier(rawValue)'), "normalizeEcuInfoValue should mask sensitive identifier values");
-    check(functionBody.includes('retainedRawValue: false') && functionBody.includes('detected: rawValue !== null && rawValue !== undefined'), "normalizeEcuInfoValue should expose detection state without retaining raw values");
+    check(functionBody.includes('row.privacyClass') && functionBody.includes('row.info_value ?? row.infoValue') && functionBody.includes('row.decodedText'), "normalizeEcuInfoValue should normalize privacy and value aliases");
+    check(functionBody.includes('row.displayLabel') && functionBody.includes('row.display_label') && functionBody.includes('row.service_mode || row.serviceMode'), "normalizeEcuInfoValue should normalize display label and service aliases");
+    check(functionBody.includes('retainedRawValue: false') && functionBody.includes('row.detected === true || row.present === true'), "normalizeEcuInfoValue should expose detection state without retaining raw values");
   }
 };
 const sanitizeEcuInfoValueFunctionChecks = () => {
@@ -1943,7 +1946,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1332+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1339+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2015,7 +2018,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.487.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readiness aliases");
+check(appSource.includes('const APP_VERSION = "2.488.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for ECU info aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5598,6 +5601,21 @@ check(decodedEcuInfo.items.find((item) => item.id === "ecu_name")?.value === "En
 const decodedSupportedTypes = obd.decodeEcuInfoResponse({ raw: "49 00 01 55 60 00 00 49 04 01 43 41 4C 2D 31 32 33 34" });
 check(decodedSupportedTypes.supportInfoTypesCaptured === true, "Mode 09 type 00 was not marked as captured");
 check(decodedSupportedTypes.supportInfoTypesSummary.labels.includes("キャリブレーションID") && decodedSupportedTypes.supportInfoTypesSummary.labels.includes("ECU名"), "Mode 09 type 00 support summary was not decoded");
+const normalizedEcuInfoAliasSnapshot = obd.normalizeEcuInfoSnapshot({
+  data: {
+    source_type: "bridge_import",
+    communication_protocol: "ISO15765-4",
+    ecu_info_rows: [
+      { mode09Type: "04", display_label: "Calibration alias", info_value: "CAL-ALIAS", detected: true },
+      { mode09_id: "ecu_name", service_mode: "09", decodedText: "Hybrid ECU", present: true },
+      { id: "vin", privacyClass: "sensitive_identifier", displayValue: "JTDKN3DU0A0123456", present: true }
+    ]
+  }
+});
+check(normalizedEcuInfoAliasSnapshot.source === "bridge_import" && normalizedEcuInfoAliasSnapshot.protocol === "ISO15765-4", "normalizeEcuInfoSnapshot did not preserve data payload source and protocol aliases");
+check(normalizedEcuInfoAliasSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-ALIAS", "normalizeEcuInfoSnapshot did not normalize Mode 09 value aliases");
+check(normalizedEcuInfoAliasSnapshot.items.find((item) => item.id === "ecu_name")?.value === "Hybrid ECU", "normalizeEcuInfoSnapshot did not normalize ECU name row aliases");
+check(normalizedEcuInfoAliasSnapshot.hadSensitiveIdentifier === true && !JSON.stringify(normalizedEcuInfoAliasSnapshot).includes("JTDKN3DU0A0123456"), "normalizeEcuInfoSnapshot did not mask sensitive identifier aliases");
 const decodedReadiness = obd.decodeReadinessResponse({ raw: "41 01 81 07 22 00" });
 check(decodedReadiness.milOn === true, "レディネス応答からMIL状態を読めません");
 check(decodedReadiness.monitors.find((item) => item.id === "catalyst")?.complete === false, "触媒レディネス未完了をデコードできません");
@@ -8185,6 +8203,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1332");
+  console.log("OBD read-only safety checks: 1339");
   console.log("Errors: 0");
 }
