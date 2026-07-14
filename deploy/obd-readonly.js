@@ -2961,6 +2961,8 @@
     const nextPendingReadoutId = pendingReadoutIds[0] || null;
     const nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
     const pendingReadoutQueueSummary = {
+      schemaVersion: "pending_readout_queue_summary_v1",
+      schema_version: "pending_readout_queue_summary_v1",
       totalCount: pendingReadoutQueue.length,
       total_count: pendingReadoutQueue.length,
       hasPendingReadouts: pendingReadoutQueue.length > 0,
@@ -2989,6 +2991,8 @@
       ? Math.round((capturedReadoutIds.length / readoutStates.length) * 100)
       : 0;
     const readoutStateSummary = {
+      schemaVersion: "readout_state_summary_v1",
+      schema_version: "readout_state_summary_v1",
       totalCount: readoutStates.length,
       total_count: readoutStates.length,
       capturedCount: capturedReadoutIds.length,
@@ -3229,6 +3233,8 @@
       ? Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)
       : directCompletionPercent;
     const readoutProgressSummary = {
+      schemaVersion: "readout_progress_summary_v1",
+      schema_version: "readout_progress_summary_v1",
       requiredCount: requiredReadoutIds.length,
       required_count: requiredReadoutIds.length,
       capturedCount: capturedReadoutIds.length,
@@ -3249,6 +3255,8 @@
       completion_percent: completionPercent
     };
     const readoutCompletionSummary = {
+      schemaVersion: "readout_completion_summary_v1",
+      schema_version: "readout_completion_summary_v1",
       complete: pendingReadoutIds.length === 0,
       hasAnyReadout: capturedReadoutIds.length > 0 || emptyReadoutIds.length > 0,
       has_any_readout: capturedReadoutIds.length > 0 || emptyReadoutIds.length > 0,
