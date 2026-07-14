@@ -7867,19 +7867,37 @@
       observed: normalized.some((monitor) => monitor.id === item.id)
     }));
 
+    const milOn = readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, false), false);
+    const monitorCount = normalized.length;
+    const completeCount = normalized.filter((item) => item.supported && item.complete).length;
+    const incompleteCount = normalized.filter((item) => item.supported && !item.complete).length;
+    const notSupportedCount = normalized.filter((item) => !item.supported).length;
+    const knownMonitorCount = knownMonitors.length;
+
     return {
       schemaVersion: "readiness_snapshot_v1",
       schema_version: "readiness_snapshot_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
-      milOn: readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, false), false),
-      monitorCount: normalized.length,
-      incompleteCount: normalized.filter((item) => item.supported && !item.complete).length,
-      knownMonitorCount: knownMonitors.length,
+      milOn,
+      mil_on: milOn,
+      monitorCount,
+      monitor_count: monitorCount,
+      completeCount,
+      complete_count: completeCount,
+      incompleteCount,
+      incomplete_count: incompleteCount,
+      notSupportedCount,
+      not_supported_count: notSupportedCount,
+      knownMonitorCount,
+      known_monitor_count: knownMonitorCount,
       monitors: normalized,
       knownMonitors,
-      retainedRawText: false
+      known_monitors: knownMonitors,
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 
