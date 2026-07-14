@@ -2348,9 +2348,7 @@
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
         : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
-    const ecuResponseSummary = withSchemaVersionAlias(ecuResponseSummaryInput?.schemaVersion
-      ? ecuResponseSummaryInput
-      : normalizeEcuResponseSummary(ecuResponseSummaryInput || {
+    const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput || {
         source: "local_bridge",
         captured_at: dtcSnapshot.capturedAt || null,
         protocol: dtcSnapshot.protocol || dtcSnapshot.obd_protocol || parts.protocol || parts.obd_protocol || null,
@@ -2654,9 +2652,7 @@
       nestedSession: parts.bridgeSession || parts.bridge_session || parts.session,
       allowVciArray: true
     });
-    const ecuResponseSummary = withSchemaVersionAlias((parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)?.schemaVersion
-      ? (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)
-      : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" }));
+    const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" }));
     const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } }));
@@ -9676,7 +9672,7 @@
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
         : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput));
-    const ecuResponseSummary = withSchemaVersionAlias(ecuResponseSummaryInput?.schemaVersion ? ecuResponseSummaryInput : normalizeEcuResponseSummary(ecuResponseSummaryInput));
+    const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput));
     const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))

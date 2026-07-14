@@ -1112,6 +1112,7 @@ const bridgeSessionSummaryFunctionChecks = () => {
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should resolve readout coverage before appending bridge readout warnings");
     check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildBridgeSessionSummary should pass onboard monitor snapshots into core session status");
     check(source.includes('parts.core_session_status?.readout_request_plan_gate_summary') && source.includes('parts.diagnostic_flow_summary?.readout_request_plan_gate_summary'), "buildBridgeSessionSummary should read nested snake_case request plan gate summaries");
+    check(functionBody.includes('const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput || {'), "buildBridgeSessionSummary should re-normalize ECU response summaries to backfill aliases");
   }
 };
 const dtcSnapshotFunctionChecks = () => {
@@ -1850,6 +1851,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('sessionInput.freezeFrameSnapshot') && functionBody.includes('sessionInput.freeze_frame_response') && functionBody.includes('sessionInput.freeze_frame'), "buildDiagnosticScanSession should accept freeze-frame snapshot and response aliases");
     check(functionBody.includes('sessionInput.readinessSnapshot') && functionBody.includes('sessionInput.readiness_response'), "buildDiagnosticScanSession should accept readiness snapshot and response aliases");
     check(functionBody.includes('sessionInput.ecuInfoSnapshot') && functionBody.includes('sessionInput.ecu_info_response') && functionBody.includes('sessionInput.ecu_info_items'), "buildDiagnosticScanSession should accept ECU info snapshot and response aliases");
+    check(functionBody.includes('const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput));'), "buildDiagnosticScanSession should re-normalize ECU response summaries to backfill aliases");
     check(functionBody.includes('decodeLivePidResponse(livePidResponseInput)') && functionBody.includes('normalizeBridgeLivePidSnapshot(livePidSnapshotInput)'), "buildDiagnosticScanSession should decode raw live PID responses or normalize bridge live PID snapshots");
     check(functionBody.includes('decodeFreezeFrameResponse(freezeFrameResponseInput)') && functionBody.includes('normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)'), "buildDiagnosticScanSession should decode or normalize freeze-frame input");
     check(functionBody.includes('decodeReadinessResponse(readinessResponseInput)') && functionBody.includes('normalizeReadinessSnapshot(readinessSnapshotInput)'), "buildDiagnosticScanSession should decode or normalize readiness input");
@@ -2086,7 +2088,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1899+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1904+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2158,7 +2160,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.558.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for ECU response snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.559.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for ECU response session alias backfill");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3218,6 +3220,7 @@ check(bridgeSummaryOnboardMonitorOnly.capturedAt === "2026-07-07T00:00:55Z", "Br
 check(bridgeSummaryOnboardMonitorOnly.onboardMonitorSnapshot?.testCount === 1, "Bridge session summary did not preserve onboard_monitor_snapshot-only input");
 const bridgeSummaryEcuResponseOnly = obd.buildBridgeSessionSummary({
   ecu_response_summary: {
+    schemaVersion: "ecu_response_summary_v1",
     capturedAt: "2026-07-07T00:00:57Z",
     protocol: "ISO9141-2",
     ecus: [{ address: "7E8", status: "ok", dtcCount: 1, services: ["03"] }]
@@ -3226,6 +3229,7 @@ const bridgeSummaryEcuResponseOnly = obd.buildBridgeSessionSummary({
 check(bridgeSummaryEcuResponseOnly.protocol === "ISO9141-2", "Bridge session summary did not recover protocol from ecu_response_summary-only input");
 check(bridgeSummaryEcuResponseOnly.capturedAt === "2026-07-07T00:00:57Z", "Bridge session summary did not recover capturedAt from ecu_response_summary-only input");
 check(bridgeSummaryEcuResponseOnly.ecuResponseSummary?.ecus[0]?.address === "7E8", "Bridge session summary did not preserve ecu_response_summary-only input");
+check(bridgeSummaryEcuResponseOnly.ecuResponseSummary?.ecus[0]?.dtc_count === 1 && bridgeSummaryEcuResponseOnly.ecuResponseSummary?.total_dtc_count === 1, "Bridge session summary did not backfill ECU response snake_case aliases");
 const bridgeSummaryEcuInfoOnly = obd.buildBridgeSessionSummary({
   ecu_info_snapshot: {
     blocked: false,
@@ -5446,6 +5450,7 @@ check(mergedDiagnosticInputBridgeOnboardMonitorOnly.onboardMonitorSnapshot?.test
 const mergedDiagnosticInputBridgeEcuResponseOnly = obd.mergeDiagnosticInputs({
   bridge_import: {
     ecu_response_summary: {
+      schemaVersion: "ecu_response_summary_v1",
       capturedAt: "2026-07-07T00:03:20Z",
       protocol: "ISO9141-2",
       ecus: [{ address: "7E8", status: "ok", dtcCount: 1, services: ["03"] }]
@@ -5456,6 +5461,7 @@ check(mergedDiagnosticInputBridgeEcuResponseOnly.source === "local_bridge", "Com
 check(mergedDiagnosticInputBridgeEcuResponseOnly.protocol === "ISO9141-2", "Combined diagnostic inputs did not preserve protocol from ecu_response_summary-only bridge_import");
 check(mergedDiagnosticInputBridgeEcuResponseOnly.capturedAt === "2026-07-07T00:03:20Z", "Combined diagnostic inputs did not preserve capturedAt from ecu_response_summary-only bridge_import");
 check(mergedDiagnosticInputBridgeEcuResponseOnly.ecuResponseSummary?.ecus[0]?.address === "7E8", "Combined diagnostic inputs did not preserve ecu_response_summary-only bridge_import");
+check(mergedDiagnosticInputBridgeEcuResponseOnly.ecuResponseSummary?.ecus[0]?.dtc_count === 1 && mergedDiagnosticInputBridgeEcuResponseOnly.ecuResponseSummary?.ecu_count === 1, "Combined diagnostic inputs did not backfill ECU response snake_case aliases");
 const mergedDiagnosticInputBridgeEcuInfoOnly = obd.mergeDiagnosticInputs({
   bridge_import: {
     ecu_info_snapshot: {
@@ -7210,6 +7216,7 @@ check(temporalReadoutAliasScanSession.protocol === "ISO9141-2" && temporalReadou
 const ecuResponseOnlyScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-ecu-response-only",
   ecu_response_summary: {
+    schemaVersion: "ecu_response_summary_v1",
     capturedAt: "2026-07-07T00:01:55Z",
     protocol: "ISO9141-2",
     ecus: [{ address: "7E8", status: "ok", dtcCount: 1, services: ["03"] }]
@@ -7218,6 +7225,7 @@ const ecuResponseOnlyScanSession = obd.buildDiagnosticScanSession({
 check(ecuResponseOnlyScanSession.protocol === "ISO9141-2", "Diagnostic scan session did not recover protocol from ecu_response_summary-only input");
 check(ecuResponseOnlyScanSession.capturedAt === "2026-07-07T00:01:55Z", "Diagnostic scan session did not recover capturedAt from ecu_response_summary-only input");
 check(ecuResponseOnlyScanSession.ecuResponseSummary?.ecus[0]?.address === "7E8", "Diagnostic scan session did not preserve ecu_response_summary-only input");
+check(ecuResponseOnlyScanSession.ecuResponseSummary?.ecus[0]?.dtc_count === 1 && ecuResponseOnlyScanSession.ecuResponseSummary?.total_dtc_count === 1, "Diagnostic scan session did not backfill ECU response snake_case aliases");
 const ecuInfoOnlyScanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-ecu-info-only",
   ecu_info_snapshot: {
@@ -9058,6 +9066,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1899");
+  console.log("OBD read-only safety checks: 1904");
   console.log("Errors: 0");
 }
