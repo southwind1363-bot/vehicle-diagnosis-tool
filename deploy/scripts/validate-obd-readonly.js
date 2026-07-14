@@ -1523,13 +1523,15 @@ const supportedPidMatrixFunctionChecks = () => {
   check(Boolean(supportedPidMatrixFunctionSource), "buildSupportedPidMatrix is missing from obd-readonly.js");
   if (supportedPidMatrixFunctionSource) {
     const functionBody = supportedPidMatrixFunctionSource[0];
-    check(functionBody.includes('Array.isArray(input.supported_pids)') && functionBody.includes('Array.isArray(input.supportedPidRows)'), "buildSupportedPidMatrix should accept supported PID array aliases");
-    check(functionBody.includes('pid.pid || pid.code || pid.id || pid.pid_code || pid.pidCode'), "buildSupportedPidMatrix should normalize object PID aliases");
+    check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"') && functionBody.includes('input.data.communication_protocol'), "buildSupportedPidMatrix should unwrap data payloads and preserve protocol aliases");
+    check(functionBody.includes('Array.isArray(sourceInput.supported_pids)') && functionBody.includes('Array.isArray(sourceInput.supportedPidRows)') && functionBody.includes('Array.isArray(sourceInput.pidList)'), "buildSupportedPidMatrix should accept supported PID array aliases");
+    check(functionBody.includes('typeof sourceInput.supported_pid_list === "string"') && functionBody.includes('sourceInput.supportedPidsText.split'), "buildSupportedPidMatrix should accept supported PID text aliases");
+    check(functionBody.includes('pid.pid || pid.code || pid.id || pid.pid_code || pid.pidCode || pid.pid_id || pid.pidId || pid.value'), "buildSupportedPidMatrix should normalize object PID aliases");
     check(functionBody.includes('String(pid).toUpperCase().replace(/^0X/, "").padStart(2, "0")'), "buildSupportedPidMatrix should normalize scalar PIDs as uppercase two-digit hex");
     check(functionBody.includes('monitorDefinitions') && functionBody.includes('definition.service === "01" && definition.pid'), "buildSupportedPidMatrix should map support against Mode 01 monitor definitions");
     check(functionBody.includes('supported: supported.has(String(definition.pid).toUpperCase())'), "buildSupportedPidMatrix should mark definitions supported from decoded PID ids");
     check(functionBody.includes('supportedCount: items.filter((item) => item.supported).length') && functionBody.includes('knownPidCount: items.length'), "buildSupportedPidMatrix should expose supported and known PID counts");
-    check(functionBody.includes('protocol: input.protocol || input.obd_protocol || null,'), "buildSupportedPidMatrix should accept obd_protocol aliases");
+    check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "buildSupportedPidMatrix should accept protocol aliases");
     check(functionBody.includes('retainedRawText: false'), "buildSupportedPidMatrix should never retain raw text");
   }
 };
@@ -1946,7 +1948,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1339+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1347+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2018,7 +2020,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.488.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for ECU info aliases");
+check(appSource.includes('const APP_VERSION = "2.489.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for supported PID aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2483,6 +2485,20 @@ const supportedPidMatrixRowAliases = obd.buildSupportedPidMatrix({
   supportedPidRows: [{ pid: "0c" }, { code: "05" }, { pidCode: "40" }]
 });
 check(supportedPidMatrixRowAliases.supportedPids.join(",") === "0C,05,40", "Supported PID matrix did not accept object row aliases");
+const supportedPidMatrixDataTextAliases = obd.buildSupportedPidMatrix({
+  data: {
+    source_type: "bridge_import",
+    communication_protocol: "ISO15765-4",
+    supported_pid_list: "0c, 05;40",
+    captured_at: "2026-06-28T00:01:40Z"
+  }
+});
+check(supportedPidMatrixDataTextAliases.source === "bridge_import" && supportedPidMatrixDataTextAliases.protocol === "ISO15765-4", "Supported PID matrix did not preserve data payload source and protocol aliases");
+check(supportedPidMatrixDataTextAliases.supportedPids.join(",") === "0C,05,40" && supportedPidMatrixDataTextAliases.capturedAt === "2026-06-28T00:01:40Z", "Supported PID matrix did not accept text PID aliases from data payloads");
+const supportedPidMatrixValueAliases = obd.buildSupportedPidMatrix({
+  pidList: [{ pid_id: "0c" }, { pidId: "05" }, { value: "40" }]
+});
+check(supportedPidMatrixValueAliases.supportedPids.join(",") === "0C,05,40", "Supported PID matrix did not accept pid_id, pidId, and value row aliases");
 const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
@@ -8203,6 +8219,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1339");
+  console.log("OBD read-only safety checks: 1347");
   console.log("Errors: 0");
 }

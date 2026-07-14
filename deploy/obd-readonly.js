@@ -7622,22 +7622,44 @@
   }
 
   function buildSupportedPidMatrix(input = {}) {
-    const source = input.source || "diagnostic_core";
+    const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
+      ? {
+        ...input.data,
+        source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+      }
+      : input;
+    const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const supportedRows = Array.isArray(input)
       ? input
-      : Array.isArray(input.supported_pids)
-        ? input.supported_pids
-        : Array.isArray(input.supportedPids)
-          ? input.supportedPids
-          : Array.isArray(input.supported_pid_rows)
-            ? input.supported_pid_rows
-            : Array.isArray(input.supportedPidRows)
-              ? input.supportedPidRows
-              : [];
+      : Array.isArray(sourceInput.supported_pids)
+        ? sourceInput.supported_pids
+        : Array.isArray(sourceInput.supportedPids)
+          ? sourceInput.supportedPids
+          : Array.isArray(sourceInput.pids)
+            ? sourceInput.pids
+            : Array.isArray(sourceInput.pid_list)
+              ? sourceInput.pid_list
+              : Array.isArray(sourceInput.pidList)
+                ? sourceInput.pidList
+                : Array.isArray(sourceInput.supported_pid_rows)
+                  ? sourceInput.supported_pid_rows
+                  : Array.isArray(sourceInput.supportedPidRows)
+                    ? sourceInput.supportedPidRows
+                    : typeof sourceInput.supported_pid_list === "string"
+                      ? sourceInput.supported_pid_list.split(/[\s,;|/]+/)
+                      : typeof sourceInput.supportedPidList === "string"
+                        ? sourceInput.supportedPidList.split(/[\s,;|/]+/)
+                        : typeof sourceInput.supported_pids_text === "string"
+                          ? sourceInput.supported_pids_text.split(/[\s,;|/]+/)
+                          : typeof sourceInput.supportedPidsText === "string"
+                            ? sourceInput.supportedPidsText.split(/[\s,;|/]+/)
+                            : [];
     const supported = new Set(supportedRows
       .map((pid) => {
         if (pid && typeof pid === "object") {
-          return String(pid.pid || pid.code || pid.id || pid.pid_code || pid.pidCode || "").toUpperCase().replace(/^0X/, "").padStart(2, "0");
+          return String(pid.pid || pid.code || pid.id || pid.pid_code || pid.pidCode || pid.pid_id || pid.pidId || pid.value || "").toUpperCase().replace(/^0X/, "").padStart(2, "0");
         }
         return String(pid).toUpperCase().replace(/^0X/, "").padStart(2, "0");
       })
@@ -7659,8 +7681,8 @@
     return {
       schemaVersion: "supported_pid_matrix_v1",
       source,
-      capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || input.obd_protocol || null,
+      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       supportedPids: [...supported],
       supportedCount: items.filter((item) => item.supported).length,
       knownPidCount: items.length,
