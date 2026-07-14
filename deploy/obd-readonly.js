@@ -3892,14 +3892,14 @@
     const currentFlow = currentDiagnosticFlowSummary && typeof currentDiagnosticFlowSummary === "object"
       ? currentDiagnosticFlowSummary
       : {};
-    const importedCompletion = Number.isFinite(Number(importedDiagnosticFlowSummary.completionPercent))
-      ? Number(importedDiagnosticFlowSummary.completionPercent)
-      : 0;
-    const currentCompletion = Number.isFinite(Number(currentFlow.completionPercent))
-      ? Number(currentFlow.completionPercent)
-      : 0;
     const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
     const readAliasValue = (summary, field) => summary && typeof summary === "object" ? pickDefined(summary[field], summary[toSnakeField(field)]) : undefined;
+    const importedCompletion = Number.isFinite(Number(readAliasValue(importedDiagnosticFlowSummary, "completionPercent")))
+      ? Number(readAliasValue(importedDiagnosticFlowSummary, "completionPercent"))
+      : 0;
+    const currentCompletion = Number.isFinite(Number(readAliasValue(currentFlow, "completionPercent")))
+      ? Number(readAliasValue(currentFlow, "completionPercent"))
+      : 0;
     const readFlowCount = (summary, field) => Number.isFinite(Number(readAliasValue(summary, field))) ? Number(readAliasValue(summary, field)) : 0;
     const importedRequiredCount = readFlowCount(importedDiagnosticFlowSummary, "requiredReadoutCount");
     const currentRequiredCount = readFlowCount(currentFlow, "requiredReadoutCount");
@@ -3973,29 +3973,41 @@
     const currentPrimaryBlockingReadoutIds = toSingletonIdList(currentPrimaryBlockingReadoutId);
     const importedPrimaryBlockingBridgeIntents = toSingletonIdList(importedPrimaryBlockingBridgeIntent);
     const currentPrimaryBlockingBridgeIntents = toSingletonIdList(currentPrimaryBlockingBridgeIntent);
+    const importedStatus = readAliasValue(importedDiagnosticFlowSummary, "status") || null;
+    const currentStatus = readAliasValue(currentFlow, "status") || null;
+    const importedNextReadoutId = readAliasValue(importedDiagnosticFlowSummary, "nextReadoutId") || null;
+    const currentNextReadoutId = readAliasValue(currentFlow, "nextReadoutId") || null;
+    const importedNextReadoutLabel = readAliasValue(importedDiagnosticFlowSummary, "nextReadoutLabel") || null;
+    const currentNextReadoutLabel = readAliasValue(currentFlow, "nextReadoutLabel") || null;
+    const importedNextReadoutSource = readAliasValue(importedDiagnosticFlowSummary, "nextReadoutSource") || null;
+    const currentNextReadoutSource = readAliasValue(currentFlow, "nextReadoutSource") || null;
+    const importedNextReadoutQueuePosition = readAliasValue(importedDiagnosticFlowSummary, "nextReadoutQueuePosition") || null;
+    const currentNextReadoutQueuePosition = readAliasValue(currentFlow, "nextReadoutQueuePosition") || null;
+    const importedReadyForAnalysis = readAliasValue(importedDiagnosticFlowSummary, "readyForAnalysis") === true;
+    const currentReadyForAnalysis = readAliasValue(currentFlow, "readyForAnalysis") === true;
     return {
       schemaVersion: "imported_diagnostic_flow_comparison_v1",
-      importedStatus: importedDiagnosticFlowSummary.status || null,
-      currentStatus: currentFlow.status || null,
-      statusChanged: (importedDiagnosticFlowSummary.status || null) !== (currentFlow.status || null),
+      importedStatus,
+      currentStatus,
+      statusChanged: importedStatus !== currentStatus,
       importedCompletionPercent: importedCompletion,
       currentCompletionPercent: currentCompletion,
       completionDelta: currentCompletion - importedCompletion,
-      importedNextReadoutId: importedDiagnosticFlowSummary.nextReadoutId || null,
-      currentNextReadoutId: currentFlow.nextReadoutId || null,
-      nextReadoutChanged: (importedDiagnosticFlowSummary.nextReadoutId || null) !== (currentFlow.nextReadoutId || null),
-      importedNextReadoutLabel: importedDiagnosticFlowSummary.nextReadoutLabel || null,
-      currentNextReadoutLabel: currentFlow.nextReadoutLabel || null,
-      importedNextReadoutSource: importedDiagnosticFlowSummary.nextReadoutSource || null,
-      currentNextReadoutSource: currentFlow.nextReadoutSource || null,
-      importedNextReadoutQueuePosition: importedDiagnosticFlowSummary.nextReadoutQueuePosition || null,
-      currentNextReadoutQueuePosition: currentFlow.nextReadoutQueuePosition || null,
-      nextReadoutDetailsChanged: (importedDiagnosticFlowSummary.nextReadoutLabel || null) !== (currentFlow.nextReadoutLabel || null)
-        || (importedDiagnosticFlowSummary.nextReadoutSource || null) !== (currentFlow.nextReadoutSource || null)
-        || (importedDiagnosticFlowSummary.nextReadoutQueuePosition || null) !== (currentFlow.nextReadoutQueuePosition || null),
-      importedReadyForAnalysis: importedDiagnosticFlowSummary.readyForAnalysis === true,
-      currentReadyForAnalysis: currentFlow.readyForAnalysis === true,
-      readyForAnalysisChanged: (importedDiagnosticFlowSummary.readyForAnalysis === true) !== (currentFlow.readyForAnalysis === true),
+      importedNextReadoutId,
+      currentNextReadoutId,
+      nextReadoutChanged: importedNextReadoutId !== currentNextReadoutId,
+      importedNextReadoutLabel,
+      currentNextReadoutLabel,
+      importedNextReadoutSource,
+      currentNextReadoutSource,
+      importedNextReadoutQueuePosition,
+      currentNextReadoutQueuePosition,
+      nextReadoutDetailsChanged: importedNextReadoutLabel !== currentNextReadoutLabel
+        || importedNextReadoutSource !== currentNextReadoutSource
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
+      importedReadyForAnalysis,
+      currentReadyForAnalysis,
+      readyForAnalysisChanged: importedReadyForAnalysis !== currentReadyForAnalysis,
       importedRequiredReadoutCount: importedRequiredCount,
       currentRequiredReadoutCount: currentRequiredCount,
       requiredReadoutDelta: currentRequiredCount - importedRequiredCount,
@@ -4316,41 +4328,55 @@
     const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
       ? currentAnalysisReadinessSummary
       : {};
-    const importedBlockerCount = Number.isFinite(Number(importedAnalysisReadinessSummary.blockerCount))
-      ? Number(importedAnalysisReadinessSummary.blockerCount)
-      : Array.isArray(importedAnalysisReadinessSummary.blockerIds) ? importedAnalysisReadinessSummary.blockerIds.length : 0;
-    const currentBlockerCount = Number.isFinite(Number(currentSummary.blockerCount))
-      ? Number(currentSummary.blockerCount)
-      : Array.isArray(currentSummary.blockerIds) ? currentSummary.blockerIds.length : 0;
-    const importedPendingCount = Number.isFinite(Number(importedAnalysisReadinessSummary.pendingReadoutCount))
-      ? Number(importedAnalysisReadinessSummary.pendingReadoutCount)
-      : Array.isArray(importedAnalysisReadinessSummary.pendingReadoutIds) ? importedAnalysisReadinessSummary.pendingReadoutIds.length : 0;
-    const currentPendingCount = Number.isFinite(Number(currentSummary.pendingReadoutCount))
-      ? Number(currentSummary.pendingReadoutCount)
-      : Array.isArray(currentSummary.pendingReadoutIds) ? currentSummary.pendingReadoutIds.length : 0;
-    const importedCompletion = Number.isFinite(Number(importedAnalysisReadinessSummary.completionPercent))
-      ? Number(importedAnalysisReadinessSummary.completionPercent)
+    const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+    const readAliasValue = (summary, field) => summary && typeof summary === "object" ? pickDefined(summary[field], summary[toSnakeField(field)]) : undefined;
+    const readStringList = (summary = {}, field) => (Array.isArray(readAliasValue(summary, field)) ? readAliasValue(summary, field).filter(Boolean).map(String).sort() : []);
+    const readCount = (summary, countField, idsField = null) => {
+      const value = readAliasValue(summary, countField);
+      if (Number.isFinite(Number(value))) return Number(value);
+      return idsField ? readStringList(summary, idsField).length : 0;
+    };
+    const importedBlockerCount = readCount(importedAnalysisReadinessSummary, "blockerCount", "blockerIds");
+    const currentBlockerCount = readCount(currentSummary, "blockerCount", "blockerIds");
+    const importedPendingCount = readCount(importedAnalysisReadinessSummary, "pendingReadoutCount", "pendingReadoutIds");
+    const currentPendingCount = readCount(currentSummary, "pendingReadoutCount", "pendingReadoutIds");
+    const importedCompletion = Number.isFinite(Number(readAliasValue(importedAnalysisReadinessSummary, "completionPercent")))
+      ? Number(readAliasValue(importedAnalysisReadinessSummary, "completionPercent"))
       : 0;
-    const currentCompletion = Number.isFinite(Number(currentSummary.completionPercent))
-      ? Number(currentSummary.completionPercent)
+    const currentCompletion = Number.isFinite(Number(readAliasValue(currentSummary, "completionPercent")))
+      ? Number(readAliasValue(currentSummary, "completionPercent"))
       : 0;
-    const readStringList = (summary = {}, field) => (Array.isArray(summary?.[field]) ? summary[field].filter(Boolean).map(String).sort() : []);
-    const readChecklistIds = (summary = {}, field) => readStringList(summary?.checklistSummary || {}, field);
+    const readChecklistSummary = (summary = {}) => readAliasValue(summary, "checklistSummary") || {};
+    const readChecklistIds = (summary = {}, field) => readStringList(readChecklistSummary(summary), field);
     const importedChecklistBlockedIds = readChecklistIds(importedAnalysisReadinessSummary, "blockedIds");
     const currentChecklistBlockedIds = readChecklistIds(currentSummary, "blockedIds");
     const importedChecklistReviewIds = readChecklistIds(importedAnalysisReadinessSummary, "reviewIds");
     const currentChecklistReviewIds = readChecklistIds(currentSummary, "reviewIds");
     const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
-    const importedVehicleApplicabilityChecklistState = importedAnalysisReadinessSummary.checklistById?.vehicle_applicability?.state || null;
-    const currentVehicleApplicabilityChecklistState = currentSummary.checklistById?.vehicle_applicability?.state || null;
+    const importedChecklistById = readAliasValue(importedAnalysisReadinessSummary, "checklistById") || {};
+    const currentChecklistById = readAliasValue(currentSummary, "checklistById") || {};
+    const importedVehicleApplicabilityChecklistState = importedChecklistById.vehicle_applicability?.state || importedChecklistById.vehicleApplicability?.state || null;
+    const currentVehicleApplicabilityChecklistState = currentChecklistById.vehicle_applicability?.state || currentChecklistById.vehicleApplicability?.state || null;
+    const importedReady = readAliasValue(importedAnalysisReadinessSummary, "ready") === true;
+    const currentReady = readAliasValue(currentSummary, "ready") === true;
+    const importedStatus = readAliasValue(importedAnalysisReadinessSummary, "status") || null;
+    const currentStatus = readAliasValue(currentSummary, "status") || null;
+    const importedNextReadoutId = readAliasValue(importedAnalysisReadinessSummary, "nextReadoutId") || null;
+    const currentNextReadoutId = readAliasValue(currentSummary, "nextReadoutId") || null;
+    const importedNextReadoutLabel = readAliasValue(importedAnalysisReadinessSummary, "nextReadoutLabel") || null;
+    const currentNextReadoutLabel = readAliasValue(currentSummary, "nextReadoutLabel") || null;
+    const importedNextReadoutSource = readAliasValue(importedAnalysisReadinessSummary, "nextReadoutSource") || null;
+    const currentNextReadoutSource = readAliasValue(currentSummary, "nextReadoutSource") || null;
+    const importedNextReadoutQueuePosition = readAliasValue(importedAnalysisReadinessSummary, "nextReadoutQueuePosition") || null;
+    const currentNextReadoutQueuePosition = readAliasValue(currentSummary, "nextReadoutQueuePosition") || null;
     return {
       schemaVersion: "imported_analysis_readiness_comparison_v1",
-      importedReady: importedAnalysisReadinessSummary.ready === true,
-      currentReady: currentSummary.ready === true,
-      readyChanged: (importedAnalysisReadinessSummary.ready === true) !== (currentSummary.ready === true),
-      importedStatus: importedAnalysisReadinessSummary.status || null,
-      currentStatus: currentSummary.status || null,
-      statusChanged: (importedAnalysisReadinessSummary.status || null) !== (currentSummary.status || null),
+      importedReady,
+      currentReady,
+      readyChanged: importedReady !== currentReady,
+      importedStatus,
+      currentStatus,
+      statusChanged: importedStatus !== currentStatus,
       importedCompletionPercent: importedCompletion,
       currentCompletionPercent: currentCompletion,
       completionDelta: currentCompletion - importedCompletion,
@@ -4373,18 +4399,18 @@
       importedVehicleApplicabilityChecklistState,
       currentVehicleApplicabilityChecklistState,
       vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
-      importedNextReadoutId: importedAnalysisReadinessSummary.nextReadoutId || null,
-      currentNextReadoutId: currentSummary.nextReadoutId || null,
-      nextReadoutChanged: (importedAnalysisReadinessSummary.nextReadoutId || null) !== (currentSummary.nextReadoutId || null),
-      importedNextReadoutLabel: importedAnalysisReadinessSummary.nextReadoutLabel || null,
-      currentNextReadoutLabel: currentSummary.nextReadoutLabel || null,
-      importedNextReadoutSource: importedAnalysisReadinessSummary.nextReadoutSource || null,
-      currentNextReadoutSource: currentSummary.nextReadoutSource || null,
-      importedNextReadoutQueuePosition: importedAnalysisReadinessSummary.nextReadoutQueuePosition || null,
-      currentNextReadoutQueuePosition: currentSummary.nextReadoutQueuePosition || null,
-      nextReadoutDetailsChanged: (importedAnalysisReadinessSummary.nextReadoutLabel || null) !== (currentSummary.nextReadoutLabel || null)
-        || (importedAnalysisReadinessSummary.nextReadoutSource || null) !== (currentSummary.nextReadoutSource || null)
-        || (importedAnalysisReadinessSummary.nextReadoutQueuePosition || null) !== (currentSummary.nextReadoutQueuePosition || null)
+      importedNextReadoutId,
+      currentNextReadoutId,
+      nextReadoutChanged: importedNextReadoutId !== currentNextReadoutId,
+      importedNextReadoutLabel,
+      currentNextReadoutLabel,
+      importedNextReadoutSource,
+      currentNextReadoutSource,
+      importedNextReadoutQueuePosition,
+      currentNextReadoutQueuePosition,
+      nextReadoutDetailsChanged: importedNextReadoutLabel !== currentNextReadoutLabel
+        || importedNextReadoutSource !== currentNextReadoutSource
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition
     };
   }
 
