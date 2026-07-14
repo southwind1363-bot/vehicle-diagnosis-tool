@@ -1917,15 +1917,20 @@
     const totalCount = safeEntries.length;
     const unmappedCount = safeUnmappedRequestIds.length;
     const mappedCount = Math.max(0, totalCount - unmappedCount);
-    const allReadOnly = safeEntries.every((item) => item?.readOnly === true);
-    const allNonTransmitting = safeEntries.every((item) => item?.wouldTransmit !== true && item?.vehicleCommandEnabled !== true && item?.executionEnabled !== true);
+    const readRequestId = (item) => item?.readoutId || item?.readout_id || item?.id || null;
+    const readReadOnlyFlag = (item) => pickDefined(item?.readOnly, item?.read_only) === true;
+    const readTransmittingFlag = (item) => pickDefined(item?.wouldTransmit, item?.would_transmit) === true
+      || pickDefined(item?.vehicleCommandEnabled, item?.vehicle_command_enabled) === true
+      || pickDefined(item?.executionEnabled, item?.execution_enabled) === true;
+    const allReadOnly = safeEntries.every((item) => readReadOnlyFlag(item));
+    const allNonTransmitting = safeEntries.every((item) => !readTransmittingFlag(item));
     const nonReadOnlyRequestIds = safeEntries
-      .filter((item) => item?.readOnly !== true)
-      .map((item) => item?.readoutId)
+      .filter((item) => !readReadOnlyFlag(item))
+      .map((item) => readRequestId(item))
       .filter(Boolean);
     const transmittingRequestIds = safeEntries
-      .filter((item) => item?.wouldTransmit === true || item?.vehicleCommandEnabled === true || item?.executionEnabled === true)
-      .map((item) => item?.readoutId)
+      .filter((item) => readTransmittingFlag(item))
+      .map((item) => readRequestId(item))
       .filter(Boolean);
     const blockedReasonIds = [
       ...(unmappedCount > 0 ? ["unmapped_readout_requests"] : []),
@@ -1981,31 +1986,42 @@
   }
 
   function buildReadoutRequestPlanSummary(plan = {}, gateSummary = {}, nextReadoutRequest = null) {
-    const nextRequest = plan?.nextRequest || nextReadoutRequest || null;
-    const totalCount = Number.isFinite(Number(plan?.totalCount)) ? Number(plan.totalCount) : 0;
-    const mappedCount = Number.isFinite(Number(plan?.mappedCount)) ? Number(plan.mappedCount) : 0;
-    const unmappedCount = Number.isFinite(Number(plan?.unmappedCount)) ? Number(plan.unmappedCount) : 0;
+    const safePlan = plan && typeof plan === "object" ? plan : {};
+    const safeGateSummary = gateSummary && typeof gateSummary === "object" ? gateSummary : {};
+    const nextRequest = safePlan.nextRequest || safePlan.next_request || nextReadoutRequest || null;
+    const totalCountInput = pickDefined(safePlan.totalCount, safePlan.total_count, safePlan.requestCount, safePlan.request_count);
+    const mappedCountInput = pickDefined(safePlan.mappedCount, safePlan.mapped_count);
+    const unmappedCountInput = pickDefined(safePlan.unmappedCount, safePlan.unmapped_count);
+    const mappedPercentInput = pickDefined(safePlan.mappedPercent, safePlan.mapped_percent);
+    const unmappedPercentInput = pickDefined(safePlan.unmappedPercent, safePlan.unmapped_percent);
+    const blockedReasonCountInput = pickDefined(safeGateSummary.blockedReasonCount, safeGateSummary.blocked_reason_count);
+    const gateBlockedReasonIds = pickDefined(safeGateSummary.blockedReasonIds, safeGateSummary.blocked_reason_ids);
+    const planBlockedReasonIds = pickDefined(safePlan.blockedReasonIds, safePlan.blocked_reason_ids);
+    const totalCount = Number.isFinite(Number(totalCountInput)) ? Number(totalCountInput) : 0;
+    const mappedCount = Number.isFinite(Number(mappedCountInput)) ? Number(mappedCountInput) : 0;
+    const unmappedCount = Number.isFinite(Number(unmappedCountInput)) ? Number(unmappedCountInput) : 0;
+    const safeForBridgePlanning = pickDefined(safePlan.safeForBridgePlanning, safePlan.safe_for_bridge_planning) === true;
     return {
       schemaVersion: "readout_request_plan_summary_v1",
-      state: gateSummary?.state || (totalCount === 0 ? "idle" : plan?.safeForBridgePlanning === true ? "ready" : "blocked"),
-      ready: gateSummary?.ready === true || (totalCount > 0 && plan?.safeForBridgePlanning === true),
-      blocked: gateSummary?.blocked === true || (totalCount > 0 && plan?.safeForBridgePlanning !== true),
+      state: safeGateSummary.state || (totalCount === 0 ? "idle" : safeForBridgePlanning ? "ready" : "blocked"),
+      ready: safeGateSummary.ready === true || (totalCount > 0 && safeForBridgePlanning),
+      blocked: safeGateSummary.blocked === true || (totalCount > 0 && !safeForBridgePlanning),
       totalCount,
       mappedCount,
       unmappedCount,
-      mappedPercent: Number.isFinite(Number(plan?.mappedPercent)) ? Number(plan.mappedPercent) : 0,
-      unmappedPercent: Number.isFinite(Number(plan?.unmappedPercent)) ? Number(plan.unmappedPercent) : 0,
-      mappingStatus: plan?.mappingStatus || "unknown",
-      safeForBridgePlanning: plan?.safeForBridgePlanning === true,
-      blockedReasonCount: Number.isFinite(Number(gateSummary?.blockedReasonCount)) ? Number(gateSummary.blockedReasonCount) : 0,
-      blockedReasonIds: Array.isArray(gateSummary?.blockedReasonIds) ? [...gateSummary.blockedReasonIds] : Array.isArray(plan?.blockedReasonIds) ? [...plan.blockedReasonIds] : [],
-      nextBlockedReasonId: gateSummary?.nextBlockedReasonId || null,
-      nextRequestId: nextRequest?.readoutId || null,
-      nextBridgeIntent: nextRequest?.bridgeIntent || null,
-      nextServiceMode: nextRequest?.serviceMode || null,
-      nextExecutionEnabled: nextRequest?.executionEnabled === true,
-      actionRequired: gateSummary?.actionRequired === true,
-      nextActionId: gateSummary?.nextActionId || null,
+      mappedPercent: Number.isFinite(Number(mappedPercentInput)) ? Number(mappedPercentInput) : 0,
+      unmappedPercent: Number.isFinite(Number(unmappedPercentInput)) ? Number(unmappedPercentInput) : 0,
+      mappingStatus: safePlan.mappingStatus || safePlan.mapping_status || "unknown",
+      safeForBridgePlanning,
+      blockedReasonCount: Number.isFinite(Number(blockedReasonCountInput)) ? Number(blockedReasonCountInput) : 0,
+      blockedReasonIds: Array.isArray(gateBlockedReasonIds) ? [...gateBlockedReasonIds] : Array.isArray(planBlockedReasonIds) ? [...planBlockedReasonIds] : [],
+      nextBlockedReasonId: safeGateSummary.nextBlockedReasonId || safeGateSummary.next_blocked_reason_id || null,
+      nextRequestId: nextRequest?.readoutId || nextRequest?.readout_id || null,
+      nextBridgeIntent: nextRequest?.bridgeIntent || nextRequest?.bridge_intent || null,
+      nextServiceMode: nextRequest?.serviceMode || nextRequest?.service_mode || null,
+      nextExecutionEnabled: pickDefined(nextRequest?.executionEnabled, nextRequest?.execution_enabled) === true,
+      actionRequired: pickDefined(safeGateSummary.actionRequired, safeGateSummary.action_required) === true,
+      nextActionId: safeGateSummary.nextActionId || safeGateSummary.next_action_id || null,
       readOnly: true,
       wouldTransmit: false,
       vehicleCommandEnabled: false
@@ -3351,15 +3367,17 @@
   }
 
   function buildDiagnosticFlowSummary(coreSessionStatus = {}) {
-    const workflow = coreSessionStatus?.coreWorkflowSummary || {};
-    const readiness = coreSessionStatus?.analysisReadinessSummary || {};
-    const progress = coreSessionStatus?.readoutProgressSummary || {};
-    const completion = coreSessionStatus?.readoutCompletionSummary || {};
-    const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || {};
-    const checklistSummary = coreSessionStatus?.analysisChecklistSummary || readiness.checklistSummary || {};
-    const checklistById = coreSessionStatus?.analysisChecklistById || readiness.checklistById || {};
+    const workflow = coreSessionStatus?.coreWorkflowSummary || coreSessionStatus?.core_workflow_summary || {};
+    const readiness = coreSessionStatus?.analysisReadinessSummary || coreSessionStatus?.analysis_readiness_summary || {};
+    const progress = coreSessionStatus?.readoutProgressSummary || coreSessionStatus?.readout_progress_summary || {};
+    const completion = coreSessionStatus?.readoutCompletionSummary || coreSessionStatus?.readout_completion_summary || {};
+    const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || coreSessionStatus?.pending_readout_queue_summary || {};
+    const checklistSummary = coreSessionStatus?.analysisChecklistSummary || coreSessionStatus?.analysis_checklist_summary || readiness.checklistSummary || readiness.checklist_summary || {};
+    const checklistById = coreSessionStatus?.analysisChecklistById || coreSessionStatus?.analysis_checklist_by_id || readiness.checklistById || readiness.checklist_by_id || {};
     const checklistItems = Array.isArray(coreSessionStatus?.analysisChecklist)
       ? coreSessionStatus.analysisChecklist
+      : Array.isArray(coreSessionStatus?.analysis_checklist)
+        ? coreSessionStatus.analysis_checklist
       : Array.isArray(readiness.checklist)
         ? readiness.checklist
         : Object.values(checklistById || {});
@@ -3377,9 +3395,9 @@
       if (item.id && !diagnosticChecklistById[item.id]) diagnosticChecklistById[item.id] = { ...item };
     });
     const vehicleApplicabilityChecklist = diagnosticChecklistById.vehicle_applicability || null;
-    const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || readiness.readoutQualitySummary || {};
+    const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || readiness.readoutQualitySummary || readiness.readout_quality_summary || {};
     const readoutQualityChecklist = diagnosticChecklistById.readout_quality || null;
-    const applicabilityStatus = coreSessionStatus?.applicabilityStatus || vehicleApplicabilityChecklist?.applicabilityStatus || "unknown";
+    const applicabilityStatus = coreSessionStatus?.applicabilityStatus || coreSessionStatus?.applicability_status || vehicleApplicabilityChecklist?.applicabilityStatus || vehicleApplicabilityChecklist?.applicability_status || "unknown";
     const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
       || applicabilityStatus === "partial"
       || applicabilityStatus === "manual"
@@ -3392,43 +3410,50 @@
     const readChecklistCount = (field, fallbackIds = []) => Number.isFinite(Number(checklistSummary?.[field]))
       ? Number(checklistSummary[field])
       : Array.isArray(fallbackIds) ? fallbackIds.length : 0;
-    const readyForAnalysis = typeof coreSessionStatus?.readyForAnalysis === "boolean"
-      ? coreSessionStatus.readyForAnalysis
+    const readyForAnalysisInput = pickDefined(coreSessionStatus?.readyForAnalysis, coreSessionStatus?.ready_for_analysis);
+    const readyForAnalysis = typeof readyForAnalysisInput === "boolean"
+      ? readyForAnalysisInput
       : readiness.ready === true;
     const pendingReadoutCount = Number.isFinite(Number(progress.pendingCount))
       ? Number(progress.pendingCount)
-      : readCount("pendingCount", coreSessionStatus?.pendingReadoutIds);
+      : readCount("pendingCount", coreSessionStatus?.pendingReadoutIds || coreSessionStatus?.pending_readout_ids);
     const blockingReasonIds = Array.isArray(readiness.blockerIds)
       ? [...readiness.blockerIds]
-      : Array.isArray(coreSessionStatus?.analysisBlockers) ? [...coreSessionStatus.analysisBlockers] : [];
+      : Array.isArray(coreSessionStatus?.analysisBlockers) ? [...coreSessionStatus.analysisBlockers] : Array.isArray(coreSessionStatus?.analysis_blockers) ? [...coreSessionStatus.analysis_blockers] : [];
     const primaryBlockingReasonId = readiness.primaryBlockingReasonId
       || completion.primaryBlockingReasonId
       || coreSessionStatus?.primaryBlockingReasonId
+      || coreSessionStatus?.primary_blocking_reason_id
       || blockingReasonIds[0]
       || null;
     const primaryBlockingReason = readiness.primaryBlockingReason
       || completion.primaryBlockingReason
       || coreSessionStatus?.primaryBlockingReason
+      || coreSessionStatus?.primary_blocking_reason
       || (primaryBlockingReasonId && coreSessionStatus?.analysisBlockerById ? coreSessionStatus.analysisBlockerById[primaryBlockingReasonId] : null)
       || null;
     const primaryBlockingReadoutId = readiness.primaryBlockingReadoutId
       || completion.primaryBlockingReadoutId
       || coreSessionStatus?.primaryBlockingReadoutId
+      || coreSessionStatus?.primary_blocking_readout_id
       || primaryBlockingReason?.readoutIds?.[0]
       || null;
     const primaryBlockingReadoutLabel = readiness.primaryBlockingReadoutLabel
       || completion.primaryBlockingReadoutLabel
       || coreSessionStatus?.primaryBlockingReadoutLabel
+      || coreSessionStatus?.primary_blocking_readout_label
       || (primaryBlockingReadoutId && coreSessionStatus?.readoutStateById ? coreSessionStatus.readoutStateById[primaryBlockingReadoutId]?.label : null)
       || primaryBlockingReadoutId
       || null;
     const primaryBlockingReadoutRequest = readiness.primaryBlockingReadoutRequest
       || completion.primaryBlockingReadoutRequest
       || coreSessionStatus?.primaryBlockingReadoutRequest
+      || coreSessionStatus?.primary_blocking_readout_request
       || null;
     const primaryBlockingSummary = readiness.primaryBlockingSummary
       || completion.primaryBlockingSummary
       || coreSessionStatus?.primaryBlockingSummary
+      || coreSessionStatus?.primary_blocking_summary
       || (primaryBlockingReasonId ? {
         schemaVersion: "primary_readout_blocker_v1",
         reasonId: primaryBlockingReasonId,
@@ -3444,16 +3469,33 @@
         wouldTransmit: primaryBlockingReadoutRequest?.wouldTransmit === true,
         vehicleCommandEnabled: primaryBlockingReadoutRequest?.vehicleCommandEnabled === true
       } : null);
-    const nextReadoutRequest = coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.nextReadoutSummary?.readoutRequest || null;
-    const pendingReadoutRequestQueue = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
-      ? coreSessionStatus.pendingReadoutRequestQueue.map((item) => ({ ...item }))
+    const nextReadoutSummary = coreSessionStatus?.nextReadoutSummary || coreSessionStatus?.next_readout_summary || null;
+    const normalizeReadoutRequestEntry = (item) => {
+      if (!item || typeof item !== "object") return item;
+      return {
+        ...item,
+        readoutId: item.readoutId || item.readout_id || item.id || null,
+        bridgeIntent: item.bridgeIntent || item.bridge_intent || null,
+        serviceMode: item.serviceMode || item.service_mode || null,
+        executionEnabled: pickDefined(item.executionEnabled, item.execution_enabled) === true,
+        readOnly: pickDefined(item.readOnly, item.read_only) === true,
+        wouldTransmit: pickDefined(item.wouldTransmit, item.would_transmit) === true,
+        vehicleCommandEnabled: pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true
+      };
+    };
+    const nextReadoutRequest = normalizeReadoutRequestEntry(coreSessionStatus?.nextReadoutRequest || coreSessionStatus?.next_readout_request || nextReadoutSummary?.readoutRequest || nextReadoutSummary?.readout_request || null);
+    const pendingReadoutRequestQueueInput = Array.isArray(coreSessionStatus?.pendingReadoutRequestQueue)
+      ? coreSessionStatus.pendingReadoutRequestQueue
+      : Array.isArray(coreSessionStatus?.pending_readout_request_queue)
+        ? coreSessionStatus.pending_readout_request_queue
       : [];
+    const pendingReadoutRequestQueue = pendingReadoutRequestQueueInput.map((item) => normalizeReadoutRequestEntry(item)).filter((item) => item && typeof item === "object");
     const mappedPendingReadoutRequests = pendingReadoutRequestQueue.filter((item) => Boolean(item.bridgeIntent));
     const unmappedPendingReadoutRequestIds = pendingReadoutRequestQueue
       .filter((item) => !item.bridgeIntent)
       .map((item) => item.readoutId);
     const fallbackReadoutRequestPlanSafetySummary = buildReadoutRequestPlanSafetySummary(pendingReadoutRequestQueue, unmappedPendingReadoutRequestIds);
-    const pendingReadoutRequestPlan = coreSessionStatus?.pendingReadoutRequestPlan || {
+    const pendingReadoutRequestPlan = coreSessionStatus?.pendingReadoutRequestPlan || coreSessionStatus?.pending_readout_request_plan || {
       schemaVersion: "read_only_readout_request_plan_v1",
       totalCount: pendingReadoutRequestQueue.length,
       mappedCount: mappedPendingReadoutRequests.length,
@@ -3493,7 +3535,7 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
-    const readoutRequestPlanGateSummary = coreSessionStatus?.readoutRequestPlanGateSummary || readiness.readoutRequestPlanGateSummary || {
+    const readoutRequestPlanGateSummary = coreSessionStatus?.readoutRequestPlanGateSummary || coreSessionStatus?.readout_request_plan_gate_summary || readiness.readoutRequestPlanGateSummary || readiness.readout_request_plan_gate_summary || {
       schemaVersion: "readout_request_plan_gate_v1",
       state: pendingReadoutRequestPlan.totalCount === 0 ? "idle" : pendingReadoutRequestPlan?.safeForBridgePlanning === true ? "ready" : "blocked",
       ready: pendingReadoutRequestPlan?.safeForBridgePlanning === true,
@@ -3525,7 +3567,7 @@
       wouldTransmit: false,
       vehicleCommandEnabled: false
     };
-    const readoutRequestPlanSummary = coreSessionStatus?.readoutRequestPlanSummary || buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
+    const readoutRequestPlanSummary = coreSessionStatus?.readoutRequestPlanSummary || coreSessionStatus?.readout_request_plan_summary || buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       stage: coreSessionStatus?.stage || "diagnostic_core",
@@ -3646,7 +3688,9 @@
     const currentPendingCount = Array.isArray(currentCoreSessionStatus?.pendingReadoutIds)
       ? currentCoreSessionStatus.pendingReadoutIds.length
       : currentFlow.pendingReadoutCount;
-    const readFlowCount = (summary, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : 0;
+    const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+    const readAliasValue = (summary, field) => summary && typeof summary === "object" ? pickDefined(summary[field], summary[toSnakeField(field)]) : undefined;
+    const readFlowCount = (summary, field) => Number.isFinite(Number(readAliasValue(summary, field))) ? Number(readAliasValue(summary, field)) : 0;
     const importedRequiredCount = Number.isFinite(Number(importedFlow.requiredReadoutCount)) ? Number(importedFlow.requiredReadoutCount) : 0;
     const currentRequiredCount = Number.isFinite(Number(currentFlow.requiredReadoutCount)) ? Number(currentFlow.requiredReadoutCount) : 0;
     const importedCapturedCount = Number.isFinite(Number(importedFlow.capturedReadoutCount)) ? Number(importedFlow.capturedReadoutCount) : 0;
@@ -3663,7 +3707,7 @@
     const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
     const importedChecklistPendingCount = readFlowCount(importedFlow, "checklistPendingCount");
     const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
-    const readStringList = (summary = {}, field) => (Array.isArray(summary?.[field]) ? summary[field].filter(Boolean).map(String).sort() : []);
+    const readStringList = (summary = {}, field) => (Array.isArray(readAliasValue(summary, field)) ? readAliasValue(summary, field).filter(Boolean).map(String).sort() : []);
     const importedChecklistBlockedIds = readStringList(importedFlow, "checklistBlockedIds");
     const currentChecklistBlockedIds = readStringList(currentFlow, "checklistBlockedIds");
     const importedChecklistReviewIds = readStringList(importedFlow, "checklistReviewIds");
@@ -3671,8 +3715,14 @@
     const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
-    const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
-    const readRequestPlanSummary = (flow = {}) => (flow.readoutRequestPlanSummary && typeof flow.readoutRequestPlanSummary === "object" ? flow.readoutRequestPlanSummary : {});
+    const readRequestPlan = (flow = {}) => {
+      const plan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan;
+      return plan && typeof plan === "object" ? plan : {};
+    };
+    const readRequestPlanSummary = (flow = {}) => {
+      const summary = flow.readoutRequestPlanSummary || flow.readout_request_plan_summary;
+      return summary && typeof summary === "object" ? summary : {};
+    };
     const importedRequestPlan = readRequestPlan(importedFlow);
     const currentRequestPlan = readRequestPlan(currentFlow);
     const importedRequestPlanSummary = readRequestPlanSummary(importedFlow);
@@ -3684,15 +3734,15 @@
     const importedRequestPlanUnmappedCount = readFlowCount(importedRequestPlan, "unmappedCount");
     const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
     const readSortedStringList = (value) => (Array.isArray(value) ? value.filter(Boolean).map(String).sort() : []);
-    const importedRequestPlanIds = readSortedStringList(importedRequestPlan.requestIds);
-    const currentRequestPlanIds = readSortedStringList(currentRequestPlan.requestIds);
-    const importedRequestPlanIntents = readSortedStringList(importedRequestPlan.bridgeIntents);
-    const currentRequestPlanIntents = readSortedStringList(currentRequestPlan.bridgeIntents);
+    const importedRequestPlanIds = readSortedStringList(pickDefined(importedRequestPlan.requestIds, importedRequestPlan.request_ids));
+    const currentRequestPlanIds = readSortedStringList(pickDefined(currentRequestPlan.requestIds, currentRequestPlan.request_ids));
+    const importedRequestPlanIntents = readSortedStringList(pickDefined(importedRequestPlan.bridgeIntents, importedRequestPlan.bridge_intents));
+    const currentRequestPlanIntents = readSortedStringList(pickDefined(currentRequestPlan.bridgeIntents, currentRequestPlan.bridge_intents));
     const toSingletonIdList = (value) => value ? [String(value)] : [];
-    const importedRequestPlanNextRequestIds = toSingletonIdList(importedRequestPlanSummary.nextRequestId);
-    const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
-    const importedRequestPlanNextBridgeIntents = toSingletonIdList(importedRequestPlanSummary.nextBridgeIntent);
-    const currentRequestPlanNextBridgeIntents = toSingletonIdList(currentRequestPlanSummary.nextBridgeIntent);
+    const importedRequestPlanNextRequestIds = toSingletonIdList(pickDefined(importedRequestPlanSummary.nextRequestId, importedRequestPlanSummary.next_request_id));
+    const currentRequestPlanNextRequestIds = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id));
+    const importedRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent));
+    const currentRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent));
     const readPrimaryBlocker = (flow = {}) => (flow.primaryBlockingSummary && typeof flow.primaryBlockingSummary === "object" ? flow.primaryBlockingSummary : {});
     const importedPrimaryBlocker = readPrimaryBlocker(importedFlow);
     const currentPrimaryBlocker = readPrimaryBlocker(currentFlow);
@@ -3810,14 +3860,14 @@
       importedRequestPlanState: importedRequestPlanSummary.state || null,
       currentRequestPlanState: currentRequestPlanSummary.state || null,
       requestPlanStateChanged: (importedRequestPlanSummary.state || null) !== (currentRequestPlanSummary.state || null),
-      importedRequestPlanNextRequestId: importedRequestPlanSummary.nextRequestId || null,
-      currentRequestPlanNextRequestId: currentRequestPlanSummary.nextRequestId || null,
-      requestPlanNextRequestChanged: (importedRequestPlanSummary.nextRequestId || null) !== (currentRequestPlanSummary.nextRequestId || null),
+      importedRequestPlanNextRequestId: pickDefined(importedRequestPlanSummary.nextRequestId, importedRequestPlanSummary.next_request_id, null),
+      currentRequestPlanNextRequestId: pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id, null),
+      requestPlanNextRequestChanged: pickDefined(importedRequestPlanSummary.nextRequestId, importedRequestPlanSummary.next_request_id, null) !== pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id, null),
       requestPlanNextRequestAddedIds: diffIds(currentRequestPlanNextRequestIds, importedRequestPlanNextRequestIds),
       requestPlanNextRequestRemovedIds: diffIds(importedRequestPlanNextRequestIds, currentRequestPlanNextRequestIds),
-      importedRequestPlanNextBridgeIntent: importedRequestPlanSummary.nextBridgeIntent || null,
-      currentRequestPlanNextBridgeIntent: currentRequestPlanSummary.nextBridgeIntent || null,
-      requestPlanNextBridgeIntentChanged: (importedRequestPlanSummary.nextBridgeIntent || null) !== (currentRequestPlanSummary.nextBridgeIntent || null),
+      importedRequestPlanNextBridgeIntent: pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent, null),
+      currentRequestPlanNextBridgeIntent: pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent, null),
+      requestPlanNextBridgeIntentChanged: pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent, null) !== pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent, null),
       requestPlanNextBridgeIntentAddedIds: diffIds(currentRequestPlanNextBridgeIntents, importedRequestPlanNextBridgeIntents),
       requestPlanNextBridgeIntentRemovedIds: diffIds(importedRequestPlanNextBridgeIntents, currentRequestPlanNextBridgeIntents),
       importedPendingReadoutCount: importedPendingCount,
@@ -3837,7 +3887,9 @@
     const currentCompletion = Number.isFinite(Number(currentFlow.completionPercent))
       ? Number(currentFlow.completionPercent)
       : 0;
-    const readFlowCount = (summary, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : 0;
+    const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+    const readAliasValue = (summary, field) => summary && typeof summary === "object" ? pickDefined(summary[field], summary[toSnakeField(field)]) : undefined;
+    const readFlowCount = (summary, field) => Number.isFinite(Number(readAliasValue(summary, field))) ? Number(readAliasValue(summary, field)) : 0;
     const importedRequiredCount = readFlowCount(importedDiagnosticFlowSummary, "requiredReadoutCount");
     const currentRequiredCount = readFlowCount(currentFlow, "requiredReadoutCount");
     const importedCapturedCount = readFlowCount(importedDiagnosticFlowSummary, "capturedReadoutCount");
@@ -3856,7 +3908,7 @@
     const currentChecklistBlockingCount = readFlowCount(currentFlow, "checklistBlockingCount");
     const importedChecklistPendingCount = readFlowCount(importedDiagnosticFlowSummary, "checklistPendingCount");
     const currentChecklistPendingCount = readFlowCount(currentFlow, "checklistPendingCount");
-    const readStringList = (summary = {}, field) => (Array.isArray(summary?.[field]) ? summary[field].filter(Boolean).map(String).sort() : []);
+    const readStringList = (summary = {}, field) => (Array.isArray(readAliasValue(summary, field)) ? readAliasValue(summary, field).filter(Boolean).map(String).sort() : []);
     const importedChecklistBlockedIds = readStringList(importedDiagnosticFlowSummary, "checklistBlockedIds");
     const currentChecklistBlockedIds = readStringList(currentFlow, "checklistBlockedIds");
     const importedChecklistReviewIds = readStringList(importedDiagnosticFlowSummary, "checklistReviewIds");
@@ -3864,8 +3916,14 @@
     const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedVehicleApplicabilityChecklistState = importedDiagnosticFlowSummary.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
-    const readRequestPlan = (flow = {}) => (flow.pendingReadoutRequestPlan && typeof flow.pendingReadoutRequestPlan === "object" ? flow.pendingReadoutRequestPlan : {});
-    const readRequestPlanSummary = (flow = {}) => (flow.readoutRequestPlanSummary && typeof flow.readoutRequestPlanSummary === "object" ? flow.readoutRequestPlanSummary : {});
+    const readRequestPlan = (flow = {}) => {
+      const plan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan;
+      return plan && typeof plan === "object" ? plan : {};
+    };
+    const readRequestPlanSummary = (flow = {}) => {
+      const summary = flow.readoutRequestPlanSummary || flow.readout_request_plan_summary;
+      return summary && typeof summary === "object" ? summary : {};
+    };
     const importedRequestPlan = readRequestPlan(importedDiagnosticFlowSummary);
     const currentRequestPlan = readRequestPlan(currentFlow);
     const importedRequestPlanSummary = readRequestPlanSummary(importedDiagnosticFlowSummary);
@@ -3877,15 +3935,15 @@
     const importedRequestPlanUnmappedCount = readFlowCount(importedRequestPlan, "unmappedCount");
     const currentRequestPlanUnmappedCount = readFlowCount(currentRequestPlan, "unmappedCount");
     const readSortedStringList = (value) => (Array.isArray(value) ? value.filter(Boolean).map(String).sort() : []);
-    const importedRequestPlanIds = readSortedStringList(importedRequestPlan.requestIds);
-    const currentRequestPlanIds = readSortedStringList(currentRequestPlan.requestIds);
-    const importedRequestPlanIntents = readSortedStringList(importedRequestPlan.bridgeIntents);
-    const currentRequestPlanIntents = readSortedStringList(currentRequestPlan.bridgeIntents);
+    const importedRequestPlanIds = readSortedStringList(pickDefined(importedRequestPlan.requestIds, importedRequestPlan.request_ids));
+    const currentRequestPlanIds = readSortedStringList(pickDefined(currentRequestPlan.requestIds, currentRequestPlan.request_ids));
+    const importedRequestPlanIntents = readSortedStringList(pickDefined(importedRequestPlan.bridgeIntents, importedRequestPlan.bridge_intents));
+    const currentRequestPlanIntents = readSortedStringList(pickDefined(currentRequestPlan.bridgeIntents, currentRequestPlan.bridge_intents));
     const toSingletonIdList = (value) => value ? [String(value)] : [];
-    const importedRequestPlanNextRequestIds = toSingletonIdList(importedRequestPlanSummary.nextRequestId);
-    const currentRequestPlanNextRequestIds = toSingletonIdList(currentRequestPlanSummary.nextRequestId);
-    const importedRequestPlanNextBridgeIntents = toSingletonIdList(importedRequestPlanSummary.nextBridgeIntent);
-    const currentRequestPlanNextBridgeIntents = toSingletonIdList(currentRequestPlanSummary.nextBridgeIntent);
+    const importedRequestPlanNextRequestIds = toSingletonIdList(pickDefined(importedRequestPlanSummary.nextRequestId, importedRequestPlanSummary.next_request_id));
+    const currentRequestPlanNextRequestIds = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id));
+    const importedRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent));
+    const currentRequestPlanNextBridgeIntents = toSingletonIdList(pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent));
     const readPrimaryBlocker = (flow = {}) => (flow.primaryBlockingSummary && typeof flow.primaryBlockingSummary === "object" ? flow.primaryBlockingSummary : {});
     const importedPrimaryBlocker = readPrimaryBlocker(importedDiagnosticFlowSummary);
     const currentPrimaryBlocker = readPrimaryBlocker(currentFlow);
@@ -4003,14 +4061,14 @@
       importedRequestPlanState: importedRequestPlanSummary.state || null,
       currentRequestPlanState: currentRequestPlanSummary.state || null,
       requestPlanStateChanged: (importedRequestPlanSummary.state || null) !== (currentRequestPlanSummary.state || null),
-      importedRequestPlanNextRequestId: importedRequestPlanSummary.nextRequestId || null,
-      currentRequestPlanNextRequestId: currentRequestPlanSummary.nextRequestId || null,
-      requestPlanNextRequestChanged: (importedRequestPlanSummary.nextRequestId || null) !== (currentRequestPlanSummary.nextRequestId || null),
+      importedRequestPlanNextRequestId: pickDefined(importedRequestPlanSummary.nextRequestId, importedRequestPlanSummary.next_request_id, null),
+      currentRequestPlanNextRequestId: pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id, null),
+      requestPlanNextRequestChanged: pickDefined(importedRequestPlanSummary.nextRequestId, importedRequestPlanSummary.next_request_id, null) !== pickDefined(currentRequestPlanSummary.nextRequestId, currentRequestPlanSummary.next_request_id, null),
       requestPlanNextRequestAddedIds: diffIds(currentRequestPlanNextRequestIds, importedRequestPlanNextRequestIds),
       requestPlanNextRequestRemovedIds: diffIds(importedRequestPlanNextRequestIds, currentRequestPlanNextRequestIds),
-      importedRequestPlanNextBridgeIntent: importedRequestPlanSummary.nextBridgeIntent || null,
-      currentRequestPlanNextBridgeIntent: currentRequestPlanSummary.nextBridgeIntent || null,
-      requestPlanNextBridgeIntentChanged: (importedRequestPlanSummary.nextBridgeIntent || null) !== (currentRequestPlanSummary.nextBridgeIntent || null),
+      importedRequestPlanNextBridgeIntent: pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent, null),
+      currentRequestPlanNextBridgeIntent: pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent, null),
+      requestPlanNextBridgeIntentChanged: pickDefined(importedRequestPlanSummary.nextBridgeIntent, importedRequestPlanSummary.next_bridge_intent, null) !== pickDefined(currentRequestPlanSummary.nextBridgeIntent, currentRequestPlanSummary.next_bridge_intent, null),
       requestPlanNextBridgeIntentAddedIds: diffIds(currentRequestPlanNextBridgeIntents, importedRequestPlanNextBridgeIntents),
       requestPlanNextBridgeIntentRemovedIds: diffIds(importedRequestPlanNextBridgeIntents, currentRequestPlanNextBridgeIntents),
       importedPendingReadoutCount: importedPendingCount,

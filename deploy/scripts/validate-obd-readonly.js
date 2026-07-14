@@ -633,7 +633,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('function buildReadoutRequestPlanSummary(plan = {}, gateSummary = {}, nextReadoutRequest = null)') && source.includes('schemaVersion: "readout_request_plan_summary_v1"') && functionBody.includes('readoutRequestPlanSummary,'), "buildCoreSessionStatus should return a compact readout request plan summary");
     check(source.includes('function buildDiagnosticFlowSummary(coreSessionStatus = {})') && source.includes('schemaVersion: "diagnostic_flow_summary_v1"'), "obd-readonly should expose a stable diagnostic flow summary builder");
     check(source.includes('nextReadoutLabel: workflow.nextReadoutLabel || readiness.nextReadoutLabel') && source.includes('nextReadoutSource: workflow.nextReadoutSource || readiness.nextReadoutSource'), "diagnostic flow summaries should carry actionable next readout details");
-    check(source.includes('const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || {};') && source.includes('pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,') && source.includes('recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,'), "diagnostic flow summaries should carry pending queue and recommended readout cursors");
+    check(source.includes('const queueSummary = coreSessionStatus?.pendingReadoutQueueSummary || coreSessionStatus?.pending_readout_queue_summary || {};') && source.includes('pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,') && source.includes('recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,'), "diagnostic flow summaries should carry pending queue and recommended readout cursors");
     check(source.includes('canStartAnalysis: readyForAnalysis,') && source.includes('analysisBlocked: !readyForAnalysis,') && source.includes('readoutCollectionRequired: pendingReadoutCount > 0,'), "diagnostic flow summaries should expose direct safe-to-analyze flags");
     check(source.includes('const primaryBlockingReasonId = readiness.primaryBlockingReasonId') && source.includes('primaryBlockingReadoutLabel,'), "diagnostic flow summaries should carry primary blocker details");
     check(source.includes('const primaryBlockingReadoutRequest = readiness.primaryBlockingReadoutRequest') && source.includes('primaryBlockingReadoutBridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,'), "diagnostic flow summaries should expose primary blocker request metadata");
@@ -652,7 +652,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('requestPlanGateActionReadoutIds: Array.isArray(readoutRequestPlanGateSummary.actionReadoutIds)') && source.includes('requestPlanGateActionByReadoutId: readoutRequestPlanGateSummary.actionQueueByReadoutId'), "diagnostic flow summaries should expose request plan gate actions by blocked readout");
     check(source.includes('requestPlanGateActionSummary: readoutRequestPlanGateSummary.actionSummary') && source.includes('typeof readoutRequestPlanGateSummary.actionSummary === "object"'), "diagnostic flow summaries should expose request plan gate action summary");
     check(source.includes('requiredReadoutCount: readCount("requiredCount", coreSessionStatus?.requiredReadoutIds),') && source.includes('missingReadoutCount: readCount("missingCount", coreSessionStatus?.missingReadoutIds || coreSessionStatus?.remainingReadoutIds),'), "diagnostic flow summaries should carry readout completion counts");
-    check(source.includes('const checklistSummary = coreSessionStatus?.analysisChecklistSummary || readiness.checklistSummary || {};') && source.includes('checklistCompleteCount: readChecklistCount("completeCount"),') && source.includes('checklistBlockedIds: Array.isArray(checklistSummary?.blockedIds) ? [...checklistSummary.blockedIds] : [],'), "diagnostic flow summaries should carry analysis checklist counts and ids");
+    check(source.includes('const checklistSummary = coreSessionStatus?.analysisChecklistSummary || coreSessionStatus?.analysis_checklist_summary || readiness.checklistSummary || readiness.checklist_summary || {};') && source.includes('checklistCompleteCount: readChecklistCount("completeCount"),') && source.includes('checklistBlockedIds: Array.isArray(checklistSummary?.blockedIds) ? [...checklistSummary.blockedIds] : [],'), "diagnostic flow summaries should carry analysis checklist counts and ids");
     check(source.includes('const diagnosticChecklistById = {') && source.includes('const vehicleApplicabilityChecklist = diagnosticChecklistById.vehicle_applicability || null;'), "diagnostic flow summaries should read vehicle applicability checklist state from normalized checklist details");
     check(source.includes('analysisChecklist: diagnosticChecklist,') && source.includes('requiredReadoutsChecklist: diagnosticChecklistById.required_readouts || null,'), "diagnostic flow summaries should expose direct analysis checklist details");
     check(source.includes('readoutQualityChecklist,') && source.includes('readoutQualityReviewRequired: readoutQualitySummary?.reviewRequired === true'), "diagnostic flow summaries should expose readout quality checklist state");
@@ -669,7 +669,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('requestPlanCountDelta: currentRequestPlanCount - importedRequestPlanCount,') && source.includes('requestPlanBridgeIntentsChanged: importedRequestPlanIntents.join("|") !== currentRequestPlanIntents.join("|"),'), "imported core comparison should compare pending readout request plans");
     check(source.includes('requestPlanIdsChanged: importedRequestPlanIds.join("|") !== currentRequestPlanIds.join("|"),') && source.includes('requestPlanBridgeIntentRemovedIds: diffIds(importedRequestPlanIntents, currentRequestPlanIntents),'), "imported comparisons should expose request plan changed ids");
     check(source.includes('requestPlanMappedDelta: currentRequestPlanMappedCount - importedRequestPlanMappedCount,') && source.includes('requestPlanUnmappedDelta: currentRequestPlanUnmappedCount - importedRequestPlanUnmappedCount,'), "imported comparisons should compare request plan mapping counts");
-    check(source.includes('const readRequestPlanSummary = (flow = {}) => (flow.readoutRequestPlanSummary') && source.includes('requestPlanNextBridgeIntentChanged:'), "imported comparisons should compare readout request plan summary state");
+    check(source.includes('const summary = flow.readoutRequestPlanSummary || flow.readout_request_plan_summary;') && source.includes('requestPlanNextBridgeIntentChanged:'), "imported comparisons should compare readout request plan summary state");
     check(source.includes('requestPlanNextRequestAddedIds: diffIds(currentRequestPlanNextRequestIds, importedRequestPlanNextRequestIds),') && source.includes('"requestPlanNextBridgeIntentRemovedIds"'), "imported comparisons should expose readout request plan summary changed ids");
     check(source.includes('importedNextReadoutLabel: importedFlow.nextReadoutLabel || null,') && source.includes('nextReadoutDetailsChanged: (importedFlow.nextReadoutLabel || null) !== (currentFlow.nextReadoutLabel || null)'), "imported core comparison should compare next readout details");
     check(source.includes('function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {})') && source.includes('schemaVersion: "imported_diagnostic_flow_comparison_v1"'), "obd-readonly should expose imported diagnostic flow comparison summaries");
@@ -1957,7 +1957,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1385+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1389+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2029,7 +2029,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.496.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout coverage aliases");
+check(appSource.includes('const APP_VERSION = "2.497.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for request plan aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7365,6 +7365,76 @@ check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlo
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.requestPlanMappedDelta) && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.requestPlanUnmappedDelta), "Diagnostic scan session did not expose imported diagnostic flow request plan mapping delta");
 check(typeof scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.requestPlanNextBridgeIntentChanged === "boolean" && "currentRequestPlanState" in scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary, "Diagnostic scan session did not expose imported diagnostic flow request plan summary comparison");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.requestPlanNextRequestAddedIds) && Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary?.requestPlanNextBridgeIntentRemovedIds), "Diagnostic scan session did not expose imported diagnostic flow request plan summary changed ids");
+const scanSessionSnakeRequestPlanImport = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-snake-request-plan-import",
+  core_session_status: {
+    schema_version: "core_session_status_v1",
+    ready_for_analysis: false,
+    pending_readout_ids: ["snake_request_snapshot"],
+    pending_readout_request_queue: [
+      {
+        readout_id: "snake_request_snapshot",
+        bridge_intent: "read_live_pid_snapshot",
+        service_mode: "read_live_data",
+        read_only: true,
+        would_transmit: false,
+        vehicle_command_enabled: false,
+        execution_enabled: false,
+        is_next: true
+      }
+    ],
+    pending_readout_request_plan: {
+      schema_version: "read_only_readout_request_plan_v1",
+      total_count: 1,
+      mapped_count: 1,
+      unmapped_count: 0,
+      mapped_percent: 100,
+      unmapped_percent: 0,
+      mapping_status: "mapped",
+      safe_for_bridge_planning: true,
+      request_ids: ["snake_request_snapshot"],
+      bridge_intents: ["read_live_pid_snapshot"],
+      next_request: {
+        readout_id: "snake_request_snapshot",
+        bridge_intent: "read_live_pid_snapshot",
+        service_mode: "read_live_data",
+        read_only: true,
+        would_transmit: false,
+        vehicle_command_enabled: false,
+        execution_enabled: false
+      }
+    },
+    readout_request_plan_gate_summary: {
+      schema_version: "readout_request_plan_gate_v1",
+      state: "ready",
+      ready: true,
+      blocked: false,
+      blocked_reason_count: 0,
+      blocked_reason_ids: [],
+      action_required: false,
+      next_action_id: null
+    }
+  },
+  diagnostic_flow_summary: {
+    schema_version: "diagnostic_flow_summary_v1",
+    pending_readout_request_plan: {
+      total_count: 1,
+      mapped_count: 1,
+      unmapped_count: 0,
+      request_ids: ["snake_request_snapshot"],
+      bridge_intents: ["read_live_pid_snapshot"]
+    },
+    readout_request_plan_summary: {
+      state: "ready",
+      next_request_id: "snake_request_snapshot",
+      next_bridge_intent: "read_live_pid_snapshot"
+    }
+  }
+});
+check(scanSessionSnakeRequestPlanImport.importedCoreComparisonSummary?.importedRequestPlanCount === 1 && scanSessionSnakeRequestPlanImport.importedCoreComparisonSummary?.importedRequestPlanIds?.includes("snake_request_snapshot"), "Diagnostic scan session did not read snake_case imported core request plan ids");
+check(scanSessionSnakeRequestPlanImport.importedCoreComparisonSummary?.importedRequestPlanNextRequestId === "snake_request_snapshot" && scanSessionSnakeRequestPlanImport.importedCoreComparisonSummary?.importedRequestPlanNextBridgeIntent === "read_live_pid_snapshot", "Diagnostic scan session did not read snake_case imported core request plan next request");
+check(scanSessionSnakeRequestPlanImport.importedDiagnosticFlowComparisonSummary?.importedRequestPlanCount === 1 && scanSessionSnakeRequestPlanImport.importedDiagnosticFlowComparisonSummary?.importedRequestPlanIds?.includes("snake_request_snapshot"), "Diagnostic scan session did not read snake_case imported diagnostic flow request plan ids");
+check(scanSessionSnakeRequestPlanImport.importedDiagnosticFlowComparisonSummary?.importedRequestPlanNextRequestId === "snake_request_snapshot" && scanSessionSnakeRequestPlanImport.importedDiagnosticFlowComparisonSummary?.importedRequestPlanNextBridgeIntent === "read_live_pid_snapshot", "Diagnostic scan session did not read snake_case imported diagnostic flow request plan next request");
 check("nextReadoutDetailsChanged" in scanSessionBridgeDiagnosticImportAlias.importedDiagnosticFlowComparisonSummary, "Diagnostic scan session did not expose imported diagnostic flow next readout detail change flag");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary?.schemaVersion === "imported_readout_completion_comparison_v1", "Diagnostic scan session did not compare imported and recalculated readout completion summary");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedReadoutCompletionComparisonSummary?.pendingCountDelta), "Diagnostic scan session did not expose imported readout completion pending delta");
@@ -8353,6 +8423,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1385");
+  console.log("OBD read-only safety checks: 1389");
   console.log("Errors: 0");
 }
