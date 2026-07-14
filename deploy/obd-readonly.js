@@ -7570,12 +7570,14 @@
   }
 
   function getDiagnosticSessionInput(input = {}) {
+    const bridgePartsInput = input.bridgeParts || input.bridge_parts || null;
     const payload = input.bridgeDiagnosticImport
       || input.bridge_diagnostic_import
       || input.bridgeImport
       || input.bridge_import
       || input.bridgeExportPayload
       || input.bridge_export_payload
+      || (bridgePartsInput ? buildBridgeDiagnosticImport(bridgePartsInput) : null)
       || null;
     const base = payload && typeof payload === "object"
       ? { ...payload, ...input }

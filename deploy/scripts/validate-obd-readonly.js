@@ -545,6 +545,7 @@ const diagnosticSessionInputFunctionChecks = () => {
   if (diagnosticSessionInputFunctionSource) {
     const functionBody = diagnosticSessionInputFunctionSource[0];
     check(functionBody.includes('const payload = input.bridgeDiagnosticImport') && functionBody.includes('|| input.bridge_export_payload'), "getDiagnosticSessionInput should accept bridge diagnostic import and export payload aliases");
+    check(functionBody.includes('const bridgePartsInput = input.bridgeParts || input.bridge_parts || null;') && functionBody.includes('buildBridgeDiagnosticImport(bridgePartsInput)'), "getDiagnosticSessionInput should normalize bridge parts aliases through bridge diagnostic import");
     check(functionBody.includes('const base = payload && typeof payload === \"object\"\r\n      ? { ...payload, ...input }'), "getDiagnosticSessionInput should layer outer input over payload fields");
     check(functionBody.includes('const nested = input.session') && functionBody.includes('|| input.scan_session') && functionBody.includes('|| input.bridge_session'), "getDiagnosticSessionInput should accept nested session aliases from outer input");
     check(functionBody.includes('|| payload?.bridgeSession') && functionBody.includes('|| payload?.bridge_session') && functionBody.includes('|| payload?.session'), "getDiagnosticSessionInput should accept nested session aliases from bridge payloads");
@@ -2110,7 +2111,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1974+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1978+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2182,7 +2183,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.578.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for DTC snapshot bridge export/import normalization");
+check(appSource.includes('const APP_VERSION = "2.579.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for bridge parts DTC snapshot scan session normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2558,6 +2559,16 @@ const typedDtcRawResponseScanSession = obd.buildDiagnosticScanSession({
   permanent_dtc_response: { raw: "4A 04 20 00 00" }
 });
 check(typedDtcRawResponseScanSession.dtcSnapshot.codes.includes("P0171") && typedDtcRawResponseScanSession.dtcSnapshot.codes.includes("P0420"), "Diagnostic scan session did not decode typed DTC response aliases");
+const bridgePartsTypedDtcScanSession = obd.buildDiagnosticScanSession({
+  bridge_parts: {
+    stored_dtc_snapshot: { dtcs: [{ code: "P0171" }] },
+    pendingDtcSnapshot: { dtcs: [{ code: "P0300" }] },
+    permanent_dtc_response: { raw: "4A 04 20 00 00" }
+  }
+});
+check(bridgePartsTypedDtcScanSession.source === "local_bridge", "Diagnostic scan session did not normalize bridge_parts source");
+check(bridgePartsTypedDtcScanSession.dtcSnapshot.storedCount === 1 && bridgePartsTypedDtcScanSession.dtcSnapshot.pendingCount === 1 && bridgePartsTypedDtcScanSession.dtcSnapshot.permanentCount === 1, "Diagnostic scan session did not preserve bridge_parts typed DTC snapshots");
+check(bridgePartsTypedDtcScanSession.readoutCoverage.itemById?.dtc_snapshot?.status === "captured", "Diagnostic scan session did not mark bridge_parts typed DTC readout as captured");
 const bridgeEmptyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({});
 check(bridgeEmptyDtcSnapshot.codes.length === 0 && bridgeEmptyDtcSnapshot.dtcs.length === 0 && bridgeEmptyDtcSnapshot.blocked === true, "空DTCブリッジ応答を安全側へ整形できません");
 const outboundRead = obd.evaluateOutboundSafety({ service: "03", stateChanging: false });
@@ -9474,6 +9485,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1974");
+  console.log("OBD read-only safety checks: 1978");
   console.log("Errors: 0");
 }
