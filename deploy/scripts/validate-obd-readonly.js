@@ -1046,11 +1046,13 @@ const readinessSnapshotFunctionChecks = () => {
   check(Boolean(readinessSnapshotFunctionSource), "normalizeReadinessSnapshot is missing from obd-readonly.js");
   if (readinessSnapshotFunctionSource) {
     const functionBody = readinessSnapshotFunctionSource[0];
-    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeReadinessSnapshot should default source to diagnostic_core");
-    check(functionBody.includes('const monitors = Array.isArray(input) ? input : Array.isArray(input.monitors) ? input.monitors : [];'), "normalizeReadinessSnapshot should accept direct array or monitors array input");
+    check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) ? input : {};') && functionBody.includes('sourceInput.source_type') && functionBody.includes('sourceInput.sourceType'), "normalizeReadinessSnapshot should default source from normalized source aliases");
+    check(functionBody.includes('Array.isArray(sourceInput.readinessValues)') && functionBody.includes('Array.isArray(sourceInput.readiness_rows)') && functionBody.includes('Array.isArray(sourceInput.items)'), "normalizeReadinessSnapshot should accept readiness monitor array aliases");
     check(functionBody.includes('readinessMonitorCatalog.find((entry) => entry.id === id)') && functionBody.includes('diagnosticUse: catalogItem?.diagnosticUse || ""'), "normalizeReadinessSnapshot should enrich monitors from readiness catalog");
-    check(functionBody.includes('supported: monitor?.supported !== false') && functionBody.includes('complete: monitor?.complete === true'), "normalizeReadinessSnapshot should normalize supported and complete states");
-    check(functionBody.includes('milOn: input.mil_on === true || input.milOn === true') && functionBody.includes('incompleteCount: normalized.filter((item) => item.supported && !item.complete).length'), "normalizeReadinessSnapshot should normalize MIL aliases and supported incomplete count");
+    check(functionBody.includes('monitor?.monitorId') && functionBody.includes('monitor?.monitor_id') && functionBody.includes('monitor?.display_label'), "normalizeReadinessSnapshot should normalize monitor id and label aliases");
+    check(functionBody.includes('monitor?.isSupported') && functionBody.includes('monitor?.is_supported') && functionBody.includes('monitor?.isComplete') && functionBody.includes('monitor?.is_complete'), "normalizeReadinessSnapshot should normalize supported and complete aliases");
+    check(functionBody.includes('readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status') && functionBody.includes('incompleteCount: normalized.filter((item) => item.supported && !item.complete).length'), "normalizeReadinessSnapshot should normalize MIL aliases and supported incomplete count");
+    check(functionBody.includes('sourceInput.communicationProtocol') && functionBody.includes('sourceInput.communication_protocol'), "normalizeReadinessSnapshot should normalize protocol aliases");
     check(functionBody.includes('knownMonitors,') && functionBody.includes('retainedRawText: false'), "normalizeReadinessSnapshot should expose known monitors and never retain raw text");
   }
 };
@@ -1941,7 +1943,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1326+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1332+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2013,7 +2015,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.486.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for vehicle applicability aliases");
+check(appSource.includes('const APP_VERSION = "2.487.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readiness aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5601,6 +5603,20 @@ check(decodedReadiness.milOn === true, "レディネス応答からMIL状態を�
 check(decodedReadiness.monitors.find((item) => item.id === "catalyst")?.complete === false, "触媒レディネス未完了をデコードできません");
 check(decodedReadiness.monitors.find((item) => item.id === "evaporative_system")?.supported === false, "EVAPレディネス対応ビットをデコードできません");
 check(decodedReadiness.retainedRawText === false, "レディネスデコードが原文保持になっています");
+const normalizedReadinessAliasSnapshot = obd.normalizeReadinessSnapshot({
+  source_type: "bridge_import",
+  communication_protocol: "ISO15765-4",
+  milStatus: "on",
+  readiness_values: [
+    { monitor_id: "catalyst", display_label: "Catalyst alias", is_supported: "true", is_complete: "false" },
+    { monitorId: "evaporative_system", isSupported: "false", readiness_status: "not_supported" },
+    { id: "oxygen_sensor", readinessStatus: "complete" }
+  ]
+});
+check(normalizedReadinessAliasSnapshot.source === "bridge_import" && normalizedReadinessAliasSnapshot.protocol === "ISO15765-4", "normalizeReadinessSnapshot did not preserve source and protocol aliases");
+check(normalizedReadinessAliasSnapshot.milOn === true && normalizedReadinessAliasSnapshot.monitorCount === 3, "normalizeReadinessSnapshot did not normalize MIL and monitor array aliases");
+check(normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "catalyst")?.complete === false && normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "catalyst")?.label === "Catalyst alias", "normalizeReadinessSnapshot did not normalize monitor id, label, and complete aliases");
+check(normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "evaporative_system")?.supported === false && normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "oxygen_sensor")?.complete === true, "normalizeReadinessSnapshot did not normalize supported and readiness status aliases");
 const decodedOnboardMonitor = obd.decodeOnboardMonitorResponse({ raw: "46 01 01 00 64 00 32 00 C8 46 02 01 01 2C 00 32 00 C8" });
 check(decodedOnboardMonitor.schemaVersion === "onboard_monitor_snapshot_v1", "Mode 06 snapshot schema is invalid");
 check(decodedOnboardMonitor.testCount === 2, "Mode 06 test count is invalid");
@@ -8169,6 +8185,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1326");
+  console.log("OBD read-only safety checks: 1332");
   console.log("Errors: 0");
 }

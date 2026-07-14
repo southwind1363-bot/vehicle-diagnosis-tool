@@ -6137,18 +6137,55 @@
   }
 
   function normalizeReadinessSnapshot(input = {}) {
-    const source = input.source || "diagnostic_core";
-    const monitors = Array.isArray(input) ? input : Array.isArray(input.monitors) ? input.monitors : [];
+    const sourceInput = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const monitors = Array.isArray(input)
+      ? input
+      : Array.isArray(sourceInput.monitors)
+        ? sourceInput.monitors
+        : Array.isArray(sourceInput.readinessMonitors)
+          ? sourceInput.readinessMonitors
+          : Array.isArray(sourceInput.readiness_monitors)
+            ? sourceInput.readiness_monitors
+            : Array.isArray(sourceInput.readinessValues)
+              ? sourceInput.readinessValues
+              : Array.isArray(sourceInput.readiness_values)
+                ? sourceInput.readiness_values
+                : Array.isArray(sourceInput.readinessRows)
+                  ? sourceInput.readinessRows
+                  : Array.isArray(sourceInput.readiness_rows)
+                    ? sourceInput.readiness_rows
+                    : Array.isArray(sourceInput.items)
+                      ? sourceInput.items
+                      : [];
+    const readBooleanAlias = (value, fallback = false) => {
+      if (value === true || value === 1) return true;
+      if (value === false || value === 0 || value === null) return false;
+      const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+      if (["true", "1", "yes", "on", "complete", "ready", "supported"].includes(normalized)) return true;
+      if (["false", "0", "no", "off", "incomplete", "not_complete", "not supported", "not_supported", "unsupported"].includes(normalized)) return false;
+      return fallback;
+    };
     const normalized = monitors.map((monitor, index) => {
-      const id = String(monitor?.id || monitor?.name || `monitor_${index + 1}`).slice(0, 80);
+      const id = String(monitor?.id || monitor?.monitorId || monitor?.monitor_id || monitor?.name || `monitor_${index + 1}`).slice(0, 80);
       const catalogItem = readinessMonitorCatalog.find((entry) => entry.id === id);
+      const statusAlias = pickDefined(monitor?.status, monitor?.readinessStatus, monitor?.readiness_status, null);
+      const statusText = typeof statusAlias === "string" ? statusAlias.trim().toLowerCase() : "";
+      const supportedAlias = pickDefined(monitor?.supported, monitor?.isSupported, monitor?.is_supported, monitor?.available, monitor?.isAvailable, monitor?.is_available, undefined);
+      const supported = supportedAlias === undefined
+        ? statusText !== "not_supported" && statusText !== "unsupported"
+        : readBooleanAlias(supportedAlias, true);
+      const completeAlias = pickDefined(monitor?.complete, monitor?.isComplete, monitor?.is_complete, monitor?.ready, monitor?.isReady, monitor?.is_ready, undefined);
+      const complete = completeAlias === undefined
+        ? ["complete", "ready", "ok"].includes(statusText)
+        : readBooleanAlias(completeAlias, false);
       return {
         id,
-        label: String(monitor?.label || catalogItem?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
+        label: String(monitor?.label || monitor?.displayLabel || monitor?.display_label || catalogItem?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
         category: catalogItem?.category || monitor?.category || "状態",
-        supported: monitor?.supported !== false,
-        complete: monitor?.complete === true,
-        status: monitor?.status || (monitor?.complete === true ? "complete" : "not_complete"),
+        supported,
+        complete,
+        status: statusAlias || (supported ? (complete ? "complete" : "not_complete") : "not_supported"),
         diagnosticUse: catalogItem?.diagnosticUse || "",
         notCompleteNote: catalogItem?.notCompleteNote || ""
       };
@@ -6164,9 +6201,9 @@
     return {
       schemaVersion: "readiness_snapshot_v1",
       source,
-      capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || input.obd_protocol || null,
-      milOn: input.mil_on === true || input.milOn === true,
+      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      milOn: readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, false), false),
       monitorCount: normalized.length,
       incompleteCount: normalized.filter((item) => item.supported && !item.complete).length,
       knownMonitorCount: knownMonitors.length,
