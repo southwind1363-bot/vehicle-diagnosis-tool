@@ -3838,19 +3838,32 @@
     const fallbackReadoutRequestPlanSafetySummary = buildReadoutRequestPlanSafetySummary(pendingReadoutRequestQueue, unmappedPendingReadoutRequestIds);
     const pendingReadoutRequestPlan = coreSessionStatus?.pendingReadoutRequestPlan || coreSessionStatus?.pending_readout_request_plan || {
       schemaVersion: "read_only_readout_request_plan_v1",
+      schema_version: "read_only_readout_request_plan_v1",
       totalCount: pendingReadoutRequestQueue.length,
+      total_count: pendingReadoutRequestQueue.length,
       mappedCount: mappedPendingReadoutRequests.length,
+      mapped_count: mappedPendingReadoutRequests.length,
       unmappedCount: unmappedPendingReadoutRequestIds.length,
+      unmapped_count: unmappedPendingReadoutRequestIds.length,
       allMapped: unmappedPendingReadoutRequestIds.length === 0,
+      all_mapped: unmappedPendingReadoutRequestIds.length === 0,
       ...fallbackReadoutRequestPlanSafetySummary,
       unmappedRequestIds: [...unmappedPendingReadoutRequestIds],
+      unmapped_request_ids: [...unmappedPendingReadoutRequestIds],
       nextRequest: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
+      next_request: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,
       requestIds: pendingReadoutRequestQueue.map((item) => item.readoutId),
+      request_ids: pendingReadoutRequestQueue.map((item) => item.readoutId),
       bridgeIntents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],
+      bridge_intents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],
       executionEnabled: false,
+      execution_enabled: false,
       readOnly: true,
+      read_only: true,
       wouldTransmit: false,
-      vehicleCommandEnabled: false
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
     const fallbackRequestPlanBlockedReasonIds = Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds) ? [...pendingReadoutRequestPlan.blockedReasonIds] : [];
     const fallbackRequestPlanBlockedReasonById = pendingReadoutRequestPlan?.blockedReasonById && typeof pendingReadoutRequestPlan.blockedReasonById === "object" ? { ...pendingReadoutRequestPlan.blockedReasonById } : {};
@@ -3862,6 +3875,8 @@
     const fallbackRequestPlanGateActionReasonIds = fallbackRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const fallbackRequestPlanGateActionReadoutIds = [...new Set(fallbackRequestPlanGateActionQueue.flatMap((item) => Array.isArray(item.readoutIds) ? item.readoutIds : []).filter(Boolean))];
     const fallbackRequestPlanGateActionSummary = {
+      schemaVersion: "readout_request_plan_gate_action_summary_v1",
+      schema_version: "readout_request_plan_gate_action_summary_v1",
       actionRequired: fallbackRequestPlanGateActionQueue.length > 0,
       action_required: fallbackRequestPlanGateActionQueue.length > 0,
       actionCount: fallbackRequestPlanGateActionQueue.length,

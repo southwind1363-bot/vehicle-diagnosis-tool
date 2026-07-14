@@ -658,6 +658,10 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('nextReadoutBridgeIntent: nextReadoutRequest?.bridgeIntent || null,') && source.includes('next_readout_bridge_intent: nextReadoutRequest?.bridgeIntent || null,') && source.includes('next_readout_execution_enabled: nextReadoutRequest?.executionEnabled === true,'), "diagnostic flow summaries should expose read-only next readout request fields");
     check(source.includes('pendingReadoutRequestCount: pendingReadoutRequestQueue.length,') && source.includes('pending_readout_request_count: pendingReadoutRequestQueue.length,') && source.includes('pending_readout_request_next: pendingReadoutRequestQueue.find((item) => item.isNext) || pendingReadoutRequestQueue[0] || null,'), "diagnostic flow summaries should expose pending readout request queue metadata");
     check(source.includes('pendingReadoutRequestPlan,') && source.includes('requestIds: pendingReadoutRequestQueue.map((item) => item.readoutId),'), "diagnostic flow summaries should expose read-only readout request plan metadata");
+    check(source.includes('schemaVersion: "read_only_readout_request_plan_v1",') && source.includes('schema_version: "read_only_readout_request_plan_v1",'), "diagnostic flow fallback request plans should expose schema aliases");
+    check(source.includes('total_count: pendingReadoutRequestQueue.length,') && source.includes('mapped_count: mappedPendingReadoutRequests.length,') && source.includes('unmapped_count: unmappedPendingReadoutRequestIds.length,'), "diagnostic flow fallback request plans should expose snake_case mapping counts");
+    check(source.includes('unmapped_request_ids: [...unmappedPendingReadoutRequestIds],') && source.includes('request_ids: pendingReadoutRequestQueue.map((item) => item.readoutId),') && source.includes('bridge_intents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],'), "diagnostic flow fallback request plans should expose snake_case request ids and intents");
+    check(source.includes('const fallbackRequestPlanGateActionSummary = {') && source.includes('schemaVersion: "readout_request_plan_gate_action_summary_v1"') && source.includes('schema_version: "readout_request_plan_gate_action_summary_v1"'), "diagnostic flow fallback gate action summaries should expose schema aliases");
     check(source.includes('allMapped: unmappedPendingReadoutRequestIds.length === 0,') && source.includes('bridgeIntents: [...new Set(mappedPendingReadoutRequests.map((item) => item.bridgeIntent))],'), "diagnostic flow readout request plans should expose mapping completeness");
     check(source.includes('requestPlanMappedCount: Number.isFinite(Number(pendingReadoutRequestPlan?.mappedCount))') && source.includes('request_plan_safe_for_bridge_planning: pendingReadoutRequestPlan?.safeForBridgePlanning === true,'), "diagnostic flow summaries should expose direct request plan safety fields");
     check(source.includes('requestPlanBlockedReasonIds: Array.isArray(pendingReadoutRequestPlan?.blockedReasonIds)') && source.includes('request_plan_blocked_reason_by_id: pendingReadoutRequestPlan?.blockedReasonById'), "diagnostic flow summaries should expose request plan blocked reasons");
@@ -2044,7 +2048,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1816+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1820+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2116,7 +2120,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.546.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout quality snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.547.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for fallback request plan snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8974,6 +8978,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1816");
+  console.log("OBD read-only safety checks: 1820");
   console.log("Errors: 0");
 }
