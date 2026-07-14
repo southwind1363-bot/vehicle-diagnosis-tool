@@ -9964,6 +9964,7 @@
       dtcSnapshot: outputDtcSnapshot,
       dtc_snapshot: outputDtcSnapshot,
       source: "obd_text_import",
+      source_type: "obd_text_import",
       toolHints: textImportMetadata.toolHints,
       tool_hints: textImportMetadata.toolHints,
       importClassification: textImportMetadata.importClassification,
