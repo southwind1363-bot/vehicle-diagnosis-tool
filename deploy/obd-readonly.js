@@ -6427,42 +6427,57 @@
   }
 
   function normalizeOnboardMonitorSnapshot(input = {}) {
-    const source = input.source || "diagnostic_core";
-    const rows = Array.isArray(input.tests)
-      ? input.tests
-      : Array.isArray(input.values)
-        ? input.values
-        : Array.isArray(input.mode06_tests)
-          ? input.mode06_tests
-          : Array.isArray(input.mode06Tests)
-            ? input.mode06Tests
-            : Array.isArray(input.monitor_tests)
-              ? input.monitor_tests
-              : Array.isArray(input.monitorTests)
-                ? input.monitorTests
-                : Array.isArray(input.onboard_monitor_tests)
-                  ? input.onboard_monitor_tests
-                  : Array.isArray(input.onboardMonitorTests)
-                    ? input.onboardMonitorTests
-                    : Array.isArray(input.mode06_rows)
-                      ? input.mode06_rows
-                      : Array.isArray(input.mode06Rows)
-                        ? input.mode06Rows
-                        : Array.isArray(input.test_rows)
-                          ? input.test_rows
-                          : Array.isArray(input.testRows)
-                            ? input.testRows
-                    : [];
+    const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
+      ? {
+        ...input.data,
+        source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+      }
+      : input;
+    const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const rows = Array.isArray(sourceInput.tests)
+      ? sourceInput.tests
+      : Array.isArray(sourceInput.values)
+        ? sourceInput.values
+        : Array.isArray(sourceInput.mode06_tests)
+          ? sourceInput.mode06_tests
+          : Array.isArray(sourceInput.mode06Tests)
+            ? sourceInput.mode06Tests
+            : Array.isArray(sourceInput.monitor_tests)
+              ? sourceInput.monitor_tests
+              : Array.isArray(sourceInput.monitorTests)
+                ? sourceInput.monitorTests
+                : Array.isArray(sourceInput.onboard_monitor_tests)
+                  ? sourceInput.onboard_monitor_tests
+                  : Array.isArray(sourceInput.onboardMonitorTests)
+                    ? sourceInput.onboardMonitorTests
+                    : Array.isArray(sourceInput.onboard_monitor_rows)
+                      ? sourceInput.onboard_monitor_rows
+                      : Array.isArray(sourceInput.onboardMonitorRows)
+                        ? sourceInput.onboardMonitorRows
+                        : Array.isArray(sourceInput.mode06_rows)
+                          ? sourceInput.mode06_rows
+                          : Array.isArray(sourceInput.mode06Rows)
+                            ? sourceInput.mode06Rows
+                            : Array.isArray(sourceInput.test_rows)
+                              ? sourceInput.test_rows
+                              : Array.isArray(sourceInput.testRows)
+                                ? sourceInput.testRows
+                                : Array.isArray(sourceInput.items)
+                                  ? sourceInput.items
+                                  : [];
     const tests = rows
       .map((row, index) => {
         if (!row || typeof row !== "object") return null;
-        const testId = String(row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId || row.test || row.test_code || row.testCode || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
-        const componentId = String(row.component_id || row.componentId || row.cid || row.component || row.component_code || row.componentCode || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
-        const value = Number(row.value ?? row.measured ?? row.measured_value ?? row.measuredValue ?? row.result ?? row.test_value ?? row.testValue ?? row.raw_value ?? row.rawValue);
-        const min = Number(row.min ?? row.minimum ?? row.min_value ?? row.minValue);
-        const max = Number(row.max ?? row.maximum ?? row.max_value ?? row.maxValue);
+        const testId = String(row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId || row.test || row.test_code || row.testCode || row.test_id_hex || row.testIdHex || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const componentId = String(row.component_id || row.componentId || row.cid || row.component || row.component_code || row.componentCode || row.component_id_hex || row.componentIdHex || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
+        const value = Number(row.value ?? row.measured ?? row.measured_value ?? row.measuredValue ?? row.result ?? row.test_value ?? row.testValue ?? row.current_value ?? row.currentValue ?? row.raw_value ?? row.rawValue);
+        const min = Number(row.min ?? row.minimum ?? row.min_value ?? row.minValue ?? row.min_limit ?? row.minLimit);
+        const max = Number(row.max ?? row.maximum ?? row.max_value ?? row.maxValue ?? row.max_limit ?? row.maxLimit);
         const hasLimits = Number.isFinite(min) && Number.isFinite(max);
-        const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : row.passed === true;
+        const statusText = typeof row.status === "string" ? row.status.trim().toLowerCase() : "";
+        const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : row.passed === true || row.pass === true || statusText === "pass" || statusText === "passed";
         if (!testId || !componentId || !Number.isFinite(value)) return null;
         return {
           testId,
@@ -6481,8 +6496,8 @@
     return {
       schemaVersion: "onboard_monitor_snapshot_v1",
       source,
-      capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || input.obd_protocol || null,
+      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       testCount: tests.length,
       failedCount: tests.filter((test) => test.status === "fail").length,
       unknownCount: tests.filter((test) => test.status === "unknown").length,
