@@ -2519,10 +2519,16 @@
       || parts.readout_request_plan_gate_summary
       || parts.coreSessionStatus?.readoutRequestPlanGateSummary
       || parts.core_session_status?.readoutRequestPlanGateSummary
+      || parts.coreSessionStatus?.readout_request_plan_gate_summary
+      || parts.core_session_status?.readout_request_plan_gate_summary
       || parts.analysisReadinessSummary?.readoutRequestPlanGateSummary
       || parts.analysis_readiness_summary?.readoutRequestPlanGateSummary
+      || parts.analysisReadinessSummary?.readout_request_plan_gate_summary
+      || parts.analysis_readiness_summary?.readout_request_plan_gate_summary
       || parts.diagnosticFlowSummary?.readoutRequestPlanGateSummary
       || parts.diagnostic_flow_summary?.readoutRequestPlanGateSummary
+      || parts.diagnosticFlowSummary?.readout_request_plan_gate_summary
+      || parts.diagnostic_flow_summary?.readout_request_plan_gate_summary
       || null;
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
@@ -5824,8 +5830,11 @@
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
       || summary.readout_request_plan_gate_summary
       || coreSessionStatus.readoutRequestPlanGateSummary
+      || coreSessionStatus.readout_request_plan_gate_summary
       || analysisReadinessSummary?.readoutRequestPlanGateSummary
+      || analysisReadinessSummary?.readout_request_plan_gate_summary
       || diagnosticFlowSummary.readoutRequestPlanGateSummary
+      || diagnosticFlowSummary.readout_request_plan_gate_summary
       || null;
     const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
       || summary.core_readout_inventory_summary
@@ -5963,8 +5972,11 @@
       || summary.readout_request_plan_gate_summary
       || exportPayload.session?.readout_request_plan_gate_summary
       || coreSessionStatus.readoutRequestPlanGateSummary
+      || coreSessionStatus.readout_request_plan_gate_summary
       || analysisReadinessSummary?.readoutRequestPlanGateSummary
+      || analysisReadinessSummary?.readout_request_plan_gate_summary
       || diagnosticFlowSummary.readoutRequestPlanGateSummary
+      || diagnosticFlowSummary.readout_request_plan_gate_summary
       || null;
     const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
       || summary.core_readout_inventory_summary
@@ -6096,7 +6108,11 @@
     const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;
     const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;
     const importedReadoutQualitySummary = bridgeImport?.readoutQualitySummary || bridgeSession?.readoutQualitySummary || null;
-    const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary || bridgeSession?.readoutRequestPlanGateSummary || null;
+    const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary
+      || bridgeImport?.readout_request_plan_gate_summary
+      || bridgeSession?.readoutRequestPlanGateSummary
+      || bridgeSession?.readout_request_plan_gate_summary
+      || null;
     const importedCoreReadoutInventorySummary = bridgeImport?.coreReadoutInventorySummary || bridgeSession?.coreReadoutInventorySummary || null;
     const selectPreferredMonitorValue = (current, candidate) => {
       if (!current) return candidate;

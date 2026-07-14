@@ -458,7 +458,7 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;'), "buildBridgeSessionExportPayload should rebuild analysis readiness summary from core session status");
     check(functionBody.includes('const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary') && functionBody.includes('readout_quality_summary: readoutQualitySummary,'), "buildBridgeSessionExportPayload should serialize readout quality summary");
     check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeSessionExportPayload should serialize imported readout quality review request plan summaries");
-    check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('coreSessionStatus.readoutRequestPlanGateSummary'), "buildBridgeSessionExportPayload should rebuild readout request plan gate summary from core session status");
+    check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('coreSessionStatus.readout_request_plan_gate_summary'), "buildBridgeSessionExportPayload should rebuild readout request plan gate summary from core session status");
     check(functionBody.includes('core_session_status: coreSessionStatus,'), "buildBridgeSessionExportPayload should serialize core session status");
     check(functionBody.includes('schema_version: \"bridge_session_export_v1\"'), "buildBridgeSessionExportPayload should emit bridge session export schema version");
     check(functionBody.includes('readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),'), "buildBridgeSessionExportPayload should normalize readout coverage into export payload");
@@ -484,7 +484,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const readoutQualitySummary = summary.readoutQualitySummary') && functionBody.includes('readoutQualitySummary,'), "buildBridgeDiagnosticImport should preserve readout quality summary");
     check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('exportPayload.session?.imported_readout_quality_review_request_plan_summary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should preserve imported readout quality review request plan summaries");
     check(functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should expose imported readout quality review request plan snake_case aliases");
-    check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "buildBridgeDiagnosticImport should preserve readout request plan gate summary");
+    check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('diagnosticFlowSummary.readout_request_plan_gate_summary'), "buildBridgeDiagnosticImport should preserve readout request plan gate summary");
     check(functionBody.includes('const coreReadoutInventorySummary = summary.coreReadoutInventorySummary') && functionBody.includes('coreReadoutInventorySummary,'), "buildBridgeDiagnosticImport should preserve core readout inventory summary");
   }
 };
@@ -940,7 +940,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "mergeDiagnosticInputs should expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;') && functionBody.includes('importedReadoutCompletionSummary,'), "mergeDiagnosticInputs should expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;') && functionBody.includes('importedAnalysisReadinessSummary,'), "mergeDiagnosticInputs should expose imported analysis readiness summary separately from recalculated status");
-    check(functionBody.includes('const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary || bridgeSession?.readoutRequestPlanGateSummary || null;') && functionBody.includes('importedReadoutRequestPlanGateSummary,'), "mergeDiagnosticInputs should expose imported readout request plan gate summary separately");
+    check(functionBody.includes('const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary') && functionBody.includes('bridgeSession?.readout_request_plan_gate_summary') && functionBody.includes('importedReadoutRequestPlanGateSummary,'), "mergeDiagnosticInputs should expose imported readout request plan gate summary separately");
     check(functionBody.includes('const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);') && functionBody.includes('importedCoreComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated core session status");
     check(functionBody.includes('const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);') && functionBody.includes('importedDiagnosticFlowComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated diagnostic flow summary");
     check(functionBody.includes('const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);') && functionBody.includes('importedReadoutCompletionComparisonSummary,'), "mergeDiagnosticInputs should compare imported and recalculated readout completion summary");
@@ -1024,6 +1024,7 @@ const bridgeSessionSummaryFunctionChecks = () => {
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should append bridge readout warnings through bridge context guard");
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should resolve readout coverage before appending bridge readout warnings");
     check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildBridgeSessionSummary should pass onboard monitor snapshots into core session status");
+    check(source.includes('parts.core_session_status?.readout_request_plan_gate_summary') && source.includes('parts.diagnostic_flow_summary?.readout_request_plan_gate_summary'), "buildBridgeSessionSummary should read nested snake_case request plan gate summaries");
   }
 };
 const dtcSnapshotFunctionChecks = () => {
@@ -1964,7 +1965,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1428+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1429+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2036,7 +2037,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.506.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for gate action aliases");
+check(appSource.includes('const APP_VERSION = "2.507.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for nested gate aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8665,6 +8666,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1428");
+  console.log("OBD read-only safety checks: 1429");
   console.log("Errors: 0");
 }
