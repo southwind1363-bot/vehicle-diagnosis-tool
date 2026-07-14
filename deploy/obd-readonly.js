@@ -3127,6 +3127,8 @@
     const readoutRequestPlanGateActionReasonIds = readoutRequestPlanGateActionQueue.map((item) => item.reasonId).filter(Boolean);
     const readoutRequestPlanGateActionReadoutIds = [...new Set(readoutRequestPlanGateActionQueue.flatMap((item) => Array.isArray(item.readoutIds) ? item.readoutIds : []).filter(Boolean))];
     const readoutRequestPlanGateActionSummary = {
+      schemaVersion: "readout_request_plan_gate_action_summary_v1",
+      schema_version: "readout_request_plan_gate_action_summary_v1",
       actionRequired: readoutRequestPlanGateActionQueue.length > 0,
       action_required: readoutRequestPlanGateActionQueue.length > 0,
       actionCount: readoutRequestPlanGateActionQueue.length,
@@ -3357,6 +3359,8 @@
       primary_blocking_summary: primaryBlockingSummary
     });
     const analysisBlockerSummary = {
+      schemaVersion: "analysis_blocker_summary_v1",
+      schema_version: "analysis_blocker_summary_v1",
       totalCount: analysisBlockers.length,
       missingReadoutCount: remainingReadoutIds.length,
       emptyReadoutCount: emptyReadoutIds.length,
@@ -3451,6 +3455,8 @@
     ];
     const analysisChecklistById = Object.fromEntries(analysisChecklist.map((item) => [item.id, { ...item }]));
     const analysisChecklistSummary = {
+      schemaVersion: "analysis_checklist_summary_v1",
+      schema_version: "analysis_checklist_summary_v1",
       totalCount: analysisChecklist.length,
       completeCount: analysisChecklist.filter((item) => item.complete).length,
       blockingCount: analysisChecklist.filter((item) => item.blocking).length,
@@ -3466,6 +3472,8 @@
       || normalizedCoverage.availableCategories > 0;
     const coreStatus = readyForAnalysis ? "analysis_ready" : hasReadoutProgress ? "collecting_readouts" : "not_started";
     const coreWorkflowSummary = {
+      schemaVersion: "core_workflow_summary_v1",
+      schema_version: "core_workflow_summary_v1",
       currentStep: readyForAnalysis ? "analysis" : hasReadoutProgress ? "readout_collection" : "readout_start",
       current_step: readyForAnalysis ? "analysis" : hasReadoutProgress ? "readout_collection" : "readout_start",
       status: coreStatus,
