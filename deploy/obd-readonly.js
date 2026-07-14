@@ -6088,8 +6088,36 @@
   }
 
   function normalizeFreezeFrameSnapshot(input = {}) {
-    const source = input.source || "diagnostic_core";
-    const rows = Array.isArray(input.values) ? input.values : Array.isArray(input.freeze_frame) ? input.freeze_frame : [];
+    const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
+      ? {
+        ...input.data,
+        source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+      }
+      : input;
+    const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const rows = Array.isArray(sourceInput.values)
+      ? sourceInput.values
+      : Array.isArray(sourceInput.freeze_frame)
+        ? sourceInput.freeze_frame
+        : Array.isArray(sourceInput.freezeFrame)
+          ? sourceInput.freezeFrame
+          : Array.isArray(sourceInput.freeze_frame_values)
+            ? sourceInput.freeze_frame_values
+            : Array.isArray(sourceInput.freezeFrameValues)
+              ? sourceInput.freezeFrameValues
+              : Array.isArray(sourceInput.freeze_frame_rows)
+                ? sourceInput.freeze_frame_rows
+                : Array.isArray(sourceInput.freezeFrameRows)
+                  ? sourceInput.freezeFrameRows
+                  : Array.isArray(sourceInput.monitorValues)
+                    ? sourceInput.monitorValues
+                    : Array.isArray(sourceInput.monitor_values)
+                      ? sourceInput.monitor_values
+                      : Array.isArray(sourceInput.items)
+                        ? sourceInput.items
+                        : [];
     const monitorValues = rows
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean)
@@ -6113,18 +6141,22 @@
       interpretationNote: item.interpretationNote
     }));
     const triggerCodes = extractDtcCodes([
-      input.trigger_dtc,
-      input.triggerDtc,
-      input.freeze_dtc,
-      input.freezeDtc,
-      input.dtc
+      sourceInput.trigger_dtc,
+      sourceInput.triggerDtc,
+      sourceInput.triggerCode,
+      sourceInput.trigger_code,
+      sourceInput.freeze_dtc,
+      sourceInput.freezeDtc,
+      sourceInput.dtc,
+      sourceInput.dtcCode,
+      sourceInput.dtc_code
     ].filter(Boolean).join(" "));
 
     return {
       schemaVersion: "freeze_frame_snapshot_v1",
       source,
-      capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || input.obd_protocol || null,
+      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       triggerDtc: triggerCodes[0] || null,
       monitorValues,
       monitorValueSummary: buildMonitorValueSummary(monitorValues),
