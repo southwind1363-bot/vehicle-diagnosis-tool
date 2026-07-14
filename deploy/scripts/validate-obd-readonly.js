@@ -392,7 +392,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
   if (bridgeReadinessSnapshotFunctionSource) {
     const functionBody = bridgeReadinessSnapshotFunctionSource[0];
     check(functionBody.includes('readinessRowIdAliases') && functionBody.includes('statusbyteb: "readiness_status_byte_b"'), "normalizeBridgeReadinessSnapshot should normalize readiness row id aliases");
-    check(functionBody.includes('Array.isArray(data.readiness_values)') && functionBody.includes('Array.isArray(data.readinessRows)') && functionBody.includes('Array.isArray(response.monitorValues)'), "normalizeBridgeReadinessSnapshot should accept readiness value aliases");
+    check(functionBody.includes('Array.isArray(data.readiness_values)') && functionBody.includes('Array.isArray(data.readinessRows)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('Array.isArray(response.monitorValues)'), "normalizeBridgeReadinessSnapshot should accept readiness value aliases");
     check(functionBody.includes('data.readinessStatusByteB !== undefined') && functionBody.includes('data.statusByteD !== undefined'), "normalizeBridgeReadinessSnapshot should accept direct readiness status byte aliases");
     check(functionBody.includes('const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {'), "normalizeBridgeReadinessSnapshot should build readiness values by normalized id");
     check(functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('monitors: []'), "normalizeBridgeReadinessSnapshot should return an empty normalized snapshot without B/C/D bytes");
@@ -1164,7 +1164,7 @@ const readinessSnapshotFunctionChecks = () => {
   if (readinessSnapshotFunctionSource) {
     const functionBody = readinessSnapshotFunctionSource[0];
     check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) ? input : {};') && functionBody.includes('sourceInput.source_type') && functionBody.includes('sourceInput.sourceType'), "normalizeReadinessSnapshot should default source from normalized source aliases");
-    check(functionBody.includes('Array.isArray(sourceInput.readinessValues)') && functionBody.includes('Array.isArray(sourceInput.readiness_rows)') && functionBody.includes('Array.isArray(sourceInput.items)'), "normalizeReadinessSnapshot should accept readiness monitor array aliases");
+    check(functionBody.includes('Array.isArray(sourceInput.readinessValues)') && functionBody.includes('Array.isArray(sourceInput.readiness_rows)') && functionBody.includes('Array.isArray(sourceInput.pid_values)') && functionBody.includes('Array.isArray(sourceInput.items)'), "normalizeReadinessSnapshot should accept readiness monitor array aliases");
     check(functionBody.includes('readinessMonitorCatalog.find((entry) => entry.id === id)') && functionBody.includes('diagnosticUse: catalogItem?.diagnosticUse || ""'), "normalizeReadinessSnapshot should enrich monitors from readiness catalog");
     check(functionBody.includes('monitor?.monitorId') && functionBody.includes('monitor?.monitor_id') && functionBody.includes('monitor?.display_label'), "normalizeReadinessSnapshot should normalize monitor id and label aliases");
     check(functionBody.includes('monitor?.isSupported') && functionBody.includes('monitor?.is_supported') && functionBody.includes('monitor?.isComplete') && functionBody.includes('monitor?.is_complete'), "normalizeReadinessSnapshot should normalize supported and complete aliases");
@@ -2097,7 +2097,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1937+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1939+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2169,7 +2169,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.570.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for freeze-frame PID values alias normalization");
+check(appSource.includes('const APP_VERSION = "2.571.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for readiness PID values alias normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2794,6 +2794,20 @@ const bridgeReadinessAliasRows = obd.normalizeBridgeReadinessSnapshot({
   }
 });
 check(bridgeReadinessAliasRows.milOn === true && bridgeReadinessAliasRows.incompleteCount === 1, "Bridge readiness row aliases were not normalized");
+const bridgeReadinessPidValuesAliasRows = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    pid_values: [
+      { id: "mil_status", value: true },
+      { id: "readiness_status_byte_b", value: 0x07 },
+      { id: "readiness_status_byte_c", value: 0x22 },
+      { id: "readiness_status_byte_d", value: 0x00 }
+    ]
+  }
+});
+check(bridgeReadinessPidValuesAliasRows.milOn === true && bridgeReadinessPidValuesAliasRows.incompleteCount === 1, "Bridge readiness pid_values aliases were not normalized");
 const bridgeReadinessStatusByteAliases = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
@@ -6126,6 +6140,14 @@ check(normalizedReadinessAliasSnapshot.milOn === true && normalizedReadinessAlia
 check(normalizedReadinessAliasSnapshot.mil_on === true && normalizedReadinessAliasSnapshot.monitor_count === 3 && normalizedReadinessAliasSnapshot.retained_raw_text === false, "normalizeReadinessSnapshot did not expose snake_case readiness aliases");
 check(normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "catalyst")?.complete === false && normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "catalyst")?.label === "Catalyst alias", "normalizeReadinessSnapshot did not normalize monitor id, label, and complete aliases");
 check(normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "evaporative_system")?.supported === false && normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "oxygen_sensor")?.complete === true, "normalizeReadinessSnapshot did not normalize supported and readiness status aliases");
+const normalizedReadinessPidValuesAliasSnapshot = obd.normalizeReadinessSnapshot({
+  milStatus: "off",
+  pid_values: [
+    { monitor_id: "catalyst", readiness_status: "not_complete", is_supported: true },
+    { monitorId: "oxygen_sensor", readinessStatus: "complete", isSupported: true }
+  ]
+});
+check(normalizedReadinessPidValuesAliasSnapshot.monitorCount === 2 && normalizedReadinessPidValuesAliasSnapshot.incompleteCount === 1 && normalizedReadinessPidValuesAliasSnapshot.completeCount === 1, "normalizeReadinessSnapshot did not normalize pid_values alias input");
 const decodedOnboardMonitor = obd.decodeOnboardMonitorResponse({ raw: "46 01 01 00 64 00 32 00 C8 46 02 01 01 2C 00 32 00 C8" });
 check(decodedOnboardMonitor.schemaVersion === "onboard_monitor_snapshot_v1", "Mode 06 snapshot schema is invalid");
 check(decodedOnboardMonitor.testCount === 2, "Mode 06 test count is invalid");
@@ -9351,6 +9373,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1937");
+  console.log("OBD read-only safety checks: 1939");
   console.log("Errors: 0");
 }

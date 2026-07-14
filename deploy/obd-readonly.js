@@ -1069,6 +1069,10 @@
             ? data.readiness_values
             : Array.isArray(data.readinessValues)
               ? data.readinessValues
+              : Array.isArray(data.pid_values)
+                ? data.pid_values
+                : Array.isArray(data.pidValues)
+                  ? data.pidValues
               : Array.isArray(data.readiness_rows)
                 ? data.readiness_rows
                 : Array.isArray(data.readinessRows)
@@ -8601,6 +8605,10 @@
               ? sourceInput.readinessValues
               : Array.isArray(sourceInput.readiness_values)
                 ? sourceInput.readiness_values
+                : Array.isArray(sourceInput.pid_values)
+                  ? sourceInput.pid_values
+                  : Array.isArray(sourceInput.pidValues)
+                    ? sourceInput.pidValues
                 : Array.isArray(sourceInput.readinessRows)
                   ? sourceInput.readinessRows
                   : Array.isArray(sourceInput.readiness_rows)
