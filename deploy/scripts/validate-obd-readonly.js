@@ -236,6 +236,10 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
     check(functionBody.includes('source.displayLabel') && functionBody.includes('source.display_label') && functionBody.includes('source.summary'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
     check(functionBody.includes('schema_version: "vehicle_applicability_v1"'), "normalizeVehicleApplicabilitySnapshot should expose snake_case schema version");
+    check(functionBody.includes('model_code: modelCode,') && functionBody.includes('engine_code: engineCode,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case vehicle identity aliases");
+    check(functionBody.includes('catalog_matched: catalogMatched,') && functionBody.includes('model_code_matched: modelCodeMatched,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case match flag aliases");
+    check(functionBody.includes('candidate_range_count: candidateRangeCount,') && functionBody.includes('supported_engine_code_count: supportedEngineCodeCount,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case applicability count aliases");
+    check(functionBody.includes('summary_label: summaryLabel'), "normalizeVehicleApplicabilitySnapshot should expose snake_case summary label alias");
   }
 };
 const vehicleApplicabilityWarningsFunctionChecks = () => {
@@ -2056,7 +2060,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1836+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1844+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2128,7 +2132,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.549.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout coverage snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.550.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for vehicle applicability snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3266,9 +3270,13 @@ const normalizedVehicleApplicabilitySnakeArrays = obd.normalizeVehicleApplicabil
   summary_label: "Toyota Prius / Applicable candidate found"
 });
 check(normalizedVehicleApplicabilitySnakeArrays.maker === "Toyota" && normalizedVehicleApplicabilitySnakeArrays.modelCode === "ZVW30", "Vehicle applicability normalization did not accept snake_case base aliases");
+check(normalizedVehicleApplicabilitySnakeArrays.model_code === "ZVW30" && normalizedVehicleApplicabilitySnakeArrays.engine_code === "2ZR-FXE", "Vehicle applicability normalization did not expose snake_case vehicle identity aliases");
 check(normalizedVehicleApplicabilitySnakeArrays.candidateRangeCount === 2 && normalizedVehicleApplicabilitySnakeArrays.applicableRangeCount === 1, "Vehicle applicability normalization did not derive counts from snake_case range aliases");
+check(normalizedVehicleApplicabilitySnakeArrays.candidate_range_count === 2 && normalizedVehicleApplicabilitySnakeArrays.applicable_range_count === 1, "Vehicle applicability normalization did not expose snake_case range count aliases");
 check(normalizedVehicleApplicabilitySnakeArrays.supportedEngineCodeCount === 1, "Vehicle applicability normalization did not derive supported engine count from snake_case aliases");
+check(normalizedVehicleApplicabilitySnakeArrays.supported_engine_code_count === 1 && normalizedVehicleApplicabilitySnakeArrays.catalog_matched === true, "Vehicle applicability normalization did not expose snake_case supported engine and match aliases");
 check(normalizedVehicleApplicabilitySnakeArrays.status === "matched" && normalizedVehicleApplicabilitySnakeArrays.summaryLabel === "Toyota Prius / Applicable candidate found", "Vehicle applicability normalization did not preserve snake_case status inputs");
+check(normalizedVehicleApplicabilitySnakeArrays.summary_label === "Toyota Prius / Applicable candidate found", "Vehicle applicability normalization did not expose snake_case summary label");
 const normalizedVehicleApplicabilityCamelArrays = obd.normalizeVehicleApplicabilitySnapshot({
   make: "Toyota",
   model: "Corolla",
@@ -8994,6 +9002,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1836");
+  console.log("OBD read-only safety checks: 1844");
   console.log("Errors: 0");
 }

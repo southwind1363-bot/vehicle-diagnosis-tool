@@ -1864,17 +1864,27 @@
       maker,
       model,
       modelCode,
+      model_code: modelCode,
       year,
       engineCode,
+      engine_code: engineCode,
       catalogMatched,
+      catalog_matched: catalogMatched,
       yearMatched,
+      year_matched: yearMatched,
       engineMatched,
+      engine_matched: engineMatched,
       modelCodeMatched,
+      model_code_matched: modelCodeMatched,
       candidateRangeCount,
+      candidate_range_count: candidateRangeCount,
       applicableRangeCount,
+      applicable_range_count: applicableRangeCount,
       supportedEngineCodeCount,
+      supported_engine_code_count: supportedEngineCodeCount,
       status,
-      summaryLabel
+      summaryLabel,
+      summary_label: summaryLabel
     };
   }
 
