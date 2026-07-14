@@ -1065,12 +1065,14 @@ const ecuResponseSummaryFunctionChecks = () => {
   check(Boolean(ecuResponseSummaryFunctionSource), "normalizeEcuResponseSummary is missing from obd-readonly.js");
   if (ecuResponseSummaryFunctionSource) {
     const functionBody = ecuResponseSummaryFunctionSource[0];
-    check(functionBody.includes('const source = input.source || "diagnostic_core";'), "normalizeEcuResponseSummary should default source to diagnostic_core");
-    check(functionBody.includes('Array.isArray(input.ecu_responses)') && functionBody.includes('Array.isArray(input.ecuResponseRows)'), "normalizeEcuResponseSummary should accept ECU response array aliases");
-    check(functionBody.includes('id: String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId'), "normalizeEcuResponseSummary should normalize ECU id aliases");
-    check(functionBody.includes('dtcCount: Number.isInteger(row?.dtc_count)') && functionBody.includes('Array.isArray(row?.codes) ? row.codes.length : null'), "normalizeEcuResponseSummary should normalize DTC count aliases and arrays");
+    check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"') && functionBody.includes('input.data.communication_protocol'), "normalizeEcuResponseSummary should unwrap data payloads and preserve protocol aliases");
+    check(functionBody.includes('const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";'), "normalizeEcuResponseSummary should default source from normalized aliases");
+    check(functionBody.includes('Array.isArray(sourceInput.ecu_responses)') && functionBody.includes('Array.isArray(sourceInput.ecuResponseRows)') && functionBody.includes('Array.isArray(sourceInput.controllers)'), "normalizeEcuResponseSummary should accept ECU response array aliases");
+    check(functionBody.includes('row?.module_id || row?.moduleId') && functionBody.includes('row?.controller_id || row?.controllerId'), "normalizeEcuResponseSummary should normalize ECU id aliases");
+    check(functionBody.includes('dtcCount: Number.isInteger(row?.dtc_count)') && functionBody.includes('Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null'), "normalizeEcuResponseSummary should normalize DTC count aliases and arrays");
     check(functionBody.includes('negativeResponseCount: Number.isInteger(row?.negative_response_count)') && functionBody.includes('negativeRequestedServices:'), "normalizeEcuResponseSummary should normalize negative response counts and service aliases");
-    check(functionBody.includes('responseTimeMs: Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
+    check(functionBody.includes('row?.response_status || row?.responseStatus') && functionBody.includes('row?.display_name') && functionBody.includes('row?.displayName'), "normalizeEcuResponseSummary should normalize status and display name aliases");
+    check(functionBody.includes('responseTimeMs: Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('row?.elapsed_ms') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
   }
 };
 const ecuInfoRowsFunctionChecks = () => {
@@ -1955,7 +1957,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1375+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1380+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2027,7 +2029,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.494.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for session temporal aliases");
+check(appSource.includes('const APP_VERSION = "2.495.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for ECU response aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2351,6 +2353,26 @@ check(ecuResponseSummaryRowAliases.ecus[0]?.address === "7E9", "ECU response sum
 check(ecuResponseSummaryRowAliases.ecus[0]?.services.join(",") === "01,09", "ECU response summary requestedServices alias was not normalized");
 check(ecuResponseSummaryRowAliases.ecus[0]?.negativeRequestedServices[0] === "22", "ECU response summary negativeServices alias was not normalized");
 check(ecuResponseSummaryRowAliases.ecus[0]?.responseTimeMs === 62, "ECU response summary latencyMs alias was not normalized");
+const ecuResponseSummaryDataAliases = obd.normalizeEcuResponseSummary({
+  data: {
+    source_type: "bridge_import",
+    communication_protocol: "ISO15765-4",
+    controllers: [
+      {
+        controller_id: "7EA",
+        display_name: "Body ECU",
+        response_status: "ok",
+        dtcCodes: ["B1234", "B1235"],
+        requested_services: ["03"],
+        elapsed_ms: 71
+      }
+    ],
+    timestamp: "2026-07-07T01:00:00Z"
+  }
+});
+check(ecuResponseSummaryDataAliases.source === "bridge_import" && ecuResponseSummaryDataAliases.protocol === "ISO15765-4", "ECU response summary did not preserve data payload source and protocol aliases");
+check(ecuResponseSummaryDataAliases.capturedAt === "2026-07-07T01:00:00Z" && ecuResponseSummaryDataAliases.ecus[0]?.address === "7EA", "ECU response summary did not preserve timestamp and controller aliases");
+check(ecuResponseSummaryDataAliases.ecus[0]?.dtcCount === 2 && ecuResponseSummaryDataAliases.ecus[0]?.responseTimeMs === 71, "ECU response summary did not normalize dtcCodes and elapsed_ms aliases");
 const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_pending_dtc",
   ok: true,
@@ -8309,6 +8331,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1375");
+  console.log("OBD read-only safety checks: 1380");
   console.log("Errors: 0");
 }

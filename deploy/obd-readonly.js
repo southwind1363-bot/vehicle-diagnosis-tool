@@ -6318,37 +6318,51 @@
   }
 
   function normalizeEcuResponseSummary(input = {}) {
-    const source = input.source || "diagnostic_core";
-    const rows = Array.isArray(input)
+    const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
+      ? {
+        ...input.data,
+        source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        captured_at: input.data.captured_at || input.data.capturedAt || input.data.timestamp || input.captured_at || input.capturedAt || input.timestamp,
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+      }
+      : input;
+    const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const rows = Array.isArray(sourceInput)
       ? input
-      : Array.isArray(input.ecus)
-        ? input.ecus
-        : Array.isArray(input.ecu_responses)
-          ? input.ecu_responses
-          : Array.isArray(input.ecuResponses)
-            ? input.ecuResponses
-            : Array.isArray(input.ecu_response_rows)
-              ? input.ecu_response_rows
-              : Array.isArray(input.ecuResponseRows)
-                ? input.ecuResponseRows
-                : [];
+      : Array.isArray(sourceInput.ecus)
+        ? sourceInput.ecus
+        : Array.isArray(sourceInput.modules)
+          ? sourceInput.modules
+          : Array.isArray(sourceInput.controllers)
+            ? sourceInput.controllers
+            : Array.isArray(sourceInput.ecu_responses)
+              ? sourceInput.ecu_responses
+              : Array.isArray(sourceInput.ecuResponses)
+                ? sourceInput.ecuResponses
+                : Array.isArray(sourceInput.ecu_response_rows)
+                  ? sourceInput.ecu_response_rows
+                  : Array.isArray(sourceInput.ecuResponseRows)
+                    ? sourceInput.ecuResponseRows
+                    : Array.isArray(sourceInput.items)
+                      ? sourceInput.items
+                      : [];
     return {
       schemaVersion: "ecu_response_summary_v1",
       source,
-      capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || input.obd_protocol || null,
+      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       ecus: rows.map((row, index) => ({
-        id: String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || `ecu_${index + 1}`).slice(0, 40),
-        name: row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : null,
-        address: row?.address || row?.ecu || row?.ecu_id || row?.ecuId || null,
-        status: row?.status || "unknown",
-        dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : null,
+        id: String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40),
+        name: row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : null,
+        address: row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null,
+        status: row?.status || row?.response_status || row?.responseStatus || "unknown",
+        dtcCount: Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null,
         responseCount: Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.responses) ? row.responses : null,
         services: Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
         negativeResponseCount: Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negatives) ? row.negatives : 0,
         negativeRequestedServices: Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negative_services) ? row.negative_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeServices) ? row.negativeServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [],
         negativeResponseLabels: Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negative_labels) ? row.negative_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeLabels) ? row.negativeLabels.map((item) => String(item)).slice(0, 16) : [],
-        responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : null
+        responseTimeMs: Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null
       })),
       retainedRawText: false
     };
