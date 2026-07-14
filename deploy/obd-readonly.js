@@ -5549,6 +5549,48 @@
     };
   }
 
+  function normalizeReadoutQualitySummaryAliases(summary = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const schemaVersion = summary.schemaVersion || summary.schema_version || "readout_quality_summary_v1";
+    const issueIds = Array.isArray(summary.issueIds)
+      ? [...new Set(summary.issueIds.filter(Boolean).map(String))].sort()
+      : Array.isArray(summary.issue_ids)
+        ? [...new Set(summary.issue_ids.filter(Boolean).map(String))].sort()
+        : [];
+    const toCount = (camelKey, snakeKey, fallback = 0) => {
+      const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
+      return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
+    };
+    const reviewRequired = pickDefined(summary.reviewRequired, summary.review_required, issueIds.length > 0) === true;
+    const readyForInterpretation = pickDefined(summary.readyForInterpretation, summary.ready_for_interpretation, !reviewRequired) === true;
+    const issueCount = toCount("issueCount", "issue_count", issueIds.length);
+    const rawPidUndecodedCount = toCount("rawPidUndecodedCount", "raw_pid_undecoded_count", 0);
+    const readinessIncompleteCount = toCount("readinessIncompleteCount", "readiness_incomplete_count", 0);
+    const ecuInfoMissingKeyCount = toCount("ecuInfoMissingKeyCount", "ecu_info_missing_key_count", 0);
+    const onboardMonitorFailedCount = toCount("onboardMonitorFailedCount", "onboard_monitor_failed_count", 0);
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      issueCount,
+      issue_count: issueCount,
+      issueIds,
+      issue_ids: issueIds,
+      reviewRequired,
+      review_required: reviewRequired,
+      readyForInterpretation,
+      ready_for_interpretation: readyForInterpretation,
+      rawPidUndecodedCount,
+      raw_pid_undecoded_count: rawPidUndecodedCount,
+      readinessIncompleteCount,
+      readiness_incomplete_count: readinessIncompleteCount,
+      ecuInfoMissingKeyCount,
+      ecu_info_missing_key_count: ecuInfoMissingKeyCount,
+      onboardMonitorFailedCount,
+      onboard_monitor_failed_count: onboardMonitorFailedCount
+    };
+  }
+
   function buildImportedReadoutRequestPlanGateComparisonSummary(importedGateSummary = null, currentGateSummary = {}) {
     if (!importedGateSummary || typeof importedGateSummary !== "object") return null;
     const currentSummary = currentGateSummary && typeof currentGateSummary === "object" ? currentGateSummary : {};
@@ -7428,11 +7470,13 @@
       || bridgeSession?.analysisReadinessSummary
       || bridgeSession?.analysis_readiness_summary
       || null;
-    const importedReadoutQualitySummary = bridgeImport?.readoutQualitySummary
+    const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(bridgeImport?.readoutQualitySummary
       || bridgeImport?.readout_quality_summary
       || bridgeSession?.readoutQualitySummary
       || bridgeSession?.readout_quality_summary
-      || null;
+      || bridgeImportInput?.readoutQualitySummary
+      || bridgeImportInput?.readout_quality_summary
+      || null);
     const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary
       || bridgeImport?.readout_request_plan_gate_summary
       || bridgeSession?.readoutRequestPlanGateSummary
@@ -9568,7 +9612,7 @@
     const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;
     const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;
     const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
-    const importedReadoutQualitySummary = sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null;
+    const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null;
     const importedCoreReadoutInventorySummary = sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null;
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
