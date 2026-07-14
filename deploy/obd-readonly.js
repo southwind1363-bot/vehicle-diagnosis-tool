@@ -8508,6 +8508,10 @@
                 ? sourceInput.freeze_frame_rows
                 : Array.isArray(sourceInput.freezeFrameRows)
                   ? sourceInput.freezeFrameRows
+                  : Array.isArray(sourceInput.pid_values)
+                    ? sourceInput.pid_values
+                    : Array.isArray(sourceInput.pidValues)
+                      ? sourceInput.pidValues
                   : Array.isArray(sourceInput.monitorValues)
                     ? sourceInput.monitorValues
                     : Array.isArray(sourceInput.monitor_values)

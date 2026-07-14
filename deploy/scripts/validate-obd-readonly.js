@@ -1149,7 +1149,7 @@ const freezeFrameSnapshotFunctionChecks = () => {
     const functionBody = freezeFrameSnapshotFunctionSource[0];
     check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"') && functionBody.includes('input.data.communication_protocol'), "normalizeFreezeFrameSnapshot should unwrap data payloads and preserve protocol aliases");
     check(functionBody.includes('const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";'), "normalizeFreezeFrameSnapshot should default source from normalized aliases");
-    check(functionBody.includes('Array.isArray(sourceInput.freezeFrameValues)') && functionBody.includes('Array.isArray(sourceInput.freeze_frame_rows)') && functionBody.includes('Array.isArray(sourceInput.monitorValues)') && functionBody.includes('Array.isArray(sourceInput.items)'), "normalizeFreezeFrameSnapshot should accept freeze-frame value array aliases");
+    check(functionBody.includes('Array.isArray(sourceInput.freezeFrameValues)') && functionBody.includes('Array.isArray(sourceInput.freeze_frame_rows)') && functionBody.includes('Array.isArray(sourceInput.pid_values)') && functionBody.includes('Array.isArray(sourceInput.monitorValues)') && functionBody.includes('Array.isArray(sourceInput.items)'), "normalizeFreezeFrameSnapshot should accept freeze-frame value array aliases");
     check(functionBody.includes('normalizeBridgePidValue(row, index)') && functionBody.includes('source: "freeze_frame"'), "normalizeFreezeFrameSnapshot should normalize rows through PID value normalization and mark freeze-frame source");
     check(functionBody.includes('freezeFramePriority: catalogItem?.priority || null') && functionBody.includes('interpretationNote: catalogItem?.interpretationNote || item.supportNote'), "normalizeFreezeFrameSnapshot should enrich values from freeze-frame item catalog");
     check(functionBody.includes('sourceInput.trigger_dtc') && functionBody.includes('sourceInput.triggerCode') && functionBody.includes('sourceInput.dtcCode') && functionBody.includes('trigger_dtc: triggerDtc'), "normalizeFreezeFrameSnapshot should normalize trigger DTC aliases");
@@ -2097,7 +2097,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1935+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1937+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2169,7 +2169,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.569.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for DTC status code array alias normalization");
+check(appSource.includes('const APP_VERSION = "2.570.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for freeze-frame PID values alias normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7237,6 +7237,14 @@ check(normalizedFreezeFrameAliasSnapshot.triggerDtc === "P0128" && normalizedFre
 check(normalizedFreezeFrameAliasSnapshot.monitorValues.length === 2 && normalizedFreezeFrameAliasSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 72, "normalizeFreezeFrameSnapshot did not normalize freeze-frame value aliases");
 check(normalizedFreezeFrameAliasSnapshot.trigger_dtc === "P0128" && normalizedFreezeFrameAliasSnapshot.captured_at === "2026-07-07T00:30:00Z", "normalizeFreezeFrameSnapshot did not expose snake_case trigger and captured aliases");
 check(normalizedFreezeFrameAliasSnapshot.monitor_values.length === 2 && normalizedFreezeFrameAliasSnapshot.monitor_value_summary.total_count === 2, "normalizeFreezeFrameSnapshot did not expose snake_case monitor values and summary aliases");
+const normalizedFreezeFramePidValuesAliasSnapshot = obd.normalizeFreezeFrameSnapshot({
+  trigger_dtc: "P0171",
+  pid_values: [
+    { id: "engine_speed", value: 1120, unit: "rpm" },
+    { pid: "05", value: 76, unit: "C" }
+  ]
+});
+check(normalizedFreezeFramePidValuesAliasSnapshot.monitorValues.length === 2 && normalizedFreezeFramePidValuesAliasSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 76, "normalizeFreezeFrameSnapshot did not normalize pid_values alias input");
 const scanSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-1",
   dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }, "P0300"] },
@@ -9343,6 +9351,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1935");
+  console.log("OBD read-only safety checks: 1937");
   console.log("Errors: 0");
 }
