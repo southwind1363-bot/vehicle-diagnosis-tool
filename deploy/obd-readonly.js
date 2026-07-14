@@ -6296,14 +6296,22 @@
     const readoutQualityReviewRequestSafetySummary = buildReadoutRequestPlanSafetySummary(readoutQualityReviewRequestSummaries, []);
     const readoutQualityReviewRequestPlanSummary = {
       schemaVersion: "readout_quality_review_request_plan_v1",
+      schema_version: "readout_quality_review_request_plan_v1",
       requestCount: readoutQualityReviewRequestSummaries.length,
+      request_count: readoutQualityReviewRequestSummaries.length,
       readoutIds: readoutQualityReviewRequestSummaries.map((item) => item.readoutId).filter(Boolean),
+      readout_ids: readoutQualityReviewRequestSummaries.map((item) => item.readoutId).filter(Boolean),
       bridgeIntents: [...new Set(readoutQualityReviewRequestSummaries.map((item) => item.bridgeIntent).filter(Boolean))],
+      bridge_intents: [...new Set(readoutQualityReviewRequestSummaries.map((item) => item.bridgeIntent).filter(Boolean))],
       primaryRequest: primaryReadoutQualityReviewRequest,
+      primary_request: primaryReadoutQualityReviewRequest,
       ...readoutQualityReviewRequestSafetySummary,
       readOnly: readoutQualityReviewRequestSafetySummary.allReadOnly === true,
+      read_only: readoutQualityReviewRequestSafetySummary.allReadOnly === true,
       wouldTransmit: false,
-      vehicleCommandEnabled: false
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
     return {
       schemaVersion: "imported_session_comparison_v1",
