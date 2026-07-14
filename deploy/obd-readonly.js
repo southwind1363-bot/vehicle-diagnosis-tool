@@ -7805,20 +7805,36 @@
       sourceInput.dtc_code
     ].filter(Boolean).join(" "));
 
+    const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const triggerDtc = triggerCodes[0] || null;
+    const monitorValueSummary = buildMonitorValueSummary(monitorValues);
+    const capturedItemCount = monitorValues.length;
+    const expectedItemCount = expectedItems.length;
+    const monitorInsights = analyzeMonitorValues(monitorValues);
+
     return {
       schemaVersion: "freeze_frame_snapshot_v1",
       schema_version: "freeze_frame_snapshot_v1",
       source,
-      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      capturedAt,
+      captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
-      triggerDtc: triggerCodes[0] || null,
+      triggerDtc,
+      trigger_dtc: triggerDtc,
       monitorValues,
-      monitorValueSummary: buildMonitorValueSummary(monitorValues),
+      monitor_values: monitorValues,
+      monitorValueSummary,
+      monitor_value_summary: monitorValueSummary,
       expectedItems,
-      capturedItemCount: monitorValues.length,
-      expectedItemCount: expectedItems.length,
-      monitorInsights: analyzeMonitorValues(monitorValues),
-      retainedRawText: false
+      expected_items: expectedItems,
+      capturedItemCount,
+      captured_item_count: capturedItemCount,
+      expectedItemCount,
+      expected_item_count: expectedItemCount,
+      monitorInsights,
+      monitor_insights: monitorInsights,
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 
