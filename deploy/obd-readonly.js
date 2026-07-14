@@ -4668,6 +4668,194 @@
     };
   }
 
+  function normalizeDiagnosticFlowSummaryAliases(summary = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const schemaVersion = summary.schemaVersion || summary.schema_version || "diagnostic_flow_summary_v1";
+    const toCount = (camelKey, snakeKey, fallback = 0) => {
+      const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
+      return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
+    };
+    const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
+    const nextReadoutRequest = summary.nextReadoutRequest || summary.next_readout_request || null;
+    const pendingReadoutRequestQueue = Array.isArray(summary.pendingReadoutRequestQueue)
+      ? summary.pendingReadoutRequestQueue
+      : Array.isArray(summary.pending_readout_request_queue)
+        ? summary.pending_readout_request_queue
+        : [];
+    const pendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
+    const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null;
+    const readoutRequestPlanSummary = summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null;
+    const analysisChecklist = Array.isArray(summary.analysisChecklist)
+      ? summary.analysisChecklist
+      : Array.isArray(summary.analysis_checklist)
+        ? summary.analysis_checklist
+        : [];
+    const analysisChecklistById = summary.analysisChecklistById || summary.analysis_checklist_by_id || {};
+    const analysisChecklistSummary = summary.analysisChecklistSummary || summary.analysis_checklist_summary || {};
+    const requiredReadoutsChecklist = summary.requiredReadoutsChecklist || summary.required_readouts_checklist || null;
+    const blockingWarningsChecklist = summary.blockingWarningsChecklist || summary.blocking_warnings_checklist || null;
+    const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
+    const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
+    const vehicleApplicabilityChecklist = summary.vehicleApplicabilityChecklist || summary.vehicle_applicability_checklist || null;
+    const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
+    const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
+    const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+    const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
+    const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const blockingReasonIds = normalizeIds(summary.blockingReasonIds || summary.blocking_reason_ids);
+    const checklistBlockedIds = normalizeIds(summary.checklistBlockedIds || summary.checklist_blocked_ids);
+    const checklistReviewIds = normalizeIds(summary.checklistReviewIds || summary.checklist_review_ids);
+    const readoutQualityIssueIds = normalizeIds(summary.readoutQualityIssueIds || summary.readout_quality_issue_ids);
+    const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
+    const requestPlanBlockedReasonIds = normalizeIds(summary.requestPlanBlockedReasonIds || summary.request_plan_blocked_reason_ids);
+    const requestPlanGateActionIds = normalizeIds(summary.requestPlanGateActionIds || summary.request_plan_gate_action_ids);
+    const requestPlanGateActionReasonIds = normalizeIds(summary.requestPlanGateActionReasonIds || summary.request_plan_gate_action_reason_ids);
+    const requestPlanGateActionReadoutIds = normalizeIds(summary.requestPlanGateActionReadoutIds || summary.request_plan_gate_action_readout_ids);
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      stage: summary.stage || "diagnostic_core",
+      status: summary.status || "not_started",
+      currentStep: pickDefined(summary.currentStep, summary.current_step, null),
+      current_step: pickDefined(summary.current_step, summary.currentStep, null),
+      nextAction: pickDefined(summary.nextAction, summary.next_action, null),
+      next_action: pickDefined(summary.next_action, summary.nextAction, null),
+      nextReadoutId: pickDefined(summary.nextReadoutId, summary.next_readout_id, null),
+      next_readout_id: pickDefined(summary.next_readout_id, summary.nextReadoutId, null),
+      nextReadoutLabel: pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
+      next_readout_label: pickDefined(summary.next_readout_label, summary.nextReadoutLabel, null),
+      nextReadoutStatus: pickDefined(summary.nextReadoutStatus, summary.next_readout_status, null),
+      next_readout_status: pickDefined(summary.next_readout_status, summary.nextReadoutStatus, null),
+      nextReadoutSource: pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
+      next_readout_source: pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
+      nextReadoutQueuePosition: pickDefined(summary.nextReadoutQueuePosition, summary.next_readout_queue_position, null),
+      next_readout_queue_position: pickDefined(summary.next_readout_queue_position, summary.nextReadoutQueuePosition, null),
+      nextReadoutRequest,
+      next_readout_request: nextReadoutRequest,
+      nextReadoutBridgeIntent: pickDefined(summary.nextReadoutBridgeIntent, summary.next_readout_bridge_intent, nextReadoutRequest?.bridgeIntent, null),
+      next_readout_bridge_intent: pickDefined(summary.next_readout_bridge_intent, summary.nextReadoutBridgeIntent, nextReadoutRequest?.bridgeIntent, null),
+      nextReadoutServiceMode: pickDefined(summary.nextReadoutServiceMode, summary.next_readout_service_mode, nextReadoutRequest?.serviceMode, null),
+      next_readout_service_mode: pickDefined(summary.next_readout_service_mode, summary.nextReadoutServiceMode, nextReadoutRequest?.serviceMode, null),
+      nextReadoutExecutionEnabled: pickDefined(summary.nextReadoutExecutionEnabled, summary.next_readout_execution_enabled, nextReadoutRequest?.executionEnabled, false) === true,
+      next_readout_execution_enabled: pickDefined(summary.next_readout_execution_enabled, summary.nextReadoutExecutionEnabled, nextReadoutRequest?.executionEnabled, false) === true,
+      pendingReadoutRequestCount: toCount("pendingReadoutRequestCount", "pending_readout_request_count", pendingReadoutRequestQueue.length),
+      pending_readout_request_count: toCount("pendingReadoutRequestCount", "pending_readout_request_count", pendingReadoutRequestQueue.length),
+      pendingReadoutRequestQueue,
+      pending_readout_request_queue: pendingReadoutRequestQueue,
+      pendingReadoutRequestNext: summary.pendingReadoutRequestNext || summary.pending_readout_request_next || pendingReadoutRequestQueue.find((item) => item?.isNext) || pendingReadoutRequestQueue[0] || null,
+      pending_readout_request_next: summary.pending_readout_request_next || summary.pendingReadoutRequestNext || pendingReadoutRequestQueue.find((item) => item?.isNext) || pendingReadoutRequestQueue[0] || null,
+      pendingReadoutRequestPlan,
+      pending_readout_request_plan: pendingReadoutRequestPlan,
+      readoutRequestPlanGateSummary,
+      readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+      readoutRequestPlanSummary,
+      readout_request_plan_summary: readoutRequestPlanSummary,
+      requestPlanMappedCount: toCount("requestPlanMappedCount", "request_plan_mapped_count", 0),
+      request_plan_mapped_count: toCount("requestPlanMappedCount", "request_plan_mapped_count", 0),
+      requestPlanUnmappedCount: toCount("requestPlanUnmappedCount", "request_plan_unmapped_count", 0),
+      request_plan_unmapped_count: toCount("requestPlanUnmappedCount", "request_plan_unmapped_count", 0),
+      requestPlanBlockedReasonIds,
+      request_plan_blocked_reason_ids: requestPlanBlockedReasonIds,
+      requestPlanGateActionIds,
+      request_plan_gate_action_ids: requestPlanGateActionIds,
+      requestPlanGateActionReasonIds,
+      request_plan_gate_action_reason_ids: requestPlanGateActionReasonIds,
+      requestPlanGateActionReadoutIds,
+      request_plan_gate_action_readout_ids: requestPlanGateActionReadoutIds,
+      analysisChecklist,
+      analysis_checklist: analysisChecklist,
+      analysisChecklistById,
+      analysis_checklist_by_id: analysisChecklistById,
+      analysisChecklistSummary,
+      analysis_checklist_summary: analysisChecklistSummary,
+      requiredReadoutsChecklist,
+      required_readouts_checklist: requiredReadoutsChecklist,
+      blockingWarningsChecklist,
+      blocking_warnings_checklist: blockingWarningsChecklist,
+      readoutQualityChecklist,
+      readout_quality_checklist: readoutQualityChecklist,
+      readoutQualitySummary,
+      readout_quality_summary: readoutQualitySummary,
+      readoutQualityReviewRequired: pickDefined(summary.readoutQualityReviewRequired, summary.readout_quality_review_required, false) === true,
+      readout_quality_review_required: pickDefined(summary.readout_quality_review_required, summary.readoutQualityReviewRequired, false) === true,
+      readoutQualityIssueCount: toCount("readoutQualityIssueCount", "readout_quality_issue_count", readoutQualityIssueIds.length),
+      readout_quality_issue_count: toCount("readoutQualityIssueCount", "readout_quality_issue_count", readoutQualityIssueIds.length),
+      readoutQualityIssueIds,
+      readout_quality_issue_ids: readoutQualityIssueIds,
+      vehicleApplicabilityChecklist,
+      vehicle_applicability_checklist: vehicleApplicabilityChecklist,
+      pendingQueueNextReadoutId: pickDefined(summary.pendingQueueNextReadoutId, summary.pending_queue_next_readout_id, null),
+      pending_queue_next_readout_id: pickDefined(summary.pending_queue_next_readout_id, summary.pendingQueueNextReadoutId, null),
+      recommendedReadoutId: pickDefined(summary.recommendedReadoutId, summary.recommended_readout_id, null),
+      recommended_readout_id: pickDefined(summary.recommended_readout_id, summary.recommendedReadoutId, null),
+      recommendedReadoutStatus: pickDefined(summary.recommendedReadoutStatus, summary.recommended_readout_status, null),
+      recommended_readout_status: pickDefined(summary.recommended_readout_status, summary.recommendedReadoutStatus, null),
+      recommendedReadoutSource: pickDefined(summary.recommendedReadoutSource, summary.recommended_readout_source, null),
+      recommended_readout_source: pickDefined(summary.recommended_readout_source, summary.recommendedReadoutSource, null),
+      readyForAnalysis,
+      ready_for_analysis: readyForAnalysis,
+      canStartAnalysis: pickDefined(summary.canStartAnalysis, summary.can_start_analysis, readyForAnalysis) === true,
+      can_start_analysis: pickDefined(summary.can_start_analysis, summary.canStartAnalysis, readyForAnalysis) === true,
+      analysisBlocked: pickDefined(summary.analysisBlocked, summary.analysis_blocked, !readyForAnalysis) === true,
+      analysis_blocked: pickDefined(summary.analysis_blocked, summary.analysisBlocked, !readyForAnalysis) === true,
+      applicabilityStatus: pickDefined(summary.applicabilityStatus, summary.applicability_status, "unknown"),
+      applicability_status: pickDefined(summary.applicability_status, summary.applicabilityStatus, "unknown"),
+      vehicleApplicabilityReviewRequired: pickDefined(summary.vehicleApplicabilityReviewRequired, summary.vehicle_applicability_review_required, false) === true,
+      vehicle_applicability_review_required: pickDefined(summary.vehicle_applicability_review_required, summary.vehicleApplicabilityReviewRequired, false) === true,
+      vehicleApplicabilityBlocking: pickDefined(summary.vehicleApplicabilityBlocking, summary.vehicle_applicability_blocking, false) === true,
+      vehicle_applicability_blocking: pickDefined(summary.vehicle_applicability_blocking, summary.vehicleApplicabilityBlocking, false) === true,
+      blockingReasonIds,
+      blocking_reason_ids: blockingReasonIds,
+      primaryBlockingReasonId: pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null),
+      primary_blocking_reason_id: pickDefined(summary.primary_blocking_reason_id, summary.primaryBlockingReasonId, null),
+      primaryBlockingReason,
+      primary_blocking_reason: primaryBlockingReason,
+      primaryBlockingReadoutId: pickDefined(summary.primaryBlockingReadoutId, summary.primary_blocking_readout_id, null),
+      primary_blocking_readout_id: pickDefined(summary.primary_blocking_readout_id, summary.primaryBlockingReadoutId, null),
+      primaryBlockingReadoutLabel: pickDefined(summary.primaryBlockingReadoutLabel, summary.primary_blocking_readout_label, null),
+      primary_blocking_readout_label: pickDefined(summary.primary_blocking_readout_label, summary.primaryBlockingReadoutLabel, null),
+      primaryBlockingReadoutRequest,
+      primary_blocking_readout_request: primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
+      primary_blocking_summary: primaryBlockingSummary,
+      primaryBlockingReadoutBridgeIntent: pickDefined(summary.primaryBlockingReadoutBridgeIntent, summary.primary_blocking_readout_bridge_intent, primaryBlockingReadoutRequest?.bridgeIntent, null),
+      primary_blocking_readout_bridge_intent: pickDefined(summary.primary_blocking_readout_bridge_intent, summary.primaryBlockingReadoutBridgeIntent, primaryBlockingReadoutRequest?.bridgeIntent, null),
+      primaryBlockingReadoutExecutionEnabled: pickDefined(summary.primaryBlockingReadoutExecutionEnabled, summary.primary_blocking_readout_execution_enabled, primaryBlockingReadoutRequest?.executionEnabled, false) === true,
+      primary_blocking_readout_execution_enabled: pickDefined(summary.primary_blocking_readout_execution_enabled, summary.primaryBlockingReadoutExecutionEnabled, primaryBlockingReadoutRequest?.executionEnabled, false) === true,
+      readoutCollectionRequired: pickDefined(summary.readoutCollectionRequired, summary.readout_collection_required, false) === true,
+      readout_collection_required: pickDefined(summary.readout_collection_required, summary.readoutCollectionRequired, false) === true,
+      completionPercent,
+      completion_percent: completionPercent,
+      requiredReadoutCount: toCount("requiredReadoutCount", "required_readout_count", 0),
+      required_readout_count: toCount("requiredReadoutCount", "required_readout_count", 0),
+      capturedReadoutCount: toCount("capturedReadoutCount", "captured_readout_count", 0),
+      captured_readout_count: toCount("capturedReadoutCount", "captured_readout_count", 0),
+      missingReadoutCount: toCount("missingReadoutCount", "missing_readout_count", 0),
+      missing_readout_count: toCount("missingReadoutCount", "missing_readout_count", 0),
+      emptyReadoutCount: toCount("emptyReadoutCount", "empty_readout_count", 0),
+      empty_readout_count: toCount("emptyReadoutCount", "empty_readout_count", 0),
+      pendingReadoutCount: toCount("pendingReadoutCount", "pending_readout_count", 0),
+      pending_readout_count: toCount("pendingReadoutCount", "pending_readout_count", 0),
+      checklistTotalCount: toCount("checklistTotalCount", "checklist_total_count", 0),
+      checklist_total_count: toCount("checklistTotalCount", "checklist_total_count", 0),
+      checklistCompleteCount: toCount("checklistCompleteCount", "checklist_complete_count", 0),
+      checklist_complete_count: toCount("checklistCompleteCount", "checklist_complete_count", 0),
+      checklistBlockingCount: toCount("checklistBlockingCount", "checklist_blocking_count", checklistBlockedIds.length),
+      checklist_blocking_count: toCount("checklistBlockingCount", "checklist_blocking_count", checklistBlockedIds.length),
+      checklistReviewCount: toCount("checklistReviewCount", "checklist_review_count", checklistReviewIds.length),
+      checklist_review_count: toCount("checklistReviewCount", "checklist_review_count", checklistReviewIds.length),
+      checklistPendingCount: toCount("checklistPendingCount", "checklist_pending_count", 0),
+      checklist_pending_count: toCount("checklistPendingCount", "checklist_pending_count", 0),
+      checklistBlockedIds,
+      checklist_blocked_ids: checklistBlockedIds,
+      checklistReviewIds,
+      checklist_review_ids: checklistReviewIds,
+      blockerCount: toCount("blockerCount", "blocker_count", blockingReasonIds.length),
+      blocker_count: toCount("blockerCount", "blocker_count", blockingReasonIds.length)
+    };
+  }
+
   function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {}) {
     if (!importedDiagnosticFlowSummary || typeof importedDiagnosticFlowSummary !== "object") return null;
     const currentFlow = currentDiagnosticFlowSummary && typeof currentDiagnosticFlowSummary === "object"
@@ -7751,11 +7939,13 @@
       || bridgeSession?.coreSessionStatus
       || bridgeSession?.core_session_status
       || null;
-    const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary
+    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(bridgeImport?.diagnosticFlowSummary
       || bridgeImport?.diagnostic_flow_summary
       || bridgeSession?.diagnosticFlowSummary
       || bridgeSession?.diagnostic_flow_summary
-      || null;
+      || bridgeImportInput?.diagnosticFlowSummary
+      || bridgeImportInput?.diagnostic_flow_summary
+      || null);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(bridgeImport?.readoutCompletionSummary
       || bridgeImport?.readout_completion_summary
       || bridgeSession?.readoutCompletionSummary
@@ -9913,7 +10103,7 @@
     const sessionInput = getDiagnosticSessionInput(input);
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;
-    const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;
+    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null);
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);

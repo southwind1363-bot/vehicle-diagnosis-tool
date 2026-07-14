@@ -715,6 +715,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('const importedReadyForAnalysis = readAliasValue(importedFlow, "readyForAnalysis") === true;') && source.includes('completionDelta: currentCompletionPercent - importedCompletionPercent,'), "imported core comparison should read alias ready and completion fields");
     check(source.includes('const importedPendingQueueNextReadoutId = readAliasValue(importedFlow, "pendingQueueNextReadoutId") || null;') && source.includes('recommendedReadoutDetailsChanged: importedRecommendedReadoutSource !== currentRecommendedReadoutSource'), "imported core comparison should compare pending queue and recommended cursor aliases");
     check(source.includes('function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {})') && source.includes('schemaVersion: "imported_diagnostic_flow_comparison_v1"') && source.includes('schema_version: "imported_diagnostic_flow_comparison_v1"'), "obd-readonly should expose imported diagnostic flow comparison summaries");
+    check(source.includes('function normalizeDiagnosticFlowSummaryAliases(summary = null)') && source.includes('schemaVersion = summary.schemaVersion || summary.schema_version || "diagnostic_flow_summary_v1"'), "obd-readonly should normalize imported diagnostic flow summary aliases");
     check(source.includes('requiredReadoutDelta: currentRequiredCount - importedRequiredCount,') && source.includes('missingReadoutDelta: currentMissingCount - importedMissingCount,'), "imported diagnostic flow comparison should compare readout completion counts");
     check(source.includes('importedChecklistBlockingCount,') && source.includes('checklistBlockingDelta: currentChecklistBlockingCount - importedChecklistBlockingCount,'), "imported diagnostic flow comparison should compare checklist blocker counts");
     check(source.includes('importedChecklistReviewIds: [...importedChecklistReviewIds],') && source.includes('vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,'), "imported diagnostic flow comparison should compare checklist ids and vehicle applicability checklist state");
@@ -1016,7 +1017,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const source = bridgeImport') && functionBody.includes('"scanner_text_and_local_bridge"') && functionBody.includes('"local_bridge"') && functionBody.includes('"scanner_text"'), "mergeDiagnosticInputs should classify merged input source");
     check(functionBody.includes('const bridgeSession = bridgeImport?.bridgeSession || bridgeImport?.bridge_session || null;'), "mergeDiagnosticInputs should accept snake_case bridge session aliases after import normalization");
     check(functionBody.includes('const importedCoreSessionStatus = bridgeImport?.coreSessionStatus') && functionBody.includes('bridgeSession?.core_session_status') && functionBody.includes('importedCoreSessionStatus,'), "mergeDiagnosticInputs should expose imported core session status separately from recalculated status");
-    check(functionBody.includes('const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary') && functionBody.includes('bridgeSession?.diagnostic_flow_summary') && functionBody.includes('importedDiagnosticFlowSummary,'), "mergeDiagnosticInputs should expose imported diagnostic flow summary separately from recalculated status");
+    check(functionBody.includes('const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(bridgeImport?.diagnosticFlowSummary') && functionBody.includes('bridgeSession?.diagnostic_flow_summary') && functionBody.includes('bridgeImportInput?.diagnostic_flow_summary') && functionBody.includes('importedDiagnosticFlowSummary,'), "mergeDiagnosticInputs should normalize and expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(bridgeImport?.readoutCompletionSummary') && functionBody.includes('bridgeSession?.readout_completion_summary') && functionBody.includes('bridgeImportInput?.readout_completion_summary') && functionBody.includes('importedReadoutCompletionSummary,'), "mergeDiagnosticInputs should normalize and expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(bridgeImport?.analysisReadinessSummary') && functionBody.includes('bridgeSession?.analysis_readiness_summary') && functionBody.includes('bridgeImportInput?.analysis_readiness_summary') && functionBody.includes('importedAnalysisReadinessSummary,'), "mergeDiagnosticInputs should normalize and expose imported analysis readiness summary separately from recalculated status");
     check(functionBody.includes('bridgeImport?.core_session_status') && functionBody.includes('bridgeImport?.diagnostic_flow_summary') && functionBody.includes('bridgeImport?.readout_completion_summary') && functionBody.includes('bridgeImport?.analysis_readiness_summary'), "mergeDiagnosticInputs should read imported core flow completion and readiness snake_case summaries");
@@ -1848,7 +1849,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('source: sessionInput.source || sessionInput.source_type || "diagnostic_core",') && functionBody.includes('source_type: sessionInput.source_type || sessionInput.source || "diagnostic_core",'), "buildDiagnosticScanSession should emit source type aliases");
     check(functionBody.includes('obd_protocol: protocol,'), "buildDiagnosticScanSession should emit obd_protocol aliases");
     check(functionBody.includes('const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;') && functionBody.includes('importedCoreSessionStatus,'), "buildDiagnosticScanSession should expose imported core session status separately from recalculated status");
-    check(functionBody.includes('const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;') && functionBody.includes('importedDiagnosticFlowSummary,'), "buildDiagnosticScanSession should expose imported diagnostic flow summary separately from recalculated status");
+    check(functionBody.includes('const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null);') && functionBody.includes('importedDiagnosticFlowSummary,'), "buildDiagnosticScanSession should normalize and expose imported diagnostic flow summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null);') && functionBody.includes('importedReadoutCompletionSummary,'), "buildDiagnosticScanSession should normalize and expose imported readout completion summary separately from recalculated status");
     check(functionBody.includes('const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null);') && functionBody.includes('importedAnalysisReadinessSummary,'), "buildDiagnosticScanSession should normalize and expose imported analysis readiness summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);') && functionBody.includes('importedReadoutRequestPlanGateSummary,'), "buildDiagnosticScanSession should expose imported readout request plan gate summary separately");
@@ -2094,7 +2095,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1927+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1930+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2166,7 +2167,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.566.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for analysis readiness summary alias normalization");
+check(appSource.includes('const APP_VERSION = "2.567.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for diagnostic flow summary alias normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4566,6 +4567,34 @@ check("nextPendingReadoutChanged" in mergedDiagnosticInputExportPayload.imported
 check("next_pending_readout_changed" in mergedDiagnosticInputExportPayload.importedCoreReadoutInventoryComparisonSummary && "current_next_pending_readout_id" in mergedDiagnosticInputExportPayload.importedCoreReadoutInventoryComparisonSummary, "Combined diagnostic inputs did not expose snake_case next pending core readout cursor");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedCoreReadoutInventoryComparisonSummary?.changed_value_count_ids) && Number.isFinite(mergedDiagnosticInputExportPayload.importedCoreReadoutInventoryComparisonSummary?.raw_pid_undecoded_delta), "Combined diagnostic inputs did not expose snake_case core readout inventory changed ids and quality delta");
 check(mergedDiagnosticInputExportPayload.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1", "Combined diagnostic inputs did not preserve imported diagnostic flow summary for bridge_session_export_v1 bridge_import input");
+const mergedDiagnosticInputSnakeFlowImport = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    diagnostic_flow_summary: {
+      schema_version: "diagnostic_flow_summary_v1",
+      stage: "diagnostic_core",
+      status: "blocked",
+      current_step: "readout_collection",
+      next_action: "collect_next_readout",
+      next_readout_id: "readiness_snapshot",
+      next_readout_label: "Readiness",
+      ready_for_analysis: false,
+      can_start_analysis: false,
+      analysis_blocked: true,
+      completion_percent: 33,
+      required_readout_count: 3,
+      captured_readout_count: 1,
+      missing_readout_count: 1,
+      empty_readout_count: 1,
+      pending_readout_count: 2,
+      checklist_blocking_count: 1,
+      checklist_blocked_ids: ["required_readouts"],
+      blocking_reason_ids: ["missing_readouts"],
+      primary_blocking_reason_id: "missing_readouts",
+      primary_blocking_readout_id: "readiness_snapshot"
+    }
+  }
+});
+check(mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1" && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.nextReadoutId === "readiness_snapshot" && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.pendingReadoutCount === 2, "Combined diagnostic inputs did not normalize snake_case-only imported diagnostic flow summary");
 check(mergedDiagnosticInputExportPayload.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not preserve imported readout completion summary for bridge_session_export_v1 bridge_import input");
 const mergedDiagnosticInputSnakeCompletionImport = obd.mergeDiagnosticInputs({
   bridge_import: {
@@ -8709,6 +8738,34 @@ check(Array.isArray(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.anal
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.analysis_checklist_by_id?.required_readouts?.pendingCount === 5, "Diagnostic scan session did not expose snake_case diagnostic flow checklist details by id");
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.required_readouts_checklist?.missingCount === 4 && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.blocking_warnings_checklist?.warningCount === 0, "Diagnostic scan session did not expose snake_case direct diagnostic flow checklist shortcuts");
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.vehicle_applicability_checklist?.state === "complete" && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.analysis_checklist_summary?.pendingCount === 1, "Diagnostic scan session did not expose snake_case vehicle applicability checklist and summary");
+const scanSessionSnakeDiagnosticFlowImport = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-snake-diagnostic-flow-import",
+  readout_coverage: scanSessionPlainCoverageOverride.readoutCoverage,
+  diagnostic_flow_summary: {
+    schema_version: "diagnostic_flow_summary_v1",
+    stage: "diagnostic_core",
+    status: "blocked",
+    current_step: "readout_collection",
+    next_action: "collect_next_readout",
+    next_readout_id: "readiness_snapshot",
+    next_readout_label: "Readiness",
+    ready_for_analysis: false,
+    can_start_analysis: false,
+    analysis_blocked: true,
+    completion_percent: 33,
+    required_readout_count: 3,
+    captured_readout_count: 1,
+    missing_readout_count: 1,
+    empty_readout_count: 1,
+    pending_readout_count: 2,
+    checklist_blocking_count: 1,
+    checklist_blocked_ids: ["required_readouts"],
+    blocking_reason_ids: ["missing_readouts"],
+    primary_blocking_reason_id: "missing_readouts",
+    primary_blocking_readout_id: "readiness_snapshot"
+  }
+});
+check(scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1" && scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowSummary?.nextReadoutId === "readiness_snapshot" && scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowComparisonSummary?.importedPendingReadoutCount === 2, "Diagnostic scan session did not normalize snake_case-only imported diagnostic flow summary");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.complete === false && scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingIds?.length === 5, "Diagnostic scan session did not expose top-level readout completion summary");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingCount === 5 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.missingCount === 4 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyCount === 1, "Diagnostic scan session did not expose readout completion counts");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyIds?.includes("freeze_frame_snapshot") && scanSessionPlainCoverageOverride.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not expose top-level readout completion ids");
@@ -9218,6 +9275,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1927");
+  console.log("OBD read-only safety checks: 1930");
   console.log("Errors: 0");
 }
