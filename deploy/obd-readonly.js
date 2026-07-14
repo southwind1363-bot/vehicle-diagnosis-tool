@@ -7585,6 +7585,8 @@
     const nested = input.session
       || input.scanSession
       || input.scan_session
+      || input.diagnosticScanSession
+      || input.diagnostic_scan_session
       || input.bridgeSession
       || input.bridge_session
       || payload?.bridgeSession
@@ -8126,7 +8128,9 @@
       || input.bridgeSession
       || input.bridge_session
       || input.scanSession
-      || input.scan_session;
+      || input.scan_session
+      || input.diagnosticScanSession
+      || input.diagnostic_scan_session;
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
     const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
