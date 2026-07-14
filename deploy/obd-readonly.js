@@ -9514,8 +9514,9 @@
     const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot;
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items;
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix;
-    const dtcSnapshot = withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion || dtcSnapshotInput?.codes
-      ? dtcSnapshotInput
+    const hasSnapshotSchema = (value) => Boolean(value?.schemaVersion || value?.schema_version);
+    const dtcSnapshot = withSchemaVersionAlias(hasSnapshotSchema(dtcSnapshotInput) || dtcSnapshotInput?.codes || dtcSnapshotInput?.dtcs
+      ? normalizeDtcSnapshot(dtcSnapshotInput)
       : sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response
         ? mergeDtcSnapshots(
             sessionInput.storedDtcResponse?.schemaVersion || sessionInput.stored_dtc_response?.schemaVersion ? (sessionInput.storedDtcResponse || sessionInput.stored_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || {})),
@@ -9529,37 +9530,57 @@
     const onboardMonitorResponseInput = withSessionProtocol(sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || {});
     const ecuInfoResponseInput = withSessionProtocol(sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || {});
     const supportedPidResponseInput = withSessionProtocol(sessionInput.supportedPidResponse || sessionInput.supported_pid_response || {});
-    const livePidSnapshot = livePidSnapshotInput?.monitorValues
-      ? livePidSnapshotInput
-      : livePidResponseInput?.monitorValues
-        ? livePidResponseInput
+    const livePidSnapshot = livePidSnapshotInput?.monitorValues || livePidSnapshotInput?.monitor_values || hasSnapshotSchema(livePidSnapshotInput)
+      ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
+      : livePidResponseInput?.monitorValues || livePidResponseInput?.monitor_values || hasSnapshotSchema(livePidResponseInput)
+        ? normalizeBridgeLivePidSnapshot(livePidResponseInput)
         : decodeLivePidResponse(livePidResponseInput);
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
-      : freezeFrameResponseInput?.schemaVersion
-        ? freezeFrameResponseInput
+      : freezeFrameSnapshotInput?.schema_version
+        ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)
+        : freezeFrameResponseInput?.schemaVersion
+          ? freezeFrameResponseInput
+          : freezeFrameResponseInput?.schema_version
+            ? normalizeFreezeFrameSnapshot(freezeFrameResponseInput)
         : decodeFreezeFrameResponse(freezeFrameResponseInput));
     const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
-      : readinessResponseInput?.schemaVersion
-        ? readinessResponseInput
+      : readinessSnapshotInput?.schema_version
+        ? normalizeReadinessSnapshot(readinessSnapshotInput)
+        : readinessResponseInput?.schemaVersion
+          ? readinessResponseInput
+          : readinessResponseInput?.schema_version
+            ? normalizeReadinessSnapshot(readinessResponseInput)
         : decodeReadinessResponse(readinessResponseInput));
     const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
-      : onboardMonitorResponseInput?.schemaVersion
-        ? onboardMonitorResponseInput
+      : onboardMonitorSnapshotInput?.schema_version
+        ? normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)
+        : onboardMonitorResponseInput?.schemaVersion
+          ? onboardMonitorResponseInput
+          : onboardMonitorResponseInput?.schema_version
+            ? normalizeOnboardMonitorSnapshot(onboardMonitorResponseInput)
         : decodeOnboardMonitorResponse(onboardMonitorResponseInput));
     const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
+      : ecuInfoSnapshotInput?.schema_version
+        ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (Array.isArray(ecuInfoSnapshotInput) || hasObjectContent(ecuInfoSnapshotInput))
         ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
         : ecuInfoResponseInput?.schemaVersion
           ? ecuInfoResponseInput
+          : ecuInfoResponseInput?.schema_version
+            ? normalizeEcuInfoSnapshot(ecuInfoResponseInput)
           : decodeEcuInfoResponse(ecuInfoResponseInput));
     const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
-      : supportedPidResponseInput?.schemaVersion
-        ? supportedPidResponseInput
+      : supportedPidMatrixInput?.schema_version
+        ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
+        : supportedPidResponseInput?.schemaVersion
+          ? supportedPidResponseInput
+          : supportedPidResponseInput?.schema_version
+            ? normalizeBridgeSupportedPidSnapshot(supportedPidResponseInput)
         : decodeSupportedPidResponse(supportedPidResponseInput));
     return buildDiagnosticScanSession({
       source: "obd_response_decoder",

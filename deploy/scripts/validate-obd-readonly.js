@@ -2112,7 +2112,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1991+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1992+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2184,7 +2184,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.590.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for session payload alias input support");
+check(appSource.includes('const APP_VERSION = "2.591.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for snake_case saved snapshot intake support");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -6357,6 +6357,23 @@ check(decodedScanSessionSnapshotSet.readinessSnapshot.incompleteCount === 1, "De
 check(decodedScanSessionSnapshotSet.onboardMonitorSnapshot.failedCount === 1, "Decoded OBD session did not accept onboard_monitor_snapshot alias input");
 check(decodedScanSessionSnapshotSet.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Decoded OBD session did not accept ecu_info_snapshot alias input");
 check(decodedScanSessionSnapshotSet.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept supported_pid_matrix alias input");
+const decodedScanSessionSnakeCaseSavedSnapshots = obd.buildDecodedObdScanSession({
+  session_id: "decoded-snake-case-saved-snapshots",
+  dtc_snapshot: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0171", status: "stored" }] },
+  live_pid_snapshot: { schema_version: "live_pid_snapshot_v1", monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 900, unit: "rpm" }] },
+  freeze_frame_snapshot: { schema_version: "freeze_frame_snapshot_v1", trigger_dtc: "P0171", monitor_values: [{ id: "coolant_temp", label: "Coolant temperature", value: 82, unit: "C" }] },
+  readiness_snapshot: { schema_version: "readiness_snapshot_v1", mil_on: true, monitors: [{ id: "catalyst", status: "not_complete", supported: true, complete: false }] },
+  onboard_monitor_snapshot: { schema_version: "onboard_monitor_snapshot_v1", monitor_tests: [{ test_id: "01", component_id: "02", value: 3, min: 1, max: 5 }] },
+  ecu_info_snapshot: { schema_version: "ecu_info_snapshot_v1", items: [{ id: "calibration_id", info_type: "04", value: "CAL-SNAKE" }] },
+  supported_pid_matrix: { schema_version: "supported_pid_matrix_v1", supported_pids: ["0C", "0D"] }
+});
+check(decodedScanSessionSnakeCaseSavedSnapshots.dtcSnapshot.codes.includes("P0171"), "Decoded OBD session dropped snake_case saved DTC snapshot input");
+check(decodedScanSessionSnakeCaseSavedSnapshots.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 900, "Decoded OBD session dropped snake_case saved live PID snapshot input");
+check(decodedScanSessionSnakeCaseSavedSnapshots.freezeFrameSnapshot.triggerDtc === "P0171", "Decoded OBD session dropped snake_case saved freeze-frame snapshot input");
+check(decodedScanSessionSnakeCaseSavedSnapshots.readinessSnapshot.milOn === true && decodedScanSessionSnakeCaseSavedSnapshots.readinessSnapshot.incompleteCount === 1, "Decoded OBD session dropped snake_case saved readiness snapshot input");
+check(decodedScanSessionSnakeCaseSavedSnapshots.onboardMonitorSnapshot.testCount === 1, "Decoded OBD session dropped snake_case saved Mode 06 snapshot input");
+check(decodedScanSessionSnakeCaseSavedSnapshots.ecuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-SNAKE", "Decoded OBD session dropped snake_case saved ECU info snapshot input");
+check(decodedScanSessionSnakeCaseSavedSnapshots.supportedPidMatrix.supportedPids.includes("0C") && decodedScanSessionSnakeCaseSavedSnapshots.supportedPidMatrix.supportedPids.includes("0D"), "Decoded OBD session dropped snake_case saved supported PID matrix input");
 const decodedScanSessionSupportedPidReason = obd.buildDecodedObdScanSession({
   session_id: "decoded-supported-pid-reason",
   vehicle_applicability: vehicleApplicabilitySample,
@@ -9558,6 +9575,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1991");
+  console.log("OBD read-only safety checks: 1992");
   console.log("Errors: 0");
 }
