@@ -6103,10 +6103,26 @@
         : null;
     const monitorById = new Map();
     const bridgeSession = bridgeImport?.bridgeSession || null;
-    const importedCoreSessionStatus = bridgeImport?.coreSessionStatus || bridgeSession?.coreSessionStatus || null;
-    const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;
-    const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;
-    const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;
+    const importedCoreSessionStatus = bridgeImport?.coreSessionStatus
+      || bridgeImport?.core_session_status
+      || bridgeSession?.coreSessionStatus
+      || bridgeSession?.core_session_status
+      || null;
+    const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary
+      || bridgeImport?.diagnostic_flow_summary
+      || bridgeSession?.diagnosticFlowSummary
+      || bridgeSession?.diagnostic_flow_summary
+      || null;
+    const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary
+      || bridgeImport?.readout_completion_summary
+      || bridgeSession?.readoutCompletionSummary
+      || bridgeSession?.readout_completion_summary
+      || null;
+    const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary
+      || bridgeImport?.analysis_readiness_summary
+      || bridgeSession?.analysisReadinessSummary
+      || bridgeSession?.analysis_readiness_summary
+      || null;
     const importedReadoutQualitySummary = bridgeImport?.readoutQualitySummary
       || bridgeImport?.readout_quality_summary
       || bridgeSession?.readoutQualitySummary
