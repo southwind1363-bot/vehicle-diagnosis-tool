@@ -2151,17 +2151,17 @@
           }
           : ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput;
-    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+    const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
-        : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
-    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
+        : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
+    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
-        : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: livePidSnapshot.supportedPids || [] } });
-    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+        : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: livePidSnapshot.supportedPids || [] } }));
+    const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
@@ -2169,18 +2169,18 @@
             || Number.isFinite(Number(readinessSnapshotInput?.incompleteCount))
             || Number.isFinite(Number(readinessSnapshotInput?.knownMonitorCount)))
           ? normalizeReadinessSnapshot(readinessSnapshotInput)
-        : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || livePidSnapshot);
-    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+        : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || livePidSnapshot));
+    const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
-        : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {});
-    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+        : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}));
+    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
-        : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {});
-    const ecuResponseSummary = ecuResponseSummaryInput?.schemaVersion
+        : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
+    const ecuResponseSummary = withSchemaVersionAlias(ecuResponseSummaryInput?.schemaVersion
       ? ecuResponseSummaryInput
       : normalizeEcuResponseSummary(ecuResponseSummaryInput || {
         source: "local_bridge",
@@ -2192,7 +2192,7 @@
           dtc_count: Number.isInteger(row.codeCount) ? row.codeCount : null,
           services: ["03"]
         }))
-      });
+      }));
     const connectionStatusInput = parts.connectionStatus || parts.connection_status || parts.connectionStatusResponse || parts.connection_status_response || {};
     const vciListInput = parts.vciList || parts.vci_list || parts.vciDevices || parts.vci_devices || parts.listVciResponse || parts.list_vci_response || {};
     const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || parts.adapterIdentityResponse || parts.adapter_identity_response || {};
@@ -2486,24 +2486,24 @@
       nestedSession: parts.bridgeSession || parts.bridge_session || parts.session,
       allowVciArray: true
     });
-    const ecuResponseSummary = (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)?.schemaVersion
+    const ecuResponseSummary = withSchemaVersionAlias((parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)?.schemaVersion
       ? (parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response)
-      : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" });
-    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
+      : normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" }));
+    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
-      : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } });
-    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+      : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } }));
+    const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
-      : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {});
-    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+      : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {}));
+    const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
-      : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {});
-    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+      : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}));
+    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
-      : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {});
-    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+      : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
+    const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
-      : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {});
+      : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
@@ -2673,6 +2673,15 @@
       if (value !== undefined) return value;
     }
     return undefined;
+  }
+
+  function withSchemaVersionAlias(snapshot) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot) || !snapshot.schemaVersion) return snapshot;
+    if (snapshot.schema_version === snapshot.schemaVersion) return snapshot;
+    return {
+      ...snapshot,
+      schema_version: snapshot.schemaVersion
+    };
   }
 
   function detectBridgeInfrastructureContext({
@@ -7532,6 +7541,7 @@
 
     return {
       schemaVersion: "dtc_snapshot_v1",
+      schema_version: "dtc_snapshot_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -7608,6 +7618,7 @@
 
     return {
       schemaVersion: "freeze_frame_snapshot_v1",
+      schema_version: "freeze_frame_snapshot_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -7686,6 +7697,7 @@
 
     return {
       schemaVersion: "readiness_snapshot_v1",
+      schema_version: "readiness_snapshot_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -7730,6 +7742,7 @@
                       : [];
     return {
       schemaVersion: "ecu_response_summary_v1",
+      schema_version: "ecu_response_summary_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -7850,6 +7863,7 @@
 
     return {
       schemaVersion: "ecu_info_snapshot_v1",
+      schema_version: "ecu_info_snapshot_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -7940,6 +7954,7 @@
 
     return {
       schemaVersion: "onboard_monitor_snapshot_v1",
+      schema_version: "onboard_monitor_snapshot_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -8089,6 +8104,7 @@
     const mergedRows = [...byCodeAndStatus.values()];
     return {
       schemaVersion: "dtc_snapshot_v1",
+      schema_version: "dtc_snapshot_v1",
       source: "merged_dtc_snapshots",
       capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null,
       protocol: snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol
@@ -8315,7 +8331,7 @@
     const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot;
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items;
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix;
-    const dtcSnapshot = dtcSnapshotInput?.schemaVersion || dtcSnapshotInput?.codes
+    const dtcSnapshot = withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion || dtcSnapshotInput?.codes
       ? dtcSnapshotInput
       : sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response
         ? mergeDtcSnapshots(
@@ -8323,7 +8339,7 @@
             sessionInput.pendingDtcResponse?.schemaVersion || sessionInput.pending_dtc_response?.schemaVersion ? (sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || {})),
             sessionInput.permanentDtcResponse?.schemaVersion || sessionInput.permanent_dtc_response?.schemaVersion ? (sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || {}))
           )
-        : sessionInput.dtcResponse?.schemaVersion ? sessionInput.dtcResponse : decodeObdDtcResponse(withSessionProtocol(sessionInput.dtcResponse || sessionInput.dtc_response || {}));
+        : sessionInput.dtcResponse?.schemaVersion ? sessionInput.dtcResponse : decodeObdDtcResponse(withSessionProtocol(sessionInput.dtcResponse || sessionInput.dtc_response || {})));
     const livePidResponseInput = withSessionProtocol(sessionInput.livePidResponse || sessionInput.live_pid_response || {});
     const freezeFrameResponseInput = withSessionProtocol(sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || {});
     const readinessResponseInput = withSessionProtocol(sessionInput.readinessResponse || sessionInput.readiness_response || {});
@@ -8335,33 +8351,33 @@
       : livePidResponseInput?.monitorValues
         ? livePidResponseInput
         : decodeLivePidResponse(livePidResponseInput);
-    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+    const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : freezeFrameResponseInput?.schemaVersion
         ? freezeFrameResponseInput
-        : decodeFreezeFrameResponse(freezeFrameResponseInput);
-    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+        : decodeFreezeFrameResponse(freezeFrameResponseInput));
+    const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
       : readinessResponseInput?.schemaVersion
         ? readinessResponseInput
-        : decodeReadinessResponse(readinessResponseInput);
-    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+        : decodeReadinessResponse(readinessResponseInput));
+    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
       : onboardMonitorResponseInput?.schemaVersion
         ? onboardMonitorResponseInput
-        : decodeOnboardMonitorResponse(onboardMonitorResponseInput);
-    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+        : decodeOnboardMonitorResponse(onboardMonitorResponseInput));
+    const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
       : (Array.isArray(ecuInfoSnapshotInput) || hasObjectContent(ecuInfoSnapshotInput))
         ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
         : ecuInfoResponseInput?.schemaVersion
           ? ecuInfoResponseInput
-          : decodeEcuInfoResponse(ecuInfoResponseInput);
-    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
+          : decodeEcuInfoResponse(ecuInfoResponseInput));
+    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : supportedPidResponseInput?.schemaVersion
         ? supportedPidResponseInput
-        : decodeSupportedPidResponse(supportedPidResponseInput);
+        : decodeSupportedPidResponse(supportedPidResponseInput));
     return buildDiagnosticScanSession({
       source: "obd_response_decoder",
       session_id: sessionInput.session_id || sessionInput.sessionId || "decoded_obd_scan_session",
@@ -8494,6 +8510,7 @@
     const negativeResponseSummary = buildNegativeResponseSummary(buckets.negativeResponses);
     return {
       schemaVersion: "obd_response_line_classification_v1",
+      schema_version: "obd_response_line_classification_v1",
       bucketCounts,
       isoTpSummary,
       negativeResponseSummary,
@@ -9195,6 +9212,7 @@
 
     return {
       schemaVersion: "supported_pid_matrix_v1",
+      schema_version: "supported_pid_matrix_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -9240,7 +9258,7 @@
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
-    const dtcSnapshot = dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput);
+    const dtcSnapshot = withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput));
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
@@ -9300,34 +9318,34 @@
           }
           : ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput;
-    const freezeFrameSnapshot = freezeFrameSnapshotInput?.schemaVersion
+    const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
-        : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput);
-    const readinessSnapshot = readinessSnapshotInput?.schemaVersion
+        : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput));
+    const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
-        : normalizeReadinessSnapshot(readinessSnapshotInput);
-    const onboardMonitorSnapshot = onboardMonitorSnapshotInput?.schemaVersion
+        : normalizeReadinessSnapshot(readinessSnapshotInput));
+    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
-        : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput);
-    const ecuResponseSummary = ecuResponseSummaryInput?.schemaVersion ? ecuResponseSummaryInput : normalizeEcuResponseSummary(ecuResponseSummaryInput);
-    const ecuInfoSnapshot = ecuInfoSnapshotInput?.schemaVersion
+        : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput));
+    const ecuResponseSummary = withSchemaVersionAlias(ecuResponseSummaryInput?.schemaVersion ? ecuResponseSummaryInput : normalizeEcuResponseSummary(ecuResponseSummaryInput));
+    const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
-        : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput);
-    const supportedPidMatrix = supportedPidMatrixInput?.schemaVersion
+        : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput));
+    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
       : (supportedPidMatrixInput?.data || Array.isArray(supportedPidMatrixInput?.supported_pids) || Array.isArray(supportedPidMatrixInput?.supportedPids))
         ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
-        : buildSupportedPidMatrix(supportedPidMatrixInput);
+        : buildSupportedPidMatrix(supportedPidMatrixInput));
     const connectionStatusInput = sessionInput.connectionStatus || sessionInput.connection_status || sessionInput.connectionStatusResponse || sessionInput.connection_status_response || {};
     const vciListInput = sessionInput.vciList || sessionInput.vci_list || sessionInput.vciDevices || sessionInput.vci_devices || sessionInput.listVciResponse || sessionInput.list_vci_response || {};
     const adapterIdentityInput = sessionInput.adapterIdentity || sessionInput.adapter_identity || sessionInput.adapterIdentityResponse || sessionInput.adapter_identity_response || {};

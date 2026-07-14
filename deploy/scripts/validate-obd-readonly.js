@@ -1089,6 +1089,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('rowValue.ecuId') && functionBody.includes('rowValue.module_id') && functionBody.includes('rowValue.freezeFrame === true'), "normalizeDtcSnapshot should preserve ECU and freeze-frame aliases");
     check(functionBody.includes('const key = `${row.code}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should deduplicate by code/status and never retain raw text");
     check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "normalizeDtcSnapshot should accept protocol aliases");
+    check(functionBody.includes('schema_version: "dtc_snapshot_v1"'), "normalizeDtcSnapshot should expose snake_case schema version");
   }
 };
 const freezeFrameSnapshotFunctionChecks = () => {
@@ -1102,6 +1103,7 @@ const freezeFrameSnapshotFunctionChecks = () => {
     check(functionBody.includes('freezeFramePriority: catalogItem?.priority || null') && functionBody.includes('interpretationNote: catalogItem?.interpretationNote || item.supportNote'), "normalizeFreezeFrameSnapshot should enrich values from freeze-frame item catalog");
     check(functionBody.includes('sourceInput.trigger_dtc') && functionBody.includes('sourceInput.triggerCode') && functionBody.includes('sourceInput.dtcCode') && functionBody.includes('triggerDtc: triggerCodes[0] || null'), "normalizeFreezeFrameSnapshot should normalize trigger DTC aliases");
     check(functionBody.includes('monitorValueSummary: buildMonitorValueSummary(monitorValues),') && functionBody.includes('retainedRawText: false'), "normalizeFreezeFrameSnapshot should summarize monitor values and never retain raw text");
+    check(functionBody.includes('schema_version: "freeze_frame_snapshot_v1"'), "normalizeFreezeFrameSnapshot should expose snake_case schema version");
   }
 };
 const readinessSnapshotFunctionChecks = () => {
@@ -1116,6 +1118,7 @@ const readinessSnapshotFunctionChecks = () => {
     check(functionBody.includes('readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status') && functionBody.includes('incompleteCount: normalized.filter((item) => item.supported && !item.complete).length'), "normalizeReadinessSnapshot should normalize MIL aliases and supported incomplete count");
     check(functionBody.includes('sourceInput.communicationProtocol') && functionBody.includes('sourceInput.communication_protocol'), "normalizeReadinessSnapshot should normalize protocol aliases");
     check(functionBody.includes('knownMonitors,') && functionBody.includes('retainedRawText: false'), "normalizeReadinessSnapshot should expose known monitors and never retain raw text");
+    check(functionBody.includes('schema_version: "readiness_snapshot_v1"'), "normalizeReadinessSnapshot should expose snake_case schema version");
   }
 };
 const ecuResponseSummaryFunctionChecks = () => {
@@ -1130,6 +1133,7 @@ const ecuResponseSummaryFunctionChecks = () => {
     check(functionBody.includes('negativeResponseCount: Number.isInteger(row?.negative_response_count)') && functionBody.includes('negativeRequestedServices:'), "normalizeEcuResponseSummary should normalize negative response counts and service aliases");
     check(functionBody.includes('row?.response_status || row?.responseStatus') && functionBody.includes('row?.display_name') && functionBody.includes('row?.displayName'), "normalizeEcuResponseSummary should normalize status and display name aliases");
     check(functionBody.includes('responseTimeMs: Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('row?.elapsed_ms') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
+    check(functionBody.includes('schema_version: "ecu_response_summary_v1"'), "normalizeEcuResponseSummary should expose snake_case schema version");
   }
 };
 const ecuInfoRowsFunctionChecks = () => {
@@ -1155,6 +1159,7 @@ const ecuInfoSnapshotFunctionChecks = () => {
     check(functionBody.includes('const keyItemIds = new Set(["vin", "calibration_id", "calibration_verification_number", "ecu_name"]);'), "normalizeEcuInfoSnapshot should define key Mode 09 item ids");
     check(functionBody.includes('hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),'), "normalizeEcuInfoSnapshot should surface detected sensitive identifiers");
     check(functionBody.includes('supportInfoTypesSummary: supportedInfoTypesSummary,') && functionBody.includes('retainedRawText: false'), "normalizeEcuInfoSnapshot should summarize supported info types and never retain raw text");
+    check(functionBody.includes('schema_version: "ecu_info_snapshot_v1"'), "normalizeEcuInfoSnapshot should expose snake_case schema version");
   }
 };
 const onboardMonitorSnapshotFunctionChecks = () => {
@@ -1169,6 +1174,7 @@ const onboardMonitorSnapshotFunctionChecks = () => {
     check(functionBody.includes('row.min_limit ?? row.minLimit') && functionBody.includes('row.max_limit ?? row.maxLimit'), "normalizeOnboardMonitorSnapshot should normalize min/max limit aliases");
     check(functionBody.includes('row.passed === true || row.pass === true || statusText === "pass" || statusText === "passed"'), "normalizeOnboardMonitorSnapshot should derive pass/fail from limits before explicit passed fallback");
     check(functionBody.includes('failedCount: tests.filter((test) => test.status === "fail").length') && functionBody.includes('retainedRawText: false'), "normalizeOnboardMonitorSnapshot should count failed tests and never retain raw text");
+    check(functionBody.includes('schema_version: "onboard_monitor_snapshot_v1"'), "normalizeOnboardMonitorSnapshot should expose snake_case schema version");
   }
 };
 const ecuInfoValueFunctionChecks = () => {
@@ -1408,6 +1414,7 @@ const classifyObdResponseLinesFunctionChecks = () => {
     check(functionBody.includes('buckets.supportedPidResponses.push(packet)') && functionBody.includes('buckets.livePidResponses.push(packet)') && functionBody.includes('buckets.readinessResponses.push(packet)'), "classifyObdResponseLines should distinguish supported PID, live PID, and readiness responses");
     check(functionBody.includes('buckets.freezeFrameResponses.push(packet)') && functionBody.includes('buckets.onboardMonitorResponses.push(packet)') && functionBody.includes('buckets.ecuInfoResponses.push(packet)'), "classifyObdResponseLines should bucket freeze-frame, Mode 06, and ECU info responses");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "classifyObdResponseLines should return read-only classification without raw text retention");
+    check(functionBody.includes('schema_version: "obd_response_line_classification_v1"'), "classifyObdResponseLines should expose snake_case schema version");
   }
 };
 const buildObdLogPacketsFunctionChecks = () => {
@@ -1599,6 +1606,7 @@ const supportedPidMatrixFunctionChecks = () => {
     check(functionBody.includes('supportedCount: items.filter((item) => item.supported).length') && functionBody.includes('knownPidCount: items.length'), "buildSupportedPidMatrix should expose supported and known PID counts");
     check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "buildSupportedPidMatrix should accept protocol aliases");
     check(functionBody.includes('retainedRawText: false'), "buildSupportedPidMatrix should never retain raw text");
+    check(functionBody.includes('schema_version: "supported_pid_matrix_v1"'), "buildSupportedPidMatrix should expose snake_case schema version");
   }
 };
 const standardPidValueFunctionChecks = () => {
@@ -2020,7 +2028,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1760+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1775+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2092,7 +2100,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.540.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout quality review request plan aliases");
+check(appSource.includes('const APP_VERSION = "2.541.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core snapshot schema aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7913,6 +7921,7 @@ const scanSessionBridgeSessionSnakeAlias = obd.buildDiagnosticScanSession({
 });
 check(scanSessionBridgeSessionSnakeAlias.monitorValueSummary.totalCount >= bridgePidSnapshot.monitorValues.length, "Diagnostic scan session did not accept bridge_session alias input");
 check(scanSessionBridgeSessionSnakeAlias.dtcSnapshot.codes.join(",") === "P0171,P0300", "Diagnostic scan session did not carry DTCs from bridge_session alias input");
+check(scanSessionBridgeSessionSnakeAlias.dtcSnapshot?.schema_version === "dtc_snapshot_v1", "Diagnostic scan session did not expose DTC snapshot snake_case schema version");
 const scanSessionBridgeResponseAliases = obd.buildDiagnosticScanSession({
   session_id: "shop-test-bridge-response-aliases",
   bridge_session: {
@@ -7985,6 +7994,12 @@ check(scanSessionBridgeCamelResponseAliases.readinessSnapshot?.incompleteCount =
 check(scanSessionBridgeCamelResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Diagnostic scan session did not decode onboardMonitorResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Diagnostic scan session did not decode ecuInfoResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecuResponseSummaryResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.supportedPidMatrix?.schema_version === "supported_pid_matrix_v1", "Diagnostic scan session did not expose supported PID matrix snake_case schema version");
+check(scanSessionBridgeCamelResponseAliases.freezeFrameSnapshot?.schema_version === "freeze_frame_snapshot_v1", "Diagnostic scan session did not expose freeze-frame snapshot snake_case schema version");
+check(scanSessionBridgeCamelResponseAliases.readinessSnapshot?.schema_version === "readiness_snapshot_v1", "Diagnostic scan session did not expose readiness snapshot snake_case schema version");
+check(scanSessionBridgeCamelResponseAliases.onboardMonitorSnapshot?.schema_version === "onboard_monitor_snapshot_v1", "Diagnostic scan session did not expose onboard monitor snapshot snake_case schema version");
+check(scanSessionBridgeCamelResponseAliases.ecuInfoSnapshot?.schema_version === "ecu_info_snapshot_v1", "Diagnostic scan session did not expose ECU info snapshot snake_case schema version");
+check(scanSessionBridgeCamelResponseAliases.ecuResponseSummary?.schema_version === "ecu_response_summary_v1", "Diagnostic scan session did not expose ECU response summary snake_case schema version");
 check(scanSessionBridgeCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connectionStatusResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.vciDevices[0]?.id === "camel-response-vci", "Diagnostic scan session did not accept listVciResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not accept adapterIdentityResponse from bridgeSession camelCase alias input");
@@ -8919,6 +8934,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1760");
+  console.log("OBD read-only safety checks: 1775");
   console.log("Errors: 0");
 }
