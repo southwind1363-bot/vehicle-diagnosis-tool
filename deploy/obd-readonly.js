@@ -7583,6 +7583,8 @@
       ? { ...payload, ...input }
       : input;
     const nested = input.session
+      || input.savedSession
+      || input.saved_session
       || input.scanSession
       || input.scan_session
       || input.diagnosticScanSession
@@ -8125,6 +8127,8 @@
     const scannerTextInput = input.scannerText || input.scanner_text || "";
     const bridgeImportInput = input.bridgeImport
       || input.session
+      || input.savedSession
+      || input.saved_session
       || input.bridge_import
       || input.bridgeDiagnosticImport
       || input.bridge_diagnostic_import
