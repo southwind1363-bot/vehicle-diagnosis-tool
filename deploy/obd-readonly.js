@@ -7587,6 +7587,8 @@
       || input.scan_session
       || input.diagnosticScanSession
       || input.diagnostic_scan_session
+      || input.diagnosticSession
+      || input.diagnostic_session
       || input.bridgeSession
       || input.bridge_session
       || payload?.bridgeSession
@@ -8130,7 +8132,9 @@
       || input.scanSession
       || input.scan_session
       || input.diagnosticScanSession
-      || input.diagnostic_scan_session;
+      || input.diagnostic_scan_session
+      || input.diagnosticSession
+      || input.diagnostic_session;
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
     const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"

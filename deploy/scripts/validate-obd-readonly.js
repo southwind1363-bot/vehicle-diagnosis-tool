@@ -547,7 +547,7 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('const payload = input.bridgeDiagnosticImport') && functionBody.includes('|| input.bridge_export_payload'), "getDiagnosticSessionInput should accept bridge diagnostic import and export payload aliases");
     check(functionBody.includes('const bridgePartsInput = input.bridgeParts || input.bridge_parts || null;') && functionBody.includes('buildBridgeDiagnosticImport(bridgePartsInput)'), "getDiagnosticSessionInput should normalize bridge parts aliases through bridge diagnostic import");
     check(functionBody.includes('const base = payload && typeof payload === \"object\"\r\n      ? { ...payload, ...input }'), "getDiagnosticSessionInput should layer outer input over payload fields");
-    check(functionBody.includes('const nested = input.session') && functionBody.includes('|| input.scan_session') && functionBody.includes('|| input.diagnostic_scan_session') && functionBody.includes('|| input.bridge_session'), "getDiagnosticSessionInput should accept nested session aliases from outer input");
+    check(functionBody.includes('const nested = input.session') && functionBody.includes('|| input.scan_session') && functionBody.includes('|| input.diagnostic_scan_session') && functionBody.includes('|| input.diagnostic_session') && functionBody.includes('|| input.bridge_session'), "getDiagnosticSessionInput should accept nested session aliases from outer input");
     check(functionBody.includes('|| payload?.bridgeSession') && functionBody.includes('|| payload?.bridge_session') && functionBody.includes('|| payload?.session'), "getDiagnosticSessionInput should accept nested session aliases from bridge payloads");
     check(functionBody.includes('...nested,') && functionBody.includes('...base,'), "getDiagnosticSessionInput should layer nested session fields before base overrides");
     check(functionBody.includes('source: base.source || base.source_type || nested.source || nested.source_type || "diagnostic_core",') && functionBody.includes('source_type: base.source_type || base.source || nested.source_type || nested.source || "diagnostic_core",'), "getDiagnosticSessionInput should normalize source type aliases");
@@ -1011,7 +1011,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
   if (mergeDiagnosticInputsFunctionSource) {
     const functionBody = mergeDiagnosticInputsFunctionSource[0];
     check(functionBody.includes('const scannerTextInput = input.scannerText || input.scanner_text || "";'), "mergeDiagnosticInputs should accept scanner text aliases");
-    check(functionBody.includes('input.bridgeImport') && functionBody.includes('input.bridge_diagnostic_import') && functionBody.includes('input.bridge_export_payload') && functionBody.includes('input.scan_session') && functionBody.includes('input.diagnostic_scan_session'), "mergeDiagnosticInputs should accept bridge import/export and scan session aliases");
+    check(functionBody.includes('input.bridgeImport') && functionBody.includes('input.bridge_diagnostic_import') && functionBody.includes('input.bridge_export_payload') && functionBody.includes('input.scan_session') && functionBody.includes('input.diagnostic_scan_session') && functionBody.includes('input.diagnostic_session'), "mergeDiagnosticInputs should accept bridge import/export and scan session aliases");
     check(functionBody.includes('const scannerAnalysis = analyzeScannerText(scannerTextInput);'), "mergeDiagnosticInputs should analyze scanner text before merging");
     check(functionBody.includes('buildBridgeDiagnosticImport(bridgeImportInput)') && functionBody.includes('buildBridgeDiagnosticImport(bridgePartsInput)'), "mergeDiagnosticInputs should normalize bridge import and bridge parts through bridge diagnostic import");
     check(functionBody.includes('if (item.source === "local_bridge") value += 40;') && functionBody.includes('if (item.decoded === false || item.valueType === "raw_hex") value -= 25;'), "mergeDiagnosticInputs should prefer decoded bridge values while penalizing undecoded raw values");
@@ -2112,7 +2112,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1985+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1986+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2184,7 +2184,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.584.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for diagnostic scan session alias input support");
+check(appSource.includes('const APP_VERSION = "2.585.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for diagnostic session alias input support");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8510,6 +8510,15 @@ const mergedDiagnosticInputDiagnosticScanSessionAlias = obd.mergeDiagnosticInput
   diagnosticScanSession: diagnosticScanSessionAliasInput
 });
 check(diagnosticScanSessionAliasInput.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticScanSessionAlias.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticScanSessionAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Diagnostic scan session aliases did not retain bridge export payload through build and merge");
+const diagnosticSessionAliasInput = obd.buildDiagnosticScanSession({
+  diagnostic_session: scanSessionBridgeExportPayloadAlias,
+  session_id: "shop-test-diagnostic-session-alias"
+});
+const mergedDiagnosticInputDiagnosticSessionAlias = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  diagnostic_session: diagnosticSessionAliasInput
+});
+check(diagnosticSessionAliasInput.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticSessionAlias.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticSessionAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Diagnostic session aliases did not retain bridge export payload through build and merge");
 const scanSessionCoreMetadataAliases = obd.buildDiagnosticScanSession({
   source_type: "local_bridge",
   obd_protocol: "CAN_11_500",
@@ -9508,6 +9517,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1985");
+  console.log("OBD read-only safety checks: 1986");
   console.log("Errors: 0");
 }
