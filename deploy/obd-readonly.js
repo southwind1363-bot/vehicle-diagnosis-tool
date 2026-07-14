@@ -748,7 +748,7 @@
   }
 
   function readBridgeProtocol(data = {}) {
-    return data.protocol || data.protocol_name || data.protocolName || data.bus_protocol || null;
+    return data.protocol || data.obd_protocol || data.protocol_name || data.protocolName || data.bus_protocol || null;
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
@@ -2006,7 +2006,7 @@
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
             ...livePidSnapshotInput.data,
-            protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.protocol || null,
+            protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.data.obd_protocol || livePidSnapshotInput.protocol || livePidSnapshotInput.obd_protocol || parts.protocol || parts.obd_protocol || null,
             captured_at: livePidSnapshotInput.data.captured_at || livePidSnapshotInput.data.capturedAt || livePidSnapshotInput.captured_at || livePidSnapshotInput.capturedAt || null
           }
           : livePidSnapshotInput)
@@ -2020,7 +2020,7 @@
       ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
           ? {
             ...supportedPidMatrixInput.data,
-            protocol: supportedPidMatrixInput.data.protocol || supportedPidMatrixInput.protocol || null,
+            protocol: supportedPidMatrixInput.data.protocol || supportedPidMatrixInput.data.obd_protocol || supportedPidMatrixInput.protocol || supportedPidMatrixInput.obd_protocol || parts.protocol || parts.obd_protocol || null,
             captured_at: supportedPidMatrixInput.data.captured_at || supportedPidMatrixInput.data.capturedAt || supportedPidMatrixInput.captured_at || supportedPidMatrixInput.capturedAt || null
           }
           : supportedPidMatrixInput)
@@ -2029,7 +2029,7 @@
       ? (readinessSnapshotInput.data && typeof readinessSnapshotInput.data === "object"
           ? {
             ...readinessSnapshotInput.data,
-            protocol: readinessSnapshotInput.data.protocol || readinessSnapshotInput.protocol || null,
+            protocol: readinessSnapshotInput.data.protocol || readinessSnapshotInput.data.obd_protocol || readinessSnapshotInput.protocol || readinessSnapshotInput.obd_protocol || parts.protocol || parts.obd_protocol || null,
             captured_at: readinessSnapshotInput.data.captured_at || readinessSnapshotInput.data.capturedAt || readinessSnapshotInput.captured_at || readinessSnapshotInput.capturedAt || null
           }
           : readinessSnapshotInput)
@@ -2038,7 +2038,7 @@
       ? (freezeFrameSnapshotInput.data && typeof freezeFrameSnapshotInput.data === "object"
           ? {
             ...freezeFrameSnapshotInput.data,
-            protocol: freezeFrameSnapshotInput.data.protocol || freezeFrameSnapshotInput.protocol || null,
+            protocol: freezeFrameSnapshotInput.data.protocol || freezeFrameSnapshotInput.data.obd_protocol || freezeFrameSnapshotInput.protocol || freezeFrameSnapshotInput.obd_protocol || parts.protocol || parts.obd_protocol || null,
             captured_at: freezeFrameSnapshotInput.data.captured_at || freezeFrameSnapshotInput.data.capturedAt || freezeFrameSnapshotInput.captured_at || freezeFrameSnapshotInput.capturedAt || null
           }
           : freezeFrameSnapshotInput)
@@ -2047,7 +2047,7 @@
       ? (onboardMonitorSnapshotInput.data && typeof onboardMonitorSnapshotInput.data === "object"
           ? {
             ...onboardMonitorSnapshotInput.data,
-            protocol: onboardMonitorSnapshotInput.data.protocol || onboardMonitorSnapshotInput.protocol || null,
+            protocol: onboardMonitorSnapshotInput.data.protocol || onboardMonitorSnapshotInput.data.obd_protocol || onboardMonitorSnapshotInput.protocol || onboardMonitorSnapshotInput.obd_protocol || parts.protocol || parts.obd_protocol || null,
             captured_at: onboardMonitorSnapshotInput.data.captured_at || onboardMonitorSnapshotInput.data.capturedAt || onboardMonitorSnapshotInput.captured_at || onboardMonitorSnapshotInput.capturedAt || null
           }
           : onboardMonitorSnapshotInput)
@@ -2056,7 +2056,7 @@
       ? (ecuInfoSnapshotInput.data && typeof ecuInfoSnapshotInput.data === "object"
           ? {
             ...ecuInfoSnapshotInput.data,
-            protocol: ecuInfoSnapshotInput.data.protocol || ecuInfoSnapshotInput.protocol || null,
+            protocol: ecuInfoSnapshotInput.data.protocol || ecuInfoSnapshotInput.data.obd_protocol || ecuInfoSnapshotInput.protocol || ecuInfoSnapshotInput.obd_protocol || parts.protocol || parts.obd_protocol || null,
             captured_at: ecuInfoSnapshotInput.data.captured_at || ecuInfoSnapshotInput.data.capturedAt || ecuInfoSnapshotInput.captured_at || ecuInfoSnapshotInput.capturedAt || null
           }
           : ecuInfoSnapshotInput)
@@ -2095,7 +2095,7 @@
       : normalizeEcuResponseSummary(ecuResponseSummaryInput || {
         source: "local_bridge",
         captured_at: dtcSnapshot.capturedAt || null,
-        protocol: dtcSnapshot.protocol || null,
+        protocol: dtcSnapshot.protocol || dtcSnapshot.obd_protocol || parts.protocol || parts.obd_protocol || null,
         ecu_responses: (dtcSnapshot.ecuResponses || []).map((row) => ({
           address: row.ecu || null,
           status: row.status || "unknown",
@@ -2208,11 +2208,13 @@
       || null;
 
     return {
-      source: "local_bridge",
+      source: parts.source || parts.source_type || "local_bridge",
+      source_type: parts.source_type || parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,
       endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt,
       protocol,
+      obd_protocol: protocol,
       vehicleProfile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       connectionStatus,
@@ -2487,11 +2489,13 @@
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
     return {
-      source: parts.source || "local_bridge",
+      source: parts.source || parts.source_type || "local_bridge",
+      source_type: parts.source_type || parts.source || "local_bridge",
       startedAt: parts.startedAt || parts.started_at || null,
       endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt: parts.capturedAt || parts.captured_at || null,
-      protocol: parts.protocol || null,
+      protocol: parts.protocol || parts.obd_protocol || null,
+      obd_protocol: parts.obd_protocol || parts.protocol || null,
       vehicleProfile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       connectionStatus,
@@ -5992,7 +5996,8 @@
       toolHints: mergeUniqueStrings(scannerAnalysis.toolHints, mergedBridgeMetadata.toolHints),
       startedAt: bridgeImport?.startedAt || bridgeSession?.startedAt || null,
       endedAt: bridgeImport?.endedAt || bridgeSession?.endedAt || null,
-      protocol: bridgeImport?.protocol || bridgeSession?.protocol || null,
+      protocol: bridgeImport?.protocol || bridgeImport?.obd_protocol || bridgeSession?.protocol || bridgeSession?.obd_protocol || null,
+      obd_protocol: bridgeImport?.obd_protocol || bridgeImport?.protocol || bridgeSession?.obd_protocol || bridgeSession?.protocol || null,
       capturedAt: bridgeImport?.capturedAt || bridgeSession?.capturedAt || null,
       codes,
       monitorValues,
@@ -6075,7 +6080,7 @@
       schemaVersion: "dtc_snapshot_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       codes: [...new Set([...byCode.values()].map((row) => row.code))],
       dtcs: [...byCode.values()],
       retainedRawText: false
@@ -6119,7 +6124,7 @@
       schemaVersion: "freeze_frame_snapshot_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       triggerDtc: triggerCodes[0] || null,
       monitorValues,
       monitorValueSummary: buildMonitorValueSummary(monitorValues),
@@ -6160,7 +6165,7 @@
       schemaVersion: "readiness_snapshot_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       milOn: input.mil_on === true || input.milOn === true,
       monitorCount: normalized.length,
       incompleteCount: normalized.filter((item) => item.supported && !item.complete).length,
@@ -6190,7 +6195,7 @@
       schemaVersion: "ecu_response_summary_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       ecus: rows.map((row, index) => ({
         id: String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || `ecu_${index + 1}`).slice(0, 40),
         name: row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : null,
@@ -6302,7 +6307,7 @@
       schemaVersion: "ecu_info_snapshot_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       itemCount: items.length,
       expectedItemCount: expectedItems.length,
       hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
@@ -6377,7 +6382,7 @@
       schemaVersion: "onboard_monitor_snapshot_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       testCount: tests.length,
       failedCount: tests.filter((test) => test.status === "fail").length,
       unknownCount: tests.filter((test) => test.status === "unknown").length,
@@ -6490,7 +6495,7 @@
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
         capturedAt: input.captured_at || input.capturedAt || null,
-        protocol: input.protocol || null,
+        protocol: input.protocol || input.obd_protocol || null,
         dtcs: []
       });
     }
@@ -6506,7 +6511,7 @@
     return normalizeDtcSnapshot({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       status,
       dtcs: [...new Set(codes)].map((code) => ({ code, status }))
     });
@@ -6526,7 +6531,9 @@
       schemaVersion: "dtc_snapshot_v1",
       source: "merged_dtc_snapshots",
       capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null,
-      protocol: snapshots.find((item) => item?.protocol)?.protocol || null,
+      protocol: snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol
+        || snapshots.find((item) => item?.protocol || item?.obd_protocol)?.obd_protocol
+        || null,
       codes: [...new Set(mergedRows.map((row) => row.code))],
       dtcs: mergedRows,
       retainedRawText: false
@@ -6591,7 +6598,7 @@
       blocked: false,
       would_transmit: false,
       data: {
-        protocol: input.protocol || null,
+        protocol: input.protocol || input.obd_protocol || null,
         supported_pids: [],
         values,
         captured_at: input.captured_at || input.capturedAt || null
@@ -6625,7 +6632,7 @@
     return normalizeFreezeFrameSnapshot({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       trigger_dtc: triggerDtc,
       values
     });
@@ -6653,7 +6660,7 @@
     return normalizeEcuInfoSnapshot({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       values
     });
   }
@@ -6727,7 +6734,7 @@
     return normalizeOnboardMonitorSnapshot({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       tests
     });
   }
@@ -6735,10 +6742,10 @@
   function buildDecodedObdScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
-    const sessionProtocol = sessionInput.protocol || null;
+    const sessionProtocol = sessionInput.protocol || sessionInput.obd_protocol || null;
     const withSessionProtocol = (value) => {
       if (!sessionProtocol || !value || typeof value !== "object" || Array.isArray(value)) return value;
-      if (value.protocol || value.protocol_name || value.protocolName) return value;
+      if (value.protocol || value.obd_protocol || value.protocol_name || value.protocolName) return value;
       return { ...value, protocol: sessionProtocol };
     };
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot;
@@ -7132,15 +7139,15 @@
       warnings: metadataOverrides.warnings,
       sourceLength: metadataOverrides.sourceLength,
       hadSensitiveIdentifier: metadataOverrides.hadSensitiveIdentifier,
-      storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: sessionInput.protocol || null },
-      pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: sessionInput.protocol || null },
-      permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: sessionInput.protocol || null },
-      supportedPidResponse: { raw: firstOrEmpty("supportedPidResponses"), protocol: sessionInput.protocol || null },
-      livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: sessionInput.protocol || null },
-      freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: sessionInput.protocol || null },
-      readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: sessionInput.protocol || null },
-      onboardMonitorResponse: { raw: firstOrEmpty("onboardMonitorResponses"), protocol: sessionInput.protocol || null },
-      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: sessionInput.protocol || null },
+      storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      pendingDtcResponse: { raw: firstOrEmpty("pendingDtcResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      permanentDtcResponse: { raw: firstOrEmpty("permanentDtcResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      supportedPidResponse: { raw: firstOrEmpty("supportedPidResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      onboardMonitorResponse: { raw: firstOrEmpty("onboardMonitorResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
       ecus: ecuResponses
     });
     const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);
@@ -7608,7 +7615,7 @@
       schemaVersion: "supported_pid_matrix_v1",
       source,
       capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || null,
+      protocol: input.protocol || input.obd_protocol || null,
       supportedPids: [...supported],
       supportedCount: items.filter((item) => item.supported).length,
       knownPidCount: items.length,

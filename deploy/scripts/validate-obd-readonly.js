@@ -58,7 +58,7 @@ const preparedVehicleRequestFunctionSource = source.match(/function requestPrepa
 const outboundSafetyFunctionSource = source.match(/function evaluateOutboundSafety[\s\S]*?reason: isStateChanging[\s\S]*?\r?\n    \};\r?\n  \}/);
 const vehicleOperationRequestFunctionSource = source.match(/function requestVehicleOperation[\s\S]*?requiredBeforeEnable: operation \? \[\.\.\.operation\.requiredBeforeEnable\] : \[\]\r?\n    \};\r?\n  \}/);
 const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
-const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.protocol_name \|\| data\.protocolName \|\| data\.bus_protocol \|\| null;\r?\n  \}/);
+const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.obd_protocol \|\| data\.protocol_name \|\| data\.protocolName \|\| data\.bus_protocol \|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
 const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
@@ -312,7 +312,7 @@ const bridgeResponseSafetyFunctionChecks = () => {
   check(Boolean(bridgeProtocolFunctionSource), "readBridgeProtocol is missing from obd-readonly.js");
   if (bridgeProtocolFunctionSource) {
     const functionBody = bridgeProtocolFunctionSource[0];
-    check(functionBody.includes('data.protocol || data.protocol_name || data.protocolName || data.bus_protocol || null'), "readBridgeProtocol should normalize bridge protocol aliases");
+    check(functionBody.includes('data.protocol || data.obd_protocol || data.protocol_name || data.protocolName || data.bus_protocol || null'), "readBridgeProtocol should normalize bridge protocol aliases");
   }
   check(Boolean(bridgeSupportedPidsFunctionSource), "collectBridgeSupportedPids is missing from obd-readonly.js");
   if (bridgeSupportedPidsFunctionSource) {
@@ -1006,6 +1006,8 @@ const bridgeSessionSummaryFunctionChecks = () => {
   if (bridgeSessionSummaryFunctionSource) {
     const functionBody = bridgeSessionSummaryFunctionSource[0];
     check(functionBody.includes('includeInfrastructure: hasBridgeInfrastructureContext'), "buildBridgeSessionSummary should derive readout coverage with bridge infrastructure context");
+    check(functionBody.includes('source: parts.source || parts.source_type || "local_bridge"') && functionBody.includes('source_type: parts.source_type || parts.source || "local_bridge"'), "buildBridgeSessionSummary should emit source type aliases");
+    check(functionBody.includes('protocol,') && functionBody.includes('obd_protocol: protocol,'), "buildBridgeSessionSummary should emit protocol aliases");
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should append bridge readout warnings through bridge context guard");
     check(functionBody.indexOf('const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);') < functionBody.indexOf('appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });'), "buildBridgeSessionSummary should resolve readout coverage before appending bridge readout warnings");
     check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildBridgeSessionSummary should pass onboard monitor snapshots into core session status");
@@ -1021,6 +1023,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('status: row.status || row.kind || input.status || "unknown"'), "normalizeDtcSnapshot should normalize DTC status aliases");
     check(functionBody.includes('ecu: row.ecu || row.ecu_id || row.address || null') && functionBody.includes('freezeFrameAvailable: row.freeze_frame_available === true || row.freezeFrameAvailable === true'), "normalizeDtcSnapshot should preserve ECU and freeze-frame aliases");
     check(functionBody.includes('const key = `${row.code}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should deduplicate by code/status and never retain raw text");
+    check(functionBody.includes('protocol: input.protocol || input.obd_protocol || null,'), "normalizeDtcSnapshot should accept obd_protocol aliases");
   }
 };
 const freezeFrameSnapshotFunctionChecks = () => {
@@ -1181,7 +1184,8 @@ const mergeDtcSnapshotsFunctionChecks = () => {
     check(functionBody.includes('const key = `${row.code || ""}::${row.status || "unknown"}`;'), "mergeDtcSnapshots should deduplicate by DTC code and status");
     check(functionBody.includes('if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);'), "mergeDtcSnapshots should retain the first valid row for each code/status pair");
     check(functionBody.includes('source: "merged_dtc_snapshots"'), "mergeDtcSnapshots should mark merged DTC source explicitly");
-    check(functionBody.includes('capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null') && functionBody.includes('protocol: snapshots.find((item) => item?.protocol)?.protocol || null'), "mergeDtcSnapshots should carry capturedAt and protocol from the first available snapshot");
+    check(functionBody.includes('capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null') && functionBody.includes('snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol'), "mergeDtcSnapshots should carry capturedAt and protocol from the first available snapshot");
+    check(functionBody.includes('snapshots.find((item) => item?.protocol || item?.obd_protocol)?.obd_protocol'), "mergeDtcSnapshots should accept obd_protocol aliases");
     check(functionBody.includes('codes: [...new Set(mergedRows.map((row) => row.code))]'), "mergeDtcSnapshots should expose deduplicated DTC code list");
     check(functionBody.includes('retainedRawText: false'), "mergeDtcSnapshots should never retain raw text");
   }
@@ -1283,7 +1287,9 @@ const decodedObdScanSessionFunctionChecks = () => {
     const functionBody = decodedObdScanSessionFunctionSource[0];
     check(functionBody.includes('const sessionInput = getDiagnosticSessionInput(input);'), "buildDecodedObdScanSession should normalize nested diagnostic session input first");
     check(functionBody.includes('const metadataOverrides = getSessionMetadataOverrides(sessionInput);'), "buildDecodedObdScanSession should collect session metadata overrides");
+    check(functionBody.includes('const sessionProtocol = sessionInput.protocol || sessionInput.obd_protocol || null;'), "buildDecodedObdScanSession should accept obd_protocol session aliases");
     check(functionBody.includes('const withSessionProtocol = (value) => {') && functionBody.includes('return { ...value, protocol: sessionProtocol };'), "buildDecodedObdScanSession should propagate session protocol to raw response inputs");
+    check(functionBody.includes('value.protocol || value.obd_protocol || value.protocol_name || value.protocolName'), "buildDecodedObdScanSession should not overwrite raw response protocol aliases");
     check(functionBody.includes('mergeDtcSnapshots(') && functionBody.includes('storedDtcResponse') && functionBody.includes('pendingDtcResponse') && functionBody.includes('permanentDtcResponse'), "buildDecodedObdScanSession should merge stored, pending, and permanent DTC responses");
     check(functionBody.includes('decodeLivePidResponse(livePidResponseInput)') && functionBody.includes('decodeFreezeFrameResponse(freezeFrameResponseInput)') && functionBody.includes('decodeReadinessResponse(readinessResponseInput)'), "buildDecodedObdScanSession should decode live PID, freeze-frame, and readiness responses");
     check(functionBody.includes('decodeOnboardMonitorResponse(onboardMonitorResponseInput)') && functionBody.includes('decodeEcuInfoResponse(ecuInfoResponseInput)') && functionBody.includes('decodeSupportedPidResponse(supportedPidResponseInput)'), "buildDecodedObdScanSession should decode Mode 06, ECU info, and supported PID responses");
@@ -1298,6 +1304,7 @@ const scanSessionFromObdTextFunctionChecks = () => {
     check(functionBody.includes('const textDtcSnapshot = extractTextDtcSnapshot(value);'), "buildScanSessionFromObdText should preserve text-only DTC extraction");
     check(functionBody.includes('const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";'), "buildScanSessionFromObdText should feed decoded sessions from classified response buckets");
     check(functionBody.includes('storedDtcResponse: { raw: firstOrEmpty("storedDtcResponses")') && functionBody.includes('ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs");
+    check(functionBody.includes('protocol: sessionInput.protocol || sessionInput.obd_protocol || null'), "buildScanSessionFromObdText should pass obd_protocol aliases into decoded response buckets");
     check(functionBody.includes('const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);'), "buildScanSessionFromObdText should merge decoded and text-extracted DTC snapshots");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('retainedRawFrames: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "buildScanSessionFromObdText should return read-only imports without retaining raw text or frames");
   }
@@ -1513,6 +1520,7 @@ const supportedPidMatrixFunctionChecks = () => {
     check(functionBody.includes('monitorDefinitions') && functionBody.includes('definition.service === "01" && definition.pid'), "buildSupportedPidMatrix should map support against Mode 01 monitor definitions");
     check(functionBody.includes('supported: supported.has(String(definition.pid).toUpperCase())'), "buildSupportedPidMatrix should mark definitions supported from decoded PID ids");
     check(functionBody.includes('supportedCount: items.filter((item) => item.supported).length') && functionBody.includes('knownPidCount: items.length'), "buildSupportedPidMatrix should expose supported and known PID counts");
+    check(functionBody.includes('protocol: input.protocol || input.obd_protocol || null,'), "buildSupportedPidMatrix should accept obd_protocol aliases");
     check(functionBody.includes('retainedRawText: false'), "buildSupportedPidMatrix should never retain raw text");
   }
 };
@@ -1929,7 +1937,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1297+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1312+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2001,7 +2009,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.484.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core source metadata aliases");
+check(appSource.includes('const APP_VERSION = "2.485.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core OBD protocol aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3025,6 +3033,13 @@ check(bridgeSummaryAliasInputs.vciDevices[0]?.id === "summary-vci", "Bridge sess
 check(bridgeSummaryAliasInputs.adapterIdentity.adapterName === "Summary Adapter", "Bridge session summary did not accept adapter_identity alias input");
 check(bridgeSummaryAliasInputs.startedAt === "2026-06-28T00:03:00Z" && bridgeSummaryAliasInputs.endedAt === "2026-06-28T00:04:00Z", "Bridge session summary did not accept started_at or ended_at alias input");
 check(bridgeSummaryAliasInputs.vehicleProfile?.maker === "Toyota", "Bridge session summary did not accept vehicle_profile alias input");
+const bridgeSummaryProtocolAliases = obd.buildBridgeSessionSummary({
+  source_type: "local_bridge",
+  obd_protocol: "CAN_11_500",
+  live_pid_response: { data: { values: [{ id: "engine_speed", value: 900, unit: "rpm" }] } }
+});
+check(bridgeSummaryProtocolAliases.source === "local_bridge" && bridgeSummaryProtocolAliases.source_type === "local_bridge", "Bridge session summary did not preserve source_type aliases");
+check(bridgeSummaryProtocolAliases.protocol === "CAN_11_500" && bridgeSummaryProtocolAliases.obd_protocol === "CAN_11_500", "Bridge session summary did not preserve obd_protocol aliases");
 const vehicleApplicabilitySample = {
   schemaVersion: "vehicle_applicability_v1",
   maker: "Toyota",
@@ -5440,10 +5455,15 @@ const mergedDtcSnapshot = obd.mergeDtcSnapshots(decodedStoredDtc, decodedPending
 check(mergedDtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored"), "保存DTCを統合できません");
 check(mergedDtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "pending"), "保留DTCを統合できません");
 check(mergedDtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "permanent"), "永久DTCを統合できません");
+const decodedObdProtocolAliasDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 00 00", obd_protocol: "CAN_29_500" });
+const mergedDtcProtocolAlias = obd.mergeDtcSnapshots({ ...decodedObdProtocolAliasDtc, protocol: null, obd_protocol: "CAN_29_500" });
+check(decodedObdProtocolAliasDtc.protocol === "CAN_29_500", "OBD DTC decoder did not preserve obd_protocol aliases");
+check(mergedDtcProtocolAlias.protocol === "CAN_29_500", "Merged DTC snapshot did not preserve obd_protocol aliases");
 const decodedSupportedPids = obd.decodeSupportedPidResponse({ raw: "41 00 18 18 00 01 41 20 80 00 00 01" });
 check(decodedSupportedPids.supportedPids.includes("04") && decodedSupportedPids.supportedPids.includes("0C"), "対応PIDビットマップをデコードできません");
 check(decodedSupportedPids.supportedPids.includes("20") && decodedSupportedPids.supportedPids.includes("21") && decodedSupportedPids.supportedPids.includes("40"), "複数レンジの対応PIDビットマップをデコードできません");
 check(decodedSupportedPids.supportedCount >= 4, "対応PIDマトリクスへ対応状態を反映できません");
+check(obd.buildSupportedPidMatrix({ obd_protocol: "ISO9141-2", supported_pids: ["0C"] }).protocol === "ISO9141-2", "Supported PID matrix did not preserve obd_protocol aliases");
 const ignoredNonBitmapPid = obd.decodeSupportedPidResponse({ raw: "41 0C 1A F8 41 05 7B" });
 check(ignoredNonBitmapPid.supportedPids.length === 0, "ライブPID応答を対応PIDビットマップとして誤読しています");
 const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0D 28 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 84 5A 41 8C 80 41 8E 7B 41 A6 00 01 E2 40" });
@@ -5738,6 +5758,13 @@ const decodedScanSessionNestedOuterOverride = obd.buildDecodedObdScanSession({
 check(decodedScanSessionNestedOuterOverride.sessionId === "decoded-outer-override", "Decoded OBD session did not let outer session_id override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.protocol === "ISO9141-2", "Decoded OBD session did not let outer protocol override scan_session nested alias input");
 check(decodedScanSessionNestedOuterOverride.vehicleProfile?.model === "Auris", "Decoded OBD session did not let outer vehicle_profile override scan_session nested alias input");
+const decodedScanSessionProtocolAlias = obd.buildDecodedObdScanSession({
+  session_id: "decoded-obd-protocol-alias",
+  obd_protocol: "CAN_11_500",
+  stored_dtc_response: { raw: "43 01 71 00 00" },
+  live_pid_response: { raw: "41 0C 1A F8" }
+});
+check(decodedScanSessionProtocolAlias.protocol === "CAN_11_500" && decodedScanSessionProtocolAlias.obd_protocol === "CAN_11_500", "Decoded OBD session did not preserve obd_protocol aliases");
 const decodedScanSessionNestedOuterCoreOverride = obd.buildDecodedObdScanSession({
   session_id: "decoded-outer-core-override",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -6254,6 +6281,11 @@ const textScanSessionNestedOuterOverride = obd.buildScanSessionFromObdText(obdTe
 check(textScanSessionNestedOuterOverride.sessionId === "obd-text-outer-override", "OBD text scan session did not let outer session_id override scan_session nested options");
 check(textScanSessionNestedOuterOverride.protocol === "ISO9141-2", "OBD text scan session did not let outer protocol override scan_session nested options");
 check(textScanSessionNestedOuterOverride.vehicleProfile?.model === "Ractis", "OBD text scan session did not let outer vehicle_profile override scan_session nested options");
+const textScanSessionProtocolAlias = obd.buildScanSessionFromObdText(obdTextLog, {
+  session_id: "obd-text-protocol-alias",
+  obd_protocol: "CAN_11_500"
+});
+check(textScanSessionProtocolAlias.protocol === "CAN_11_500" && textScanSessionProtocolAlias.obd_protocol === "CAN_11_500", "OBD text scan session did not preserve obd_protocol aliases");
 const textScanSessionNestedOuterCoreOverride = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-outer-core-override",
   vehicle_applicability: vehicleApplicabilityPartialSample,
@@ -8113,6 +8145,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1297");
+  console.log("OBD read-only safety checks: 1312");
   console.log("Errors: 0");
 }
