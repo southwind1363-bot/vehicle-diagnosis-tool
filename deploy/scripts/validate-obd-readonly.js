@@ -1782,7 +1782,11 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);') && functionBody.includes('importedCoreReadoutInventoryComparisonSummary,'), "buildDiagnosticScanSession should compare imported and recalculated core readout inventory summary");
     check(functionBody.includes('onboardMonitorSnapshot,') && functionBody.indexOf('onboardMonitorSnapshot,') < functionBody.indexOf('livePidSnapshot,'), "buildDiagnosticScanSession should pass onboard monitor snapshots into core session status");
     check(functionBody.includes('schemaVersion: "scan_session_v1"') && functionBody.includes('sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80)'), "buildDiagnosticScanSession should emit a bounded scan session identity");
-    check(functionBody.includes('monitorValueSummary: resolveMonitorValueSummary([') && functionBody.includes('...freezeFrameSnapshot.monitorValues'), "buildDiagnosticScanSession should summarize live PID and freeze-frame monitor values");
+    check(functionBody.includes('schema_version: "scan_session_v1"') && functionBody.includes('session_id: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80)'), "buildDiagnosticScanSession should emit snake_case identity aliases");
+    check(functionBody.includes('vehicle_profile: resolvedMetadata.vehicleProfile,') && functionBody.includes('connection_status: connectionStatus,') && functionBody.includes('adapter_identity: adapterIdentity,'), "buildDiagnosticScanSession should emit snake_case vehicle and infrastructure aliases");
+    check(functionBody.includes('dtc_snapshot: dtcSnapshot,') && functionBody.includes('freeze_frame_snapshot: freezeFrameSnapshot,') && functionBody.includes('supported_pid_matrix: supportedPidMatrix,'), "buildDiagnosticScanSession should emit snake_case core readout aliases");
+    check(functionBody.includes('core_session_status: coreSessionStatus,') && functionBody.includes('diagnostic_flow_summary: diagnosticFlowSummary,') && functionBody.includes('analysis_readiness_summary: analysisReadinessSummary,'), "buildDiagnosticScanSession should emit snake_case diagnostic summary aliases");
+    check(functionBody.includes('const monitorValueSummary = resolveMonitorValueSummary([') && functionBody.includes('monitor_value_summary: monitorValueSummary,') && functionBody.includes('import_classification: resolvedImportClassification,'), "buildDiagnosticScanSession should emit snake_case monitor and import classification aliases");
     check(functionBody.includes('...buildReadOnlyFlags({') && functionBody.includes('vehicleCommandEnabled: false'), "buildDiagnosticScanSession should return explicit read-only flags");
   }
 };
@@ -1982,7 +1986,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1451+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1461+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2054,7 +2058,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.514.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for runtime snake_case return alias validation");
+check(appSource.includes('const APP_VERSION = "2.515.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for scan session snake_case return aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5351,6 +5355,11 @@ check(scanSessionFromMergedDiagnosticInput.toolHints.join(",") === mergedDiagnos
 check(scanSessionFromMergedDiagnosticInput.hadSensitiveIdentifier === true, "Diagnostic scan session did not preserve hadSensitiveIdentifier from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.sourceLength === mergedDiagnosticInputExportNestedOuterOverride.sourceLength, "Diagnostic scan session did not preserve sourceLength from merged diagnostic input");
 check(scanSessionFromMergedDiagnosticInput.importClassification?.bucketCounts?.storedDtcResponses === mergedDiagnosticInputExportNestedOuterOverride.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not preserve importClassification from merged diagnostic input");
+check(scanSessionFromMergedDiagnosticInput.schema_version === "scan_session_v1" && scanSessionFromMergedDiagnosticInput.session_id === "merged-diagnostic-input-scan-session", "Diagnostic scan session did not expose runtime snake_case identity aliases");
+check(scanSessionFromMergedDiagnosticInput.vehicle_profile?.model === "Outer Porte" && scanSessionFromMergedDiagnosticInput.vehicle_applicability?.status === "partial" && scanSessionFromMergedDiagnosticInput.connection_status?.vehicleConnected === false, "Diagnostic scan session did not expose runtime snake_case vehicle metadata aliases");
+check(scanSessionFromMergedDiagnosticInput.freeze_frame_snapshot?.triggerDtc === "P0420" && scanSessionFromMergedDiagnosticInput.readiness_snapshot?.incompleteCount === 0 && scanSessionFromMergedDiagnosticInput.supported_pid_matrix?.supportedPids.join(",") === "0C,0D", "Diagnostic scan session did not expose runtime snake_case core readout aliases");
+check(scanSessionFromMergedDiagnosticInput.core_session_status?.schemaVersion === "core_session_status_v1" && scanSessionFromMergedDiagnosticInput.diagnostic_flow_summary?.schemaVersion === "diagnostic_flow_summary_v1" && typeof scanSessionFromMergedDiagnosticInput.analysis_readiness_summary?.ready === "boolean", "Diagnostic scan session did not expose runtime snake_case diagnostic summary aliases");
+check(scanSessionFromMergedDiagnosticInput.monitor_value_summary?.totalCount >= 0 && scanSessionFromMergedDiagnosticInput.import_classification?.bucketCounts?.storedDtcResponses === mergedDiagnosticInputExportNestedOuterOverride.importClassification?.bucketCounts?.storedDtcResponses, "Diagnostic scan session did not expose runtime snake_case monitor and import aliases");
 const scanSessionFromMergedDiagnosticInputMetadataOverride = obd.buildDiagnosticScanSession({
   session_id: "merged-diagnostic-input-metadata-override",
   warnings: ["isotp_reassembly_issue"],
@@ -8688,6 +8697,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1451");
+  console.log("OBD read-only safety checks: 1461");
   console.log("Errors: 0");
 }
