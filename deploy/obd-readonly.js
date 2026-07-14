@@ -5304,6 +5304,67 @@
     };
   }
 
+  function normalizeCoreReadoutInventorySummaryAliases(summary = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const schemaVersion = summary.schemaVersion || summary.schema_version || "core_readout_inventory_v1";
+    const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
+    const toCount = (camelKey, snakeKey, fallback = 0) => {
+      const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
+      return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
+    };
+    const countsById = (summary.countsById || summary.counts_by_id) && typeof (summary.countsById || summary.counts_by_id) === "object"
+      ? { ...(summary.countsById || summary.counts_by_id) }
+      : {};
+    const itemById = (summary.itemById || summary.item_by_id) && typeof (summary.itemById || summary.item_by_id) === "object"
+      ? { ...(summary.itemById || summary.item_by_id) }
+      : {};
+    const capturedIds = normalizeIds(summary.capturedIds || summary.captured_ids);
+    const emptyIds = normalizeIds(summary.emptyIds || summary.empty_ids);
+    const missingIds = normalizeIds(summary.missingIds || summary.missing_ids);
+    const pendingIds = normalizeIds(summary.pendingIds || summary.pending_ids || [...missingIds, ...emptyIds]);
+    const attemptedIds = normalizeIds(summary.attemptedIds || summary.attempted_ids || [...capturedIds, ...emptyIds]);
+    const totalValueCount = toCount("totalValueCount", "total_value_count", Object.values(countsById).reduce((total, value) => total + (Number.isFinite(Number(value)) ? Number(value) : 0), 0));
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      totalReadoutCount: toCount("totalReadoutCount", "total_readout_count", Object.keys(countsById).length),
+      total_readout_count: toCount("totalReadoutCount", "total_readout_count", Object.keys(countsById).length),
+      capturedReadoutCount: toCount("capturedReadoutCount", "captured_readout_count", capturedIds.length),
+      captured_readout_count: toCount("capturedReadoutCount", "captured_readout_count", capturedIds.length),
+      emptyReadoutCount: toCount("emptyReadoutCount", "empty_readout_count", emptyIds.length),
+      empty_readout_count: toCount("emptyReadoutCount", "empty_readout_count", emptyIds.length),
+      missingReadoutCount: toCount("missingReadoutCount", "missing_readout_count", missingIds.length),
+      missing_readout_count: toCount("missingReadoutCount", "missing_readout_count", missingIds.length),
+      pendingReadoutCount: toCount("pendingReadoutCount", "pending_readout_count", pendingIds.length),
+      pending_readout_count: toCount("pendingReadoutCount", "pending_readout_count", pendingIds.length),
+      attemptedReadoutCount: toCount("attemptedReadoutCount", "attempted_readout_count", attemptedIds.length),
+      attempted_readout_count: toCount("attemptedReadoutCount", "attempted_readout_count", attemptedIds.length),
+      totalValueCount,
+      total_value_count: totalValueCount,
+      countsById,
+      counts_by_id: countsById,
+      itemById,
+      item_by_id: itemById,
+      capturedIds,
+      captured_ids: capturedIds,
+      emptyIds,
+      empty_ids: emptyIds,
+      missingIds,
+      missing_ids: missingIds,
+      pendingIds,
+      pending_ids: pendingIds,
+      attemptedIds,
+      attempted_ids: attemptedIds,
+      nextPendingReadoutId: summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0] || null,
+      next_pending_readout_id: summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0] || null,
+      allReadoutsAttempted: pickDefined(summary.allReadoutsAttempted, summary.all_readouts_attempted, missingIds.length === 0) === true,
+      all_readouts_attempted: pickDefined(summary.allReadoutsAttempted, summary.all_readouts_attempted, missingIds.length === 0) === true,
+      valueCaptureComplete: pickDefined(summary.valueCaptureComplete, summary.value_capture_complete, pendingIds.length === 0) === true,
+      value_capture_complete: pickDefined(summary.valueCaptureComplete, summary.value_capture_complete, pendingIds.length === 0) === true
+    };
+  }
+
   function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
     if (!importedAnalysisReadinessSummary || typeof importedAnalysisReadinessSummary !== "object") return null;
     const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
@@ -7553,11 +7614,13 @@
       || bridgeImportInput?.readoutRequestPlanGateSummary
       || bridgeImportInput?.readout_request_plan_gate_summary
       || null);
-    const importedCoreReadoutInventorySummary = bridgeImport?.coreReadoutInventorySummary
+    const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(bridgeImport?.coreReadoutInventorySummary
       || bridgeImport?.core_readout_inventory_summary
       || bridgeSession?.coreReadoutInventorySummary
       || bridgeSession?.core_readout_inventory_summary
-      || null;
+      || bridgeImportInput?.coreReadoutInventorySummary
+      || bridgeImportInput?.core_readout_inventory_summary
+      || null);
     const firstBridgeArray = (...values) => values.find((value) => Array.isArray(value)) || [];
     const bridgeMonitorValues = firstBridgeArray(
       bridgeImport?.monitorValues,
@@ -9685,7 +9748,7 @@
     const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
-    const importedCoreReadoutInventorySummary = sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null;
+    const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
