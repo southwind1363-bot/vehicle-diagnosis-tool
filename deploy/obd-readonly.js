@@ -6107,13 +6107,21 @@
     const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary || bridgeSession?.diagnosticFlowSummary || null;
     const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary || bridgeSession?.readoutCompletionSummary || null;
     const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary || bridgeSession?.analysisReadinessSummary || null;
-    const importedReadoutQualitySummary = bridgeImport?.readoutQualitySummary || bridgeSession?.readoutQualitySummary || null;
+    const importedReadoutQualitySummary = bridgeImport?.readoutQualitySummary
+      || bridgeImport?.readout_quality_summary
+      || bridgeSession?.readoutQualitySummary
+      || bridgeSession?.readout_quality_summary
+      || null;
     const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary
       || bridgeImport?.readout_request_plan_gate_summary
       || bridgeSession?.readoutRequestPlanGateSummary
       || bridgeSession?.readout_request_plan_gate_summary
       || null;
-    const importedCoreReadoutInventorySummary = bridgeImport?.coreReadoutInventorySummary || bridgeSession?.coreReadoutInventorySummary || null;
+    const importedCoreReadoutInventorySummary = bridgeImport?.coreReadoutInventorySummary
+      || bridgeImport?.core_readout_inventory_summary
+      || bridgeSession?.coreReadoutInventorySummary
+      || bridgeSession?.core_readout_inventory_summary
+      || null;
     const selectPreferredMonitorValue = (current, candidate) => {
       if (!current) return candidate;
       if (!candidate) return current;
