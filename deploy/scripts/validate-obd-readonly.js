@@ -2112,7 +2112,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1992+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1993+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2184,7 +2184,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.591.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for snake_case saved snapshot intake support");
+check(appSource.includes('const APP_VERSION = "2.592.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for snake_case saved DTC response intake support");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -6320,6 +6320,18 @@ check(decodedScanSessionAliasInputs.supportedPidMatrix.supportedPids.includes("4
 check(decodedScanSessionAliasInputs.onboardMonitorSnapshot.testCount === 1, "Decoded OBD session did not accept onboard_monitor_response alias input");
 check(decodedScanSessionAliasInputs.startedAt === "2026-06-28T00:12:00Z" && decodedScanSessionAliasInputs.endedAt === "2026-06-28T00:13:00Z", "Decoded OBD session did not accept started_at or ended_at alias input");
 check(decodedScanSessionAliasInputs.vehicleProfile?.model === "Prius", "Decoded OBD session did not accept vehicle_profile alias input");
+const decodedScanSessionSnakeDtcResponses = obd.buildDecodedObdScanSession({
+  session_id: "decoded-snake-dtc-responses",
+  stored_dtc_response: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0171", status: "stored" }] },
+  pending_dtc_response: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0300", status: "pending" }] },
+  permanent_dtc_response: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0420", status: "permanent" }] }
+});
+check(decodedScanSessionSnakeDtcResponses.dtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored") && decodedScanSessionSnakeDtcResponses.dtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "pending") && decodedScanSessionSnakeDtcResponses.dtcSnapshot.dtcs.some((item) => item.code === "P0420" && item.status === "permanent"), "Decoded OBD session did not preserve snake_case saved stored/pending/permanent DTC responses");
+const decodedScanSessionSnakeDtcResponse = obd.buildDecodedObdScanSession({
+  session_id: "decoded-snake-dtc-response",
+  dtc_response: { schema_version: "dtc_snapshot_v1", dtcs: [{ code: "P0133", status: "stored" }] }
+});
+check(decodedScanSessionSnakeDtcResponse.dtcSnapshot.codes.includes("P0133"), "Decoded OBD session did not preserve snake_case saved dtc_response input");
 const decodedScanSessionDirectMixedVehicleMetadata = obd.buildDecodedObdScanSession({
   sessionId: "decoded-mixed-vehicle-meta",
   vehicleProfile: { maker: "Toyota", model: "Mixed Axio" },
@@ -9575,6 +9587,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1992");
+  console.log("OBD read-only safety checks: 1993");
   console.log("Errors: 0");
 }

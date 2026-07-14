@@ -9514,16 +9514,22 @@
     const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot;
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items;
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix;
+    const storedDtcResponseInput = sessionInput.storedDtcResponse || sessionInput.stored_dtc_response;
+    const pendingDtcResponseInput = sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response;
+    const permanentDtcResponseInput = sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response;
+    const dtcResponseInput = sessionInput.dtcResponse || sessionInput.dtc_response || {};
     const hasSnapshotSchema = (value) => Boolean(value?.schemaVersion || value?.schema_version);
     const dtcSnapshot = withSchemaVersionAlias(hasSnapshotSchema(dtcSnapshotInput) || dtcSnapshotInput?.codes || dtcSnapshotInput?.dtcs
       ? normalizeDtcSnapshot(dtcSnapshotInput)
-      : sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response
+      : storedDtcResponseInput || pendingDtcResponseInput || permanentDtcResponseInput
         ? mergeDtcSnapshots(
-            sessionInput.storedDtcResponse?.schemaVersion || sessionInput.stored_dtc_response?.schemaVersion ? (sessionInput.storedDtcResponse || sessionInput.stored_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || {})),
-            sessionInput.pendingDtcResponse?.schemaVersion || sessionInput.pending_dtc_response?.schemaVersion ? (sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || {})),
-            sessionInput.permanentDtcResponse?.schemaVersion || sessionInput.permanent_dtc_response?.schemaVersion ? (sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response) : decodeObdDtcResponse(withSessionProtocol(sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || {}))
+            hasSnapshotSchema(storedDtcResponseInput) || storedDtcResponseInput?.codes || storedDtcResponseInput?.dtcs ? normalizeDtcSnapshot(storedDtcResponseInput) : decodeObdDtcResponse(withSessionProtocol(storedDtcResponseInput || {})),
+            hasSnapshotSchema(pendingDtcResponseInput) || pendingDtcResponseInput?.codes || pendingDtcResponseInput?.dtcs ? normalizeDtcSnapshot(pendingDtcResponseInput) : decodeObdDtcResponse(withSessionProtocol(pendingDtcResponseInput || {})),
+            hasSnapshotSchema(permanentDtcResponseInput) || permanentDtcResponseInput?.codes || permanentDtcResponseInput?.dtcs ? normalizeDtcSnapshot(permanentDtcResponseInput) : decodeObdDtcResponse(withSessionProtocol(permanentDtcResponseInput || {}))
           )
-        : sessionInput.dtcResponse?.schemaVersion ? sessionInput.dtcResponse : decodeObdDtcResponse(withSessionProtocol(sessionInput.dtcResponse || sessionInput.dtc_response || {})));
+        : hasSnapshotSchema(dtcResponseInput) || dtcResponseInput?.codes || dtcResponseInput?.dtcs
+          ? normalizeDtcSnapshot(dtcResponseInput)
+          : decodeObdDtcResponse(withSessionProtocol(dtcResponseInput)));
     const livePidResponseInput = withSessionProtocol(sessionInput.livePidResponse || sessionInput.live_pid_response || {});
     const freezeFrameResponseInput = withSessionProtocol(sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || {});
     const readinessResponseInput = withSessionProtocol(sessionInput.readinessResponse || sessionInput.readiness_response || {});
