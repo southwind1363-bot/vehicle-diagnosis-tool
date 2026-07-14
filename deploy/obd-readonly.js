@@ -6102,7 +6102,7 @@
         ? buildBridgeDiagnosticImport(bridgePartsInput)
         : null;
     const monitorById = new Map();
-    const bridgeSession = bridgeImport?.bridgeSession || null;
+    const bridgeSession = bridgeImport?.bridgeSession || bridgeImport?.bridge_session || null;
     const importedCoreSessionStatus = bridgeImport?.coreSessionStatus
       || bridgeImport?.core_session_status
       || bridgeSession?.coreSessionStatus
@@ -6322,7 +6322,7 @@
       vciDevices: bridgeImport?.vciDevices || bridgeImport?.vci_devices || bridgeSession?.vciDevices || bridgeSession?.vci_devices || [],
       adapterIdentity: bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity || bridgeSession?.adapterIdentity || bridgeSession?.adapter_identity || null,
       bridgeSession,
-      bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
+      bridgeExportPayload: bridgeImport?.exportPayload || bridgeImport?.export_payload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
       warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
