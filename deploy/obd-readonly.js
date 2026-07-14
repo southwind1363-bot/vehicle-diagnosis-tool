@@ -7585,6 +7585,8 @@
     const nested = input.session
       || input.savedSession
       || input.saved_session
+      || input.lastSession
+      || input.last_session
       || input.scanSession
       || input.scan_session
       || input.diagnosticScanSession
@@ -8129,6 +8131,8 @@
       || input.session
       || input.savedSession
       || input.saved_session
+      || input.lastSession
+      || input.last_session
       || input.bridge_import
       || input.bridgeDiagnosticImport
       || input.bridge_diagnostic_import
