@@ -6055,19 +6055,42 @@
   }
 
   function normalizeDtcSnapshot(input = {}) {
-    const source = input.source || "diagnostic_core";
-    const rawRows = Array.isArray(input.dtcs) ? input.dtcs : Array.isArray(input.codes) ? input.codes : [];
+    const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
+      ? {
+        ...input.data,
+        source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+      }
+      : input;
+    const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const rawRows = [
+      ...(Array.isArray(sourceInput.dtcs) ? sourceInput.dtcs : []),
+      ...(Array.isArray(sourceInput.codes) ? sourceInput.codes : []),
+      ...(Array.isArray(sourceInput.dtc_list) ? sourceInput.dtc_list : []),
+      ...(Array.isArray(sourceInput.dtcList) ? sourceInput.dtcList : []),
+      ...(Array.isArray(sourceInput.diagnosticTroubleCodes) ? sourceInput.diagnosticTroubleCodes : []),
+      ...(Array.isArray(sourceInput.diagnostic_trouble_codes) ? sourceInput.diagnostic_trouble_codes : []),
+      ...(Array.isArray(sourceInput.stored_dtcs) ? sourceInput.stored_dtcs.map((row) => ({ value: row, status: "stored" })) : []),
+      ...(Array.isArray(sourceInput.storedDtcs) ? sourceInput.storedDtcs.map((row) => ({ value: row, status: "stored" })) : []),
+      ...(Array.isArray(sourceInput.pending_dtcs) ? sourceInput.pending_dtcs.map((row) => ({ value: row, status: "pending" })) : []),
+      ...(Array.isArray(sourceInput.pendingDtcs) ? sourceInput.pendingDtcs.map((row) => ({ value: row, status: "pending" })) : []),
+      ...(Array.isArray(sourceInput.permanent_dtcs) ? sourceInput.permanent_dtcs.map((row) => ({ value: row, status: "permanent" })) : []),
+      ...(Array.isArray(sourceInput.permanentDtcs) ? sourceInput.permanentDtcs.map((row) => ({ value: row, status: "permanent" })) : [])
+    ];
     const rows = rawRows.flatMap((row) => {
       if (typeof row === "string") {
         return extractDtcCodes(row).map((code) => ({ code }));
       }
       if (!row || typeof row !== "object") return [];
-      const codes = extractDtcCodes(row.code || row.dtc || row.id || "");
+      const rowValue = row.value && typeof row.value === "object" ? row.value : row;
+      const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || sourceInput.status || "unknown";
+      const codes = extractDtcCodes(rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "");
       return codes.map((code) => ({
         code,
-        status: row.status || row.kind || input.status || "unknown",
-        ecu: row.ecu || row.ecu_id || row.address || null,
-        freezeFrameAvailable: row.freeze_frame_available === true || row.freezeFrameAvailable === true
+        status: rowStatus,
+        ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
+        freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
       }));
     });
     const byCode = new Map();
@@ -6079,8 +6102,8 @@
     return {
       schemaVersion: "dtc_snapshot_v1",
       source,
-      capturedAt: input.captured_at || input.capturedAt || null,
-      protocol: input.protocol || input.obd_protocol || null,
+      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       codes: [...new Set([...byCode.values()].map((row) => row.code))],
       dtcs: [...byCode.values()],
       retainedRawText: false
