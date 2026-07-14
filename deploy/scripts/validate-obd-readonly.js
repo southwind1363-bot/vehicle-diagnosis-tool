@@ -61,7 +61,7 @@ const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResp
 const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.obd_protocol \|\| data\.communication_protocol[\s\S]*?\|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
 const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
-const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgeReadinessSnapshotFunctionSource = source.match(/function normalizeBridgeReadinessSnapshot[\s\S]*?monitors: monitorBits\.map[\s\S]*?\r?\n    \}\)\);\r?\n  \}/);
@@ -83,7 +83,7 @@ const warningListFunctionSource = source.match(/function resolveWarningList[\s\S
 const mergeDiagnosticInputsFunctionSource = source.match(/function mergeDiagnosticInputs[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
 const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?return explicitSummary \|\| buildMonitorValueSummary\(monitorValues\);\r?\n  \}/);
-const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonitorValueSummary[\s\S]*?textCount\r?\n    \};\r?\n  \}/);
+const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonitorValueSummary[\s\S]*?text_count: textCount\r?\n    \};\r?\n  \}/);
 const analyzeMonitorValuesFunctionSource = source.match(/function analyzeMonitorValues[\s\S]*?return insights\.slice\(0, 6\);\r?\n  \}/);
 const fuelTrimInsightFunctionSource = source.match(/function addFuelTrimInsight[\s\S]*?\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
@@ -361,8 +361,10 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(data.values)') && functionBody.includes('Array.isArray(data.monitor_values)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeLivePidSnapshot should accept live PID value aliases");
     check(functionBody.includes('Array.isArray(data.live_pid_values)') && functionBody.includes('Array.isArray(data.liveData)') && functionBody.includes('Array.isArray(data.items)'), "normalizeBridgeLivePidSnapshot should accept live data array aliases");
     check(functionBody.includes('.map((row, index) => normalizeBridgePidValue(row, index))') && functionBody.includes('.filter(Boolean)'), "normalizeBridgeLivePidSnapshot should normalize and filter PID value rows");
-    check(functionBody.includes('supportedPids: collectBridgeSupportedPids(data)'), "normalizeBridgeLivePidSnapshot should carry supported PID context");
-    check(functionBody.includes('monitorValueSummary: buildMonitorValueSummary(monitorValues)') && functionBody.includes('monitorInsights: analyzeMonitorValues(monitorValues)'), "normalizeBridgeLivePidSnapshot should derive summaries and monitor insights");
+    check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeLivePidSnapshot should carry supported PID context and snake_case alias");
+    check(functionBody.includes('const monitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('monitor_value_summary: monitorValueSummary'), "normalizeBridgeLivePidSnapshot should derive summaries and expose snake_case alias");
+    check(functionBody.includes('const monitorInsights = analyzeMonitorValues(monitorValues);') && functionBody.includes('monitor_insights: monitorInsights'), "normalizeBridgeLivePidSnapshot should derive insights and expose snake_case alias");
+    check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('monitor_values: monitorValues') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeLivePidSnapshot should expose snake_case capture, values, and retention aliases");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeLivePidSnapshot should not retain raw bridge text");
   }
   check(Boolean(bridgeSupportedPidSnapshotFunctionSource), "normalizeBridgeSupportedPidSnapshot is missing from obd-readonly.js");
@@ -1067,8 +1069,10 @@ const buildMonitorValueSummaryFunctionChecks = () => {
     check(functionBody.includes('const rows = Array.isArray(values) ? values : [];'), "buildMonitorValueSummary should treat non-array input as empty rows");
     check(functionBody.includes('item?.decoded === false || item?.valueType === "raw_hex"'), "buildMonitorValueSummary should count undecoded raw values from decoded=false or raw_hex type");
     check(functionBody.includes('Number.isFinite(item?.value)'), "buildMonitorValueSummary should count numeric values only from finite numeric values");
-    check(functionBody.includes('decodedCount: Math.max(0, rows.length - undecodedRawCount),'), "buildMonitorValueSummary should derive decoded count without going below zero");
+    check(functionBody.includes('const decodedCount = Math.max(0, rows.length - undecodedRawCount);'), "buildMonitorValueSummary should derive decoded count without going below zero");
     check(functionBody.includes('numericCount,') && functionBody.includes('textCount'), "buildMonitorValueSummary should expose numeric and text counts");
+    check(functionBody.includes('total_count: totalCount') && functionBody.includes('decoded_count: decodedCount') && functionBody.includes('undecoded_raw_count: undecodedRawCount'), "buildMonitorValueSummary should expose snake_case total and decoded count aliases");
+    check(functionBody.includes('numeric_count: numericCount') && functionBody.includes('text_count: textCount'), "buildMonitorValueSummary should expose snake_case numeric and text count aliases");
   }
 };
 const analyzeMonitorValuesFunctionChecks = () => {
@@ -2070,7 +2074,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1867+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1875+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2142,7 +2146,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.554.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for supported PID snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.555.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for live PID summary snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2591,6 +2595,8 @@ const bridgePidLiveDataAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
 check(bridgePidLiveDataAliasSnapshot.monitorValues.length === 3, "Bridge live PID live_pid_values alias was not normalized");
 check(bridgePidLiveDataAliasSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 810, "Bridge live PID sensor_id/current_value aliases were not normalized");
 check(bridgePidLiveDataAliasSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 84, "Bridge live PID pid_id/displayValue aliases were not normalized");
+check(bridgePidLiveDataAliasSnapshot.monitor_values.length === 3 && bridgePidLiveDataAliasSnapshot.monitor_value_summary.total_count === 3, "Bridge live PID snapshot did not expose snake_case values and summary aliases");
+check(bridgePidLiveDataAliasSnapshot.captured_at === "2026-06-28T00:01:02Z" && bridgePidLiveDataAliasSnapshot.retained_raw_text === false, "Bridge live PID snapshot did not expose snake_case capture and retention aliases");
 const bridgePidLabelAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
@@ -5790,6 +5796,7 @@ check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_tem
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "dpf_differential_pressure")?.value === "00 64", "DPF系の式未実装PIDをRAW値として保持できません");
 check(liveUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "式未実装PIDの後続PIDを読み進められません");
 check(liveUndecodedNumberPid.monitorValueSummary.undecodedRawCount === 2, "ライブPIDの未換算RAW件数を集計できません");
+check(liveUndecodedNumberPid.monitorValueSummary.undecoded_raw_count === 2 && liveUndecodedNumberPid.monitorValueSummary.total_count === liveUndecodedNumberPid.monitorValueSummary.totalCount, "Live PID summary did not expose snake_case count aliases");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status")?.value === "mil_on;dtc_count=2;ignition=spark", "Monitor status PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_mil")?.value === "mil_on", "Monitor status MIL value was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "monitor_status_dtc_count")?.value === 2, "Monitor status DTC count was not decoded");
@@ -5870,6 +5877,7 @@ const freezeUndecodedNumberPid = obd.decodeFreezeFrameResponse({ raw: "42 75 00 
 check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "turbo_temp")?.value === "01 90", "フリーズフレームで式未実装の数値PIDをRAW値として保持できません");
 check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle_speed")?.value === 40, "フリーズフレームで式未実装PIDの後続PIDを読み進められません");
 check(freezeUndecodedNumberPid.monitorValueSummary.undecodedRawCount === 1, "フリーズフレームの未換算RAW件数を集計できません");
+check(freezeUndecodedNumberPid.monitorValueSummary.undecoded_raw_count === 1 && freezeUndecodedNumberPid.monitorValueSummary.numeric_count === freezeUndecodedNumberPid.monitorValueSummary.numericCount, "Freeze-frame summary did not expose snake_case count aliases");
 check(decodedFreezeFrame.retainedRawText === false, "フリーズフレームデコードが原文保持になっています");
 const decodedEcuInfo = obd.decodeEcuInfoResponse({ raw: "49 02 01 4A 54 44 4B 4E 33 44 55 30 41 30 31 32 33 34 35 36 49 04 01 43 41 4C 2D 31 32 33 34 49 0A 01 45 6E 67 69 6E 65 20 45 43 55" });
 check(decodedEcuInfo.hadSensitiveIdentifier === true, "Mode 09 VINを識別情報として検出できません");
@@ -9026,6 +9034,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1867");
+  console.log("OBD read-only safety checks: 1875");
   console.log("Errors: 0");
 }

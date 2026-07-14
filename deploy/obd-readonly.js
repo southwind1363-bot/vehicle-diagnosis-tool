@@ -934,6 +934,10 @@
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
+    const supportedPids = collectBridgeSupportedPids(data);
+    const capturedAt = data.captured_at || data.capturedAt || null;
+    const monitorValueSummary = buildMonitorValueSummary(monitorValues);
+    const monitorInsights = analyzeMonitorValues(monitorValues);
 
     return {
       source: "local_bridge",
@@ -942,12 +946,18 @@
       blocked: safety.blocked,
       wouldTransmit: safety.wouldTransmit,
       protocol: readBridgeProtocol(data),
-      supportedPids: collectBridgeSupportedPids(data),
-      capturedAt: data.captured_at || data.capturedAt || null,
+      supportedPids,
+      supported_pids: supportedPids,
+      capturedAt,
+      captured_at: capturedAt,
       monitorValues,
-      monitorValueSummary: buildMonitorValueSummary(monitorValues),
-      monitorInsights: analyzeMonitorValues(monitorValues),
-      retainedRawText: false
+      monitor_values: monitorValues,
+      monitorValueSummary,
+      monitor_value_summary: monitorValueSummary,
+      monitorInsights,
+      monitor_insights: monitorInsights,
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 
@@ -1222,12 +1232,19 @@
     const undecodedRawCount = rows.filter((item) => item?.decoded === false || item?.valueType === "raw_hex").length;
     const numericCount = rows.filter((item) => item?.valueType !== "text" && item?.valueType !== "raw_hex" && Number.isFinite(item?.value)).length;
     const textCount = rows.filter((item) => item?.valueType === "text").length;
+    const totalCount = rows.length;
+    const decodedCount = Math.max(0, rows.length - undecodedRawCount);
     return {
-      totalCount: rows.length,
-      decodedCount: Math.max(0, rows.length - undecodedRawCount),
+      totalCount,
+      total_count: totalCount,
+      decodedCount,
+      decoded_count: decodedCount,
       undecodedRawCount,
+      undecoded_raw_count: undecodedRawCount,
       numericCount,
-      textCount
+      numeric_count: numericCount,
+      textCount,
+      text_count: textCount
     };
   }
 
