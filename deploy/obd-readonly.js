@@ -1928,9 +1928,7 @@
 
   function appendVehicleApplicabilityWarnings(warnings, applicability = {}) {
     if (!hasObjectContent(applicability)) return;
-    const normalized = applicability?.schemaVersion === "vehicle_applicability_v1"
-      ? applicability
-      : normalizeVehicleApplicabilitySnapshot(applicability || {});
+    const normalized = normalizeVehicleApplicabilitySnapshot(applicability || {});
     if (normalized.status === "partial") {
       warnings.push("vehicle_applicability_partial");
     } else if (normalized.status === "unlisted") {
