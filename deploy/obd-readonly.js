@@ -3493,6 +3493,8 @@
       primary_blocking_summary: primaryBlockingSummary
     };
     const analysisReadinessSummary = {
+      schemaVersion: "analysis_readiness_summary_v1",
+      schema_version: "analysis_readiness_summary_v1",
       ready: readyForAnalysis,
       status: coreStatus,
       blockerCount: analysisBlockers.length,
