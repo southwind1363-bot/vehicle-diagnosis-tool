@@ -9905,7 +9905,7 @@
     const textDtcSnapshot = extractTextDtcSnapshot(value);
     const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
-    const readDtcResponseOption = (camelKey, snakeKey, bucketName) => sessionInput[camelKey] || sessionInput[snakeKey] || { raw: firstOrEmpty(bucketName), protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+    const readResponseOption = (camelKey, snakeKey, bucketName) => sessionInput[camelKey] || sessionInput[snakeKey] || { raw: firstOrEmpty(bucketName), protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -9927,15 +9927,15 @@
       warnings: metadataOverrides.warnings,
       sourceLength: metadataOverrides.sourceLength,
       hadSensitiveIdentifier: metadataOverrides.hadSensitiveIdentifier,
-      storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses"),
-      pendingDtcResponse: readDtcResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
-      permanentDtcResponse: readDtcResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
-      supportedPidResponse: { raw: firstOrEmpty("supportedPidResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
-      livePidResponse: { raw: firstOrEmpty("livePidResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
-      freezeFrameResponse: { raw: firstOrEmpty("freezeFrameResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
-      readinessResponse: { raw: firstOrEmpty("readinessResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
-      onboardMonitorResponse: { raw: firstOrEmpty("onboardMonitorResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
-      ecuInfoResponse: { raw: firstOrEmpty("ecuInfoResponses"), protocol: sessionInput.protocol || sessionInput.obd_protocol || null },
+      storedDtcResponse: readResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses"),
+      pendingDtcResponse: readResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
+      permanentDtcResponse: readResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
+      supportedPidResponse: readResponseOption("supportedPidResponse", "supported_pid_response", "supportedPidResponses"),
+      livePidResponse: readResponseOption("livePidResponse", "live_pid_response", "livePidResponses"),
+      freezeFrameResponse: readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses"),
+      readinessResponse: readResponseOption("readinessResponse", "readiness_response", "readinessResponses"),
+      onboardMonitorResponse: readResponseOption("onboardMonitorResponse", "onboard_monitor_response", "onboardMonitorResponses"),
+      ecuInfoResponse: readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses"),
       ecus: ecuResponses
     });
     const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);
