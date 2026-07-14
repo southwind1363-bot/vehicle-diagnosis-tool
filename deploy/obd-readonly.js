@@ -3640,13 +3640,13 @@
       ecuInfoMissingKeyCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "ecuInfoMissingKeyCount"))) ? Number(readAliasValue(readoutQualitySummary, "ecuInfoMissingKeyCount")) : 0,
       onboardMonitorFailedCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "onboardMonitorFailedCount"))) ? Number(readAliasValue(readoutQualitySummary, "onboardMonitorFailedCount")) : 0,
       vehicleApplicabilityChecklist: diagnosticChecklistById.vehicle_applicability || null,
-      pendingQueueNextReadoutId: queueSummary.nextReadoutId || coreSessionStatus?.nextPendingReadoutId || null,
-      pendingQueueNextReadoutStatus: queueSummary.nextReadoutStatus || coreSessionStatus?.nextPendingReadoutState?.status || null,
-      recommendedReadoutId: queueSummary.recommendedReadoutId || coreSessionStatus?.nextRecommendedReadoutId || null,
-      recommendedReadoutStatus: queueSummary.recommendedReadoutStatus || coreSessionStatus?.nextReadoutSummary?.status || null,
-      recommendedReadoutSource: queueSummary.recommendedReadoutSource || coreSessionStatus?.nextReadoutSource || null,
-      recommendedReadoutQueuePosition: queueSummary.recommendedReadoutQueuePosition || coreSessionStatus?.nextReadoutSummary?.queuePosition || null,
-      recommendedReadoutIsPending: queueSummary.recommendedReadoutIsPending === true,
+      pendingQueueNextReadoutId: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
+      pendingQueueNextReadoutStatus: readAliasValue(queueSummary, "nextReadoutStatus") || coreSessionStatus?.nextPendingReadoutState?.status || coreSessionStatus?.next_pending_readout_state?.status || null,
+      recommendedReadoutId: readAliasValue(queueSummary, "recommendedReadoutId") || readAliasValue(coreSessionStatus, "nextRecommendedReadoutId") || null,
+      recommendedReadoutStatus: readAliasValue(queueSummary, "recommendedReadoutStatus") || coreSessionStatus?.nextReadoutSummary?.status || coreSessionStatus?.next_readout_summary?.status || null,
+      recommendedReadoutSource: readAliasValue(queueSummary, "recommendedReadoutSource") || readAliasValue(coreSessionStatus, "nextReadoutSource") || null,
+      recommendedReadoutQueuePosition: readAliasValue(queueSummary, "recommendedReadoutQueuePosition") || coreSessionStatus?.nextReadoutSummary?.queuePosition || coreSessionStatus?.next_readout_summary?.queue_position || null,
+      recommendedReadoutIsPending: readAliasValue(queueSummary, "recommendedReadoutIsPending") === true,
       readyForAnalysis,
       canStartAnalysis: readyForAnalysis,
       analysisBlocked: !readyForAnalysis,
@@ -3783,6 +3783,14 @@
     const currentNextReadoutSource = readAliasValue(currentFlow, "nextReadoutSource") || null;
     const importedNextReadoutQueuePosition = readAliasValue(importedFlow, "nextReadoutQueuePosition") || null;
     const currentNextReadoutQueuePosition = readAliasValue(currentFlow, "nextReadoutQueuePosition") || null;
+    const importedPendingQueueNextReadoutId = readAliasValue(importedFlow, "pendingQueueNextReadoutId") || null;
+    const currentPendingQueueNextReadoutId = readAliasValue(currentFlow, "pendingQueueNextReadoutId") || null;
+    const importedRecommendedReadoutId = readAliasValue(importedFlow, "recommendedReadoutId") || null;
+    const currentRecommendedReadoutId = readAliasValue(currentFlow, "recommendedReadoutId") || null;
+    const importedRecommendedReadoutSource = readAliasValue(importedFlow, "recommendedReadoutSource") || null;
+    const currentRecommendedReadoutSource = readAliasValue(currentFlow, "recommendedReadoutSource") || null;
+    const importedRecommendedReadoutQueuePosition = readAliasValue(importedFlow, "recommendedReadoutQueuePosition") || null;
+    const currentRecommendedReadoutQueuePosition = readAliasValue(currentFlow, "recommendedReadoutQueuePosition") || null;
     return {
       schemaVersion: "imported_core_comparison_v1",
       importedStatus,
@@ -3806,6 +3814,18 @@
       nextReadoutDetailsChanged: importedNextReadoutLabel !== currentNextReadoutLabel
         || importedNextReadoutSource !== currentNextReadoutSource
         || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
+      importedPendingQueueNextReadoutId,
+      currentPendingQueueNextReadoutId,
+      pendingQueueNextReadoutChanged: importedPendingQueueNextReadoutId !== currentPendingQueueNextReadoutId,
+      importedRecommendedReadoutId,
+      currentRecommendedReadoutId,
+      recommendedReadoutChanged: importedRecommendedReadoutId !== currentRecommendedReadoutId,
+      importedRecommendedReadoutSource,
+      currentRecommendedReadoutSource,
+      importedRecommendedReadoutQueuePosition,
+      currentRecommendedReadoutQueuePosition,
+      recommendedReadoutDetailsChanged: importedRecommendedReadoutSource !== currentRecommendedReadoutSource
+        || importedRecommendedReadoutQueuePosition !== currentRecommendedReadoutQueuePosition,
       importedRequiredReadoutCount: importedRequiredCount,
       currentRequiredReadoutCount: currentRequiredCount,
       requiredReadoutDelta: currentRequiredCount - importedRequiredCount,
