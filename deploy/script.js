@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 1480+件",
+  validationCheckLabel: "OBD安全検証 1481+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "統合診断入力のread-only flag aliasを追加・検証",
+  recentMilestone: "読取品質確認のretained raw text safety aliasを表示検証",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.519.0";
+const APP_VERSION = "2.520.0";
 const APP_LAST_UPDATED = "2026-07-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5646,7 +5646,20 @@ function formatReadoutQualityReviewRequestSummary(summary, fallback = NO_DATA) {
   const parts = [label, bridgeIntent, serviceMode].filter(Boolean);
   if (requestCount > 1) parts.push(`${requestCount}件`);
   if (!parts.length) return fallback;
-  if (request.vehicleCommandEnabled === false || request.vehicle_command_enabled === false || request.wouldTransmit === false || request.would_transmit === false || planSummary?.vehicleCommandEnabled === false || planSummary?.vehicle_command_enabled === false || planSummary?.wouldTransmit === false || planSummary?.would_transmit === false) parts.push("read-only");
+  const requestReadOnly =
+    request.vehicleCommandEnabled === false
+    || request.vehicle_command_enabled === false
+    || request.wouldTransmit === false
+    || request.would_transmit === false
+    || request.retainedRawText === false
+    || request.retained_raw_text === false
+    || planSummary?.vehicleCommandEnabled === false
+    || planSummary?.vehicle_command_enabled === false
+    || planSummary?.wouldTransmit === false
+    || planSummary?.would_transmit === false
+    || planSummary?.retainedRawText === false
+    || planSummary?.retained_raw_text === false;
+  if (requestReadOnly) parts.push("read-only");
   return parts.join(" / ");
 }
 
