@@ -161,6 +161,7 @@ const readoutCoverageFunctionChecks = () => {
     check(functionBody.includes('const includeInfrastructureInput = pickDefined(input.includeInfrastructure, input.include_infrastructure);'), "buildReadoutCoverageSnapshot should normalize includeInfrastructure aliases");
     check(functionBody.includes('includeInfrastructureInput === false'), "buildReadoutCoverageSnapshot should preserve explicit includeInfrastructure false");
     check(functionBody.indexOf('includeInfrastructureInput === false') < functionBody.indexOf(': hasConnectionStatusInput'), "buildReadoutCoverageSnapshot should evaluate explicit includeInfrastructure false before inferring infrastructure from bridge inputs");
+    check(functionBody.includes('const storedDtcSnapshotInput = input.storedDtcSnapshot || input.stored_dtc_snapshot') && functionBody.includes('normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")'), "buildReadoutCoverageSnapshot should merge typed DTC snapshot aliases");
   }
 };
 const bridgeReadoutWarningsFunctionChecks = () => {
@@ -1337,7 +1338,8 @@ const mergeDtcSnapshotsFunctionChecks = () => {
     check(functionBody.includes('source: "merged_dtc_snapshots"'), "mergeDtcSnapshots should mark merged DTC source explicitly");
     check(functionBody.includes('capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null') && functionBody.includes('snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol'), "mergeDtcSnapshots should carry capturedAt and protocol from the first available snapshot");
     check(functionBody.includes('snapshots.find((item) => item?.protocol || item?.obd_protocol)?.obd_protocol'), "mergeDtcSnapshots should accept obd_protocol aliases");
-    check(functionBody.includes('codes: [...new Set(mergedRows.map((row) => row.code))]'), "mergeDtcSnapshots should expose deduplicated DTC code list");
+    check(functionBody.includes('const codes = [...new Set(mergedRows.map((row) => row.code))]') && functionBody.includes('codes,'), "mergeDtcSnapshots should expose deduplicated DTC code list");
+    check(functionBody.includes('storedCount = mergedRows.filter((item) => item.status === "stored").length') && functionBody.includes('permanent_count: permanentCount'), "mergeDtcSnapshots should expose status count aliases");
     check(functionBody.includes('retainedRawText: false'), "mergeDtcSnapshots should never retain raw text");
   }
 };
@@ -1861,6 +1863,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null);') && functionBody.includes('importedAnalysisReadinessSummary,'), "buildDiagnosticScanSession should normalize and expose imported analysis readiness summary separately from recalculated status");
     check(functionBody.includes('const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);') && functionBody.includes('importedReadoutRequestPlanGateSummary,'), "buildDiagnosticScanSession should expose imported readout request plan gate summary separately");
     check(functionBody.includes('const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);') && functionBody.includes('importedCoreReadoutInventorySummary,'), "buildDiagnosticScanSession should expose imported core readout inventory summary separately");
+    check(functionBody.includes('const storedDtcSnapshotInput = sessionInput.storedDtcSnapshot || sessionInput.stored_dtc_snapshot') && functionBody.includes('normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")'), "buildDiagnosticScanSession should merge typed DTC snapshot aliases");
     check(functionBody.includes('sessionInput.livePidSnapshot') && functionBody.includes('sessionInput.live_pid_response') && functionBody.includes('sessionInput.live_pids'), "buildDiagnosticScanSession should accept live PID snapshot and response aliases");
     check(functionBody.includes('sessionInput.freezeFrameSnapshot') && functionBody.includes('sessionInput.freeze_frame_response') && functionBody.includes('sessionInput.freeze_frame'), "buildDiagnosticScanSession should accept freeze-frame snapshot and response aliases");
     check(functionBody.includes('sessionInput.readinessSnapshot') && functionBody.includes('sessionInput.readiness_response'), "buildDiagnosticScanSession should accept readiness snapshot and response aliases");
@@ -2102,7 +2105,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1954+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1961+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2174,7 +2177,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.575.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for Mode 06 explicit failed status normalization");
+check(appSource.includes('const APP_VERSION = "2.576.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for typed DTC snapshot alias scan session normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2537,6 +2540,19 @@ const bridgeMixedDtcSession = obd.buildDiagnosticScanSession({
   dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored" }, { code: "P0171", status: "pending" }] }
 });
 check(bridgeMixedDtcSession.dtcSnapshot.dtcs.length === 2, "同一DTCの保存/保留状態をセッション内で保持できません");
+const typedDtcScanSession = obd.buildDiagnosticScanSession({
+  storedDtcSnapshot: { dtcs: [{ code: "P0171" }] },
+  pending_dtc_snapshot: { dtcs: [{ code: "P0300" }] },
+  permanentDtcSnapshot: { dtcs: [{ code: "P0420" }] }
+});
+check(typedDtcScanSession.dtcSnapshot.storedCount === 1 && typedDtcScanSession.dtcSnapshot.pendingCount === 1 && typedDtcScanSession.dtcSnapshot.permanentCount === 1, "Diagnostic scan session did not merge typed DTC snapshot aliases");
+check(typedDtcScanSession.readoutCoverage.itemById?.dtc_snapshot?.status === "captured", "Diagnostic scan session did not mark typed DTC aliases as captured readout");
+const typedDtcRawResponseScanSession = obd.buildDiagnosticScanSession({
+  stored_dtc_response: { raw: "43 01 71 00 00" },
+  pending_dtc_response: { raw: "47 03 00 00 00" },
+  permanent_dtc_response: { raw: "4A 04 20 00 00" }
+});
+check(typedDtcRawResponseScanSession.dtcSnapshot.codes.includes("P0171") && typedDtcRawResponseScanSession.dtcSnapshot.codes.includes("P0420"), "Diagnostic scan session did not decode typed DTC response aliases");
 const bridgeEmptyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({});
 check(bridgeEmptyDtcSnapshot.codes.length === 0 && bridgeEmptyDtcSnapshot.dtcs.length === 0 && bridgeEmptyDtcSnapshot.blocked === true, "空DTCブリッジ応答を安全側へ整形できません");
 const outboundRead = obd.evaluateOutboundSafety({ service: "03", stateChanging: false });
@@ -5860,6 +5876,12 @@ check(aliasReadoutCoverage.progressPercent >= 80, "Readout coverage did not acce
 check(aliasReadoutCoverage.items.some((item) => item.id === "vci_devices" && item.count === 1), "Readout coverage did not count vci_list alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "freeze_frame_snapshot" && item.count === 2), "Readout coverage did not accept freeze_frame_response alias input");
 check(aliasReadoutCoverage.items.some((item) => item.id === "supported_pid_matrix" && item.count >= 2), "Readout coverage did not accept supported_pid_snapshot alias input");
+const typedDtcReadoutCoverage = obd.buildReadoutCoverageSnapshot({
+  stored_dtc_snapshot: { dtcs: [{ code: "P0171" }] },
+  pendingDtcSnapshot: { dtcs: [{ code: "P0300" }] },
+  permanent_dtc_response: { raw: "4A 04 20 00 00" }
+});
+check(typedDtcReadoutCoverage.itemById?.dtc_snapshot?.status === "captured" && typedDtcReadoutCoverage.itemById?.dtc_snapshot?.count === 3, "Readout coverage did not merge typed DTC aliases");
 const nonInfrastructureAliasReadoutCoverage = obd.buildReadoutCoverageSnapshot({
   includeInfrastructure: false,
   connection_status: bridgeStatus,
@@ -9431,6 +9453,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1954");
+  console.log("OBD read-only safety checks: 1961");
   console.log("Errors: 0");
 }

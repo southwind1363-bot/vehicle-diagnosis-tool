@@ -1282,6 +1282,9 @@
     const connectionStatusInput = input.connectionStatus || input.connection_status || input.connectionStatusResponse || input.connection_status_response || {};
     const vciDevicesInput = input.vciDevices || input.vci_devices || input.vciList || input.vci_list || input.listVciResponse || input.list_vci_response || [];
     const adapterIdentityInput = input.adapterIdentity || input.adapter_identity || input.adapterIdentityResponse || input.adapter_identity_response || {};
+    const storedDtcSnapshotInput = input.storedDtcSnapshot || input.stored_dtc_snapshot || input.storedDtcResponse || input.stored_dtc_response || {};
+    const pendingDtcSnapshotInput = input.pendingDtcSnapshot || input.pending_dtc_snapshot || input.pendingDtcResponse || input.pending_dtc_response || {};
+    const permanentDtcSnapshotInput = input.permanentDtcSnapshot || input.permanent_dtc_snapshot || input.permanentDtcResponse || input.permanent_dtc_response || {};
     const dtcSnapshotInput = input.dtcSnapshot || input.dtc_snapshot || {};
     const livePidSnapshotInput = input.livePidSnapshot || input.live_pid_snapshot || input.livePidResponse || input.live_pid_response || {};
     const freezeFrameSnapshotInput = input.freezeFrameSnapshot || input.freeze_frame_snapshot || input.freezeFrameResponse || input.freeze_frame_response || {};
@@ -1292,6 +1295,7 @@
     const hasConnectionStatusInput = hasObjectContent(connectionStatusInput);
     const hasAdapterIdentityInput = hasObjectContent(adapterIdentityInput);
     const hasDtcSnapshotInput = hasObjectContent(dtcSnapshotInput);
+    const hasTypedDtcSnapshotInput = hasObjectContent(storedDtcSnapshotInput) || hasObjectContent(pendingDtcSnapshotInput) || hasObjectContent(permanentDtcSnapshotInput);
     const hasLivePidSnapshotInput = hasObjectContent(livePidSnapshotInput);
     const hasFreezeFrameSnapshotInput = hasObjectContent(freezeFrameSnapshotInput);
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
@@ -1318,6 +1322,12 @@
       : null;
     const dtcSnapshot = hasDtcSnapshotInput
       ? (dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput))
+      : hasTypedDtcSnapshotInput
+        ? mergeDtcSnapshots(
+          normalizeTypedDtcSnapshotInput(storedDtcSnapshotInput, "stored", "read_stored_dtc"),
+          normalizeTypedDtcSnapshotInput(pendingDtcSnapshotInput, "pending", "read_pending_dtc"),
+          normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")
+        )
       : null;
     const livePidSnapshot = hasLivePidSnapshotInput
       ? (livePidSnapshotInput?.monitorValues
@@ -9165,6 +9175,13 @@
       if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
     });
     const mergedRows = [...byCodeAndStatus.values()];
+    const codes = [...new Set(mergedRows.map((row) => row.code))];
+    const codeCount = codes.length;
+    const dtcCount = mergedRows.length;
+    const storedCount = mergedRows.filter((item) => item.status === "stored").length;
+    const pendingCount = mergedRows.filter((item) => item.status === "pending").length;
+    const permanentCount = mergedRows.filter((item) => item.status === "permanent").length;
+    const unknownCount = mergedRows.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
     return {
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
@@ -9173,10 +9190,42 @@
       protocol: snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol
         || snapshots.find((item) => item?.protocol || item?.obd_protocol)?.obd_protocol
         || null,
-      codes: [...new Set(mergedRows.map((row) => row.code))],
+      codes,
+      codeCount,
+      code_count: codeCount,
       dtcs: mergedRows,
+      dtcCount,
+      dtc_count: dtcCount,
+      storedCount,
+      stored_count: storedCount,
+      pendingCount,
+      pending_count: pendingCount,
+      permanentCount,
+      permanent_count: permanentCount,
+      unknownCount,
+      unknown_count: unknownCount,
       retainedRawText: false
     };
+  }
+
+  function normalizeTypedDtcSnapshotInput(input = null, status = "stored", intent = "read_stored_dtc") {
+    if (!hasObjectContent(input)) return null;
+    if (input.schemaVersion && Array.isArray(input.dtcs)) return input;
+    if (input.raw || input.response || Array.isArray(input.bytes)) {
+      return decodeObdDtcResponse({ ...input, status: input.status || status });
+    }
+    const hasDtcRows = Array.isArray(input.dtcs)
+      || Array.isArray(input.codes)
+      || Array.isArray(input.dtc_list)
+      || Array.isArray(input.dtcList)
+      || Array.isArray(input.diagnosticTroubleCodes)
+      || Array.isArray(input.diagnostic_trouble_codes);
+    if (hasDtcRows) return normalizeDtcSnapshot({ ...input, status: input.status || status });
+    return normalizeBridgeDtcSnapshot({
+      ...input,
+      intent: input.intent || intent,
+      data: input.data || { ...input, status: input.status || status }
+    });
   }
 
   function decodeDtcPair(high, low) {
@@ -10310,7 +10359,11 @@
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
-    const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
+    const storedDtcSnapshotInput = sessionInput.storedDtcSnapshot || sessionInput.stored_dtc_snapshot || sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || null;
+    const pendingDtcSnapshotInput = sessionInput.pendingDtcSnapshot || sessionInput.pending_dtc_snapshot || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || null;
+    const permanentDtcSnapshotInput = sessionInput.permanentDtcSnapshot || sessionInput.permanent_dtc_snapshot || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || null;
+    const hasTypedDtcSnapshotInput = hasObjectContent(storedDtcSnapshotInput) || hasObjectContent(pendingDtcSnapshotInput) || hasObjectContent(permanentDtcSnapshotInput);
+    const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || (hasTypedDtcSnapshotInput ? {} : sessionInput);
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
       || sessionInput.livePidResponse
@@ -10334,7 +10387,15 @@
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
-    const dtcSnapshot = withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput));
+    const dtcSnapshot = withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion
+      ? dtcSnapshotInput
+      : hasTypedDtcSnapshotInput
+        ? mergeDtcSnapshots(
+          normalizeTypedDtcSnapshotInput(storedDtcSnapshotInput, "stored", "read_stored_dtc"),
+          normalizeTypedDtcSnapshotInput(pendingDtcSnapshotInput, "pending", "read_pending_dtc"),
+          normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")
+        )
+        : normalizeDtcSnapshot(dtcSnapshotInput));
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
