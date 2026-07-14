@@ -69,7 +69,7 @@ const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBrid
 const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgePidValueFunctionSource = source.match(/function normalizeBridgePidValue[\s\S]*?sourceLine: index \+ 1\r?\n    \};\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
-const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missingLabels: normalizedMissingLabels\r?\n    \};\r?\n  \}/);
+const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missing_labels: normalizedMissingLabels\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
 const vehicleApplicabilityWarningsFunctionSource = source.match(/function appendVehicleApplicabilityWarnings[\s\S]*?vehicle_profile_manual"\);\r?\n    \}\r?\n  \}/);
@@ -198,11 +198,15 @@ const normalizeReadoutCoverageFunctionChecks = () => {
     check(functionBody.includes('schemaVersion: input.schemaVersion || input.schema_version || "readout_coverage_v1",'), "normalizeReadoutCoverageSnapshot should normalize schema version aliases");
     check(functionBody.includes('schema_version: input.schema_version || input.schemaVersion || "readout_coverage_v1",'), "normalizeReadoutCoverageSnapshot should expose snake_case schema version aliases");
     check(functionBody.includes('includeInfrastructure: pickDefined(input.includeInfrastructure, input.include_infrastructure) === true,'), "normalizeReadoutCoverageSnapshot should normalize includeInfrastructure aliases as explicit true");
+    check(functionBody.includes('include_infrastructure: pickDefined(input.includeInfrastructure, input.include_infrastructure) === true,') && functionBody.includes('total_categories: totalCategories,') && functionBody.includes('available_categories: availableCategories,'), "normalizeReadoutCoverageSnapshot should expose snake_case coverage category aliases");
     check(functionBody.includes('capturedPercent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent)))') && functionBody.includes(': computedCapturedPercent,'), "normalizeReadoutCoverageSnapshot should clamp capturedPercent and fall back to computed captured percent");
     check(functionBody.includes('progressPercent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent)))') && functionBody.includes(': computedProgressPercent,'), "normalizeReadoutCoverageSnapshot should clamp progressPercent and fall back to computed progress percent");
+    check(functionBody.includes('captured_percent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent)))') && functionBody.includes('progress_percent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent)))'), "normalizeReadoutCoverageSnapshot should expose snake_case coverage percent aliases");
     check(functionBody.includes('const emptyIdsInput = pickDefined(input.emptyIds, input.empty_ids, input.emptyReadoutIds, input.empty_readout_ids);') && functionBody.includes('missingLabels: normalizedMissingLabels'), "normalizeReadoutCoverageSnapshot should normalize snake_case coverage label and id aliases");
     check(functionBody.includes('const itemById = normalizedItems.reduce((byId, item) => {') && functionBody.includes('itemsByStatus,'), "normalizeReadoutCoverageSnapshot should expose readout coverage item indexes");
+    check(functionBody.includes('item_by_id: itemById,') && functionBody.includes('items_by_status: itemsByStatus,') && functionBody.includes('completion_summary: coverageCompletionSummary,'), "normalizeReadoutCoverageSnapshot should expose snake_case coverage indexes and completion summary aliases");
     check(functionBody.includes('const capturedIdsInput = pickDefined(input.capturedIds, input.captured_ids, input.capturedReadoutIds, input.captured_readout_ids);') && functionBody.includes('pendingLabels: normalizedPendingLabels,'), "normalizeReadoutCoverageSnapshot should expose captured and pending readout coverage ids");
+    check(functionBody.includes('captured_ids: normalizedCapturedIds,') && functionBody.includes('pending_ids: normalizedPendingIds,') && functionBody.includes('missing_labels: normalizedMissingLabels'), "normalizeReadoutCoverageSnapshot should expose snake_case coverage id and label aliases");
     check(functionBody.includes('const coverageCompletionSummary = {') && functionBody.includes('schemaVersion: "readout_coverage_completion_v1"') && functionBody.includes('completionSummary: coverageCompletionSummary,'), "normalizeReadoutCoverageSnapshot should expose a compact readout coverage completion summary");
     check(functionBody.includes('schema_version: "readout_coverage_completion_v1"'), "normalizeReadoutCoverageSnapshot should expose snake_case completion summary schema version");
     check(functionBody.includes('analysis_ready: normalizedPendingIds.length === 0,') && functionBody.includes('analysis_blocked: normalizedPendingIds.length > 0,'), "normalizeReadoutCoverageSnapshot should expose snake_case completion analysis gate flags");
@@ -2052,7 +2056,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1828+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1836+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2124,7 +2128,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.548.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for coverage completion snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.549.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout coverage snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8388,10 +8392,14 @@ const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
   }
 });
 check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
+check(scanSessionPlainCoverageOverride.readoutCoverage.include_infrastructure === false, "Diagnostic scan session did not expose readout coverage snake_case includeInfrastructure alias");
 check(scanSessionPlainCoverageOverride.readoutCoverage.schema_version === "readout_coverage_v1", "Diagnostic scan session did not expose readout coverage snake_case schema version");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedPercent === 29, "Diagnostic scan session did not preserve plain-object capturedPercent override");
+check(scanSessionPlainCoverageOverride.readoutCoverage.captured_percent === 29 && scanSessionPlainCoverageOverride.readoutCoverage.progress_percent === 43, "Diagnostic scan session did not expose readout coverage snake_case percent aliases");
 check(scanSessionPlainCoverageOverride.readoutCoverage.itemById?.dtc_snapshot?.status === "captured" && Array.isArray(scanSessionPlainCoverageOverride.readoutCoverage.itemsByStatus?.empty), "Diagnostic scan session did not expose readout coverage item indexes");
+check(scanSessionPlainCoverageOverride.readoutCoverage.item_by_id?.dtc_snapshot?.status === "captured" && Array.isArray(scanSessionPlainCoverageOverride.readoutCoverage.items_by_status?.empty), "Diagnostic scan session did not expose readout coverage snake_case item indexes");
 check(scanSessionPlainCoverageOverride.readoutCoverage.capturedIds?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.readoutCoverage.pendingIds?.includes("readiness_snapshot"), "Diagnostic scan session did not expose readout coverage captured and pending ids");
+check(scanSessionPlainCoverageOverride.readoutCoverage.captured_ids?.includes("dtc_snapshot") && scanSessionPlainCoverageOverride.readoutCoverage.pending_ids?.includes("readiness_snapshot"), "Diagnostic scan session did not expose readout coverage snake_case captured and pending ids");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.schemaVersion === "readout_coverage_completion_v1" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.pendingCount === 5, "Diagnostic scan session did not expose readout coverage completion summary");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.schema_version === "readout_coverage_completion_v1", "Diagnostic scan session did not expose readout coverage completion snake_case schema version");
 check(scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.hasPendingReadouts === true && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextPendingId === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.readoutCoverage.completionSummary?.nextPendingStatus === "empty", "Diagnostic scan session did not expose actionable readout coverage completion flags");
@@ -8986,6 +8994,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1828");
+  console.log("OBD read-only safety checks: 1836");
   console.log("Errors: 0");
 }
