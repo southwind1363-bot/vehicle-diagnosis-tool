@@ -778,23 +778,44 @@
       return true;
     });
     const codes = [...new Set(dtcs.map((item) => item.code))];
+    const capturedAt = data.captured_at || data.capturedAt || null;
+    const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
+    const codeCount = codes.length;
+    const dtcCount = normalizedDtcs.length;
+    const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
+    const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
+    const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
 
     return {
+      schemaVersion: "dtc_snapshot_v1",
+      schema_version: "dtc_snapshot_v1",
       source: "local_bridge",
       intent,
       ok: safety.ok,
       blocked: safety.blocked,
       wouldTransmit: safety.wouldTransmit,
       codes,
-      dtcs: dtcs.map((item) => ({ ...item, source: "local_bridge" })),
+      codeCount,
+      code_count: codeCount,
+      dtcs: normalizedDtcs,
+      dtcCount,
+      dtc_count: dtcCount,
+      storedCount,
+      stored_count: storedCount,
+      pendingCount,
+      pending_count: pendingCount,
+      permanentCount,
+      permanent_count: permanentCount,
       protocol: readBridgeProtocol(data),
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
         status: row?.status || "unknown",
         codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : null
       })),
-      capturedAt: data.captured_at || data.capturedAt || null,
-      retainedRawText: false
+      capturedAt,
+      captured_at: capturedAt,
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 
@@ -7728,15 +7749,39 @@
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
     });
 
+    const normalizedDtcs = [...byCode.values()];
+    const codes = [...new Set(normalizedDtcs.map((row) => row.code))];
+    const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const codeCount = codes.length;
+    const dtcCount = normalizedDtcs.length;
+    const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
+    const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
+    const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
+    const unknownCount = normalizedDtcs.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
+
     return {
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
       source,
-      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      capturedAt,
+      captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
-      codes: [...new Set([...byCode.values()].map((row) => row.code))],
-      dtcs: [...byCode.values()],
-      retainedRawText: false
+      codes,
+      codeCount,
+      code_count: codeCount,
+      dtcs: normalizedDtcs,
+      dtcCount,
+      dtc_count: dtcCount,
+      storedCount,
+      stored_count: storedCount,
+      pendingCount,
+      pending_count: pendingCount,
+      permanentCount,
+      permanent_count: permanentCount,
+      unknownCount,
+      unknown_count: unknownCount,
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 

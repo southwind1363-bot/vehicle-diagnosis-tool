@@ -60,7 +60,7 @@ const vehicleOperationRequestFunctionSource = source.match(/function requestVehi
 const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
 const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.obd_protocol \|\| data\.communication_protocol[\s\S]*?\|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
-const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDtcSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
@@ -89,7 +89,7 @@ const fuelTrimInsightFunctionSource = source.match(/function addFuelTrimInsight[
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
 const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
-const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreezeFrameSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const readinessSnapshotFunctionSource = source.match(/function normalizeReadinessSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
@@ -352,7 +352,10 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";'), "normalizeBridgeDtcSnapshot should derive DTC status from bridge intent");
     check(functionBody.includes('extractDtcCodes(row.code || row.dtc || row.id || "")'), "normalizeBridgeDtcSnapshot should normalize DTC row code aliases");
     check(functionBody.includes('const key = `${entry.code}::${entry.status}`;'), "normalizeBridgeDtcSnapshot should deduplicate by code and status");
-    check(functionBody.includes('dtcs: dtcs.map((item) => ({ ...item, source: "local_bridge" }))'), "normalizeBridgeDtcSnapshot should mark normalized DTC rows as local bridge sourced");
+    check(functionBody.includes('const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));'), "normalizeBridgeDtcSnapshot should mark normalized DTC rows as local bridge sourced");
+    check(functionBody.includes('schema_version: "dtc_snapshot_v1"') && functionBody.includes('captured_at: capturedAt'), "normalizeBridgeDtcSnapshot should expose snake_case schema and capture aliases");
+    check(functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount') && functionBody.includes('stored_count: storedCount'), "normalizeBridgeDtcSnapshot should expose snake_case DTC count aliases");
+    check(functionBody.includes('pending_count: pendingCount') && functionBody.includes('permanent_count: permanentCount') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeDtcSnapshot should expose snake_case status count and raw retention aliases");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeDtcSnapshot should not retain raw bridge text");
   }
   check(Boolean(bridgeLivePidSnapshotFunctionSource), "normalizeBridgeLivePidSnapshot is missing from obd-readonly.js");
@@ -1125,6 +1128,9 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('const key = `${row.code}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should deduplicate by code/status and never retain raw text");
     check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "normalizeDtcSnapshot should accept protocol aliases");
     check(functionBody.includes('schema_version: "dtc_snapshot_v1"'), "normalizeDtcSnapshot should expose snake_case schema version");
+    check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount'), "normalizeDtcSnapshot should expose snake_case capture and DTC count aliases");
+    check(functionBody.includes('stored_count: storedCount') && functionBody.includes('pending_count: pendingCount') && functionBody.includes('permanent_count: permanentCount'), "normalizeDtcSnapshot should expose snake_case DTC status counts");
+    check(functionBody.includes('unknown_count: unknownCount') && functionBody.includes('retained_raw_text: false'), "normalizeDtcSnapshot should expose snake_case unknown count and raw retention aliases");
   }
 };
 const freezeFrameSnapshotFunctionChecks = () => {
@@ -2076,7 +2082,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1881+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1891+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2148,7 +2154,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.556.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for freeze-frame snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.557.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for DTC snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2501,6 +2507,8 @@ const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 check(bridgePendingDtcSnapshot.intent === "read_pending_dtc", "保留DTCブリッジ応答のintentが不正です");
 check(bridgePendingDtcSnapshot.dtcs.length === 1 && bridgePendingDtcSnapshot.dtcs[0]?.status === "pending", "保留DTCブリッジ応答の種別または重複除外が不正です");
+check(bridgePendingDtcSnapshot.schema_version === "dtc_snapshot_v1" && bridgePendingDtcSnapshot.dtc_count === 1 && bridgePendingDtcSnapshot.pending_count === 1, "Bridge DTC snapshot did not expose snake_case schema and count aliases");
+check(bridgePendingDtcSnapshot.code_count === 1 && bridgePendingDtcSnapshot.retained_raw_text === false, "Bridge DTC snapshot did not expose snake_case code and raw retention aliases");
 const bridgeMixedDtcSession = obd.buildDiagnosticScanSession({
   dtcSnapshot: { dtcs: [{ code: "P0171", status: "stored" }, { code: "P0171", status: "pending" }] }
 });
@@ -5760,6 +5768,8 @@ check(normalizedDtcAliasSnapshot.source === "bridge_import" && normalizedDtcAlia
 check(normalizedDtcAliasSnapshot.codes.join(",") === "P0171,P0300,P0420", "normalizeDtcSnapshot did not merge status-specific DTC arrays");
 check(normalizedDtcAliasSnapshot.dtcs.some((item) => item.code === "P0171" && item.status === "stored" && item.ecu === "7E8" && item.freezeFrameAvailable === true), "normalizeDtcSnapshot did not preserve stored DTC ECU and freeze-frame aliases");
 check(normalizedDtcAliasSnapshot.dtcs.some((item) => item.code === "P0300" && item.status === "pending") && normalizedDtcAliasSnapshot.dtcs.some((item) => item.code === "P0420" && item.status === "permanent"), "normalizeDtcSnapshot did not preserve pending and permanent statuses");
+check(normalizedDtcAliasSnapshot.captured_at === "2026-07-07T00:40:00Z" && normalizedDtcAliasSnapshot.dtc_count === 3 && normalizedDtcAliasSnapshot.code_count === 3, "normalizeDtcSnapshot did not expose snake_case capture and count aliases");
+check(normalizedDtcAliasSnapshot.stored_count === 1 && normalizedDtcAliasSnapshot.pending_count === 1 && normalizedDtcAliasSnapshot.permanent_count === 1 && normalizedDtcAliasSnapshot.retained_raw_text === false, "normalizeDtcSnapshot did not expose snake_case status and raw retention aliases");
 const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00", protocol: "ISO15765-4" });
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
@@ -9040,6 +9050,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1881");
+  console.log("OBD read-only safety checks: 1891");
   console.log("Errors: 0");
 }
