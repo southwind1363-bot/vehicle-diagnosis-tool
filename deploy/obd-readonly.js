@@ -5787,6 +5787,75 @@
     };
   }
 
+  function normalizeReadoutRequestPlanGateSummaryAliases(summary = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const schemaVersion = summary.schemaVersion || summary.schema_version || "readout_request_plan_gate_v1";
+    const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
+    const toCount = (camelKey, snakeKey, fallback = 0) => {
+      const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
+      return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
+    };
+    const blockedReasonIds = normalizeIds(pickDefined(summary.blockedReasonIds, summary.blocked_reason_ids, []));
+    const actionIds = normalizeIds(pickDefined(summary.actionIds, summary.action_ids, []));
+    const actionReasonIds = normalizeIds(pickDefined(summary.actionReasonIds, summary.action_reason_ids, []));
+    const actionReadoutIds = normalizeIds(pickDefined(summary.actionReadoutIds, summary.action_readout_ids, []));
+    const actionQueue = Array.isArray(summary.actionQueue)
+      ? summary.actionQueue.map((item) => ({ ...item }))
+      : Array.isArray(summary.action_queue)
+        ? summary.action_queue.map((item) => ({ ...item }))
+        : [];
+    const actionSummaryInput = summary.actionSummary || summary.action_summary || {};
+    const actionSummary = actionSummaryInput && typeof actionSummaryInput === "object" && !Array.isArray(actionSummaryInput)
+      ? {
+        ...actionSummaryInput,
+        schemaVersion: actionSummaryInput.schemaVersion || actionSummaryInput.schema_version || "readout_request_plan_gate_action_summary_v1",
+        schema_version: actionSummaryInput.schema_version || actionSummaryInput.schemaVersion || "readout_request_plan_gate_action_summary_v1",
+        actionCount: Number.isFinite(Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length))) ? Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length)) : actionIds.length,
+        action_count: Number.isFinite(Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length))) ? Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length)) : actionIds.length,
+        reasonCount: Number.isFinite(Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length))) ? Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length)) : actionReasonIds.length,
+        reason_count: Number.isFinite(Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length))) ? Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length)) : actionReasonIds.length,
+        readoutCount: Number.isFinite(Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length))) ? Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length)) : actionReadoutIds.length,
+        readout_count: Number.isFinite(Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length))) ? Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length)) : actionReadoutIds.length,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        wouldTransmit: false,
+        would_transmit: false
+      }
+      : null;
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      state: summary.state || "unknown",
+      ready: pickDefined(summary.ready, summary.is_ready, false) === true,
+      blocked: pickDefined(summary.blocked, summary.is_blocked, false) === true,
+      safeForBridgePlanning: pickDefined(summary.safeForBridgePlanning, summary.safe_for_bridge_planning, false) === true,
+      safe_for_bridge_planning: pickDefined(summary.safeForBridgePlanning, summary.safe_for_bridge_planning, false) === true,
+      blockedReasonCount: toCount("blockedReasonCount", "blocked_reason_count", blockedReasonIds.length),
+      blocked_reason_count: toCount("blockedReasonCount", "blocked_reason_count", blockedReasonIds.length),
+      blockedReasonIds,
+      blocked_reason_ids: blockedReasonIds,
+      actionRequired: pickDefined(summary.actionRequired, summary.action_required, actionIds.length > 0 || actionQueue.length > 0) === true,
+      action_required: pickDefined(summary.actionRequired, summary.action_required, actionIds.length > 0 || actionQueue.length > 0) === true,
+      actionCount: toCount("actionCount", "action_count", actionIds.length || actionQueue.length),
+      action_count: toCount("actionCount", "action_count", actionIds.length || actionQueue.length),
+      actionIds,
+      action_ids: actionIds,
+      actionReasonIds,
+      action_reason_ids: actionReasonIds,
+      actionReadoutIds,
+      action_readout_ids: actionReadoutIds,
+      actionSummary,
+      action_summary: actionSummary,
+      actionQueue,
+      action_queue: actionQueue,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function buildImportedSessionComparisonSummary({
     coreComparison = null,
     diagnosticFlowComparison = null,
@@ -7477,11 +7546,13 @@
       || bridgeImportInput?.readoutQualitySummary
       || bridgeImportInput?.readout_quality_summary
       || null);
-    const importedReadoutRequestPlanGateSummary = bridgeImport?.readoutRequestPlanGateSummary
+    const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(bridgeImport?.readoutRequestPlanGateSummary
       || bridgeImport?.readout_request_plan_gate_summary
       || bridgeSession?.readoutRequestPlanGateSummary
       || bridgeSession?.readout_request_plan_gate_summary
-      || null;
+      || bridgeImportInput?.readoutRequestPlanGateSummary
+      || bridgeImportInput?.readout_request_plan_gate_summary
+      || null);
     const importedCoreReadoutInventorySummary = bridgeImport?.coreReadoutInventorySummary
       || bridgeImport?.core_readout_inventory_summary
       || bridgeSession?.coreReadoutInventorySummary
@@ -9613,7 +9684,7 @@
     const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;
     const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
-    const importedReadoutRequestPlanGateSummary = sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null;
+    const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
     const importedCoreReadoutInventorySummary = sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null;
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || sessionInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
