@@ -9945,10 +9945,12 @@
       explicitImportClassification,
       detectedToolHints: toolHints
     });
+    const outputDtcSnapshot = mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot;
 
     return {
       ...session,
-      dtcSnapshot: mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot,
+      dtcSnapshot: outputDtcSnapshot,
+      dtc_snapshot: outputDtcSnapshot,
       source: "obd_text_import",
       toolHints: textImportMetadata.toolHints,
       importClassification: textImportMetadata.importClassification,
