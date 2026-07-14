@@ -804,31 +804,32 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('schemaVersion: "core_session_status_v1",'), "buildCoreSessionStatus should expose a stable schema version");
     check(functionBody.includes('status: coreStatus,'), "buildCoreSessionStatus should derive status from analysis readiness and readout progress");
     check(functionBody.includes('requiredReadoutIds,'), "buildCoreSessionStatus should return required core readout ids");
-    check(functionBody.includes('missingReadoutIds: remainingReadoutIds,'), "buildCoreSessionStatus should expose missingReadoutIds as an explicit scan-session field");
-    check(functionBody.includes('pendingReadoutIds,'), "buildCoreSessionStatus should expose pending readout ids");
-    check(functionBody.includes('pendingReadoutStates,'), "buildCoreSessionStatus should expose pending readout state entries");
-    check(functionBody.includes('pendingReadoutStateById,'), "buildCoreSessionStatus should expose pending readout states by id");
-    check(functionBody.includes('pendingReadoutQueue,'), "buildCoreSessionStatus should expose ordered pending readout queue entries");
-    check(functionBody.includes('pendingReadoutQueueById,'), "buildCoreSessionStatus should expose pending readout queue entries by id");
-    check(functionBody.includes('pendingReadoutQueueSummary,'), "buildCoreSessionStatus should expose pending readout queue summary");
-    check(functionBody.includes('nextPendingReadoutId,') && functionBody.includes('nextPendingReadoutState,'), "buildCoreSessionStatus should expose the next pending readout cursor");
-    check(functionBody.includes('readoutStates,'), "buildCoreSessionStatus should expose per-readout state entries");
-    check(functionBody.includes('readoutStateById,'), "buildCoreSessionStatus should expose per-readout states by id");
-    check(functionBody.includes('readoutStatesByStatus,'), "buildCoreSessionStatus should expose per-readout states grouped by status");
-    check(functionBody.includes('readoutStateSummary,'), "buildCoreSessionStatus should expose per-readout state summary");
-    check(functionBody.includes('readoutProgressSummary,'), "buildCoreSessionStatus should return consolidated readout progress summary");
-    check(functionBody.includes('readoutCompletionSummary,'), "buildCoreSessionStatus should return grouped readout completion details");
-    check(functionBody.includes('coreWorkflowSummary,'), "buildCoreSessionStatus should return core workflow summary");
-    check(functionBody.includes('nextReadoutCandidate,'), "buildCoreSessionStatus should expose the resolved next readout candidate");
-    check(functionBody.includes('nextRecommendedReadoutId,'), "buildCoreSessionStatus should expose the resolved next recommended readout id");
-    check(functionBody.includes('nextReadoutSource,'), "buildCoreSessionStatus should expose the next readout source");
-    check(functionBody.includes('nextReadoutState,'), "buildCoreSessionStatus should expose the next readout state");
-    check(functionBody.includes('nextReadoutSummary,'), "buildCoreSessionStatus should return the next readout summary");
-    check(functionBody.includes('analysisBlockers,'), "buildCoreSessionStatus should expose analysis blockers");
-    check(functionBody.includes('analysisBlockerById,'), "buildCoreSessionStatus should expose analysis blocker details by id");
-    check(functionBody.includes('analysisBlockerSummary,'), "buildCoreSessionStatus should expose analysis blocker summary");
-    check(functionBody.includes('analysisChecklist,') && functionBody.includes('analysisChecklistById,') && functionBody.includes('analysisChecklistSummary,'), "buildCoreSessionStatus should return analysis checklist details");
-    check(functionBody.includes('analysisReadinessSummary,'), "buildCoreSessionStatus should return analysis readiness summary");
+    check(functionBody.includes('schema_version: "core_session_status_v1"') && functionBody.includes('completion_percent: completionPercent,') && functionBody.includes('ready_for_analysis: readyForAnalysis'), "buildCoreSessionStatus should expose top-level core status snake_case aliases");
+    check(functionBody.includes('missingReadoutIds: remainingReadoutIds,') && functionBody.includes('missing_readout_ids: remainingReadoutIds,'), "buildCoreSessionStatus should expose missingReadoutIds as an explicit scan-session field");
+    check(functionBody.includes('pendingReadoutIds,') && functionBody.includes('pending_readout_ids: pendingReadoutIds,'), "buildCoreSessionStatus should expose pending readout ids");
+    check(functionBody.includes('pendingReadoutStates,') && functionBody.includes('pending_readout_states: pendingReadoutStates,'), "buildCoreSessionStatus should expose pending readout state entries");
+    check(functionBody.includes('pendingReadoutStateById,') && functionBody.includes('pending_readout_state_by_id: pendingReadoutStateById,'), "buildCoreSessionStatus should expose pending readout states by id");
+    check(functionBody.includes('pendingReadoutQueue,') && functionBody.includes('pending_readout_queue: pendingReadoutQueue,'), "buildCoreSessionStatus should expose ordered pending readout queue entries");
+    check(functionBody.includes('pendingReadoutQueueById,') && functionBody.includes('pending_readout_queue_by_id: pendingReadoutQueueById,'), "buildCoreSessionStatus should expose pending readout queue entries by id");
+    check(functionBody.includes('pendingReadoutQueueSummary,') && functionBody.includes('pending_readout_queue_summary: pendingReadoutQueueSummary,'), "buildCoreSessionStatus should expose pending readout queue summary");
+    check(functionBody.includes('nextPendingReadoutId,') && functionBody.includes('next_pending_readout_id: nextPendingReadoutId,') && functionBody.includes('next_pending_readout_state: nextPendingReadoutState,'), "buildCoreSessionStatus should expose the next pending readout cursor");
+    check(functionBody.includes('readoutStates,') && functionBody.includes('readout_states: readoutStates,'), "buildCoreSessionStatus should expose per-readout state entries");
+    check(functionBody.includes('readoutStateById,') && functionBody.includes('readout_state_by_id: readoutStateById,'), "buildCoreSessionStatus should expose per-readout states by id");
+    check(functionBody.includes('readoutStatesByStatus,') && functionBody.includes('readout_states_by_status: readoutStatesByStatus,'), "buildCoreSessionStatus should expose per-readout states grouped by status");
+    check(functionBody.includes('readoutStateSummary,') && functionBody.includes('readout_state_summary: readoutStateSummary,'), "buildCoreSessionStatus should expose per-readout state summary");
+    check(functionBody.includes('readoutProgressSummary,') && functionBody.includes('readout_progress_summary: readoutProgressSummary,'), "buildCoreSessionStatus should return consolidated readout progress summary");
+    check(functionBody.includes('readoutCompletionSummary,') && functionBody.includes('readout_completion_summary: readoutCompletionSummary,'), "buildCoreSessionStatus should return grouped readout completion details");
+    check(functionBody.includes('coreWorkflowSummary,') && functionBody.includes('core_workflow_summary: coreWorkflowSummary,'), "buildCoreSessionStatus should return core workflow summary");
+    check(functionBody.includes('nextReadoutCandidate,') && functionBody.includes('next_readout_candidate: nextReadoutCandidate,'), "buildCoreSessionStatus should expose the resolved next readout candidate");
+    check(functionBody.includes('nextRecommendedReadoutId,') && functionBody.includes('next_recommended_readout_id: nextRecommendedReadoutId,'), "buildCoreSessionStatus should expose the resolved next recommended readout id");
+    check(functionBody.includes('nextReadoutSource,') && functionBody.includes('next_readout_source: nextReadoutSource,'), "buildCoreSessionStatus should expose the next readout source");
+    check(functionBody.includes('nextReadoutState,') && functionBody.includes('next_readout_state: nextReadoutState,'), "buildCoreSessionStatus should expose the next readout state");
+    check(functionBody.includes('nextReadoutSummary,') && functionBody.includes('next_readout_summary: nextReadoutSummary,'), "buildCoreSessionStatus should return the next readout summary");
+    check(functionBody.includes('analysisBlockers,') && functionBody.includes('analysis_blockers: analysisBlockers,'), "buildCoreSessionStatus should expose analysis blockers");
+    check(functionBody.includes('analysisBlockerById,') && functionBody.includes('analysis_blocker_by_id: analysisBlockerById,'), "buildCoreSessionStatus should expose analysis blocker details by id");
+    check(functionBody.includes('analysisBlockerSummary,') && functionBody.includes('analysis_blocker_summary: analysisBlockerSummary,'), "buildCoreSessionStatus should expose analysis blocker summary");
+    check(functionBody.includes('analysisChecklist,') && functionBody.includes('analysis_checklist: analysisChecklist,') && functionBody.includes('analysis_checklist_by_id: analysisChecklistById,') && functionBody.includes('analysis_checklist_summary: analysisChecklistSummary,'), "buildCoreSessionStatus should return analysis checklist details");
+    check(functionBody.includes('analysisReadinessSummary,') && functionBody.includes('analysis_readiness_summary: analysisReadinessSummary,'), "buildCoreSessionStatus should return analysis readiness summary");
     check(functionBody.includes('readoutRequestPlanGateSummary,') && functionBody.includes('analysisReadinessSummary,'), "buildCoreSessionStatus should return readout request plan gate summary");
   }
 };
@@ -1992,7 +1993,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1555+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1575+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2064,7 +2065,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.529.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readout progress summary aliases");
+check(appSource.includes('const APP_VERSION = "2.530.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for core session status aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8438,10 +8439,15 @@ check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.
 check(!scanSessionPlainCoverageOverride.coreSessionStatus?.remainingReadoutIds?.includes("freeze_frame_snapshot"), "Diagnostic scan session kept coverage-empty readouts in remaining ids");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.requiredReadoutIds?.length === 7 && scanSessionPlainCoverageOverride.coreSessionStatus.requiredReadoutIds.includes("onboard_monitor_snapshot"), "Diagnostic scan session did not expose required core readout ids");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutIds?.length === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutIds.includes("freeze_frame_snapshot"), "Diagnostic scan session did not expose pending readout ids");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.schema_version === "core_session_status_v1" && scanSessionPlainCoverageOverride.coreSessionStatus?.completion_percent === 29 && scanSessionPlainCoverageOverride.coreSessionStatus?.ready_for_analysis === false, "Diagnostic scan session did not expose top-level snake_case core status aliases");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.required_readout_ids?.includes("onboard_monitor_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.pending_readout_ids?.includes("freeze_frame_snapshot"), "Diagnostic scan session did not expose snake_case core readout id lists");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.missing_readout_ids?.includes("readiness_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.remaining_readout_ids?.includes("ecu_info_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.empty_readout_ids?.includes("freeze_frame_snapshot"), "Diagnostic scan session did not expose snake_case missing and empty core readout ids");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutStates?.length === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutStates.some((item) => item.id === "freeze_frame_snapshot" && item.status === "empty"), "Diagnostic scan session did not expose pending readout states");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutStateById?.freeze_frame_snapshot?.status === "empty", "Diagnostic scan session did not expose pending readout states by id");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutQueue?.[0]?.position === 1 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutQueue[0]?.isNext === true, "Diagnostic scan session did not expose ordered pending readout queue");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutQueueById?.readiness_snapshot?.position === 1, "Diagnostic scan session did not expose pending readout queue by id");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.pending_readout_states?.some((item) => item.id === "freeze_frame_snapshot" && item.status === "empty") && scanSessionPlainCoverageOverride.coreSessionStatus?.pending_readout_state_by_id?.freeze_frame_snapshot?.status === "empty", "Diagnostic scan session did not expose snake_case pending readout states");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.pending_readout_queue?.[0]?.position === 1 && scanSessionPlainCoverageOverride.coreSessionStatus?.pending_readout_queue_by_id?.readiness_snapshot?.position === 1, "Diagnostic scan session did not expose snake_case ordered pending readout queue");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutQueueSummary?.totalCount === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutQueueSummary?.remainingAfterNextCount === 4, "Diagnostic scan session did not expose pending readout queue summary");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutQueueSummary?.hasPendingReadouts === true && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutQueueSummary?.nextReadoutStatus === "missing", "Diagnostic scan session did not expose pending readout queue summary next state");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutQueueSummary?.pendingPercent === 71, "Diagnostic scan session did not expose pending readout queue percent");
@@ -8463,6 +8469,8 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateById?.read
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStatesByStatus?.captured?.some((item) => item.id === "dtc_snapshot"), "Diagnostic scan session did not group captured readout states");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStatesByStatus?.empty?.some((item) => item.id === "freeze_frame_snapshot"), "Diagnostic scan session did not group empty readout states");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStatesByStatus?.missing?.some((item) => item.id === "readiness_snapshot"), "Diagnostic scan session did not group missing readout states");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readout_states?.find((item) => item.id === "dtc_snapshot")?.status === "captured" && scanSessionPlainCoverageOverride.coreSessionStatus?.readout_state_by_id?.freeze_frame_snapshot?.status === "empty", "Diagnostic scan session did not expose snake_case readout state entries");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readout_states_by_status?.missing?.some((item) => item.id === "readiness_snapshot"), "Diagnostic scan session did not expose snake_case readout states grouped by status");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.totalCount === 7, "Diagnostic scan session did not expose total readout state count");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.capturedCount === 2, "Diagnostic scan session did not expose captured readout state count");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutStateSummary?.emptyCount === 1, "Diagnostic scan session did not expose empty readout state count");
@@ -8487,6 +8495,11 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutCompletionSumma
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutCompletionSummary?.has_missing_readouts === true && scanSessionPlainCoverageOverride.coreSessionStatus.readoutCompletionSummary?.empty_ids?.includes("freeze_frame_snapshot"), "Diagnostic scan session did not expose snake_case incomplete readout completion summary");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutCompletionSummary?.pending_ids?.length === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.readoutCompletionSummary?.captured_ids?.includes("dtc_snapshot"), "Diagnostic scan session did not expose snake_case grouped readout completion ids");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.readoutCompletionSummary?.primary_blocking_readout_id === "readiness_snapshot", "Diagnostic scan session did not carry snake_case primary blocker into readout completion summary");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readout_state_summary?.pending_count === 5 && scanSessionPlainCoverageOverride.coreSessionStatus?.readout_progress_summary?.completion_percent === 29, "Diagnostic scan session did not expose snake_case top-level readout summary aliases");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.readout_completion_summary?.pending_ids?.includes("readiness_snapshot") && scanSessionPlainCoverageOverride.coreSessionStatus?.readout_completion_summary?.primary_blocking_readout_id === "readiness_snapshot", "Diagnostic scan session did not expose snake_case top-level readout completion summary alias");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.core_workflow_summary?.next_readout_id === "freeze_frame_snapshot" && scanSessionPlainCoverageOverride.coreSessionStatus?.analysis_readiness_summary?.pending_readout_count === 5, "Diagnostic scan session did not expose snake_case top-level workflow and readiness summary aliases");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysis_blockers?.includes("missing_readouts") && scanSessionPlainCoverageOverride.coreSessionStatus?.analysis_blocker_summary?.missingReadoutCount === 4, "Diagnostic scan session did not expose snake_case analysis blocker aliases");
+check(scanSessionPlainCoverageOverride.coreSessionStatus?.analysis_checklist_by_id?.required_readouts?.pendingCount === 5 && scanSessionPlainCoverageOverride.coreSessionStatus?.blocking_warning_ids?.length === 0, "Diagnostic scan session did not expose snake_case checklist and warning aliases");
 check(Array.isArray(scanSessionPlainCoverageOverride.coreSessionStatus?.emptyReadoutIds) && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds.length === 1 && scanSessionPlainCoverageOverride.coreSessionStatus.emptyReadoutIds[0] === "freeze_frame_snapshot", "Diagnostic scan session did not preserve plain-object coverage override emptyReadoutIds");
 const scanSessionCamelCoverageOverride = obd.buildDiagnosticScanSession({
   sessionId: "shop-test-camel-coverage-override",
@@ -8773,6 +8786,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1555");
+  console.log("OBD read-only safety checks: 1575");
   console.log("Errors: 0");
 }
