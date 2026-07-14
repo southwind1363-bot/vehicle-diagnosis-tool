@@ -916,11 +916,21 @@
         ? data.monitor_values
         : Array.isArray(data.monitorValues)
           ? data.monitorValues
-        : Array.isArray(data.pid_values)
-          ? data.pid_values
-          : Array.isArray(data.pidValues)
-            ? data.pidValues
-          : [];
+          : Array.isArray(data.pid_values)
+            ? data.pid_values
+            : Array.isArray(data.pidValues)
+              ? data.pidValues
+              : Array.isArray(data.live_pid_values)
+                ? data.live_pid_values
+                : Array.isArray(data.livePidValues)
+                  ? data.livePidValues
+                  : Array.isArray(data.live_data)
+                    ? data.live_data
+                    : Array.isArray(data.liveData)
+                      ? data.liveData
+                      : Array.isArray(data.items)
+                        ? data.items
+                        : [];
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
@@ -1173,16 +1183,16 @@
 
   function normalizeBridgePidValue(row, index) {
     if (!row || typeof row !== "object") return null;
-    const labelAlias = row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName || null;
-    const id = String(row.id || row.monitor_id || row.monitorId || row.pid || row.code || row.pid_code || row.pidCode || "").trim();
+    const labelAlias = row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName || row.displayLabel || row.display_label || null;
+    const id = String(row.id || row.monitor_id || row.monitorId || row.sensor_id || row.sensorId || row.pid || row.code || row.pid_code || row.pidCode || row.pid_id || row.pidId || "").trim();
     const normalizedLabelAlias = labelAlias ? normalizeMonitorLabel(labelAlias) : "";
     const definition = monitorDefinitions.find((item) => item.id === id)
-      || monitorDefinitions.find((item) => item.pid === row.pid || item.pid === row.code || item.pid === row.pid_code || item.pid === row.pidCode)
+      || monitorDefinitions.find((item) => item.pid === row.pid || item.pid === row.code || item.pid === row.pid_code || item.pid === row.pidCode || item.pid === row.pid_id || item.pid === row.pidId)
       || (normalizedLabelAlias ? monitorDefinitions.find((item) => item.aliases.some((alias) => isMonitorLabelMatch(normalizedLabelAlias, alias))) : null)
       || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
     const isUndecodedRaw = row.decoded === false;
-    const rawValue = row.value ?? row.result ?? row.reading ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null;
+    const rawValue = row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null;
     const valueType = definition?.valueType || row.value_type || row.valueType || (typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number");
     const parsedValue = valueType === "boolean" ? rawValue === true : valueType === "text" || isUndecodedRaw ? String(rawValue ?? "").slice(0, 160) : Number(rawValue);
     if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;
@@ -1193,11 +1203,11 @@
       id: definition?.id || id,
       label: definition?.label || row.label || row.name || id,
       value: parsedValue,
-      unit: definition?.unit || row.unit || "",
+      unit: definition?.unit || row.unit || row.units || "",
       category: definition?.category || row.category || "ブリッジ読取",
       valueType: isUndecodedRaw ? "raw_hex" : valueType,
       service: definition?.service || row.service || null,
-      pid: definition?.pid || row.pid || null,
+      pid: definition?.pid || row.pid || row.pid_code || row.pidCode || row.pid_id || row.pidId || null,
       scope: definition?.scope || "local-bridge",
       supportNote: definition?.supportNote || "ローカルブリッジ応答を既存データモニター表示へ整形",
       freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null,

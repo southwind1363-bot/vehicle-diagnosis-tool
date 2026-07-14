@@ -344,6 +344,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   if (bridgeLivePidSnapshotFunctionSource) {
     const functionBody = bridgeLivePidSnapshotFunctionSource[0];
     check(functionBody.includes('Array.isArray(data.values)') && functionBody.includes('Array.isArray(data.monitor_values)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeLivePidSnapshot should accept live PID value aliases");
+    check(functionBody.includes('Array.isArray(data.live_pid_values)') && functionBody.includes('Array.isArray(data.liveData)') && functionBody.includes('Array.isArray(data.items)'), "normalizeBridgeLivePidSnapshot should accept live data array aliases");
     check(functionBody.includes('.map((row, index) => normalizeBridgePidValue(row, index))') && functionBody.includes('.filter(Boolean)'), "normalizeBridgeLivePidSnapshot should normalize and filter PID value rows");
     check(functionBody.includes('supportedPids: collectBridgeSupportedPids(data)'), "normalizeBridgeLivePidSnapshot should carry supported PID context");
     check(functionBody.includes('monitorValueSummary: buildMonitorValueSummary(monitorValues)') && functionBody.includes('monitorInsights: analyzeMonitorValues(monitorValues)'), "normalizeBridgeLivePidSnapshot should derive summaries and monitor insights");
@@ -399,15 +400,16 @@ const bridgePidValueFunctionChecks = () => {
   if (bridgePidValueFunctionSource) {
     const functionBody = bridgePidValueFunctionSource[0];
     check(functionBody.includes('if (!row || typeof row !== "object") return null;'), "normalizeBridgePidValue should reject non-object PID rows");
-    check(functionBody.includes('row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName'), "normalizeBridgePidValue should accept monitor label aliases");
-    check(functionBody.includes('row.id || row.monitor_id || row.monitorId || row.pid || row.code || row.pid_code || row.pidCode'), "normalizeBridgePidValue should accept PID and monitor id aliases");
-    check(functionBody.includes('monitorDefinitions.find((item) => item.id === id)') && functionBody.includes('isMonitorLabelMatch(normalizedLabelAlias, alias)'), "normalizeBridgePidValue should resolve monitor definitions by id, PID, and label aliases");
+    check(functionBody.includes('row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName') && functionBody.includes('row.display_label'), "normalizeBridgePidValue should accept monitor label aliases");
+    check(functionBody.includes('row.id || row.monitor_id || row.monitorId || row.sensor_id || row.sensorId || row.pid') && functionBody.includes('row.pid_id || row.pidId'), "normalizeBridgePidValue should accept PID and monitor id aliases");
+    check(functionBody.includes('monitorDefinitions.find((item) => item.id === id)') && functionBody.includes('item.pid === row.pid_id || item.pid === row.pidId') && functionBody.includes('isMonitorLabelMatch(normalizedLabelAlias, alias)'), "normalizeBridgePidValue should resolve monitor definitions by id, PID, and label aliases");
     check(functionBody.includes('bridgeComputedPidDefinitions[id]'), "normalizeBridgePidValue should preserve computed bridge PID definitions");
     check(functionBody.includes('const isUndecodedRaw = row.decoded === false;'), "normalizeBridgePidValue should preserve explicit undecoded raw rows");
-    check(functionBody.includes('row.value ?? row.result ?? row.reading ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null'), "normalizeBridgePidValue should accept value aliases");
+    check(functionBody.includes('row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue'), "normalizeBridgePidValue should accept value aliases");
     check(functionBody.includes('typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number"'), "normalizeBridgePidValue should infer text versus numeric values from raw value shape");
     check(functionBody.includes('if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;'), "normalizeBridgePidValue should reject non-finite numeric values unless they are raw undecoded values");
     check(functionBody.includes('valueType: isUndecodedRaw ? "raw_hex" : valueType') && functionBody.includes('decoded: isUndecodedRaw ? false : true'), "normalizeBridgePidValue should mark undecoded values as raw_hex and decoded=false");
+    check(functionBody.includes('row.unit || row.units') && functionBody.includes('row.pid_id || row.pidId || null'), "normalizeBridgePidValue should normalize unit and PID output aliases");
     check(functionBody.includes('freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null'), "normalizeBridgePidValue should normalize freeze-frame number aliases");
     check(functionBody.includes('sourceLine: index + 1'), "normalizeBridgePidValue should retain source row position");
   }
@@ -1953,7 +1955,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1365+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1370+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2025,7 +2027,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.492.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for Mode 06 aliases");
+check(appSource.includes('const APP_VERSION = "2.493.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for live PID aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2437,6 +2439,23 @@ const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
 check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05" && bridgePidAliasSnapshot.protocol === "ISO15765-4" && bridgePidAliasSnapshot.capturedAt === "2026-06-28T00:01:01Z", "Bridge live PID aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues[0]?.id === "engine_speed" && bridgePidAliasSnapshot.monitorValues[1]?.valueType === "number", "Bridge live PID row aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues.length === 2, "Bridge live PID monitor_values alias was not normalized");
+const bridgePidLiveDataAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    protocol_name: "ISO15765-4",
+    live_pid_values: [
+      { sensor_id: "engine_speed", current_value: 810, units: "rpm" },
+      { pid_id: "05", displayValue: 84, units: "C" },
+      { display_label: "Fuel system status", display_value: "Closed loop" }
+    ],
+    captured_at: "2026-06-28T00:01:02Z"
+  }
+});
+check(bridgePidLiveDataAliasSnapshot.monitorValues.length === 3, "Bridge live PID live_pid_values alias was not normalized");
+check(bridgePidLiveDataAliasSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 810, "Bridge live PID sensor_id/current_value aliases were not normalized");
+check(bridgePidLiveDataAliasSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 84, "Bridge live PID pid_id/displayValue aliases were not normalized");
 const bridgePidLabelAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
@@ -8267,6 +8286,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1365");
+  console.log("OBD read-only safety checks: 1370");
   console.log("Errors: 0");
 }
