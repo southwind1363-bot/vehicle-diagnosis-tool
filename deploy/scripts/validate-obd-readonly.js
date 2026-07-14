@@ -95,7 +95,7 @@ const readinessSnapshotFunctionSource = source.match(/function normalizeReadines
 const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S]*?value: input\[key\]\r?\n      \}\)\);\r?\n  \}/);
 const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
-const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
 const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
 const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
@@ -1210,8 +1210,10 @@ const onboardMonitorSnapshotFunctionChecks = () => {
     check(functionBody.includes('row.component_id || row.componentId || row.cid || row.component') && functionBody.includes('row.measured_value ?? row.measuredValue') && functionBody.includes('row.current_value'), "normalizeOnboardMonitorSnapshot should normalize component and measured value aliases");
     check(functionBody.includes('row.min_limit ?? row.minLimit') && functionBody.includes('row.max_limit ?? row.maxLimit'), "normalizeOnboardMonitorSnapshot should normalize min/max limit aliases");
     check(functionBody.includes('row.passed === true || row.pass === true || statusText === "pass" || statusText === "passed"'), "normalizeOnboardMonitorSnapshot should derive pass/fail from limits before explicit passed fallback");
-    check(functionBody.includes('failedCount: tests.filter((test) => test.status === "fail").length') && functionBody.includes('retainedRawText: false'), "normalizeOnboardMonitorSnapshot should count failed tests and never retain raw text");
+    check(functionBody.includes('const failedCount = tests.filter((test) => test.status === "fail").length') && functionBody.includes('retainedRawText: false'), "normalizeOnboardMonitorSnapshot should count failed tests and never retain raw text");
     check(functionBody.includes('schema_version: "onboard_monitor_snapshot_v1"'), "normalizeOnboardMonitorSnapshot should expose snake_case schema version");
+    check(functionBody.includes('test_count: testCount') && functionBody.includes('passed_count: passedCount') && functionBody.includes('failed_count: failedCount') && functionBody.includes('unknown_count: unknownCount'), "normalizeOnboardMonitorSnapshot should expose snake_case Mode 06 count aliases");
+    check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('retained_raw_text: false'), "normalizeOnboardMonitorSnapshot should expose snake_case capture and raw retention aliases");
   }
 };
 const ecuInfoValueFunctionChecks = () => {
@@ -2066,7 +2068,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1856+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1861+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2138,7 +2140,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.552.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for readiness snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.553.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for Mode 06 snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3058,6 +3060,7 @@ const bridgeOnboardMonitorExtendedAliases = obd.normalizeBridgeOnboardMonitorSna
   }
 });
 check(bridgeOnboardMonitorExtendedAliases.testCount === 1 && bridgeOnboardMonitorExtendedAliases.failedCount === 0, "Bridge Mode 06 extended aliases were not normalized");
+check(bridgeOnboardMonitorExtendedAliases.test_count === 1 && bridgeOnboardMonitorExtendedAliases.failed_count === 0 && bridgeOnboardMonitorExtendedAliases.retained_raw_text === false, "Bridge Mode 06 did not expose snake_case count and raw retention aliases");
 const bridgeMode06RowAliases = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
@@ -3095,6 +3098,8 @@ const onboardMonitorSnapshotDataAliases = obd.normalizeOnboardMonitorSnapshot({
 check(onboardMonitorSnapshotDataAliases.source === "bridge_import" && onboardMonitorSnapshotDataAliases.protocol === "ISO15765-4", "Mode 06 snapshot did not preserve data payload source and protocol aliases");
 check(onboardMonitorSnapshotDataAliases.testCount === 2 && onboardMonitorSnapshotDataAliases.tests[0]?.status === "pass", "Mode 06 snapshot did not accept onboard_monitor_rows data aliases");
 check(onboardMonitorSnapshotDataAliases.tests[1]?.status === "unknown" && onboardMonitorSnapshotDataAliases.tests[1]?.passed === true, "Mode 06 snapshot did not preserve explicit pass status without limits");
+check(onboardMonitorSnapshotDataAliases.test_count === 2 && onboardMonitorSnapshotDataAliases.passed_count === 1 && onboardMonitorSnapshotDataAliases.unknown_count === 1, "Mode 06 snapshot did not expose snake_case data payload count aliases");
+check(onboardMonitorSnapshotDataAliases.captured_at === "2026-07-07T00:50:00Z" && onboardMonitorSnapshotDataAliases.retained_raw_text === false, "Mode 06 snapshot did not expose snake_case capture and retention aliases");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");
@@ -5910,6 +5915,7 @@ check(decodedOnboardMonitor.tests.find((item) => item.testId === "01" && item.co
 check(decodedOnboardMonitor.tests.find((item) => item.testId === "02" && item.componentId === "01")?.status === "fail", "Mode 06 fail status was not decoded");
 check(decodedOnboardMonitor.failedCount === 1, "Mode 06 failed count is invalid");
 check(decodedOnboardMonitor.retainedRawText === false, "Mode 06 decoder retained raw text");
+check(decodedOnboardMonitor.test_count === 2 && decodedOnboardMonitor.failed_count === 1 && decodedOnboardMonitor.retained_raw_text === false, "Mode 06 decoder did not expose snake_case count and retention aliases");
 const decodedScanSession = obd.buildDecodedObdScanSession({
   session_id: "decoded-test",
   storedDtcResponse: { raw: "43 01 71 03 00 00 00" },
@@ -9014,6 +9020,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1856");
+  console.log("OBD read-only safety checks: 1861");
   console.log("Errors: 0");
 }

@@ -8156,17 +8156,30 @@
       })
       .filter(Boolean);
 
+    const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const testCount = tests.length;
+    const passedCount = tests.filter((test) => test.status === "pass").length;
+    const failedCount = tests.filter((test) => test.status === "fail").length;
+    const unknownCount = tests.filter((test) => test.status === "unknown").length;
+
     return {
       schemaVersion: "onboard_monitor_snapshot_v1",
       schema_version: "onboard_monitor_snapshot_v1",
       source,
-      capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      capturedAt,
+      captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
-      testCount: tests.length,
-      failedCount: tests.filter((test) => test.status === "fail").length,
-      unknownCount: tests.filter((test) => test.status === "unknown").length,
+      testCount,
+      test_count: testCount,
+      passedCount,
+      passed_count: passedCount,
+      failedCount,
+      failed_count: failedCount,
+      unknownCount,
+      unknown_count: unknownCount,
       tests,
-      retainedRawText: false
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 
