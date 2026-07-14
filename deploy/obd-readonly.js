@@ -9953,14 +9953,24 @@
       dtc_snapshot: outputDtcSnapshot,
       source: "obd_text_import",
       toolHints: textImportMetadata.toolHints,
+      tool_hints: textImportMetadata.toolHints,
       importClassification: textImportMetadata.importClassification,
+      import_classification: textImportMetadata.importClassification,
       warnings: textImportMetadata.warnings,
+      warning_ids: textImportMetadata.warnings,
+      warning_flags: textImportMetadata.warnings,
       hadSensitiveIdentifier: textImportMetadata.hadSensitiveIdentifier,
+      had_sensitive_identifier: textImportMetadata.hadSensitiveIdentifier,
       sourceLength: textImportMetadata.sourceLength,
+      source_length: textImportMetadata.sourceLength,
       retainedRawText: false,
+      retained_raw_text: false,
       retainedRawFrames: false,
+      retained_raw_frames: false,
       wouldTransmit: false,
-      vehicleCommandEnabled: false
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
   }
 
