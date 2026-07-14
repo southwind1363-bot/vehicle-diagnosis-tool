@@ -5365,6 +5365,84 @@
     };
   }
 
+  function normalizeReadoutCompletionSummaryAliases(summary = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const schemaVersion = summary.schemaVersion || summary.schema_version || "readout_completion_summary_v1";
+    const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
+    const toCount = (camelKey, snakeKey, fallback = 0) => {
+      const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
+      return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
+    };
+    const requiredIds = normalizeIds(summary.requiredIds || summary.required_ids);
+    const capturedIds = normalizeIds(summary.capturedIds || summary.captured_ids);
+    const missingIds = normalizeIds(summary.missingIds || summary.missing_ids);
+    const emptyIds = normalizeIds(summary.emptyIds || summary.empty_ids);
+    const pendingIds = normalizeIds(summary.pendingIds || summary.pending_ids || [...missingIds, ...emptyIds]);
+    const requiredCount = toCount("requiredCount", "required_count", requiredIds.length);
+    const capturedCount = toCount("capturedCount", "captured_count", capturedIds.length);
+    const missingCount = toCount("missingCount", "missing_count", missingIds.length);
+    const emptyCount = toCount("emptyCount", "empty_count", emptyIds.length);
+    const pendingCount = toCount("pendingCount", "pending_count", pendingIds.length);
+    const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, requiredCount > 0 ? Math.round((capturedCount / requiredCount) * 100) : 0);
+    const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
+    const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
+    const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+    const complete = pickDefined(summary.complete, pendingCount === 0) === true;
+    const hasAnyReadout = pickDefined(summary.hasAnyReadout, summary.has_any_readout, capturedCount > 0 || emptyCount > 0) === true;
+    const hasCapturedReadouts = pickDefined(summary.hasCapturedReadouts, summary.has_captured_readouts, capturedCount > 0) === true;
+    const hasMissingReadouts = pickDefined(summary.hasMissingReadouts, summary.has_missing_readouts, missingCount > 0) === true;
+    const hasEmptyReadouts = pickDefined(summary.hasEmptyReadouts, summary.has_empty_readouts, emptyCount > 0) === true;
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      complete,
+      hasAnyReadout,
+      has_any_readout: hasAnyReadout,
+      hasCapturedReadouts,
+      has_captured_readouts: hasCapturedReadouts,
+      hasMissingReadouts,
+      has_missing_readouts: hasMissingReadouts,
+      hasEmptyReadouts,
+      has_empty_readouts: hasEmptyReadouts,
+      requiredCount,
+      required_count: requiredCount,
+      capturedCount,
+      captured_count: capturedCount,
+      missingCount,
+      missing_count: missingCount,
+      emptyCount,
+      empty_count: emptyCount,
+      pendingCount,
+      pending_count: pendingCount,
+      requiredIds,
+      required_ids: requiredIds,
+      capturedIds,
+      captured_ids: capturedIds,
+      missingIds,
+      missing_ids: missingIds,
+      emptyIds,
+      empty_ids: emptyIds,
+      pendingIds,
+      pending_ids: pendingIds,
+      completionPercent,
+      completion_percent: completionPercent,
+      primaryBlockingReasonId: pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null),
+      primary_blocking_reason_id: pickDefined(summary.primary_blocking_reason_id, summary.primaryBlockingReasonId, null),
+      primaryBlockingReason,
+      primary_blocking_reason: primaryBlockingReason,
+      primaryBlockingReadoutId: pickDefined(summary.primaryBlockingReadoutId, summary.primary_blocking_readout_id, null),
+      primary_blocking_readout_id: pickDefined(summary.primary_blocking_readout_id, summary.primaryBlockingReadoutId, null),
+      primaryBlockingReadoutLabel: pickDefined(summary.primaryBlockingReadoutLabel, summary.primary_blocking_readout_label, null),
+      primary_blocking_readout_label: pickDefined(summary.primary_blocking_readout_label, summary.primaryBlockingReadoutLabel, null),
+      primaryBlockingReadoutRequest,
+      primary_blocking_readout_request: primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
+      primary_blocking_summary: primaryBlockingSummary
+    };
+  }
+
   function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
     if (!importedAnalysisReadinessSummary || typeof importedAnalysisReadinessSummary !== "object") return null;
     const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
@@ -7590,11 +7668,13 @@
       || bridgeSession?.diagnosticFlowSummary
       || bridgeSession?.diagnostic_flow_summary
       || null;
-    const importedReadoutCompletionSummary = bridgeImport?.readoutCompletionSummary
+    const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(bridgeImport?.readoutCompletionSummary
       || bridgeImport?.readout_completion_summary
       || bridgeSession?.readoutCompletionSummary
       || bridgeSession?.readout_completion_summary
-      || null;
+      || bridgeImportInput?.readoutCompletionSummary
+      || bridgeImportInput?.readout_completion_summary
+      || null);
     const importedAnalysisReadinessSummary = bridgeImport?.analysisReadinessSummary
       || bridgeImport?.analysis_readiness_summary
       || bridgeSession?.analysisReadinessSummary
@@ -9744,7 +9824,7 @@
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const importedCoreSessionStatus = sessionInput.coreSessionStatus || sessionInput.core_session_status || null;
     const importedDiagnosticFlowSummary = sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null;
-    const importedReadoutCompletionSummary = sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null;
+    const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null);
     const importedAnalysisReadinessSummary = sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null;
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
