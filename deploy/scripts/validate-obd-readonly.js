@@ -978,6 +978,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('bridge_session: bridgeSession,') && functionBody.includes('bridge_export_payload: bridgeExportPayload,') && functionBody.includes('next_readout_candidates: resolvedNextReadoutCandidates,'), "mergeDiagnosticInputs should expose snake_case bridge session aliases");
     check(functionBody.includes('core_session_status: coreSessionStatus,') && functionBody.includes('diagnostic_flow_summary: diagnosticFlowSummary,') && functionBody.includes('analysis_readiness_summary: analysisReadinessSummary,'), "mergeDiagnosticInputs should expose snake_case diagnostic session summary aliases");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "mergeDiagnosticInputs should remain read-only and avoid raw text retention");
+    check(functionBody.includes('retained_raw_text: false') && functionBody.includes('would_transmit: false') && functionBody.includes('vehicle_command_enabled: false'), "mergeDiagnosticInputs should expose snake_case read-only safety aliases");
   }
 };
 const readoutCoverageInputFunctionChecks = () => {
@@ -1989,7 +1990,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1478+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1480+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2061,7 +2062,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.518.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for read-only flag aliases");
+check(appSource.includes('const APP_VERSION = "2.519.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for merged read-only flag aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4314,6 +4315,7 @@ check(mergedDiagnosticInput.adapterIdentity?.adapterFamily === "elm327", "統合
 check(mergedDiagnosticInput.hadSensitiveIdentifier === true, "統合診断入力が貼り付け側の識別情報候補を引き継げません");
 check(mergedDiagnosticInput.retainedRawText === false, "統合診断入力が原文保持になっています");
 check(mergedDiagnosticInput.wouldTransmit === false && mergedDiagnosticInput.vehicleCommandEnabled === false, "統合診断入力が送信可能扱いになっています");
+check(mergedDiagnosticInput.retained_raw_text === false && mergedDiagnosticInput.would_transmit === false && mergedDiagnosticInput.vehicle_command_enabled === false, "Combined diagnostic inputs did not expose runtime snake_case read-only safety aliases");
 check(mergedDiagnosticInput.monitor_value_summary?.totalCount === mergedDiagnosticInput.monitorValueSummary.totalCount && mergedDiagnosticInput.ecu_response_summary?.ecus[0]?.dtcCount === 1, "Combined diagnostic inputs did not expose runtime snake_case readout summaries");
 check(mergedDiagnosticInput.supported_pid_matrix?.supportedPids.includes("05") && mergedDiagnosticInput.readiness_snapshot?.incompleteCount === 1 && mergedDiagnosticInput.freeze_frame_snapshot?.triggerDtc === "P0171", "Combined diagnostic inputs did not expose runtime snake_case core snapshots");
 check(mergedDiagnosticInput.readout_coverage?.progressPercent >= 80 && mergedDiagnosticInput.vehicle_applicability?.status === "matched", "Combined diagnostic inputs did not expose runtime snake_case coverage and applicability");
@@ -8714,6 +8716,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1478");
+  console.log("OBD read-only safety checks: 1480");
   console.log("Errors: 0");
 }

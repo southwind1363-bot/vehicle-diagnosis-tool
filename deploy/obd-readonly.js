@@ -6396,8 +6396,11 @@
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
+      retained_raw_text: false,
       wouldTransmit: false,
-      vehicleCommandEnabled: false
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
   }
 
