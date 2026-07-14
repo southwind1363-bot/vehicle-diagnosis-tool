@@ -2506,6 +2506,8 @@
       vciDevices: vciList.devices,
       adapterIdentity,
       codes: dtcSnapshot.codes,
+      dtcSnapshot,
+      dtc_snapshot: dtcSnapshot,
       ecuResponseSummary,
       supportedPidMatrix,
       readinessSnapshot,
@@ -2663,6 +2665,7 @@
     const readinessSnapshotInput = parts.readinessSnapshot || parts.readiness_snapshot || parts.readinessResponse || parts.readiness_response || parts.livePidResponse || parts.live_pid_response;
     const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
     const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
+    const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot || null;
     const codesInput = parts.codes || parts.dtc_codes || parts.dtcCodes || [];
     const monitorValuesInput = parts.monitorValues || parts.monitor_values || [];
     const monitorInsightsInput = parts.monitorInsights || parts.monitor_insights || [];
@@ -2723,7 +2726,17 @@
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
-    const dtcSnapshot = { blocked: false, codes: Array.isArray(codesInput) ? codesInput : [] };
+    const dtcSnapshot = dtcSnapshotInput && typeof dtcSnapshotInput === "object" && !Array.isArray(dtcSnapshotInput)
+      ? {
+        ...dtcSnapshotInput,
+        ...normalizeDtcSnapshot({
+          source: dtcSnapshotInput.source || dtcSnapshotInput.source_type || "local_bridge",
+          ...dtcSnapshotInput
+        }),
+        blocked: dtcSnapshotInput.blocked === true,
+        wouldTransmit: dtcSnapshotInput.wouldTransmit === true || dtcSnapshotInput.would_transmit === true
+      }
+      : normalizeDtcSnapshot({ source: "local_bridge", codes: Array.isArray(codesInput) ? codesInput : [] });
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
@@ -2790,9 +2803,9 @@
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
-      codes: Array.isArray(codesInput)
-        ? codesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
-        : [],
+      codes: cloneBridgeArrayItems(dtcSnapshot.codes),
+      dtcSnapshot,
+      dtc_snapshot: dtcSnapshot,
       ecuResponseSummary,
       supportedPidMatrix,
       readinessSnapshot,
@@ -7829,6 +7842,7 @@
 
   function buildBridgeSessionExportPayload(parts = {}) {
     const summary = resolveBridgeSummary(parts);
+    const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });
     const coreSessionStatus = summary.coreSessionStatus || summary.core_session_status || buildCoreSessionStatusFromSummary(summary, {
       vehicleApplicability: metadataFields.vehicle_applicability,
@@ -7855,7 +7869,7 @@
       || summary.core_readout_inventory_summary
       || buildCoreReadoutInventorySummary({
         readoutCoverage: summary.readoutCoverage,
-        dtcSnapshot: { codes: summary.codes || [] },
+        dtcSnapshot,
         livePidSnapshot: { monitorValues: summary.monitorValues || [], monitorValueSummary: summary.monitorValueSummary || null },
         freezeFrameSnapshot: summary.freezeFrameSnapshot,
         readinessSnapshot: summary.readinessSnapshot,
@@ -7882,7 +7896,8 @@
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: cloneBridgeArrayItems(summary.vciDevices),
         adapter_identity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
-        dtc_codes: cloneBridgeArrayItems(summary.codes),
+        dtc_codes: cloneBridgeArrayItems(dtcSnapshot.codes),
+        dtc_snapshot: dtcSnapshot,
         ecu_response_summary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         readiness_snapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
@@ -7918,6 +7933,7 @@
 
   function buildBridgeDiagnosticImport(parts = {}) {
     const summary = resolveBridgeSummary(parts);
+    const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const metadataFields = buildSummaryMetadataFields(summary);
     const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});
     const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
@@ -7998,7 +8014,7 @@
       || exportPayload.session?.core_readout_inventory_summary
       || buildCoreReadoutInventorySummary({
         readoutCoverage: summary.readoutCoverage,
-        dtcSnapshot: { codes: summary.codes || [] },
+        dtcSnapshot,
         livePidSnapshot: { monitorValues: summary.monitorValues || [], monitorValueSummary: summary.monitorValueSummary || null },
         freezeFrameSnapshot: summary.freezeFrameSnapshot,
         readinessSnapshot: summary.readinessSnapshot,
@@ -8006,7 +8022,7 @@
         onboardMonitorSnapshot: summary.onboardMonitorSnapshot,
         supportedPidMatrix: summary.supportedPidMatrix
       });
-    const codes = cloneBridgeArrayItems(summary.codes);
+    const codes = cloneBridgeArrayItems(dtcSnapshot.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
     const monitorInsights = cloneBridgeArrayItems(summary.monitorInsights);
 
@@ -8020,6 +8036,8 @@
       vehicleProfile: summary.vehicleProfile || null,
       vehicleApplicability: metadataFields.vehicleApplicability,
       codes,
+      dtcSnapshot,
+      dtc_snapshot: dtcSnapshot,
       monitorValues,
       monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
       monitorInsights,
@@ -8057,6 +8075,8 @@
         vciDevices: cloneBridgeArrayItems(summary.vciDevices),
         adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
         codes,
+        dtcSnapshot,
+        dtc_snapshot: dtcSnapshot,
         ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
         supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
@@ -8182,6 +8202,13 @@
       bridgeSession?.dtcCodes,
       bridgeSession?.dtc_codes
     );
+    const bridgeDtcSnapshotInput = bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot || bridgeSession?.dtcSnapshot || bridgeSession?.dtc_snapshot || null;
+    const bridgeDtcSnapshot = bridgeDtcSnapshotInput && typeof bridgeDtcSnapshotInput === "object" && !Array.isArray(bridgeDtcSnapshotInput)
+      ? normalizeDtcSnapshot({
+        source: bridgeDtcSnapshotInput.source || bridgeDtcSnapshotInput.source_type || "local_bridge",
+        ...bridgeDtcSnapshotInput
+      })
+      : normalizeDtcSnapshot({ source: "local_bridge", codes: bridgeCodes });
     const bridgeMonitorInsightsInput = firstBridgeArray(
       bridgeImport?.monitorInsights,
       bridgeImport?.monitor_insights,
@@ -8219,10 +8246,11 @@
     });
 
     const monitorValues = [...monitorById.values()];
-    const codes = [...new Set([
-      ...scannerAnalysis.codes,
-      ...bridgeCodes
-    ])];
+    const dtcSnapshot = mergeDtcSnapshots(
+      normalizeDtcSnapshot({ source: "scanner_text", codes: scannerAnalysis.codes }),
+      bridgeDtcSnapshot
+    );
+    const codes = dtcSnapshot.codes;
     const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeMonitorInsightsInput);
     const bridgeMonitorValueSummary = bridgeImport?.monitorValueSummary
       || bridgeImport?.monitor_value_summary
@@ -8264,7 +8292,7 @@
           mergedBridgeMetadata.readoutCoverageInput,
           mergedBridgeMetadata.vehicleApplicability,
           bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null,
-          bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot || bridgeSession?.dtcSnapshot || bridgeSession?.dtc_snapshot || null,
+          dtcSnapshot,
           bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null
         )
     );
@@ -8276,7 +8304,7 @@
     const coreSessionStatus = buildCoreSessionStatus({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       vehicleApplicability: mergedBridgeMetadata.vehicleApplicability,
-      dtcSnapshot: { codes },
+      dtcSnapshot,
       freezeFrameSnapshot,
       readinessSnapshot,
       ecuInfoSnapshot,
@@ -8293,7 +8321,7 @@
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
-      dtcSnapshot: { codes },
+      dtcSnapshot,
       livePidSnapshot: { monitorValues, monitorValueSummary },
       freezeFrameSnapshot,
       readinessSnapshot,
@@ -8340,6 +8368,8 @@
       obd_protocol: bridgeImport?.obd_protocol || bridgeImport?.protocol || bridgeSession?.obd_protocol || bridgeSession?.protocol || null,
       capturedAt: bridgeImport?.capturedAt || bridgeImport?.captured_at || bridgeSession?.capturedAt || bridgeSession?.captured_at || null,
       codes,
+      dtcSnapshot,
+      dtc_snapshot: dtcSnapshot,
       monitorValues,
       monitorValueSummary,
       monitor_value_summary: monitorValueSummary,

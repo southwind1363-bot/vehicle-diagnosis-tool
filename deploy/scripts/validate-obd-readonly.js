@@ -477,6 +477,7 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
   if (bridgeSessionExportPayloadFunctionSource) {
     const functionBody = bridgeSessionExportPayloadFunctionSource[0];
     check(functionBody.includes('const summary = resolveBridgeSummary(parts);'), "buildBridgeSessionExportPayload should resolve bridge summary before export serialization");
+    check(functionBody.includes('const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot') && functionBody.includes('dtc_snapshot: dtcSnapshot,'), "buildBridgeSessionExportPayload should serialize DTC snapshots");
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });'), "buildBridgeSessionExportPayload should rebuild summary metadata in snake_case for export");
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);'), "buildBridgeSessionExportPayload should rebuild diagnostic flow summary from core session status");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;'), "buildBridgeSessionExportPayload should rebuild readout completion summary from core session status");
@@ -499,6 +500,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
   if (bridgeDiagnosticImportFunctionSource) {
     const functionBody = bridgeDiagnosticImportFunctionSource[0];
     check(functionBody.includes('const summary = resolveBridgeSummary(parts);'), "buildBridgeDiagnosticImport should resolve bridge summary before rebuilding import payload");
+    check(functionBody.includes('const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot') && functionBody.includes('dtc_snapshot: dtcSnapshot,'), "buildBridgeDiagnosticImport should preserve DTC snapshots");
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary);'), "buildBridgeDiagnosticImport should rebuild normalized summary metadata");
     check(functionBody.includes('const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});'), "buildBridgeDiagnosticImport should derive nested bridge session metadata overrides");
     check(functionBody.includes('const exportPayload = buildBridgeSessionExportPayload(summary);'), "buildBridgeDiagnosticImport should rebuild bridge export payload from resolved summary");
@@ -1014,7 +1016,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const firstBridgeArray = (...values) => values.find((value) => Array.isArray(value)) || [];'), "mergeDiagnosticInputs should select only array bridge payload aliases");
     check(functionBody.includes('scannerAnalysis.monitorValues.forEach((item) => {') && functionBody.includes('bridgeMonitorValues.forEach((item) => {'), "mergeDiagnosticInputs should merge scanner and bridge monitor values");
     check(functionBody.includes('bridgeImport?.monitor_values') && functionBody.includes('bridgeSession?.monitor_values'), "mergeDiagnosticInputs should accept snake_case bridge monitor value arrays");
-    check(functionBody.includes('const codes = [...new Set([') && functionBody.includes('...scannerAnalysis.codes') && functionBody.includes('...bridgeCodes'), "mergeDiagnosticInputs should deduplicate scanner and bridge DTC codes");
+    check(functionBody.includes('const bridgeDtcSnapshotInput = bridgeImport?.dtcSnapshot || bridgeImport?.dtc_snapshot') && functionBody.includes('const dtcSnapshot = mergeDtcSnapshots(') && functionBody.includes('const codes = dtcSnapshot.codes;'), "mergeDiagnosticInputs should merge scanner and bridge DTC snapshots");
     check(functionBody.includes('bridgeImport?.dtc_codes') && functionBody.includes('bridgeSession?.dtc_codes'), "mergeDiagnosticInputs should accept snake_case bridge DTC code arrays");
     check(functionBody.includes('bridgeImport?.monitor_insights') && functionBody.includes('cloneBridgeArrayItems(bridgeMonitorInsightsInput)'), "mergeDiagnosticInputs should accept snake_case bridge monitor insight arrays");
     check(functionBody.includes('const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);'), "mergeDiagnosticInputs should recalculate monitor summaries and insights from merged values");
@@ -1051,6 +1053,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const vehicleProfile = bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile') && functionBody.includes('const connectionStatus = bridgeImport?.connectionStatus || bridgeImport?.connection_status') && functionBody.includes('const adapterIdentity = bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity'), "mergeDiagnosticInputs should preserve snake_case vehicle and infrastructure metadata");
     check(functionBody.includes('const bridgeExportPayload = bridgeImport?.exportPayload || bridgeImport?.export_payload'), "mergeDiagnosticInputs should preserve snake_case bridge export payload aliases");
     check(functionBody.includes('monitor_value_summary: monitorValueSummary,') && functionBody.includes('ecu_response_summary: ecuResponseSummary,') && functionBody.includes('supported_pid_matrix: supportedPidMatrix,'), "mergeDiagnosticInputs should expose snake_case readout data aliases");
+    check(functionBody.includes('dtcSnapshot,') && functionBody.includes('dtc_snapshot: dtcSnapshot,'), "mergeDiagnosticInputs should expose normalized DTC snapshots");
     check(functionBody.includes('readiness_snapshot: readinessSnapshot,') && functionBody.includes('ecu_info_snapshot: ecuInfoSnapshot,') && functionBody.includes('freeze_frame_snapshot: freezeFrameSnapshot,'), "mergeDiagnosticInputs should expose snake_case core snapshot aliases");
     check(functionBody.includes('readout_coverage: mergedBridgeMetadata.readoutCoverage,') && functionBody.includes('vehicle_applicability: mergedBridgeMetadata.vehicleApplicability,') && functionBody.includes('import_classification: mergedBridgeMetadata.importClassification,'), "mergeDiagnosticInputs should expose snake_case coverage and applicability aliases");
     check(functionBody.includes('bridge_session: bridgeSession,') && functionBody.includes('bridge_export_payload: bridgeExportPayload,') && functionBody.includes('next_readout_candidates: resolvedNextReadoutCandidates,'), "mergeDiagnosticInputs should expose snake_case bridge session aliases");
@@ -1118,6 +1121,7 @@ const bridgeSessionSummaryFunctionChecks = () => {
   if (bridgeSessionSummaryFunctionSource) {
     const functionBody = bridgeSessionSummaryFunctionSource[0];
     check(functionBody.includes('const storedDtcSnapshotInput = parts.storedDtcSnapshot || parts.stored_dtc_snapshot') && functionBody.includes('normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")'), "buildBridgeSessionSummary should merge typed DTC snapshot aliases");
+    check(functionBody.includes('dtcSnapshot,') && functionBody.includes('dtc_snapshot: dtcSnapshot,'), "buildBridgeSessionSummary should expose normalized DTC snapshots");
     check(functionBody.includes('includeInfrastructure: hasBridgeInfrastructureContext'), "buildBridgeSessionSummary should derive readout coverage with bridge infrastructure context");
     check(functionBody.includes('source: parts.source || parts.source_type || "local_bridge"') && functionBody.includes('source_type: parts.source_type || parts.source || "local_bridge"'), "buildBridgeSessionSummary should emit source type aliases");
     check(functionBody.includes('protocol,') && functionBody.includes('obd_protocol: protocol,'), "buildBridgeSessionSummary should emit protocol aliases");
@@ -2106,7 +2110,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1964+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1974+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2178,7 +2182,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.577.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for typed DTC snapshot alias bridge summary normalization");
+check(appSource.includes('const APP_VERSION = "2.578.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for DTC snapshot bridge export/import normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3207,6 +3211,15 @@ const bridgeSummaryTypedDtcAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryTypedDtcAliases.codes.length === 3, "Bridge session summary did not merge typed DTC aliases");
 check(bridgeSummaryTypedDtcAliases.codes.includes("P0171") && bridgeSummaryTypedDtcAliases.codes.includes("P0300") && bridgeSummaryTypedDtcAliases.codes.includes("P0420"), "Bridge session summary did not expose merged typed DTC codes");
+check(bridgeSummaryTypedDtcAliases.dtcSnapshot.storedCount === 1 && bridgeSummaryTypedDtcAliases.dtcSnapshot.pendingCount === 1 && bridgeSummaryTypedDtcAliases.dtcSnapshot.permanentCount === 1, "Bridge session summary did not expose typed DTC snapshot counts");
+check(bridgeSummaryTypedDtcAliases.dtc_snapshot.codes.includes("P0420"), "Bridge session summary did not expose snake_case typed DTC snapshot");
+const bridgeExportTypedDtcAliases = obd.buildBridgeSessionExportPayload(bridgeSummaryTypedDtcAliases);
+check(bridgeExportTypedDtcAliases.session.dtc_snapshot.permanentCount === 1 && bridgeExportTypedDtcAliases.session.dtc_codes.includes("P0420"), "Bridge export did not preserve typed DTC snapshots");
+const bridgeDiagnosticImportTypedDtcAliases = obd.buildBridgeDiagnosticImport(bridgeExportTypedDtcAliases);
+check(bridgeDiagnosticImportTypedDtcAliases.dtcSnapshot.pendingCount === 1 && bridgeDiagnosticImportTypedDtcAliases.bridgeSession.dtc_snapshot.storedCount === 1, "Bridge diagnostic import did not preserve typed DTC snapshots");
+const mergedDiagnosticInputTypedDtcAliases = obd.mergeDiagnosticInputs({ scanner_text: "P0171", bridge_import: bridgeExportTypedDtcAliases });
+check(mergedDiagnosticInputTypedDtcAliases.dtcSnapshot.permanentCount === 1 && mergedDiagnosticInputTypedDtcAliases.dtc_snapshot.pendingCount === 1, "Combined diagnostic inputs did not preserve typed DTC snapshots");
+check(mergedDiagnosticInputTypedDtcAliases.coreReadoutInventorySummary.countsById.dtc_snapshot >= 3, "Combined diagnostic inputs did not count typed DTC snapshots in core inventory");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.address === "7E8", "Bridge session summary did not carry ECU response address");
 check(bridgeSummary.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge session summary did not carry ECU DTC count");
 check(bridgeSummary.monitorValues.length === 3, "ブリッジセッション要約へPID値を引き継げません");
@@ -9461,6 +9474,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1964");
+  console.log("OBD read-only safety checks: 1974");
   console.log("Errors: 0");
 }
