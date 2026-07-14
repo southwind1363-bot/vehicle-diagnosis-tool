@@ -935,6 +935,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('scannerAnalysis.monitorValues.forEach((item) => {') && functionBody.includes('(bridgeImport?.monitorValues || bridgeSession?.monitorValues || []).forEach((item) => {'), "mergeDiagnosticInputs should merge scanner and bridge monitor values");
     check(functionBody.includes('const codes = [...new Set([') && functionBody.includes('...scannerAnalysis.codes') && functionBody.includes('...(bridgeImport?.codes || bridgeSession?.codes || [])'), "mergeDiagnosticInputs should deduplicate scanner and bridge DTC codes");
     check(functionBody.includes('const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);'), "mergeDiagnosticInputs should recalculate monitor summaries and insights from merged values");
+    check(functionBody.includes('bridgeImport?.monitor_value_summary') && functionBody.includes('bridgeSession?.monitor_value_summary'), "mergeDiagnosticInputs should read snake_case bridge monitor value summaries");
     check(functionBody.includes('const source = bridgeImport') && functionBody.includes('"scanner_text_and_local_bridge"') && functionBody.includes('"local_bridge"') && functionBody.includes('"scanner_text"'), "mergeDiagnosticInputs should classify merged input source");
     check(functionBody.includes('const importedCoreSessionStatus = bridgeImport?.coreSessionStatus') && functionBody.includes('bridgeSession?.core_session_status') && functionBody.includes('importedCoreSessionStatus,'), "mergeDiagnosticInputs should expose imported core session status separately from recalculated status");
     check(functionBody.includes('const importedDiagnosticFlowSummary = bridgeImport?.diagnosticFlowSummary') && functionBody.includes('bridgeSession?.diagnostic_flow_summary') && functionBody.includes('importedDiagnosticFlowSummary,'), "mergeDiagnosticInputs should expose imported diagnostic flow summary separately from recalculated status");
@@ -960,7 +961,10 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;') && functionBody.includes('analysisReadinessSummary,'), "mergeDiagnosticInputs should expose a top-level analysis readiness summary");
     check(functionBody.includes('const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary') && functionBody.includes('readoutRequestPlanGateSummary,'), "mergeDiagnosticInputs should expose a top-level readout request plan gate summary");
     check(functionBody.includes('const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({') && functionBody.includes('coreReadoutInventorySummary,'), "mergeDiagnosticInputs should expose a top-level core readout inventory summary");
-    check(functionBody.includes('onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,'), "mergeDiagnosticInputs should pass onboard monitor snapshots into core session status");
+    check(functionBody.includes('const freezeFrameSnapshot = bridgeImport?.freezeFrameSnapshot || bridgeImport?.freeze_frame_snapshot') && functionBody.includes('const readinessSnapshot = bridgeImport?.readinessSnapshot || bridgeImport?.readiness_snapshot') && functionBody.includes('const ecuInfoSnapshot = bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot'), "mergeDiagnosticInputs should normalize core readout snapshots with snake_case aliases");
+    check(functionBody.includes('const onboardMonitorSnapshot = bridgeImport?.onboardMonitorSnapshot || bridgeImport?.onboard_monitor_snapshot') && functionBody.includes('const supportedPidMatrix = bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix'), "mergeDiagnosticInputs should normalize monitor and PID matrix snapshots with snake_case aliases");
+    check(functionBody.includes('startedAt: bridgeImport?.startedAt || bridgeImport?.started_at') && functionBody.includes('capturedAt: bridgeImport?.capturedAt || bridgeImport?.captured_at'), "mergeDiagnosticInputs should preserve snake_case imported scan timestamps");
+    check(functionBody.includes('vehicleProfile: bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile') && functionBody.includes('connectionStatus: bridgeImport?.connectionStatus || bridgeImport?.connection_status') && functionBody.includes('adapterIdentity: bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity'), "mergeDiagnosticInputs should preserve snake_case vehicle and infrastructure metadata");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "mergeDiagnosticInputs should remain read-only and avoid raw text retention");
   }
 };
@@ -1967,7 +1971,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1431+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1435+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2039,7 +2043,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.509.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for imported session summary aliases");
+check(appSource.includes('const APP_VERSION = "2.510.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for imported snapshot aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8668,6 +8672,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1431");
+  console.log("OBD read-only safety checks: 1435");
   console.log("Errors: 0");
 }

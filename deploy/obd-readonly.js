@@ -6174,7 +6174,11 @@
       ...(bridgeImport?.codes || bridgeSession?.codes || [])
     ])];
     const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeImport?.monitorInsights || bridgeSession?.monitorInsights || []);
-    const bridgeMonitorValueSummary = bridgeImport?.monitorValueSummary || bridgeSession?.monitorValueSummary || null;
+    const bridgeMonitorValueSummary = bridgeImport?.monitorValueSummary
+      || bridgeImport?.monitor_value_summary
+      || bridgeSession?.monitorValueSummary
+      || bridgeSession?.monitor_value_summary
+      || null;
     const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);
     const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);
     const monitorInsights = [...new Map([
@@ -6214,16 +6218,21 @@
           bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null
         )
     );
+    const freezeFrameSnapshot = bridgeImport?.freezeFrameSnapshot || bridgeImport?.freeze_frame_snapshot || bridgeSession?.freezeFrameSnapshot || bridgeSession?.freeze_frame_snapshot || null;
+    const readinessSnapshot = bridgeImport?.readinessSnapshot || bridgeImport?.readiness_snapshot || bridgeSession?.readinessSnapshot || bridgeSession?.readiness_snapshot || null;
+    const ecuInfoSnapshot = bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null;
+    const onboardMonitorSnapshot = bridgeImport?.onboardMonitorSnapshot || bridgeImport?.onboard_monitor_snapshot || bridgeSession?.onboardMonitorSnapshot || bridgeSession?.onboard_monitor_snapshot || null;
+    const supportedPidMatrix = bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null;
     const coreSessionStatus = buildCoreSessionStatus({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       vehicleApplicability: mergedBridgeMetadata.vehicleApplicability,
       dtcSnapshot: { codes },
-      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
-      readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
-      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
-      onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
       livePidSnapshot: { monitorValues, monitorValueSummary },
-      supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null,
+      supportedPidMatrix,
       warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
@@ -6236,11 +6245,11 @@
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       dtcSnapshot: { codes },
       livePidSnapshot: { monitorValues, monitorValueSummary },
-      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
-      readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
-      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
-      onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
-      supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
     });
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
@@ -6269,28 +6278,28 @@
       source,
       importType: "combined_diagnostic_inputs",
       toolHints: mergeUniqueStrings(scannerAnalysis.toolHints, mergedBridgeMetadata.toolHints),
-      startedAt: bridgeImport?.startedAt || bridgeSession?.startedAt || null,
-      endedAt: bridgeImport?.endedAt || bridgeSession?.endedAt || null,
+      startedAt: bridgeImport?.startedAt || bridgeImport?.started_at || bridgeSession?.startedAt || bridgeSession?.started_at || null,
+      endedAt: bridgeImport?.endedAt || bridgeImport?.ended_at || bridgeSession?.endedAt || bridgeSession?.ended_at || null,
       protocol: bridgeImport?.protocol || bridgeImport?.obd_protocol || bridgeSession?.protocol || bridgeSession?.obd_protocol || null,
       obd_protocol: bridgeImport?.obd_protocol || bridgeImport?.protocol || bridgeSession?.obd_protocol || bridgeSession?.protocol || null,
-      capturedAt: bridgeImport?.capturedAt || bridgeSession?.capturedAt || null,
+      capturedAt: bridgeImport?.capturedAt || bridgeImport?.captured_at || bridgeSession?.capturedAt || bridgeSession?.captured_at || null,
       codes,
       monitorValues,
       monitorValueSummary,
       monitorInsights,
-      ecuResponseSummary: bridgeImport?.ecuResponseSummary || bridgeSession?.ecuResponseSummary || null,
-      supportedPidMatrix: bridgeImport?.supportedPidMatrix || bridgeSession?.supportedPidMatrix || null,
-      readinessSnapshot: bridgeImport?.readinessSnapshot || bridgeSession?.readinessSnapshot || null,
-      ecuInfoSnapshot: bridgeImport?.ecuInfoSnapshot || bridgeSession?.ecuInfoSnapshot || null,
-      onboardMonitorSnapshot: bridgeImport?.onboardMonitorSnapshot || bridgeSession?.onboardMonitorSnapshot || null,
+      ecuResponseSummary: bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null,
+      supportedPidMatrix,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
-      freezeFrameSnapshot: bridgeImport?.freezeFrameSnapshot || bridgeSession?.freezeFrameSnapshot || null,
-      vehicleProfile: bridgeImport?.vehicleProfile || bridgeSession?.vehicleProfile || null,
+      freezeFrameSnapshot,
+      vehicleProfile: bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || null,
       vehicleApplicability: mergedBridgeMetadata.vehicleApplicability,
       importClassification: mergedBridgeMetadata.importClassification,
-      connectionStatus: bridgeImport?.connectionStatus || bridgeSession?.connectionStatus || null,
-      vciDevices: bridgeImport?.vciDevices || bridgeSession?.vciDevices || [],
-      adapterIdentity: bridgeImport?.adapterIdentity || bridgeSession?.adapterIdentity || null,
+      connectionStatus: bridgeImport?.connectionStatus || bridgeImport?.connection_status || bridgeSession?.connectionStatus || bridgeSession?.connection_status || null,
+      vciDevices: bridgeImport?.vciDevices || bridgeImport?.vci_devices || bridgeSession?.vciDevices || bridgeSession?.vci_devices || [],
+      adapterIdentity: bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity || bridgeSession?.adapterIdentity || bridgeSession?.adapter_identity || null,
       bridgeSession,
       bridgeExportPayload: bridgeImport?.exportPayload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null),
       warnings: mergedBridgeMetadata.warnings,
