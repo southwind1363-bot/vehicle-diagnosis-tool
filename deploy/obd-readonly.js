@@ -6138,6 +6138,27 @@
       || bridgeSession?.coreReadoutInventorySummary
       || bridgeSession?.core_readout_inventory_summary
       || null;
+    const firstBridgeArray = (...values) => values.find((value) => Array.isArray(value)) || [];
+    const bridgeMonitorValues = firstBridgeArray(
+      bridgeImport?.monitorValues,
+      bridgeImport?.monitor_values,
+      bridgeSession?.monitorValues,
+      bridgeSession?.monitor_values
+    );
+    const bridgeCodes = firstBridgeArray(
+      bridgeImport?.codes,
+      bridgeImport?.dtcCodes,
+      bridgeImport?.dtc_codes,
+      bridgeSession?.codes,
+      bridgeSession?.dtcCodes,
+      bridgeSession?.dtc_codes
+    );
+    const bridgeMonitorInsightsInput = firstBridgeArray(
+      bridgeImport?.monitorInsights,
+      bridgeImport?.monitor_insights,
+      bridgeSession?.monitorInsights,
+      bridgeSession?.monitor_insights
+    );
     const selectPreferredMonitorValue = (current, candidate) => {
       if (!current) return candidate;
       if (!candidate) return current;
@@ -6163,7 +6184,7 @@
       const candidate = { ...item, source: "scanner_text" };
       monitorById.set(item.id, selectPreferredMonitorValue(monitorById.get(item.id), candidate));
     });
-    (bridgeImport?.monitorValues || bridgeSession?.monitorValues || []).forEach((item) => {
+    bridgeMonitorValues.forEach((item) => {
       const candidate = { ...item, source: "local_bridge" };
       monitorById.set(item.id, selectPreferredMonitorValue(monitorById.get(item.id), candidate));
     });
@@ -6171,9 +6192,9 @@
     const monitorValues = [...monitorById.values()];
     const codes = [...new Set([
       ...scannerAnalysis.codes,
-      ...(bridgeImport?.codes || bridgeSession?.codes || [])
+      ...bridgeCodes
     ])];
-    const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeImport?.monitorInsights || bridgeSession?.monitorInsights || []);
+    const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeMonitorInsightsInput);
     const bridgeMonitorValueSummary = bridgeImport?.monitorValueSummary
       || bridgeImport?.monitor_value_summary
       || bridgeSession?.monitorValueSummary
