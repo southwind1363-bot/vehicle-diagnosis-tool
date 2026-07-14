@@ -1191,6 +1191,9 @@ const ecuInfoSnapshotFunctionChecks = () => {
     check(functionBody.includes('hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),'), "normalizeEcuInfoSnapshot should surface detected sensitive identifiers");
     check(functionBody.includes('supportInfoTypesSummary: supportedInfoTypesSummary,') && functionBody.includes('retainedRawText: false'), "normalizeEcuInfoSnapshot should summarize supported info types and never retain raw text");
     check(functionBody.includes('schema_version: "ecu_info_snapshot_v1"'), "normalizeEcuInfoSnapshot should expose snake_case schema version");
+    check(functionBody.includes('const keyItemSummary = {') && functionBody.includes('missing_count: missingKeyItems.length,') && functionBody.includes('missing_labels: missingKeyItems.map((item) => item.label)'), "normalizeEcuInfoSnapshot should expose snake_case key item summary fields");
+    check(functionBody.includes('captured_at: sourceInput.captured_at') && functionBody.includes('item_count: items.length,') && functionBody.includes('expected_item_count: expectedItems.length,'), "normalizeEcuInfoSnapshot should expose snake_case top-level count aliases");
+    check(functionBody.includes('key_item_summary: keyItemSummary,') && functionBody.includes('support_info_types_captured: supportedInfoTypesCaptured,') && functionBody.includes('support_info_types_summary: supportedInfoTypesSummary,'), "normalizeEcuInfoSnapshot should expose snake_case ECU info summary aliases");
   }
 };
 const onboardMonitorSnapshotFunctionChecks = () => {
@@ -2060,7 +2063,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1844+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1850+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2132,7 +2135,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.550.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for vehicle applicability snake_case aliases");
+check(appSource.includes('const APP_VERSION = "2.551.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for ECU info snake_case aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2789,8 +2792,11 @@ check(bridgeEcuInfoSnapshot.hadSensitiveIdentifier === true, "Bridge ECU info di
 check(!JSON.stringify(bridgeEcuInfoSnapshot).includes("JTDKN3DU0A0123456"), "Bridge ECU info retained raw VIN");
 check(bridgeEcuInfoSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-1234", "Bridge ECU info did not retain CALID");
 check(bridgeEcuInfoSnapshot.keyItemSummary.capturedCount === 3 && bridgeEcuInfoSnapshot.keyItemSummary.missingLabels.includes("キャリブレーション確認番号 CVN"), "Bridge ECU info key item summary was not built");
+check(bridgeEcuInfoSnapshot.key_item_summary?.captured_count === 3 && bridgeEcuInfoSnapshot.key_item_summary?.missing_labels.includes("キャリブレーション確認番号 CVN"), "Bridge ECU info snake_case key item summary was not built");
 check(bridgeEcuInfoSnapshot.supportInfoTypesCaptured === true, "Bridge ECU info did not mark supported info types as captured");
+check(bridgeEcuInfoSnapshot.support_info_types_captured === true, "Bridge ECU info did not expose snake_case supported info type capture state");
 check(bridgeEcuInfoSnapshot.supportInfoTypesSummary.count >= 6 && bridgeEcuInfoSnapshot.supportInfoTypesSummary.labels.includes("ECU名"), "Bridge ECU info supported info type summary was not built");
+check(bridgeEcuInfoSnapshot.support_info_types_summary?.count >= 6 && bridgeEcuInfoSnapshot.support_info_types_summary?.labels.includes("ECU名"), "Bridge ECU info snake_case supported info type summary was not built");
 const bridgeEmptyEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({});
 check(bridgeEmptyEcuInfoSnapshot.itemCount === 0 && bridgeEmptyEcuInfoSnapshot.blocked === true, "Empty Bridge ECU info response was not fail-closed");
 const bridgeAliasEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
@@ -9002,6 +9008,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1844");
+  console.log("OBD read-only safety checks: 1850");
   console.log("Errors: 0");
 }

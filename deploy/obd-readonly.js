@@ -8032,27 +8032,41 @@
     const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured);
     const supportedInfoTypesItem = items.find((item) => item.id === "supported_info_types_00");
     const supportedInfoTypesSummary = decodeMode09SupportedInfoTypes(supportedInfoTypesItem?.value);
+    const keyItemSummary = {
+      totalCount: keyItems.length,
+      total_count: keyItems.length,
+      capturedCount: capturedKeyItems.length,
+      captured_count: capturedKeyItems.length,
+      missingCount: missingKeyItems.length,
+      missing_count: missingKeyItems.length,
+      capturedLabels: capturedKeyItems.map((item) => item.label),
+      captured_labels: capturedKeyItems.map((item) => item.label),
+      missingLabels: missingKeyItems.map((item) => item.label),
+      missing_labels: missingKeyItems.map((item) => item.label)
+    };
 
     return {
       schemaVersion: "ecu_info_snapshot_v1",
       schema_version: "ecu_info_snapshot_v1",
       source,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
+      captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       itemCount: items.length,
+      item_count: items.length,
       expectedItemCount: expectedItems.length,
+      expected_item_count: expectedItems.length,
       hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
+      had_sensitive_identifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
       items,
       expectedItems,
-      keyItemSummary: {
-        totalCount: keyItems.length,
-        capturedCount: capturedKeyItems.length,
-        missingCount: missingKeyItems.length,
-        capturedLabels: capturedKeyItems.map((item) => item.label),
-        missingLabels: missingKeyItems.map((item) => item.label)
-      },
+      expected_items: expectedItems,
+      keyItemSummary,
+      key_item_summary: keyItemSummary,
       supportInfoTypesCaptured: supportedInfoTypesCaptured,
+      support_info_types_captured: supportedInfoTypesCaptured,
       supportInfoTypesSummary: supportedInfoTypesSummary,
+      support_info_types_summary: supportedInfoTypesSummary,
       retainedRawText: false
     };
   }
