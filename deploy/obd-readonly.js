@@ -4180,14 +4180,44 @@
   function buildImportedCoreReadoutInventoryComparisonSummary(importedInventory = null, currentInventory = {}) {
     if (!importedInventory || typeof importedInventory !== "object") return null;
     const currentSummary = currentInventory && typeof currentInventory === "object" ? currentInventory : {};
-    const readCount = (summary, field, idsField = null) => Number.isFinite(Number(summary?.[field]))
-      ? Number(summary[field])
-      : idsField && Array.isArray(summary?.[idsField]) ? summary[idsField].length : 0;
-    const readIds = (summary, field) => Array.isArray(summary?.[field])
-      ? [...new Set(summary[field].filter(Boolean).map(String))].sort()
+    const aliasMap = {
+      attemptedIds: ["attempted_ids"],
+      attemptedReadoutCount: ["attempted_readout_count", "attempted_count"],
+      capturedIds: ["captured_ids"],
+      capturedReadoutCount: ["captured_readout_count", "captured_count"],
+      countsById: ["counts_by_id"],
+      ecuInfoMissingKeyCount: ["ecu_info_missing_key_count", "mode09_key_items_missing_count"],
+      emptyIds: ["empty_ids"],
+      emptyReadoutCount: ["empty_readout_count", "empty_count"],
+      missingIds: ["missing_ids"],
+      missingReadoutCount: ["missing_readout_count", "missing_count"],
+      nextPendingReadoutId: ["next_pending_readout_id"],
+      onboardMonitorFailedCount: ["onboard_monitor_failed_count"],
+      pendingIds: ["pending_ids"],
+      pendingReadoutCount: ["pending_readout_count", "pending_count"],
+      rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],
+      readinessIncompleteCount: ["readiness_incomplete_count"],
+      totalValueCount: ["total_value_count"]
+    };
+    const readField = (summary = {}, field) => {
+      if (!summary || typeof summary !== "object") return undefined;
+      const aliases = [field, ...(aliasMap[field] || [])];
+      for (const alias of aliases) {
+        if (summary[alias] !== undefined) return summary[alias];
+      }
+      return undefined;
+    };
+    const readCount = (summary, field, idsField = null) => {
+      const value = readField(summary, field);
+      if (Number.isFinite(Number(value))) return Number(value);
+      const ids = idsField ? readField(summary, idsField) : null;
+      return Array.isArray(ids) ? ids.length : 0;
+    };
+    const readIds = (summary, field) => Array.isArray(readField(summary, field))
+      ? [...new Set(readField(summary, field).filter(Boolean).map(String))].sort()
       : [];
-    const readCountsById = (summary = {}) => summary.countsById && typeof summary.countsById === "object"
-      ? { ...summary.countsById }
+    const readCountsById = (summary = {}) => readField(summary, "countsById") && typeof readField(summary, "countsById") === "object"
+      ? { ...readField(summary, "countsById") }
       : {};
     const importedCountsById = readCountsById(importedInventory);
     const currentCountsById = readCountsById(currentSummary);
@@ -4267,9 +4297,9 @@
       attemptedIdsChanged: importedAttemptedIds.join("|") !== currentAttemptedIds.join("|"),
       attemptedAddedIds: diffIds(currentAttemptedIds, importedAttemptedIds),
       attemptedRemovedIds: diffIds(importedAttemptedIds, currentAttemptedIds),
-      importedNextPendingReadoutId: importedInventory.nextPendingReadoutId || null,
-      currentNextPendingReadoutId: currentSummary.nextPendingReadoutId || null,
-      nextPendingReadoutChanged: (importedInventory.nextPendingReadoutId || null) !== (currentSummary.nextPendingReadoutId || null),
+      importedNextPendingReadoutId: readField(importedInventory, "nextPendingReadoutId") || null,
+      currentNextPendingReadoutId: readField(currentSummary, "nextPendingReadoutId") || null,
+      nextPendingReadoutChanged: (readField(importedInventory, "nextPendingReadoutId") || null) !== (readField(currentSummary, "nextPendingReadoutId") || null),
       importedCountsById,
       currentCountsById,
       valueCountDeltaById,

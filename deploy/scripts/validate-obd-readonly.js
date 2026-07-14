@@ -686,7 +686,9 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('pendingReadoutCount: pendingIds.length,') && source.includes('attemptedReadoutPercent: percent(attemptedIds.length),'), "core readout inventory should expose attempted and pending progress fields");
     check(source.includes('nextPendingReadoutId,') && source.includes('valueCaptureComplete: pendingIds.length === 0,'), "core readout inventory should expose the next pending readout cursor");
     check(source.includes('pendingReadoutDelta: currentPendingReadoutCount - importedPendingReadoutCount,') && source.includes('attemptedReadoutDelta: currentAttemptedReadoutCount - importedAttemptedReadoutCount,'), "imported core readout inventory comparison should compare pending and attempted counts");
-    check(source.includes('nextPendingReadoutChanged: (importedInventory.nextPendingReadoutId || null) !== (currentSummary.nextPendingReadoutId || null),'), "imported core readout inventory comparison should compare next pending readout cursor");
+    check(source.includes('nextPendingReadoutChanged: (readField(importedInventory, "nextPendingReadoutId") || null) !== (readField(currentSummary, "nextPendingReadoutId") || null),'), "imported core readout inventory comparison should compare next pending readout cursor");
+    check(source.includes('capturedReadoutCount: ["captured_readout_count", "captured_count"],') && source.includes('countsById: ["counts_by_id"],'), "imported core readout inventory comparison should read snake_case inventory count aliases");
+    check(source.includes('nextPendingReadoutId: ["next_pending_readout_id"],') && source.includes('rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],'), "imported core readout inventory comparison should read snake_case pending and quality aliases");
     check(source.includes('comparison.attemptedReadoutDelta') && source.includes('comparison.nextPendingReadoutChanged === true'), "imported session comparison should classify attempted and next pending readout inventory changes");
     check(source.includes('const readCount = (summary, ids, field) => Number.isFinite(Number(summary?.[field])) ? Number(summary[field]) : ids.length;') && source.includes('requiredCountDelta: currentRequiredCount - importedRequiredCount,'), "imported readout completion comparison should support count-only summaries");
     check(source.includes('requiredIdsChanged: normalizedImportedRequiredIds.join("|") !== normalizedCurrentRequiredIds.join("|"),') && source.includes('emptyIdsChanged: normalizedImportedEmptyIds.join("|") !== normalizedCurrentEmptyIds.join("|")'), "imported readout completion comparison should compare readout id lists");
@@ -1957,7 +1959,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1404+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 1410+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2029,7 +2031,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.501.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for gate comparison aliases");
+check(appSource.includes('const APP_VERSION = "2.502.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-14";'), "OBD app version should advance for inventory comparison aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7359,6 +7361,33 @@ check(scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSumma
 check(scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.rawPidUndecodedDelta === -3 && scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.onboardMonitorFailedDelta === -1, "Diagnostic scan session did not read snake_case imported readout quality count deltas");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.readoutRequestPlanGateSummary?.state, "Diagnostic scan session did not preserve imported readout request plan gate summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1", "Diagnostic scan session did not preserve imported core readout inventory summary from bridge_diagnostic_import alias input");
+const scanSessionSnakeCoreReadoutInventoryImport = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-snake-core-readout-inventory-import",
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    total_value_count: 5,
+    captured_readout_count: 1,
+    captured_ids: ["dtc_snapshot"],
+    empty_readout_count: 1,
+    empty_ids: ["readiness_snapshot"],
+    missing_readout_count: 4,
+    missing_ids: ["live_pid_snapshot", "freeze_frame_snapshot", "ecu_info_snapshot", "supported_pid_matrix"],
+    pending_readout_count: 2,
+    pending_ids: ["freeze_frame_snapshot", "readiness_snapshot"],
+    attempted_readout_count: 3,
+    attempted_ids: ["dtc_snapshot", "freeze_frame_snapshot", "readiness_snapshot"],
+    next_pending_readout_id: "freeze_frame_snapshot",
+    counts_by_id: { dtc_snapshot: 2, freeze_frame_snapshot: 3 },
+    raw_pid_undecoded_count: 2,
+    readiness_incomplete_count: 1,
+    ecu_info_missing_key_count: 1,
+    onboard_monitor_failed_count: 1
+  }
+});
+check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedTotalValueCount === 5 && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedCapturedReadoutCount === 1, "Diagnostic scan session did not read snake_case imported core readout inventory counts");
+check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedPendingIds?.includes("freeze_frame_snapshot") && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedAttemptedIds?.includes("readiness_snapshot"), "Diagnostic scan session did not read snake_case imported core readout inventory id lists");
+check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedNextPendingReadoutId === "freeze_frame_snapshot" && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedCountsById?.freeze_frame_snapshot === 3, "Diagnostic scan session did not read snake_case imported core readout inventory cursor or counts_by_id");
+check(Number.isFinite(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.rawPidUndecodedDelta) && Number.isFinite(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.ecuInfoMissingKeyDelta), "Diagnostic scan session did not read snake_case imported core readout inventory quality counts");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.capturedReadoutDelta), "Diagnostic scan session did not expose imported core captured readout delta");
@@ -8546,6 +8575,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 1404");
+  console.log("OBD read-only safety checks: 1410");
   console.log("Errors: 0");
 }
