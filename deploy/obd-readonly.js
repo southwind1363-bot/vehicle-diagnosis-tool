@@ -3828,6 +3828,29 @@
     const vehicleApplicabilityNeedsReview = applicability.status === "partial"
       || applicability.status === "manual"
       || applicability.status === "unlisted";
+    const vehicleApplicabilityHasIdentity = Boolean(applicability.maker || applicability.model || applicability.modelCode || applicability.year || applicability.engineCode || applicability.targetSystem || applicability.targetEcu);
+    const vehicleApplicabilityEvidencePresent = Boolean(applicability.sourceName || applicability.sourceUrl || applicability.sourceDate || applicability.evidenceId);
+    const vehicleApplicabilitySourceVerified = applicability.sourceVerified === true || applicability.source_verified === true || applicability.verified === true;
+    const vehicleApplicabilityEvidenceReviewRequired = vehicleApplicabilityHasIdentity && (!vehicleApplicabilityEvidencePresent || !vehicleApplicabilitySourceVerified);
+    const vehicleApplicabilityEvidenceSummary = {
+      schemaVersion: "vehicle_applicability_evidence_summary_v1",
+      schema_version: "vehicle_applicability_evidence_summary_v1",
+      evidencePresent: vehicleApplicabilityEvidencePresent,
+      evidence_present: vehicleApplicabilityEvidencePresent,
+      sourceVerified: vehicleApplicabilitySourceVerified,
+      source_verified: vehicleApplicabilitySourceVerified,
+      reviewRequired: vehicleApplicabilityEvidenceReviewRequired,
+      review_required: vehicleApplicabilityEvidenceReviewRequired,
+      sourceName: applicability.sourceName || null,
+      source_name: applicability.sourceName || null,
+      sourceUrl: applicability.sourceUrl || null,
+      source_url: applicability.sourceUrl || null,
+      sourceDate: applicability.sourceDate || null,
+      source_date: applicability.sourceDate || null,
+      evidenceId: applicability.evidenceId || null,
+      evidence_id: applicability.evidenceId || null,
+      confidence: applicability.confidence ?? null
+    };
     const readCount = (...values) => {
       for (const value of values) {
         if (Number.isFinite(Number(value))) return Math.max(0, Math.round(Number(value)));
@@ -3910,7 +3933,15 @@
         applicabilityStatus: applicability.status || "unknown",
         candidateRangeCount: applicability.candidateRangeCount || 0,
         applicableRangeCount: applicability.applicableRangeCount || 0,
-        supportedEngineCodeCount: applicability.supportedEngineCodeCount || 0
+        supportedEngineCodeCount: applicability.supportedEngineCodeCount || 0,
+        evidenceSummary: vehicleApplicabilityEvidenceSummary,
+        evidence_summary: vehicleApplicabilityEvidenceSummary,
+        evidencePresent: vehicleApplicabilityEvidenceSummary.evidencePresent,
+        evidence_present: vehicleApplicabilityEvidenceSummary.evidencePresent,
+        sourceVerified: vehicleApplicabilityEvidenceSummary.sourceVerified,
+        source_verified: vehicleApplicabilityEvidenceSummary.sourceVerified,
+        evidenceReviewRequired: vehicleApplicabilityEvidenceSummary.reviewRequired,
+        evidence_review_required: vehicleApplicabilityEvidenceSummary.reviewRequired
       }
     ];
     const analysisChecklistById = Object.fromEntries(analysisChecklist.map((item) => [item.id, { ...item }]));
@@ -3990,6 +4021,8 @@
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      vehicleApplicabilityEvidenceSummary,
+      vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       missing_readout_count: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
@@ -4034,6 +4067,8 @@
       completion_percent: completionPercent,
       applicabilityStatus: applicability.status || "unknown",
       applicability_status: applicability.status || "unknown",
+      vehicleApplicabilityEvidenceSummary,
+      vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
       include_infrastructure: normalizedCoverage.includeInfrastructure === true,
       requiredReadoutIds,

@@ -716,6 +716,8 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('const primaryBlockingReadoutRequest = primaryBlockingReadoutId') && functionBody.includes('source: "primary_blocker"'), "buildCoreSessionStatus should expose read-only request metadata for the primary blocker");
     check(functionBody.includes('const primaryBlockingSummary = primaryBlockingReasonId ? {') && functionBody.includes('schemaVersion: "primary_readout_blocker_v1"') && functionBody.includes('schema_version: "primary_readout_blocker_v1"'), "buildCoreSessionStatus should expose one primary blocker summary");
     check(functionBody.includes('const analysisChecklist = [') && functionBody.includes('id: "required_readouts"') && functionBody.includes('id: "vehicle_applicability"'), "buildCoreSessionStatus should expose an analysis readiness checklist");
+    check(functionBody.includes('const vehicleApplicabilityEvidenceSummary = {') && functionBody.includes('schemaVersion: "vehicle_applicability_evidence_summary_v1"'), "buildCoreSessionStatus should expose a vehicle applicability evidence summary");
+    check(functionBody.includes('evidence_present: vehicleApplicabilityEvidencePresent,') && functionBody.includes('source_verified: vehicleApplicabilitySourceVerified,') && functionBody.includes('review_required: vehicleApplicabilityEvidenceReviewRequired,'), "buildCoreSessionStatus should expose snake_case applicability evidence state");
     check(functionBody.includes('const readoutQualitySummary = {') && functionBody.includes('schemaVersion: "readout_quality_summary_v1"'), "buildCoreSessionStatus should expose a readout quality summary");
     check(functionBody.includes('schema_version: "readout_quality_summary_v1"'), "buildCoreSessionStatus should expose readout quality snake_case schema version");
     check(functionBody.includes('issue_count: readoutQualityIssues.length,') && functionBody.includes('issue_ids: readoutQualityIssues.map((item) => item.id),'), "buildCoreSessionStatus should expose readout quality snake_case issue aliases");
@@ -723,6 +725,7 @@ const coreSessionStatusFunctionChecks = () => {
     check(functionBody.includes('rawPidUndecodedCount > 0 ? { id: "raw_pid_values_need_conversion"') && functionBody.includes('onboardMonitorFailedCount > 0 ? { id: "onboard_monitor_test_failed"'), "buildCoreSessionStatus should classify readout quality issue ids");
     check(functionBody.includes('id: "readout_quality"') && functionBody.includes('state: readoutQualitySummary.reviewRequired ? "review" : "complete"'), "buildCoreSessionStatus should add readout quality to the analysis checklist");
     check(functionBody.includes('readoutQualitySummary,') && functionBody.includes('readoutQualityIssueCount: readoutQualitySummary.issueCount,'), "buildCoreSessionStatus should carry readout quality into analysis readiness");
+    check(functionBody.includes('vehicleApplicabilityEvidenceSummary,') && functionBody.includes('vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,'), "buildCoreSessionStatus should carry applicability evidence into core and readiness summaries");
     check(functionBody.includes('const analysisChecklistById = Object.fromEntries(analysisChecklist.map((item) => [item.id, { ...item }]));'), "buildCoreSessionStatus should index analysis readiness checklist entries by id");
     check(functionBody.includes('const analysisChecklistSummary = {') && functionBody.includes('reviewCount: analysisChecklist.filter((item) => item.state === "review").length,') && functionBody.includes('ready: analysisBlockers.length === 0'), "buildCoreSessionStatus should summarize analysis readiness checklist state");
     check(functionBody.includes('schemaVersion: "analysis_checklist_summary_v1"') && functionBody.includes('schema_version: "analysis_checklist_summary_v1"'), "buildCoreSessionStatus should expose analysis checklist schema aliases");
@@ -2190,7 +2193,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2161+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2168+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2262,7 +2265,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.649.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for applicability evidence metadata retention");
+check(appSource.includes('const APP_VERSION = "2.650.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for applicability evidence summary retention");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8391,6 +8394,9 @@ check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.targetSystem ===
 check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.ecu_address === "7E8" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.supportedEcuCount === 2, "Diagnostic scan session did not preserve ECU address or supported ECU count");
 check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.sourceName === "catalog-test" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.source_url === "https://example.invalid/catalog", "Diagnostic scan session did not preserve applicability source metadata");
 check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.evidenceId === "AQUA-ECM-001" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.confidence === 0.82 && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.source_verified === true, "Diagnostic scan session did not preserve applicability evidence metadata");
+check(scanSessionVehicleMatchProfileAlias.coreSessionStatus?.vehicleApplicabilityEvidenceSummary?.evidencePresent === true && scanSessionVehicleMatchProfileAlias.coreSessionStatus?.vehicleApplicabilityEvidenceSummary?.sourceVerified === true, "Diagnostic scan session did not summarize verified applicability evidence");
+check(scanSessionVehicleMatchProfileAlias.coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary?.evidence_present === true, "Diagnostic scan session did not expose snake_case applicability evidence summary in readiness");
+check(scanSessionVehicleMatchProfileAlias.coreSessionStatus?.analysisChecklistById?.vehicle_applicability?.evidenceReviewRequired === false, "Diagnostic scan session incorrectly required evidence review for verified applicability evidence");
 const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-partial",
   vehicle_profile: { maker: "Toyota", model: "Prius" },
@@ -8398,6 +8404,7 @@ const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
   dtcSnapshot: bridgeDtcSnapshot
 });
 check(scanSessionApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Diagnostic scan session did not emit partial applicability warning");
+check(scanSessionApplicabilityPartial.coreSessionStatus?.vehicleApplicabilityEvidenceSummary?.reviewRequired === true, "Diagnostic scan session did not require review when applicability identity lacks evidence");
 check(Array.isArray(scanSessionApplicabilityPartial.nextReadoutCandidates) && scanSessionApplicabilityPartial.nextReadoutCandidates.length > 0, "Diagnostic scan session did not derive next readout candidates");
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot as the next readout candidate");
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot after freeze_frame for partial applicability");
@@ -10603,6 +10610,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2161");
+  console.log("OBD read-only safety checks: 2168");
   console.log("Errors: 0");
 }
