@@ -8090,6 +8090,7 @@
   }
 
   function buildSummaryMetadataFields(summary = {}, { snakeCase = false } = {}) {
+    const vehicleProfile = getVehicleProfileInput(summary);
     const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(
       getVehicleApplicabilityInput(summary) || {}
     );
@@ -8110,6 +8111,7 @@
     const sourceLength = Number.isFinite(Number(sourceLengthValue)) ? Math.max(0, Math.round(Number(sourceLengthValue))) : 0;
     return snakeCase
       ? {
+        vehicle_profile: vehicleProfile,
         vehicle_applicability: vehicleApplicability,
         import_classification: importClassification,
         tool_hints: toolHints,
@@ -8120,6 +8122,7 @@
         source_length: sourceLength
       }
       : {
+        vehicleProfile,
         vehicleApplicability,
         importClassification,
         toolHints,
@@ -8360,7 +8363,7 @@
         ended_at: summary.endedAt || null,
         captured_at: summary.capturedAt || null,
         protocol: summary.protocol || null,
-        vehicle_profile: summary.vehicleProfile || null,
+        vehicle_profile: metadataFields.vehicle_profile || null,
         vehicle_applicability: metadataFields.vehicle_applicability,
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: cloneBridgeArrayItems(summary.vciDevices),
@@ -8407,6 +8410,9 @@
     const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});
     const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
     const bridgeSessionMetadataFields = {
+      vehicleProfile: preserveNestedBridgeSessionMetadata
+        ? nestedSessionMetadata.vehicleProfile || metadataFields.vehicleProfile
+        : metadataFields.vehicleProfile,
       toolHints: preserveNestedBridgeSessionMetadata
         ? mergeUniqueStrings(metadataFields.toolHints, nestedSessionMetadata.toolHints)
         : metadataFields.toolHints,
@@ -8502,7 +8508,7 @@
       endedAt: summary.endedAt || null,
       protocol: summary.protocol || null,
       capturedAt: summary.capturedAt || null,
-      vehicleProfile: summary.vehicleProfile || null,
+      vehicleProfile: metadataFields.vehicleProfile || null,
       vehicleApplicability: metadataFields.vehicleApplicability,
       codes,
       dtcSnapshot,
@@ -8539,7 +8545,7 @@
         endedAt: summary.endedAt || null,
         capturedAt: summary.capturedAt || null,
         protocol: summary.protocol || null,
-        vehicleProfile: summary.vehicleProfile || null,
+        vehicleProfile: bridgeSessionMetadataFields.vehicleProfile || null,
         vehicleApplicability: metadataFields.vehicleApplicability,
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: cloneBridgeArrayItems(summary.vciDevices),

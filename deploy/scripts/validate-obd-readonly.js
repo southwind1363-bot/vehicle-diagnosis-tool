@@ -493,6 +493,7 @@ const summaryMetadataFieldsFunctionChecks = () => {
   check(Boolean(summaryMetadataFieldsFunctionSource), "buildSummaryMetadataFields is missing from obd-readonly.js");
   if (summaryMetadataFieldsFunctionSource) {
     const functionBody = summaryMetadataFieldsFunctionSource[0];
+    check(functionBody.includes('const vehicleProfile = getVehicleProfileInput(summary);') && functionBody.includes('vehicle_profile: vehicleProfile,') && functionBody.includes('vehicleProfile,'), "buildSummaryMetadataFields should normalize vehicle profile aliases");
     check(functionBody.includes('const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints, importClassification?.toolHints, importClassification?.tool_hints);'), "buildSummaryMetadataFields should merge camelCase and snake_case tool hints");
     check(functionBody.includes('const warnings = resolveWarningList(summary.warnings, summary.warning_ids, summary.warning_flags, summary.warningFlags, importClassification?.warnings, importClassification?.warning_ids, importClassification?.warning_flags);'), "buildSummaryMetadataFields should normalize warning aliases");
     check(functionBody.includes('warning_ids: warnings,') && functionBody.includes('warningIds: warnings,'), "buildSummaryMetadataFields should preserve warning id aliases in exports");
@@ -507,6 +508,7 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('const summary = resolveBridgeSummary(parts);'), "buildBridgeSessionExportPayload should resolve bridge summary before export serialization");
     check(functionBody.includes('const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot') && functionBody.includes('dtc_snapshot: dtcSnapshot,'), "buildBridgeSessionExportPayload should serialize DTC snapshots");
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });'), "buildBridgeSessionExportPayload should rebuild summary metadata in snake_case for export");
+    check(functionBody.includes('vehicle_profile: metadataFields.vehicle_profile || null,'), "buildBridgeSessionExportPayload should export normalized vehicle profile metadata");
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);'), "buildBridgeSessionExportPayload should rebuild diagnostic flow summary from core session status");
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;'), "buildBridgeSessionExportPayload should rebuild readout completion summary from core session status");
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;'), "buildBridgeSessionExportPayload should rebuild analysis readiness summary from core session status");
@@ -530,6 +532,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const summary = resolveBridgeSummary(parts);'), "buildBridgeDiagnosticImport should resolve bridge summary before rebuilding import payload");
     check(functionBody.includes('const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot') && functionBody.includes('dtc_snapshot: dtcSnapshot,'), "buildBridgeDiagnosticImport should preserve DTC snapshots");
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary);'), "buildBridgeDiagnosticImport should rebuild normalized summary metadata");
+    check(functionBody.includes('vehicleProfile: metadataFields.vehicleProfile || null,') && functionBody.includes('vehicleProfile: bridgeSessionMetadataFields.vehicleProfile || null,'), "buildBridgeDiagnosticImport should import normalized vehicle profile metadata");
     check(functionBody.includes('const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});'), "buildBridgeDiagnosticImport should derive nested bridge session metadata overrides");
     check(functionBody.includes('const exportPayload = buildBridgeSessionExportPayload(summary);'), "buildBridgeDiagnosticImport should rebuild bridge export payload from resolved summary");
     check(functionBody.includes('const coreSessionStatus = summary.coreSessionStatus') && functionBody.includes('coreSessionStatus,'), "buildBridgeDiagnosticImport should preserve core session status");
@@ -2173,7 +2176,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2130+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2135+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2245,7 +2248,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.642.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for vehicle profile alias intake");
+check(appSource.includes('const APP_VERSION = "2.643.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for vehicle profile summary alias retention");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4091,6 +4094,7 @@ const bridgeExportUnknownApplicability = obd.buildBridgeSessionExportPayload({
 check(bridgeExportUnknownApplicability.session.vehicle_applicability?.status === "unknown", "Bridge export did not default missing vehicle applicability to unknown");
 const bridgeExportSummaryAliases = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:08:00Z",
+  selected_vehicle: { manufacturer: "Toyota", vehicle_model: "Summary Aqua", vehicle_model_code: "NHP10" },
   dtc_codes: ["P0171"],
   monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 650, unit: "rpm", valueType: "number", decoded: true }],
   monitor_value_summary: { totalCount: 1, decodedCount: 1, undecodedRawCount: 0, numericCount: 1, textCount: 0 },
@@ -4119,6 +4123,7 @@ const bridgeExportSummaryAliases = obd.buildBridgeSessionExportPayload({
   next_readout_candidates: explicitNextReadoutCandidatesSample
 });
 check(bridgeExportSummaryAliases.session.captured_at === "2026-06-28T00:08:00Z", "Bridge export did not accept captured_at summary alias input");
+check(bridgeExportSummaryAliases.session.vehicle_profile?.model === "Summary Aqua" && bridgeExportSummaryAliases.session.vehicle_profile?.modelCode === "NHP10", "Bridge export did not normalize selected_vehicle profile summary alias input");
 check(bridgeExportSummaryAliases.session.dtc_codes[0] === "P0171", "Bridge export did not accept dtc_codes summary alias input");
 check(bridgeExportSummaryAliases.session.monitor_values[0]?.id === "engine_speed", "Bridge export did not accept monitor_values summary alias input");
 check(bridgeExportSummaryAliases.session.monitor_value_summary.totalCount === 1, "Bridge export did not accept monitor_value_summary summary alias input");
@@ -4285,7 +4290,12 @@ const bridgeDiagnosticImportQualityReviewPlan = obd.buildBridgeDiagnosticImport(
   },
   dtcSnapshot: bridgeDtcSnapshot
 });
+const bridgeDiagnosticImportVehicleInfoAlias = obd.buildBridgeDiagnosticImport({
+  vehicle_info: { manufacturer: "Toyota", vehicle_model: "Import Aqua", vehicle_model_code: "NHP10" },
+  dtcSnapshot: bridgeDtcSnapshot
+});
 check(bridgeDiagnosticImportUnknownApplicability.vehicleApplicability?.status === "unknown", "Bridge diagnostic import did not preserve unknown vehicle applicability from bridge export payload");
+check(bridgeDiagnosticImportVehicleInfoAlias.vehicleProfile?.model === "Import Aqua" && bridgeDiagnosticImportVehicleInfoAlias.bridgeSession?.vehicleProfile?.modelCode === "NHP10", "Bridge diagnostic import did not normalize vehicle_info profile alias input");
 check(bridgeDiagnosticImportQualityReviewPlan.importedReadoutQualityReviewRequestPlanSummary?.schemaVersion === "readout_quality_review_request_plan_v1", "Bridge diagnostic import did not expose imported readout quality review request plan summary");
 check(bridgeDiagnosticImportQualityReviewPlan.imported_readout_quality_review_request_plan_summary?.schemaVersion === "readout_quality_review_request_plan_v1", "Bridge diagnostic import did not expose imported readout quality review request plan snake_case summary");
 check(bridgeDiagnosticImportQualityReviewPlan.bridgeSession?.importedReadoutQualityReviewRequestPlanSummary?.vehicleCommandEnabled === false, "Bridge diagnostic import did not retain imported readout quality review request plan summary on bridgeSession");
@@ -10560,6 +10570,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2130");
+  console.log("OBD read-only safety checks: 2135");
   console.log("Errors: 0");
 }
