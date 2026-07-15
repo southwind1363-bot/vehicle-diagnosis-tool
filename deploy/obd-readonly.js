@@ -7813,6 +7813,8 @@
     const isoTpSummaryInput = explicitImportClassification?.isoTpSummary || explicitImportClassification?.iso_tp_summary;
     const negativeResponseSummaryInput = explicitImportClassification?.negativeResponseSummary || explicitImportClassification?.negative_response_summary;
     const lineCountInput = pickDefined(explicitImportClassification?.lineCount, explicitImportClassification?.line_count, null);
+    const explicitHadSensitiveIdentifier = explicitImportClassification?.hadSensitiveIdentifier === true
+      || explicitImportClassification?.had_sensitive_identifier === true;
     const bucketCounts = bucketCountsInput && typeof bucketCountsInput === "object"
       ? { ...classified.bucketCounts, ...bucketCountsInput }
       : classified.bucketCounts;
@@ -7825,6 +7827,13 @@
     const lineCount = Number.isFinite(Number(lineCountInput))
       ? Math.max(0, Math.round(Number(lineCountInput)))
       : classified.lineCount;
+    const hadSensitiveIdentifier = session.hadSensitiveIdentifier === true
+      || classified.hadSensitiveIdentifier === true
+      || explicitHadSensitiveIdentifier
+      || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true
+      || session.ecuInfoSnapshot?.had_sensitive_identifier === true
+      || session.ecu_info_snapshot?.hadSensitiveIdentifier === true
+      || session.ecu_info_snapshot?.had_sensitive_identifier === true;
     return {
       toolHints: mergedToolHints,
       importClassification: {
@@ -7839,19 +7848,16 @@
         lineCount,
         line_count: lineCount,
         toolHints: mergedToolHints,
-        tool_hints: mergedToolHints
+        tool_hints: mergedToolHints,
+        hadSensitiveIdentifier,
+        had_sensitive_identifier: hadSensitiveIdentifier
       },
       warnings: mergeUniqueStrings(
         session.warnings,
         classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : [],
         classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
       ),
-      hadSensitiveIdentifier: session.hadSensitiveIdentifier === true
-        || classified.hadSensitiveIdentifier === true
-        || session.ecuInfoSnapshot?.hadSensitiveIdentifier === true
-        || session.ecuInfoSnapshot?.had_sensitive_identifier === true
-        || session.ecu_info_snapshot?.hadSensitiveIdentifier === true
-        || session.ecu_info_snapshot?.had_sensitive_identifier === true,
+      hadSensitiveIdentifier,
       sourceLength: Number.isFinite(Number(pickDefined(session.sourceLength, classified.sourceLength)))
         ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
         : 0
