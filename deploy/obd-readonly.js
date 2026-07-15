@@ -3194,9 +3194,17 @@
     return items.map((item) => (item && typeof item === "object" ? { ...item } : item));
   }
 
+  function isSafeNextReadoutCandidate(item = null) {
+    if (!item || typeof item !== "object") return false;
+    if (pickDefined(item.readOnly, item.read_only) === false) return false;
+    if (pickDefined(item.wouldTransmit, item.would_transmit) === true) return false;
+    if (pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true) return false;
+    return true;
+  }
+
   function normalizeNextReadoutCandidates(items) {
     return cloneBridgeArrayItems(items)
-      .filter((item) => item && typeof item === "object")
+      .filter(isSafeNextReadoutCandidate)
       .map((item) => ({
         ...item,
         id: String(pickDefined(item.id, item.readout_id, item.readoutId, "") || ""),

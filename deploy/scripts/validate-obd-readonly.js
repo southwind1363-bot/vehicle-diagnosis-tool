@@ -2325,7 +2325,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.691.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for next readout candidate safety filtering");
+check(appSource.includes('const APP_VERSION = "2.692.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for core next readout candidate safety filtering");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3921,6 +3921,12 @@ const explicitNextReadoutCandidatesUnsortedSample = [
   { id: "live_pid_snapshot", label: "Live PID", status: "missing", priority: 80, reason: "Live PID candidate" },
   { id: "freeze_frame_snapshot", label: "Freeze Frame", status: "missing", priority: 95, reason: "Freeze frame candidate" },
   { id: "dtc_snapshot", label: "DTC", status: "missing", priority: 100, reason: "DTC candidate" }
+];
+const explicitUnsafeNextReadoutCandidatesSample = [
+  { id: "unsafe_write_candidate", label: "Unsafe Write", status: "missing", priority: 1000, read_only: false, reason: "Unsafe read-only candidate" },
+  { id: "unsafe_transmit_candidate", label: "Unsafe Transmit", status: "missing", priority: 990, would_transmit: true, reason: "Unsafe transmit candidate" },
+  { id: "unsafe_command_candidate", label: "Unsafe Command", status: "missing", priority: 980, vehicle_command_enabled: true, reason: "Unsafe command candidate" },
+  { id: "safe_readout_candidate", label: "Safe Readout", status: "missing", priority: 900, read_only: true, would_transmit: false, vehicle_command_enabled: false, reason: "Safe readout candidate" }
 ];
 const bridgeSummaryApplicabilityAliases = obd.buildBridgeSessionSummary({
   vehicle_profile: { maker: "Toyota", model: "Prius" },
@@ -8858,6 +8864,10 @@ const scanSessionExplicitUnsortedCandidates = obd.buildDiagnosticScanSession({
   session_id: "shop-test-explicit-candidates",
   next_readout_candidates: explicitNextReadoutCandidatesUnsortedSample
 });
+const scanSessionUnsafeExplicitCandidates = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-unsafe-explicit-candidates",
+  next_readout_candidates: explicitUnsafeNextReadoutCandidatesSample
+});
 check(scanSessionScanSessionAlias.ecuInfoSnapshot.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept scan_session alias input");
 check(scanSessionScanSessionAlias.readinessSnapshot.incompleteCount === 1, "Diagnostic scan session did not carry readiness from scan_session alias input");
 check(scanSessionScanSessionAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from scan_session alias input");
@@ -8872,6 +8882,8 @@ const scanSessionScanSessionToolHintsAlias = obd.buildDiagnosticScanSession({
 check(scanSessionScanSessionToolHintsAlias.toolHints.join(",") === "CONSULT,IDS", "Diagnostic scan session did not carry toolHints from scan_session alias input");
 check(scanSessionExplicitUnsortedCandidates.nextReadoutCandidates[0]?.id === "dtc_snapshot", "Diagnostic scan session did not sort explicit next_readout_candidates by priority");
 check(scanSessionExplicitUnsortedCandidates.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "Diagnostic scan session did not let explicit next_readout_candidates drive coreSessionStatus nextRecommendedReadoutId");
+check(scanSessionUnsafeExplicitCandidates.nextReadoutCandidates.length === 1 && scanSessionUnsafeExplicitCandidates.nextReadoutCandidates[0]?.id === "safe_readout_candidate", "Diagnostic scan session did not filter unsafe explicit next_readout_candidates");
+check(scanSessionUnsafeExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "safe_readout_candidate", "Diagnostic scan session allowed unsafe next_readout_candidates to drive nextRecommendedReadoutId");
 const scanSessionExplicitCandidatesEmptyReadouts = obd.buildDiagnosticScanSession({
   session_id: "shop-test-explicit-empty-readouts",
   dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:00Z", codes: [], dtcs: [] },
