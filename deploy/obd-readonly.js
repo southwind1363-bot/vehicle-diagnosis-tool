@@ -3199,6 +3199,7 @@
     if (pickDefined(item.readOnly, item.read_only) === false) return false;
     if (pickDefined(item.wouldTransmit, item.would_transmit) === true) return false;
     if (pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true) return false;
+    if (pickDefined(item.executionEnabled, item.execution_enabled) === true) return false;
     return true;
   }
 
