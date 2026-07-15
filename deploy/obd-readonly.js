@@ -7813,6 +7813,14 @@
     const isoTpSummaryInput = explicitImportClassification?.isoTpSummary || explicitImportClassification?.iso_tp_summary;
     const negativeResponseSummaryInput = explicitImportClassification?.negativeResponseSummary || explicitImportClassification?.negative_response_summary;
     const lineCountInput = pickDefined(explicitImportClassification?.lineCount, explicitImportClassification?.line_count, null);
+    const sourceLengthInput = pickDefined(
+      explicitImportClassification?.sourceLength,
+      explicitImportClassification?.source_length,
+      session.sourceLength,
+      session.source_length,
+      classified.sourceLength,
+      0
+    );
     const explicitHadSensitiveIdentifier = explicitImportClassification?.hadSensitiveIdentifier === true
       || explicitImportClassification?.had_sensitive_identifier === true;
     const bucketCounts = bucketCountsInput && typeof bucketCountsInput === "object"
@@ -7827,6 +7835,9 @@
     const lineCount = Number.isFinite(Number(lineCountInput))
       ? Math.max(0, Math.round(Number(lineCountInput)))
       : classified.lineCount;
+    const sourceLength = Number.isFinite(Number(sourceLengthInput))
+      ? Math.max(0, Math.round(Number(sourceLengthInput)))
+      : 0;
     const hadSensitiveIdentifier = session.hadSensitiveIdentifier === true
       || classified.hadSensitiveIdentifier === true
       || explicitHadSensitiveIdentifier
@@ -7847,6 +7858,8 @@
         negative_response_summary: negativeResponseSummary,
         lineCount,
         line_count: lineCount,
+        sourceLength,
+        source_length: sourceLength,
         toolHints: mergedToolHints,
         tool_hints: mergedToolHints,
         hadSensitiveIdentifier,
@@ -7858,9 +7871,7 @@
         classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
       ),
       hadSensitiveIdentifier,
-      sourceLength: Number.isFinite(Number(pickDefined(session.sourceLength, classified.sourceLength)))
-        ? Math.max(0, Math.round(Number(pickDefined(session.sourceLength, classified.sourceLength))))
-        : 0
+      sourceLength
     };
   }
 
