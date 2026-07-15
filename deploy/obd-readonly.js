@@ -7726,13 +7726,31 @@
 
   function getDiagnosticSessionInput(input = {}) {
     const bridgePartsInput = input.bridgeParts || input.bridge_parts || null;
+    const bridgePartsPayloadSessionInput = bridgePartsInput?.sessionPayload
+      || bridgePartsInput?.session_payload
+      || bridgePartsInput?.savedSession
+      || bridgePartsInput?.saved_session
+      || bridgePartsInput?.lastSession
+      || bridgePartsInput?.last_session
+      || bridgePartsInput?.scanSession
+      || bridgePartsInput?.scan_session
+      || bridgePartsInput?.diagnosticScanSession
+      || bridgePartsInput?.diagnostic_scan_session
+      || bridgePartsInput?.diagnosticSession
+      || bridgePartsInput?.diagnostic_session
+      || bridgePartsInput?.obdScanSession
+      || bridgePartsInput?.obd_scan_session
+      || null;
+    const effectiveBridgePartsInput = bridgePartsPayloadSessionInput && typeof bridgePartsPayloadSessionInput === "object"
+      ? buildDiagnosticScanSession(bridgePartsInput)
+      : bridgePartsInput;
     const payload = input.bridgeDiagnosticImport
       || input.bridge_diagnostic_import
       || input.bridgeImport
       || input.bridge_import
       || input.bridgeExportPayload
       || input.bridge_export_payload
-      || (bridgePartsInput ? buildBridgeDiagnosticImport(bridgePartsInput) : null)
+      || (effectiveBridgePartsInput ? buildBridgeDiagnosticImport(effectiveBridgePartsInput) : null)
       || null;
     const base = payload && typeof payload === "object"
       ? { ...payload, ...input }
@@ -8451,6 +8469,24 @@
       ? buildDiagnosticScanSession(bridgeImportInput)
       : bridgeImportInput;
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
+    const bridgePartsPayloadSessionInput = bridgePartsInput?.sessionPayload
+      || bridgePartsInput?.session_payload
+      || bridgePartsInput?.savedSession
+      || bridgePartsInput?.saved_session
+      || bridgePartsInput?.lastSession
+      || bridgePartsInput?.last_session
+      || bridgePartsInput?.scanSession
+      || bridgePartsInput?.scan_session
+      || bridgePartsInput?.diagnosticScanSession
+      || bridgePartsInput?.diagnostic_scan_session
+      || bridgePartsInput?.diagnosticSession
+      || bridgePartsInput?.diagnostic_session
+      || bridgePartsInput?.obdScanSession
+      || bridgePartsInput?.obd_scan_session
+      || null;
+    const effectiveBridgePartsInput = bridgePartsPayloadSessionInput && typeof bridgePartsPayloadSessionInput === "object"
+      ? buildDiagnosticScanSession(bridgePartsInput)
+      : bridgePartsInput;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
     const bridgeImport = effectiveBridgeImportInput?.importType === "bridge_diagnostic_snapshot"
       ? buildBridgeDiagnosticImport(effectiveBridgeImportInput)
@@ -8460,8 +8496,8 @@
         ? buildBridgeDiagnosticImport(effectiveBridgeImportInput)
       : effectiveBridgeImportInput && hasBridgeSummaryMetadata(getBridgeSummaryInput(effectiveBridgeImportInput))
         ? buildBridgeDiagnosticImport(effectiveBridgeImportInput)
-      : bridgePartsInput
-        ? buildBridgeDiagnosticImport(bridgePartsInput)
+      : effectiveBridgePartsInput
+        ? buildBridgeDiagnosticImport(effectiveBridgePartsInput)
         : null;
     const monitorById = new Map();
     const bridgeSession = bridgeImport?.bridgeSession || bridgeImport?.bridge_session || null;
