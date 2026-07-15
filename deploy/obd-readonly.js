@@ -7485,7 +7485,60 @@
   }
 
   function resolveImportClassification(input = null) {
-    return input && typeof input === "object" ? { ...input } : null;
+    if (!input || typeof input !== "object") return null;
+    const schemaVersion = input.schemaVersion || input.schema_version || null;
+    const bucketCounts = input.bucketCounts || input.bucket_counts || null;
+    const isoTpSummary = input.isoTpSummary || input.iso_tp_summary || null;
+    const negativeResponseSummary = input.negativeResponseSummary || input.negative_response_summary || null;
+    const ecuResponses = Array.isArray(input.ecuResponses)
+      ? input.ecuResponses
+      : Array.isArray(input.ecu_responses)
+        ? input.ecu_responses
+        : [];
+    const ecuResponseCountValue = pickDefined(input.ecuResponseCount, input.ecu_response_count, ecuResponses.length);
+    const ecuResponseCount = Number.isFinite(Number(ecuResponseCountValue)) ? Math.max(0, Math.round(Number(ecuResponseCountValue))) : ecuResponses.length;
+    const lineCountValue = pickDefined(input.lineCount, input.line_count, null);
+    const sourceLengthValue = pickDefined(input.sourceLength, input.source_length, null);
+    const toolHints = mergeUniqueStrings(input.toolHints, input.tool_hints);
+    const warnings = mergeUniqueStrings(input.warnings, input.warning_ids, input.warning_flags, input.warningFlags);
+    const hadSensitiveIdentifier = input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true;
+    const normalized = {
+      ...input,
+      schemaVersion,
+      schema_version: schemaVersion,
+      bucketCounts,
+      bucket_counts: bucketCounts,
+      isoTpSummary,
+      iso_tp_summary: isoTpSummary,
+      negativeResponseSummary,
+      negative_response_summary: negativeResponseSummary,
+      ecuResponseCount,
+      ecu_response_count: ecuResponseCount,
+      ecuResponses,
+      ecu_responses: ecuResponses,
+      toolHints,
+      tool_hints: toolHints,
+      warnings,
+      warning_ids: warnings,
+      warning_flags: warnings,
+      hadSensitiveIdentifier,
+      had_sensitive_identifier: hadSensitiveIdentifier,
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+    if (Number.isFinite(Number(lineCountValue))) {
+      normalized.lineCount = Math.max(0, Math.round(Number(lineCountValue)));
+      normalized.line_count = normalized.lineCount;
+    }
+    if (Number.isFinite(Number(sourceLengthValue))) {
+      normalized.sourceLength = Math.max(0, Math.round(Number(sourceLengthValue)));
+      normalized.source_length = normalized.sourceLength;
+    }
+    return normalized;
   }
 
   function resolveWarningList(...warningSets) {

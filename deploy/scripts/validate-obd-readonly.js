@@ -76,7 +76,7 @@ const vehicleApplicabilityWarningsFunctionSource = source.match(/function append
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
 const sessionTemporalContextFunctionSource = source.match(/function resolveSessionTemporalContext[\s\S]*?capturedAt:[\s\S]*?\r?\n    \};\r?\n  \}/);
-const importClassificationFunctionSource = source.match(/function resolveImportClassification[\s\S]*?return input && typeof input === "object" \? \{ \.\.\.input \} : null;\r?\n  \}/);
+const importClassificationFunctionSource = source.match(/function resolveImportClassification[\s\S]*?return normalized;\r?\n  \}/);
 const readOnlyFlagsFunctionSource = source.match(/function buildReadOnlyFlags[\s\S]*?return flags;\r?\n  \}/);
 const commonCoreWarningsFunctionSource = source.match(/function appendCommonCoreWarnings[\s\S]*?appendVehicleApplicabilityWarnings\(warnings, vehicleApplicability \|\| \{\}\);\r?\n  \}/);
 const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
@@ -970,8 +970,12 @@ const importClassificationFunctionChecks = () => {
   if (importClassificationFunctionSource) {
     const functionBody = importClassificationFunctionSource[0];
     check(functionBody.includes('function resolveImportClassification(input = null)'), "resolveImportClassification should default missing input to null");
-    check(functionBody.includes('input && typeof input === "object"'), "resolveImportClassification should only preserve object classification input");
-    check(functionBody.includes('? { ...input } : null;'), "resolveImportClassification should clone object input and fall back to null for non-objects");
+    check(functionBody.includes('if (!input || typeof input !== "object") return null;'), "resolveImportClassification should only preserve object classification input");
+    check(functionBody.includes('schemaVersion,') && functionBody.includes('schema_version: schemaVersion'), "resolveImportClassification should normalize schema aliases");
+    check(functionBody.includes('bucketCounts,') && functionBody.includes('bucket_counts: bucketCounts'), "resolveImportClassification should normalize bucket count aliases");
+    check(functionBody.includes('ecuResponseCount,') && functionBody.includes('ecu_responses: ecuResponses'), "resolveImportClassification should normalize ECU response aliases");
+    check(functionBody.includes('tool_hints: toolHints') && functionBody.includes('warning_flags: warnings'), "resolveImportClassification should normalize tool and warning aliases");
+    check(functionBody.includes('retained_raw_text: false') && functionBody.includes('vehicle_command_enabled: false'), "resolveImportClassification should force read-only safety aliases");
   }
 };
 const readOnlyFlagsFunctionChecks = () => {
@@ -2117,7 +2121,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2007+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2008+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2189,7 +2193,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.606.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for text classification ECU response metadata");
+check(appSource.includes('const APP_VERSION = "2.607.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for import classification normalization");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8656,6 +8660,31 @@ const scanSessionCoreMetadataAliases = obd.buildDiagnosticScanSession({
 check(scanSessionCoreMetadataAliases.source === "local_bridge" && scanSessionCoreMetadataAliases.source_type === "local_bridge", "Diagnostic scan session did not preserve source_type aliases");
 check(scanSessionCoreMetadataAliases.protocol === "CAN_11_500" && scanSessionCoreMetadataAliases.obd_protocol === "CAN_11_500", "Diagnostic scan session did not preserve obd_protocol aliases");
 check(scanSessionCoreMetadataAliases.warnings.includes("negative_obd_response_present") && scanSessionCoreMetadataAliases.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not merge warning_ids aliases");
+const scanSessionImportClassificationAliasNormalization = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-import-classification-alias-normalization",
+  import_classification: {
+    schema_version: "obd_response_line_classification_v1",
+    bucket_counts: { livePidResponses: 3 },
+    iso_tp_summary: { completeCount: 1 },
+    negative_response_summary: { totalCount: 2 },
+    ecu_response_count: 1,
+    ecu_responses: [{ ecu: "7E8", response_count: 2 }],
+    line_count: 12,
+    source_length: 99,
+    tool_hints: ["Techstream"],
+    warning_flags: ["negative_obd_response_present"],
+    had_sensitive_identifier: true,
+    would_transmit: true,
+    vehicle_command_enabled: true
+  }
+});
+check(scanSessionImportClassificationAliasNormalization.importClassification?.schemaVersion === "obd_response_line_classification_v1" && scanSessionImportClassificationAliasNormalization.importClassification?.schema_version === "obd_response_line_classification_v1", "Diagnostic scan session did not normalize import classification schema aliases");
+check(scanSessionImportClassificationAliasNormalization.importClassification?.bucketCounts?.livePidResponses === 3 && scanSessionImportClassificationAliasNormalization.importClassification?.bucket_counts?.livePidResponses === 3, "Diagnostic scan session did not normalize import classification bucket aliases");
+check(scanSessionImportClassificationAliasNormalization.importClassification?.negativeResponseSummary?.totalCount === 2 && scanSessionImportClassificationAliasNormalization.importClassification?.negative_response_summary?.totalCount === 2, "Diagnostic scan session did not normalize import classification negative response aliases");
+check(scanSessionImportClassificationAliasNormalization.importClassification?.ecuResponseCount === 1 && scanSessionImportClassificationAliasNormalization.importClassification?.ecu_responses?.[0]?.ecu === "7E8", "Diagnostic scan session did not normalize import classification ECU response aliases");
+check(scanSessionImportClassificationAliasNormalization.importClassification?.lineCount === 12 && scanSessionImportClassificationAliasNormalization.importClassification?.source_length === 99, "Diagnostic scan session did not normalize import classification count metadata aliases");
+check(scanSessionImportClassificationAliasNormalization.importClassification?.toolHints?.includes("Techstream") && scanSessionImportClassificationAliasNormalization.importClassification?.warning_flags?.includes("negative_obd_response_present"), "Diagnostic scan session did not normalize import classification tool or warning aliases");
+check(scanSessionImportClassificationAliasNormalization.importClassification?.hadSensitiveIdentifier === true && scanSessionImportClassificationAliasNormalization.importClassification?.vehicle_command_enabled === false && scanSessionImportClassificationAliasNormalization.importClassification?.would_transmit === false, "Diagnostic scan session did not force import classification read-only safety metadata");
 const scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeExportPayloadPopulatedPartialExplicitCandidates,
   session_id: "shop-test-bridge-export-populated-partial-explicit-candidates"
@@ -9641,6 +9670,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2007");
+  console.log("OBD read-only safety checks: 2008");
   console.log("Errors: 0");
 }
