@@ -7239,6 +7239,12 @@
     const bridgeIntentChangedIdSummary = changedIdSummaryByKind.bridge_intent || { ids: [], count: 0, summaries: [] };
     const readoutChangedIdDirectionSummary = changedIdKindDirectionSummary.readout_id || {};
     const bridgeIntentChangedIdDirectionSummary = changedIdKindDirectionSummary.bridge_intent || {};
+    const vehicleApplicabilityChangedIdSummaries = changedIdSummaries.filter((item) => String(item.id || "").startsWith("vehicle_applicability_"));
+    const vehicleApplicabilityChangedIds = vehicleApplicabilityChangedIdSummaries.map((item) => item.id);
+    const vehicleApplicabilityChangedIdsByDirection = ["mixed", "added", "removed"].reduce((byDirection, direction) => {
+      byDirection[direction] = vehicleApplicabilityChangedIdSummaries.filter((item) => item.direction === direction).map((item) => item.id);
+      return byDirection;
+    }, {});
     const changedIdDirectionSummary = {
       added: { ids: addedOnlyChangedIdSummaries.map((item) => item.id), count: addedOnlyChangedIdSummaries.length, summaries: addedOnlyChangedIdSummaries },
       removed: { ids: removedOnlyChangedIdSummaries.map((item) => item.id), count: removedOnlyChangedIdSummaries.length, summaries: removedOnlyChangedIdSummaries },
@@ -7635,6 +7641,14 @@
       blocked_reason_changed_id_count: changedIdSummaryByKind.blocked_reason?.count || 0,
       analysisChecklistChangedIdCount: changedIdSummaryByKind.analysis_checklist_id?.count || 0,
       analysis_checklist_changed_id_count: changedIdSummaryByKind.analysis_checklist_id?.count || 0,
+      vehicleApplicabilityChangedIds,
+      vehicle_applicability_changed_ids: vehicleApplicabilityChangedIds,
+      vehicleApplicabilityChangedIdCount: vehicleApplicabilityChangedIds.length,
+      vehicle_applicability_changed_id_count: vehicleApplicabilityChangedIds.length,
+      vehicleApplicabilityMixedChangedIds: vehicleApplicabilityChangedIdsByDirection.mixed || [],
+      vehicle_applicability_mixed_changed_ids: vehicleApplicabilityChangedIdsByDirection.mixed || [],
+      hasVehicleApplicabilityChangedIds: vehicleApplicabilityChangedIds.length > 0,
+      has_vehicle_applicability_changed_ids: vehicleApplicabilityChangedIds.length > 0,
       otherChangedIdCount: changedIdSummaryByKind.other?.count || 0,
       other_changed_id_count: changedIdSummaryByKind.other?.count || 0,
       readoutAddedChangedIds: [...(readoutChangedIdDirectionSummary.added?.ids || [])],
@@ -7817,14 +7831,20 @@
       readout_changed_ids: [...readoutChangedIdSummary.ids],
       bridgeIntentChangedIds: [...bridgeIntentChangedIdSummary.ids],
       bridge_intent_changed_ids: [...bridgeIntentChangedIdSummary.ids],
+      vehicleApplicabilityChangedIds,
+      vehicle_applicability_changed_ids: vehicleApplicabilityChangedIds,
       readoutAddedChangedIds: [...(readoutChangedIdDirectionSummary.added?.ids || [])],
       readoutRemovedChangedIds: [...(readoutChangedIdDirectionSummary.removed?.ids || [])],
       readoutMixedChangedIds: [...(readoutChangedIdDirectionSummary.mixed?.ids || [])],
       bridgeIntentAddedChangedIds: [...(bridgeIntentChangedIdDirectionSummary.added?.ids || [])],
       bridgeIntentRemovedChangedIds: [...(bridgeIntentChangedIdDirectionSummary.removed?.ids || [])],
       bridgeIntentMixedChangedIds: [...(bridgeIntentChangedIdDirectionSummary.mixed?.ids || [])],
+      vehicleApplicabilityMixedChangedIds: vehicleApplicabilityChangedIdsByDirection.mixed || [],
+      vehicle_applicability_mixed_changed_ids: vehicleApplicabilityChangedIdsByDirection.mixed || [],
       readoutChangedIdCount: readoutChangedIdSummary.count || 0,
       bridgeIntentChangedIdCount: bridgeIntentChangedIdSummary.count || 0,
+      vehicleApplicabilityChangedIdCount: vehicleApplicabilityChangedIds.length,
+      vehicle_applicability_changed_id_count: vehicleApplicabilityChangedIds.length,
       readoutAddedChangedIdCount: readoutChangedIdDirectionSummary.added?.count || 0,
       readoutRemovedChangedIdCount: readoutChangedIdDirectionSummary.removed?.count || 0,
       readoutMixedChangedIdCount: readoutChangedIdDirectionSummary.mixed?.count || 0,
@@ -7833,6 +7853,8 @@
       bridgeIntentMixedChangedIdCount: bridgeIntentChangedIdDirectionSummary.mixed?.count || 0,
       hasReadoutChangedIds: (readoutChangedIdSummary.count || 0) > 0,
       hasBridgeIntentChangedIds: (bridgeIntentChangedIdSummary.count || 0) > 0,
+      hasVehicleApplicabilityChangedIds: vehicleApplicabilityChangedIds.length > 0,
+      has_vehicle_applicability_changed_ids: vehicleApplicabilityChangedIds.length > 0,
       hasAddedReadoutChangedIds: (readoutChangedIdDirectionSummary.added?.count || 0) > 0,
       hasRemovedReadoutChangedIds: (readoutChangedIdDirectionSummary.removed?.count || 0) > 0,
       hasAddedBridgeIntentChangedIds: (bridgeIntentChangedIdDirectionSummary.added?.count || 0) > 0,
