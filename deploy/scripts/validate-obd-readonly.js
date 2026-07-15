@@ -559,6 +559,7 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('readoutCoverage: pickPresent(input.readoutCoverage, input.readout_coverage') && functionBody.includes('nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates'), "getDiagnosticSessionInput should preserve nested coverage and next candidates when outer aliases are null");
     check(functionBody.includes('dtcSnapshot: pickPresent(input.dtcSnapshot, input.dtc_snapshot') && functionBody.includes('supportedPidMatrix: pickPresent(input.supportedPidMatrix, input.supported_pid_matrix'), "getDiagnosticSessionInput should preserve nested core snapshots when outer aliases are null");
     check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),') && functionBody.includes('warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),'), "getDiagnosticSessionInput should normalize warning id aliases");
+    check(functionBody.includes('sourceLength: pickPresent(input.sourceLength, input.source_length') && functionBody.includes('nested.sourceLength, nested.source_length'), "getDiagnosticSessionInput should preserve nested source length when outer aliases are null");
     check(functionBody.includes('coreSessionStatus: pickPresent(input.coreSessionStatus, input.core_session_status') && functionBody.includes('nested.coreSessionStatus, nested.core_session_status'), "getDiagnosticSessionInput should preserve imported core session status aliases when outer aliases are null");
     check(functionBody.includes('diagnosticFlowSummary: pickPresent(input.diagnosticFlowSummary, input.diagnostic_flow_summary') && functionBody.includes('nested.diagnosticFlowSummary, nested.diagnostic_flow_summary'), "getDiagnosticSessionInput should preserve imported diagnostic flow aliases when outer aliases are null");
     check(functionBody.includes('readoutCompletionSummary: pickPresent(input.readoutCompletionSummary, input.readout_completion_summary') && functionBody.includes('nested.readoutCompletionSummary, nested.readout_completion_summary'), "getDiagnosticSessionInput should preserve imported readout completion aliases when outer aliases are null");
@@ -2128,7 +2129,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2024+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2026+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2200,7 +2201,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.614.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for nested null imported summary preservation");
+check(appSource.includes('const APP_VERSION = "2.615.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for nested null source length preservation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8963,6 +8964,13 @@ const scanSessionNestedSourceLengthAlias = obd.buildDiagnosticScanSession({
   }
 });
 check(scanSessionNestedSourceLengthAlias.sourceLength === 128, "Diagnostic scan session did not accept source_length from nested scan_session alias input");
+const scanSessionNestedNullOuterSourceLengthAlias = obd.buildDiagnosticScanSession({
+  source_length: null,
+  scan_session: {
+    source_length: 128
+  }
+});
+check(scanSessionNestedNullOuterSourceLengthAlias.sourceLength === 128, "Diagnostic scan session did not preserve nested source_length when outer input was null");
 const scanSessionNestedWarningsAlias = obd.buildDiagnosticScanSession({
   session_id: "shop-test-warnings-nested",
   scan_session: {
@@ -9780,6 +9788,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2024");
+  console.log("OBD read-only safety checks: 2026");
   console.log("Errors: 0");
 }

@@ -7742,8 +7742,8 @@
       warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),
       importClassification,
       import_classification: importClassification,
-      sourceLength: pickDefined(input.sourceLength, input.source_length, payload?.sourceLength, payload?.source_length, nested.sourceLength, nested.source_length, null),
-      source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
+      sourceLength: pickPresent(input.sourceLength, input.source_length, payload?.sourceLength, payload?.source_length, nested.sourceLength, nested.source_length, null),
+      source_length: pickPresent(input.source_length, input.sourceLength, payload?.source_length, payload?.sourceLength, nested.source_length, nested.sourceLength, null),
       hadSensitiveIdentifier: [
         input.hadSensitiveIdentifier,
         input.had_sensitive_identifier,
