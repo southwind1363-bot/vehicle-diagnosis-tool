@@ -7750,8 +7750,11 @@
       || input.bridge_import
       || input.bridgeExportPayload
       || input.bridge_export_payload
+      || input.bridgePayload
+      || input.bridge_payload
       || (effectiveBridgePartsInput ? buildBridgeDiagnosticImport(effectiveBridgePartsInput) : null)
       || null;
+    const defaultSource = payload ? "local_bridge" : "diagnostic_core";
     const base = payload && typeof payload === "object"
       ? { ...payload, ...input }
       : input;
@@ -7797,8 +7800,8 @@
     return {
       ...nested,
       ...base,
-      source: base.source || base.source_type || nested.source || nested.source_type || "diagnostic_core",
-      source_type: base.source_type || base.source || nested.source_type || nested.source || "diagnostic_core",
+      source: base.source || base.source_type || nested.source || nested.source_type || defaultSource,
+      source_type: base.source_type || base.source || nested.source_type || nested.source || defaultSource,
       session_id: base.session_id || base.sessionId || nested.session_id || nested.sessionId || "local_scan_session",
       started_at: base.started_at || base.startedAt || nested.started_at || nested.startedAt || null,
       ended_at: base.ended_at || base.endedAt || nested.ended_at || nested.endedAt || null,
@@ -8440,6 +8443,8 @@
       || input.bridge_diagnostic_import
       || input.bridgeExportPayload
       || input.bridge_export_payload
+      || input.bridgePayload
+      || input.bridge_payload
       || input.bridgeSession
       || input.bridge_session
       || input.scanSession
