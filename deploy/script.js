@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "保存済み次読取要求の次操作安全aliasを反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.689.0";
+const APP_VERSION = "2.690.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1639,6 +1639,12 @@ function buildSavedNextReadoutCandidate(session = null) {
     bridgeIntent: request?.bridgeIntent || request?.bridge_intent || plan?.nextBridgeIntent || plan?.next_bridge_intent || null,
     serviceMode: request?.serviceMode || request?.service_mode || plan?.nextServiceMode || plan?.next_service_mode || null,
     executionEnabled: request?.executionEnabled === true || request?.execution_enabled === true || plan?.nextExecutionEnabled === true || plan?.next_execution_enabled === true,
+    readOnly: true,
+    read_only: true,
+    wouldTransmit: false,
+    would_transmit: false,
+    vehicleCommandEnabled: false,
+    vehicle_command_enabled: false,
     savedFromRequest: true,
     saved_from_request: true
   };
