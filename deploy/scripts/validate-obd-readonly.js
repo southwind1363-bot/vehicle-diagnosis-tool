@@ -877,6 +877,8 @@ const coreSessionStatusFunctionChecks = () => {
     check(source.includes('item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true') && source.includes('item.actionReadoutIdsChanged === true') && source.includes('item.actionSummaryReadoutCountDelta'), "imported session top-level summaries should treat request plan action changes as gate changes");
     check(source.includes('const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta') && source.includes('comparison.unmappedCountDelta') && source.includes('completionChanged: comparisons.some((item) => hasComparisonMetricChanges(item))'), "imported session comparison summaries should use one metric-change helper for section and top-level completion flags");
     check(source.includes('analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true') && source.includes('"analysis_checklist"'), "imported session comparison summaries should classify analysis checklist changes");
+    check(source.includes('comparison.vehicleApplicabilityEvidenceChanged === true ? "analysis_checklist"') && source.includes('|| comparison.vehicleApplicabilityEvidenceChanged === true'), "imported session comparison summaries should classify applicability evidence changes as analysis checklist changes");
+    check(source.includes('|| item.comparison.vehicleApplicabilityEvidenceChanged === true') && source.includes('|| item.vehicleApplicabilityEvidenceChanged === true)'), "imported session analysis checklist flags should include applicability evidence changes");
     check(source.includes('comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true') && source.includes('comparison.attemptedIdsChanged === true ? "readout_completion" : null'), "imported session comparison summaries should classify readout completion id changes");
     check(source.includes('const sectionSummaries = sectionInputs') && source.includes('const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);'), "imported session comparison summaries should expose section summaries");
     check(source.includes('section_summaries: sectionSummaries,') && source.includes('changed_section_summaries: changedSectionSummaries,'), "imported session comparison summaries should expose snake_case section summaries");
@@ -2198,7 +2200,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2189+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2195+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2270,7 +2272,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.654.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for applicability evidence readiness comparison retention");
+check(appSource.includes('const APP_VERSION = "2.655.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for applicability evidence session comparison aggregation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5252,6 +5254,19 @@ check(Number.isFinite(mergedDiagnosticInputExportPayload.importedReadoutRequestP
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Combined diagnostic inputs did not summarize imported session comparison results");
 check(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.schema_version === "imported_session_comparison_v1" && mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.has_imported_session_state === true, "Combined diagnostic inputs did not expose imported session comparison snake_case schema aliases");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changedSectionIds), "Combined diagnostic inputs did not expose imported session changed section ids");
+const importedSessionEvidenceComparisonProbe = obd.buildDiagnosticScanSession({
+  session_id: "applicability-evidence-session-comparison-probe",
+  analysis_readiness_summary: {
+    schema_version: "analysis_readiness_v1",
+    vehicle_applicability_evidence_summary: {
+      present: true,
+      source_verified: true,
+      evidence_review_required: false
+    }
+  }
+});
+check(importedSessionEvidenceComparisonProbe.importedAnalysisReadinessComparisonSummary?.vehicleApplicabilityEvidenceChanged === true && importedSessionEvidenceComparisonProbe.importedSessionComparisonSummary?.analysisChecklistChanged === true, "Combined diagnostic inputs did not lift applicability evidence changes into imported session analysis checklist state");
+check(importedSessionEvidenceComparisonProbe.importedAnalysisReadinessComparisonSummary?.vehicleApplicabilityEvidenceChanged === true && importedSessionEvidenceComparisonProbe.importedSessionComparisonSummary?.changedReasonIds?.includes("analysis_checklist"), "Combined diagnostic inputs did not classify applicability evidence changes as imported session analysis checklist reasons");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.changed_section_ids) && Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.compared_section_ids), "Combined diagnostic inputs did not expose imported session snake_case section ids");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.comparedSectionIds) && Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.unchangedSectionIds), "Combined diagnostic inputs did not expose imported session compared and unchanged section ids");
 check(Array.isArray(mergedDiagnosticInputExportPayload.importedSessionComparisonSummary?.sectionSummaries) && mergedDiagnosticInputExportPayload.importedSessionComparisonSummary.sectionSummaries.length >= 7, "Combined diagnostic inputs did not expose imported session section summaries");
@@ -9081,6 +9096,8 @@ check("next_pending_readout_changed" in scanSessionBridgeDiagnosticImportAlias.i
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventoryComparisonSummary?.readiness_incomplete_delta) && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventoryComparisonSummary?.ecu_info_missing_key_delta), "Diagnostic scan session did not expose snake_case imported core readout inventory quality deltas");
 check(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.schemaVersion === "imported_session_comparison_v1", "Diagnostic scan session did not summarize imported session comparison results");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionIds), "Diagnostic scan session did not expose imported session changed section ids");
+check(importedSessionEvidenceComparisonProbe.importedSessionComparisonSummary?.sectionSummaryById?.analysis_readiness_summary?.analysisChecklistChanged === true, "Diagnostic scan session did not lift applicability evidence changes into imported session section analysis checklist state");
+check(importedSessionEvidenceComparisonProbe.importedSessionComparisonSummary?.primaryChangedReasonId === "analysis_checklist" || importedSessionEvidenceComparisonProbe.importedSessionComparisonSummary?.changedReasonIds?.includes("analysis_checklist"), "Diagnostic scan session did not prioritize applicability evidence changes as imported session analysis checklist reasons");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.comparedSectionIds) && Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.unchangedSectionIds), "Diagnostic scan session did not expose imported session compared and unchanged section ids");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.sectionSummaries) && scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary.sectionSummaries.length >= 7, "Diagnostic scan session did not expose imported session section summaries");
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedSessionComparisonSummary?.changedSectionSummaries), "Diagnostic scan session did not expose imported session changed section summaries");
@@ -10631,6 +10648,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2189");
+  console.log("OBD read-only safety checks: 2195");
   console.log("Errors: 0");
 }
