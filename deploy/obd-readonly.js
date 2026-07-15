@@ -2886,6 +2886,13 @@
     return undefined;
   }
 
+  function pickPresent(...values) {
+    for (const value of values) {
+      if (value !== undefined && value !== null) return value;
+    }
+    return undefined;
+  }
+
   function withSchemaVersionAlias(snapshot) {
     if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot) || !snapshot.schemaVersion) return snapshot;
     if (snapshot.schema_version === snapshot.schemaVersion) return snapshot;
@@ -7595,10 +7602,10 @@
       vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
       vehicleApplicability: base.vehicleApplicability || base.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
       vehicle_applicability: base.vehicle_applicability || base.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
-      readoutCoverage: pickDefined(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
-      readout_coverage: pickDefined(base.readout_coverage, base.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
-      nextReadoutCandidates: pickDefined(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
-      next_readout_candidates: pickDefined(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
+      readoutCoverage: pickPresent(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
+      readout_coverage: pickPresent(base.readout_coverage, base.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
+      nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
+      next_readout_candidates: pickPresent(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       importClassification,
       import_classification: importClassification,
       source: base.source || base.source_type || nested.source || nested.source_type || null,
@@ -7696,8 +7703,8 @@
       vci_devices: pickDefined(input.vci_devices, input.vciDevices, input.vci_list, input.vciList, payload?.vci_devices, payload?.vciDevices, payload?.vci_list, payload?.vciList, nested.vci_devices, nested.vciDevices, nested.vci_list, nested.vciList, null),
       adapterIdentity: pickDefined(input.adapterIdentity, input.adapter_identity, payload?.adapterIdentity, payload?.adapter_identity, nested.adapterIdentity, nested.adapter_identity, null),
       adapter_identity: pickDefined(input.adapter_identity, input.adapterIdentity, payload?.adapter_identity, payload?.adapterIdentity, nested.adapter_identity, nested.adapterIdentity, null),
-      readoutCoverage: pickDefined(input.readoutCoverage, input.readout_coverage, payload?.readoutCoverage, payload?.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
-      readout_coverage: pickDefined(input.readout_coverage, input.readoutCoverage, payload?.readout_coverage, payload?.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
+      readoutCoverage: pickPresent(input.readoutCoverage, input.readout_coverage, payload?.readoutCoverage, payload?.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
+      readout_coverage: pickPresent(input.readout_coverage, input.readoutCoverage, payload?.readout_coverage, payload?.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
       coreSessionStatus: pickDefined(input.coreSessionStatus, input.core_session_status, payload?.coreSessionStatus, payload?.core_session_status, nested.coreSessionStatus, nested.core_session_status, null),
       core_session_status: pickDefined(input.core_session_status, input.coreSessionStatus, payload?.core_session_status, payload?.coreSessionStatus, nested.core_session_status, nested.coreSessionStatus, null),
       diagnosticFlowSummary: pickDefined(input.diagnosticFlowSummary, input.diagnostic_flow_summary, payload?.diagnosticFlowSummary, payload?.diagnostic_flow_summary, nested.diagnosticFlowSummary, nested.diagnostic_flow_summary, null),
@@ -7726,7 +7733,8 @@
       ecu_info_snapshot: pickDefined(input.ecu_info_snapshot, input.ecuInfoSnapshot, payload?.ecu_info_snapshot, payload?.ecuInfoSnapshot, nested.ecu_info_snapshot, nested.ecuInfoSnapshot, null),
       supportedPidMatrix: pickDefined(input.supportedPidMatrix, input.supported_pid_matrix, payload?.supportedPidMatrix, payload?.supported_pid_matrix, nested.supportedPidMatrix, nested.supported_pid_matrix, null),
       supported_pid_matrix: pickDefined(input.supported_pid_matrix, input.supportedPidMatrix, payload?.supported_pid_matrix, payload?.supportedPidMatrix, nested.supported_pid_matrix, nested.supportedPidMatrix, null),
-      next_readout_candidates: pickDefined(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
+      nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
+      next_readout_candidates: pickPresent(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
       warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),
       warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),
