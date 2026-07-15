@@ -7778,6 +7778,12 @@
       || input.diagnostic_result
       || input.readoutResult
       || input.readout_result
+      || input.obdResult
+      || input.obd_result
+      || input.obdReadout
+      || input.obd_readout
+      || input.readoutPayload
+      || input.readout_payload
       || (effectiveBridgePartsInput ? buildBridgeDiagnosticImport(effectiveBridgePartsInput) : null)
       || null;
     const defaultSource = payload ? "local_bridge" : "diagnostic_core";
@@ -8507,6 +8513,12 @@
       || input.diagnostic_result
       || input.readoutResult
       || input.readout_result
+      || input.obdResult
+      || input.obd_result
+      || input.obdReadout
+      || input.obd_readout
+      || input.readoutPayload
+      || input.readout_payload
       || input.bridgeSession
       || input.bridge_session
       || input.scanSession
