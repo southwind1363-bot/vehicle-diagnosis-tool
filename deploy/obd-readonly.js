@@ -7001,26 +7001,36 @@
       Number(comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || 0) !== 0 ? "request_plan_counts" : null
     ].filter(Boolean);
     const readChangedIds = (comparison = {}, fields = []) => [...new Set(fields.flatMap((field) => Array.isArray(comparison[field]) ? comparison[field] : []).filter(Boolean))];
-    const readAddedIds = (comparison = {}) => readChangedIds(comparison, [
-      "checklistBlockedAddedIds", "checklistReviewAddedIds",
-      "issueAddedIds", "changedIssueCountIds",
-      "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds", "attemptedAddedIds",
-      "changedValueCountIds",
-      "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
-      "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
-      "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
-      "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds"
-    ]);
-    const readRemovedIds = (comparison = {}) => readChangedIds(comparison, [
-      "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
-      "issueRemovedIds", "changedIssueCountIds",
-      "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds", "attemptedRemovedIds",
-      "changedValueCountIds",
-      "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
-      "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
-      "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
-      "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds"
-    ]);
+    const readApplicabilityStateChangedIds = (comparison = {}) => [
+      comparison.vehicleApplicabilityChecklistChanged === true ? "vehicle_applicability_checklist" : null,
+      comparison.vehicleApplicabilityEvidenceChanged === true ? "vehicle_applicability_evidence" : null
+    ].filter(Boolean);
+    const readAddedIds = (comparison = {}) => [...new Set([
+      ...readChangedIds(comparison, [
+        "checklistBlockedAddedIds", "checklistReviewAddedIds",
+        "issueAddedIds", "changedIssueCountIds",
+        "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds", "attemptedAddedIds",
+        "changedValueCountIds",
+        "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
+        "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
+        "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
+        "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds"
+      ]),
+      ...readApplicabilityStateChangedIds(comparison)
+    ])];
+    const readRemovedIds = (comparison = {}) => [...new Set([
+      ...readChangedIds(comparison, [
+        "checklistBlockedRemovedIds", "checklistReviewRemovedIds",
+        "issueRemovedIds", "changedIssueCountIds",
+        "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds", "attemptedRemovedIds",
+        "changedValueCountIds",
+        "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
+        "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
+        "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
+        "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds"
+      ]),
+      ...readApplicabilityStateChangedIds(comparison)
+    ])];
     const sectionSummaries = sectionInputs
       .filter((item) => item.comparison)
       .map((item) => {
