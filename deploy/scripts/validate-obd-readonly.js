@@ -446,6 +446,7 @@ const bridgeSummaryInputFunctionChecks = () => {
     check(functionBody.includes('if (!nested || typeof nested !== \"object\") return parts;'), "getBridgeSummaryInput should return outer parts when nested bridge summary is unavailable");
     check(functionBody.includes('const mergedMetadata = mergeNestedSessionMetadata(parts, nested);'), "getBridgeSummaryInput should merge nested session metadata before rebuilding bridge summary input");
     check(functionBody.includes('...nested,') && functionBody.includes('...parts,'), "getBridgeSummaryInput should layer nested bridge summary fields before outer overrides");
+    check(functionBody.includes('connectionStatus: pickPresent(parts.connectionStatus, parts.connection_status') && functionBody.includes('adapterIdentity: pickPresent(parts.adapterIdentity, parts.adapter_identity'), "getBridgeSummaryInput should preserve nested bridge infrastructure when outer aliases are null");
   }
 };
 const mergedBridgeMetadataFunctionChecks = () => {
@@ -2130,7 +2131,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2030+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2032+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2202,7 +2203,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.617.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for nested null bridge infrastructure preservation");
+check(appSource.includes('const APP_VERSION = "2.618.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for bridge summary nested null infrastructure preservation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4408,6 +4409,22 @@ check(bridgeSummaryNestedSessionAliases.warnings.includes("freeze_frame_availabl
 check(bridgeSummaryNestedSessionAliases.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge session summary did not carry next_readout_candidates from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.toolHints.join(",") === "Techstream,J2534", "Bridge session summary did not carry tool_hints from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.sourceLength === 128, "Bridge session summary did not carry source_length from nested session alias input");
+const bridgeSummaryNestedNullOuterInfrastructure = obd.buildBridgeSessionSummary({
+  connection_status: null,
+  vci_devices: null,
+  adapter_identity: null,
+  session: {
+    connection_status: { status: "connected", display_status: "Connected", vehicle_connected: true },
+    vci_devices: bridgeVciList.devices,
+    adapter_identity: bridgeAdapterIdentity
+  }
+});
+check(
+  bridgeSummaryNestedNullOuterInfrastructure.connectionStatus?.vehicleConnected === true
+    && bridgeSummaryNestedNullOuterInfrastructure.vciDevices[0]?.id === bridgeVciList.devices[0]?.id
+    && bridgeSummaryNestedNullOuterInfrastructure.adapterIdentity?.adapterFamily === bridgeAdapterIdentity.adapterFamily,
+  "Bridge session summary did not preserve nested bridge infrastructure when outer input was null"
+);
 const bridgeSummaryNestedNullOuterSourceLength = obd.buildBridgeSessionSummary({
   source_length: null,
   session: {
@@ -9812,6 +9829,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2030");
+  console.log("OBD read-only safety checks: 2032");
   console.log("Errors: 0");
 }

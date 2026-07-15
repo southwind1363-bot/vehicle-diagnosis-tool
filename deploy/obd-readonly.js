@@ -2653,6 +2653,12 @@
       capturedAt: parts.capturedAt || parts.captured_at || nested.capturedAt || nested.captured_at || null,
       protocol: parts.protocol || parts.obd_protocol || nested.protocol || nested.obd_protocol || null,
       obd_protocol: parts.obd_protocol || parts.protocol || nested.obd_protocol || nested.protocol || null,
+      connectionStatus: pickPresent(parts.connectionStatus, parts.connection_status, parts.connectionStatusResponse, parts.connection_status_response, nested.connectionStatus, nested.connection_status, nested.connectionStatusResponse, nested.connection_status_response, null),
+      connection_status: pickPresent(parts.connection_status, parts.connectionStatus, parts.connection_status_response, parts.connectionStatusResponse, nested.connection_status, nested.connectionStatus, nested.connection_status_response, nested.connectionStatusResponse, null),
+      vciDevices: pickPresent(parts.vciDevices, parts.vci_devices, parts.vciList, parts.vci_list, parts.listVciResponse, parts.list_vci_response, nested.vciDevices, nested.vci_devices, nested.vciList, nested.vci_list, nested.listVciResponse, nested.list_vci_response, null),
+      vci_devices: pickPresent(parts.vci_devices, parts.vciDevices, parts.vci_list, parts.vciList, parts.list_vci_response, parts.listVciResponse, nested.vci_devices, nested.vciDevices, nested.vci_list, nested.vciList, nested.list_vci_response, nested.listVciResponse, null),
+      adapterIdentity: pickPresent(parts.adapterIdentity, parts.adapter_identity, parts.adapterIdentityResponse, parts.adapter_identity_response, nested.adapterIdentity, nested.adapter_identity, nested.adapterIdentityResponse, nested.adapter_identity_response, null),
+      adapter_identity: pickPresent(parts.adapter_identity, parts.adapterIdentity, parts.adapter_identity_response, parts.adapterIdentityResponse, nested.adapter_identity, nested.adapterIdentity, nested.adapter_identity_response, nested.adapterIdentityResponse, null),
       ...mergedMetadata
     };
   }
