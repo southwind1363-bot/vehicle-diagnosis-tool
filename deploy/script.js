@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2168+件",
+  validationCheckLabel: "OBD安全検証 2174+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "車両/ECU適合根拠の確認状態をコアセッションへ保持",
+  recentMilestone: "車両/ECU適合根拠の確認状態を診断フローへ表示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.650.0";
+const APP_VERSION = "2.651.0";
 const APP_LAST_UPDATED = "2026-07-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1569,6 +1569,19 @@ function formatVehicleApplicabilitySummary(applicability, fallback = "") {
   if (applicability.year && applicability.yearMatched === false) detailParts.push(`年式 ${applicability.year} 要確認`);
   if (applicability.modelCode && applicability.modelCodeMatched === false) detailParts.push(`型式 ${applicability.modelCode} 要確認`);
   return [statusLabel, ...detailParts].filter(Boolean).join(" / ") || applicability.summaryLabel || fallback || "";
+}
+
+function formatVehicleApplicabilityEvidenceSummary(summary, fallback = "") {
+  if (!summary || typeof summary !== "object") return fallback || "";
+  const evidencePresent = summary.evidencePresent === true || summary.evidence_present === true;
+  const sourceVerified = summary.sourceVerified === true || summary.source_verified === true || summary.verified === true;
+  const reviewRequired = summary.reviewRequired === true || summary.review_required === true;
+  const state = reviewRequired ? "review" : sourceVerified ? "verified" : evidencePresent ? "evidence present" : "not recorded";
+  const sourceName = summary.sourceName || summary.source_name || "";
+  const evidenceId = summary.evidenceId || summary.evidence_id || "";
+  const confidenceValue = summary.confidence ?? summary.confidence_score ?? "";
+  const confidence = confidenceValue !== "" && confidenceValue !== null ? `confidence ${confidenceValue}` : "";
+  return [state, sourceName, evidenceId, confidence].filter(Boolean).join(" / ") || fallback || "";
 }
 
 function formatVehicleProfileLabel(profile, fallback = "") {
@@ -5774,9 +5787,14 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const applicabilityStatus = flow.applicabilityStatus || flow.applicability_status || core.applicabilityStatus || core.applicability_status || session.vehicleApplicability?.status || session.vehicle_applicability?.status || null;
   const applicabilityChecklist = core.analysisChecklistById?.vehicle_applicability || core.analysis_checklist_by_id?.vehicle_applicability || analysisReadinessSummary?.checklistById?.vehicle_applicability || analysisReadinessSummary?.checklist_by_id?.vehicle_applicability || null;
   const applicabilityLabel = formatVehicleApplicabilitySummary(session.vehicleApplicability || session.vehicle_applicability || { status: applicabilityStatus }, applicabilityStatus || NO_DATA) || NO_DATA;
+  const applicabilityEvidenceSummary = core.vehicleApplicabilityEvidenceSummary || core.vehicle_applicability_evidence_summary || analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || analysisReadinessSummary?.vehicle_applicability_evidence_summary || applicabilityChecklist?.evidenceSummary || applicabilityChecklist?.evidence_summary || null;
+  const applicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(applicabilityEvidenceSummary, NO_DATA) || NO_DATA;
   const applicabilityTone = flow.vehicleApplicabilityBlocking === true || applicabilityChecklist?.blocking === true
     ? "blocked"
     : flow.vehicleApplicabilityReviewRequired === true || applicabilityChecklist?.state === "review" ? "pending" : "";
+  const applicabilityEvidenceTone = applicabilityEvidenceSummary?.reviewRequired === true || applicabilityEvidenceSummary?.review_required === true
+    ? "pending"
+    : applicabilityEvidenceSummary?.sourceVerified === true || applicabilityEvidenceSummary?.source_verified === true ? "ready" : "";
   const statusLabel = canStartAnalysis
     ? "解析へ進めます"
     : collectionRequired
@@ -5819,6 +5837,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
+
+  addObdDiagnosticFlowMetric(grid, "Evidence", applicabilityEvidenceLabel, applicabilityEvidenceTone);
 
   const note = document.createElement("p");
   note.className = "obd-diagnostic-flow-note";
@@ -5882,6 +5902,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(sessionVehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(sessionVehicleApplicability, NO_DATA) || NO_DATA;
+  const vehicleApplicabilityEvidenceSummary = coreSessionStatus?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.evidenceSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.evidence_summary || null;
+  const vehicleApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(vehicleApplicabilityEvidenceSummary, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, session?.nextReadoutCandidates || session?.next_readout_candidates, NO_DATA);
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA);
   const emptyReadoutLabel = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, NO_DATA);
@@ -5967,6 +5989,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel]);
   values.splice(10, 0, ["品質比較", readoutQualityComparisonLabel]);
   values.splice(11, 0, ["品質確認要求", readoutQualityReviewRequestLabel]);
+  values.push(["Evidence", vehicleApplicabilityEvidenceLabel]);
   values.forEach(([label, value]) => {
     const item = document.createElement("span");
     const strong = document.createElement("strong");
@@ -6487,6 +6510,7 @@ function analyzeObdScannerImport() {
   const analysisVehicleLabel = formatVehicleProfileLabel(summaryVehicleProfile);
   const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summaryVehicleApplicability);
   const summaryCoreSessionStatus = summarySource.coreSessionStatus || summarySource.core_session_status || null;
+  const analysisApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(summaryCoreSessionStatus?.vehicleApplicabilityEvidenceSummary || summaryCoreSessionStatus?.vehicle_applicability_evidence_summary || summaryCoreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || summaryCoreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary, "");
   const summaryNextReadoutCandidates = summarySource.nextReadoutCandidates || summarySource.next_readout_candidates;
   const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summaryCoreSessionStatus, "");
   const analysisEmptyReadoutLabel = formatCoreEmptyReadoutSummary(summaryCoreSessionStatus, 2, "");
@@ -6496,6 +6520,9 @@ function analyzeObdScannerImport() {
   }
   if (analysisApplicabilityLabel) {
     notes.push(`適用 ${analysisApplicabilityLabel}`);
+  }
+  if (analysisApplicabilityEvidenceLabel) {
+    notes.push(`Evidence ${analysisApplicabilityEvidenceLabel}`);
   }
   if (analysisCoreStatusLabel) {
     notes.push(`コア ${analysisCoreStatusLabel}`);

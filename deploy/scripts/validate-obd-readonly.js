@@ -2193,7 +2193,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2168+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2174+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2265,7 +2265,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.650.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for applicability evidence summary retention");
+check(appSource.includes('const APP_VERSION = "2.651.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for applicability evidence display");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2329,6 +2329,12 @@ check(appSource.includes('const readoutRequestTone = unmappedReadoutRequestCount
 check(appSource.includes('const checklistSummary = core.analysisChecklistSummary || core.analysis_checklist_summary || analysisReadinessSummary?.checklistSummary || analysisReadinessSummary?.checklist_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel'), "OBD diagnostic flow panel should show analysis readiness checklist progress");
 check(appSource.includes('const applicabilityStatus = flow.applicabilityStatus || flow.applicability_status || core.applicabilityStatus || core.applicability_status') && appSource.includes('addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);'), "OBD diagnostic flow panel should show vehicle applicability status");
 check(appSource.includes('core.analysis_checklist_by_id?.vehicle_applicability') && appSource.includes('analysisReadinessSummary?.checklist_by_id?.vehicle_applicability'), "OBD diagnostic flow panel should accept snake_case checklist indexes");
+check(appSource.includes('function formatVehicleApplicabilityEvidenceSummary(summary, fallback = "")') && appSource.includes('summary.reviewRequired === true || summary.review_required === true'), "OBD app should format vehicle applicability evidence summaries");
+check(appSource.includes('sourceVerified ? "verified" : evidencePresent ? "evidence present" : "not recorded"') && appSource.includes('`confidence ${confidenceValue}`'), "OBD app should format applicability evidence state and confidence");
+check(appSource.includes('const applicabilityEvidenceSummary = core.vehicleApplicabilityEvidenceSummary || core.vehicle_applicability_evidence_summary') && appSource.includes('addObdDiagnosticFlowMetric(grid, "Evidence", applicabilityEvidenceLabel, applicabilityEvidenceTone);'), "OBD diagnostic flow panel should show applicability evidence status");
+check(appSource.includes('const applicabilityEvidenceTone = applicabilityEvidenceSummary?.reviewRequired === true') && appSource.includes('applicabilityEvidenceSummary?.source_verified === true ? "ready"'), "OBD diagnostic flow panel should tone applicability evidence review and verified states");
+check(appSource.includes('const vehicleApplicabilityEvidenceSummary = coreSessionStatus?.vehicleApplicabilityEvidenceSummary') && appSource.includes('values.push(["Evidence", vehicleApplicabilityEvidenceLabel]);'), "OBD session summary should show applicability evidence status");
+check(appSource.includes('const analysisApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary') && appSource.includes('notes.push(`Evidence ${analysisApplicabilityEvidenceLabel}`);'), "OBD analysis notes should include applicability evidence status");
 check(appSource.includes('session.vehicleApplicability || session.vehicle_applicability'), "OBD diagnostic flow panel should accept snake_case vehicle applicability");
 check(styleCss.includes(".obd-diagnostic-flow-panel") && styleCss.includes(".obd-diagnostic-flow-grid"), "OBD diagnostic flow panel styles are missing from style.css");
 check(indexHtml.includes("Techstream/J2534") && indexHtml.includes("Current/Pending/Permanent") && indexHtml.includes("CONSULT") && indexHtml.includes("HDS") && indexHtml.includes("IDS"), "OBD import helper text in index.html is out of date");
@@ -10610,6 +10616,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2168");
+  console.log("OBD read-only safety checks: 2174");
   console.log("Errors: 0");
 }
