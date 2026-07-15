@@ -958,7 +958,11 @@
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
     const monitorValueSummary = buildMonitorValueSummary(monitorValues);
-    const monitorInsights = analyzeMonitorValues(monitorValues);
+    const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);
+    const monitorInsights = [...new Map([
+      ...explicitMonitorInsights,
+      ...analyzeMonitorValues(monitorValues)
+    ].map((item, index) => [item?.id || item?.title || `monitor_insight_${index}`, item])).values()];
 
     return {
       source: "local_bridge",
@@ -7787,6 +7791,12 @@
       ecu_info_snapshot: pickPresent(input.ecu_info_snapshot, input.ecuInfoSnapshot, payload?.ecu_info_snapshot, payload?.ecuInfoSnapshot, nested.ecu_info_snapshot, nested.ecuInfoSnapshot, null),
       supportedPidMatrix: pickPresent(input.supportedPidMatrix, input.supported_pid_matrix, payload?.supportedPidMatrix, payload?.supported_pid_matrix, nested.supportedPidMatrix, nested.supported_pid_matrix, null),
       supported_pid_matrix: pickPresent(input.supported_pid_matrix, input.supportedPidMatrix, payload?.supported_pid_matrix, payload?.supportedPidMatrix, nested.supported_pid_matrix, nested.supportedPidMatrix, null),
+      codes: pickPresent(input.codes, input.dtc_codes, input.dtcCodes, payload?.codes, payload?.dtc_codes, payload?.dtcCodes, nested.codes, nested.dtc_codes, nested.dtcCodes, null),
+      dtc_codes: pickPresent(input.dtc_codes, input.codes, input.dtcCodes, payload?.dtc_codes, payload?.codes, payload?.dtcCodes, nested.dtc_codes, nested.codes, nested.dtcCodes, null),
+      monitorValues: pickPresent(input.monitorValues, input.monitor_values, payload?.monitorValues, payload?.monitor_values, nested.monitorValues, nested.monitor_values, null),
+      monitor_values: pickPresent(input.monitor_values, input.monitorValues, payload?.monitor_values, payload?.monitorValues, nested.monitor_values, nested.monitorValues, null),
+      monitorInsights: pickPresent(input.monitorInsights, input.monitor_insights, payload?.monitorInsights, payload?.monitor_insights, nested.monitorInsights, nested.monitor_insights, null),
+      monitor_insights: pickPresent(input.monitor_insights, input.monitorInsights, payload?.monitor_insights, payload?.monitorInsights, nested.monitor_insights, nested.monitorInsights, null),
       nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
       next_readout_candidates: pickPresent(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
