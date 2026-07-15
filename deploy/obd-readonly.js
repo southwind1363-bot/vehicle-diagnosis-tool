@@ -7303,6 +7303,10 @@
       return byId;
     }, {});
     const vehicleApplicabilityChangedRows = changedIdDisplayRows.filter((row) => vehicleApplicabilityChangedIds.includes(row.id));
+    const vehicleApplicabilityChangedRowById = vehicleApplicabilityChangedRows.reduce((byId, row) => {
+      byId[row.id] = row;
+      return byId;
+    }, {});
     const primaryVehicleApplicabilityChangedRow = vehicleApplicabilityChangedRows.find((row) => row.primary) || vehicleApplicabilityChangedRows[0] || null;
     const primaryChangedIdDisplayRow = changedIdDisplayRows.find((row) => row.primary) || null;
     const buildChangedIdDisplayGroup = (value, rows = []) => ({
@@ -7649,6 +7653,8 @@
       vehicle_applicability_changed_id_count: vehicleApplicabilityChangedIds.length,
       vehicleApplicabilityChangedRows,
       vehicle_applicability_changed_rows: vehicleApplicabilityChangedRows,
+      vehicleApplicabilityChangedRowById,
+      vehicle_applicability_changed_row_by_id: vehicleApplicabilityChangedRowById,
       primaryVehicleApplicabilityChangedRow,
       primary_vehicle_applicability_changed_row: primaryVehicleApplicabilityChangedRow,
       vehicleApplicabilityMixedChangedIds: vehicleApplicabilityChangedIdsByDirection.mixed || [],
@@ -7792,6 +7798,8 @@
       changedIdDisplayRowById,
       vehicleApplicabilityChangedRows,
       vehicle_applicability_changed_rows: vehicleApplicabilityChangedRows,
+      vehicleApplicabilityChangedRowById,
+      vehicle_applicability_changed_row_by_id: vehicleApplicabilityChangedRowById,
       primaryVehicleApplicabilityChangedRow,
       primary_vehicle_applicability_changed_row: primaryVehicleApplicabilityChangedRow,
       primaryChangedIdDisplayRow,
