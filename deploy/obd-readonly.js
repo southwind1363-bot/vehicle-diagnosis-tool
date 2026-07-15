@@ -957,7 +957,7 @@
       .filter(Boolean);
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
-    const monitorValueSummary = buildMonitorValueSummary(monitorValues);
+    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
     const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);
     const monitorInsights = [...new Map([
       ...explicitMonitorInsights,
@@ -1268,6 +1268,32 @@
     const textCount = rows.filter((item) => item?.valueType === "text").length;
     const totalCount = rows.length;
     const decodedCount = Math.max(0, rows.length - undecodedRawCount);
+    return {
+      totalCount,
+      total_count: totalCount,
+      decodedCount,
+      decoded_count: decodedCount,
+      undecodedRawCount,
+      undecoded_raw_count: undecodedRawCount,
+      numericCount,
+      numeric_count: numericCount,
+      textCount,
+      text_count: textCount
+    };
+  }
+
+  function mergeMonitorValueSummaries(...summaries) {
+    const rows = summaries.filter((summary) => summary && typeof summary === "object");
+    if (!rows.length) return null;
+    const readCount = (summary, camelKey, snakeKey) => {
+      const value = summary[camelKey] ?? summary[snakeKey];
+      return Number.isFinite(Number(value)) ? Number(value) : 0;
+    };
+    const totalCount = rows.reduce((sum, summary) => sum + readCount(summary, "totalCount", "total_count"), 0);
+    const decodedCount = rows.reduce((sum, summary) => sum + readCount(summary, "decodedCount", "decoded_count"), 0);
+    const undecodedRawCount = rows.reduce((sum, summary) => sum + readCount(summary, "undecodedRawCount", "undecoded_raw_count"), 0);
+    const numericCount = rows.reduce((sum, summary) => sum + readCount(summary, "numericCount", "numeric_count"), 0);
+    const textCount = rows.reduce((sum, summary) => sum + readCount(summary, "textCount", "text_count"), 0);
     return {
       totalCount,
       total_count: totalCount,
@@ -2286,6 +2312,7 @@
     const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response;
     const codesInput = pickPresent(parts.codes, parts.dtc_codes, parts.dtcCodes, []);
     const directMonitorValuesInput = pickPresent(parts.monitorValues, parts.monitor_values, []);
+    const directMonitorValueSummaryInput = pickPresent(parts.monitorValueSummary, parts.monitor_value_summary, null);
     const directMonitorInsightsInput = pickPresent(parts.monitorInsights, parts.monitor_insights, []);
     const readoutCoverageInput = getReadoutCoverageInput(parts);
     const dtcSnapshot = dtcSnapshotInput?.codes
@@ -2316,7 +2343,7 @@
     const monitorValues = Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length
       ? directMonitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorValues);
-    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, livePidSnapshot.monitorValueSummary);
+    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, directMonitorValueSummaryInput || livePidSnapshot.monitorValueSummary);
     const monitorInsights = Array.isArray(directMonitorInsightsInput) && directMonitorInsightsInput.length
       ? directMonitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorInsights);
@@ -2701,6 +2728,8 @@
       dtc_codes: pickPresent(parts.dtc_codes, parts.codes, parts.dtcCodes, nested.dtc_codes, nested.codes, nested.dtcCodes, null),
       monitorValues: pickPresent(parts.monitorValues, parts.monitor_values, nested.monitorValues, nested.monitor_values, null),
       monitor_values: pickPresent(parts.monitor_values, parts.monitorValues, nested.monitor_values, nested.monitorValues, null),
+      monitorValueSummary: pickPresent(parts.monitorValueSummary, parts.monitor_value_summary, nested.monitorValueSummary, nested.monitor_value_summary, null),
+      monitor_value_summary: pickPresent(parts.monitor_value_summary, parts.monitorValueSummary, nested.monitor_value_summary, nested.monitorValueSummary, null),
       monitorInsights: pickPresent(parts.monitorInsights, parts.monitor_insights, nested.monitorInsights, nested.monitor_insights, null),
       monitor_insights: pickPresent(parts.monitor_insights, parts.monitorInsights, nested.monitor_insights, nested.monitorInsights, null),
       ...mergedMetadata
@@ -2773,7 +2802,7 @@
       : Array.isArray(livePidSnapshot.monitorValues)
         ? livePidSnapshot.monitorValues.map((item) => (item && typeof item === "object" ? { ...item } : item))
         : [];
-    const monitorValueSummary = parts.monitorValueSummary || parts.monitor_value_summary || livePidSnapshot.monitorValueSummary || buildMonitorValueSummary(monitorValues);
+    const monitorValueSummary = pickPresent(parts.monitorValueSummary, parts.monitor_value_summary, livePidSnapshot.monitorValueSummary, buildMonitorValueSummary(monitorValues));
     const monitorInsights = Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
@@ -7781,8 +7810,12 @@
       dtc_snapshot: pickPresent(input.dtc_snapshot, input.dtcSnapshot, payload?.dtc_snapshot, payload?.dtcSnapshot, nested.dtc_snapshot, nested.dtcSnapshot, null),
       livePidSnapshot: pickPresent(input.livePidSnapshot, input.live_pid_snapshot, payload?.livePidSnapshot, payload?.live_pid_snapshot, nested.livePidSnapshot, nested.live_pid_snapshot, null),
       live_pid_snapshot: pickPresent(input.live_pid_snapshot, input.livePidSnapshot, payload?.live_pid_snapshot, payload?.livePidSnapshot, nested.live_pid_snapshot, nested.livePidSnapshot, null),
+      livePidResponse: pickPresent(input.livePidResponse, input.live_pid_response, payload?.livePidResponse, payload?.live_pid_response, nested.livePidResponse, nested.live_pid_response, null),
+      live_pid_response: pickPresent(input.live_pid_response, input.livePidResponse, payload?.live_pid_response, payload?.livePidResponse, nested.live_pid_response, nested.livePidResponse, null),
       freezeFrameSnapshot: pickPresent(input.freezeFrameSnapshot, input.freeze_frame_snapshot, payload?.freezeFrameSnapshot, payload?.freeze_frame_snapshot, nested.freezeFrameSnapshot, nested.freeze_frame_snapshot, null),
       freeze_frame_snapshot: pickPresent(input.freeze_frame_snapshot, input.freezeFrameSnapshot, payload?.freeze_frame_snapshot, payload?.freezeFrameSnapshot, nested.freeze_frame_snapshot, nested.freezeFrameSnapshot, null),
+      freezeFrameResponse: pickPresent(input.freezeFrameResponse, input.freeze_frame_response, payload?.freezeFrameResponse, payload?.freeze_frame_response, nested.freezeFrameResponse, nested.freeze_frame_response, null),
+      freeze_frame_response: pickPresent(input.freeze_frame_response, input.freezeFrameResponse, payload?.freeze_frame_response, payload?.freezeFrameResponse, nested.freeze_frame_response, nested.freezeFrameResponse, null),
       readinessSnapshot: pickPresent(input.readinessSnapshot, input.readiness_snapshot, payload?.readinessSnapshot, payload?.readiness_snapshot, nested.readinessSnapshot, nested.readiness_snapshot, null),
       readiness_snapshot: pickPresent(input.readiness_snapshot, input.readinessSnapshot, payload?.readiness_snapshot, payload?.readinessSnapshot, nested.readiness_snapshot, nested.readinessSnapshot, null),
       onboardMonitorSnapshot: pickPresent(input.onboardMonitorSnapshot, input.onboard_monitor_snapshot, payload?.onboardMonitorSnapshot, payload?.onboard_monitor_snapshot, nested.onboardMonitorSnapshot, nested.onboard_monitor_snapshot, null),
@@ -7795,6 +7828,8 @@
       dtc_codes: pickPresent(input.dtc_codes, input.codes, input.dtcCodes, payload?.dtc_codes, payload?.codes, payload?.dtcCodes, nested.dtc_codes, nested.codes, nested.dtcCodes, null),
       monitorValues: pickPresent(input.monitorValues, input.monitor_values, payload?.monitorValues, payload?.monitor_values, nested.monitorValues, nested.monitor_values, null),
       monitor_values: pickPresent(input.monitor_values, input.monitorValues, payload?.monitor_values, payload?.monitorValues, nested.monitor_values, nested.monitorValues, null),
+      monitorValueSummary: pickPresent(input.monitorValueSummary, input.monitor_value_summary, payload?.monitorValueSummary, payload?.monitor_value_summary, nested.monitorValueSummary, nested.monitor_value_summary, null),
+      monitor_value_summary: pickPresent(input.monitor_value_summary, input.monitorValueSummary, payload?.monitor_value_summary, payload?.monitorValueSummary, nested.monitor_value_summary, nested.monitorValueSummary, null),
       monitorInsights: pickPresent(input.monitorInsights, input.monitor_insights, payload?.monitorInsights, payload?.monitor_insights, nested.monitorInsights, nested.monitor_insights, null),
       monitor_insights: pickPresent(input.monitor_insights, input.monitorInsights, payload?.monitor_insights, payload?.monitorInsights, nested.monitor_insights, nested.monitorInsights, null),
       nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
@@ -9759,6 +9794,8 @@
     const supportedPidResponseInput = withSessionProtocol(sessionInput.supportedPidResponse || sessionInput.supported_pid_response || {});
     const livePidSnapshot = livePidSnapshotInput?.monitorValues || livePidSnapshotInput?.monitor_values || hasSnapshotSchema(livePidSnapshotInput)
       ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
+      : (livePidSnapshotInput?.raw || livePidSnapshotInput?.response || Array.isArray(livePidSnapshotInput?.bytes))
+        ? decodeLivePidResponse(withSessionProtocol(livePidSnapshotInput))
       : livePidResponseInput?.monitorValues || livePidResponseInput?.monitor_values || hasSnapshotSchema(livePidResponseInput)
         ? normalizeBridgeLivePidSnapshot(livePidResponseInput)
         : decodeLivePidResponse(livePidResponseInput);
@@ -9766,6 +9803,8 @@
       ? freezeFrameSnapshotInput
       : freezeFrameSnapshotInput?.schema_version
         ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)
+        : (freezeFrameSnapshotInput?.raw || freezeFrameSnapshotInput?.response || Array.isArray(freezeFrameSnapshotInput?.bytes))
+          ? decodeFreezeFrameResponse(withSessionProtocol(freezeFrameSnapshotInput))
         : freezeFrameResponseInput?.schemaVersion
           ? freezeFrameResponseInput
           : freezeFrameResponseInput?.schema_version
@@ -10728,7 +10767,7 @@
       || sessionInput.live_pid_response
       || sessionInput.livePids
       || sessionInput.live_pids
-      || (Array.isArray(sessionInput.monitorValues) || Array.isArray(sessionInput.monitor_values)
+      || (Array.isArray(sessionInput.monitorValues) || Array.isArray(sessionInput.monitor_values) || sessionInput.monitorValueSummary || sessionInput.monitor_value_summary
         ? {
           source: sessionInput.source || sessionInput.source_type || "local_bridge",
           captured_at: sessionInput.captured_at || sessionInput.capturedAt || null,
@@ -10964,10 +11003,14 @@
       || sessionInput.importedReadoutQualityReviewRequestPlanSummary
       || sessionInput.imported_readout_quality_review_request_plan_summary
       || null;
+    const mergedMonitorValueSummary = mergeMonitorValueSummaries(
+      livePidSnapshot.monitorValueSummary || livePidSnapshot.monitor_value_summary,
+      freezeFrameSnapshot.monitorValueSummary || freezeFrameSnapshot.monitor_value_summary
+    );
     const monitorValueSummary = resolveMonitorValueSummary([
       ...livePidSnapshot.monitorValues,
       ...freezeFrameSnapshot.monitorValues
-    ]);
+    ], mergedMonitorValueSummary);
     const resolvedImportClassification = resolveImportClassification(importClassification);
 
     return {

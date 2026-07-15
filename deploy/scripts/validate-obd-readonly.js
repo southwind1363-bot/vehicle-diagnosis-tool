@@ -369,7 +369,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(data.live_pid_values)') && functionBody.includes('Array.isArray(data.liveData)') && functionBody.includes('Array.isArray(data.items)'), "normalizeBridgeLivePidSnapshot should accept live data array aliases");
     check(functionBody.includes('.map((row, index) => normalizeBridgePidValue(row, index))') && functionBody.includes('.filter(Boolean)'), "normalizeBridgeLivePidSnapshot should normalize and filter PID value rows");
     check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeLivePidSnapshot should carry supported PID context and snake_case alias");
-    check(functionBody.includes('const monitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('monitor_value_summary: monitorValueSummary'), "normalizeBridgeLivePidSnapshot should derive summaries and expose snake_case alias");
+    check(functionBody.includes('const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);') && functionBody.includes('monitor_value_summary: monitorValueSummary'), "normalizeBridgeLivePidSnapshot should preserve explicit summaries and expose snake_case alias");
     check(functionBody.includes('const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);') && functionBody.includes('...analyzeMonitorValues(monitorValues)') && functionBody.includes('monitor_insights: monitorInsights'), "normalizeBridgeLivePidSnapshot should merge explicit and derived insights with snake_case alias");
     check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('monitor_values: monitorValues') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeLivePidSnapshot should expose snake_case capture, values, and retention aliases");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeLivePidSnapshot should not retain raw bridge text");
@@ -450,6 +450,7 @@ const bridgeSummaryInputFunctionChecks = () => {
     check(functionBody.includes('storedDtcSnapshot: pickPresent(parts.storedDtcSnapshot, parts.stored_dtc_snapshot') && functionBody.includes('permanentDtcSnapshot: pickPresent(parts.permanentDtcSnapshot, parts.permanent_dtc_snapshot'), "getBridgeSummaryInput should preserve nested typed DTC snapshots when outer aliases are null");
     check(functionBody.includes('dtcSnapshot: pickPresent(parts.dtcSnapshot, parts.dtc_snapshot') && functionBody.includes('ecuInfoSnapshot: pickPresent(parts.ecuInfoSnapshot, parts.ecu_info_snapshot'), "getBridgeSummaryInput should preserve nested core snapshots when outer aliases are null");
     check(functionBody.includes('codes: pickPresent(parts.codes, parts.dtc_codes') && functionBody.includes('monitorValues: pickPresent(parts.monitorValues, parts.monitor_values') && functionBody.includes('monitorInsights: pickPresent(parts.monitorInsights, parts.monitor_insights'), "getBridgeSummaryInput should preserve nested simple DTC and monitor arrays when outer aliases are null");
+    check(functionBody.includes('monitorValueSummary: pickPresent(parts.monitorValueSummary, parts.monitor_value_summary') && functionBody.includes('nested.monitorValueSummary, nested.monitor_value_summary'), "getBridgeSummaryInput should preserve nested monitor value summaries when outer aliases are null");
   }
 };
 const mergedBridgeMetadataFunctionChecks = () => {
@@ -565,6 +566,7 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('storedDtcSnapshot: pickPresent(input.storedDtcSnapshot, input.stored_dtc_snapshot') && functionBody.includes('permanentDtcSnapshot: pickPresent(input.permanentDtcSnapshot, input.permanent_dtc_snapshot'), "getDiagnosticSessionInput should preserve nested typed DTC snapshots when outer aliases are null");
     check(functionBody.includes('dtcSnapshot: pickPresent(input.dtcSnapshot, input.dtc_snapshot') && functionBody.includes('supportedPidMatrix: pickPresent(input.supportedPidMatrix, input.supported_pid_matrix'), "getDiagnosticSessionInput should preserve nested core snapshots when outer aliases are null");
     check(functionBody.includes('codes: pickPresent(input.codes, input.dtc_codes') && functionBody.includes('monitorValues: pickPresent(input.monitorValues, input.monitor_values') && functionBody.includes('monitorInsights: pickPresent(input.monitorInsights, input.monitor_insights'), "getDiagnosticSessionInput should preserve nested simple DTC and monitor arrays when outer aliases are null");
+    check(functionBody.includes('monitorValueSummary: pickPresent(input.monitorValueSummary, input.monitor_value_summary') && functionBody.includes('nested.monitorValueSummary, nested.monitor_value_summary'), "getDiagnosticSessionInput should preserve nested monitor value summaries when outer aliases are null");
     check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),') && functionBody.includes('warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),'), "getDiagnosticSessionInput should normalize warning id aliases");
     check(functionBody.includes('sourceLength: pickPresent(input.sourceLength, input.source_length') && functionBody.includes('nested.sourceLength, nested.source_length'), "getDiagnosticSessionInput should preserve nested source length when outer aliases are null");
     check(functionBody.includes('coreSessionStatus: pickPresent(input.coreSessionStatus, input.core_session_status') && functionBody.includes('nested.coreSessionStatus, nested.core_session_status'), "getDiagnosticSessionInput should preserve imported core session status aliases when outer aliases are null");
@@ -2136,7 +2138,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2042+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2046+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2208,7 +2210,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.623.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for scan session nested null monitor array preservation");
+check(appSource.includes('const APP_VERSION = "2.624.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for scan session nested monitor summary preservation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4483,6 +4485,17 @@ check(
     && bridgeSummaryNestedNullOuterMonitorArrays.monitorValues?.some((item) => item.id === "engine_rpm")
     && bridgeSummaryNestedNullOuterMonitorArrays.monitorInsights?.some((item) => item.id === "rpm_observed"),
   "Bridge session summary did not preserve nested simple DTC and monitor arrays when outer input was null"
+);
+const bridgeSummaryNestedNullOuterMonitorSummary = obd.buildBridgeSessionSummary({
+  monitor_value_summary: null,
+  session: {
+    monitor_value_summary: { totalCount: 99, undecodedRawCount: 7 }
+  }
+});
+check(
+  bridgeSummaryNestedNullOuterMonitorSummary.monitorValueSummary?.totalCount === 99
+    && bridgeSummaryNestedNullOuterMonitorSummary.monitorValueSummary?.undecodedRawCount === 7,
+  "Bridge session summary did not preserve nested monitor_value_summary when outer input was null"
 );
 const bridgeSummaryNestedNullOuterSourceLength = obd.buildBridgeSessionSummary({
   source_length: null,
@@ -9863,6 +9876,19 @@ check(
     && scanSessionNestedNullOuterMonitorArrays.livePidSnapshot?.monitorInsights?.some((item) => item.id === "rpm_observed"),
   "Diagnostic scan session did not preserve nested simple DTC and monitor arrays when outer input was null"
 );
+const scanSessionNestedNullOuterMonitorSummary = obd.buildDiagnosticScanSession({
+  monitor_value_summary: null,
+  scan_session: {
+    monitor_value_summary: { totalCount: 99, undecodedRawCount: 7 }
+  }
+});
+check(
+  scanSessionNestedNullOuterMonitorSummary.monitorValueSummary?.totalCount === 99
+    && scanSessionNestedNullOuterMonitorSummary.monitorValueSummary?.undecodedRawCount === 7
+    && scanSessionNestedNullOuterMonitorSummary.livePidSnapshot?.monitorValueSummary?.totalCount === 99
+    && scanSessionNestedNullOuterMonitorSummary.warnings.includes("raw_pid_values_need_conversion"),
+  "Diagnostic scan session did not preserve nested monitor_value_summary when outer input was null"
+);
 const scanSessionNestedNullOuterImportedSummaries = obd.buildDiagnosticScanSession({
   core_session_status: null,
   diagnostic_flow_summary: null,
@@ -9921,6 +9947,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2042");
+  console.log("OBD read-only safety checks: 2046");
   console.log("Errors: 0");
 }
