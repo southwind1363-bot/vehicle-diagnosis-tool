@@ -1620,6 +1620,7 @@ const textImportMetadataFunctionChecks = () => {
     check(functionBody.includes('const negativeResponseSummaryInput = explicitImportClassification?.negativeResponseSummary || explicitImportClassification?.negative_response_summary;') && functionBody.includes('negative_response_summary: negativeResponseSummary'), "buildTextImportMetadata should merge and expose negative-response summary aliases");
     check(functionBody.includes('const sourceLengthInput = pickDefined(') && functionBody.includes('explicitImportClassification?.source_length') && functionBody.includes('source_length: sourceLength'), "buildTextImportMetadata should preserve explicit import classification source length aliases");
     check(functionBody.includes('const explicitHadSensitiveIdentifier = explicitImportClassification?.hadSensitiveIdentifier === true') && functionBody.includes('had_sensitive_identifier: hadSensitiveIdentifier'), "buildTextImportMetadata should preserve explicit import classification sensitive identifier aliases");
+    check(functionBody.includes('retained_raw_text: false') && functionBody.includes('would_transmit: false') && functionBody.includes('vehicle_command_enabled: false'), "buildTextImportMetadata should expose read-only safety flags in import classification metadata");
     check(functionBody.includes('isotp_reassembly_issue') && functionBody.includes('negative_obd_response_present'), "buildTextImportMetadata should map ISO-TP and negative-response issues into warnings");
     check(functionBody.includes('session.ecuInfoSnapshot?.hadSensitiveIdentifier === true') && functionBody.includes('classified.hadSensitiveIdentifier === true'), "buildTextImportMetadata should preserve sensitive identifier detection from session and classification");
     check(functionBody.includes('const sourceLength = Number.isFinite(Number(sourceLengthInput))') && functionBody.includes('Math.max(0, Math.round(Number(sourceLengthInput)))'), "buildTextImportMetadata should normalize source length without retaining raw input");
@@ -2114,7 +2115,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2004+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2005+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2186,7 +2187,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.603.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for text classification source length metadata");
+check(appSource.includes('const APP_VERSION = "2.604.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for text classification read-only safety metadata");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7381,7 +7382,10 @@ const textScanSessionExplicitImportClassification = obd.buildScanSessionFromObdT
     negativeResponseSummary: { totalCount: 7 },
     tool_hints: ["CONSULT"],
     source_length: 456,
-    had_sensitive_identifier: true
+    had_sensitive_identifier: true,
+    retained_raw_text: true,
+    would_transmit: true,
+    vehicle_command_enabled: true
   }
 });
 check(textScanSessionExplicitImportClassification.importClassification?.bucketCounts?.livePidResponses === 99, "OBD text scan session did not preserve explicit import_classification bucket count override");
@@ -7391,6 +7395,7 @@ check(textScanSessionExplicitImportClassification.import_classification?.bucket_
 check(textScanSessionExplicitImportClassification.toolHints.includes("CONSULT") && textScanSessionExplicitImportClassification.importClassification?.tool_hints?.includes("CONSULT"), "OBD text scan session did not merge explicit import_classification tool_hints into session metadata");
 check(textScanSessionExplicitImportClassification.hadSensitiveIdentifier === true && textScanSessionExplicitImportClassification.importClassification?.had_sensitive_identifier === true, "OBD text scan session did not merge explicit import_classification sensitive identifier metadata");
 check(textScanSessionExplicitImportClassification.sourceLength === 456 && textScanSessionExplicitImportClassification.importClassification?.source_length === 456, "OBD text scan session did not merge explicit import_classification source length metadata");
+check(textScanSessionExplicitImportClassification.importClassification?.retained_raw_text === false && textScanSessionExplicitImportClassification.importClassification?.would_transmit === false && textScanSessionExplicitImportClassification.importClassification?.vehicle_command_enabled === false, "OBD text scan session did not force import classification read-only safety flags");
 const textScanSessionRebuilt = obd.buildDiagnosticScanSession({
   session_id: "obd-text-rebuilt",
   scan_session: textScanSession
@@ -9629,6 +9634,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2004");
+  console.log("OBD read-only safety checks: 2005");
   console.log("Errors: 0");
 }

@@ -7863,7 +7863,13 @@
         toolHints: mergedToolHints,
         tool_hints: mergedToolHints,
         hadSensitiveIdentifier,
-        had_sensitive_identifier: hadSensitiveIdentifier
+        had_sensitive_identifier: hadSensitiveIdentifier,
+        retainedRawText: false,
+        retained_raw_text: false,
+        wouldTransmit: false,
+        would_transmit: false,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false
       },
       warnings: mergeUniqueStrings(
         session.warnings,
