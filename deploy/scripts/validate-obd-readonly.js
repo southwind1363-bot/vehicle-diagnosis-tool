@@ -182,6 +182,8 @@ const bridgeSummaryAliasFunctionChecks = () => {
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(derivedWarnings, {'), "normalizeBridgeSummaryAliases should append bridge readout warnings through derived warnings");
     check(functionBody.includes('hasBridgeInfrastructureContext,'), "normalizeBridgeSummaryAliases should pass bridge infrastructure context into bridge readout warning mapping");
     check(functionBody.includes('readoutCoverage: derivedReadoutCoverage'), "normalizeBridgeSummaryAliases should map bridge readout warnings from derived readout coverage");
+    check(functionBody.includes('const nextReadoutRequest = parts.nextReadoutRequest') && functionBody.includes('next_readout_request: nextReadoutRequest,'), "normalizeBridgeSummaryAliases should preserve next readout request summaries");
+    check(functionBody.includes('const readoutRequestPlanSummary = parts.readoutRequestPlanSummary') && functionBody.includes('readout_request_plan_summary: readoutRequestPlanSummary,'), "normalizeBridgeSummaryAliases should preserve readout request plan summaries");
   }
 };
 const resolveReadoutCoverageFunctionChecks = () => {
@@ -584,6 +586,8 @@ const nestedSessionMetadataMergeFunctionChecks = () => {
   if (nestedSessionMetadataMergeFunctionSource) {
     const functionBody = nestedSessionMetadataMergeFunctionSource[0];
     check(functionBody.includes('readoutCoverage: pickPresent(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),'), "mergeNestedSessionMetadata should prefer outer readout coverage before nested aliases");
+    check(functionBody.includes('nextReadoutRequest: pickPresent(base.nextReadoutRequest, base.next_readout_request, nested.nextReadoutRequest, nested.next_readout_request, null),'), "mergeNestedSessionMetadata should preserve nested next readout request aliases");
+    check(functionBody.includes('readoutRequestPlanSummary: pickPresent(base.readoutRequestPlanSummary, base.readout_request_plan_summary, nested.readoutRequestPlanSummary, nested.readout_request_plan_summary, null),'), "mergeNestedSessionMetadata should preserve nested readout request plan summary aliases");
     check(functionBody.includes('const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);'), "mergeNestedSessionMetadata should normalize import classification metadata");
     check(functionBody.includes('toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, baseImportClassification?.toolHints, baseImportClassification?.tool_hints, nested.toolHints, nested.tool_hints, nestedImportClassification?.toolHints, nestedImportClassification?.tool_hints),'), "mergeNestedSessionMetadata should merge outer and nested tool hints");
     check(functionBody.includes('source: base.source || base.source_type || nested.source || nested.source_type || null,'), "mergeNestedSessionMetadata should merge outer and nested source aliases");
@@ -2233,7 +2237,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2275+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2281+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2316,7 +2320,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.671.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for saved session readout request aliases");
+check(appSource.includes('const APP_VERSION = "2.672.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for nested bridge summary readout request aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4171,6 +4175,39 @@ const bridgeExportNextReadoutRequestSummary = obd.buildBridgeSessionExportPayloa
 });
 check(bridgeExportNextReadoutRequestSummary.session.next_readout_request?.readout_id === "freeze_frame_snapshot" && bridgeExportNextReadoutRequestSummary.session.next_readout_request?.vehicle_command_enabled === false, "Bridge export did not carry next readout request summary");
 check(bridgeExportNextReadoutRequestSummary.session.readout_request_plan_summary?.next_request_id === "freeze_frame_snapshot" && bridgeExportNextReadoutRequestSummary.session.readout_request_plan_summary?.vehicle_command_enabled === false, "Bridge export did not carry readout request plan summary");
+const bridgeExportNestedSavedReadoutRequestSummary = obd.buildBridgeSessionExportPayload({
+  bridge_session: {
+    readout_coverage: {
+      items: [
+        "dtc_snapshot",
+        "freeze_frame_snapshot",
+        "readiness_snapshot",
+        "ecu_info_snapshot",
+        "onboard_monitor_snapshot",
+        "supported_pid_matrix",
+        "live_pid_snapshot"
+      ].map((id) => ({ id, status: "captured" }))
+    },
+    next_readout_request: {
+      readout_id: "nested_saved_snapshot",
+      bridge_intent: "review_nested_saved",
+      read_only: true,
+      would_transmit: false,
+      vehicle_command_enabled: false,
+      execution_enabled: false
+    },
+    readout_request_plan_summary: {
+      state: "saved",
+      next_request_id: "nested_saved_snapshot",
+      next_bridge_intent: "review_nested_saved",
+      read_only: true,
+      would_transmit: false,
+      vehicle_command_enabled: false
+    }
+  }
+});
+check(bridgeExportNestedSavedReadoutRequestSummary.session.next_readout_request?.readout_id === "nested_saved_snapshot" && bridgeExportNestedSavedReadoutRequestSummary.session.next_readout_request?.vehicle_command_enabled === false, "Bridge export did not preserve nested saved next readout request summary");
+check(bridgeExportNestedSavedReadoutRequestSummary.session.readout_request_plan_summary?.next_request_id === "nested_saved_snapshot" && bridgeExportNestedSavedReadoutRequestSummary.session.readout_request_plan_summary?.next_bridge_intent === "review_nested_saved", "Bridge export did not preserve nested saved readout request plan summary");
 const bridgeExportSummaryAliases = obd.buildBridgeSessionExportPayload({
   captured_at: "2026-06-28T00:08:00Z",
   selected_vehicle: { manufacturer: "Toyota", vehicle_model: "Summary Aqua", vehicle_model_code: "NHP10" },
@@ -10774,6 +10811,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2275");
+  console.log("OBD read-only safety checks: 2281");
   console.log("Errors: 0");
 }

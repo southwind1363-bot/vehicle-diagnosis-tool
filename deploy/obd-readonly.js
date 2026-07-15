@@ -2808,6 +2808,11 @@
       || parts.captured_at
       || parts.protocol
       ||
+      parts.nextReadoutRequest
+      || parts.next_readout_request
+      || parts.readoutRequestPlanSummary
+      || parts.readout_request_plan_summary
+      ||
       Array.isArray(parts.nextReadoutCandidates)
       || Array.isArray(parts.next_readout_candidates)
       || Array.isArray(parts.toolHints)
@@ -3009,6 +3014,28 @@
       || parts.diagnosticFlowSummary?.readout_request_plan_gate_summary
       || parts.diagnostic_flow_summary?.readout_request_plan_gate_summary
       || null;
+    const nextReadoutRequest = parts.nextReadoutRequest
+      || parts.next_readout_request
+      || parts.coreSessionStatus?.nextReadoutRequest
+      || parts.core_session_status?.nextReadoutRequest
+      || parts.coreSessionStatus?.next_readout_request
+      || parts.core_session_status?.next_readout_request
+      || parts.diagnosticFlowSummary?.nextReadoutRequest
+      || parts.diagnostic_flow_summary?.nextReadoutRequest
+      || parts.diagnosticFlowSummary?.next_readout_request
+      || parts.diagnostic_flow_summary?.next_readout_request
+      || null;
+    const readoutRequestPlanSummary = parts.readoutRequestPlanSummary
+      || parts.readout_request_plan_summary
+      || parts.coreSessionStatus?.readoutRequestPlanSummary
+      || parts.core_session_status?.readoutRequestPlanSummary
+      || parts.coreSessionStatus?.readout_request_plan_summary
+      || parts.core_session_status?.readout_request_plan_summary
+      || parts.diagnosticFlowSummary?.readoutRequestPlanSummary
+      || parts.diagnostic_flow_summary?.readoutRequestPlanSummary
+      || parts.diagnosticFlowSummary?.readout_request_plan_summary
+      || parts.diagnostic_flow_summary?.readout_request_plan_summary
+      || null;
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
@@ -3060,6 +3087,10 @@
           )
       ),
       readoutRequestPlanGateSummary,
+      nextReadoutRequest,
+      next_readout_request: nextReadoutRequest,
+      readoutRequestPlanSummary,
+      readout_request_plan_summary: readoutRequestPlanSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
@@ -8158,6 +8189,10 @@
       vehicle_applicability: baseVehicleApplicability || nestedVehicleApplicability || null,
       readoutCoverage: pickPresent(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
       readout_coverage: pickPresent(base.readout_coverage, base.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
+      nextReadoutRequest: pickPresent(base.nextReadoutRequest, base.next_readout_request, nested.nextReadoutRequest, nested.next_readout_request, null),
+      next_readout_request: pickPresent(base.next_readout_request, base.nextReadoutRequest, nested.next_readout_request, nested.nextReadoutRequest, null),
+      readoutRequestPlanSummary: pickPresent(base.readoutRequestPlanSummary, base.readout_request_plan_summary, nested.readoutRequestPlanSummary, nested.readout_request_plan_summary, null),
+      readout_request_plan_summary: pickPresent(base.readout_request_plan_summary, base.readoutRequestPlanSummary, nested.readout_request_plan_summary, nested.readoutRequestPlanSummary, null),
       nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
       next_readout_candidates: pickPresent(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
       importClassification,
