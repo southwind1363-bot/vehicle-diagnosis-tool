@@ -7308,6 +7308,26 @@
       return byId;
     }, {});
     const primaryVehicleApplicabilityChangedRow = vehicleApplicabilityChangedRows.find((row) => row.primary) || vehicleApplicabilityChangedRows[0] || null;
+    const vehicleApplicabilityChangedRowSummary = {
+      schemaVersion: "vehicle_applicability_changed_row_summary_v1",
+      schema_version: "vehicle_applicability_changed_row_summary_v1",
+      changed: vehicleApplicabilityChangedRows.length > 0,
+      ids: vehicleApplicabilityChangedIds,
+      count: vehicleApplicabilityChangedRows.length,
+      rows: vehicleApplicabilityChangedRows,
+      rowById: vehicleApplicabilityChangedRowById,
+      row_by_id: vehicleApplicabilityChangedRowById,
+      primaryRow: primaryVehicleApplicabilityChangedRow,
+      primary_row: primaryVehicleApplicabilityChangedRow,
+      primaryId: primaryVehicleApplicabilityChangedRow?.id || null,
+      primary_id: primaryVehicleApplicabilityChangedRow?.id || null,
+      evidenceRow: vehicleApplicabilityChangedRowById.vehicle_applicability_evidence || null,
+      evidence_row: vehicleApplicabilityChangedRowById.vehicle_applicability_evidence || null,
+      checklistRow: vehicleApplicabilityChangedRowById.vehicle_applicability_checklist || null,
+      checklist_row: vehicleApplicabilityChangedRowById.vehicle_applicability_checklist || null,
+      reviewTargets: [...new Set(vehicleApplicabilityChangedRows.map((row) => row.reviewTarget).filter(Boolean))],
+      review_targets: [...new Set(vehicleApplicabilityChangedRows.map((row) => row.reviewTarget).filter(Boolean))]
+    };
     const primaryChangedIdDisplayRow = changedIdDisplayRows.find((row) => row.primary) || null;
     const buildChangedIdDisplayGroup = (value, rows = []) => ({
       value,
@@ -7657,6 +7677,8 @@
       vehicle_applicability_changed_row_by_id: vehicleApplicabilityChangedRowById,
       primaryVehicleApplicabilityChangedRow,
       primary_vehicle_applicability_changed_row: primaryVehicleApplicabilityChangedRow,
+      vehicleApplicabilityChangedRowSummary,
+      vehicle_applicability_changed_row_summary: vehicleApplicabilityChangedRowSummary,
       vehicleApplicabilityMixedChangedIds: vehicleApplicabilityChangedIdsByDirection.mixed || [],
       vehicle_applicability_mixed_changed_ids: vehicleApplicabilityChangedIdsByDirection.mixed || [],
       hasVehicleApplicabilityChangedIds: vehicleApplicabilityChangedIds.length > 0,
@@ -7802,6 +7824,8 @@
       vehicle_applicability_changed_row_by_id: vehicleApplicabilityChangedRowById,
       primaryVehicleApplicabilityChangedRow,
       primary_vehicle_applicability_changed_row: primaryVehicleApplicabilityChangedRow,
+      vehicleApplicabilityChangedRowSummary,
+      vehicle_applicability_changed_row_summary: vehicleApplicabilityChangedRowSummary,
       primaryChangedIdDisplayRow,
       changedIdDisplayGroupByKind,
       changedIdDisplayGroupByDirection,
