@@ -561,7 +561,8 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('source: base.source || base.source_type || nested.source || nested.source_type || "diagnostic_core",') && functionBody.includes('source_type: base.source_type || base.source || nested.source_type || nested.source || "diagnostic_core",'), "getDiagnosticSessionInput should normalize source type aliases");
     check(functionBody.includes('protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,') && functionBody.includes('obd_protocol: base.obd_protocol || base.protocol || nested.obd_protocol || nested.protocol || null,'), "getDiagnosticSessionInput should normalize protocol aliases");
     check(functionBody.includes('const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);') && functionBody.includes('const importClassification = baseImportClassification || nestedImportClassification || null;'), "getDiagnosticSessionInput should normalize import classification before merging nested session metadata");
-    check(functionBody.includes('connectionStatus: pickPresent(input.connectionStatus, input.connection_status') && functionBody.includes('adapterIdentity: pickPresent(input.adapterIdentity, input.adapter_identity'), "getDiagnosticSessionInput should preserve nested bridge infrastructure when outer aliases are null");
+    check(functionBody.includes('connectionStatus: pickPresent(input.connectionStatus, input.connection_status, input.connectionStatusResponse') && functionBody.includes('adapterIdentity: pickPresent(input.adapterIdentity, input.adapter_identity, input.adapterIdentityResponse'), "getDiagnosticSessionInput should preserve nested bridge infrastructure when outer aliases are null");
+    check(functionBody.includes('vciDevices: pickPresent(input.vciDevices, input.vci_devices, input.vciList, input.vci_list, input.listVciResponse') && functionBody.includes('ecuResponseSummary: pickPresent(input.ecuResponseSummary, input.ecu_response_summary, input.ecuResponseSummaryResponse'), "getDiagnosticSessionInput should preserve nested bridge response summaries when outer aliases are null");
     check(functionBody.includes('readoutCoverage: pickPresent(input.readoutCoverage, input.readout_coverage') && functionBody.includes('nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates'), "getDiagnosticSessionInput should preserve nested coverage and next candidates when outer aliases are null");
     check(functionBody.includes('storedDtcSnapshot: pickPresent(input.storedDtcSnapshot, input.stored_dtc_snapshot') && functionBody.includes('permanentDtcSnapshot: pickPresent(input.permanentDtcSnapshot, input.permanent_dtc_snapshot'), "getDiagnosticSessionInput should preserve nested typed DTC snapshots when outer aliases are null");
     check(functionBody.includes('dtcSnapshot: pickPresent(input.dtcSnapshot, input.dtc_snapshot') && functionBody.includes('supportedPidMatrix: pickPresent(input.supportedPidMatrix, input.supported_pid_matrix'), "getDiagnosticSessionInput should preserve nested core snapshots when outer aliases are null");
@@ -2139,7 +2140,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2053+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2058+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2211,7 +2212,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.625.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for scan session nested core response preservation");
+check(appSource.includes('const APP_VERSION = "2.626.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for scan session nested infrastructure response preservation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -9826,6 +9827,37 @@ check(
     && scanSessionNestedNullOuterInfrastructure.adapterIdentity?.adapterFamily === bridgeAdapterIdentity.adapterFamily,
   "Diagnostic scan session did not preserve nested bridge infrastructure when outer input was null"
 );
+const scanSessionNestedNullOuterInfrastructureResponses = obd.buildDiagnosticScanSession({
+  connection_status_response: null,
+  list_vci_response: null,
+  adapter_identity_response: null,
+  ecu_response_summary_response: null,
+  scan_session: {
+    connection_status_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { status: "ready", is_paired: true, vci_ready: true, car_connected: true }
+    },
+    list_vci_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { devices: [{ id: "nested-response-vci", label: "Nested Response VCI", connected: true }] }
+    },
+    adapter_identity_response: {
+      ok: true,
+      blocked: false,
+      would_transmit: false,
+      data: { adapter: "Nested Response Adapter", family: "stn", version: "7.6" }
+    },
+    ecu_response_summary_response: bridgeSummary.ecuResponseSummary
+  }
+});
+check(scanSessionNestedNullOuterInfrastructureResponses.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not preserve nested connection_status_response when outer input was null");
+check(scanSessionNestedNullOuterInfrastructureResponses.vciDevices?.[0]?.id === "nested-response-vci", "Diagnostic scan session did not preserve nested list_vci_response when outer input was null");
+check(scanSessionNestedNullOuterInfrastructureResponses.adapterIdentity?.adapterFamily === "stn", "Diagnostic scan session did not preserve nested adapter_identity_response when outer input was null");
+check(scanSessionNestedNullOuterInfrastructureResponses.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not preserve nested ecu_response_summary_response when outer input was null");
 const scanSessionNestedNullOuterCoreSnapshots = obd.buildDiagnosticScanSession({
   dtc_snapshot: null,
   freeze_frame_snapshot: null,
@@ -9970,6 +10002,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2053");
+  console.log("OBD read-only safety checks: 2058");
   console.log("Errors: 0");
 }
