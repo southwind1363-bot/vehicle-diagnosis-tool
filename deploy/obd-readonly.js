@@ -1912,6 +1912,7 @@
     const candidateRanges = Array.isArray(source.candidateRanges) ? source.candidateRanges : Array.isArray(source.candidate_ranges) ? source.candidate_ranges : Array.isArray(source.candidates) ? source.candidates : [];
     const applicableRanges = Array.isArray(source.applicableRanges) ? source.applicableRanges : Array.isArray(source.applicable_ranges) ? source.applicable_ranges : Array.isArray(source.matchedRanges) ? source.matchedRanges : Array.isArray(source.matched_ranges) ? source.matched_ranges : [];
     const supportedEngineCodes = Array.isArray(source.supportedEngineCodes) ? source.supportedEngineCodes : Array.isArray(source.supported_engine_codes) ? source.supported_engine_codes : Array.isArray(source.engineCodes) ? source.engineCodes : Array.isArray(source.engine_codes) ? source.engine_codes : [];
+    const supportedEcus = Array.isArray(source.supportedEcus) ? source.supportedEcus : Array.isArray(source.supported_ecus) ? source.supported_ecus : Array.isArray(source.ecuList) ? source.ecuList : Array.isArray(source.ecu_list) ? source.ecu_list : Array.isArray(source.modules) ? source.modules : [];
     const toCount = (...values) => {
       for (const value of values) {
         const numeric = Number(value);
@@ -1930,6 +1931,9 @@
     const drivetrain = source.drivetrain || source.driveType || source.drive_type || source.drivetrainType || source.drivetrain_type || source.drivenWheels || source.driven_wheels || null;
     const fuelType = source.fuelType || source.fuel_type || source.fuel || source.powertrainType || source.powertrain_type || null;
     const electrification = source.electrification || source.hybridSystem || source.hybrid_system || source.evSystem || source.ev_system || null;
+    const targetSystem = source.targetSystem || source.target_system || source.system || source.systemName || source.system_name || source.diagnosticSystem || source.diagnostic_system || null;
+    const targetEcu = source.targetEcu || source.target_ecu || source.ecu || source.ecuName || source.ecu_name || source.module || source.moduleName || source.module_name || null;
+    const ecuAddress = source.ecuAddress || source.ecu_address || source.address || source.canId || source.can_id || source.responseId || source.response_id || null;
     const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
@@ -1937,6 +1941,7 @@
     const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);
     const applicableRangeCount = toCount(source.applicableRangeCount, source.applicable_range_count, applicableRanges.length);
     const supportedEngineCodeCount = toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, supportedEngineCodes.length);
+    const supportedEcuCount = toCount(source.supportedEcuCount, source.supported_ecu_count, supportedEcus.length);
     const providedStatus = typeof source.status === "string" ? source.status.trim() : typeof source.applicabilityStatus === "string" ? source.applicabilityStatus.trim() : typeof source.applicability_status === "string" ? source.applicability_status.trim() : "";
     const summaryLabel = source.summaryLabel || source.summary_label || source.displayLabel || source.display_label || source.summary || source.label || null;
     let status = providedStatus;
@@ -1973,6 +1978,12 @@
       fuel_type: fuelType,
       electrification,
       hybrid_system: electrification,
+      targetSystem,
+      target_system: targetSystem,
+      targetEcu,
+      target_ecu: targetEcu,
+      ecuAddress,
+      ecu_address: ecuAddress,
       catalogMatched,
       catalog_matched: catalogMatched,
       yearMatched,
@@ -1987,6 +1998,10 @@
       applicable_range_count: applicableRangeCount,
       supportedEngineCodeCount,
       supported_engine_code_count: supportedEngineCodeCount,
+      supportedEcus,
+      supported_ecus: supportedEcus,
+      supportedEcuCount,
+      supported_ecu_count: supportedEcuCount,
       status,
       summaryLabel,
       summary_label: summaryLabel
