@@ -2237,7 +2237,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2294+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2298+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2320,7 +2320,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.679.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for saved next readout auto-flow fallback");
+check(appSource.includes('const APP_VERSION = "2.680.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for saved next readout bridge reimport fallback");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2383,6 +2383,10 @@ check(appSource.includes('savedFromRequest: true,') && appSource.includes('saved
 check(appSource.includes('const canTriggerCandidate = !savedReadoutRequest || candidate.executionEnabled === true || candidate.execution_enabled === true;') && appSource.includes('const buttonTarget = canTriggerCandidate ? action?.button?.() || null : null;'), "OBD saved next readout fallback actions should require explicit execution enablement");
 check(appSource.includes('const nextReadoutCandidates = getSessionNextReadoutCandidates(lastSession, 1);') && appSource.includes('if (hasPendingReadoutCandidates) return "results";'), "OBD auto stage should treat saved next readout requests as result-stage work");
 check(appSource.includes('nextReadoutRequest: importResult.nextReadoutRequest || importResult.next_readout_request') && appSource.includes('readoutRequestPlanSummary: importResult.readoutRequestPlanSummary || importResult.readout_request_plan_summary'), "OBD local bridge readout rebuild should pass saved readout request summaries");
+check(appSource.includes('const previousNextReadoutCandidates = previousSession.nextReadoutCandidates || previousSession.next_readout_candidates') && appSource.includes('previousCoreSessionStatus?.next_readout_candidates'), "OBD local bridge readout rebuild should recover saved next readout candidate aliases");
+check(appSource.includes('const previousNextReadoutRequest = previousSession.nextReadoutRequest || previousSession.next_readout_request') && appSource.includes('previousCoreSessionStatus?.next_readout_summary?.readout_request'), "OBD local bridge readout rebuild should recover saved next readout request aliases");
+check(appSource.includes('const previousReadoutRequestPlanSummary = previousSession.readoutRequestPlanSummary || previousSession.readout_request_plan_summary') && appSource.includes('previousCoreSessionStatus?.readout_request_plan_summary'), "OBD local bridge readout rebuild should recover saved readout request plan aliases");
+check(appSource.includes('nextReadoutCandidates: previousNextReadoutCandidates || undefined,') && appSource.includes('readoutRequestPlanSummary: previousReadoutRequestPlanSummary || undefined,'), "OBD local bridge diagnostic import should receive saved readout request metadata");
 check(appSource.includes('const pendingReadoutRequestCountValue = flow.pendingReadoutRequestCount ?? flow.pending_readout_request_count;') && appSource.includes('const readoutRequestQueueLabel = pendingReadoutRequestCount'), "OBD diagnostic flow panel should show pending readout request queue count");
 check(appSource.includes('const readoutRequestPlan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan || flow.readoutRequestPlanSummary || flow.readout_request_plan_summary') && appSource.includes('core.readoutRequestPlanSummary || core.readout_request_plan_summary') && appSource.includes('readoutRequestPlan?.total_count'), "OBD diagnostic flow panel should use readout request plan counts when available");
 check(appSource.includes('const mappedReadoutRequestCountValue = readoutRequestPlan?.mappedCount ?? readoutRequestPlan?.mapped_count;') && appSource.includes('` / mapped ${mappedReadoutRequestCount}`'), "OBD diagnostic flow panel should show mapped readout request count when available");
@@ -10823,6 +10827,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2294");
+  console.log("OBD read-only safety checks: 2298");
   console.log("Errors: 0");
 }

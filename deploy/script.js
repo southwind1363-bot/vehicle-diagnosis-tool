@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2294+件",
+  validationCheckLabel: "OBD安全検証 2298+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "保存済み次読取要求を自動フローへ反映",
+  recentMilestone: "保存済み次読取要求をブリッジ再取込へ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.679.0";
+const APP_VERSION = "2.680.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4521,6 +4521,11 @@ function renderObdBridgeReadout(parts = {}) {
   const vehicleApplicability = buildSelectedObdVehicleApplicability(vehicleProfile)
     || previousSession.vehicleApplicability
     || null;
+  const previousDiagnosticFlowSummary = previousSession.diagnosticFlowSummary || previousSession.diagnostic_flow_summary || null;
+  const previousCoreSessionStatus = previousSession.coreSessionStatus || previousSession.core_session_status || null;
+  const previousNextReadoutCandidates = previousSession.nextReadoutCandidates || previousSession.next_readout_candidates || previousDiagnosticFlowSummary?.nextReadoutCandidates || previousDiagnosticFlowSummary?.next_readout_candidates || previousCoreSessionStatus?.nextReadoutCandidates || previousCoreSessionStatus?.next_readout_candidates || null;
+  const previousNextReadoutRequest = previousSession.nextReadoutRequest || previousSession.next_readout_request || previousDiagnosticFlowSummary?.nextReadoutRequest || previousDiagnosticFlowSummary?.next_readout_request || previousCoreSessionStatus?.nextReadoutRequest || previousCoreSessionStatus?.next_readout_request || previousCoreSessionStatus?.nextReadoutSummary?.readoutRequest || previousCoreSessionStatus?.next_readout_summary?.readout_request || null;
+  const previousReadoutRequestPlanSummary = previousSession.readoutRequestPlanSummary || previousSession.readout_request_plan_summary || previousDiagnosticFlowSummary?.readoutRequestPlanSummary || previousDiagnosticFlowSummary?.readout_request_plan_summary || previousCoreSessionStatus?.readoutRequestPlanSummary || previousCoreSessionStatus?.readout_request_plan_summary || null;
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
@@ -4534,6 +4539,9 @@ function renderObdBridgeReadout(parts = {}) {
     connectionStatus: obdDevSession.bridgeStatus || previousSession.connectionStatus || undefined,
     vciList: obdDevSession.bridgeVciList || (Array.isArray(previousSession.vciDevices) ? { devices: previousSession.vciDevices } : undefined),
     adapterIdentity: obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined,
+    nextReadoutCandidates: previousNextReadoutCandidates || undefined,
+    nextReadoutRequest: previousNextReadoutRequest || undefined,
+    readoutRequestPlanSummary: previousReadoutRequestPlanSummary || undefined,
     toolHints: previousSession.toolHints || undefined,
     sourceLength: previousSession.sourceLength || undefined,
     hadSensitiveIdentifier: previousSession.hadSensitiveIdentifier === true
@@ -4553,9 +4561,9 @@ function renderObdBridgeReadout(parts = {}) {
     supportedPidMatrix: supportedPidMatrix || { supported_pids: [] },
     ecuResponseSummary: importResult.ecuResponseSummary,
     readoutCoverage: importResult.readoutCoverage || importResult.bridgeSession?.readoutCoverage,
-    nextReadoutCandidates: importResult.nextReadoutCandidates || importResult.bridgeSession?.nextReadoutCandidates,
-    nextReadoutRequest: importResult.nextReadoutRequest || importResult.next_readout_request || importResult.bridgeSession?.nextReadoutRequest || importResult.bridgeSession?.next_readout_request || previousSession.nextReadoutRequest || previousSession.next_readout_request,
-    readoutRequestPlanSummary: importResult.readoutRequestPlanSummary || importResult.readout_request_plan_summary || importResult.bridgeSession?.readoutRequestPlanSummary || importResult.bridgeSession?.readout_request_plan_summary || previousSession.readoutRequestPlanSummary || previousSession.readout_request_plan_summary,
+    nextReadoutCandidates: importResult.nextReadoutCandidates || importResult.next_readout_candidates || importResult.bridgeSession?.nextReadoutCandidates || importResult.bridgeSession?.next_readout_candidates || previousNextReadoutCandidates,
+    nextReadoutRequest: importResult.nextReadoutRequest || importResult.next_readout_request || importResult.bridgeSession?.nextReadoutRequest || importResult.bridgeSession?.next_readout_request || previousNextReadoutRequest,
+    readoutRequestPlanSummary: importResult.readoutRequestPlanSummary || importResult.readout_request_plan_summary || importResult.bridgeSession?.readoutRequestPlanSummary || importResult.bridgeSession?.readout_request_plan_summary || previousReadoutRequestPlanSummary,
     connectionStatus: importResult.connectionStatus || importResult.bridgeSession?.connectionStatus,
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
     vehicleProfile: vehicleProfile || importResult.vehicleProfile || importResult.bridgeSession?.vehicleProfile || undefined,
