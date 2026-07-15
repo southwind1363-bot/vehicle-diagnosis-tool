@@ -7302,6 +7302,8 @@
       byId[row.id] = row;
       return byId;
     }, {});
+    const vehicleApplicabilityChangedRows = changedIdDisplayRows.filter((row) => vehicleApplicabilityChangedIds.includes(row.id));
+    const primaryVehicleApplicabilityChangedRow = vehicleApplicabilityChangedRows.find((row) => row.primary) || vehicleApplicabilityChangedRows[0] || null;
     const primaryChangedIdDisplayRow = changedIdDisplayRows.find((row) => row.primary) || null;
     const buildChangedIdDisplayGroup = (value, rows = []) => ({
       value,
@@ -7645,6 +7647,10 @@
       vehicle_applicability_changed_ids: vehicleApplicabilityChangedIds,
       vehicleApplicabilityChangedIdCount: vehicleApplicabilityChangedIds.length,
       vehicle_applicability_changed_id_count: vehicleApplicabilityChangedIds.length,
+      vehicleApplicabilityChangedRows,
+      vehicle_applicability_changed_rows: vehicleApplicabilityChangedRows,
+      primaryVehicleApplicabilityChangedRow,
+      primary_vehicle_applicability_changed_row: primaryVehicleApplicabilityChangedRow,
       vehicleApplicabilityMixedChangedIds: vehicleApplicabilityChangedIdsByDirection.mixed || [],
       vehicle_applicability_mixed_changed_ids: vehicleApplicabilityChangedIdsByDirection.mixed || [],
       hasVehicleApplicabilityChangedIds: vehicleApplicabilityChangedIds.length > 0,
@@ -7784,6 +7790,10 @@
       changedIdDisplayRows,
       changedIdDisplayRowByKey,
       changedIdDisplayRowById,
+      vehicleApplicabilityChangedRows,
+      vehicle_applicability_changed_rows: vehicleApplicabilityChangedRows,
+      primaryVehicleApplicabilityChangedRow,
+      primary_vehicle_applicability_changed_row: primaryVehicleApplicabilityChangedRow,
       primaryChangedIdDisplayRow,
       changedIdDisplayGroupByKind,
       changedIdDisplayGroupByDirection,
