@@ -8432,16 +8432,34 @@
       || input.diagnostic_session
       || input.obdScanSession
       || input.obd_scan_session;
+    const bridgeImportPayloadSessionInput = bridgeImportInput?.sessionPayload
+      || bridgeImportInput?.session_payload
+      || bridgeImportInput?.savedSession
+      || bridgeImportInput?.saved_session
+      || bridgeImportInput?.lastSession
+      || bridgeImportInput?.last_session
+      || bridgeImportInput?.scanSession
+      || bridgeImportInput?.scan_session
+      || bridgeImportInput?.diagnosticScanSession
+      || bridgeImportInput?.diagnostic_scan_session
+      || bridgeImportInput?.diagnosticSession
+      || bridgeImportInput?.diagnostic_session
+      || bridgeImportInput?.obdScanSession
+      || bridgeImportInput?.obd_scan_session
+      || null;
+    const effectiveBridgeImportInput = bridgeImportPayloadSessionInput && typeof bridgeImportPayloadSessionInput === "object"
+      ? buildDiagnosticScanSession(bridgeImportInput)
+      : bridgeImportInput;
     const bridgePartsInput = input.bridgeParts || input.bridge_parts;
     const scannerAnalysis = analyzeScannerText(scannerTextInput);
-    const bridgeImport = bridgeImportInput?.importType === "bridge_diagnostic_snapshot"
-      ? buildBridgeDiagnosticImport(bridgeImportInput)
-      : bridgeImportInput?.schema_version === "bridge_session_export_v1" || bridgeImportInput?.session || bridgeImportInput?.bridgeSession || bridgeImportInput?.bridge_session
-      ? buildBridgeDiagnosticImport(bridgeImportInput)
-      : bridgeImportInput && hasBridgeSummaryContent(getBridgeSummaryInput(bridgeImportInput))
-        ? buildBridgeDiagnosticImport(bridgeImportInput)
-      : bridgeImportInput && hasBridgeSummaryMetadata(getBridgeSummaryInput(bridgeImportInput))
-        ? buildBridgeDiagnosticImport(bridgeImportInput)
+    const bridgeImport = effectiveBridgeImportInput?.importType === "bridge_diagnostic_snapshot"
+      ? buildBridgeDiagnosticImport(effectiveBridgeImportInput)
+      : effectiveBridgeImportInput?.schema_version === "bridge_session_export_v1" || effectiveBridgeImportInput?.session || effectiveBridgeImportInput?.bridgeSession || effectiveBridgeImportInput?.bridge_session
+      ? buildBridgeDiagnosticImport(effectiveBridgeImportInput)
+      : effectiveBridgeImportInput && hasBridgeSummaryContent(getBridgeSummaryInput(effectiveBridgeImportInput))
+        ? buildBridgeDiagnosticImport(effectiveBridgeImportInput)
+      : effectiveBridgeImportInput && hasBridgeSummaryMetadata(getBridgeSummaryInput(effectiveBridgeImportInput))
+        ? buildBridgeDiagnosticImport(effectiveBridgeImportInput)
       : bridgePartsInput
         ? buildBridgeDiagnosticImport(bridgePartsInput)
         : null;
