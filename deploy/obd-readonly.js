@@ -4197,6 +4197,16 @@
       if (item.id && !diagnosticChecklistById[item.id]) diagnosticChecklistById[item.id] = { ...item };
     });
     const vehicleApplicabilityChecklist = diagnosticChecklistById.vehicle_applicability || null;
+    const vehicleApplicabilityEvidenceSummary = coreSessionStatus?.vehicleApplicabilityEvidenceSummary
+      || coreSessionStatus?.vehicle_applicability_evidence_summary
+      || readiness.vehicleApplicabilityEvidenceSummary
+      || readiness.vehicle_applicability_evidence_summary
+      || vehicleApplicabilityChecklist?.evidenceSummary
+      || vehicleApplicabilityChecklist?.evidence_summary
+      || null;
+    const vehicleApplicabilityEvidenceReviewRequired = pickDefined(vehicleApplicabilityEvidenceSummary?.reviewRequired, vehicleApplicabilityEvidenceSummary?.review_required, false) === true;
+    const vehicleApplicabilityEvidencePresent = pickDefined(vehicleApplicabilityEvidenceSummary?.evidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, false) === true;
+    const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
     const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || readiness.readoutQualitySummary || readiness.readout_quality_summary || {};
     const readoutQualityChecklist = diagnosticChecklistById.readout_quality || null;
     const applicabilityStatus = coreSessionStatus?.applicabilityStatus || coreSessionStatus?.applicability_status || vehicleApplicabilityChecklist?.applicabilityStatus || vehicleApplicabilityChecklist?.applicability_status || "unknown";
@@ -4576,6 +4586,8 @@
       onboard_monitor_failed_count: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "onboardMonitorFailedCount"))) ? Number(readAliasValue(readoutQualitySummary, "onboardMonitorFailedCount")) : 0,
       vehicleApplicabilityChecklist: diagnosticChecklistById.vehicle_applicability || null,
       vehicle_applicability_checklist: diagnosticChecklistById.vehicle_applicability || null,
+      vehicleApplicabilityEvidenceSummary,
+      vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       pendingQueueNextReadoutId: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pending_queue_next_readout_id: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pendingQueueNextReadoutStatus: readAliasValue(queueSummary, "nextReadoutStatus") || coreSessionStatus?.nextPendingReadoutState?.status || coreSessionStatus?.next_pending_readout_state?.status || null,
@@ -4602,6 +4614,12 @@
       vehicle_applicability_review_required: vehicleApplicabilityReviewRequired,
       vehicleApplicabilityBlocking,
       vehicle_applicability_blocking: vehicleApplicabilityBlocking,
+      vehicleApplicabilityEvidenceReviewRequired,
+      vehicle_applicability_evidence_review_required: vehicleApplicabilityEvidenceReviewRequired,
+      vehicleApplicabilityEvidencePresent,
+      vehicle_applicability_evidence_present: vehicleApplicabilityEvidencePresent,
+      vehicleApplicabilitySourceVerified,
+      vehicle_applicability_source_verified: vehicleApplicabilitySourceVerified,
       blockingReasonIds,
       blocking_reason_ids: blockingReasonIds,
       primaryBlockingReasonId,
@@ -5181,6 +5199,14 @@
     const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
     const vehicleApplicabilityChecklist = summary.vehicleApplicabilityChecklist || summary.vehicle_applicability_checklist || null;
+    const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || {};
+    const vehicleApplicabilityEvidenceSummary = summary.vehicleApplicabilityEvidenceSummary
+      || summary.vehicle_applicability_evidence_summary
+      || analysisReadinessSummary.vehicleApplicabilityEvidenceSummary
+      || analysisReadinessSummary.vehicle_applicability_evidence_summary
+      || vehicleApplicabilityChecklist?.evidenceSummary
+      || vehicleApplicabilityChecklist?.evidence_summary
+      || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
@@ -5269,6 +5295,8 @@
       readout_quality_issue_ids: readoutQualityIssueIds,
       vehicleApplicabilityChecklist,
       vehicle_applicability_checklist: vehicleApplicabilityChecklist,
+      vehicleApplicabilityEvidenceSummary,
+      vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       pendingQueueNextReadoutId: pickDefined(summary.pendingQueueNextReadoutId, summary.pending_queue_next_readout_id, null),
       pending_queue_next_readout_id: pickDefined(summary.pending_queue_next_readout_id, summary.pendingQueueNextReadoutId, null),
       recommendedReadoutId: pickDefined(summary.recommendedReadoutId, summary.recommended_readout_id, null),
@@ -5289,6 +5317,12 @@
       vehicle_applicability_review_required: pickDefined(summary.vehicle_applicability_review_required, summary.vehicleApplicabilityReviewRequired, false) === true,
       vehicleApplicabilityBlocking: pickDefined(summary.vehicleApplicabilityBlocking, summary.vehicle_applicability_blocking, false) === true,
       vehicle_applicability_blocking: pickDefined(summary.vehicle_applicability_blocking, summary.vehicleApplicabilityBlocking, false) === true,
+      vehicleApplicabilityEvidenceReviewRequired: pickDefined(summary.vehicleApplicabilityEvidenceReviewRequired, summary.vehicle_applicability_evidence_review_required, vehicleApplicabilityEvidenceSummary?.reviewRequired, vehicleApplicabilityEvidenceSummary?.review_required, false) === true,
+      vehicle_applicability_evidence_review_required: pickDefined(summary.vehicle_applicability_evidence_review_required, summary.vehicleApplicabilityEvidenceReviewRequired, vehicleApplicabilityEvidenceSummary?.review_required, vehicleApplicabilityEvidenceSummary?.reviewRequired, false) === true,
+      vehicleApplicabilityEvidencePresent: pickDefined(summary.vehicleApplicabilityEvidencePresent, summary.vehicle_applicability_evidence_present, vehicleApplicabilityEvidenceSummary?.evidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, false) === true,
+      vehicle_applicability_evidence_present: pickDefined(summary.vehicle_applicability_evidence_present, summary.vehicleApplicabilityEvidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, vehicleApplicabilityEvidenceSummary?.evidencePresent, false) === true,
+      vehicleApplicabilitySourceVerified: pickDefined(summary.vehicleApplicabilitySourceVerified, summary.vehicle_applicability_source_verified, vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true,
+      vehicle_applicability_source_verified: pickDefined(summary.vehicle_applicability_source_verified, summary.vehicleApplicabilitySourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, vehicleApplicabilityEvidenceSummary?.sourceVerified, false) === true,
       blockingReasonIds,
       blocking_reason_ids: blockingReasonIds,
       primaryBlockingReasonId: pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null),
