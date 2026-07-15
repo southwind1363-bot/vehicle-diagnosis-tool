@@ -532,13 +532,14 @@ const nestedSessionMetadataMergeFunctionChecks = () => {
   if (nestedSessionMetadataMergeFunctionSource) {
     const functionBody = nestedSessionMetadataMergeFunctionSource[0];
     check(functionBody.includes('readoutCoverage: pickDefined(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),'), "mergeNestedSessionMetadata should prefer outer readout coverage before nested aliases");
-    check(functionBody.includes('toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, nested.toolHints, nested.tool_hints),'), "mergeNestedSessionMetadata should merge outer and nested tool hints");
+    check(functionBody.includes('const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);'), "mergeNestedSessionMetadata should normalize import classification metadata");
+    check(functionBody.includes('toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, baseImportClassification?.toolHints, baseImportClassification?.tool_hints, nested.toolHints, nested.tool_hints, nestedImportClassification?.toolHints, nestedImportClassification?.tool_hints),'), "mergeNestedSessionMetadata should merge outer and nested tool hints");
     check(functionBody.includes('source: base.source || base.source_type || nested.source || nested.source_type || null,'), "mergeNestedSessionMetadata should merge outer and nested source aliases");
     check(functionBody.includes('protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,'), "mergeNestedSessionMetadata should merge outer and nested protocol aliases");
-    check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),'), "mergeNestedSessionMetadata should merge outer and nested warning aliases");
-    check(functionBody.includes('warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),'), "mergeNestedSessionMetadata should preserve warning_ids aliases");
-    check(functionBody.includes('sourceLength: pickDefined(base.sourceLength, base.source_length, nested.sourceLength, nested.source_length, null),'), "mergeNestedSessionMetadata should prefer outer source length before nested aliases");
-    check(functionBody.includes('].some((value) => value === true)\r\n        ? true'), "mergeNestedSessionMetadata should preserve true hadSensitiveIdentifier across outer and nested metadata");
+    check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, baseImportClassification?.warnings, baseImportClassification?.warning_ids, baseImportClassification?.warning_flags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags, nestedImportClassification?.warnings, nestedImportClassification?.warning_ids, nestedImportClassification?.warning_flags),'), "mergeNestedSessionMetadata should merge outer and nested warning aliases");
+    check(functionBody.includes('warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, baseImportClassification?.warning_ids, baseImportClassification?.warnings, baseImportClassification?.warning_flags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags, nestedImportClassification?.warning_ids, nestedImportClassification?.warnings, nestedImportClassification?.warning_flags),'), "mergeNestedSessionMetadata should preserve warning_ids aliases");
+    check(functionBody.includes('sourceLength: pickDefined(base.sourceLength, base.source_length, baseImportClassification?.sourceLength, baseImportClassification?.source_length, nested.sourceLength, nested.source_length, nestedImportClassification?.sourceLength, nestedImportClassification?.source_length, null),'), "mergeNestedSessionMetadata should prefer outer source length before nested aliases");
+    check(functionBody.includes('baseImportClassification?.hadSensitiveIdentifier') && functionBody.includes('nestedImportClassification?.had_sensitive_identifier'), "mergeNestedSessionMetadata should preserve true hadSensitiveIdentifier across outer and nested metadata");
   }
 };
 const diagnosticSessionInputFunctionChecks = () => {
@@ -2122,7 +2123,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2009+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2010+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2194,7 +2195,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.608.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for import classification metadata lifting");
+check(appSource.includes('const APP_VERSION = "2.609.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for nested import classification metadata lifting");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4400,6 +4401,19 @@ check(bridgeSummaryNestedSessionAliases.warnings.includes("freeze_frame_availabl
 check(bridgeSummaryNestedSessionAliases.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Bridge session summary did not carry next_readout_candidates from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.toolHints.join(",") === "Techstream,J2534", "Bridge session summary did not carry tool_hints from nested session alias input");
 check(bridgeSummaryNestedSessionAliases.sourceLength === 128, "Bridge session summary did not carry source_length from nested session alias input");
+const bridgeSummaryNestedImportClassificationMetadata = obd.buildBridgeSessionSummary({
+  session: {
+    import_classification: {
+      schema_version: "obd_response_line_classification_v1",
+      tool_hints: ["CONSULT"],
+      warning_flags: ["negative_obd_response_present"],
+      source_length: 222,
+      had_sensitive_identifier: true
+    }
+  }
+});
+check(bridgeSummaryNestedImportClassificationMetadata.toolHints.includes("CONSULT") && bridgeSummaryNestedImportClassificationMetadata.warnings.includes("negative_obd_response_present"), "Bridge session summary did not lift nested import_classification tool and warning metadata");
+check(bridgeSummaryNestedImportClassificationMetadata.sourceLength === 222 && bridgeSummaryNestedImportClassificationMetadata.hadSensitiveIdentifier === true, "Bridge session summary did not lift nested import_classification source and sensitive metadata");
 const bridgeSummaryNestedOuterOverride = obd.buildBridgeSessionSummary({
   protocol: "ISO9141-2",
   captured_at: "2026-06-28T00:10:30Z",
@@ -9673,6 +9687,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2009");
+  console.log("OBD read-only safety checks: 2010");
   console.log("Errors: 0");
 }

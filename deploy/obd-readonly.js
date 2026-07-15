@@ -2267,6 +2267,7 @@
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
+    const importClassification = resolveImportClassification(metadataOverrides.importClassification);
     const storedDtcSnapshotInput = parts.storedDtcSnapshot || parts.stored_dtc_snapshot || parts.storedDtcResponse || parts.stored_dtc_response || null;
     const pendingDtcSnapshotInput = parts.pendingDtcSnapshot || parts.pending_dtc_snapshot || parts.pendingDtcResponse || parts.pending_dtc_response || null;
     const permanentDtcSnapshotInput = parts.permanentDtcSnapshot || parts.permanent_dtc_snapshot || parts.permanentDtcResponse || parts.permanent_dtc_response || null;
@@ -2408,7 +2409,7 @@
     const hasBridgeSnapshotContext = hasBridgeInfrastructureContext
       || hasObjectContent(dtcSnapshotInput)
       || hasObjectContent(livePidSnapshotInput);
-    const warnings = [];
+    const warnings = resolveWarningList(metadataOverrides.warnings);
     if (hasBridgeSnapshotContext && (connectionStatus.blocked || vciList.blocked || dtcSnapshot.blocked || livePidSnapshot.blocked)) warnings.push("local_bridge_disabled");
     appendCommonCoreWarnings(warnings, {
       dtcWarning: "confirm_dtc_with_service_manual",
@@ -2518,6 +2519,8 @@
       monitorValues: livePidSnapshot.monitorValues,
       monitorValueSummary: resolveMonitorValueSummary(livePidSnapshot.monitorValues, livePidSnapshot.monitorValueSummary),
       monitorInsights: livePidSnapshot.monitorInsights,
+      importClassification,
+      import_classification: importClassification,
       toolHints: resolvedMetadata.toolHints,
       freezeFrameSnapshot,
       warnings,
@@ -2672,6 +2675,7 @@
     const nextReadoutCandidatesInput = metadataOverrides.nextReadoutCandidates || [];
     const warningsInput = metadataOverrides.warnings || [];
     const importClassificationInput = metadataOverrides.importClassification;
+    const importClassification = resolveImportClassification(importClassificationInput);
     const {
       connectionStatus,
       vciList: normalizedVciList,
@@ -2819,7 +2823,8 @@
       monitorValues,
       monitorValueSummary,
       monitorInsights,
-      importClassification: resolveImportClassification(importClassificationInput),
+      importClassification,
+      import_classification: importClassification,
       toolHints: resolvedMetadata.toolHints,
       warnings: resolveWarningList(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings),
       nextReadoutCandidates: normalizeNextReadoutCandidates(
@@ -7582,6 +7587,9 @@
   }
 
   function mergeNestedSessionMetadata(base = {}, nested = {}) {
+    const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);
+    const nestedImportClassification = resolveImportClassification(nested.importClassification || nested.import_classification || null);
+    const importClassification = baseImportClassification || nestedImportClassification || null;
     return {
       vehicleProfile: base.vehicleProfile || base.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
       vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
@@ -7591,34 +7599,42 @@
       readout_coverage: pickDefined(base.readout_coverage, base.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
       nextReadoutCandidates: pickDefined(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
       next_readout_candidates: pickDefined(base.next_readout_candidates, base.nextReadoutCandidates, nested.next_readout_candidates, nested.nextReadoutCandidates, null),
-      importClassification: pickDefined(base.importClassification, base.import_classification, nested.importClassification, nested.import_classification, null),
-      import_classification: pickDefined(base.import_classification, base.importClassification, nested.import_classification, nested.importClassification, null),
+      importClassification,
+      import_classification: importClassification,
       source: base.source || base.source_type || nested.source || nested.source_type || null,
       source_type: base.source_type || base.source || nested.source_type || nested.source || null,
       protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,
       obd_protocol: base.obd_protocol || base.protocol || nested.obd_protocol || nested.protocol || null,
-      toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, nested.toolHints, nested.tool_hints),
-      tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
-      warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),
-      warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),
-      sourceLength: pickDefined(base.sourceLength, base.source_length, nested.sourceLength, nested.source_length, null),
-      source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
+      toolHints: mergeUniqueStrings(base.toolHints, base.tool_hints, baseImportClassification?.toolHints, baseImportClassification?.tool_hints, nested.toolHints, nested.tool_hints, nestedImportClassification?.toolHints, nestedImportClassification?.tool_hints),
+      tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, baseImportClassification?.tool_hints, baseImportClassification?.toolHints, nested.tool_hints, nested.toolHints, nestedImportClassification?.tool_hints, nestedImportClassification?.toolHints),
+      warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, baseImportClassification?.warnings, baseImportClassification?.warning_ids, baseImportClassification?.warning_flags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags, nestedImportClassification?.warnings, nestedImportClassification?.warning_ids, nestedImportClassification?.warning_flags),
+      warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, baseImportClassification?.warning_ids, baseImportClassification?.warnings, baseImportClassification?.warning_flags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags, nestedImportClassification?.warning_ids, nestedImportClassification?.warnings, nestedImportClassification?.warning_flags),
+      sourceLength: pickDefined(base.sourceLength, base.source_length, baseImportClassification?.sourceLength, baseImportClassification?.source_length, nested.sourceLength, nested.source_length, nestedImportClassification?.sourceLength, nestedImportClassification?.source_length, null),
+      source_length: pickDefined(base.source_length, base.sourceLength, baseImportClassification?.source_length, baseImportClassification?.sourceLength, nested.source_length, nested.sourceLength, nestedImportClassification?.source_length, nestedImportClassification?.sourceLength, null),
       hadSensitiveIdentifier: [
         base.hadSensitiveIdentifier,
         base.had_sensitive_identifier,
+        baseImportClassification?.hadSensitiveIdentifier,
+        baseImportClassification?.had_sensitive_identifier,
         nested.hadSensitiveIdentifier,
-        nested.had_sensitive_identifier
+        nested.had_sensitive_identifier,
+        nestedImportClassification?.hadSensitiveIdentifier,
+        nestedImportClassification?.had_sensitive_identifier
       ].some((value) => value === true)
         ? true
-        : pickDefined(base.hadSensitiveIdentifier, base.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, null),
+        : pickDefined(base.hadSensitiveIdentifier, base.had_sensitive_identifier, baseImportClassification?.hadSensitiveIdentifier, baseImportClassification?.had_sensitive_identifier, nested.hadSensitiveIdentifier, nested.had_sensitive_identifier, nestedImportClassification?.hadSensitiveIdentifier, nestedImportClassification?.had_sensitive_identifier, null),
       had_sensitive_identifier: [
         base.had_sensitive_identifier,
         base.hadSensitiveIdentifier,
+        baseImportClassification?.had_sensitive_identifier,
+        baseImportClassification?.hadSensitiveIdentifier,
         nested.had_sensitive_identifier,
-        nested.hadSensitiveIdentifier
+        nested.hadSensitiveIdentifier,
+        nestedImportClassification?.had_sensitive_identifier,
+        nestedImportClassification?.hadSensitiveIdentifier
       ].some((value) => value === true)
         ? true
-        : pickDefined(base.had_sensitive_identifier, base.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, null)
+        : pickDefined(base.had_sensitive_identifier, base.hadSensitiveIdentifier, baseImportClassification?.had_sensitive_identifier, baseImportClassification?.hadSensitiveIdentifier, nested.had_sensitive_identifier, nested.hadSensitiveIdentifier, nestedImportClassification?.had_sensitive_identifier, nestedImportClassification?.hadSensitiveIdentifier, null)
     };
   }
 
@@ -8184,6 +8200,7 @@
       monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
       monitorInsights,
       importClassification: metadataFields.importClassification,
+      import_classification: metadataFields.importClassification,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
       readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
@@ -8230,6 +8247,7 @@
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
         importClassification: bridgeSessionMetadataFields.importClassification,
+        import_classification: bridgeSessionMetadataFields.importClassification,
         toolHints: bridgeSessionMetadataFields.toolHints,
         warnings: bridgeSessionMetadataFields.warnings,
         nextReadoutCandidates: bridgeSessionMetadataFields.nextReadoutCandidates,
