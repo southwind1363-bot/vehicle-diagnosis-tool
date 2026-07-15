@@ -1999,6 +1999,45 @@
     );
   }
 
+  function normalizeVehicleProfileInput(input = null) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const normalized = normalizeVehicleApplicabilitySnapshot(input);
+    if (!normalized.maker && !normalized.model && !normalized.modelCode && !normalized.year && !normalized.engineCode) return { ...input };
+    return {
+      ...input,
+      maker: normalized.maker,
+      model: normalized.model,
+      modelCode: normalized.modelCode,
+      model_code: normalized.modelCode,
+      year: normalized.year,
+      engineCode: normalized.engineCode,
+      engine_code: normalized.engineCode
+    };
+  }
+
+  function getVehicleProfileInput(source = {}) {
+    if (!source || typeof source !== "object") return null;
+    return normalizeVehicleProfileInput(pickDefined(
+      source.vehicleProfile,
+      source.vehicle_profile,
+      source.vehicleProfileSnapshot,
+      source.vehicle_profile_snapshot,
+      source.vehicleInfo,
+      source.vehicle_info,
+      source.vehicleContext,
+      source.vehicle_context,
+      source.selectedVehicle,
+      source.selected_vehicle,
+      source.carInfo,
+      source.car_info,
+      source.carProfile,
+      source.car_profile,
+      source.vehicle,
+      source.car,
+      null
+    ));
+  }
+
   function appendVehicleApplicabilityWarnings(warnings, applicability = {}) {
     if (!hasObjectContent(applicability)) return;
     const normalized = normalizeVehicleApplicabilitySnapshot(applicability || {});
@@ -7717,11 +7756,13 @@
     const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);
     const nestedImportClassification = resolveImportClassification(nested.importClassification || nested.import_classification || null);
     const importClassification = baseImportClassification || nestedImportClassification || null;
+    const baseVehicleProfile = getVehicleProfileInput(base);
+    const nestedVehicleProfile = getVehicleProfileInput(nested);
     const baseVehicleApplicability = getVehicleApplicabilityInput(base);
     const nestedVehicleApplicability = getVehicleApplicabilityInput(nested);
     return {
-      vehicleProfile: base.vehicleProfile || base.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
-      vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
+      vehicleProfile: baseVehicleProfile || nestedVehicleProfile || null,
+      vehicle_profile: baseVehicleProfile || nestedVehicleProfile || null,
       vehicleApplicability: baseVehicleApplicability || nestedVehicleApplicability || null,
       vehicle_applicability: baseVehicleApplicability || nestedVehicleApplicability || null,
       readoutCoverage: pickPresent(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
@@ -7905,6 +7946,13 @@
       getVehicleApplicabilityInput(nested),
       null
     );
+    const mergedVehicleProfile = pickPresent(
+      getVehicleProfileInput(input),
+      getVehicleProfileInput(payload),
+      getVehicleProfileInput(base),
+      getVehicleProfileInput(nested),
+      null
+    );
     return {
       ...nested,
       ...base,
@@ -7917,7 +7965,8 @@
       capturedAt: base.captured_at || base.capturedAt || nested.captured_at || nested.capturedAt || null,
       protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,
       obd_protocol: base.obd_protocol || base.protocol || nested.obd_protocol || nested.protocol || null,
-      vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
+      vehicleProfile: mergedVehicleProfile,
+      vehicle_profile: mergedVehicleProfile,
       vehicleApplicability: mergedVehicleApplicability,
       vehicle_applicability: mergedVehicleApplicability,
       connectionStatus: pickPresent(input.connectionStatus, input.connection_status, input.connectionStatusResponse, input.connection_status_response, payload?.connectionStatus, payload?.connection_status, payload?.connectionStatusResponse, payload?.connection_status_response, nested.connectionStatus, nested.connection_status, nested.connectionStatusResponse, nested.connection_status_response, null),
@@ -8028,7 +8077,7 @@
       : pickDefined(sessionInput.had_sensitive_identifier, sessionInput.hadSensitiveIdentifier, importClassification?.hadSensitiveIdentifier, importClassification?.had_sensitive_identifier, null);
     const sourceLength = pickDefined(sessionInput.source_length, sessionInput.sourceLength, importClassification?.sourceLength, importClassification?.source_length, null);
     return {
-      vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,
+      vehicleProfile: getVehicleProfileInput(sessionInput),
       vehicleApplicability: getVehicleApplicabilityInput(sessionInput),
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
       nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,

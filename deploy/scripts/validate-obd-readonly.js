@@ -73,6 +73,7 @@ const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeR
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
 const vehicleApplicabilityInputFunctionSource = source.match(/function getVehicleApplicabilityInput[\s\S]*?source\.applicability,\r?\n      null\r?\n    \);\r?\n  \}/);
+const vehicleProfileInputFunctionSource = source.match(/function getVehicleProfileInput[\s\S]*?source\.car,\r?\n      null\r?\n    \)\);\r?\n  \}/);
 const vehicleApplicabilityWarningsFunctionSource = source.match(/function appendVehicleApplicabilityWarnings[\s\S]*?vehicle_profile_manual"\);\r?\n    \}\r?\n  \}/);
 const resolveBridgeSummaryFunctionSource = source.match(/function resolveBridgeSummary[\s\S]*?\r?\n  \}/);
 const resolveBridgeInfrastructureFunctionSource = source.match(/function resolveBridgeInfrastructureInputs[\s\S]*?honorCoverageOverride\r?\n      \}\)\r?\n    \};\r?\n  \}/);
@@ -254,6 +255,16 @@ const vehicleApplicabilityInputFunctionChecks = () => {
     check(functionBody.includes('source.applicabilitySnapshot') && functionBody.includes('source.applicability_snapshot'), "getVehicleApplicabilityInput should accept applicability snapshot aliases");
     check(functionBody.includes('source.vehicleMatch') && functionBody.includes('source.vehicle_match'), "getVehicleApplicabilityInput should accept vehicle match aliases");
     check(functionBody.includes('source.applicabilityReport') && functionBody.includes('source.applicability_report') && functionBody.includes('source.applicability'), "getVehicleApplicabilityInput should accept applicability report aliases");
+  }
+};
+const vehicleProfileInputFunctionChecks = () => {
+  check(Boolean(vehicleProfileInputFunctionSource), "getVehicleProfileInput is missing from obd-readonly.js");
+  if (vehicleProfileInputFunctionSource) {
+    const functionBody = vehicleProfileInputFunctionSource[0];
+    check(functionBody.includes('source.vehicleInfo') && functionBody.includes('source.vehicle_info'), "getVehicleProfileInput should accept vehicle info aliases");
+    check(functionBody.includes('source.vehicleContext') && functionBody.includes('source.vehicle_context'), "getVehicleProfileInput should accept vehicle context aliases");
+    check(functionBody.includes('source.selectedVehicle') && functionBody.includes('source.selected_vehicle'), "getVehicleProfileInput should accept selected vehicle aliases");
+    check(functionBody.includes('source.carInfo') && functionBody.includes('source.car_info') && functionBody.includes('source.carProfile'), "getVehicleProfileInput should accept car info/profile aliases");
   }
 };
 const vehicleApplicabilityWarningsFunctionChecks = () => {
@@ -536,7 +547,7 @@ const sessionMetadataOverridesFunctionChecks = () => {
   check(Boolean(sessionMetadataOverridesFunctionSource), "getSessionMetadataOverrides is missing from obd-readonly.js");
   if (sessionMetadataOverridesFunctionSource) {
     const functionBody = sessionMetadataOverridesFunctionSource[0];
-    check(functionBody.includes('vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
+    check(functionBody.includes('vehicleProfile: getVehicleProfileInput(sessionInput),'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
     check(functionBody.includes('readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,'), "getSessionMetadataOverrides should normalize readout coverage aliases");
     check(functionBody.includes('const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);'), "getSessionMetadataOverrides should normalize import classification input");
     check(functionBody.includes('toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints, importClassification?.toolHints, importClassification?.tool_hints),'), "getSessionMetadataOverrides should merge tool hint aliases");
@@ -2017,6 +2028,7 @@ normalizeReadoutCoverageFunctionChecks();
 resolveReadoutCoverageFunctionChecks();
 vehicleApplicabilityFunctionChecks();
 vehicleApplicabilityInputFunctionChecks();
+vehicleProfileInputFunctionChecks();
 vehicleApplicabilityWarningsFunctionChecks();
 resolveBridgeSummaryFunctionChecks();
 resolveBridgeInfrastructureFunctionChecks();
@@ -2161,7 +2173,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2123+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2130+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2233,7 +2245,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.641.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for vehicle applicability profile derivation");
+check(appSource.includes('const APP_VERSION = "2.642.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for vehicle profile alias intake");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8305,6 +8317,19 @@ check(scanSessionDirectMixedVehicleMetadata.sessionId === "shop-test-mixed-vehic
 check(scanSessionDirectMixedVehicleMetadata.vehicleProfile?.model === "Mixed Roomy", "Diagnostic scan session did not preserve mixed-case direct vehicleProfile input");
 check(scanSessionDirectMixedVehicleMetadata.vehicleApplicability?.status === "matched", "Diagnostic scan session did not preserve mixed-case direct vehicle_applicability input");
 [
+  ["vehicle_info", { make: "Toyota", modelName: "Aqua", model_code: "NHP10", engine_code: "1NZ-FXE" }, "Aqua"],
+  ["vehicleContext", { manufacturer: "Honda", vehicle_model: "Fit", vehicle_year: "2021" }, "Fit"],
+  ["selected_vehicle", { maker: "Nissan", model: "Leaf" }, "Leaf"],
+  ["car_info", { brand: "Mazda", car_model: "Demio" }, "Demio"]
+].forEach(([alias, profile, expectedModel]) => {
+  const session = obd.buildDiagnosticScanSession({
+    session_id: `shop-test-${alias.replace(/_/g, "-")}-profile`,
+    [alias]: profile,
+    dtcSnapshot: bridgeDtcSnapshot
+  });
+  check(session.vehicleProfile?.model === expectedModel, `Diagnostic scan session did not accept ${alias} vehicle profile alias input`);
+});
+[
   ["vehicle_match", { status: "matched", maker: "Toyota", model: "Aqua" }, "matched"],
   ["applicability_snapshot", { status: "partial", maker: "Toyota", model: "Prius" }, "partial"],
   ["vehicleApplicabilitySnapshot", { status: "manual", maker: "Honda", model: "Fit" }, "manual"],
@@ -8345,6 +8370,14 @@ const scanSessionNestedApplicabilitySnapshotAlias = obd.buildDiagnosticScanSessi
   }
 });
 check(scanSessionNestedApplicabilitySnapshotAlias.vehicleApplicability?.status === "matched", "Diagnostic scan session did not accept applicability_snapshot inside nested scan_session input");
+const scanSessionNestedVehicleInfoAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-nested-vehicle-info",
+  scan_session: {
+    vehicle_info: { make: "Toyota", modelName: "Yaris", model_code: "MXPA10" },
+    dtc_snapshot: bridgeDtcSnapshot
+  }
+});
+check(scanSessionNestedVehicleInfoAlias.vehicleProfile?.model === "Yaris" && scanSessionNestedVehicleInfoAlias.vehicleProfile?.modelCode === "MXPA10", "Diagnostic scan session did not accept vehicle_info inside nested scan_session input");
 const mergedDiagnosticInputVehicleMatchAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   scan_payload: {
@@ -8353,6 +8386,14 @@ const mergedDiagnosticInputVehicleMatchAlias = obd.mergeDiagnosticInputs({
   }
 });
 check(mergedDiagnosticInputVehicleMatchAlias.vehicleApplicability?.status === "partial" && mergedDiagnosticInputVehicleMatchAlias.source === "scanner_text_and_local_bridge", "Combined diagnostic inputs did not accept vehicle_match applicability alias from scan_payload input");
+const mergedDiagnosticInputSelectedVehicleAlias = obd.mergeDiagnosticInputs({
+  scanner_text: "P0171",
+  scan_payload: {
+    selected_vehicle: { maker: "Toyota", model: "Aqua", engine_code: "1NZ-FXE" },
+    dtc_snapshot: bridgeDtcSnapshot
+  }
+});
+check(mergedDiagnosticInputSelectedVehicleAlias.vehicleProfile?.model === "Aqua" && mergedDiagnosticInputSelectedVehicleAlias.vehicleProfile?.engineCode === "1NZ-FXE", "Combined diagnostic inputs did not accept selected_vehicle profile alias from scan_payload input");
 const scanSessionAdapterOnly = obd.buildDiagnosticScanSession({
   session_id: "shop-test-adapter-only",
   adapter_identity: {
@@ -10519,6 +10560,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2123");
+  console.log("OBD read-only safety checks: 2130");
   console.log("Errors: 0");
 }
