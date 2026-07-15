@@ -5199,7 +5199,7 @@
     const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
-    const readoutRequestPlanSummary = summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null;
+    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
     const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummary?.primaryBlockingReason || readoutCompletionSummary?.primaryBlockingReason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || analysisReadinessSummary?.primaryBlockingReadoutRequest || readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
@@ -5207,7 +5207,7 @@
     const pendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
     const pendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
     const analysisChecklist = normalizeArray("analysisChecklist", "analysis_checklist");
-    const nextReadoutRequest = summary.nextReadoutRequest || summary.next_readout_request || null;
+    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(summary.nextReadoutRequest || summary.next_readout_request || null);
     const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, analysisReadinessSummary?.ready, false) === true;
     return {
       ...summary,
@@ -5326,7 +5326,7 @@
       return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
     };
     const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
-    const nextReadoutRequest = summary.nextReadoutRequest || summary.next_readout_request || null;
+    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(summary.nextReadoutRequest || summary.next_readout_request || null);
     const pendingReadoutRequestQueue = Array.isArray(summary.pendingReadoutRequestQueue)
       ? summary.pendingReadoutRequestQueue
       : Array.isArray(summary.pending_readout_request_queue)
@@ -5334,7 +5334,7 @@
         : [];
     const pendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null;
-    const readoutRequestPlanSummary = summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null;
+    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
     const analysisChecklist = Array.isArray(summary.analysisChecklist)
       ? summary.analysisChecklist
       : Array.isArray(summary.analysis_checklist)
