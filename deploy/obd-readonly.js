@@ -9308,6 +9308,8 @@
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
+    const nextReadoutRequest = coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || null;
+    const readoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       dtcSnapshot,
@@ -9416,6 +9418,10 @@
       readout_quality_summary: readoutQualitySummary,
       readoutRequestPlanGateSummary,
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+      nextReadoutRequest,
+      next_readout_request: nextReadoutRequest,
+      readoutRequestPlanSummary,
+      readout_request_plan_summary: readoutRequestPlanSummary,
       coreReadoutInventorySummary,
       core_readout_inventory_summary: coreReadoutInventorySummary,
       importedCoreSessionStatus,
@@ -11696,6 +11702,8 @@
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
+    const nextReadoutRequest = coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || null;
+    const readoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
@@ -11794,6 +11802,10 @@
       readout_quality_summary: readoutQualitySummary,
       readoutRequestPlanGateSummary,
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+      nextReadoutRequest,
+      next_readout_request: nextReadoutRequest,
+      readoutRequestPlanSummary,
+      readout_request_plan_summary: readoutRequestPlanSummary,
       importedCoreSessionStatus,
       imported_core_session_status: importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
