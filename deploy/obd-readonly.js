@@ -7045,6 +7045,10 @@
             || item.comparison.checklistReviewIdsChanged === true
             || item.comparison.vehicleApplicabilityChecklistChanged === true
             || item.comparison.vehicleApplicabilityEvidenceChanged === true,
+          vehicleApplicabilityChecklistChanged: item.comparison.vehicleApplicabilityChecklistChanged === true,
+          vehicle_applicability_checklist_changed: item.comparison.vehicleApplicabilityChecklistChanged === true,
+          vehicleApplicabilityEvidenceChanged: item.comparison.vehicleApplicabilityEvidenceChanged === true,
+          vehicle_applicability_evidence_changed: item.comparison.vehicleApplicabilityEvidenceChanged === true,
           requestPlanGateChanged: item.comparison.blockedChanged === true
             || item.comparison.safeForBridgePlanningChanged === true
             || item.comparison.nextBlockedReasonChanged === true
@@ -7874,6 +7878,10 @@
       primary_blocker_changed: comparisons.some((item) => item.primaryBlockingChanged === true || item.primaryBlockingReasonChanged === true || item.primaryBlockingReadoutChanged === true || item.primaryBlockingBridgeIntentChanged === true),
       analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true || item.vehicleApplicabilityEvidenceChanged === true),
       analysis_checklist_changed: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true || item.vehicleApplicabilityEvidenceChanged === true),
+      vehicleApplicabilityChecklistChanged: comparisons.some((item) => item.vehicleApplicabilityChecklistChanged === true),
+      vehicle_applicability_checklist_changed: comparisons.some((item) => item.vehicleApplicabilityChecklistChanged === true),
+      vehicleApplicabilityEvidenceChanged: comparisons.some((item) => item.vehicleApplicabilityEvidenceChanged === true),
+      vehicle_applicability_evidence_changed: comparisons.some((item) => item.vehicleApplicabilityEvidenceChanged === true),
       nextReadoutChanged: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       next_readout_changed: comparisons.some((item) => item.nextReadoutChanged === true || item.nextReadoutDetailsChanged === true),
       readoutCompletionChanged: comparisons.some((item) => item.completeChanged === true || item.requiredIdsChanged === true || item.capturedIdsChanged === true || item.missingIdsChanged === true || item.pendingIdsChanged === true || item.emptyIdsChanged === true || Number(item.requiredCountDelta || 0) !== 0 || Number(item.capturedCountDelta || 0) !== 0 || Number(item.missingCountDelta || 0) !== 0 || Number(item.pendingCountDelta || 0) !== 0 || Number(item.emptyCountDelta || 0) !== 0),
