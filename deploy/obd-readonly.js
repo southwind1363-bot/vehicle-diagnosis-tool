@@ -8739,6 +8739,20 @@
       || diagnosticFlowSummary.readoutRequestPlanGateSummary
       || diagnosticFlowSummary.readout_request_plan_gate_summary
       || null;
+    const nextReadoutRequest = summary.nextReadoutRequest
+      || summary.next_readout_request
+      || coreSessionStatus.nextReadoutRequest
+      || coreSessionStatus.next_readout_request
+      || diagnosticFlowSummary.nextReadoutRequest
+      || diagnosticFlowSummary.next_readout_request
+      || null;
+    const readoutRequestPlanSummary = summary.readoutRequestPlanSummary
+      || summary.readout_request_plan_summary
+      || coreSessionStatus.readoutRequestPlanSummary
+      || coreSessionStatus.readout_request_plan_summary
+      || diagnosticFlowSummary.readoutRequestPlanSummary
+      || diagnosticFlowSummary.readout_request_plan_summary
+      || null;
     const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
       || summary.core_readout_inventory_summary
       || buildCoreReadoutInventorySummary({
@@ -8794,6 +8808,8 @@
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
         imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
         readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+        next_readout_request: nextReadoutRequest,
+        readout_request_plan_summary: readoutRequestPlanSummary,
         core_readout_inventory_summary: coreReadoutInventorySummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
         source_length: metadataFields.source_length
@@ -8891,6 +8907,22 @@
       || diagnosticFlowSummary.readoutRequestPlanGateSummary
       || diagnosticFlowSummary.readout_request_plan_gate_summary
       || null;
+    const nextReadoutRequest = summary.nextReadoutRequest
+      || summary.next_readout_request
+      || exportPayload.session?.next_readout_request
+      || coreSessionStatus.nextReadoutRequest
+      || coreSessionStatus.next_readout_request
+      || diagnosticFlowSummary.nextReadoutRequest
+      || diagnosticFlowSummary.next_readout_request
+      || null;
+    const readoutRequestPlanSummary = summary.readoutRequestPlanSummary
+      || summary.readout_request_plan_summary
+      || exportPayload.session?.readout_request_plan_summary
+      || coreSessionStatus.readoutRequestPlanSummary
+      || coreSessionStatus.readout_request_plan_summary
+      || diagnosticFlowSummary.readoutRequestPlanSummary
+      || diagnosticFlowSummary.readout_request_plan_summary
+      || null;
     const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
       || summary.core_readout_inventory_summary
       || exportPayload.session?.core_readout_inventory_summary
@@ -8948,6 +8980,10 @@
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       readoutRequestPlanGateSummary,
+      nextReadoutRequest,
+      next_readout_request: nextReadoutRequest,
+      readoutRequestPlanSummary,
+      readout_request_plan_summary: readoutRequestPlanSummary,
       coreReadoutInventorySummary,
       bridgeSession: {
         startedAt: summary.startedAt || null,
@@ -8987,6 +9023,10 @@
         importedVehicleApplicabilityChangedRowSummary,
         imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
         readoutRequestPlanGateSummary,
+        nextReadoutRequest,
+        next_readout_request: nextReadoutRequest,
+        readoutRequestPlanSummary,
+        readout_request_plan_summary: readoutRequestPlanSummary,
         coreReadoutInventorySummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
         sourceLength: bridgeSessionMetadataFields.sourceLength,
