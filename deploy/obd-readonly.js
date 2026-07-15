@@ -1924,6 +1924,8 @@
     const modelCode = source.modelCode || source.model_code || source.chassisCode || source.chassis_code || source.frameCode || source.frame_code || source.vehicleModelCode || source.vehicle_model_code || source.bodyCode || source.body_code || null;
     const year = source.year || source.modelYear || source.model_year || source.registrationYear || source.registration_year || source.vehicleYear || source.vehicle_year || null;
     const engineCode = source.engineCode || source.engine_code || source.engine || source.engineModel || source.engine_model || source.engineType || source.engine_type || source.powertrainCode || source.powertrain_code || null;
+    const grade = source.grade || source.trim || source.trimLevel || source.trim_level || source.vehicleGrade || source.vehicle_grade || null;
+    const market = source.market || source.region || source.country || source.destinationMarket || source.destination_market || source.salesRegion || source.sales_region || null;
     const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
@@ -1955,6 +1957,10 @@
       year,
       engineCode,
       engine_code: engineCode,
+      grade,
+      trim: grade,
+      market,
+      region: market,
       catalogMatched,
       catalog_matched: catalogMatched,
       yearMatched,
@@ -2011,7 +2017,11 @@
       model_code: normalized.modelCode,
       year: normalized.year,
       engineCode: normalized.engineCode,
-      engine_code: normalized.engineCode
+      engine_code: normalized.engineCode,
+      grade: normalized.grade,
+      trim: normalized.trim,
+      market: normalized.market,
+      region: normalized.region
     };
   }
 
@@ -3238,6 +3248,10 @@
       year: normalized.year,
       engineCode: normalized.engineCode,
       engine_code: normalized.engineCode,
+      grade: normalized.grade,
+      trim: normalized.trim,
+      market: normalized.market,
+      region: normalized.region,
       source: "vehicle_applicability",
       source_type: "vehicle_applicability"
     };
