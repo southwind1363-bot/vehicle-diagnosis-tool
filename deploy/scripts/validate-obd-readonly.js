@@ -528,6 +528,7 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;'), "buildBridgeSessionExportPayload should rebuild analysis readiness summary from core session status");
     check(functionBody.includes('const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary') && functionBody.includes('readout_quality_summary: readoutQualitySummary,'), "buildBridgeSessionExportPayload should serialize readout quality summary");
     check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeSessionExportPayload should serialize imported readout quality review request plan summaries");
+    check(functionBody.includes('const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary') && functionBody.includes('imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,'), "buildBridgeSessionExportPayload should serialize imported applicability changed row summaries");
     check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('coreSessionStatus.readout_request_plan_gate_summary'), "buildBridgeSessionExportPayload should rebuild readout request plan gate summary from core session status");
     check(functionBody.includes('core_session_status: coreSessionStatus,'), "buildBridgeSessionExportPayload should serialize core session status");
     check(functionBody.includes('schema_version: \"bridge_session_export_v1\"'), "buildBridgeSessionExportPayload should emit bridge session export schema version");
@@ -556,6 +557,8 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const readoutQualitySummary = summary.readoutQualitySummary') && functionBody.includes('readoutQualitySummary,'), "buildBridgeDiagnosticImport should preserve readout quality summary");
     check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('exportPayload.session?.imported_readout_quality_review_request_plan_summary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should preserve imported readout quality review request plan summaries");
     check(functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should expose imported readout quality review request plan snake_case aliases");
+    check(functionBody.includes('const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary') && functionBody.includes('exportPayload.session?.imported_vehicle_applicability_changed_row_summary') && functionBody.includes('importedVehicleApplicabilityChangedRowSummary,'), "buildBridgeDiagnosticImport should preserve imported applicability changed row summaries");
+    check(functionBody.includes('imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,'), "buildBridgeDiagnosticImport should expose imported applicability changed row snake_case aliases");
     check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('diagnosticFlowSummary.readout_request_plan_gate_summary'), "buildBridgeDiagnosticImport should preserve readout request plan gate summary");
     check(functionBody.includes('const coreReadoutInventorySummary = summary.coreReadoutInventorySummary') && functionBody.includes('coreReadoutInventorySummary,'), "buildBridgeDiagnosticImport should preserve core readout inventory summary");
   }
@@ -2218,7 +2221,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2243+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2251+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2301,7 +2304,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.666.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for top-level applicability changed row UI aliases");
+check(appSource.includes('const APP_VERSION = "2.667.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for bridge applicability changed row export/import");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4349,6 +4352,19 @@ const bridgeDiagnosticImportQualityReviewPlan = obd.buildBridgeDiagnosticImport(
   },
   dtcSnapshot: bridgeDtcSnapshot
 });
+const bridgeExportApplicabilityChangedRowSummary = obd.buildBridgeSessionExportPayload({
+  importedVehicleApplicabilityChangedRowSummary: {
+    schemaVersion: "vehicle_applicability_changed_row_summary_v1",
+    schema_version: "vehicle_applicability_changed_row_summary_v1",
+    changed: true,
+    primaryReviewTarget: "analysis_checklist_review",
+    primary_review_target: "analysis_checklist_review",
+    mixedCount: 1,
+    mixed_count: 1
+  },
+  dtcSnapshot: bridgeDtcSnapshot
+});
+const bridgeDiagnosticImportApplicabilityChangedRowSummary = obd.buildBridgeDiagnosticImport(bridgeExportApplicabilityChangedRowSummary);
 const bridgeDiagnosticImportVehicleInfoAlias = obd.buildBridgeDiagnosticImport({
   vehicle_info: { manufacturer: "Toyota", vehicle_model: "Import Aqua", vehicle_model_code: "NHP10" },
   dtcSnapshot: bridgeDtcSnapshot
@@ -4360,6 +4376,11 @@ check(bridgeDiagnosticImportQualityReviewPlan.imported_readout_quality_review_re
 check(bridgeDiagnosticImportQualityReviewPlan.bridgeSession?.importedReadoutQualityReviewRequestPlanSummary?.vehicleCommandEnabled === false, "Bridge diagnostic import did not retain imported readout quality review request plan summary on bridgeSession");
 check(bridgeDiagnosticImportQualityReviewPlan.bridgeSession?.imported_readout_quality_review_request_plan_summary?.vehicleCommandEnabled === false, "Bridge diagnostic import did not retain imported readout quality review request plan snake_case summary on bridgeSession");
 check(bridgeDiagnosticImportQualityReviewPlan.exportPayload.session.imported_readout_quality_review_request_plan_summary?.wouldTransmit === false, "Bridge diagnostic import did not retain imported readout quality review request plan summary on export payload");
+check(bridgeExportApplicabilityChangedRowSummary.session?.imported_vehicle_applicability_changed_row_summary?.schemaVersion === "vehicle_applicability_changed_row_summary_v1", "Bridge export did not retain imported applicability changed row summary");
+check(bridgeDiagnosticImportApplicabilityChangedRowSummary.importedVehicleApplicabilityChangedRowSummary?.primaryReviewTarget === "analysis_checklist_review", "Bridge diagnostic import did not expose imported applicability changed row summary");
+check(bridgeDiagnosticImportApplicabilityChangedRowSummary.imported_vehicle_applicability_changed_row_summary?.primary_review_target === "analysis_checklist_review", "Bridge diagnostic import did not expose imported applicability changed row snake_case summary");
+check(bridgeDiagnosticImportApplicabilityChangedRowSummary.bridgeSession?.importedVehicleApplicabilityChangedRowSummary?.mixedCount === 1, "Bridge diagnostic import did not retain imported applicability changed row summary on bridgeSession");
+check(bridgeDiagnosticImportApplicabilityChangedRowSummary.exportPayload.session?.imported_vehicle_applicability_changed_row_summary?.mixed_count === 1, "Bridge diagnostic import did not retain imported applicability changed row summary on export payload");
 check(bridgeDiagnosticImport.importType === "bridge_diagnostic_snapshot", "ブリッジ診断取込の種別が不正です");
 check(bridgeDiagnosticImport.codes.join(",") === "P0171,P0300", "ブリッジ診断取込へDTCを引き継げません");
 check(bridgeDiagnosticImport.ecuResponseSummary.ecus[0]?.dtcCount === 1, "Bridge diagnostic import did not carry ECU response summary");
@@ -10694,6 +10715,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2243");
+  console.log("OBD read-only safety checks: 2251");
   console.log("Errors: 0");
 }

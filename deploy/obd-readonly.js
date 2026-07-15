@@ -2667,6 +2667,9 @@
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
+      || parts.imported_vehicle_applicability_changed_row_summary
+      || null;
 
     return {
       source: parts.source || parts.source_type || "local_bridge",
@@ -2706,6 +2709,8 @@
       analysisReadinessSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedVehicleApplicabilityChangedRowSummary,
+      imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       readoutRequestPlanGateSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
@@ -2734,6 +2739,8 @@
       || parts.readout_coverage_response
       || parts.importClassification
       || parts.import_classification
+      || parts.importedVehicleApplicabilityChangedRowSummary
+      || parts.imported_vehicle_applicability_changed_row_summary
       || Array.isArray(parts.warningFlags)
       || Array.isArray(parts.warning_flags)
       || parts.capturedAt
@@ -3005,6 +3012,9 @@
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
+      || parts.imported_vehicle_applicability_changed_row_summary
+      || null;
     return {
       source: parts.source || parts.source_type || "local_bridge",
       source_type: parts.source_type || parts.source || "local_bridge",
@@ -3052,6 +3062,8 @@
       readoutRequestPlanGateSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedVehicleApplicabilityChangedRowSummary,
+      imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
@@ -8713,6 +8725,9 @@
     const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary
       || summary.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary
+      || summary.imported_vehicle_applicability_changed_row_summary
+      || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
       || summary.readout_request_plan_gate_summary
       || coreSessionStatus.readoutRequestPlanGateSummary
@@ -8775,6 +8790,7 @@
         analysis_readiness_summary: analysisReadinessSummary,
         readout_quality_summary: readoutQualitySummary,
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+        imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
         readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
         core_readout_inventory_summary: coreReadoutInventorySummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
@@ -8859,6 +8875,10 @@
       || summary.imported_readout_quality_review_request_plan_summary
       || exportPayload.session?.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary
+      || summary.imported_vehicle_applicability_changed_row_summary
+      || exportPayload.session?.imported_vehicle_applicability_changed_row_summary
+      || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
       || summary.readout_request_plan_gate_summary
       || exportPayload.session?.readout_request_plan_gate_summary
@@ -8923,6 +8943,8 @@
       readoutQualitySummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedVehicleApplicabilityChangedRowSummary,
+      imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       readoutRequestPlanGateSummary,
       coreReadoutInventorySummary,
       bridgeSession: {
@@ -8960,6 +8982,8 @@
         readoutQualitySummary,
         importedReadoutQualityReviewRequestPlanSummary,
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+        importedVehicleApplicabilityChangedRowSummary,
+        imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
         readoutRequestPlanGateSummary,
         coreReadoutInventorySummary,
         hadSensitiveIdentifier: bridgeSessionMetadataFields.hadSensitiveIdentifier,
