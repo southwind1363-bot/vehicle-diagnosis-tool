@@ -8380,6 +8380,10 @@
       readout_quality_summary: pickPresent(input.readout_quality_summary, input.readoutQualitySummary, payload?.readout_quality_summary, payload?.readoutQualitySummary, nested.readout_quality_summary, nested.readoutQualitySummary, null),
       readoutRequestPlanGateSummary: pickPresent(input.readoutRequestPlanGateSummary, input.readout_request_plan_gate_summary, payload?.readoutRequestPlanGateSummary, payload?.readout_request_plan_gate_summary, nested.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary, null),
       readout_request_plan_gate_summary: pickPresent(input.readout_request_plan_gate_summary, input.readoutRequestPlanGateSummary, payload?.readout_request_plan_gate_summary, payload?.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary, nested.readoutRequestPlanGateSummary, null),
+      nextReadoutRequest: pickPresent(input.nextReadoutRequest, input.next_readout_request, payload?.nextReadoutRequest, payload?.next_readout_request, nested.nextReadoutRequest, nested.next_readout_request, null),
+      next_readout_request: pickPresent(input.next_readout_request, input.nextReadoutRequest, payload?.next_readout_request, payload?.nextReadoutRequest, nested.next_readout_request, nested.nextReadoutRequest, null),
+      readoutRequestPlanSummary: pickPresent(input.readoutRequestPlanSummary, input.readout_request_plan_summary, payload?.readoutRequestPlanSummary, payload?.readout_request_plan_summary, nested.readoutRequestPlanSummary, nested.readout_request_plan_summary, null),
+      readout_request_plan_summary: pickPresent(input.readout_request_plan_summary, input.readoutRequestPlanSummary, payload?.readout_request_plan_summary, payload?.readoutRequestPlanSummary, nested.readout_request_plan_summary, nested.readoutRequestPlanSummary, null),
       coreReadoutInventorySummary: pickPresent(input.coreReadoutInventorySummary, input.core_readout_inventory_summary, payload?.coreReadoutInventorySummary, payload?.core_readout_inventory_summary, nested.coreReadoutInventorySummary, nested.core_readout_inventory_summary, null),
       core_readout_inventory_summary: pickPresent(input.core_readout_inventory_summary, input.coreReadoutInventorySummary, payload?.core_readout_inventory_summary, payload?.coreReadoutInventorySummary, nested.core_readout_inventory_summary, nested.coreReadoutInventorySummary, null),
       importedReadoutQualityReviewRequestPlanSummary: pickPresent(input.importedReadoutQualityReviewRequestPlanSummary, input.imported_readout_quality_review_request_plan_summary, payload?.importedReadoutQualityReviewRequestPlanSummary, payload?.imported_readout_quality_review_request_plan_summary, nested.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary, null),
@@ -9348,8 +9352,12 @@
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
-    const nextReadoutRequest = coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || null;
-    const readoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
+    const nextReadoutRequest = coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || input.nextReadoutRequest || input.next_readout_request || bridgeImport?.nextReadoutRequest || bridgeImport?.next_readout_request || bridgeSession?.nextReadoutRequest || bridgeSession?.next_readout_request || null;
+    const generatedReadoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
+    const savedReadoutRequestPlanSummary = input.readoutRequestPlanSummary || input.readout_request_plan_summary || bridgeImport?.readoutRequestPlanSummary || bridgeImport?.readout_request_plan_summary || bridgeSession?.readoutRequestPlanSummary || bridgeSession?.readout_request_plan_summary || null;
+    const readoutRequestPlanSummary = generatedReadoutRequestPlanSummary?.nextRequestId || generatedReadoutRequestPlanSummary?.next_request_id
+      ? generatedReadoutRequestPlanSummary
+      : savedReadoutRequestPlanSummary || generatedReadoutRequestPlanSummary;
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       dtcSnapshot,
@@ -11742,8 +11750,12 @@
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
-    const nextReadoutRequest = coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || null;
-    const readoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
+    const nextReadoutRequest = coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || sessionInput.nextReadoutRequest || sessionInput.next_readout_request || null;
+    const generatedReadoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
+    const savedReadoutRequestPlanSummary = sessionInput.readoutRequestPlanSummary || sessionInput.readout_request_plan_summary || null;
+    const readoutRequestPlanSummary = generatedReadoutRequestPlanSummary?.nextRequestId || generatedReadoutRequestPlanSummary?.next_request_id
+      ? generatedReadoutRequestPlanSummary
+      : savedReadoutRequestPlanSummary || generatedReadoutRequestPlanSummary;
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
