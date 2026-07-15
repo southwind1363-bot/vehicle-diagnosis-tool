@@ -1975,6 +1975,30 @@
     };
   }
 
+  function getVehicleApplicabilityInput(source = {}) {
+    if (!source || typeof source !== "object") return null;
+    return pickDefined(
+      source.vehicleApplicability,
+      source.vehicle_applicability,
+      source.vehicleApplicabilitySnapshot,
+      source.vehicle_applicability_snapshot,
+      source.applicabilitySnapshot,
+      source.applicability_snapshot,
+      source.applicabilityResult,
+      source.applicability_result,
+      source.vehicleMatch,
+      source.vehicle_match,
+      source.vehicleMatchResult,
+      source.vehicle_match_result,
+      source.vehicleApplicabilityResult,
+      source.vehicle_applicability_result,
+      source.applicabilityReport,
+      source.applicability_report,
+      source.applicability,
+      null
+    );
+  }
+
   function appendVehicleApplicabilityWarnings(warnings, applicability = {}) {
     if (!hasObjectContent(applicability)) return;
     const normalized = normalizeVehicleApplicabilitySnapshot(applicability || {});
@@ -7562,7 +7586,7 @@
   } = {}) {
     return buildCoreSessionStatus({
       readoutCoverage: summary.readoutCoverage || summary.readout_coverage,
-      vehicleApplicability: vehicleApplicability || summary.vehicleApplicability || summary.vehicle_applicability,
+      vehicleApplicability: vehicleApplicability || getVehicleApplicabilityInput(summary),
       dtcSnapshot: summary.dtcSnapshot || summary.dtc_snapshot || { codes: summary.codes || summary.dtc_codes || [] },
       freezeFrameSnapshot: summary.freezeFrameSnapshot || summary.freeze_frame_snapshot || null,
       readinessSnapshot: summary.readinessSnapshot || summary.readiness_snapshot || null,
@@ -7676,11 +7700,13 @@
     const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);
     const nestedImportClassification = resolveImportClassification(nested.importClassification || nested.import_classification || null);
     const importClassification = baseImportClassification || nestedImportClassification || null;
+    const baseVehicleApplicability = getVehicleApplicabilityInput(base);
+    const nestedVehicleApplicability = getVehicleApplicabilityInput(nested);
     return {
       vehicleProfile: base.vehicleProfile || base.vehicle_profile || nested.vehicleProfile || nested.vehicle_profile || null,
       vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
-      vehicleApplicability: base.vehicleApplicability || base.vehicle_applicability || nested.vehicleApplicability || nested.vehicle_applicability || null,
-      vehicle_applicability: base.vehicle_applicability || base.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
+      vehicleApplicability: baseVehicleApplicability || nestedVehicleApplicability || null,
+      vehicle_applicability: baseVehicleApplicability || nestedVehicleApplicability || null,
       readoutCoverage: pickPresent(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
       readout_coverage: pickPresent(base.readout_coverage, base.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
       nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates, nested.nextReadoutCandidates, nested.next_readout_candidates, null),
@@ -7855,6 +7881,13 @@
     const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);
     const nestedImportClassification = resolveImportClassification(nested.importClassification || nested.import_classification || null);
     const importClassification = baseImportClassification || nestedImportClassification || null;
+    const mergedVehicleApplicability = pickPresent(
+      getVehicleApplicabilityInput(input),
+      getVehicleApplicabilityInput(payload),
+      getVehicleApplicabilityInput(base),
+      getVehicleApplicabilityInput(nested),
+      null
+    );
     return {
       ...nested,
       ...base,
@@ -7868,7 +7901,8 @@
       protocol: base.protocol || base.obd_protocol || nested.protocol || nested.obd_protocol || null,
       obd_protocol: base.obd_protocol || base.protocol || nested.obd_protocol || nested.protocol || null,
       vehicle_profile: base.vehicle_profile || base.vehicleProfile || nested.vehicle_profile || nested.vehicleProfile || null,
-      vehicle_applicability: base.vehicle_applicability || base.vehicleApplicability || nested.vehicle_applicability || nested.vehicleApplicability || null,
+      vehicleApplicability: mergedVehicleApplicability,
+      vehicle_applicability: mergedVehicleApplicability,
       connectionStatus: pickPresent(input.connectionStatus, input.connection_status, input.connectionStatusResponse, input.connection_status_response, payload?.connectionStatus, payload?.connection_status, payload?.connectionStatusResponse, payload?.connection_status_response, nested.connectionStatus, nested.connection_status, nested.connectionStatusResponse, nested.connection_status_response, null),
       connection_status: pickPresent(input.connection_status, input.connectionStatus, input.connection_status_response, input.connectionStatusResponse, payload?.connection_status, payload?.connectionStatus, payload?.connection_status_response, payload?.connectionStatusResponse, nested.connection_status, nested.connectionStatus, nested.connection_status_response, nested.connectionStatusResponse, null),
       vciDevices: pickPresent(input.vciDevices, input.vci_devices, input.vciList, input.vci_list, input.listVciResponse, input.list_vci_response, payload?.vciDevices, payload?.vci_devices, payload?.vciList, payload?.vci_list, payload?.listVciResponse, payload?.list_vci_response, nested.vciDevices, nested.vci_devices, nested.vciList, nested.vci_list, nested.listVciResponse, nested.list_vci_response, null),
@@ -7978,7 +8012,7 @@
     const sourceLength = pickDefined(sessionInput.source_length, sessionInput.sourceLength, importClassification?.sourceLength, importClassification?.source_length, null);
     return {
       vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,
-      vehicleApplicability: sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || null,
+      vehicleApplicability: getVehicleApplicabilityInput(sessionInput),
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
       nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,
       importClassification,
@@ -7991,7 +8025,7 @@
 
   function buildSummaryMetadataFields(summary = {}, { snakeCase = false } = {}) {
     const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(
-      summary.vehicleApplicability || summary.vehicle_applicability || {}
+      getVehicleApplicabilityInput(summary) || {}
     );
     const importClassificationInput = summary.importClassification || summary.import_classification;
     const importClassification = resolveImportClassification(importClassificationInput);
@@ -8042,10 +8076,8 @@
       null
     );
     const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(pickDefined(
-      bridgeImport?.vehicleApplicability,
-      bridgeImport?.vehicle_applicability,
-      bridgeSession?.vehicleApplicability,
-      bridgeSession?.vehicle_applicability,
+      getVehicleApplicabilityInput(bridgeImport),
+      getVehicleApplicabilityInput(bridgeSession),
       null
     ) || {});
     const nextReadoutCandidatesInput = pickDefined(
