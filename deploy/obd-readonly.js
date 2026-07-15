@@ -7806,7 +7806,8 @@
     explicitImportClassification = null,
     detectedToolHints = []
   } = {}) {
-    const mergedToolHints = mergeUniqueStrings(session.toolHints, detectedToolHints);
+    const explicitToolHints = mergeUniqueStrings(explicitImportClassification?.toolHints, explicitImportClassification?.tool_hints);
+    const mergedToolHints = mergeUniqueStrings(session.toolHints, session.tool_hints, explicitToolHints, detectedToolHints);
     const schemaVersion = explicitImportClassification?.schemaVersion || explicitImportClassification?.schema_version || classified.schemaVersion || classified.schema_version;
     const bucketCountsInput = explicitImportClassification?.bucketCounts || explicitImportClassification?.bucket_counts;
     const isoTpSummaryInput = explicitImportClassification?.isoTpSummary || explicitImportClassification?.iso_tp_summary;
