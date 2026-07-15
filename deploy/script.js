@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2282+件",
+  validationCheckLabel: "OBD安全検証 2283+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "保存済み読取要求を診断フローUIで参照",
+  recentMilestone: "保存済み読取要求から次読取IDを補完",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.673.0";
+const APP_VERSION = "2.674.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5760,9 +5760,9 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const pendingCount = Number.isFinite(Number(pendingReadoutCountValue))
     ? Number(pendingReadoutCountValue)
     : corePendingReadoutIds.length;
-  const nextReadoutId = flow.recommendedReadoutId || flow.recommended_readout_id || flow.nextReadoutId || flow.next_readout_id || core.nextRecommendedReadoutId || core.next_recommended_readout_id || null;
-  const nextReadoutLabel = flow.nextReadoutLabel || flow.next_readout_label || formatCoreReadoutLabel(nextReadoutId, nextReadoutId || NO_DATA);
   const nextReadoutRequest = flow.nextReadoutRequest || flow.next_readout_request || core.nextReadoutRequest || core.next_readout_request || core.nextReadoutSummary?.readoutRequest || core.next_readout_summary?.readout_request || session.nextReadoutRequest || session.next_readout_request || null;
+  const nextReadoutId = flow.recommendedReadoutId || flow.recommended_readout_id || flow.nextReadoutId || flow.next_readout_id || core.nextRecommendedReadoutId || core.next_recommended_readout_id || nextReadoutRequest?.readoutId || nextReadoutRequest?.readout_id || null;
+  const nextReadoutLabel = flow.nextReadoutLabel || flow.next_readout_label || formatCoreReadoutLabel(nextReadoutId, nextReadoutId || NO_DATA);
   const readoutRequestPlan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan || flow.readoutRequestPlanSummary || flow.readout_request_plan_summary || core.pendingReadoutRequestPlan || core.pending_readout_request_plan || core.readoutRequestPlanSummary || core.readout_request_plan_summary || session.readoutRequestPlanSummary || session.readout_request_plan_summary || null;
   const pendingReadoutRequestCountValue = flow.pendingReadoutRequestCount ?? flow.pending_readout_request_count;
   const readoutRequestPlanTotalCountValue = readoutRequestPlan?.totalCount ?? readoutRequestPlan?.total_count;
