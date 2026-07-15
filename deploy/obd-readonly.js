@@ -7308,6 +7308,13 @@
       return byId;
     }, {});
     const primaryVehicleApplicabilityChangedRow = vehicleApplicabilityChangedRows.find((row) => row.primary) || vehicleApplicabilityChangedRows[0] || null;
+    const vehicleApplicabilityChangedReviewTargets = [...new Set(vehicleApplicabilityChangedRows.map((row) => row.reviewTarget).filter(Boolean))];
+    const vehicleApplicabilityChangedDirectionCounts = ["mixed", "added", "removed"].reduce((counts, direction) => {
+      const rows = vehicleApplicabilityChangedRows.filter((row) => row.direction === direction);
+      counts[direction] = rows.length;
+      counts[`${direction}Ids`] = rows.map((row) => row.id);
+      return counts;
+    }, { total: vehicleApplicabilityChangedRows.length });
     const vehicleApplicabilityChangedRowSummary = {
       schemaVersion: "vehicle_applicability_changed_row_summary_v1",
       schema_version: "vehicle_applicability_changed_row_summary_v1",
@@ -7321,12 +7328,28 @@
       primary_row: primaryVehicleApplicabilityChangedRow,
       primaryId: primaryVehicleApplicabilityChangedRow?.id || null,
       primary_id: primaryVehicleApplicabilityChangedRow?.id || null,
+      primaryReviewTarget: primaryVehicleApplicabilityChangedRow?.reviewTarget || vehicleApplicabilityChangedReviewTargets[0] || null,
+      primary_review_target: primaryVehicleApplicabilityChangedRow?.reviewTarget || vehicleApplicabilityChangedReviewTargets[0] || null,
+      directionCounts: vehicleApplicabilityChangedDirectionCounts,
+      direction_counts: vehicleApplicabilityChangedDirectionCounts,
+      mixedCount: vehicleApplicabilityChangedDirectionCounts.mixed || 0,
+      mixed_count: vehicleApplicabilityChangedDirectionCounts.mixed || 0,
+      addedCount: vehicleApplicabilityChangedDirectionCounts.added || 0,
+      added_count: vehicleApplicabilityChangedDirectionCounts.added || 0,
+      removedCount: vehicleApplicabilityChangedDirectionCounts.removed || 0,
+      removed_count: vehicleApplicabilityChangedDirectionCounts.removed || 0,
+      mixedIds: vehicleApplicabilityChangedDirectionCounts.mixedIds || [],
+      mixed_ids: vehicleApplicabilityChangedDirectionCounts.mixedIds || [],
+      addedIds: vehicleApplicabilityChangedDirectionCounts.addedIds || [],
+      added_ids: vehicleApplicabilityChangedDirectionCounts.addedIds || [],
+      removedIds: vehicleApplicabilityChangedDirectionCounts.removedIds || [],
+      removed_ids: vehicleApplicabilityChangedDirectionCounts.removedIds || [],
       evidenceRow: vehicleApplicabilityChangedRowById.vehicle_applicability_evidence || null,
       evidence_row: vehicleApplicabilityChangedRowById.vehicle_applicability_evidence || null,
       checklistRow: vehicleApplicabilityChangedRowById.vehicle_applicability_checklist || null,
       checklist_row: vehicleApplicabilityChangedRowById.vehicle_applicability_checklist || null,
-      reviewTargets: [...new Set(vehicleApplicabilityChangedRows.map((row) => row.reviewTarget).filter(Boolean))],
-      review_targets: [...new Set(vehicleApplicabilityChangedRows.map((row) => row.reviewTarget).filter(Boolean))]
+      reviewTargets: vehicleApplicabilityChangedReviewTargets,
+      review_targets: vehicleApplicabilityChangedReviewTargets
     };
     const primaryChangedIdDisplayRow = changedIdDisplayRows.find((row) => row.primary) || null;
     const buildChangedIdDisplayGroup = (value, rows = []) => ({
