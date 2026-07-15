@@ -10998,6 +10998,8 @@
       vehicleApplicability: metadataOverrides.vehicleApplicability,
       readoutCoverage: metadataOverrides.readoutCoverage,
       nextReadoutCandidates: metadataOverrides.nextReadoutCandidates,
+      nextReadoutRequest: metadataOverrides.nextReadoutRequest,
+      readoutRequestPlanSummary: metadataOverrides.readoutRequestPlanSummary,
       dtcSnapshot: sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || null,
       livePidSnapshot: sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot || null,
       freezeFrameSnapshot: sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || null,

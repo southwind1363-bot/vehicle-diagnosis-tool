@@ -2237,7 +2237,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2304+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2309+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2320,7 +2320,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.681.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for saved next readout metadata fallback");
+check(appSource.includes('const APP_VERSION = "2.682.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for saved next readout metadata fallback");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2393,6 +2393,7 @@ check(source.includes('next_readout_request: nextReadoutRequest,') && source.inc
 check(source.includes('const nextReadoutRequest = pickDefined(') && source.includes('bridgeImportMetadata.nextReadoutRequest') && source.includes('bridgeSessionMetadata.nextReadoutRequest'), "merged bridge metadata should carry saved next readout requests");
 check(source.includes('const readoutRequestPlanSummary = pickDefined(') && source.includes('bridgeImportMetadata.readoutRequestPlanSummary') && source.includes('bridgeSessionMetadata.readoutRequestPlanSummary'), "merged bridge metadata should carry saved readout request plan summaries");
 check(source.includes('mergedBridgeMetadata.nextReadoutRequest || null') && source.includes('mergedBridgeMetadata.readoutRequestPlanSummary || null'), "merged diagnostic inputs should fallback to saved bridge metadata request summaries");
+check(source.includes('nextReadoutRequest: metadataOverrides.nextReadoutRequest,') && source.includes('readoutRequestPlanSummary: metadataOverrides.readoutRequestPlanSummary,'), "OBD text import should pass saved readout request metadata to decoded sessions");
 check(appSource.includes('const pendingReadoutRequestCountValue = flow.pendingReadoutRequestCount ?? flow.pending_readout_request_count;') && appSource.includes('const readoutRequestQueueLabel = pendingReadoutRequestCount'), "OBD diagnostic flow panel should show pending readout request queue count");
 check(appSource.includes('const readoutRequestPlan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan || flow.readoutRequestPlanSummary || flow.readout_request_plan_summary') && appSource.includes('core.readoutRequestPlanSummary || core.readout_request_plan_summary') && appSource.includes('readoutRequestPlan?.total_count'), "OBD diagnostic flow panel should use readout request plan counts when available");
 check(appSource.includes('const mappedReadoutRequestCountValue = readoutRequestPlan?.mappedCount ?? readoutRequestPlan?.mapped_count;') && appSource.includes('` / mapped ${mappedReadoutRequestCount}`'), "OBD diagnostic flow panel should show mapped readout request count when available");
@@ -7606,16 +7607,38 @@ check(decodedScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.c
 check(decodedScanSessionPopulatedUnlistedExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "custom_decoded_snapshot", "Decoded OBD session did not preserve explicit next_readout_candidates for populated unlisted applicability");
 const decodedScanSessionExplicitMetaOverrides = obd.buildDecodedObdScanSession({
   session_id: "decoded-explicit-meta-overrides",
-  stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
   tool_hints: ["Techstream", "J2534"],
   warning_flags: ["negative_obd_response_present"],
   source_length: 128,
-  had_sensitive_identifier: true
+  had_sensitive_identifier: true,
+  next_readout_request: {
+    readout_id: "decoded_saved_snapshot",
+    bridge_intent: "review_decoded_saved",
+    read_only: true,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  },
+  readout_request_plan_summary: {
+    next_request_id: "decoded_saved_snapshot",
+    next_bridge_intent: "review_decoded_saved",
+    read_only: true,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  }
 });
 check(decodedScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J2534", "Decoded OBD session did not preserve explicit tool_hints input");
 check(decodedScanSessionExplicitMetaOverrides.warnings.includes("negative_obd_response_present"), "Decoded OBD session did not preserve explicit warning_flags input");
 check(decodedScanSessionExplicitMetaOverrides.sourceLength === 128, "Decoded OBD session did not preserve explicit source_length input");
 check(decodedScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "Decoded OBD session did not preserve explicit had_sensitive_identifier input");
+check(decodedScanSessionExplicitMetaOverrides.nextReadoutRequest?.readout_id === "decoded_saved_snapshot" && decodedScanSessionExplicitMetaOverrides.next_readout_request?.bridge_intent === "review_decoded_saved", "Decoded OBD session did not preserve saved next readout request metadata");
+check(decodedScanSessionExplicitMetaOverrides.readoutRequestPlanSummary?.next_request_id === "decoded_saved_snapshot" && decodedScanSessionExplicitMetaOverrides.readout_request_plan_summary?.vehicle_command_enabled === false, "Decoded OBD session did not preserve saved readout request plan metadata");
 const decodedScanSessionExplicitMixedMetaOverrides = obd.buildDecodedObdScanSession({
   sessionId: "decoded-explicit-mixed-meta-overrides",
   stored_dtc_response: { raw: "43 01 71 03 00 00 00" },
@@ -8172,10 +8195,31 @@ check(textScanSessionUnknownApplicability.coreSessionStatus?.applicabilityStatus
 check(textScanSessionUnknownApplicability.coreSessionStatus?.nextRecommendedReadoutId === "dtc_snapshot", "OBD text scan session did not prioritize dtc_snapshot when vehicle applicability is absent");
 const textScanSessionExplicitMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   session_id: "obd-text-explicit-meta-overrides",
+  dtc_snapshot: bridgeDtcSnapshot,
+  live_pid_snapshot: bridgePidSnapshot,
+  freeze_frame_snapshot: bridgeFreezeFrameSnapshot,
+  readiness_snapshot: bridgeReadinessSnapshot,
+  ecu_info_snapshot: bridgeEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeOnboardMonitorSnapshot,
+  supported_pid_matrix: bridgeSupportedPidSnapshot,
   tool_hints: ["Techstream", "J2534"],
   warning_flags: ["isotp_reassembly_issue"],
   source_length: 128,
-  had_sensitive_identifier: true
+  had_sensitive_identifier: true,
+  next_readout_request: {
+    readout_id: "text_saved_snapshot",
+    bridge_intent: "review_text_saved",
+    read_only: true,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  },
+  readout_request_plan_summary: {
+    next_request_id: "text_saved_snapshot",
+    next_bridge_intent: "review_text_saved",
+    read_only: true,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  }
 });
 check(textScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J2534", "OBD text scan session did not preserve explicit tool_hints option input");
 check(textScanSessionExplicitMetaOverrides.warnings.includes("isotp_reassembly_issue"), "OBD text scan session did not preserve explicit warning_flags option input");
@@ -8183,6 +8227,8 @@ check(textScanSessionExplicitMetaOverrides.sourceLength === 128, "OBD text scan 
 check(textScanSessionExplicitMetaOverrides.hadSensitiveIdentifier === true, "OBD text scan session did not preserve explicit had_sensitive_identifier option input");
 check(textScanSessionExplicitMetaOverrides.tool_hints?.join(",") === "Techstream,J2534" && textScanSessionExplicitMetaOverrides.warning_ids?.includes("isotp_reassembly_issue"), "OBD text scan session did not expose explicit metadata through snake_case aliases");
 check(textScanSessionExplicitMetaOverrides.source_length === 128 && textScanSessionExplicitMetaOverrides.had_sensitive_identifier === true, "OBD text scan session did not expose explicit source length or sensitive identifier aliases");
+check(textScanSessionExplicitMetaOverrides.nextReadoutRequest?.readout_id === "text_saved_snapshot" && textScanSessionExplicitMetaOverrides.next_readout_request?.bridge_intent === "review_text_saved", "OBD text scan session did not preserve saved next readout request metadata");
+check(textScanSessionExplicitMetaOverrides.readoutRequestPlanSummary?.next_request_id === "text_saved_snapshot" && textScanSessionExplicitMetaOverrides.readout_request_plan_summary?.vehicle_command_enabled === false, "OBD text scan session did not preserve saved readout request plan metadata");
 const textScanSessionExplicitMixedMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-mixed-meta-overrides",
   toolHints: ["Techstream"],
@@ -10833,6 +10879,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2304");
+  console.log("OBD read-only safety checks: 2309");
   console.log("Errors: 0");
 }
