@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2229+件",
+  validationCheckLabel: "OBD安全検証 2233+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "適合changed行サマリーに確認先と方向別件数を追加",
+  recentMilestone: "適合changed行サマリー表示に確認先と方向別件数を反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.663.0";
+const APP_VERSION = "2.664.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5491,17 +5491,31 @@ function formatVehicleApplicabilityChangedRowSummary(summary, fallback = NO_DATA
     ? rowSummary.reviewTargets
     : Array.isArray(rowSummary.review_targets) ? rowSummary.review_targets : [];
   const primaryRow = rowSummary.primaryRow || rowSummary.primary_row || evidenceRow || checklistRow || null;
+  const directionCounts = rowSummary.directionCounts || rowSummary.direction_counts || {};
+  const mixedCount = Number.isFinite(Number(rowSummary.mixedCount ?? rowSummary.mixed_count))
+    ? Number(rowSummary.mixedCount ?? rowSummary.mixed_count)
+    : Number.isFinite(Number(directionCounts.mixed)) ? Number(directionCounts.mixed) : 0;
+  const addedCount = Number.isFinite(Number(rowSummary.addedCount ?? rowSummary.added_count))
+    ? Number(rowSummary.addedCount ?? rowSummary.added_count)
+    : Number.isFinite(Number(directionCounts.added)) ? Number(directionCounts.added) : 0;
+  const removedCount = Number.isFinite(Number(rowSummary.removedCount ?? rowSummary.removed_count))
+    ? Number(rowSummary.removedCount ?? rowSummary.removed_count)
+    : Number.isFinite(Number(directionCounts.removed)) ? Number(directionCounts.removed) : 0;
   const directionLabel = {
     added: "追加",
     removed: "解除",
     mixed: "変更"
-  }[primaryRow?.direction] || primaryRow?.direction || "";
+  }[primaryRow?.direction] || primaryRow?.direction || (mixedCount > 0 ? "変更" : addedCount > 0 ? "追加" : removedCount > 0 ? "解除" : "");
+  const primaryReviewTarget = rowSummary.primaryReviewTarget || rowSummary.primary_review_target || reviewTargets[0] || primaryRow?.reviewTarget || primaryRow?.review_target || "";
   const parts = [];
   if (count > 0) parts.push(`${count}件`);
+  if (mixedCount > 0) parts.push(`変更${mixedCount}`);
+  if (addedCount > 0) parts.push(`追加${addedCount}`);
+  if (removedCount > 0) parts.push(`解除${removedCount}`);
   if (evidenceRow) parts.push("根拠");
   if (checklistRow) parts.push("適合確認");
   if (directionLabel) parts.push(directionLabel);
-  const reviewTargetLabel = formatChangedIdReviewTargetLabel(reviewTargets[0] || primaryRow?.reviewTarget || primaryRow?.review_target || "");
+  const reviewTargetLabel = formatChangedIdReviewTargetLabel(primaryReviewTarget);
   if (reviewTargetLabel) parts.push(reviewTargetLabel);
   return parts.length ? parts.join(" / ") : fallback;
 }
