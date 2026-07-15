@@ -7774,10 +7774,18 @@
       || input.local_bridge_session
       || input.scanResult
       || input.scan_result
+      || input.scanPayload
+      || input.scan_payload
+      || input.scanData
+      || input.scan_data
       || input.diagnosticResult
       || input.diagnostic_result
+      || input.diagnosticData
+      || input.diagnostic_data
       || input.readoutResult
       || input.readout_result
+      || input.readoutSnapshot
+      || input.readout_snapshot
       || input.obdResult
       || input.obd_result
       || input.obdPayload
@@ -8517,10 +8525,18 @@
       || input.local_bridge_session
       || input.scanResult
       || input.scan_result
+      || input.scanPayload
+      || input.scan_payload
+      || input.scanData
+      || input.scan_data
       || input.diagnosticResult
       || input.diagnostic_result
+      || input.diagnosticData
+      || input.diagnostic_data
       || input.readoutResult
       || input.readout_result
+      || input.readoutSnapshot
+      || input.readout_snapshot
       || input.obdResult
       || input.obd_result
       || input.obdPayload
