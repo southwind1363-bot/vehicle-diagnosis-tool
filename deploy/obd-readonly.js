@@ -1926,6 +1926,10 @@
     const engineCode = source.engineCode || source.engine_code || source.engine || source.engineModel || source.engine_model || source.engineType || source.engine_type || source.powertrainCode || source.powertrain_code || null;
     const grade = source.grade || source.trim || source.trimLevel || source.trim_level || source.vehicleGrade || source.vehicle_grade || null;
     const market = source.market || source.region || source.country || source.destinationMarket || source.destination_market || source.salesRegion || source.sales_region || null;
+    const transmission = source.transmission || source.transmissionType || source.transmission_type || source.gearbox || source.transaxle || null;
+    const drivetrain = source.drivetrain || source.driveType || source.drive_type || source.drivetrainType || source.drivetrain_type || source.drivenWheels || source.driven_wheels || null;
+    const fuelType = source.fuelType || source.fuel_type || source.fuel || source.powertrainType || source.powertrain_type || null;
+    const electrification = source.electrification || source.hybridSystem || source.hybrid_system || source.evSystem || source.ev_system || null;
     const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
@@ -1961,6 +1965,14 @@
       trim: grade,
       market,
       region: market,
+      transmission,
+      transmission_type: transmission,
+      drivetrain,
+      drive_type: drivetrain,
+      fuelType,
+      fuel_type: fuelType,
+      electrification,
+      hybrid_system: electrification,
       catalogMatched,
       catalog_matched: catalogMatched,
       yearMatched,
@@ -2021,7 +2033,15 @@
       grade: normalized.grade,
       trim: normalized.trim,
       market: normalized.market,
-      region: normalized.region
+      region: normalized.region,
+      transmission: normalized.transmission,
+      transmission_type: normalized.transmission_type,
+      drivetrain: normalized.drivetrain,
+      drive_type: normalized.drive_type,
+      fuelType: normalized.fuelType,
+      fuel_type: normalized.fuel_type,
+      electrification: normalized.electrification,
+      hybrid_system: normalized.hybrid_system
     };
   }
 
@@ -3252,6 +3272,14 @@
       trim: normalized.trim,
       market: normalized.market,
       region: normalized.region,
+      transmission: normalized.transmission,
+      transmission_type: normalized.transmission_type,
+      drivetrain: normalized.drivetrain,
+      drive_type: normalized.drive_type,
+      fuelType: normalized.fuelType,
+      fuel_type: normalized.fuel_type,
+      electrification: normalized.electrification,
+      hybrid_system: normalized.hybrid_system,
       source: "vehicle_applicability",
       source_type: "vehicle_applicability"
     };
