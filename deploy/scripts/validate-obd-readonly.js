@@ -240,6 +240,8 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('source.trimLevel') && functionBody.includes('source.vehicle_grade') && functionBody.includes('source.destination_market'), "normalizeVehicleApplicabilitySnapshot should normalize grade and market aliases");
     check(functionBody.includes('source.transmissionType') && functionBody.includes('source.driven_wheels') && functionBody.includes('source.powertrain_type') && functionBody.includes('source.hybrid_system'), "normalizeVehicleApplicabilitySnapshot should normalize transmission, drivetrain, fuel, and electrification aliases");
     check(functionBody.includes('source.targetSystem') && functionBody.includes('source.ecuName') && functionBody.includes('source.can_id'), "normalizeVehicleApplicabilitySnapshot should normalize target system and ECU aliases");
+    check(functionBody.includes('source.dataSource') && functionBody.includes('source.reference_source') && functionBody.includes('source.catalog_url'), "normalizeVehicleApplicabilitySnapshot should normalize applicability source aliases");
+    check(functionBody.includes('source.referenceId') && functionBody.includes('source.confidence_score') && functionBody.includes('source.source_verified'), "normalizeVehicleApplicabilitySnapshot should normalize applicability evidence aliases");
     check(functionBody.includes('source.catalogMatch === true') && functionBody.includes('source.model_code_match === true'), "normalizeVehicleApplicabilitySnapshot should normalize match flag aliases");
     check(functionBody.includes('const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);'), "normalizeVehicleApplicabilitySnapshot should derive candidate range counts from explicit values or array length");
     check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
@@ -249,6 +251,8 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('trim: grade,') && functionBody.includes('region: market,'), "normalizeVehicleApplicabilitySnapshot should expose trim and region aliases");
     check(functionBody.includes('transmission_type: transmission,') && functionBody.includes('drive_type: drivetrain,') && functionBody.includes('fuel_type: fuelType,') && functionBody.includes('hybrid_system: electrification,'), "normalizeVehicleApplicabilitySnapshot should expose drivetrain and powertrain aliases");
     check(functionBody.includes('target_system: targetSystem,') && functionBody.includes('target_ecu: targetEcu,') && functionBody.includes('ecu_address: ecuAddress,'), "normalizeVehicleApplicabilitySnapshot should expose ECU applicability aliases");
+    check(functionBody.includes('source_name: sourceName,') && functionBody.includes('source_url: sourceUrl,') && functionBody.includes('evidence_id: evidenceId,'), "normalizeVehicleApplicabilitySnapshot should expose applicability source aliases");
+    check(functionBody.includes('confidence,') && functionBody.includes('source_verified: sourceVerified,') && functionBody.includes('verified: sourceVerified,'), "normalizeVehicleApplicabilitySnapshot should expose applicability confidence aliases");
     check(functionBody.includes('catalog_matched: catalogMatched,') && functionBody.includes('model_code_matched: modelCodeMatched,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case match flag aliases");
     check(functionBody.includes('candidate_range_count: candidateRangeCount,') && functionBody.includes('supported_engine_code_count: supportedEngineCodeCount,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case applicability count aliases");
     check(functionBody.includes('supported_ecus: supportedEcus,') && functionBody.includes('supported_ecu_count: supportedEcuCount,'), "normalizeVehicleApplicabilitySnapshot should expose supported ECU list aliases");
@@ -2186,7 +2190,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2155+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2161+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2258,7 +2262,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.648.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for ECU applicability metadata retention");
+check(appSource.includes('const APP_VERSION = "2.649.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for applicability evidence metadata retention");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8375,7 +8379,7 @@ check(scanSessionDirectMixedVehicleMetadata.vehicleApplicability?.status === "ma
 });
 const scanSessionVehicleMatchProfileAlias = obd.buildDiagnosticScanSession({
   session_id: "shop-test-vehicle-match-profile",
-  vehicle_match: { status: "matched", maker: "Toyota", model: "Aqua", year: "2023", engine_code: "M15A-FXE", trim_level: "G", destination_market: "JP", transmission_type: "CVT", driven_wheels: "FF", fuel_type: "hybrid_gasoline", hybrid_system: "THS", target_system: "Engine", ecu_name: "ECM", can_id: "7E8", supported_ecus: ["ECM", "HV ECU"] },
+  vehicle_match: { status: "matched", maker: "Toyota", model: "Aqua", year: "2023", engine_code: "M15A-FXE", trim_level: "G", destination_market: "JP", transmission_type: "CVT", driven_wheels: "FF", fuel_type: "hybrid_gasoline", hybrid_system: "THS", target_system: "Engine", ecu_name: "ECM", can_id: "7E8", supported_ecus: ["ECM", "HV ECU"], data_source: "catalog-test", reference_url: "https://example.invalid/catalog", reference_id: "AQUA-ECM-001", confidence_score: 0.82, source_verified: true },
   dtcSnapshot: bridgeDtcSnapshot
 });
 check(scanSessionVehicleMatchProfileAlias.vehicleProfile?.model === "Aqua" && scanSessionVehicleMatchProfileAlias.vehicleProfile?.engineCode === "M15A-FXE", "Diagnostic scan session did not derive vehicleProfile from vehicle_match applicability alias input");
@@ -8385,6 +8389,8 @@ check(scanSessionVehicleMatchProfileAlias.vehicleProfile?.transmission === "CVT"
 check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.fuel_type === "hybrid_gasoline" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.hybrid_system === "THS", "Diagnostic scan session did not expose fuel and electrification aliases on vehicle applicability");
 check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.targetSystem === "Engine" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.targetEcu === "ECM", "Diagnostic scan session did not expose target system and ECU aliases on vehicle applicability");
 check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.ecu_address === "7E8" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.supportedEcuCount === 2, "Diagnostic scan session did not preserve ECU address or supported ECU count");
+check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.sourceName === "catalog-test" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.source_url === "https://example.invalid/catalog", "Diagnostic scan session did not preserve applicability source metadata");
+check(scanSessionVehicleMatchProfileAlias.vehicleApplicability?.evidenceId === "AQUA-ECM-001" && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.confidence === 0.82 && scanSessionVehicleMatchProfileAlias.vehicleApplicability?.source_verified === true, "Diagnostic scan session did not preserve applicability evidence metadata");
 const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-partial",
   vehicle_profile: { maker: "Toyota", model: "Prius" },
@@ -10597,6 +10603,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2155");
+  console.log("OBD read-only safety checks: 2161");
   console.log("Errors: 0");
 }

@@ -1934,6 +1934,12 @@
     const targetSystem = source.targetSystem || source.target_system || source.system || source.systemName || source.system_name || source.diagnosticSystem || source.diagnostic_system || null;
     const targetEcu = source.targetEcu || source.target_ecu || source.ecu || source.ecuName || source.ecu_name || source.module || source.moduleName || source.module_name || null;
     const ecuAddress = source.ecuAddress || source.ecu_address || source.address || source.canId || source.can_id || source.responseId || source.response_id || null;
+    const sourceName = source.sourceName || source.source_name || source.source || source.dataSource || source.data_source || source.catalogSource || source.catalog_source || source.referenceSource || source.reference_source || null;
+    const sourceUrl = source.sourceUrl || source.source_url || source.referenceUrl || source.reference_url || source.catalogUrl || source.catalog_url || null;
+    const sourceDate = source.sourceDate || source.source_date || source.referenceDate || source.reference_date || source.catalogDate || source.catalog_date || null;
+    const evidenceId = source.evidenceId || source.evidence_id || source.referenceId || source.reference_id || source.catalogId || source.catalog_id || null;
+    const confidence = source.confidence ?? source.confidenceScore ?? source.confidence_score ?? source.matchConfidence ?? source.match_confidence ?? null;
+    const sourceVerified = source.sourceVerified === true || source.source_verified === true || source.catalogVerified === true || source.catalog_verified === true || source.verified === true;
     const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
@@ -1984,6 +1990,18 @@
       target_ecu: targetEcu,
       ecuAddress,
       ecu_address: ecuAddress,
+      sourceName,
+      source_name: sourceName,
+      sourceUrl,
+      source_url: sourceUrl,
+      sourceDate,
+      source_date: sourceDate,
+      evidenceId,
+      evidence_id: evidenceId,
+      confidence,
+      sourceVerified,
+      source_verified: sourceVerified,
+      verified: sourceVerified,
       catalogMatched,
       catalog_matched: catalogMatched,
       yearMatched,
