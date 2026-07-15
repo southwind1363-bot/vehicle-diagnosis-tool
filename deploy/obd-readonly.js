@@ -7758,6 +7758,10 @@
       || input.bridge_result
       || input.bridgeSnapshot
       || input.bridge_snapshot
+      || input.bridgeResponse
+      || input.bridge_response
+      || input.localBridgeResponse
+      || input.local_bridge_response
       || (effectiveBridgePartsInput ? buildBridgeDiagnosticImport(effectiveBridgePartsInput) : null)
       || null;
     const defaultSource = payload ? "local_bridge" : "diagnostic_core";
@@ -8457,6 +8461,10 @@
       || input.bridge_result
       || input.bridgeSnapshot
       || input.bridge_snapshot
+      || input.bridgeResponse
+      || input.bridge_response
+      || input.localBridgeResponse
+      || input.local_bridge_response
       || input.bridgeSession
       || input.bridge_session
       || input.scanSession
