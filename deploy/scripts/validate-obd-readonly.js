@@ -559,13 +559,14 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('readoutCoverage: pickPresent(input.readoutCoverage, input.readout_coverage') && functionBody.includes('nextReadoutCandidates: pickPresent(base.nextReadoutCandidates, base.next_readout_candidates'), "getDiagnosticSessionInput should preserve nested coverage and next candidates when outer aliases are null");
     check(functionBody.includes('dtcSnapshot: pickPresent(input.dtcSnapshot, input.dtc_snapshot') && functionBody.includes('supportedPidMatrix: pickPresent(input.supportedPidMatrix, input.supported_pid_matrix'), "getDiagnosticSessionInput should preserve nested core snapshots when outer aliases are null");
     check(functionBody.includes('warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),') && functionBody.includes('warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),'), "getDiagnosticSessionInput should normalize warning id aliases");
-    check(functionBody.includes('coreSessionStatus: pickDefined(input.coreSessionStatus, input.core_session_status') && functionBody.includes('nested.coreSessionStatus, nested.core_session_status'), "getDiagnosticSessionInput should preserve imported core session status aliases");
-    check(functionBody.includes('diagnosticFlowSummary: pickDefined(input.diagnosticFlowSummary, input.diagnostic_flow_summary') && functionBody.includes('nested.diagnosticFlowSummary, nested.diagnostic_flow_summary'), "getDiagnosticSessionInput should preserve imported diagnostic flow aliases");
-    check(functionBody.includes('readoutCompletionSummary: pickDefined(input.readoutCompletionSummary, input.readout_completion_summary') && functionBody.includes('nested.readoutCompletionSummary, nested.readout_completion_summary'), "getDiagnosticSessionInput should preserve imported readout completion aliases");
-    check(functionBody.includes('analysisReadinessSummary: pickDefined(input.analysisReadinessSummary, input.analysis_readiness_summary') && functionBody.includes('nested.analysisReadinessSummary, nested.analysis_readiness_summary'), "getDiagnosticSessionInput should preserve imported analysis readiness aliases");
-    check(functionBody.includes('readoutQualitySummary: pickDefined(input.readoutQualitySummary, input.readout_quality_summary') && functionBody.includes('nested.readoutQualitySummary, nested.readout_quality_summary'), "getDiagnosticSessionInput should preserve imported readout quality aliases");
-    check(functionBody.includes('readoutRequestPlanGateSummary: pickDefined(input.readoutRequestPlanGateSummary, input.readout_request_plan_gate_summary') && functionBody.includes('nested.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary'), "getDiagnosticSessionInput should preserve imported readout request plan gate aliases");
-    check(functionBody.includes('importedReadoutQualityReviewRequestPlanSummary: pickDefined(input.importedReadoutQualityReviewRequestPlanSummary, input.imported_readout_quality_review_request_plan_summary') && functionBody.includes('nested.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary'), "getDiagnosticSessionInput should preserve imported readout quality review request plan aliases");
+    check(functionBody.includes('coreSessionStatus: pickPresent(input.coreSessionStatus, input.core_session_status') && functionBody.includes('nested.coreSessionStatus, nested.core_session_status'), "getDiagnosticSessionInput should preserve imported core session status aliases when outer aliases are null");
+    check(functionBody.includes('diagnosticFlowSummary: pickPresent(input.diagnosticFlowSummary, input.diagnostic_flow_summary') && functionBody.includes('nested.diagnosticFlowSummary, nested.diagnostic_flow_summary'), "getDiagnosticSessionInput should preserve imported diagnostic flow aliases when outer aliases are null");
+    check(functionBody.includes('readoutCompletionSummary: pickPresent(input.readoutCompletionSummary, input.readout_completion_summary') && functionBody.includes('nested.readoutCompletionSummary, nested.readout_completion_summary'), "getDiagnosticSessionInput should preserve imported readout completion aliases when outer aliases are null");
+    check(functionBody.includes('analysisReadinessSummary: pickPresent(input.analysisReadinessSummary, input.analysis_readiness_summary') && functionBody.includes('nested.analysisReadinessSummary, nested.analysis_readiness_summary'), "getDiagnosticSessionInput should preserve imported analysis readiness aliases when outer aliases are null");
+    check(functionBody.includes('readoutQualitySummary: pickPresent(input.readoutQualitySummary, input.readout_quality_summary') && functionBody.includes('nested.readoutQualitySummary, nested.readout_quality_summary'), "getDiagnosticSessionInput should preserve imported readout quality aliases when outer aliases are null");
+    check(functionBody.includes('readoutRequestPlanGateSummary: pickPresent(input.readoutRequestPlanGateSummary, input.readout_request_plan_gate_summary') && functionBody.includes('nested.readoutRequestPlanGateSummary, nested.readout_request_plan_gate_summary'), "getDiagnosticSessionInput should preserve imported readout request plan gate aliases when outer aliases are null");
+    check(functionBody.includes('coreReadoutInventorySummary: pickPresent(input.coreReadoutInventorySummary, input.core_readout_inventory_summary') && functionBody.includes('nested.coreReadoutInventorySummary, nested.core_readout_inventory_summary'), "getDiagnosticSessionInput should preserve imported core readout inventory aliases when outer aliases are null");
+    check(functionBody.includes('importedReadoutQualityReviewRequestPlanSummary: pickPresent(input.importedReadoutQualityReviewRequestPlanSummary, input.imported_readout_quality_review_request_plan_summary') && functionBody.includes('nested.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary'), "getDiagnosticSessionInput should preserve imported readout quality review request plan aliases when outer aliases are null");
     check(source.includes('const bridgeSession = sessionInput.bridgeSession || sessionInput.bridge_session || null;') && source.includes('bridge_export_payload: bridgeExportPayload,'), "buildDiagnosticScanSession should preserve bridge session and export payload aliases");
   }
 };
@@ -2127,7 +2128,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2014+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2024+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2199,7 +2200,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.613.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for nested null core snapshot preservation");
+check(appSource.includes('const APP_VERSION = "2.614.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for nested null imported summary preservation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -9721,6 +9722,35 @@ check(scanSessionNestedNullOuterCoreSnapshots.freezeFrameSnapshot?.triggerDtc ==
 check(scanSessionNestedNullOuterCoreSnapshots.readinessSnapshot?.incompleteCount === bridgeReadinessSnapshot.incompleteCount, "Diagnostic scan session did not preserve nested readiness_snapshot when outer input was null");
 check(scanSessionNestedNullOuterCoreSnapshots.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not preserve nested ecu_info_snapshot when outer input was null");
 check(scanSessionNestedNullOuterCoreSnapshots.supportedPidMatrix?.supportedPids?.includes("40"), "Diagnostic scan session did not preserve nested supported_pid_matrix when outer input was null");
+const scanSessionNestedNullOuterImportedSummaries = obd.buildDiagnosticScanSession({
+  core_session_status: null,
+  diagnostic_flow_summary: null,
+  readout_completion_summary: null,
+  analysis_readiness_summary: null,
+  readout_quality_summary: null,
+  readout_request_plan_gate_summary: null,
+  core_readout_inventory_summary: null,
+  imported_readout_quality_review_request_plan_summary: null,
+  scan_session: {
+    core_session_status: { schema_version: "core_session_status_v1", ready_for_analysis: true, completion_percent: 77 },
+    diagnostic_flow_summary: { schema_version: "diagnostic_flow_summary_v1", can_start_analysis: true, current_step: "nested_imported" },
+    readout_completion_summary: { schema_version: "readout_completion_summary_v1", captured_count: 3, completion_percent: 77 },
+    analysis_readiness_summary: { schema_version: "analysis_readiness_summary_v1", ready: true, blocker_count: 0 },
+    readout_quality_summary: { schema_version: "readout_quality_summary_v1", issue_count: 2, issue_ids: ["raw_pid_values_need_conversion"] },
+    readout_request_plan_gate_summary: { schema_version: "readout_request_plan_gate_v1", state: "ready" },
+    core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", total_value_count: 5, captured_readout_count: 2 },
+    imported_readout_quality_review_request_plan_summary: { schema_version: "readout_quality_review_request_plan_v1", request_count: 1, vehicle_command_enabled: false }
+  }
+});
+check(scanSessionNestedNullOuterImportedSummaries.importedCoreSessionStatus?.completionPercent === 77, "Diagnostic scan session did not preserve nested imported core session status when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedDiagnosticFlowSummary?.currentStep === "nested_imported", "Diagnostic scan session did not preserve nested imported diagnostic flow summary when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedReadoutCompletionSummary?.completionPercent === 77, "Diagnostic scan session did not preserve nested imported readout completion summary when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedAnalysisReadinessSummary?.ready === true, "Diagnostic scan session did not preserve nested imported analysis readiness summary when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedReadoutQualitySummary?.issueCount === 2, "Diagnostic scan session did not preserve nested imported readout quality summary when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedReadoutRequestPlanGateSummary?.state === "ready", "Diagnostic scan session did not preserve nested imported readout request plan gate summary when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedCoreReadoutInventorySummary?.totalValueCount === 5, "Diagnostic scan session did not preserve nested imported core readout inventory summary when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedReadoutQualityReviewRequestPlanSummary?.requestCount >= 1, "Diagnostic scan session did not preserve nested imported readout quality review requests when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedReadoutQualityReviewRequestPlanSummary?.vehicleCommandEnabled === false, "Diagnostic scan session did not preserve nested imported readout quality review safety when outer input was null");
 const scanSessionNonInfrastructureBridgeExportPayload = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeDiagnosticImportNonInfrastructureAliases.exportPayload,
   session_id: "shop-test-non-infra-bridge-export"
@@ -9750,6 +9780,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2014");
+  console.log("OBD read-only safety checks: 2024");
   console.log("Errors: 0");
 }
