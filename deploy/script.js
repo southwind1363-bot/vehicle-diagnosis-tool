@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "保存済み次読取要求の次操作安全aliasを反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.688.0";
+const APP_VERSION = "2.689.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1627,9 +1627,10 @@ function buildSavedNextReadoutCandidate(session = null) {
     || null;
   const readoutId = request?.readoutId || request?.readout_id || plan?.nextRequestId || plan?.next_request_id || null;
   if (!readoutId) return null;
+  const readOnly = request?.readOnly !== false && request?.read_only !== false && plan?.readOnly !== false && plan?.read_only !== false && plan?.nextReadOnly !== false && plan?.next_read_only !== false;
   const wouldTransmit = request?.wouldTransmit === true || request?.would_transmit === true || plan?.wouldTransmit === true || plan?.would_transmit === true || plan?.nextWouldTransmit === true || plan?.next_would_transmit === true;
   const vehicleCommandEnabled = request?.vehicleCommandEnabled === true || request?.vehicle_command_enabled === true || plan?.vehicleCommandEnabled === true || plan?.vehicle_command_enabled === true || plan?.nextVehicleCommandEnabled === true || plan?.next_vehicle_command_enabled === true;
-  if (wouldTransmit || vehicleCommandEnabled) return null;
+  if (!readOnly || wouldTransmit || vehicleCommandEnabled) return null;
   return {
     id: readoutId,
     label: request?.label || request?.displayLabel || request?.display_label || plan?.nextRequestLabel || plan?.next_request_label || formatCoreReadoutLabel(readoutId, readoutId),
