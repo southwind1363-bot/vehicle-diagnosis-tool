@@ -2723,6 +2723,12 @@
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
+    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || metadataOverrides.nextReadoutRequest || null);
+    const generatedReadoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
+    const savedReadoutRequestPlanSummary = metadataOverrides.readoutRequestPlanSummary || null;
+    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(generatedReadoutRequestPlanSummary?.nextRequestId || generatedReadoutRequestPlanSummary?.next_request_id
+      ? generatedReadoutRequestPlanSummary
+      : savedReadoutRequestPlanSummary || generatedReadoutRequestPlanSummary);
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
@@ -2771,6 +2777,10 @@
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       readoutRequestPlanGateSummary,
+      nextReadoutRequest,
+      next_readout_request: nextReadoutRequest,
+      readoutRequestPlanSummary,
+      readout_request_plan_summary: readoutRequestPlanSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
@@ -3073,7 +3083,7 @@
       || parts.diagnosticFlowSummary?.readout_request_plan_gate_summary
       || parts.diagnostic_flow_summary?.readout_request_plan_gate_summary
       || null;
-    const nextReadoutRequest = parts.nextReadoutRequest
+    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(parts.nextReadoutRequest
       || parts.next_readout_request
       || parts.coreSessionStatus?.nextReadoutRequest
       || parts.core_session_status?.nextReadoutRequest
@@ -3083,8 +3093,8 @@
       || parts.diagnostic_flow_summary?.nextReadoutRequest
       || parts.diagnosticFlowSummary?.next_readout_request
       || parts.diagnostic_flow_summary?.next_readout_request
-      || null;
-    const readoutRequestPlanSummary = parts.readoutRequestPlanSummary
+      || null);
+    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(parts.readoutRequestPlanSummary
       || parts.readout_request_plan_summary
       || parts.coreSessionStatus?.readoutRequestPlanSummary
       || parts.core_session_status?.readoutRequestPlanSummary
@@ -3094,7 +3104,7 @@
       || parts.diagnostic_flow_summary?.readoutRequestPlanSummary
       || parts.diagnosticFlowSummary?.readout_request_plan_summary
       || parts.diagnostic_flow_summary?.readout_request_plan_summary
-      || null;
+      || null);
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;

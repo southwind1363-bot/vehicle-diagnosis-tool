@@ -182,8 +182,8 @@ const bridgeSummaryAliasFunctionChecks = () => {
     check(functionBody.includes('appendBridgeReadoutCoverageWarnings(derivedWarnings, {'), "normalizeBridgeSummaryAliases should append bridge readout warnings through derived warnings");
     check(functionBody.includes('hasBridgeInfrastructureContext,'), "normalizeBridgeSummaryAliases should pass bridge infrastructure context into bridge readout warning mapping");
     check(functionBody.includes('readoutCoverage: derivedReadoutCoverage'), "normalizeBridgeSummaryAliases should map bridge readout warnings from derived readout coverage");
-    check(functionBody.includes('const nextReadoutRequest = parts.nextReadoutRequest') && functionBody.includes('next_readout_request: nextReadoutRequest,'), "normalizeBridgeSummaryAliases should preserve next readout request summaries");
-    check(functionBody.includes('const readoutRequestPlanSummary = parts.readoutRequestPlanSummary') && functionBody.includes('readout_request_plan_summary: readoutRequestPlanSummary,'), "normalizeBridgeSummaryAliases should preserve readout request plan summaries");
+    check(functionBody.includes('const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(parts.nextReadoutRequest') && functionBody.includes('next_readout_request: nextReadoutRequest,'), "normalizeBridgeSummaryAliases should preserve normalized next readout request summaries");
+    check(functionBody.includes('const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(parts.readoutRequestPlanSummary') && functionBody.includes('readout_request_plan_summary: readoutRequestPlanSummary,'), "normalizeBridgeSummaryAliases should preserve normalized readout request plan summaries");
   }
 };
 const resolveReadoutCoverageFunctionChecks = () => {
@@ -2320,7 +2320,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.683.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for normalized saved next readout metadata");
+check(appSource.includes('const APP_VERSION = "2.684.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for bridge summary saved readout metadata");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3748,6 +3748,38 @@ check(bridgeSummaryAliasInputs.vciDevices[0]?.id === "summary-vci", "Bridge sess
 check(bridgeSummaryAliasInputs.adapterIdentity.adapterName === "Summary Adapter", "Bridge session summary did not accept adapter_identity alias input");
 check(bridgeSummaryAliasInputs.startedAt === "2026-06-28T00:03:00Z" && bridgeSummaryAliasInputs.endedAt === "2026-06-28T00:04:00Z", "Bridge session summary did not accept started_at or ended_at alias input");
 check(bridgeSummaryAliasInputs.vehicleProfile?.maker === "Toyota", "Bridge session summary did not accept vehicle_profile alias input");
+const bridgeSummarySavedReadoutRequestAliases = obd.buildBridgeSessionSummary({
+  readout_coverage: {
+    include_infrastructure: false,
+    items: [
+      "dtc_snapshot",
+      "freeze_frame_snapshot",
+      "readiness_snapshot",
+      "ecu_info_snapshot",
+      "onboard_monitor_snapshot",
+      "supported_pid_matrix",
+      "live_pid_snapshot"
+    ].map((id) => ({ id, status: "captured", available: true, count: 1 }))
+  },
+  next_readout_request: {
+    readout_id: "summary_saved_snapshot",
+    bridge_intent: "review_summary_saved",
+    read_only: true,
+    would_transmit: false,
+    vehicle_command_enabled: false,
+    execution_enabled: false
+  },
+  readout_request_plan_summary: {
+    state: "saved",
+    next_request_id: "summary_saved_snapshot",
+    next_bridge_intent: "review_summary_saved",
+    read_only: true,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  }
+});
+check(bridgeSummarySavedReadoutRequestAliases.nextReadoutRequest?.readoutId === "summary_saved_snapshot" && bridgeSummarySavedReadoutRequestAliases.next_readout_request?.vehicle_command_enabled === false, "Bridge session summary did not normalize saved next readout request aliases");
+check(bridgeSummarySavedReadoutRequestAliases.readoutRequestPlanSummary?.nextRequestId === "summary_saved_snapshot" && bridgeSummarySavedReadoutRequestAliases.readout_request_plan_summary?.next_bridge_intent === "review_summary_saved", "Bridge session summary did not normalize saved readout request plan aliases");
 const bridgeSummaryProtocolAliases = obd.buildBridgeSessionSummary({
   source_type: "local_bridge",
   obd_protocol: "CAN_11_500",
