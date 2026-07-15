@@ -219,12 +219,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2286+件",
+  validationCheckLabel: "OBD安全検証 2292+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "保存済み読取計画の状態をUIへ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.677.0";
+const APP_VERSION = "2.678.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1596,6 +1596,56 @@ function getTopNextReadoutCandidates(candidates, limit = 4) {
   return candidates.filter(Boolean).slice(0, limit);
 }
 
+function buildSavedNextReadoutCandidate(session = null) {
+  if (!session || typeof session !== "object") return null;
+  const flow = session.diagnosticFlowSummary || session.diagnostic_flow_summary || {};
+  const core = session.coreSessionStatus || session.core_session_status || {};
+  const nextReadoutSummary = core.nextReadoutSummary || core.next_readout_summary || {};
+  const request = flow.nextReadoutRequest
+    || flow.next_readout_request
+    || core.nextReadoutRequest
+    || core.next_readout_request
+    || nextReadoutSummary.readoutRequest
+    || nextReadoutSummary.readout_request
+    || session.nextReadoutRequest
+    || session.next_readout_request
+    || null;
+  const plan = flow.pendingReadoutRequestPlan
+    || flow.pending_readout_request_plan
+    || flow.readoutRequestPlanSummary
+    || flow.readout_request_plan_summary
+    || core.pendingReadoutRequestPlan
+    || core.pending_readout_request_plan
+    || core.readoutRequestPlanSummary
+    || core.readout_request_plan_summary
+    || session.readoutRequestPlanSummary
+    || session.readout_request_plan_summary
+    || null;
+  const readoutId = request?.readoutId || request?.readout_id || plan?.nextRequestId || plan?.next_request_id || null;
+  if (!readoutId) return null;
+  const wouldTransmit = request?.wouldTransmit === true || request?.would_transmit === true || plan?.wouldTransmit === true || plan?.would_transmit === true;
+  const vehicleCommandEnabled = request?.vehicleCommandEnabled === true || request?.vehicle_command_enabled === true || plan?.vehicleCommandEnabled === true || plan?.vehicle_command_enabled === true;
+  if (wouldTransmit || vehicleCommandEnabled) return null;
+  return {
+    id: readoutId,
+    label: request?.label || request?.displayLabel || request?.display_label || plan?.nextRequestLabel || plan?.next_request_label || formatCoreReadoutLabel(readoutId, readoutId),
+    status: request?.status || request?.readoutStatus || request?.readout_status || "missing",
+    applicabilityStatus: flow.applicabilityStatus || flow.applicability_status || core.applicabilityStatus || core.applicability_status || session.vehicleApplicability?.status || session.vehicle_applicability?.status || null,
+    bridgeIntent: request?.bridgeIntent || request?.bridge_intent || plan?.nextBridgeIntent || plan?.next_bridge_intent || null,
+    serviceMode: request?.serviceMode || request?.service_mode || plan?.nextServiceMode || plan?.next_service_mode || null,
+    executionEnabled: request?.executionEnabled === true || request?.execution_enabled === true || plan?.nextExecutionEnabled === true || plan?.next_execution_enabled === true,
+    savedFromRequest: true,
+    saved_from_request: true
+  };
+}
+
+function getSessionNextReadoutCandidates(session = null, limit = 4) {
+  const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates || session?.next_readout_candidates, limit);
+  if (candidates.length || limit <= 0) return candidates;
+  const savedCandidate = buildSavedNextReadoutCandidate(session);
+  return savedCandidate ? [savedCandidate].slice(0, limit) : [];
+}
+
 function getTopNextReadoutLabels(candidates, limit = 2) {
   return getTopNextReadoutCandidates(candidates, limit).map((item) => item?.label).filter(Boolean);
 }
@@ -1859,7 +1909,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId(capability);
   const currentSession = obdDevSession.lastSession || null;
-  const currentNextReadoutCandidates = currentSession?.nextReadoutCandidates || currentSession?.next_readout_candidates;
+  const currentNextReadoutCandidates = getSessionNextReadoutCandidates(currentSession, 2);
   const nextReadoutLabels = getTopNextReadoutLabels(currentNextReadoutCandidates, 2);
   const nextReadoutLabel = formatTopNextReadoutLabel(currentNextReadoutCandidates, 2);
   const coreSessionStatus = currentSession?.coreSessionStatus || currentSession?.core_session_status || null;
@@ -4898,7 +4948,7 @@ function buildCoreSessionStatusLines(coreSessionStatus) {
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const { includeReadinessCount = false } = options;
   const analysisCoreSessionStatus = analysis.coreSessionStatus || analysis.core_session_status || null;
-  const analysisNextReadoutCandidates = analysis.nextReadoutCandidates || analysis.next_readout_candidates;
+  const analysisNextReadoutCandidates = getSessionNextReadoutCandidates(analysis, 2);
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage || analysis.readout_coverage);
   const applicabilitySummary = formatVehicleApplicabilitySummary(analysis.vehicleApplicability || analysis.vehicle_applicability);
   const nextStepLabel = formatCoreNextStepSummary(analysisCoreSessionStatus, analysisNextReadoutCandidates, "");
@@ -5001,6 +5051,11 @@ function formatObdBridgeWarningLabel(code = "") {
 
 function triggerObdNextReadoutCandidate(candidate = null) {
   if (!candidate) return;
+  if ((candidate.savedFromRequest === true || candidate.saved_from_request === true) && candidate.executionEnabled !== true && candidate.execution_enabled !== true) {
+    obdDevStatus.textContent = `${candidate.label || "次読取要求"} は保存済みの読取要求です。詳細読取メニューで実行条件を確認してください。`;
+    renderObdStageView("details");
+    return;
+  }
   const action = OBD_NEXT_READOUT_ACTIONS[candidate.id];
   const targetButton = action?.button?.() || null;
   renderObdStageView("details");
@@ -5039,7 +5094,7 @@ function renderObdNextReadoutActions(session = null) {
   if (!obdNextReadoutPanel || !obdNextReadoutList) return;
   obdNextReadoutList.innerHTML = "";
   const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;
-  const candidates = getTopNextReadoutCandidates(session?.nextReadoutCandidates || session?.next_readout_candidates, 4);
+  const candidates = getSessionNextReadoutCandidates(session, 4);
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
   const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   if (blockingSummary) {
@@ -5086,7 +5141,9 @@ function renderObdNextReadoutActions(session = null) {
   }
   candidates.forEach((candidate) => {
     const action = OBD_NEXT_READOUT_ACTIONS[candidate.id] || null;
-    const buttonTarget = action?.button?.() || null;
+    const savedReadoutRequest = candidate.savedFromRequest === true || candidate.saved_from_request === true;
+    const canTriggerCandidate = !savedReadoutRequest || candidate.executionEnabled === true || candidate.execution_enabled === true;
+    const buttonTarget = canTriggerCandidate ? action?.button?.() || null : null;
     const card = document.createElement("article");
     card.className = "obd-operation-card";
 
@@ -5167,7 +5224,7 @@ function renderObdBridgeSessionDetails(session = null) {
   const supportedPidMatrix = session?.supportedPidMatrix || session?.supported_pid_matrix || null;
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
   const onboardMonitorSnapshot = session?.onboardMonitorSnapshot || session?.onboard_monitor_snapshot || null;
-  const nextReadoutSummary = formatCoreNextStepSummary(coreSessionStatus, session?.nextReadoutCandidates || session?.next_readout_candidates, NO_DATA);
+  const nextReadoutSummary = formatCoreNextStepSummary(coreSessionStatus, getSessionNextReadoutCandidates(session, 2), NO_DATA);
   const coreSessionLines = buildCoreSessionStatusLines(coreSessionStatus);
   const warningLines = getNonBlockingWarningLabels(session, 4);
   if (session && (readoutProtocol !== NO_DATA || capturedAt !== NO_DATA || startedAt !== NO_DATA || endedAt !== NO_DATA || vehicleLabel !== NO_DATA || coreSessionLines.length || warningLines.length)) {
@@ -5953,7 +6010,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(sessionVehicleApplicability, NO_DATA) || NO_DATA;
   const vehicleApplicabilityEvidenceSummary = coreSessionStatus?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.evidenceSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.evidence_summary || null;
   const vehicleApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(vehicleApplicabilityEvidenceSummary, NO_DATA) || NO_DATA;
-  const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, session?.nextReadoutCandidates || session?.next_readout_candidates, NO_DATA);
+  const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, getSessionNextReadoutCandidates(session, 2), NO_DATA);
   const coreSessionStatusLabel = formatCoreSessionStatusSummary(coreSessionStatus, NO_DATA);
   const emptyReadoutLabel = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, NO_DATA);
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(coreSessionStatus, 2, NO_DATA);
@@ -6472,6 +6529,10 @@ function analyzeObdScannerImport() {
   const currentEcuResponseSummary = currentSession?.ecuResponseSummary || currentSession?.ecu_response_summary || null;
   const currentReadoutCoverage = currentSession?.readoutCoverage || currentSession?.readout_coverage || null;
   const currentNextReadoutCandidates = currentSession?.nextReadoutCandidates || currentSession?.next_readout_candidates || null;
+  const currentDiagnosticFlowSummary = currentSession?.diagnosticFlowSummary || currentSession?.diagnostic_flow_summary || null;
+  const currentCoreSessionStatus = currentSession?.coreSessionStatus || currentSession?.core_session_status || null;
+  const currentNextReadoutRequest = currentSession?.nextReadoutRequest || currentSession?.next_readout_request || currentDiagnosticFlowSummary?.nextReadoutRequest || currentDiagnosticFlowSummary?.next_readout_request || currentCoreSessionStatus?.nextReadoutRequest || currentCoreSessionStatus?.next_readout_request || currentCoreSessionStatus?.nextReadoutSummary?.readoutRequest || currentCoreSessionStatus?.next_readout_summary?.readout_request || null;
+  const currentReadoutRequestPlanSummary = currentSession?.readoutRequestPlanSummary || currentSession?.readout_request_plan_summary || currentDiagnosticFlowSummary?.readoutRequestPlanSummary || currentDiagnosticFlowSummary?.readout_request_plan_summary || currentCoreSessionStatus?.readoutRequestPlanSummary || currentCoreSessionStatus?.readout_request_plan_summary || null;
   const currentStartedAt = currentSession?.startedAt || currentSession?.started_at;
   const currentEndedAt = currentSession?.endedAt || currentSession?.ended_at;
   const currentCapturedAt = currentSession?.capturedAt || currentSession?.captured_at;
@@ -6506,6 +6567,8 @@ function analyzeObdScannerImport() {
       ecuResponseSummary: currentEcuResponseSummary,
       readoutCoverage: currentReadoutCoverage,
       nextReadoutCandidates: currentNextReadoutCandidates,
+      nextReadoutRequest: currentNextReadoutRequest,
+      readoutRequestPlanSummary: currentReadoutRequestPlanSummary,
       warnings: currentWarnings,
       toolHints: currentToolHints,
       sourceLength: currentSourceLength,
@@ -6563,7 +6626,7 @@ function analyzeObdScannerImport() {
   const analysisApplicabilityLabel = formatVehicleApplicabilitySummary(summaryVehicleApplicability);
   const summaryCoreSessionStatus = summarySource.coreSessionStatus || summarySource.core_session_status || null;
   const analysisApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(summaryCoreSessionStatus?.vehicleApplicabilityEvidenceSummary || summaryCoreSessionStatus?.vehicle_applicability_evidence_summary || summaryCoreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || summaryCoreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary, "");
-  const summaryNextReadoutCandidates = summarySource.nextReadoutCandidates || summarySource.next_readout_candidates;
+  const summaryNextReadoutCandidates = getSessionNextReadoutCandidates(summarySource, 2);
   const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summaryCoreSessionStatus, "");
   const analysisEmptyReadoutLabel = formatCoreEmptyReadoutSummary(summaryCoreSessionStatus, 2, "");
   const analysisNextStepLabel = formatCoreNextStepSummary(summaryCoreSessionStatus, summaryNextReadoutCandidates, "");
