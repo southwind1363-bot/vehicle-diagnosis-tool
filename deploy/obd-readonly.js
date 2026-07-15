@@ -2305,6 +2305,8 @@
     const nextRequest = normalizeReadoutRequestSummaryAliases(input.nextRequest || input.next_request || null);
     const nextRequestId = input.nextRequestId || input.next_request_id || nextRequest?.readoutId || null;
     const nextBridgeIntent = input.nextBridgeIntent || input.next_bridge_intent || nextRequest?.bridgeIntent || null;
+    const nextServiceMode = input.nextServiceMode || input.next_service_mode || nextRequest?.serviceMode || null;
+    const nextExecutionEnabled = pickDefined(input.nextExecutionEnabled, input.next_execution_enabled, nextRequest?.executionEnabled, nextRequest?.execution_enabled, false) === true;
     const readOnly = pickDefined(input.readOnly, input.read_only, true) !== false;
     const retainedRawText = pickDefined(input.retainedRawText, input.retained_raw_text, false) === true;
     const wouldTransmit = pickDefined(input.wouldTransmit, input.would_transmit, false) === true;
@@ -2317,6 +2319,10 @@
       next_request_id: nextRequestId,
       nextBridgeIntent,
       next_bridge_intent: nextBridgeIntent,
+      nextServiceMode,
+      next_service_mode: nextServiceMode,
+      nextExecutionEnabled,
+      next_execution_enabled: nextExecutionEnabled,
       readOnly,
       read_only: readOnly,
       retainedRawText,
