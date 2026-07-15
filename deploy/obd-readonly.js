@@ -8149,6 +8149,11 @@
       getVehicleApplicabilityInput(bridgeSession),
       null
     ) || {});
+    const vehicleProfile = pickDefined(
+      bridgeImportMetadata.vehicleProfile,
+      bridgeSessionMetadata.vehicleProfile,
+      null
+    );
     const nextReadoutCandidatesInput = pickDefined(
       bridgeImport?.nextReadoutCandidates,
       bridgeImport?.next_readout_candidates,
@@ -8167,6 +8172,7 @@
     return {
       readoutCoverageInput,
       readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverageInput),
+      vehicleProfile,
       vehicleApplicability,
       nextReadoutCandidatesInput,
       importClassification,
@@ -8930,7 +8936,7 @@
       || bridgeSession?.imported_readout_quality_review_request_plan_summary
       || null;
     const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
-    const vehicleProfile = bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || null;
+    const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || null;
     const connectionStatus = bridgeImport?.connectionStatus || bridgeImport?.connection_status || bridgeSession?.connectionStatus || bridgeSession?.connection_status || null;
     const vciDevices = bridgeImport?.vciDevices || bridgeImport?.vci_devices || bridgeSession?.vciDevices || bridgeSession?.vci_devices || [];
     const adapterIdentity = bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity || bridgeSession?.adapterIdentity || bridgeSession?.adapter_identity || null;
