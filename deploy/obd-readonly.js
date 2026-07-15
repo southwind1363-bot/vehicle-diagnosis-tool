@@ -7841,21 +7841,20 @@
       bridgeSession?.next_readout_candidates,
       []
     );
-    const importClassification = pickDefined(
+    const importClassificationInput = pickDefined(
       bridgeImport?.importClassification,
       bridgeImport?.import_classification,
       bridgeSession?.importClassification,
       bridgeSession?.import_classification,
       null
     );
+    const importClassification = resolveImportClassification(importClassificationInput);
     return {
       readoutCoverageInput,
       readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverageInput),
       vehicleApplicability,
       nextReadoutCandidatesInput,
-      importClassification: importClassification && typeof importClassification === "object"
-        ? { ...importClassification }
-        : null,
+      importClassification,
       toolHints: mergeUniqueStrings(bridgeImportMetadata.toolHints, bridgeSessionMetadata.toolHints),
       warnings: resolveWarningList(bridgeImportMetadata.warnings, bridgeSessionMetadata.warnings),
       hadSensitiveIdentifier: bridgeImportMetadata.hadSensitiveIdentifier === true
