@@ -7807,23 +7807,38 @@
     detectedToolHints = []
   } = {}) {
     const mergedToolHints = mergeUniqueStrings(session.toolHints, detectedToolHints);
+    const schemaVersion = explicitImportClassification?.schemaVersion || explicitImportClassification?.schema_version || classified.schemaVersion || classified.schema_version;
+    const bucketCountsInput = explicitImportClassification?.bucketCounts || explicitImportClassification?.bucket_counts;
+    const isoTpSummaryInput = explicitImportClassification?.isoTpSummary || explicitImportClassification?.iso_tp_summary;
+    const negativeResponseSummaryInput = explicitImportClassification?.negativeResponseSummary || explicitImportClassification?.negative_response_summary;
+    const lineCountInput = pickDefined(explicitImportClassification?.lineCount, explicitImportClassification?.line_count, null);
+    const bucketCounts = bucketCountsInput && typeof bucketCountsInput === "object"
+      ? { ...classified.bucketCounts, ...bucketCountsInput }
+      : classified.bucketCounts;
+    const isoTpSummary = isoTpSummaryInput && typeof isoTpSummaryInput === "object"
+      ? { ...classified.isoTpSummary, ...isoTpSummaryInput }
+      : classified.isoTpSummary;
+    const negativeResponseSummary = negativeResponseSummaryInput && typeof negativeResponseSummaryInput === "object"
+      ? { ...classified.negativeResponseSummary, ...negativeResponseSummaryInput }
+      : classified.negativeResponseSummary;
+    const lineCount = Number.isFinite(Number(lineCountInput))
+      ? Math.max(0, Math.round(Number(lineCountInput)))
+      : classified.lineCount;
     return {
       toolHints: mergedToolHints,
       importClassification: {
-        schemaVersion: explicitImportClassification?.schemaVersion || classified.schemaVersion,
-        bucketCounts: explicitImportClassification?.bucketCounts && typeof explicitImportClassification.bucketCounts === "object"
-          ? { ...classified.bucketCounts, ...explicitImportClassification.bucketCounts }
-          : classified.bucketCounts,
-        isoTpSummary: explicitImportClassification?.isoTpSummary && typeof explicitImportClassification.isoTpSummary === "object"
-          ? { ...classified.isoTpSummary, ...explicitImportClassification.isoTpSummary }
-          : classified.isoTpSummary,
-        negativeResponseSummary: explicitImportClassification?.negativeResponseSummary && typeof explicitImportClassification.negativeResponseSummary === "object"
-          ? { ...classified.negativeResponseSummary, ...explicitImportClassification.negativeResponseSummary }
-          : classified.negativeResponseSummary,
-        lineCount: Number.isFinite(Number(explicitImportClassification?.lineCount))
-          ? Math.max(0, Math.round(Number(explicitImportClassification.lineCount)))
-          : classified.lineCount,
-        toolHints: mergedToolHints
+        schemaVersion,
+        schema_version: schemaVersion,
+        bucketCounts,
+        bucket_counts: bucketCounts,
+        isoTpSummary,
+        iso_tp_summary: isoTpSummary,
+        negativeResponseSummary,
+        negative_response_summary: negativeResponseSummary,
+        lineCount,
+        line_count: lineCount,
+        toolHints: mergedToolHints,
+        tool_hints: mergedToolHints
       },
       warnings: mergeUniqueStrings(
         session.warnings,
