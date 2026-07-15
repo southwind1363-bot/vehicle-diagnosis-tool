@@ -7752,12 +7752,20 @@
       || input.bridge_export_payload
       || input.bridgePayload
       || input.bridge_payload
+      || input.localBridgePayload
+      || input.local_bridge_payload
       || input.bridgeData
       || input.bridge_data
+      || input.localBridgeData
+      || input.local_bridge_data
       || input.bridgeResult
       || input.bridge_result
+      || input.localBridgeResult
+      || input.local_bridge_result
       || input.bridgeSnapshot
       || input.bridge_snapshot
+      || input.localBridgeSnapshot
+      || input.local_bridge_snapshot
       || input.bridgeResponse
       || input.bridge_response
       || input.localBridgeResponse
@@ -8455,12 +8463,20 @@
       || input.bridge_export_payload
       || input.bridgePayload
       || input.bridge_payload
+      || input.localBridgePayload
+      || input.local_bridge_payload
       || input.bridgeData
       || input.bridge_data
+      || input.localBridgeData
+      || input.local_bridge_data
       || input.bridgeResult
       || input.bridge_result
+      || input.localBridgeResult
+      || input.local_bridge_result
       || input.bridgeSnapshot
       || input.bridge_snapshot
+      || input.localBridgeSnapshot
+      || input.local_bridge_snapshot
       || input.bridgeResponse
       || input.bridge_response
       || input.localBridgeResponse
