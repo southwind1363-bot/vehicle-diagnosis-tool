@@ -4720,6 +4720,24 @@
     const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
+    const readVehicleApplicabilityEvidenceSummary = (flow = {}) => {
+      const directSummary = readAliasValue(flow, "vehicleApplicabilityEvidenceSummary");
+      if (directSummary && typeof directSummary === "object" && !Array.isArray(directSummary)) return directSummary;
+      const readinessSummary = readAliasValue(flow, "analysisReadinessSummary");
+      const readinessEvidenceSummary = readAliasValue(readinessSummary, "vehicleApplicabilityEvidenceSummary");
+      if (readinessEvidenceSummary && typeof readinessEvidenceSummary === "object" && !Array.isArray(readinessEvidenceSummary)) return readinessEvidenceSummary;
+      const checklistSummary = readAliasValue(flow, "vehicleApplicabilityChecklist");
+      const checklistEvidenceSummary = readAliasValue(checklistSummary, "evidenceSummary");
+      return checklistEvidenceSummary && typeof checklistEvidenceSummary === "object" && !Array.isArray(checklistEvidenceSummary) ? checklistEvidenceSummary : {};
+    };
+    const importedVehicleApplicabilityEvidenceSummary = readVehicleApplicabilityEvidenceSummary(importedFlow);
+    const currentVehicleApplicabilityEvidenceSummary = readVehicleApplicabilityEvidenceSummary(currentFlow);
+    const importedVehicleApplicabilityEvidencePresent = readAliasValue(importedVehicleApplicabilityEvidenceSummary, "evidencePresent") === true;
+    const currentVehicleApplicabilityEvidencePresent = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "evidencePresent") === true;
+    const importedVehicleApplicabilitySourceVerified = readAliasValue(importedVehicleApplicabilityEvidenceSummary, "sourceVerified") === true;
+    const currentVehicleApplicabilitySourceVerified = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "sourceVerified") === true;
+    const importedVehicleApplicabilityEvidenceReviewRequired = readAliasValue(importedVehicleApplicabilityEvidenceSummary, "reviewRequired") === true;
+    const currentVehicleApplicabilityEvidenceReviewRequired = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "reviewRequired") === true;
     const readRequestPlan = (flow = {}) => {
       const plan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan;
       return plan && typeof plan === "object" ? plan : {};
@@ -4940,6 +4958,24 @@
       current_vehicle_applicability_checklist_state: currentVehicleApplicabilityChecklistState,
       vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
       vehicle_applicability_checklist_changed: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
+      importedVehicleApplicabilityEvidencePresent,
+      imported_vehicle_applicability_evidence_present: importedVehicleApplicabilityEvidencePresent,
+      currentVehicleApplicabilityEvidencePresent,
+      current_vehicle_applicability_evidence_present: currentVehicleApplicabilityEvidencePresent,
+      importedVehicleApplicabilitySourceVerified,
+      imported_vehicle_applicability_source_verified: importedVehicleApplicabilitySourceVerified,
+      currentVehicleApplicabilitySourceVerified,
+      current_vehicle_applicability_source_verified: currentVehicleApplicabilitySourceVerified,
+      importedVehicleApplicabilityEvidenceReviewRequired,
+      imported_vehicle_applicability_evidence_review_required: importedVehicleApplicabilityEvidenceReviewRequired,
+      currentVehicleApplicabilityEvidenceReviewRequired,
+      current_vehicle_applicability_evidence_review_required: currentVehicleApplicabilityEvidenceReviewRequired,
+      vehicleApplicabilityEvidenceChanged: importedVehicleApplicabilityEvidencePresent !== currentVehicleApplicabilityEvidencePresent
+        || importedVehicleApplicabilitySourceVerified !== currentVehicleApplicabilitySourceVerified
+        || importedVehicleApplicabilityEvidenceReviewRequired !== currentVehicleApplicabilityEvidenceReviewRequired,
+      vehicle_applicability_evidence_changed: importedVehicleApplicabilityEvidencePresent !== currentVehicleApplicabilityEvidencePresent
+        || importedVehicleApplicabilitySourceVerified !== currentVehicleApplicabilitySourceVerified
+        || importedVehicleApplicabilityEvidenceReviewRequired !== currentVehicleApplicabilityEvidenceReviewRequired,
       importedRequestPlanCount,
       imported_request_plan_count: importedRequestPlanCount,
       currentRequestPlanCount,
@@ -5414,6 +5450,24 @@
     const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
     const importedVehicleApplicabilityChecklistState = importedDiagnosticFlowSummary.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
+    const readVehicleApplicabilityEvidenceSummary = (flow = {}) => {
+      const directSummary = readAliasValue(flow, "vehicleApplicabilityEvidenceSummary");
+      if (directSummary && typeof directSummary === "object" && !Array.isArray(directSummary)) return directSummary;
+      const readinessSummary = readAliasValue(flow, "analysisReadinessSummary");
+      const readinessEvidenceSummary = readAliasValue(readinessSummary, "vehicleApplicabilityEvidenceSummary");
+      if (readinessEvidenceSummary && typeof readinessEvidenceSummary === "object" && !Array.isArray(readinessEvidenceSummary)) return readinessEvidenceSummary;
+      const checklistSummary = readAliasValue(flow, "vehicleApplicabilityChecklist");
+      const checklistEvidenceSummary = readAliasValue(checklistSummary, "evidenceSummary");
+      return checklistEvidenceSummary && typeof checklistEvidenceSummary === "object" && !Array.isArray(checklistEvidenceSummary) ? checklistEvidenceSummary : {};
+    };
+    const importedVehicleApplicabilityEvidenceSummary = readVehicleApplicabilityEvidenceSummary(importedDiagnosticFlowSummary);
+    const currentVehicleApplicabilityEvidenceSummary = readVehicleApplicabilityEvidenceSummary(currentFlow);
+    const importedVehicleApplicabilityEvidencePresent = readAliasValue(importedVehicleApplicabilityEvidenceSummary, "evidencePresent") === true;
+    const currentVehicleApplicabilityEvidencePresent = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "evidencePresent") === true;
+    const importedVehicleApplicabilitySourceVerified = readAliasValue(importedVehicleApplicabilityEvidenceSummary, "sourceVerified") === true;
+    const currentVehicleApplicabilitySourceVerified = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "sourceVerified") === true;
+    const importedVehicleApplicabilityEvidenceReviewRequired = readAliasValue(importedVehicleApplicabilityEvidenceSummary, "reviewRequired") === true;
+    const currentVehicleApplicabilityEvidenceReviewRequired = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "reviewRequired") === true;
     const readRequestPlan = (flow = {}) => {
       const plan = flow.pendingReadoutRequestPlan || flow.pending_readout_request_plan;
       return plan && typeof plan === "object" ? plan : {};
@@ -5614,6 +5668,24 @@
       importedVehicleApplicabilityChecklistState,
       currentVehicleApplicabilityChecklistState,
       vehicleApplicabilityChecklistChanged: importedVehicleApplicabilityChecklistState !== currentVehicleApplicabilityChecklistState,
+      importedVehicleApplicabilityEvidencePresent,
+      imported_vehicle_applicability_evidence_present: importedVehicleApplicabilityEvidencePresent,
+      currentVehicleApplicabilityEvidencePresent,
+      current_vehicle_applicability_evidence_present: currentVehicleApplicabilityEvidencePresent,
+      importedVehicleApplicabilitySourceVerified,
+      imported_vehicle_applicability_source_verified: importedVehicleApplicabilitySourceVerified,
+      currentVehicleApplicabilitySourceVerified,
+      current_vehicle_applicability_source_verified: currentVehicleApplicabilitySourceVerified,
+      importedVehicleApplicabilityEvidenceReviewRequired,
+      imported_vehicle_applicability_evidence_review_required: importedVehicleApplicabilityEvidenceReviewRequired,
+      currentVehicleApplicabilityEvidenceReviewRequired,
+      current_vehicle_applicability_evidence_review_required: currentVehicleApplicabilityEvidenceReviewRequired,
+      vehicleApplicabilityEvidenceChanged: importedVehicleApplicabilityEvidencePresent !== currentVehicleApplicabilityEvidencePresent
+        || importedVehicleApplicabilitySourceVerified !== currentVehicleApplicabilitySourceVerified
+        || importedVehicleApplicabilityEvidenceReviewRequired !== currentVehicleApplicabilityEvidenceReviewRequired,
+      vehicle_applicability_evidence_changed: importedVehicleApplicabilityEvidencePresent !== currentVehicleApplicabilityEvidencePresent
+        || importedVehicleApplicabilitySourceVerified !== currentVehicleApplicabilitySourceVerified
+        || importedVehicleApplicabilityEvidenceReviewRequired !== currentVehicleApplicabilityEvidenceReviewRequired,
       importedRequestPlanCount,
       imported_request_plan_count: importedRequestPlanCount,
       currentRequestPlanCount,
