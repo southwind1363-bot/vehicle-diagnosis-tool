@@ -2280,6 +2280,9 @@
     const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
     const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
     const ecuResponseSummaryInput = parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response;
+    const codesInput = pickPresent(parts.codes, parts.dtc_codes, parts.dtcCodes, []);
+    const directMonitorValuesInput = pickPresent(parts.monitorValues, parts.monitor_values, []);
+    const directMonitorInsightsInput = pickPresent(parts.monitorInsights, parts.monitor_insights, []);
     const readoutCoverageInput = getReadoutCoverageInput(parts);
     const dtcSnapshot = dtcSnapshotInput?.codes
       ? dtcSnapshotInput
@@ -2289,7 +2292,9 @@
           normalizeTypedDtcSnapshotInput(pendingDtcSnapshotInput, "pending", "read_pending_dtc"),
           normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")
         )
-        : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
+        : Array.isArray(codesInput) && codesInput.length
+          ? normalizeDtcSnapshot({ source: "local_bridge", codes: codesInput })
+          : normalizeBridgeDtcSnapshot(dtcSnapshotInput);
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
@@ -2304,6 +2309,13 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const monitorValues = Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length
+      ? directMonitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
+      : cloneBridgeArrayItems(livePidSnapshot.monitorValues);
+    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, livePidSnapshot.monitorValueSummary);
+    const monitorInsights = Array.isArray(directMonitorInsightsInput) && directMonitorInsightsInput.length
+      ? directMonitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
+      : cloneBridgeArrayItems(livePidSnapshot.monitorInsights);
     const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
       ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
           ? {
@@ -2422,7 +2434,7 @@
       hasEcuInfoSnapshotInput,
       ecuInfoSnapshot,
       liveDataWarning: "compare_values_under_same_conditions",
-      hasLiveData: livePidSnapshot.monitorValues.length > 0,
+      hasLiveData: monitorValues.length > 0,
       rawPidUndecodedCount: (livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0) + (freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0),
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
@@ -2516,9 +2528,9 @@
       onboardMonitorSnapshot,
       readoutCoverage,
       coreReadoutInventorySummary,
-      monitorValues: livePidSnapshot.monitorValues,
-      monitorValueSummary: resolveMonitorValueSummary(livePidSnapshot.monitorValues, livePidSnapshot.monitorValueSummary),
-      monitorInsights: livePidSnapshot.monitorInsights,
+      monitorValues,
+      monitorValueSummary,
+      monitorInsights,
       importClassification,
       import_classification: importClassification,
       toolHints: resolvedMetadata.toolHints,
@@ -2681,6 +2693,12 @@
       onboard_monitor_snapshot: pickPresent(parts.onboard_monitor_snapshot, parts.onboardMonitorSnapshot, parts.onboard_monitor_response, parts.onboardMonitorResponse, nested.onboard_monitor_snapshot, nested.onboardMonitorSnapshot, nested.onboard_monitor_response, nested.onboardMonitorResponse, null),
       ecuResponseSummary: pickPresent(parts.ecuResponseSummary, parts.ecu_response_summary, parts.ecuResponseSummaryResponse, parts.ecu_response_summary_response, nested.ecuResponseSummary, nested.ecu_response_summary, nested.ecuResponseSummaryResponse, nested.ecu_response_summary_response, null),
       ecu_response_summary: pickPresent(parts.ecu_response_summary, parts.ecuResponseSummary, parts.ecu_response_summary_response, parts.ecuResponseSummaryResponse, nested.ecu_response_summary, nested.ecuResponseSummary, nested.ecu_response_summary_response, nested.ecuResponseSummaryResponse, null),
+      codes: pickPresent(parts.codes, parts.dtc_codes, parts.dtcCodes, nested.codes, nested.dtc_codes, nested.dtcCodes, null),
+      dtc_codes: pickPresent(parts.dtc_codes, parts.codes, parts.dtcCodes, nested.dtc_codes, nested.codes, nested.dtcCodes, null),
+      monitorValues: pickPresent(parts.monitorValues, parts.monitor_values, nested.monitorValues, nested.monitor_values, null),
+      monitor_values: pickPresent(parts.monitor_values, parts.monitorValues, nested.monitor_values, nested.monitorValues, null),
+      monitorInsights: pickPresent(parts.monitorInsights, parts.monitor_insights, nested.monitorInsights, nested.monitor_insights, null),
+      monitor_insights: pickPresent(parts.monitor_insights, parts.monitorInsights, nested.monitor_insights, nested.monitorInsights, null),
       ...mergedMetadata
     };
   }
@@ -2697,9 +2715,9 @@
     const ecuInfoSnapshotInput = parts.ecuInfoSnapshot || parts.ecu_info_snapshot || parts.ecuInfoResponse || parts.ecu_info_response;
     const onboardMonitorSnapshotInput = parts.onboardMonitorSnapshot || parts.onboard_monitor_snapshot || parts.onboardMonitorResponse || parts.onboard_monitor_response;
     const dtcSnapshotInput = parts.dtcSnapshot || parts.dtc_snapshot || null;
-    const codesInput = parts.codes || parts.dtc_codes || parts.dtcCodes || [];
-    const monitorValuesInput = parts.monitorValues || parts.monitor_values || [];
-    const monitorInsightsInput = parts.monitorInsights || parts.monitor_insights || [];
+    const codesInput = pickPresent(parts.codes, parts.dtc_codes, parts.dtcCodes, []);
+    const monitorValuesInput = pickPresent(parts.monitorValues, parts.monitor_values, []);
+    const monitorInsightsInput = pickPresent(parts.monitorInsights, parts.monitor_insights, []);
     const nextReadoutCandidatesInput = metadataOverrides.nextReadoutCandidates || [];
     const warningsInput = metadataOverrides.warnings || [];
     const importClassificationInput = metadataOverrides.importClassification;

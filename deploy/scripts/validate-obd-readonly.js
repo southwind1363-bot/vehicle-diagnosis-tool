@@ -449,6 +449,7 @@ const bridgeSummaryInputFunctionChecks = () => {
     check(functionBody.includes('connectionStatus: pickPresent(parts.connectionStatus, parts.connection_status') && functionBody.includes('adapterIdentity: pickPresent(parts.adapterIdentity, parts.adapter_identity'), "getBridgeSummaryInput should preserve nested bridge infrastructure when outer aliases are null");
     check(functionBody.includes('storedDtcSnapshot: pickPresent(parts.storedDtcSnapshot, parts.stored_dtc_snapshot') && functionBody.includes('permanentDtcSnapshot: pickPresent(parts.permanentDtcSnapshot, parts.permanent_dtc_snapshot'), "getBridgeSummaryInput should preserve nested typed DTC snapshots when outer aliases are null");
     check(functionBody.includes('dtcSnapshot: pickPresent(parts.dtcSnapshot, parts.dtc_snapshot') && functionBody.includes('ecuInfoSnapshot: pickPresent(parts.ecuInfoSnapshot, parts.ecu_info_snapshot'), "getBridgeSummaryInput should preserve nested core snapshots when outer aliases are null");
+    check(functionBody.includes('codes: pickPresent(parts.codes, parts.dtc_codes') && functionBody.includes('monitorValues: pickPresent(parts.monitorValues, parts.monitor_values') && functionBody.includes('monitorInsights: pickPresent(parts.monitorInsights, parts.monitor_insights'), "getBridgeSummaryInput should preserve nested simple DTC and monitor arrays when outer aliases are null");
   }
 };
 const mergedBridgeMetadataFunctionChecks = () => {
@@ -2134,7 +2135,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2038+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2040+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2206,7 +2207,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.621.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for scan session nested null typed DTC preservation");
+check(appSource.includes('const APP_VERSION = "2.622.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for bridge summary nested null monitor array preservation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4465,6 +4466,22 @@ check(
     && bridgeSummaryNestedNullOuterTypedDtc.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "pending")
     && bridgeSummaryNestedNullOuterTypedDtc.dtcSnapshot?.dtcs?.some((item) => item.code === "P0420" && item.status === "permanent"),
   "Bridge session summary did not preserve nested typed DTC snapshots when outer input was null"
+);
+const bridgeSummaryNestedNullOuterMonitorArrays = obd.buildBridgeSessionSummary({
+  codes: null,
+  monitor_values: null,
+  monitor_insights: null,
+  session: {
+    codes: ["P0100"],
+    monitor_values: [{ id: "engine_rpm", label: "Engine RPM", value: 900, valueType: "number" }],
+    monitor_insights: [{ id: "rpm_observed", label: "RPM observed" }]
+  }
+});
+check(
+  bridgeSummaryNestedNullOuterMonitorArrays.dtcSnapshot?.codes?.includes("P0100")
+    && bridgeSummaryNestedNullOuterMonitorArrays.monitorValues?.some((item) => item.id === "engine_rpm")
+    && bridgeSummaryNestedNullOuterMonitorArrays.monitorInsights?.some((item) => item.id === "rpm_observed"),
+  "Bridge session summary did not preserve nested simple DTC and monitor arrays when outer input was null"
 );
 const bridgeSummaryNestedNullOuterSourceLength = obd.buildBridgeSessionSummary({
   source_length: null,
@@ -9886,6 +9903,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2038");
+  console.log("OBD read-only safety checks: 2040");
   console.log("Errors: 0");
 }
