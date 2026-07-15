@@ -219,13 +219,13 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2218+件",
+  validationCheckLabel: "OBD安全検証 2223+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "適合根拠changed行summaryを追加",
+  recentMilestone: "適合changed行サマリーを画面表示へ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.661.0";
-const APP_LAST_UPDATED = "2026-07-15";
+const APP_VERSION = "2.662.0";
+const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -5474,6 +5474,38 @@ function formatChangedIdDisplaySummary(summary, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : "変更あり";
 }
 
+function formatVehicleApplicabilityChangedRowSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const rowSummary = summary.vehicleApplicabilityChangedRowSummary || summary.vehicle_applicability_changed_row_summary || summary;
+  if (!rowSummary || typeof rowSummary !== "object") return fallback;
+  const rowById = rowSummary.rowById || rowSummary.row_by_id || {};
+  const evidenceRow = rowSummary.evidenceRow || rowSummary.evidence_row || rowById.vehicle_applicability_evidence || null;
+  const checklistRow = rowSummary.checklistRow || rowSummary.checklist_row || rowById.vehicle_applicability_checklist || null;
+  const count = Number.isFinite(Number(rowSummary.count))
+    ? Number(rowSummary.count)
+    : Number.isFinite(Number(summary.vehicleApplicabilityChangedIdCount || summary.vehicle_applicability_changed_id_count))
+      ? Number(summary.vehicleApplicabilityChangedIdCount || summary.vehicle_applicability_changed_id_count)
+      : 0;
+  if (count <= 0 && rowSummary.changed !== true) return fallback;
+  const reviewTargets = Array.isArray(rowSummary.reviewTargets)
+    ? rowSummary.reviewTargets
+    : Array.isArray(rowSummary.review_targets) ? rowSummary.review_targets : [];
+  const primaryRow = rowSummary.primaryRow || rowSummary.primary_row || evidenceRow || checklistRow || null;
+  const directionLabel = {
+    added: "追加",
+    removed: "解除",
+    mixed: "変更"
+  }[primaryRow?.direction] || primaryRow?.direction || "";
+  const parts = [];
+  if (count > 0) parts.push(`${count}件`);
+  if (evidenceRow) parts.push("根拠");
+  if (checklistRow) parts.push("適合確認");
+  if (directionLabel) parts.push(directionLabel);
+  const reviewTargetLabel = formatChangedIdReviewTargetLabel(reviewTargets[0] || primaryRow?.reviewTarget || primaryRow?.review_target || "");
+  if (reviewTargetLabel) parts.push(reviewTargetLabel);
+  return parts.length ? parts.join(" / ") : fallback;
+}
+
 function formatChangedIdReviewTargetIds(ids = []) {
   const labels = ids
     .slice(0, 3)
@@ -5771,6 +5803,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(primaryBlockerComparisonSummary, NO_DATA);
   const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
+  const vehicleApplicabilityChangedRowSummary = changedIdDisplaySummary?.vehicleApplicabilityChangedRowSummary || changedIdDisplaySummary?.vehicle_applicability_changed_row_summary || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary || null;
+  const vehicleApplicabilityChangedRowLabel = formatVehicleApplicabilityChangedRowSummary(vehicleApplicabilityChangedRowSummary, NO_DATA);
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventorySummary = session.coreReadoutInventorySummary || session.core_readout_inventory_summary || null;
   const coreReadoutInventoryComparisonSummary = session.importedCoreReadoutInventoryComparisonSummary || session.imported_core_readout_inventory_comparison_summary || null;
@@ -5835,6 +5869,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "読取品質", readoutQualityLabel, readoutQualitySummary?.reviewRequired || readoutQualitySummary?.review_required ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
+  addObdDiagnosticFlowMetric(grid, "適合差分", vehicleApplicabilityChangedRowLabel, vehicleApplicabilityChangedRowSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
 
@@ -5912,6 +5947,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary, NO_DATA);
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
+  const vehicleApplicabilityChangedRowSummary = changedIdDisplaySummary?.vehicleApplicabilityChangedRowSummary || changedIdDisplaySummary?.vehicle_applicability_changed_row_summary || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary || null;
+  const vehicleApplicabilityChangedRowLabel = formatVehicleApplicabilityChangedRowSummary(vehicleApplicabilityChangedRowSummary, NO_DATA);
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary || session?.core_readout_inventory_summary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary, NO_DATA);
@@ -5985,6 +6022,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   ];
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
+  values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
   values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel]);
   values.splice(10, 0, ["品質比較", readoutQualityComparisonLabel]);
@@ -6562,6 +6600,10 @@ function analyzeObdScannerImport() {
   const changedIdDisplayNote = formatChangedIdDisplaySummary(changedIdDisplaySummary, "");
   if (changedIdDisplayNote) {
     notes.push(`読取差分 ${changedIdDisplayNote}`);
+  }
+  const vehicleApplicabilityChangedRowNote = formatVehicleApplicabilityChangedRowSummary(changedIdDisplaySummary?.vehicleApplicabilityChangedRowSummary || changedIdDisplaySummary?.vehicle_applicability_changed_row_summary || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary, "");
+  if (vehicleApplicabilityChangedRowNote) {
+    notes.push(`適合差分 ${vehicleApplicabilityChangedRowNote}`);
   }
   const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, "");
   if (changedIdReviewTargetActionNote) {
