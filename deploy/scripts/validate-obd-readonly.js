@@ -556,6 +556,7 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('const bridgePartsInput = input.bridgeParts || input.bridge_parts || null;') && functionBody.includes('buildBridgeDiagnosticImport(bridgePartsInput)'), "getDiagnosticSessionInput should normalize bridge parts aliases through bridge diagnostic import");
     check(functionBody.includes('const base = payload && typeof payload === \"object\"\r\n      ? { ...payload, ...input }'), "getDiagnosticSessionInput should layer outer input over payload fields");
     check(functionBody.includes('const nested = input.session') && functionBody.includes('|| input.session_payload') && functionBody.includes('|| input.saved_session') && functionBody.includes('|| input.last_session') && functionBody.includes('|| input.scan_session') && functionBody.includes('|| input.diagnostic_scan_session') && functionBody.includes('|| input.diagnostic_session') && functionBody.includes('|| input.obd_scan_session') && functionBody.includes('|| input.bridge_session'), "getDiagnosticSessionInput should accept nested session aliases from outer input");
+    check(functionBody.includes('|| payload?.scanSession') && functionBody.includes('|| payload?.scan_session') && functionBody.includes('|| payload?.diagnostic_scan_session'), "getDiagnosticSessionInput should accept nested scan session aliases from bridge payloads");
     check(functionBody.includes('|| payload?.bridgeSession') && functionBody.includes('|| payload?.bridge_session') && functionBody.includes('|| payload?.session'), "getDiagnosticSessionInput should accept nested session aliases from bridge payloads");
     check(functionBody.includes('...nested,') && functionBody.includes('...base,'), "getDiagnosticSessionInput should layer nested session fields before base overrides");
     check(functionBody.includes('source: base.source || base.source_type || nested.source || nested.source_type || "diagnostic_core",') && functionBody.includes('source_type: base.source_type || base.source || nested.source_type || nested.source || "diagnostic_core",'), "getDiagnosticSessionInput should normalize source type aliases");
@@ -2140,7 +2141,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2058+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2061+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2212,7 +2213,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.626.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for scan session nested infrastructure response preservation");
+check(appSource.includes('const APP_VERSION = "2.627.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for bridge payload nested scan session aliases");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8728,6 +8729,26 @@ check(scanSessionBridgeExportPayloadAlias.vehicleProfile?.model === bridgeExport
 check(scanSessionBridgeExportPayloadAlias.nextReadoutCandidates[0]?.id === bridgeExportPayload.session.next_readout_candidates[0]?.id, "Diagnostic scan session did not carry next_readout_candidates from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.warnings.includes("freeze_frame_available"), "Diagnostic scan session did not carry warnings from bridge_export_payload alias input");
 check(scanSessionBridgeExportPayloadAlias.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && scanSessionBridgeExportPayloadAlias.bridge_export_payload?.session?.dtc_snapshot?.codeCount === bridgeExportPayload.session.dtc_snapshot?.codeCount, "Diagnostic scan session did not preserve bridge_export_payload payload");
+const scanSessionBridgeDiagnosticImportPayloadScanAlias = obd.buildDiagnosticScanSession({
+  bridge_diagnostic_import: {
+    scan_session: {
+      session_id: "payload-scan-alias",
+      readiness_snapshot: bridgeReadinessSnapshot,
+      supported_pid_matrix: bridgeSupportedPidSnapshot
+    }
+  }
+});
+check(scanSessionBridgeDiagnosticImportPayloadScanAlias.sessionId === "payload-scan-alias" && scanSessionBridgeDiagnosticImportPayloadScanAlias.readinessSnapshot?.incompleteCount === bridgeReadinessSnapshot.incompleteCount, "Diagnostic scan session did not accept scan_session nested inside bridge_diagnostic_import payload");
+const scanSessionBridgeExportPayloadDiagnosticScanAlias = obd.buildDiagnosticScanSession({
+  bridge_export_payload: {
+    diagnostic_scan_session: {
+      session_id: "payload-diagnostic-scan-alias",
+      ecu_info_snapshot: bridgeEcuInfoSnapshot,
+      supported_pid_matrix: bridgeSupportedPidSnapshot
+    }
+  }
+});
+check(scanSessionBridgeExportPayloadDiagnosticScanAlias.sessionId === "payload-diagnostic-scan-alias" && scanSessionBridgeExportPayloadDiagnosticScanAlias.ecuInfoSnapshot?.itemCount === bridgeEcuInfoSnapshot.itemCount, "Diagnostic scan session did not accept diagnostic_scan_session nested inside bridge_export_payload");
 const scanSessionNestedBridgeExportPayloadRetention = obd.buildDiagnosticScanSession({
   scan_session: scanSessionBridgeExportPayloadAlias,
   session_id: "shop-test-nested-bridge-export-retention"
@@ -10002,6 +10023,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2058");
+  console.log("OBD read-only safety checks: 2061");
   console.log("Errors: 0");
 }

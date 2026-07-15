@@ -7754,6 +7754,20 @@
       || input.obd_scan_session
       || input.bridgeSession
       || input.bridge_session
+      || payload?.sessionPayload
+      || payload?.session_payload
+      || payload?.savedSession
+      || payload?.saved_session
+      || payload?.lastSession
+      || payload?.last_session
+      || payload?.scanSession
+      || payload?.scan_session
+      || payload?.diagnosticScanSession
+      || payload?.diagnostic_scan_session
+      || payload?.diagnosticSession
+      || payload?.diagnostic_session
+      || payload?.obdScanSession
+      || payload?.obd_scan_session
       || payload?.bridgeSession
       || payload?.bridge_session
       || payload?.session
