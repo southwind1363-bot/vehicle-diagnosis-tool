@@ -155,6 +155,10 @@ function hasBridgeMergeDiagnosticInputsSupport() {
   return typeof window.ObdReadOnly?.mergeDiagnosticInputs === "function";
 }
 
+function hasBridgeDiagnosticScanSessionSupport() {
+  return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";
+}
+
 function hasBridgeDiagnosticImportPipelineSupport() {
   return hasBridgeSessionSummarySupport()
     && hasBridgeSessionExportSupport()
@@ -221,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2309+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "保存済み次読取要求をOBD取込メタデータへ反映",
+  recentMilestone: "保存済み次読取要求とscan session再取込を進捗判定へ反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.685.0";
+const APP_VERSION = "2.686.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3829,11 +3833,32 @@ function buildDiagnosticCoreProgressSnapshot() {
     { id: "ecu_info_mode09", label: "ECU情報 / Mode09", available: hasBridgeEcuInfoSupport() },
     { id: "mode06", label: "Mode06監視結果", available: hasBridgeOnboardMonitorSupport() },
     { id: "diagnostic_import", label: "診断取込 / export", available: hasBridgeDiagnosticImportPipelineSupport() },
-    { id: "scan_session", label: "scan session構造", available: typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function" },
+    { id: "scan_session", label: "scan session構造", available: hasBridgeDiagnosticScanSessionSupport() },
+    { id: "saved_next_readout_request", label: "saved next readout request", available: typeof buildSavedNextReadoutCandidate === "function" },
+    {
+      id: "readout_request_plan_summary",
+      label: "readout request plan summary",
+      available: hasBridgeDiagnosticScanSessionSupport()
+        && hasBridgeMergeDiagnosticInputsSupport()
+    },
+    {
+      id: "imported_summary_comparisons",
+      label: "imported summary comparisons",
+      available: hasBridgeDiagnosticScanSessionSupport()
+        && hasBridgeMergeDiagnosticInputsSupport()
+        && hasBridgeDiagnosticImportPipelineSupport()
+    },
+    {
+      id: "saved_request_reimport",
+      label: "saved request re-import",
+      available: hasBridgeDiagnosticScanSessionSupport()
+        && hasBridgeDiagnosticImportPipelineSupport()
+        && typeof analyzeObdScannerImport === "function"
+    },
     {
       id: "request_gate_actions",
       label: "request gate / action",
-      available: typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function"
+      available: hasBridgeDiagnosticScanSessionSupport()
         && typeof window.ObdReadOnly?.mergeDiagnosticInputs === "function"
     }
   ];
