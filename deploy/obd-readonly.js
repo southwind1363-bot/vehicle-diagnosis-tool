@@ -7807,6 +7807,12 @@
     detectedToolHints = []
   } = {}) {
     const explicitToolHints = mergeUniqueStrings(explicitImportClassification?.toolHints, explicitImportClassification?.tool_hints);
+    const explicitWarnings = mergeUniqueStrings(
+      explicitImportClassification?.warnings,
+      explicitImportClassification?.warning_ids,
+      explicitImportClassification?.warning_flags,
+      explicitImportClassification?.warningFlags
+    );
     const mergedToolHints = mergeUniqueStrings(session.toolHints, session.tool_hints, explicitToolHints, detectedToolHints);
     const schemaVersion = explicitImportClassification?.schemaVersion || explicitImportClassification?.schema_version || classified.schemaVersion || classified.schema_version;
     const bucketCountsInput = explicitImportClassification?.bucketCounts || explicitImportClassification?.bucket_counts;
@@ -7869,10 +7875,14 @@
         wouldTransmit: false,
         would_transmit: false,
         vehicleCommandEnabled: false,
-        vehicle_command_enabled: false
+        vehicle_command_enabled: false,
+        warnings: explicitWarnings,
+        warning_ids: explicitWarnings,
+        warning_flags: explicitWarnings
       },
       warnings: mergeUniqueStrings(
         session.warnings,
+        explicitWarnings,
         classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : [],
         classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
       ),
