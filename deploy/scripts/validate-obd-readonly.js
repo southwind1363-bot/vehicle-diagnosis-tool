@@ -601,8 +601,9 @@ const resolvedSessionMetadataFunctionChecks = () => {
   check(Boolean(resolvedSessionMetadataFunctionSource), "buildResolvedSessionMetadata is missing from obd-readonly.js");
   if (resolvedSessionMetadataFunctionSource) {
     const functionBody = resolvedSessionMetadataFunctionSource[0];
-    check(functionBody.includes('vehicleProfile: metadataOverrides.vehicleProfile,'), "buildResolvedSessionMetadata should preserve explicit vehicle profile metadata");
-    check(functionBody.includes('vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),'), "buildResolvedSessionMetadata should normalize vehicle applicability metadata");
+    check(functionBody.includes('const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {});'), "buildResolvedSessionMetadata should normalize vehicle applicability before metadata resolution");
+    check(functionBody.includes('vehicleProfile: metadataOverrides.vehicleProfile || deriveVehicleProfileFromApplicability(vehicleApplicability),'), "buildResolvedSessionMetadata should preserve explicit vehicle profile metadata or derive it from applicability");
+    check(functionBody.includes('vehicleApplicability,'), "buildResolvedSessionMetadata should expose normalized vehicle applicability metadata");
     check(functionBody.includes('toolHints: mergeUniqueStrings(metadataOverrides.toolHints),'), "buildResolvedSessionMetadata should merge metadata tool hints");
     check(functionBody.includes('hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true') && functionBody.includes('|| metadataOverrides.hadSensitiveIdentifier === true,'), "buildResolvedSessionMetadata should preserve sensitive-identifier metadata from ECU info or overrides");
     check(functionBody.includes('sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))'), "buildResolvedSessionMetadata should sanitize metadata source length");
@@ -2160,7 +2161,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2121+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2123+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2232,7 +2233,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.640.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for vehicle applicability alias intake");
+check(appSource.includes('const APP_VERSION = "2.641.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for vehicle applicability profile derivation");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8316,6 +8317,12 @@ check(scanSessionDirectMixedVehicleMetadata.vehicleApplicability?.status === "ma
   });
   check(session.vehicleApplicability?.status === expectedStatus, `Diagnostic scan session did not accept ${alias} vehicle applicability alias input`);
 });
+const scanSessionVehicleMatchProfileAlias = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-vehicle-match-profile",
+  vehicle_match: { status: "matched", maker: "Toyota", model: "Aqua", year: "2023", engine_code: "M15A-FXE" },
+  dtcSnapshot: bridgeDtcSnapshot
+});
+check(scanSessionVehicleMatchProfileAlias.vehicleProfile?.model === "Aqua" && scanSessionVehicleMatchProfileAlias.vehicleProfile?.engineCode === "M15A-FXE", "Diagnostic scan session did not derive vehicleProfile from vehicle_match applicability alias input");
 const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-partial",
   vehicle_profile: { maker: "Toyota", model: "Prius" },
@@ -10512,6 +10519,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2121");
+  console.log("OBD read-only safety checks: 2123");
   console.log("Errors: 0");
 }

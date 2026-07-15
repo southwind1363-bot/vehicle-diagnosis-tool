@@ -3182,13 +3182,30 @@
     appendVehicleApplicabilityWarnings(warnings, vehicleApplicability || {});
   }
 
+  function deriveVehicleProfileFromApplicability(applicability = {}) {
+    const normalized = normalizeVehicleApplicabilitySnapshot(applicability || {});
+    if (!normalized.maker && !normalized.model && !normalized.modelCode && !normalized.year && !normalized.engineCode) return null;
+    return {
+      maker: normalized.maker,
+      model: normalized.model,
+      modelCode: normalized.modelCode,
+      model_code: normalized.modelCode,
+      year: normalized.year,
+      engineCode: normalized.engineCode,
+      engine_code: normalized.engineCode,
+      source: "vehicle_applicability",
+      source_type: "vehicle_applicability"
+    };
+  }
+
   function buildResolvedSessionMetadata({
     metadataOverrides = {},
     ecuInfoSnapshot = {}
   } = {}) {
+    const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {});
     return {
-      vehicleProfile: metadataOverrides.vehicleProfile,
-      vehicleApplicability: normalizeVehicleApplicabilitySnapshot(metadataOverrides.vehicleApplicability || {}),
+      vehicleProfile: metadataOverrides.vehicleProfile || deriveVehicleProfileFromApplicability(vehicleApplicability),
+      vehicleApplicability,
       toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
         || metadataOverrides.hadSensitiveIdentifier === true,
