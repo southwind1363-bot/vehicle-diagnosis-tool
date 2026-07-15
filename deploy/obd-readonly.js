@@ -2307,6 +2307,9 @@
     const nextBridgeIntent = input.nextBridgeIntent || input.next_bridge_intent || nextRequest?.bridgeIntent || null;
     const nextServiceMode = input.nextServiceMode || input.next_service_mode || nextRequest?.serviceMode || null;
     const nextExecutionEnabled = pickDefined(input.nextExecutionEnabled, input.next_execution_enabled, nextRequest?.executionEnabled, nextRequest?.execution_enabled, false) === true;
+    const nextReadOnly = pickDefined(input.nextReadOnly, input.next_read_only, nextRequest?.readOnly, nextRequest?.read_only, true) !== false;
+    const nextWouldTransmit = pickDefined(input.nextWouldTransmit, input.next_would_transmit, nextRequest?.wouldTransmit, nextRequest?.would_transmit, false) === true;
+    const nextVehicleCommandEnabled = pickDefined(input.nextVehicleCommandEnabled, input.next_vehicle_command_enabled, nextRequest?.vehicleCommandEnabled, nextRequest?.vehicle_command_enabled, false) === true;
     const readOnly = pickDefined(input.readOnly, input.read_only, true) !== false;
     const retainedRawText = pickDefined(input.retainedRawText, input.retained_raw_text, false) === true;
     const wouldTransmit = pickDefined(input.wouldTransmit, input.would_transmit, false) === true;
@@ -2323,6 +2326,12 @@
       next_service_mode: nextServiceMode,
       nextExecutionEnabled,
       next_execution_enabled: nextExecutionEnabled,
+      nextReadOnly,
+      next_read_only: nextReadOnly,
+      nextWouldTransmit,
+      next_would_transmit: nextWouldTransmit,
+      nextVehicleCommandEnabled,
+      next_vehicle_command_enabled: nextVehicleCommandEnabled,
       readOnly,
       read_only: readOnly,
       retainedRawText,
