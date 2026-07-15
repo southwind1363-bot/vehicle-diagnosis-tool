@@ -7813,11 +7813,17 @@
       explicitImportClassification?.warning_flags,
       explicitImportClassification?.warningFlags
     );
+    const explicitEcuResponses = Array.isArray(explicitImportClassification?.ecuResponses)
+      ? explicitImportClassification.ecuResponses
+      : Array.isArray(explicitImportClassification?.ecu_responses)
+        ? explicitImportClassification.ecu_responses
+        : null;
     const mergedToolHints = mergeUniqueStrings(session.toolHints, session.tool_hints, explicitToolHints, detectedToolHints);
     const schemaVersion = explicitImportClassification?.schemaVersion || explicitImportClassification?.schema_version || classified.schemaVersion || classified.schema_version;
     const bucketCountsInput = explicitImportClassification?.bucketCounts || explicitImportClassification?.bucket_counts;
     const isoTpSummaryInput = explicitImportClassification?.isoTpSummary || explicitImportClassification?.iso_tp_summary;
     const negativeResponseSummaryInput = explicitImportClassification?.negativeResponseSummary || explicitImportClassification?.negative_response_summary;
+    const ecuResponseCountInput = pickDefined(explicitImportClassification?.ecuResponseCount, explicitImportClassification?.ecu_response_count, null);
     const lineCountInput = pickDefined(explicitImportClassification?.lineCount, explicitImportClassification?.line_count, null);
     const sourceLengthInput = pickDefined(
       explicitImportClassification?.sourceLength,
@@ -7838,6 +7844,16 @@
     const negativeResponseSummary = negativeResponseSummaryInput && typeof negativeResponseSummaryInput === "object"
       ? { ...classified.negativeResponseSummary, ...negativeResponseSummaryInput }
       : classified.negativeResponseSummary;
+    const ecuResponses = explicitEcuResponses
+      ? explicitEcuResponses.map((row) => row && typeof row === "object" ? { ...row } : row).filter(Boolean)
+      : Array.isArray(classified.ecuResponses)
+        ? classified.ecuResponses.map((row) => row && typeof row === "object" ? { ...row } : row).filter(Boolean)
+        : [];
+    const ecuResponseCount = Number.isFinite(Number(ecuResponseCountInput))
+      ? Math.max(0, Math.round(Number(ecuResponseCountInput)))
+      : Number.isFinite(Number(classified.ecuResponseCount))
+        ? Math.max(0, Math.round(Number(classified.ecuResponseCount)))
+        : ecuResponses.length;
     const lineCount = Number.isFinite(Number(lineCountInput))
       ? Math.max(0, Math.round(Number(lineCountInput)))
       : classified.lineCount;
@@ -7862,6 +7878,10 @@
         iso_tp_summary: isoTpSummary,
         negativeResponseSummary,
         negative_response_summary: negativeResponseSummary,
+        ecuResponseCount,
+        ecu_response_count: ecuResponseCount,
+        ecuResponses,
+        ecu_responses: ecuResponses,
         lineCount,
         line_count: lineCount,
         sourceLength,
