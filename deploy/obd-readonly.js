@@ -7673,6 +7673,9 @@
       || payload?.session
       || null;
     if (!nested || typeof nested !== "object") return base;
+    const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);
+    const nestedImportClassification = resolveImportClassification(nested.importClassification || nested.import_classification || null);
+    const importClassification = baseImportClassification || nestedImportClassification || null;
     return {
       ...nested,
       ...base,
@@ -7727,7 +7730,8 @@
       tool_hints: mergeUniqueStrings(base.tool_hints, base.toolHints, nested.tool_hints, nested.toolHints),
       warnings: mergeUniqueStrings(base.warnings, base.warning_ids, base.warning_flags, base.warningFlags, nested.warnings, nested.warning_ids, nested.warning_flags, nested.warningFlags),
       warning_ids: mergeUniqueStrings(base.warning_ids, base.warnings, base.warning_flags, base.warningFlags, nested.warning_ids, nested.warnings, nested.warning_flags, nested.warningFlags),
-      import_classification: pickDefined(base.import_classification, base.importClassification, nested.import_classification, nested.importClassification, null),
+      importClassification,
+      import_classification: importClassification,
       sourceLength: pickDefined(input.sourceLength, input.source_length, payload?.sourceLength, payload?.source_length, nested.sourceLength, nested.source_length, null),
       source_length: pickDefined(base.source_length, base.sourceLength, nested.source_length, nested.sourceLength, null),
       hadSensitiveIdentifier: [
@@ -10090,6 +10094,17 @@
       explicitImportClassification,
       detectedToolHints: toolHints
     });
+    const explicitSourceLengthValue = pickDefined(metadataOverrides.sourceLength, textImportMetadata.sourceLength);
+    const outputSourceLength = Number.isFinite(Number(explicitSourceLengthValue))
+      ? Math.max(0, Math.round(Number(explicitSourceLengthValue)))
+      : textImportMetadata.sourceLength;
+    const outputImportClassification = textImportMetadata.importClassification && typeof textImportMetadata.importClassification === "object"
+      ? {
+        ...textImportMetadata.importClassification,
+        sourceLength: outputSourceLength,
+        source_length: outputSourceLength
+      }
+      : textImportMetadata.importClassification;
     const hasTextDtcCodes = Array.isArray(textDtcSnapshot?.codes) && textDtcSnapshot.codes.length > 0;
     const outputDtcSnapshot = hasTextDtcCodes && mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot;
     const outputSession = outputDtcSnapshot === session.dtcSnapshot
@@ -10112,15 +10127,15 @@
       source_type: "obd_text_import",
       toolHints: textImportMetadata.toolHints,
       tool_hints: textImportMetadata.toolHints,
-      importClassification: textImportMetadata.importClassification,
-      import_classification: textImportMetadata.importClassification,
+      importClassification: outputImportClassification,
+      import_classification: outputImportClassification,
       warnings: textImportMetadata.warnings,
       warning_ids: textImportMetadata.warnings,
       warning_flags: textImportMetadata.warnings,
       hadSensitiveIdentifier: textImportMetadata.hadSensitiveIdentifier,
       had_sensitive_identifier: textImportMetadata.hadSensitiveIdentifier,
-      sourceLength: textImportMetadata.sourceLength,
-      source_length: textImportMetadata.sourceLength,
+      sourceLength: outputSourceLength,
+      source_length: outputSourceLength,
       retainedRawText: false,
       retained_raw_text: false,
       retainedRawFrames: false,
