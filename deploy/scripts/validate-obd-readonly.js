@@ -47,7 +47,7 @@ const nestedSessionMetadataMergeFunctionSource = source.match(/function mergeNes
 const sessionMetadataOverridesFunctionSource = source.match(/function getSessionMetadataOverrides[\s\S]*?hadSensitiveIdentifier\r?\n    \};\r?\n  \}/);
 const bridgeDiagnosticImportFunctionSource = source.match(/function buildBridgeDiagnosticImport[\s\S]*?const exportPayload = buildBridgeSessionExportPayload\(summary\);\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSessionExportPayloadFunctionSource = source.match(/function buildBridgeSessionExportPayload[\s\S]*?readout_coverage: normalizeReadoutCoverageSnapshot\(summary\.readoutCoverage \|\| buildReadoutCoverageSnapshot\(\)\),\r?\n[\s\S]*?\r?\n  \}/);
-const summaryMetadataFieldsFunctionSource = source.match(/function buildSummaryMetadataFields[\s\S]*?const sourceLengthValue = pickDefined\(summary\.sourceLength, summary\.source_length, 0\);\r?\n[\s\S]*?\r?\n  \}/);
+const summaryMetadataFieldsFunctionSource = source.match(/function buildSummaryMetadataFields[\s\S]*?const sourceLengthValue = pickDefined\(summary\.sourceLength, summary\.source_length, importClassification\?\.sourceLength, importClassification\?\.source_length, 0\);\r?\n[\s\S]*?\r?\n  \}/);
 const mergedBridgeMetadataFunctionSource = source.match(/function buildMergedBridgeMetadata[\s\S]*?warnings: resolveWarningList\(bridgeImportMetadata\.warnings, bridgeSessionMetadata\.warnings\),\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryInputFunctionSource = source.match(/function getBridgeSummaryInput[\s\S]*?endedAt: parts\.endedAt \|\| parts\.ended_at \|\| nested\.endedAt \|\| nested\.ended_at \|\| null,\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSummaryAliasFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}/);
@@ -465,11 +465,11 @@ const summaryMetadataFieldsFunctionChecks = () => {
   check(Boolean(summaryMetadataFieldsFunctionSource), "buildSummaryMetadataFields is missing from obd-readonly.js");
   if (summaryMetadataFieldsFunctionSource) {
     const functionBody = summaryMetadataFieldsFunctionSource[0];
-    check(functionBody.includes('const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints);'), "buildSummaryMetadataFields should merge camelCase and snake_case tool hints");
-    check(functionBody.includes('const warnings = resolveWarningList(summary.warnings, summary.warning_ids, summary.warning_flags, summary.warningFlags);'), "buildSummaryMetadataFields should normalize warning aliases");
+    check(functionBody.includes('const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints, importClassification?.toolHints, importClassification?.tool_hints);'), "buildSummaryMetadataFields should merge camelCase and snake_case tool hints");
+    check(functionBody.includes('const warnings = resolveWarningList(summary.warnings, summary.warning_ids, summary.warning_flags, summary.warningFlags, importClassification?.warnings, importClassification?.warning_ids, importClassification?.warning_flags);'), "buildSummaryMetadataFields should normalize warning aliases");
     check(functionBody.includes('warning_ids: warnings,') && functionBody.includes('warningIds: warnings,'), "buildSummaryMetadataFields should preserve warning id aliases in exports");
     check(functionBody.includes('const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);'), "buildSummaryMetadataFields should normalize next-readout candidate aliases");
-    check(functionBody.includes('const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, 0);'), "buildSummaryMetadataFields should normalize source length aliases");
+    check(functionBody.includes('const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, importClassification?.sourceLength, importClassification?.source_length, 0);'), "buildSummaryMetadataFields should normalize source length aliases");
   }
 };
 const bridgeSessionExportPayloadFunctionChecks = () => {
@@ -521,9 +521,10 @@ const sessionMetadataOverridesFunctionChecks = () => {
     const functionBody = sessionMetadataOverridesFunctionSource[0];
     check(functionBody.includes('vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
     check(functionBody.includes('readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,'), "getSessionMetadataOverrides should normalize readout coverage aliases");
-    check(functionBody.includes('toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints),'), "getSessionMetadataOverrides should merge tool hint aliases");
-    check(functionBody.includes('warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_ids, sessionInput.warning_flags, sessionInput.warningFlags),'), "getSessionMetadataOverrides should merge warning aliases");
-    check(functionBody.includes('sourceLength: pickDefined(sessionInput.source_length, sessionInput.sourceLength, null),'), "getSessionMetadataOverrides should normalize source length aliases");
+    check(functionBody.includes('const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);'), "getSessionMetadataOverrides should normalize import classification input");
+    check(functionBody.includes('toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints, importClassification?.toolHints, importClassification?.tool_hints),'), "getSessionMetadataOverrides should merge tool hint aliases");
+    check(functionBody.includes('warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_ids, sessionInput.warning_flags, sessionInput.warningFlags, importClassification?.warnings, importClassification?.warning_ids, importClassification?.warning_flags),'), "getSessionMetadataOverrides should merge warning aliases");
+    check(functionBody.includes('const sourceLength = pickDefined(sessionInput.source_length, sessionInput.sourceLength, importClassification?.sourceLength, importClassification?.source_length, null);'), "getSessionMetadataOverrides should normalize source length aliases");
   }
 };
 const nestedSessionMetadataMergeFunctionChecks = () => {
@@ -2121,7 +2122,7 @@ if (nextStepFunctionSource) {
 }
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2008+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2009+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"'), "OBD progress overview should count request gate/action work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2193,7 +2194,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.607.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for import classification normalization");
+check(appSource.includes('const APP_VERSION = "2.608.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-15";'), "OBD app version should advance for import classification metadata lifting");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8685,6 +8686,8 @@ check(scanSessionImportClassificationAliasNormalization.importClassification?.ec
 check(scanSessionImportClassificationAliasNormalization.importClassification?.lineCount === 12 && scanSessionImportClassificationAliasNormalization.importClassification?.source_length === 99, "Diagnostic scan session did not normalize import classification count metadata aliases");
 check(scanSessionImportClassificationAliasNormalization.importClassification?.toolHints?.includes("Techstream") && scanSessionImportClassificationAliasNormalization.importClassification?.warning_flags?.includes("negative_obd_response_present"), "Diagnostic scan session did not normalize import classification tool or warning aliases");
 check(scanSessionImportClassificationAliasNormalization.importClassification?.hadSensitiveIdentifier === true && scanSessionImportClassificationAliasNormalization.importClassification?.vehicle_command_enabled === false && scanSessionImportClassificationAliasNormalization.importClassification?.would_transmit === false, "Diagnostic scan session did not force import classification read-only safety metadata");
+check(scanSessionImportClassificationAliasNormalization.toolHints.includes("Techstream") && scanSessionImportClassificationAliasNormalization.warnings.includes("negative_obd_response_present"), "Diagnostic scan session did not lift import classification tool and warning metadata");
+check(scanSessionImportClassificationAliasNormalization.sourceLength === 99 && scanSessionImportClassificationAliasNormalization.hadSensitiveIdentifier === true, "Diagnostic scan session did not lift import classification source and sensitive metadata");
 const scanSessionBridgeExportPayloadPopulatedPartialExplicitCandidates = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeExportPayloadPopulatedPartialExplicitCandidates,
   session_id: "shop-test-bridge-export-populated-partial-explicit-candidates"
@@ -9670,6 +9673,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2008");
+  console.log("OBD read-only safety checks: 2009");
   console.log("Errors: 0");
 }

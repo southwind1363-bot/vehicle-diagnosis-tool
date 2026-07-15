@@ -7738,19 +7738,23 @@
   }
 
   function getSessionMetadataOverrides(sessionInput = {}) {
+    const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);
     const hadSensitiveIdentifier = sessionInput.hadSensitiveIdentifier === true
       || sessionInput.had_sensitive_identifier === true
+      || importClassification?.hadSensitiveIdentifier === true
+      || importClassification?.had_sensitive_identifier === true
       ? true
-      : pickDefined(sessionInput.had_sensitive_identifier, sessionInput.hadSensitiveIdentifier, null);
+      : pickDefined(sessionInput.had_sensitive_identifier, sessionInput.hadSensitiveIdentifier, importClassification?.hadSensitiveIdentifier, importClassification?.had_sensitive_identifier, null);
+    const sourceLength = pickDefined(sessionInput.source_length, sessionInput.sourceLength, importClassification?.sourceLength, importClassification?.source_length, null);
     return {
       vehicleProfile: sessionInput.vehicle_profile || sessionInput.vehicleProfile || null,
       vehicleApplicability: sessionInput.vehicle_applicability || sessionInput.vehicleApplicability || null,
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
       nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,
-      importClassification: sessionInput.import_classification || sessionInput.importClassification || null,
-      toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints),
-      warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_ids, sessionInput.warning_flags, sessionInput.warningFlags),
-      sourceLength: pickDefined(sessionInput.source_length, sessionInput.sourceLength, null),
+      importClassification,
+      toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints, importClassification?.toolHints, importClassification?.tool_hints),
+      warnings: mergeUniqueStrings(sessionInput.warnings, sessionInput.warning_ids, sessionInput.warning_flags, sessionInput.warningFlags, importClassification?.warnings, importClassification?.warning_ids, importClassification?.warning_flags),
+      sourceLength,
       hadSensitiveIdentifier
     };
   }
@@ -7761,16 +7765,18 @@
     );
     const importClassificationInput = summary.importClassification || summary.import_classification;
     const importClassification = resolveImportClassification(importClassificationInput);
-    const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints);
-    const warnings = resolveWarningList(summary.warnings, summary.warning_ids, summary.warning_flags, summary.warningFlags);
+    const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints, importClassification?.toolHints, importClassification?.tool_hints);
+    const warnings = resolveWarningList(summary.warnings, summary.warning_ids, summary.warning_flags, summary.warningFlags, importClassification?.warnings, importClassification?.warning_ids, importClassification?.warning_flags);
     const nextReadoutCandidates = normalizeNextReadoutCandidates(summary.nextReadoutCandidates || summary.next_readout_candidates);
     const hadSensitiveIdentifier = summary.hadSensitiveIdentifier === true
       || summary.had_sensitive_identifier === true
       || summary.ecuInfoSnapshot?.hadSensitiveIdentifier === true
       || summary.ecuInfoSnapshot?.had_sensitive_identifier === true
       || summary.ecu_info_snapshot?.hadSensitiveIdentifier === true
-      || summary.ecu_info_snapshot?.had_sensitive_identifier === true;
-    const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, 0);
+      || summary.ecu_info_snapshot?.had_sensitive_identifier === true
+      || importClassification?.hadSensitiveIdentifier === true
+      || importClassification?.had_sensitive_identifier === true;
+    const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, importClassification?.sourceLength, importClassification?.source_length, 0);
     const sourceLength = Number.isFinite(Number(sourceLengthValue)) ? Math.max(0, Math.round(Number(sourceLengthValue))) : 0;
     return snakeCase
       ? {
