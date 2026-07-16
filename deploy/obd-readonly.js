@@ -2920,6 +2920,9 @@
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedNextReadoutGuardReviewRequestPlanSummary = parts.importedNextReadoutGuardReviewRequestPlanSummary
+      || parts.imported_next_readout_guard_review_request_plan_summary
+      || null;
     const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
       || null;
@@ -2964,6 +2967,8 @@
       analysisReadinessSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedNextReadoutGuardReviewRequestPlanSummary,
+      imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       readoutRequestPlanGateSummary,
@@ -3317,6 +3322,11 @@
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedNextReadoutGuardReviewRequestPlanSummary = parts.importedNextReadoutGuardReviewRequestPlanSummary
+      || parts.imported_next_readout_guard_review_request_plan_summary
+      || parts.importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
+      || parts.imported_next_readout_guard_comparison_summary?.review_request_plan_summary
+      || null;
     const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
       || null;
@@ -3373,6 +3383,8 @@
       readout_request_plan_summary: readoutRequestPlanSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedNextReadoutGuardReviewRequestPlanSummary,
+      imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
@@ -8497,6 +8509,9 @@
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false
     };
+    const nextReadoutGuardReviewRequestPlanSummary = nextReadoutGuardComparison?.reviewRequestPlanSummary
+      || nextReadoutGuardComparison?.review_request_plan_summary
+      || null;
     return {
       schemaVersion: "imported_session_comparison_v1",
       schema_version: "imported_session_comparison_v1",
@@ -8606,6 +8621,8 @@
       primary_readout_quality_review_request: primaryReadoutQualityReviewRequest,
       readoutQualityReviewRequestPlanSummary,
       readout_quality_review_request_plan_summary: readoutQualityReviewRequestPlanSummary,
+      nextReadoutGuardReviewRequestPlanSummary,
+      next_readout_guard_review_request_plan_summary: nextReadoutGuardReviewRequestPlanSummary,
       readoutQualityReviewIssueIds,
       readout_quality_review_issue_ids: readoutQualityReviewIssueIds,
       readoutQualityReviewIssueCount: readoutQualityReviewIssueIds.length,
@@ -9104,6 +9121,8 @@
       core_readout_inventory_summary: pickPresent(input.core_readout_inventory_summary, input.coreReadoutInventorySummary, payload?.core_readout_inventory_summary, payload?.coreReadoutInventorySummary, nested.core_readout_inventory_summary, nested.coreReadoutInventorySummary, null),
       importedReadoutQualityReviewRequestPlanSummary: pickPresent(input.importedReadoutQualityReviewRequestPlanSummary, input.imported_readout_quality_review_request_plan_summary, payload?.importedReadoutQualityReviewRequestPlanSummary, payload?.imported_readout_quality_review_request_plan_summary, nested.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary, null),
       imported_readout_quality_review_request_plan_summary: pickPresent(input.imported_readout_quality_review_request_plan_summary, input.importedReadoutQualityReviewRequestPlanSummary, payload?.imported_readout_quality_review_request_plan_summary, payload?.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary, nested.importedReadoutQualityReviewRequestPlanSummary, null),
+      importedNextReadoutGuardReviewRequestPlanSummary: pickPresent(input.importedNextReadoutGuardReviewRequestPlanSummary, input.imported_next_readout_guard_review_request_plan_summary, payload?.importedNextReadoutGuardReviewRequestPlanSummary, payload?.imported_next_readout_guard_review_request_plan_summary, nested.importedNextReadoutGuardReviewRequestPlanSummary, nested.imported_next_readout_guard_review_request_plan_summary, null),
+      imported_next_readout_guard_review_request_plan_summary: pickPresent(input.imported_next_readout_guard_review_request_plan_summary, input.importedNextReadoutGuardReviewRequestPlanSummary, payload?.imported_next_readout_guard_review_request_plan_summary, payload?.importedNextReadoutGuardReviewRequestPlanSummary, nested.imported_next_readout_guard_review_request_plan_summary, nested.importedNextReadoutGuardReviewRequestPlanSummary, null),
       importedVehicleApplicabilityChangedRowSummary: pickPresent(input.importedVehicleApplicabilityChangedRowSummary, input.imported_vehicle_applicability_changed_row_summary, payload?.importedVehicleApplicabilityChangedRowSummary, payload?.imported_vehicle_applicability_changed_row_summary, nested.importedVehicleApplicabilityChangedRowSummary, nested.imported_vehicle_applicability_changed_row_summary, null),
       imported_vehicle_applicability_changed_row_summary: pickPresent(input.imported_vehicle_applicability_changed_row_summary, input.importedVehicleApplicabilityChangedRowSummary, payload?.imported_vehicle_applicability_changed_row_summary, payload?.importedVehicleApplicabilityChangedRowSummary, nested.imported_vehicle_applicability_changed_row_summary, nested.importedVehicleApplicabilityChangedRowSummary, null),
       storedDtcSnapshot: pickPresent(input.storedDtcSnapshot, input.stored_dtc_snapshot, input.storedDtcResponse, input.stored_dtc_response, payload?.storedDtcSnapshot, payload?.stored_dtc_snapshot, payload?.storedDtcResponse, payload?.stored_dtc_response, nested.storedDtcSnapshot, nested.stored_dtc_snapshot, nested.storedDtcResponse, nested.stored_dtc_response, null),
@@ -9486,6 +9505,11 @@
     const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary
       || summary.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary
+      || summary.imported_next_readout_guard_review_request_plan_summary
+      || summary.importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
+      || summary.imported_next_readout_guard_comparison_summary?.review_request_plan_summary
+      || null;
     const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary
       || summary.imported_vehicle_applicability_changed_row_summary
       || null;
@@ -9587,6 +9611,7 @@
         analysis_readiness_summary: analysisReadinessSummary,
         readout_quality_summary: readoutQualitySummary,
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+        imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
         imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
         readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
         next_readout_request: nextReadoutRequest,
@@ -9686,6 +9711,12 @@
     const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary
       || summary.imported_readout_quality_review_request_plan_summary
       || exportPayload.session?.imported_readout_quality_review_request_plan_summary
+      || null;
+    const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary
+      || summary.imported_next_readout_guard_review_request_plan_summary
+      || summary.importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
+      || summary.imported_next_readout_guard_comparison_summary?.review_request_plan_summary
+      || exportPayload.session?.imported_next_readout_guard_review_request_plan_summary
       || null;
     const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary
       || summary.imported_vehicle_applicability_changed_row_summary
@@ -9802,6 +9833,8 @@
       readoutQualitySummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedNextReadoutGuardReviewRequestPlanSummary,
+      imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       readoutRequestPlanGateSummary,
@@ -9853,6 +9886,8 @@
         readoutQualitySummary,
         importedReadoutQualityReviewRequestPlanSummary,
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+        importedNextReadoutGuardReviewRequestPlanSummary,
+        imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
         importedVehicleApplicabilityChangedRowSummary,
         imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
         readoutRequestPlanGateSummary,
@@ -10279,6 +10314,15 @@
       || bridgeSession?.importedReadoutQualityReviewRequestPlanSummary
       || bridgeSession?.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedNextReadoutGuardReviewRequestPlanSummary = importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
+      || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
+      || bridgeImport?.importedNextReadoutGuardReviewRequestPlanSummary
+      || bridgeImport?.imported_next_readout_guard_review_request_plan_summary
+      || bridgeSession?.importedNextReadoutGuardReviewRequestPlanSummary
+      || bridgeSession?.imported_next_readout_guard_review_request_plan_summary
+      || null;
     const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
     const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || null;
     const connectionStatus = bridgeImport?.connectionStatus || bridgeImport?.connection_status || bridgeSession?.connectionStatus || bridgeSession?.connection_status || null;
@@ -10384,6 +10428,8 @@
       importedCoreReadoutInventoryComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedNextReadoutGuardReviewRequestPlanSummary,
+      imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       importedSessionComparisonSummary,
@@ -12706,6 +12752,13 @@
       || sessionInput.importedReadoutQualityReviewRequestPlanSummary
       || sessionInput.imported_readout_quality_review_request_plan_summary
       || null;
+    const importedNextReadoutGuardReviewRequestPlanSummary = importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
+      || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
+      || sessionInput.importedNextReadoutGuardReviewRequestPlanSummary
+      || sessionInput.imported_next_readout_guard_review_request_plan_summary
+      || null;
     const mergedMonitorValueSummary = mergeMonitorValueSummaries(
       livePidSnapshot.monitorValueSummary || livePidSnapshot.monitor_value_summary,
       freezeFrameSnapshot.monitorValueSummary || freezeFrameSnapshot.monitor_value_summary
@@ -12825,6 +12878,8 @@
       imported_core_readout_inventory_comparison_summary: importedCoreReadoutInventoryComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
+      importedNextReadoutGuardReviewRequestPlanSummary,
+      imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       importedSessionComparisonSummary,
