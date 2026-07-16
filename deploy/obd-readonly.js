@@ -5279,6 +5279,7 @@
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
     const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
+    const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummary?.primaryBlockingReason || readoutCompletionSummary?.primaryBlockingReason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || analysisReadinessSummary?.primaryBlockingReadoutRequest || readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || analysisReadinessSummary?.primaryBlockingSummary || readoutCompletionSummary?.primaryBlockingSummary || null;
@@ -5353,6 +5354,8 @@
       core_workflow_summary: coreWorkflowSummary,
       nextReadoutCandidate: summary.nextReadoutCandidate || summary.next_readout_candidate || null,
       next_readout_candidate: summary.next_readout_candidate || summary.nextReadoutCandidate || null,
+      nextReadoutCandidateSafetySummary,
+      next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       nextRecommendedReadoutId: pickDefined(summary.nextRecommendedReadoutId, summary.next_recommended_readout_id, null),
       next_recommended_readout_id: pickDefined(summary.next_recommended_readout_id, summary.nextRecommendedReadoutId, null),
       nextReadoutSource: pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
