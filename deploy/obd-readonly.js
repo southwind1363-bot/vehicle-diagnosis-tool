@@ -7324,6 +7324,167 @@
     };
   }
 
+  function normalizeNextReadoutGuardSummaryAliases(summary = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const schemaVersion = summary.schemaVersion || summary.schema_version || "next_readout_guard_summary_v1";
+    const readFlag = (camelKey, snakeKey, fallback = false) => pickDefined(summary[camelKey], summary[snakeKey], fallback) === true;
+    const readoutId = pickDefined(summary.readoutId, summary.readout_id, null);
+    const reasonId = pickDefined(summary.reasonId, summary.reason_id, null);
+    const gateState = pickDefined(summary.gateState, summary.gate_state, "unknown");
+    const gateReady = readFlag("gateReady", "gate_ready", gateState === "ready");
+    const actionRequired = readFlag("actionRequired", "action_required", false);
+    const requestSafe = readFlag("requestSafe", "request_safe", false);
+    const readOnly = pickDefined(summary.readOnly, summary.read_only, true) !== false;
+    const nonTransmitting = readFlag("nonTransmitting", "non_transmitting", false);
+    const vehicleCommandDisabled = readFlag("vehicleCommandDisabled", "vehicle_command_disabled", false);
+    const executionDisabled = readFlag("executionDisabled", "execution_disabled", false);
+    const planningReady = pickDefined(summary.planningReady, summary.planning_ready, summary.safeForReadoutPlanning, summary.safe_for_readout_planning, false) === true;
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      readoutId,
+      readout_id: readoutId,
+      reasonId,
+      reason_id: reasonId,
+      gateState,
+      gate_state: gateState,
+      gateReady,
+      gate_ready: gateReady,
+      actionRequired,
+      action_required: actionRequired,
+      nextActionId: pickDefined(summary.nextActionId, summary.next_action_id, null),
+      next_action_id: pickDefined(summary.nextActionId, summary.next_action_id, null),
+      requestSafe,
+      request_safe: requestSafe,
+      readOnly,
+      read_only: readOnly,
+      nonTransmitting,
+      non_transmitting: nonTransmitting,
+      vehicleCommandDisabled,
+      vehicle_command_disabled: vehicleCommandDisabled,
+      executionDisabled,
+      execution_disabled: executionDisabled,
+      planningReady,
+      planning_ready: planningReady,
+      safeForReadoutPlanning: planningReady,
+      safe_for_readout_planning: planningReady,
+      bridgeIntent: pickDefined(summary.bridgeIntent, summary.bridge_intent, null),
+      bridge_intent: pickDefined(summary.bridgeIntent, summary.bridge_intent, null),
+      serviceMode: pickDefined(summary.serviceMode, summary.service_mode, null),
+      service_mode: pickDefined(summary.serviceMode, summary.service_mode, null)
+    };
+  }
+
+  function buildImportedNextReadoutGuardComparisonSummary(importedGuardSummary = null, currentGuardSummary = {}) {
+    const importedSummary = normalizeNextReadoutGuardSummaryAliases(importedGuardSummary);
+    if (!importedSummary || typeof importedSummary !== "object") return null;
+    const currentSummary = normalizeNextReadoutGuardSummaryAliases(currentGuardSummary) || {};
+    const read = (summary, camelKey, snakeKey = camelKey) => pickDefined(summary?.[camelKey], summary?.[snakeKey], null);
+    const changed = (camelKey, snakeKey = camelKey) => read(importedSummary, camelKey, snakeKey) !== read(currentSummary, camelKey, snakeKey);
+    const changedFlagIds = [
+      changed("gateReady", "gate_ready") ? "gate_ready" : null,
+      changed("actionRequired", "action_required") ? "action_required" : null,
+      changed("requestSafe", "request_safe") ? "request_safe" : null,
+      changed("readOnly", "read_only") ? "read_only" : null,
+      changed("nonTransmitting", "non_transmitting") ? "non_transmitting" : null,
+      changed("vehicleCommandDisabled", "vehicle_command_disabled") ? "vehicle_command_disabled" : null,
+      changed("executionDisabled", "execution_disabled") ? "execution_disabled" : null,
+      changed("planningReady", "planning_ready") ? "planning_ready" : null
+    ].filter(Boolean);
+    const readoutIdChanged = changed("readoutId", "readout_id");
+    const bridgeIntentChanged = changed("bridgeIntent", "bridge_intent");
+    const changedReadoutIds = [...new Set([read(importedSummary, "readoutId", "readout_id"), read(currentSummary, "readoutId", "readout_id")].filter(Boolean))];
+    const changedBridgeIntentIds = [...new Set([read(importedSummary, "bridgeIntent", "bridge_intent"), read(currentSummary, "bridgeIntent", "bridge_intent")].filter(Boolean))];
+    const changedIds = [...new Set([...changedReadoutIds, ...changedBridgeIntentIds, ...changedFlagIds])];
+    const hasChanges = [
+      readoutIdChanged,
+      changed("reasonId", "reason_id"),
+      changed("gateState", "gate_state"),
+      changed("nextActionId", "next_action_id"),
+      bridgeIntentChanged,
+      changed("serviceMode", "service_mode"),
+      changedFlagIds.length > 0
+    ].some(Boolean);
+    return {
+      schemaVersion: "imported_next_readout_guard_comparison_v1",
+      schema_version: "imported_next_readout_guard_comparison_v1",
+      changed: hasChanges,
+      changed_count: changedIds.length,
+      changedCount: changedIds.length,
+      importedReadoutId: read(importedSummary, "readoutId", "readout_id"),
+      imported_readout_id: read(importedSummary, "readoutId", "readout_id"),
+      currentReadoutId: read(currentSummary, "readoutId", "readout_id"),
+      current_readout_id: read(currentSummary, "readoutId", "readout_id"),
+      readoutIdChanged,
+      readout_id_changed: readoutIdChanged,
+      readoutChanged: readoutIdChanged,
+      readout_changed: readoutIdChanged,
+      readoutAddedIds: readoutIdChanged && read(currentSummary, "readoutId", "readout_id") ? [read(currentSummary, "readoutId", "readout_id")] : [],
+      readout_added_ids: readoutIdChanged && read(currentSummary, "readoutId", "readout_id") ? [read(currentSummary, "readoutId", "readout_id")] : [],
+      readoutRemovedIds: readoutIdChanged && read(importedSummary, "readoutId", "readout_id") ? [read(importedSummary, "readoutId", "readout_id")] : [],
+      readout_removed_ids: readoutIdChanged && read(importedSummary, "readoutId", "readout_id") ? [read(importedSummary, "readoutId", "readout_id")] : [],
+      importedReasonId: read(importedSummary, "reasonId", "reason_id"),
+      imported_reason_id: read(importedSummary, "reasonId", "reason_id"),
+      currentReasonId: read(currentSummary, "reasonId", "reason_id"),
+      current_reason_id: read(currentSummary, "reasonId", "reason_id"),
+      reasonIdChanged: changed("reasonId", "reason_id"),
+      reason_id_changed: changed("reasonId", "reason_id"),
+      importedGateState: read(importedSummary, "gateState", "gate_state"),
+      imported_gate_state: read(importedSummary, "gateState", "gate_state"),
+      currentGateState: read(currentSummary, "gateState", "gate_state"),
+      current_gate_state: read(currentSummary, "gateState", "gate_state"),
+      gateStateChanged: changed("gateState", "gate_state"),
+      gate_state_changed: changed("gateState", "gate_state"),
+      importedPlanningReady: read(importedSummary, "planningReady", "planning_ready") === true,
+      imported_planning_ready: read(importedSummary, "planningReady", "planning_ready") === true,
+      currentPlanningReady: read(currentSummary, "planningReady", "planning_ready") === true,
+      current_planning_ready: read(currentSummary, "planningReady", "planning_ready") === true,
+      planningReadyChanged: changed("planningReady", "planning_ready"),
+      planning_ready_changed: changed("planningReady", "planning_ready"),
+      safeForReadoutPlanningChanged: changed("safeForReadoutPlanning", "safe_for_readout_planning"),
+      safe_for_readout_planning_changed: changed("safeForReadoutPlanning", "safe_for_readout_planning"),
+      requestSafeChanged: changed("requestSafe", "request_safe"),
+      request_safe_changed: changed("requestSafe", "request_safe"),
+      readOnlyChanged: changed("readOnly", "read_only"),
+      read_only_changed: changed("readOnly", "read_only"),
+      nonTransmittingChanged: changed("nonTransmitting", "non_transmitting"),
+      non_transmitting_changed: changed("nonTransmitting", "non_transmitting"),
+      vehicleCommandDisabledChanged: changed("vehicleCommandDisabled", "vehicle_command_disabled"),
+      vehicle_command_disabled_changed: changed("vehicleCommandDisabled", "vehicle_command_disabled"),
+      executionDisabledChanged: changed("executionDisabled", "execution_disabled"),
+      execution_disabled_changed: changed("executionDisabled", "execution_disabled"),
+      safetyChanged: changedFlagIds.length > 0,
+      safety_changed: changedFlagIds.length > 0,
+      safetyFlagChangedIds: changedFlagIds,
+      safety_flag_changed_ids: changedFlagIds,
+      importedNextActionId: read(importedSummary, "nextActionId", "next_action_id"),
+      imported_next_action_id: read(importedSummary, "nextActionId", "next_action_id"),
+      currentNextActionId: read(currentSummary, "nextActionId", "next_action_id"),
+      current_next_action_id: read(currentSummary, "nextActionId", "next_action_id"),
+      nextActionChanged: changed("nextActionId", "next_action_id"),
+      next_action_changed: changed("nextActionId", "next_action_id"),
+      importedBridgeIntent: read(importedSummary, "bridgeIntent", "bridge_intent"),
+      imported_bridge_intent: read(importedSummary, "bridgeIntent", "bridge_intent"),
+      currentBridgeIntent: read(currentSummary, "bridgeIntent", "bridge_intent"),
+      current_bridge_intent: read(currentSummary, "bridgeIntent", "bridge_intent"),
+      bridgeIntentChanged,
+      bridge_intent_changed: bridgeIntentChanged,
+      bridgeIntentAddedIds: bridgeIntentChanged && read(currentSummary, "bridgeIntent", "bridge_intent") ? [read(currentSummary, "bridgeIntent", "bridge_intent")] : [],
+      bridge_intent_added_ids: bridgeIntentChanged && read(currentSummary, "bridgeIntent", "bridge_intent") ? [read(currentSummary, "bridgeIntent", "bridge_intent")] : [],
+      bridgeIntentRemovedIds: bridgeIntentChanged && read(importedSummary, "bridgeIntent", "bridge_intent") ? [read(importedSummary, "bridgeIntent", "bridge_intent")] : [],
+      bridge_intent_removed_ids: bridgeIntentChanged && read(importedSummary, "bridgeIntent", "bridge_intent") ? [read(importedSummary, "bridgeIntent", "bridge_intent")] : [],
+      importedServiceMode: read(importedSummary, "serviceMode", "service_mode"),
+      imported_service_mode: read(importedSummary, "serviceMode", "service_mode"),
+      currentServiceMode: read(currentSummary, "serviceMode", "service_mode"),
+      current_service_mode: read(currentSummary, "serviceMode", "service_mode"),
+      serviceModeChanged: changed("serviceMode", "service_mode"),
+      service_mode_changed: changed("serviceMode", "service_mode"),
+      changedIds,
+      changed_ids: changedIds
+    };
+  }
+
   function normalizeReadoutRequestPlanGateSummaryAliases(summary = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
     const schemaVersion = summary.schemaVersion || summary.schema_version || "readout_request_plan_gate_v1";
@@ -7400,6 +7561,7 @@
     analysisReadinessComparison = null,
     readoutQualityComparison = null,
     readoutRequestPlanGateComparison = null,
+    nextReadoutGuardComparison = null,
     coreReadoutInventoryComparison = null
   } = {}) {
     const sectionInputs = [
@@ -7409,6 +7571,7 @@
       { id: "analysis_readiness_summary", comparison: analysisReadinessComparison },
       { id: "readout_quality_summary", comparison: readoutQualityComparison },
       { id: "readout_request_plan_gate_summary", comparison: readoutRequestPlanGateComparison },
+      { id: "next_readout_guard_summary", comparison: nextReadoutGuardComparison },
       { id: "core_readout_inventory_summary", comparison: coreReadoutInventoryComparison }
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
@@ -7423,6 +7586,20 @@
       || comparison.requestPlanStateChanged === true
       || comparison.requestPlanNextRequestChanged === true
       || comparison.requestPlanNextBridgeIntentChanged === true
+      || comparison.changed === true
+      || comparison.readoutIdChanged === true
+      || comparison.reasonIdChanged === true
+      || comparison.gateStateChanged === true
+      || comparison.planningReadyChanged === true
+      || comparison.safeForReadoutPlanningChanged === true
+      || comparison.requestSafeChanged === true
+      || comparison.readOnlyChanged === true
+      || comparison.nonTransmittingChanged === true
+      || comparison.vehicleCommandDisabledChanged === true
+      || comparison.executionDisabledChanged === true
+      || comparison.safetyChanged === true
+      || comparison.bridgeIntentChanged === true
+      || comparison.serviceModeChanged === true
       || comparison.primaryBlockingChanged === true
       || comparison.primaryBlockingReasonChanged === true
       || comparison.primaryBlockingReadoutChanged === true
@@ -7459,6 +7636,8 @@
       comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
       comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
       comparison.requestPlanStateChanged === true || comparison.requestPlanNextRequestChanged === true || comparison.requestPlanNextBridgeIntentChanged === true ? "request_plan_summary" : null,
+      comparison.readoutIdChanged === true || comparison.reasonIdChanged === true || comparison.gateStateChanged === true || comparison.planningReadyChanged === true || comparison.safeForReadoutPlanningChanged === true || comparison.bridgeIntentChanged === true || comparison.serviceModeChanged === true ? "next_readout_guard" : null,
+      comparison.requestSafeChanged === true || comparison.readOnlyChanged === true || comparison.nonTransmittingChanged === true || comparison.vehicleCommandDisabledChanged === true || comparison.executionDisabledChanged === true || comparison.safetyChanged === true ? "next_readout_guard_safety" : null,
       comparison.primaryBlockingChanged === true || comparison.primaryBlockingReasonChanged === true || comparison.primaryBlockingReadoutChanged === true || comparison.primaryBlockingBridgeIntentChanged === true ? "primary_blocker" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
@@ -7494,6 +7673,7 @@
         "requiredAddedIds", "capturedAddedIds", "missingAddedIds", "pendingAddedIds", "emptyAddedIds", "attemptedAddedIds",
         "changedValueCountIds",
         "blockedReasonAddedIds", "actionAddedIds", "actionReasonAddedIds", "actionReadoutAddedIds",
+        "readoutAddedIds", "bridgeIntentAddedIds", "safetyFlagChangedIds",
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds"
@@ -7507,6 +7687,7 @@
         "requiredRemovedIds", "capturedRemovedIds", "missingRemovedIds", "pendingRemovedIds", "emptyRemovedIds", "attemptedRemovedIds",
         "changedValueCountIds",
         "blockedReasonRemovedIds", "actionRemovedIds", "actionReasonRemovedIds", "actionReadoutRemovedIds",
+        "readoutRemovedIds", "bridgeIntentRemovedIds", "safetyFlagChangedIds",
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds"
@@ -7553,7 +7734,19 @@
             || item.comparison.blockedReasonIdsChanged === true,
           requestPlanSummaryChanged: item.comparison.requestPlanStateChanged === true
             || item.comparison.requestPlanNextRequestChanged === true
-            || item.comparison.requestPlanNextBridgeIntentChanged === true
+            || item.comparison.requestPlanNextBridgeIntentChanged === true,
+          nextReadoutGuardChanged: item.comparison.readoutIdChanged === true
+            || item.comparison.reasonIdChanged === true
+            || item.comparison.gateStateChanged === true
+            || item.comparison.planningReadyChanged === true
+            || item.comparison.safeForReadoutPlanningChanged === true
+            || item.comparison.requestSafeChanged === true
+            || item.comparison.readOnlyChanged === true
+            || item.comparison.nonTransmittingChanged === true
+            || item.comparison.vehicleCommandDisabledChanged === true
+            || item.comparison.executionDisabledChanged === true
+            || item.comparison.bridgeIntentChanged === true
+            || item.comparison.serviceModeChanged === true
         };
       });
     const changedSectionSummaries = sectionSummaries.filter((item) => item.changed);
@@ -7644,6 +7837,7 @@
       if (knownBridgeIntentChangedIds.has(id) || String(id).startsWith("read_")) return "bridge_intent";
       if (knownReadoutChangedIds.has(id)) return "readout_id";
       if (reasonIds.includes("request_plan_actions")) return "request_plan_action";
+      if (reasonIds.includes("next_readout_guard_safety")) return "readout_guard_safety";
       if (reasonIds.includes("blocked_reasons")) return "blocked_reason";
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
       return "other";
@@ -7907,7 +8101,7 @@
         removed: row.removedCount || 0
       };
     };
-    const changedIdDisplayKindDirectionCounts = ["readout_id", "bridge_intent", "request_plan_action", "blocked_reason", "analysis_checklist_id", "other"]
+    const changedIdDisplayKindDirectionCounts = ["readout_id", "bridge_intent", "request_plan_action", "readout_guard_safety", "blocked_reason", "analysis_checklist_id", "other"]
       .reduce((counts, kind) => {
         counts[kind] = buildKindDirectionCountSummary(kind);
         return counts;
@@ -8158,6 +8352,8 @@
       bridge_intent_kind_direction_counts: changedIdDisplayKindDirectionCounts.bridge_intent,
       requestPlanActionKindDirectionCounts: changedIdDisplayKindDirectionCounts.request_plan_action,
       request_plan_action_kind_direction_counts: changedIdDisplayKindDirectionCounts.request_plan_action,
+      readoutGuardSafetyKindDirectionCounts: changedIdDisplayKindDirectionCounts.readout_guard_safety,
+      readout_guard_safety_kind_direction_counts: changedIdDisplayKindDirectionCounts.readout_guard_safety,
       blockedReasonKindDirectionCounts: changedIdDisplayKindDirectionCounts.blocked_reason,
       blocked_reason_kind_direction_counts: changedIdDisplayKindDirectionCounts.blocked_reason,
       analysisChecklistKindDirectionCounts: changedIdDisplayKindDirectionCounts.analysis_checklist_id,
@@ -8168,6 +8364,8 @@
       bridge_intent_changed_id_count: bridgeIntentChangedIdSummary.count || 0,
       requestPlanActionChangedIdCount: changedIdSummaryByKind.request_plan_action?.count || 0,
       request_plan_action_changed_id_count: changedIdSummaryByKind.request_plan_action?.count || 0,
+      readoutGuardSafetyChangedIdCount: changedIdSummaryByKind.readout_guard_safety?.count || 0,
+      readout_guard_safety_changed_id_count: changedIdSummaryByKind.readout_guard_safety?.count || 0,
       blockedReasonChangedIdCount: changedIdSummaryByKind.blocked_reason?.count || 0,
       blocked_reason_changed_id_count: changedIdSummaryByKind.blocked_reason?.count || 0,
       analysisChecklistChangedIdCount: changedIdSummaryByKind.analysis_checklist_id?.count || 0,
@@ -8451,6 +8649,8 @@
       ready_for_analysis_changed: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
       request_plan_gate_changed: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
+      nextReadoutGuardChanged: comparisons.some((item) => item.readoutIdChanged === true || item.reasonIdChanged === true || item.gateStateChanged === true || item.planningReadyChanged === true || item.safeForReadoutPlanningChanged === true || item.requestSafeChanged === true || item.readOnlyChanged === true || item.nonTransmittingChanged === true || item.vehicleCommandDisabledChanged === true || item.executionDisabledChanged === true || item.bridgeIntentChanged === true || item.serviceModeChanged === true),
+      next_readout_guard_changed: comparisons.some((item) => item.readoutIdChanged === true || item.reasonIdChanged === true || item.gateStateChanged === true || item.planningReadyChanged === true || item.safeForReadoutPlanningChanged === true || item.requestSafeChanged === true || item.readOnlyChanged === true || item.nonTransmittingChanged === true || item.vehicleCommandDisabledChanged === true || item.executionDisabledChanged === true || item.bridgeIntentChanged === true || item.serviceModeChanged === true),
       requestPlanSummaryChanged: comparisons.some((item) => item.requestPlanStateChanged === true || item.requestPlanNextRequestChanged === true || item.requestPlanNextBridgeIntentChanged === true),
       request_plan_summary_changed: comparisons.some((item) => item.requestPlanStateChanged === true || item.requestPlanNextRequestChanged === true || item.requestPlanNextBridgeIntentChanged === true),
       primaryBlockerChanged: comparisons.some((item) => item.primaryBlockingChanged === true || item.primaryBlockingReasonChanged === true || item.primaryBlockingReadoutChanged === true || item.primaryBlockingBridgeIntentChanged === true),
@@ -9768,6 +9968,15 @@
       || bridgeImportInput?.readoutRequestPlanGateSummary
       || bridgeImportInput?.readout_request_plan_gate_summary
       || null);
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(input.nextReadoutGuardSummary
+      || input.next_readout_guard_summary
+      || bridgeImport?.nextReadoutGuardSummary
+      || bridgeImport?.next_readout_guard_summary
+      || bridgeSession?.nextReadoutGuardSummary
+      || bridgeSession?.next_readout_guard_summary
+      || bridgeImportInput?.nextReadoutGuardSummary
+      || bridgeImportInput?.next_readout_guard_summary
+      || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(bridgeImport?.coreReadoutInventorySummary
       || bridgeImport?.core_readout_inventory_summary
       || bridgeSession?.coreReadoutInventorySummary
@@ -9942,18 +10151,13 @@
       || diagnosticFlowSummary.nextReadoutReasonSummary
       || diagnosticFlowSummary.next_readout_reason_summary
       || null;
-    const nextReadoutGuardSummary = input.nextReadoutGuardSummary
-      || input.next_readout_guard_summary
-      || bridgeImport?.nextReadoutGuardSummary
-      || bridgeImport?.next_readout_guard_summary
-      || bridgeSession?.nextReadoutGuardSummary
-      || bridgeSession?.next_readout_guard_summary
-      || mergedBridgeMetadata.nextReadoutGuardSummary
+    const generatedNextReadoutGuardSummary = mergedBridgeMetadata.nextReadoutGuardSummary
       || coreSessionStatus.nextReadoutGuardSummary
       || coreSessionStatus.next_readout_guard_summary
       || diagnosticFlowSummary.nextReadoutGuardSummary
       || diagnosticFlowSummary.next_readout_guard_summary
       || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
+    const nextReadoutGuardSummary = generatedNextReadoutGuardSummary || importedNextReadoutGuardSummary;
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       dtcSnapshot,
@@ -9970,6 +10174,7 @@
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const importedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
     const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const importedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
     const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
@@ -9978,6 +10183,7 @@
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
       readoutQualityComparison: importedReadoutQualityComparisonSummary,
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      nextReadoutGuardComparison: importedNextReadoutGuardComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
     const importedVehicleApplicabilityChangedRowSummary = importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
@@ -10083,6 +10289,8 @@
       importedReadoutQualitySummary,
       imported_readout_quality_summary: importedReadoutQualitySummary,
       importedReadoutRequestPlanGateSummary,
+      importedNextReadoutGuardSummary,
+      imported_next_readout_guard_summary: importedNextReadoutGuardSummary,
       importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
       importedDiagnosticFlowComparisonSummary,
@@ -10091,6 +10299,8 @@
       importedReadoutQualityComparisonSummary,
       imported_readout_quality_comparison_summary: importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
+      importedNextReadoutGuardComparisonSummary,
+      imported_next_readout_guard_comparison_summary: importedNextReadoutGuardComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
@@ -12126,6 +12336,7 @@
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(sessionInput.nextReadoutGuardSummary || sessionInput.next_readout_guard_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
     const bridgeSession = sessionInput.bridgeSession || sessionInput.bridge_session || null;
     const bridgeExportPayload = sessionInput.exportPayload || sessionInput.export_payload || sessionInput.bridgeExportPayload || sessionInput.bridge_export_payload || null;
@@ -12394,6 +12605,7 @@
     const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const importedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
     const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const importedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
     const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
@@ -12402,6 +12614,7 @@
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
       readoutQualityComparison: importedReadoutQualityComparisonSummary,
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      nextReadoutGuardComparison: importedNextReadoutGuardComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
     const importedVehicleApplicabilityChangedRowSummary = importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
@@ -12510,6 +12723,8 @@
       imported_readout_quality_summary: importedReadoutQualitySummary,
       importedReadoutRequestPlanGateSummary,
       imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+      importedNextReadoutGuardSummary,
+      imported_next_readout_guard_summary: importedNextReadoutGuardSummary,
       importedCoreReadoutInventorySummary,
       imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
@@ -12524,6 +12739,8 @@
       imported_readout_quality_comparison_summary: importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
       imported_readout_request_plan_gate_comparison_summary: importedReadoutRequestPlanGateComparisonSummary,
+      importedNextReadoutGuardComparisonSummary,
+      imported_next_readout_guard_comparison_summary: importedNextReadoutGuardComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       imported_core_readout_inventory_comparison_summary: importedCoreReadoutInventoryComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
