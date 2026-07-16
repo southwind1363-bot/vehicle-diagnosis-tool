@@ -10768,15 +10768,30 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
-    const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
-    const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
-    const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
-    const importedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
-    const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
-    const importedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
-    const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
-    const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({
+    const importedSessionComparisonSummaryInput = input.importedSessionComparisonSummary
+      || input.imported_session_comparison_summary
+      || bridgeImport?.importedSessionComparisonSummary
+      || bridgeImport?.imported_session_comparison_summary
+      || bridgeSession?.importedSessionComparisonSummary
+      || bridgeSession?.imported_session_comparison_summary
+      || null;
+    const generatedImportedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
+    const generatedImportedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
+    const generatedImportedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
+    const generatedImportedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
+    const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
+    const generatedImportedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
+    const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
+    const importedCoreComparisonSummary = input.importedCoreComparisonSummary || input.imported_core_comparison_summary || bridgeImport?.importedCoreComparisonSummary || bridgeImport?.imported_core_comparison_summary || bridgeSession?.importedCoreComparisonSummary || bridgeSession?.imported_core_comparison_summary || importedSessionComparisonSummaryInput?.coreComparison || importedSessionComparisonSummaryInput?.core_comparison || generatedImportedCoreComparisonSummary;
+    const importedDiagnosticFlowComparisonSummary = input.importedDiagnosticFlowComparisonSummary || input.imported_diagnostic_flow_comparison_summary || bridgeImport?.importedDiagnosticFlowComparisonSummary || bridgeImport?.imported_diagnostic_flow_comparison_summary || bridgeSession?.importedDiagnosticFlowComparisonSummary || bridgeSession?.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummaryInput?.diagnosticFlowComparison || importedSessionComparisonSummaryInput?.diagnostic_flow_comparison || generatedImportedDiagnosticFlowComparisonSummary;
+    const importedReadoutCompletionComparisonSummary = input.importedReadoutCompletionComparisonSummary || input.imported_readout_completion_comparison_summary || bridgeImport?.importedReadoutCompletionComparisonSummary || bridgeImport?.imported_readout_completion_comparison_summary || bridgeSession?.importedReadoutCompletionComparisonSummary || bridgeSession?.imported_readout_completion_comparison_summary || importedSessionComparisonSummaryInput?.readoutCompletionComparison || importedSessionComparisonSummaryInput?.readout_completion_comparison || generatedImportedReadoutCompletionComparisonSummary;
+    const importedAnalysisReadinessComparisonSummary = input.importedAnalysisReadinessComparisonSummary || input.imported_analysis_readiness_comparison_summary || bridgeImport?.importedAnalysisReadinessComparisonSummary || bridgeImport?.imported_analysis_readiness_comparison_summary || bridgeSession?.importedAnalysisReadinessComparisonSummary || bridgeSession?.imported_analysis_readiness_comparison_summary || importedSessionComparisonSummaryInput?.analysisReadinessComparison || importedSessionComparisonSummaryInput?.analysis_readiness_comparison || generatedImportedAnalysisReadinessComparisonSummary;
+    const importedReadoutQualityComparisonSummary = input.importedReadoutQualityComparisonSummary || input.imported_readout_quality_comparison_summary || bridgeImport?.importedReadoutQualityComparisonSummary || bridgeImport?.imported_readout_quality_comparison_summary || bridgeSession?.importedReadoutQualityComparisonSummary || bridgeSession?.imported_readout_quality_comparison_summary || importedSessionComparisonSummaryInput?.readoutQualityComparison || importedSessionComparisonSummaryInput?.readout_quality_comparison || generatedImportedReadoutQualityComparisonSummary;
+    const importedReadoutRequestPlanGateComparisonSummary = input.importedReadoutRequestPlanGateComparisonSummary || input.imported_readout_request_plan_gate_comparison_summary || bridgeImport?.importedReadoutRequestPlanGateComparisonSummary || bridgeImport?.imported_readout_request_plan_gate_comparison_summary || bridgeSession?.importedReadoutRequestPlanGateComparisonSummary || bridgeSession?.imported_readout_request_plan_gate_comparison_summary || importedSessionComparisonSummaryInput?.readoutRequestPlanGateComparison || importedSessionComparisonSummaryInput?.readout_request_plan_gate_comparison || generatedImportedReadoutRequestPlanGateComparisonSummary;
+    const importedNextReadoutGuardComparisonSummary = input.importedNextReadoutGuardComparisonSummary || input.imported_next_readout_guard_comparison_summary || bridgeImport?.importedNextReadoutGuardComparisonSummary || bridgeImport?.imported_next_readout_guard_comparison_summary || bridgeSession?.importedNextReadoutGuardComparisonSummary || bridgeSession?.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummaryInput?.nextReadoutGuardComparison || importedSessionComparisonSummaryInput?.next_readout_guard_comparison || generatedImportedNextReadoutGuardComparisonSummary;
+    const importedCoreReadoutInventoryComparisonSummary = input.importedCoreReadoutInventoryComparisonSummary || input.imported_core_readout_inventory_comparison_summary || bridgeImport?.importedCoreReadoutInventoryComparisonSummary || bridgeImport?.imported_core_readout_inventory_comparison_summary || bridgeSession?.importedCoreReadoutInventoryComparisonSummary || bridgeSession?.imported_core_readout_inventory_comparison_summary || importedSessionComparisonSummaryInput?.coreReadoutInventoryComparison || importedSessionComparisonSummaryInput?.core_readout_inventory_comparison || generatedImportedCoreReadoutInventoryComparisonSummary;
+    const generatedImportedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
       diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
       readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
@@ -10786,6 +10801,7 @@
       nextReadoutGuardComparison: importedNextReadoutGuardComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
+    const importedSessionComparisonSummary = importedSessionComparisonSummaryInput || generatedImportedSessionComparisonSummary;
     const importedVehicleApplicabilityChangedRowSummary = bridgeImport?.importedVehicleApplicabilityChangedRowSummary
       || bridgeImport?.imported_vehicle_applicability_changed_row_summary
       || bridgeImport?.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
