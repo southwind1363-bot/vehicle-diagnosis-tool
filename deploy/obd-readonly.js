@@ -10540,6 +10540,7 @@
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       importedSessionComparisonSummary,
+      imported_session_comparison_summary: importedSessionComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
