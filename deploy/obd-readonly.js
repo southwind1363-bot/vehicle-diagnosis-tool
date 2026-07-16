@@ -10078,7 +10078,15 @@
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const metadataFields = buildSummaryMetadataFields(summary);
     const directSessionMetadata = getSessionMetadataOverrides(parts);
-    const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});
+    const nestedBridgeSession = parts.bridgeSession
+      || parts.bridge_session
+      || parts.session
+      || parts.bridgeExportPayload?.session
+      || parts.bridge_export_payload?.session
+      || parts.localBridgeExportPayload?.session
+      || parts.local_bridge_export_payload?.session
+      || {};
+    const nestedSessionMetadata = getSessionMetadataOverrides(nestedBridgeSession);
     const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
     const bridgeSessionMetadataFields = {
       vehicleProfile: preserveNestedBridgeSessionMetadata
