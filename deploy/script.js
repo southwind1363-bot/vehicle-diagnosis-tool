@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "次読取候補の安全フィルタとread-only正規化を反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.703.0";
+const APP_VERSION = "2.704.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6706,6 +6706,7 @@ function analyzeObdScannerImport() {
   const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summaryCoreSessionStatus, "");
   const analysisEmptyReadoutLabel = formatCoreEmptyReadoutSummary(summaryCoreSessionStatus, 2, "");
   const analysisNextStepLabel = formatCoreNextStepSummary(summaryCoreSessionStatus, summaryNextReadoutCandidates, "");
+  const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary || summaryCoreSessionStatus?.nextReadoutCandidateSafetySummary || summaryCoreSessionStatus?.next_readout_candidate_safety_summary || summarySource.diagnosticFlowSummary?.nextReadoutCandidateSafetySummary || summarySource.diagnosticFlowSummary?.next_readout_candidate_safety_summary || summarySource.diagnostic_flow_summary?.nextReadoutCandidateSafetySummary || summarySource.diagnostic_flow_summary?.next_readout_candidate_safety_summary, "");
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
   }
@@ -6744,6 +6745,9 @@ function analyzeObdScannerImport() {
   }
   if (analysisNextStepLabel) {
     notes.push(`次操作 ${analysisNextStepLabel}`);
+  }
+  if (analysisNextReadoutCandidateSafetyNote) {
+    notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);
   }
   const primaryBlockerComparisonNote = formatPrimaryBlockerChangeSummary(importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary, "");
   if (primaryBlockerComparisonNote) {
