@@ -9443,6 +9443,8 @@
       imported_readout_quality_comparison_summary: pickPresent(input.imported_readout_quality_comparison_summary, input.importedReadoutQualityComparisonSummary, payload?.imported_readout_quality_comparison_summary, payload?.importedReadoutQualityComparisonSummary, nested.imported_readout_quality_comparison_summary, nested.importedReadoutQualityComparisonSummary, null),
       importedReadoutRequestPlanGateComparisonSummary: pickPresent(input.importedReadoutRequestPlanGateComparisonSummary, input.imported_readout_request_plan_gate_comparison_summary, payload?.importedReadoutRequestPlanGateComparisonSummary, payload?.imported_readout_request_plan_gate_comparison_summary, nested.importedReadoutRequestPlanGateComparisonSummary, nested.imported_readout_request_plan_gate_comparison_summary, null),
       imported_readout_request_plan_gate_comparison_summary: pickPresent(input.imported_readout_request_plan_gate_comparison_summary, input.importedReadoutRequestPlanGateComparisonSummary, payload?.imported_readout_request_plan_gate_comparison_summary, payload?.importedReadoutRequestPlanGateComparisonSummary, nested.imported_readout_request_plan_gate_comparison_summary, nested.importedReadoutRequestPlanGateComparisonSummary, null),
+      importedNextReadoutGuardSummary: pickPresent(input.importedNextReadoutGuardSummary, input.imported_next_readout_guard_summary, payload?.importedNextReadoutGuardSummary, payload?.imported_next_readout_guard_summary, nested.importedNextReadoutGuardSummary, nested.imported_next_readout_guard_summary, null),
+      imported_next_readout_guard_summary: pickPresent(input.imported_next_readout_guard_summary, input.importedNextReadoutGuardSummary, payload?.imported_next_readout_guard_summary, payload?.importedNextReadoutGuardSummary, nested.imported_next_readout_guard_summary, nested.importedNextReadoutGuardSummary, null),
       importedNextReadoutGuardComparisonSummary: pickPresent(input.importedNextReadoutGuardComparisonSummary, input.imported_next_readout_guard_comparison_summary, payload?.importedNextReadoutGuardComparisonSummary, payload?.imported_next_readout_guard_comparison_summary, nested.importedNextReadoutGuardComparisonSummary, nested.imported_next_readout_guard_comparison_summary, null),
       imported_next_readout_guard_comparison_summary: pickPresent(input.imported_next_readout_guard_comparison_summary, input.importedNextReadoutGuardComparisonSummary, payload?.imported_next_readout_guard_comparison_summary, payload?.importedNextReadoutGuardComparisonSummary, nested.imported_next_readout_guard_comparison_summary, nested.importedNextReadoutGuardComparisonSummary, null),
       importedCoreReadoutInventoryComparisonSummary: pickPresent(input.importedCoreReadoutInventoryComparisonSummary, input.imported_core_readout_inventory_comparison_summary, payload?.importedCoreReadoutInventoryComparisonSummary, payload?.imported_core_readout_inventory_comparison_summary, nested.importedCoreReadoutInventoryComparisonSummary, nested.imported_core_readout_inventory_comparison_summary, null),
@@ -10616,12 +10618,20 @@
       || bridgeImportInput?.readoutRequestPlanGateSummary
       || bridgeImportInput?.readout_request_plan_gate_summary
       || null);
-    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(input.nextReadoutGuardSummary
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(input.importedNextReadoutGuardSummary
+      || input.imported_next_readout_guard_summary
+      || input.nextReadoutGuardSummary
       || input.next_readout_guard_summary
+      || bridgeImport?.importedNextReadoutGuardSummary
+      || bridgeImport?.imported_next_readout_guard_summary
       || bridgeImport?.nextReadoutGuardSummary
       || bridgeImport?.next_readout_guard_summary
+      || bridgeSession?.importedNextReadoutGuardSummary
+      || bridgeSession?.imported_next_readout_guard_summary
       || bridgeSession?.nextReadoutGuardSummary
       || bridgeSession?.next_readout_guard_summary
+      || bridgeImportInput?.importedNextReadoutGuardSummary
+      || bridgeImportInput?.imported_next_readout_guard_summary
       || bridgeImportInput?.nextReadoutGuardSummary
       || bridgeImportInput?.next_readout_guard_summary
       || null);
@@ -13057,7 +13067,7 @@
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(sessionInput.importedAnalysisReadinessSummary || sessionInput.imported_analysis_readiness_summary || sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.importedReadoutQualitySummary || sessionInput.imported_readout_quality_summary || sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.importedReadoutRequestPlanGateSummary || sessionInput.imported_readout_request_plan_gate_summary || sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
-    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(sessionInput.nextReadoutGuardSummary || sessionInput.next_readout_guard_summary || null);
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(sessionInput.importedNextReadoutGuardSummary || sessionInput.imported_next_readout_guard_summary || sessionInput.nextReadoutGuardSummary || sessionInput.next_readout_guard_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.importedCoreReadoutInventorySummary || sessionInput.imported_core_readout_inventory_summary || sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
     const bridgeSession = sessionInput.bridgeSession || sessionInput.bridge_session || null;
     const bridgeExportPayload = sessionInput.exportPayload || sessionInput.export_payload || sessionInput.bridgeExportPayload || sessionInput.bridge_export_payload || null;
