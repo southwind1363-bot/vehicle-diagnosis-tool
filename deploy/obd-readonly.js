@@ -9274,6 +9274,8 @@
       || input.bridge_import
       || input.bridgeExportPayload
       || input.bridge_export_payload
+      || input.localBridgeExportPayload
+      || input.local_bridge_export_payload
       || input.bridgePayload
       || input.bridge_payload
       || input.localBridgePayload
@@ -10486,6 +10488,8 @@
       || input.bridge_diagnostic_import
       || input.bridgeExportPayload
       || input.bridge_export_payload
+      || input.localBridgeExportPayload
+      || input.local_bridge_export_payload
       || input.bridgePayload
       || input.bridge_payload
       || input.localBridgePayload
