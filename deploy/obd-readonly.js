@@ -2948,6 +2948,7 @@
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(parts.importedReadoutRequestPlanGateSummary || parts.imported_readout_request_plan_gate_summary || null);
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(parts.importedNextReadoutGuardSummary || parts.imported_next_readout_guard_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(parts.importedCoreReadoutInventorySummary || parts.imported_core_readout_inventory_summary || null);
     const generatedImportedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const generatedImportedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
@@ -2955,6 +2956,7 @@
     const generatedImportedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
     const generatedImportedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
     const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedCoreComparisonSummary = parts.importedCoreComparisonSummary || parts.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || generatedImportedCoreComparisonSummary;
     const importedDiagnosticFlowComparisonSummary = parts.importedDiagnosticFlowComparisonSummary || parts.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummary?.diagnosticFlowComparison || importedSessionComparisonSummary?.diagnostic_flow_comparison || generatedImportedDiagnosticFlowComparisonSummary;
@@ -2962,6 +2964,7 @@
     const importedAnalysisReadinessComparisonSummary = parts.importedAnalysisReadinessComparisonSummary || parts.imported_analysis_readiness_comparison_summary || importedSessionComparisonSummary?.analysisReadinessComparison || importedSessionComparisonSummary?.analysis_readiness_comparison || generatedImportedAnalysisReadinessComparisonSummary;
     const importedReadoutQualityComparisonSummary = parts.importedReadoutQualityComparisonSummary || parts.imported_readout_quality_comparison_summary || importedSessionComparisonSummary?.readoutQualityComparison || importedSessionComparisonSummary?.readout_quality_comparison || generatedImportedReadoutQualityComparisonSummary;
     const importedReadoutRequestPlanGateComparisonSummary = parts.importedReadoutRequestPlanGateComparisonSummary || parts.imported_readout_request_plan_gate_comparison_summary || importedSessionComparisonSummary?.readoutRequestPlanGateComparison || importedSessionComparisonSummary?.readout_request_plan_gate_comparison || generatedImportedReadoutRequestPlanGateComparisonSummary;
+    const importedNextReadoutGuardComparisonSummary = parts.importedNextReadoutGuardComparisonSummary || parts.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || generatedImportedNextReadoutGuardComparisonSummary;
     const importedCoreReadoutInventoryComparisonSummary = parts.importedCoreReadoutInventoryComparisonSummary || parts.imported_core_readout_inventory_comparison_summary || importedSessionComparisonSummary?.coreReadoutInventoryComparison || importedSessionComparisonSummary?.core_readout_inventory_comparison || generatedImportedCoreReadoutInventoryComparisonSummary;
     const generatedImportedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
@@ -2970,6 +2973,7 @@
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
       readoutQualityComparison: importedReadoutQualityComparisonSummary,
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      nextReadoutGuardComparison: importedNextReadoutGuardComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
     const resolvedImportedSessionComparisonSummary = importedSessionComparisonSummary || generatedImportedSessionComparisonSummary;
@@ -3038,6 +3042,8 @@
       imported_readout_quality_summary: importedReadoutQualitySummary,
       importedReadoutRequestPlanGateSummary,
       imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+      importedNextReadoutGuardSummary,
+      imported_next_readout_guard_summary: importedNextReadoutGuardSummary,
       importedCoreReadoutInventorySummary,
       imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
@@ -3052,6 +3058,8 @@
       imported_readout_quality_comparison_summary: importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
       imported_readout_request_plan_gate_comparison_summary: importedReadoutRequestPlanGateComparisonSummary,
+      importedNextReadoutGuardComparisonSummary,
+      imported_next_readout_guard_comparison_summary: importedNextReadoutGuardComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       imported_core_readout_inventory_comparison_summary: importedCoreReadoutInventoryComparisonSummary,
       readoutRequestPlanGateSummary,
@@ -3508,6 +3516,28 @@
       || parts.diagnosticFlowSummary?.next_readout_request_safety_summary
       || parts.diagnostic_flow_summary?.next_readout_request_safety_summary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const nextReadoutReasonSummary = parts.nextReadoutReasonSummary
+      || parts.next_readout_reason_summary
+      || parts.coreSessionStatus?.nextReadoutReasonSummary
+      || parts.core_session_status?.nextReadoutReasonSummary
+      || parts.coreSessionStatus?.next_readout_reason_summary
+      || parts.core_session_status?.next_readout_reason_summary
+      || parts.diagnosticFlowSummary?.nextReadoutReasonSummary
+      || parts.diagnostic_flow_summary?.nextReadoutReasonSummary
+      || parts.diagnosticFlowSummary?.next_readout_reason_summary
+      || parts.diagnostic_flow_summary?.next_readout_reason_summary
+      || null;
+    const nextReadoutGuardSummary = parts.nextReadoutGuardSummary
+      || parts.next_readout_guard_summary
+      || parts.coreSessionStatus?.nextReadoutGuardSummary
+      || parts.core_session_status?.nextReadoutGuardSummary
+      || parts.coreSessionStatus?.next_readout_guard_summary
+      || parts.core_session_status?.next_readout_guard_summary
+      || parts.diagnosticFlowSummary?.nextReadoutGuardSummary
+      || parts.diagnostic_flow_summary?.nextReadoutGuardSummary
+      || parts.diagnosticFlowSummary?.next_readout_guard_summary
+      || parts.diagnostic_flow_summary?.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || parts.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
@@ -3540,6 +3570,7 @@
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(parts.importedReadoutRequestPlanGateSummary || parts.imported_readout_request_plan_gate_summary || null);
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(parts.importedNextReadoutGuardSummary || parts.imported_next_readout_guard_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(parts.importedCoreReadoutInventorySummary || parts.imported_core_readout_inventory_summary || null);
     const generatedImportedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const generatedImportedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
@@ -3547,6 +3578,7 @@
     const generatedImportedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
     const generatedImportedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
     const generatedImportedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);
     const generatedImportedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
     const importedCoreComparisonSummary = parts.importedCoreComparisonSummary || parts.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || generatedImportedCoreComparisonSummary;
     const importedDiagnosticFlowComparisonSummary = parts.importedDiagnosticFlowComparisonSummary || parts.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummary?.diagnosticFlowComparison || importedSessionComparisonSummary?.diagnostic_flow_comparison || generatedImportedDiagnosticFlowComparisonSummary;
@@ -3554,6 +3586,7 @@
     const importedAnalysisReadinessComparisonSummary = parts.importedAnalysisReadinessComparisonSummary || parts.imported_analysis_readiness_comparison_summary || importedSessionComparisonSummary?.analysisReadinessComparison || importedSessionComparisonSummary?.analysis_readiness_comparison || generatedImportedAnalysisReadinessComparisonSummary;
     const importedReadoutQualityComparisonSummary = parts.importedReadoutQualityComparisonSummary || parts.imported_readout_quality_comparison_summary || importedSessionComparisonSummary?.readoutQualityComparison || importedSessionComparisonSummary?.readout_quality_comparison || generatedImportedReadoutQualityComparisonSummary;
     const importedReadoutRequestPlanGateComparisonSummary = parts.importedReadoutRequestPlanGateComparisonSummary || parts.imported_readout_request_plan_gate_comparison_summary || importedSessionComparisonSummary?.readoutRequestPlanGateComparison || importedSessionComparisonSummary?.readout_request_plan_gate_comparison || generatedImportedReadoutRequestPlanGateComparisonSummary;
+    const importedNextReadoutGuardComparisonSummary = parts.importedNextReadoutGuardComparisonSummary || parts.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || generatedImportedNextReadoutGuardComparisonSummary;
     const importedCoreReadoutInventoryComparisonSummary = parts.importedCoreReadoutInventoryComparisonSummary || parts.imported_core_readout_inventory_comparison_summary || importedSessionComparisonSummary?.coreReadoutInventoryComparison || importedSessionComparisonSummary?.core_readout_inventory_comparison || generatedImportedCoreReadoutInventoryComparisonSummary;
     const generatedImportedSessionComparisonSummary = buildImportedSessionComparisonSummary({
       coreComparison: importedCoreComparisonSummary,
@@ -3562,6 +3595,7 @@
       analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
       readoutQualityComparison: importedReadoutQualityComparisonSummary,
       readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      nextReadoutGuardComparison: importedNextReadoutGuardComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
     const resolvedImportedSessionComparisonSummary = importedSessionComparisonSummary || generatedImportedSessionComparisonSummary;
@@ -3635,6 +3669,8 @@
       imported_readout_quality_summary: importedReadoutQualitySummary,
       importedReadoutRequestPlanGateSummary,
       imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+      importedNextReadoutGuardSummary,
+      imported_next_readout_guard_summary: importedNextReadoutGuardSummary,
       importedCoreReadoutInventorySummary,
       imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
       importedCoreComparisonSummary,
@@ -3649,8 +3685,14 @@
       imported_readout_quality_comparison_summary: importedReadoutQualityComparisonSummary,
       importedReadoutRequestPlanGateComparisonSummary,
       imported_readout_request_plan_gate_comparison_summary: importedReadoutRequestPlanGateComparisonSummary,
+      importedNextReadoutGuardComparisonSummary,
+      imported_next_readout_guard_comparison_summary: importedNextReadoutGuardComparisonSummary,
       importedCoreReadoutInventoryComparisonSummary,
       imported_core_readout_inventory_comparison_summary: importedCoreReadoutInventoryComparisonSummary,
+      nextReadoutReasonSummary,
+      next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
