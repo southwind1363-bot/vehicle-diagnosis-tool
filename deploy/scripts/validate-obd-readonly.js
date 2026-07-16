@@ -2302,7 +2302,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2382+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2383+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2385,7 +2385,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.754.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for text import readout safety preservation");
+check(appSource.includes('const APP_VERSION = "2.755.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for text import readout safety validation");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
 check(appSource.includes('function formatNextReadoutRequestSafetySummary(request = null, plan = null, fallback = NO_DATA)') && appSource.includes('vehicle command off') && appSource.includes('execution off'), "OBD UI should format next readout request safety summaries");
 check(appSource.includes('function formatNextReadoutReasonSummary(summary = null, fallback = NO_DATA)') && appSource.includes('const reasonId = summary.reasonId || summary.reason_id || summary.reason || "";') && appSource.includes('parts.push(`queue ${Number(queuePositionValue)}`);'), "OBD UI should format next readout reason summaries");
@@ -2408,7 +2408,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "テキスト取込で読取安全を保持"'), "OBD core progress snapshot should show the latest text import readout safety milestone");
+check(appSource.includes('recentMilestone: "テキスト取込安全を実データ検証"'), "OBD core progress snapshot should show the latest text import readout safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -8659,6 +8659,23 @@ const textScanSessionExplicitMetaOverrides = obd.buildScanSessionFromObdText(obd
     read_only: true,
     would_transmit: false,
     vehicle_command_enabled: false
+  },
+  next_readout_request_safety_summary: {
+    schema_version: "next_readout_request_safety_summary_v1",
+    read_only: true,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  },
+  next_readout_reason_summary: {
+    schema_version: "next_readout_reason_summary_v1",
+    reason_id: "saved_text_import_reason",
+    queue_position: 1
+  },
+  next_readout_candidate_safety_summary: {
+    schema_version: "next_readout_candidate_safety_summary_v1",
+    total_count: 2,
+    unsafe_count: 0,
+    all_execution_disabled: true
   }
 });
 check(textScanSessionExplicitMetaOverrides.toolHints.join(",") === "Techstream,J2534", "OBD text scan session did not preserve explicit tool_hints option input");
@@ -8669,6 +8686,7 @@ check(textScanSessionExplicitMetaOverrides.tool_hints?.join(",") === "Techstream
 check(textScanSessionExplicitMetaOverrides.source_length === 128 && textScanSessionExplicitMetaOverrides.had_sensitive_identifier === true, "OBD text scan session did not expose explicit source length or sensitive identifier aliases");
 check(textScanSessionExplicitMetaOverrides.nextReadoutRequest?.readout_id === "text_saved_snapshot" && textScanSessionExplicitMetaOverrides.next_readout_request?.bridge_intent === "review_text_saved", "OBD text scan session did not preserve saved next readout request metadata");
 check(textScanSessionExplicitMetaOverrides.readoutRequestPlanSummary?.next_request_id === "text_saved_snapshot" && textScanSessionExplicitMetaOverrides.readout_request_plan_summary?.vehicle_command_enabled === false, "OBD text scan session did not preserve saved readout request plan metadata");
+check(textScanSessionExplicitMetaOverrides.nextReadoutRequestSafetySummary?.vehicle_command_enabled === false && textScanSessionExplicitMetaOverrides.nextReadoutReasonSummary?.reason_id === "saved_text_import_reason" && textScanSessionExplicitMetaOverrides.nextReadoutCandidateSafetySummary?.total_count === 2, "OBD text scan session did not preserve saved readout safety metadata in real import output");
 const textScanSessionExplicitMixedMetaOverrides = obd.buildScanSessionFromObdText(obdTextLog, {
   sessionId: "obd-text-explicit-mixed-meta-overrides",
   toolHints: ["Techstream"],
@@ -11597,6 +11615,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2382");
+  console.log("OBD read-only safety checks: 2383");
   console.log("Errors: 0");
 }
