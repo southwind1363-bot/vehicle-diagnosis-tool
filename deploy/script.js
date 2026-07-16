@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2375+件",
+  validationCheckLabel: "OBD安全検証 2378+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "merge読取安全メタを保持",
+  recentMilestone: "ローカル再読込で読取安全を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.751.0";
+const APP_VERSION = "2.752.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4580,6 +4580,9 @@ function renderObdBridgeReadout(parts = {}) {
   const previousCoreSessionStatus = previousSession.coreSessionStatus || previousSession.core_session_status || null;
   const previousNextReadoutCandidates = previousSession.nextReadoutCandidates || previousSession.next_readout_candidates || previousDiagnosticFlowSummary?.nextReadoutCandidates || previousDiagnosticFlowSummary?.next_readout_candidates || previousCoreSessionStatus?.nextReadoutCandidates || previousCoreSessionStatus?.next_readout_candidates || null;
   const previousNextReadoutRequest = previousSession.nextReadoutRequest || previousSession.next_readout_request || previousDiagnosticFlowSummary?.nextReadoutRequest || previousDiagnosticFlowSummary?.next_readout_request || previousCoreSessionStatus?.nextReadoutRequest || previousCoreSessionStatus?.next_readout_request || previousCoreSessionStatus?.nextReadoutSummary?.readoutRequest || previousCoreSessionStatus?.next_readout_summary?.readout_request || null;
+  const previousNextReadoutRequestSafetySummary = previousSession.nextReadoutRequestSafetySummary || previousSession.next_readout_request_safety_summary || previousDiagnosticFlowSummary?.nextReadoutRequestSafetySummary || previousDiagnosticFlowSummary?.next_readout_request_safety_summary || previousCoreSessionStatus?.nextReadoutRequestSafetySummary || previousCoreSessionStatus?.next_readout_request_safety_summary || null;
+  const previousNextReadoutReasonSummary = previousSession.nextReadoutReasonSummary || previousSession.next_readout_reason_summary || previousDiagnosticFlowSummary?.nextReadoutReasonSummary || previousDiagnosticFlowSummary?.next_readout_reason_summary || previousCoreSessionStatus?.nextReadoutReasonSummary || previousCoreSessionStatus?.next_readout_reason_summary || null;
+  const previousNextReadoutCandidateSafetySummary = previousSession.nextReadoutCandidateSafetySummary || previousSession.next_readout_candidate_safety_summary || previousDiagnosticFlowSummary?.nextReadoutCandidateSafetySummary || previousDiagnosticFlowSummary?.next_readout_candidate_safety_summary || previousCoreSessionStatus?.nextReadoutCandidateSafetySummary || previousCoreSessionStatus?.next_readout_candidate_safety_summary || null;
   const previousReadoutRequestPlanSummary = previousSession.readoutRequestPlanSummary || previousSession.readout_request_plan_summary || previousDiagnosticFlowSummary?.readoutRequestPlanSummary || previousDiagnosticFlowSummary?.readout_request_plan_summary || previousCoreSessionStatus?.readoutRequestPlanSummary || previousCoreSessionStatus?.readout_request_plan_summary || null;
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
@@ -4596,6 +4599,9 @@ function renderObdBridgeReadout(parts = {}) {
     adapterIdentity: obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined,
     nextReadoutCandidates: previousNextReadoutCandidates || undefined,
     nextReadoutRequest: previousNextReadoutRequest || undefined,
+    nextReadoutRequestSafetySummary: previousNextReadoutRequestSafetySummary || undefined,
+    nextReadoutReasonSummary: previousNextReadoutReasonSummary || undefined,
+    nextReadoutCandidateSafetySummary: previousNextReadoutCandidateSafetySummary || undefined,
     readoutRequestPlanSummary: previousReadoutRequestPlanSummary || undefined,
     toolHints: previousSession.toolHints || undefined,
     sourceLength: previousSession.sourceLength || undefined,
@@ -4618,6 +4624,9 @@ function renderObdBridgeReadout(parts = {}) {
     readoutCoverage: importResult.readoutCoverage || importResult.bridgeSession?.readoutCoverage,
     nextReadoutCandidates: importResult.nextReadoutCandidates || importResult.next_readout_candidates || importResult.bridgeSession?.nextReadoutCandidates || importResult.bridgeSession?.next_readout_candidates || previousNextReadoutCandidates,
     nextReadoutRequest: importResult.nextReadoutRequest || importResult.next_readout_request || importResult.bridgeSession?.nextReadoutRequest || importResult.bridgeSession?.next_readout_request || previousNextReadoutRequest,
+    nextReadoutRequestSafetySummary: importResult.nextReadoutRequestSafetySummary || importResult.next_readout_request_safety_summary || importResult.bridgeSession?.nextReadoutRequestSafetySummary || importResult.bridgeSession?.next_readout_request_safety_summary || previousNextReadoutRequestSafetySummary,
+    nextReadoutReasonSummary: importResult.nextReadoutReasonSummary || importResult.next_readout_reason_summary || importResult.bridgeSession?.nextReadoutReasonSummary || importResult.bridgeSession?.next_readout_reason_summary || previousNextReadoutReasonSummary,
+    nextReadoutCandidateSafetySummary: importResult.nextReadoutCandidateSafetySummary || importResult.next_readout_candidate_safety_summary || importResult.bridgeSession?.nextReadoutCandidateSafetySummary || importResult.bridgeSession?.next_readout_candidate_safety_summary || previousNextReadoutCandidateSafetySummary,
     readoutRequestPlanSummary: importResult.readoutRequestPlanSummary || importResult.readout_request_plan_summary || importResult.bridgeSession?.readoutRequestPlanSummary || importResult.bridgeSession?.readout_request_plan_summary || previousReadoutRequestPlanSummary,
     connectionStatus: importResult.connectionStatus || importResult.bridgeSession?.connectionStatus,
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
