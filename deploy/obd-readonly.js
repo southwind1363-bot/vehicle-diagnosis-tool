@@ -2735,6 +2735,11 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
+    const nextReadoutCandidateSafetySummary = coreSessionStatus.nextReadoutCandidateSafetySummary
+      || coreSessionStatus.next_readout_candidate_safety_summary
+      || diagnosticFlowSummary.nextReadoutCandidateSafetySummary
+      || diagnosticFlowSummary.next_readout_candidate_safety_summary
+      || null;
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
@@ -2785,6 +2790,8 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
       diagnosticFlowSummary,
+      nextReadoutCandidateSafetySummary,
+      next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       readoutCompletionSummary,
       analysisReadinessSummary,
       importedReadoutQualityReviewRequestPlanSummary,
@@ -8944,6 +8951,13 @@
       nextReadoutCandidates: metadataFields.next_readout_candidates
     });
     const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);
+    const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary
+      || summary.next_readout_candidate_safety_summary
+      || coreSessionStatus.nextReadoutCandidateSafetySummary
+      || coreSessionStatus.next_readout_candidate_safety_summary
+      || diagnosticFlowSummary.nextReadoutCandidateSafetySummary
+      || diagnosticFlowSummary.next_readout_candidate_safety_summary
+      || null;
     const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
@@ -9025,6 +9039,7 @@
         next_readout_candidates: metadataFields.next_readout_candidates,
         core_session_status: coreSessionStatus,
         diagnostic_flow_summary: diagnosticFlowSummary,
+        next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
         readout_completion_summary: readoutCompletionSummary,
         analysis_readiness_summary: analysisReadinessSummary,
         readout_quality_summary: readoutQualitySummary,
@@ -9099,6 +9114,14 @@
       || summary.diagnostic_flow_summary
       || exportPayload.session?.diagnostic_flow_summary
       || buildDiagnosticFlowSummary(coreSessionStatus);
+    const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary
+      || summary.next_readout_candidate_safety_summary
+      || exportPayload.session?.next_readout_candidate_safety_summary
+      || coreSessionStatus.nextReadoutCandidateSafetySummary
+      || coreSessionStatus.next_readout_candidate_safety_summary
+      || diagnosticFlowSummary.nextReadoutCandidateSafetySummary
+      || diagnosticFlowSummary.next_readout_candidate_safety_summary
+      || null;
     const readoutCompletionSummary = summary.readoutCompletionSummary
       || summary.readout_completion_summary
       || exportPayload.session?.readout_completion_summary
@@ -9199,6 +9222,8 @@
       nextReadoutCandidates: metadataFields.nextReadoutCandidates,
       coreSessionStatus,
       diagnosticFlowSummary,
+      nextReadoutCandidateSafetySummary,
+      next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       readoutCompletionSummary,
       analysisReadinessSummary,
       readoutQualitySummary,
@@ -9242,6 +9267,8 @@
         nextReadoutCandidates: bridgeSessionMetadataFields.nextReadoutCandidates,
         coreSessionStatus,
         diagnosticFlowSummary,
+        nextReadoutCandidateSafetySummary,
+        next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
         readoutCompletionSummary,
         analysisReadinessSummary,
         readoutQualitySummary,
@@ -9571,6 +9598,11 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
+    const nextReadoutCandidateSafetySummary = coreSessionStatus.nextReadoutCandidateSafetySummary
+      || coreSessionStatus.next_readout_candidate_safety_summary
+      || diagnosticFlowSummary.nextReadoutCandidateSafetySummary
+      || diagnosticFlowSummary.next_readout_candidate_safety_summary
+      || null;
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
@@ -9681,6 +9713,8 @@
       core_session_status: coreSessionStatus,
       diagnosticFlowSummary,
       diagnostic_flow_summary: diagnosticFlowSummary,
+      nextReadoutCandidateSafetySummary,
+      next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       readoutCompletionSummary,
       readout_completion_summary: readoutCompletionSummary,
       analysisReadinessSummary,
