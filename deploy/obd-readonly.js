@@ -4092,6 +4092,9 @@
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
+    const dtcStatusSummary = dtcSnapshot?.dtcStatusSummary
+      || dtcSnapshot?.dtc_status_summary
+      || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
     const isCapturedReadout = (snapshot, key) => (
       Boolean(snapshot?.capturedAt)
       || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
@@ -4861,6 +4864,8 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      dtcStatusSummary,
+      dtc_status_summary: dtcStatusSummary,
       nextPendingReadoutId,
       next_pending_readout_id: nextPendingReadoutId,
       nextPendingReadoutState,
@@ -4972,6 +4977,7 @@
     const vehicleApplicabilityEvidencePresent = pickDefined(vehicleApplicabilityEvidenceSummary?.evidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, false) === true;
     const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
     const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || readiness.readoutQualitySummary || readiness.readout_quality_summary || {};
+    const dtcStatusSummary = coreSessionStatus?.dtcStatusSummary || coreSessionStatus?.dtc_status_summary || {};
     const readoutQualityChecklist = diagnosticChecklistById.readout_quality || null;
     const applicabilityStatus = coreSessionStatus?.applicabilityStatus || coreSessionStatus?.applicability_status || vehicleApplicabilityChecklist?.applicabilityStatus || vehicleApplicabilityChecklist?.applicability_status || "unknown";
     const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
@@ -5364,6 +5370,8 @@
       readout_quality_checklist: readoutQualityChecklist,
       readoutQualitySummary: readoutQualitySummary && typeof readoutQualitySummary === "object" ? { ...readoutQualitySummary } : {},
       readout_quality_summary: readoutQualitySummary && typeof readoutQualitySummary === "object" ? { ...readoutQualitySummary } : {},
+      dtcStatusSummary: dtcStatusSummary && typeof dtcStatusSummary === "object" ? { ...dtcStatusSummary } : {},
+      dtc_status_summary: dtcStatusSummary && typeof dtcStatusSummary === "object" ? { ...dtcStatusSummary } : {},
       readoutQualityReviewRequired: pickDefined(readoutQualitySummary?.reviewRequired, readoutQualitySummary?.review_required) === true || readoutQualityChecklist?.state === "review",
       readout_quality_review_required: pickDefined(readoutQualitySummary?.reviewRequired, readoutQualitySummary?.review_required) === true || readoutQualityChecklist?.state === "review",
       readoutQualityIssueCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "issueCount"))) ? Number(readAliasValue(readoutQualitySummary, "issueCount")) : 0,
