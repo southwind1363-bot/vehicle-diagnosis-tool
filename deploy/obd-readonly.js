@@ -2922,6 +2922,10 @@
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = parts.importedNextReadoutGuardReviewRequestPlanSummary
       || parts.imported_next_readout_guard_review_request_plan_summary
+      || parts.importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || parts.importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || parts.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || parts.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
       || null;
     const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
@@ -3011,6 +3015,10 @@
       || parts.import_classification
       || parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
+      || parts.importedSessionComparisonSummary
+      || parts.imported_session_comparison_summary
+      || parts.importedNextReadoutGuardReviewRequestPlanSummary
+      || parts.imported_next_readout_guard_review_request_plan_summary
       || Array.isArray(parts.warningFlags)
       || Array.isArray(parts.warning_flags)
       || parts.capturedAt
@@ -3324,6 +3332,10 @@
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = parts.importedNextReadoutGuardReviewRequestPlanSummary
       || parts.imported_next_readout_guard_review_request_plan_summary
+      || parts.importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || parts.importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || parts.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || parts.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
       || parts.importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || parts.imported_next_readout_guard_comparison_summary?.review_request_plan_summary
       || null;
@@ -9507,6 +9519,10 @@
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary
       || summary.imported_next_readout_guard_review_request_plan_summary
+      || summary.importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || summary.importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || summary.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || summary.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
       || summary.importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || summary.imported_next_readout_guard_comparison_summary?.review_request_plan_summary
       || null;
@@ -9714,8 +9730,14 @@
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary
       || summary.imported_next_readout_guard_review_request_plan_summary
+      || summary.importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || summary.importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || summary.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || summary.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
       || summary.importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || summary.imported_next_readout_guard_comparison_summary?.review_request_plan_summary
+      || exportPayload.session?.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || exportPayload.session?.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
       || exportPayload.session?.imported_next_readout_guard_review_request_plan_summary
       || null;
     const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary
@@ -10314,14 +10336,22 @@
       || bridgeSession?.importedReadoutQualityReviewRequestPlanSummary
       || bridgeSession?.imported_readout_quality_review_request_plan_summary
       || null;
-    const importedNextReadoutGuardReviewRequestPlanSummary = importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+    const importedNextReadoutGuardReviewRequestPlanSummary = bridgeImport?.importedNextReadoutGuardReviewRequestPlanSummary
+      || bridgeImport?.imported_next_readout_guard_review_request_plan_summary
+      || bridgeImport?.importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || bridgeImport?.importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || bridgeImport?.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || bridgeImport?.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
+      || bridgeSession?.importedNextReadoutGuardReviewRequestPlanSummary
+      || bridgeSession?.imported_next_readout_guard_review_request_plan_summary
+      || bridgeSession?.importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || bridgeSession?.importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || bridgeSession?.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || bridgeSession?.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
+      || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
       || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
       || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
-      || bridgeImport?.importedNextReadoutGuardReviewRequestPlanSummary
-      || bridgeImport?.imported_next_readout_guard_review_request_plan_summary
-      || bridgeSession?.importedNextReadoutGuardReviewRequestPlanSummary
-      || bridgeSession?.imported_next_readout_guard_review_request_plan_summary
       || null;
     const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
     const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || null;
@@ -12752,12 +12782,16 @@
       || sessionInput.importedReadoutQualityReviewRequestPlanSummary
       || sessionInput.imported_readout_quality_review_request_plan_summary
       || null;
-    const importedNextReadoutGuardReviewRequestPlanSummary = importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+    const importedNextReadoutGuardReviewRequestPlanSummary = sessionInput.importedNextReadoutGuardReviewRequestPlanSummary
+      || sessionInput.imported_next_readout_guard_review_request_plan_summary
+      || sessionInput.importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
+      || sessionInput.importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
+      || sessionInput.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
+      || sessionInput.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
+      || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary
       || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary
       || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
-      || sessionInput.importedNextReadoutGuardReviewRequestPlanSummary
-      || sessionInput.imported_next_readout_guard_review_request_plan_summary
       || null;
     const mergedMonitorValueSummary = mergeMonitorValueSummaries(
       livePidSnapshot.monitorValueSummary || livePidSnapshot.monitor_value_summary,
