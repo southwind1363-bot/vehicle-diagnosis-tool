@@ -2328,7 +2328,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.699.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for diagnostic flow candidate safety summaries");
+check(appSource.includes('const APP_VERSION = "2.700.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for imported diagnostic flow candidate safety aliases");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show next readout candidate safety summaries");
 check(appSource.includes('session?.diagnosticFlowSummary?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show next readout candidate safety summaries");
@@ -5373,6 +5373,12 @@ const mergedDiagnosticInputSnakeFlowImport = obd.mergeDiagnosticInputs({
         read_only: true,
         would_transmit: false,
         vehicle_command_enabled: false
+      },
+      next_readout_candidate_safety_summary: {
+        schema_version: "next_readout_candidate_safety_summary_v1",
+        total_count: 1,
+        all_safe: true,
+        unsafe_count: 0
       }
     }
   }
@@ -5380,6 +5386,7 @@ const mergedDiagnosticInputSnakeFlowImport = obd.mergeDiagnosticInputs({
 check(mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1" && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.nextReadoutId === "readiness_snapshot" && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.pendingReadoutCount === 2, "Combined diagnostic inputs did not normalize snake_case-only imported diagnostic flow summary");
 check(mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.nextReadoutRequest?.readoutId === "flow_saved_snapshot" && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.next_readout_request?.bridge_intent === "review_flow_saved", "Combined diagnostic inputs did not normalize saved next readout request aliases inside imported diagnostic flow summary");
 check(mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.readoutRequestPlanSummary?.nextRequestId === "flow_saved_snapshot" && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.readout_request_plan_summary?.vehicle_command_enabled === false, "Combined diagnostic inputs did not normalize saved readout request plan aliases inside imported diagnostic flow summary");
+check(mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.nextReadoutCandidateSafetySummary?.schema_version === "next_readout_candidate_safety_summary_v1" && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.next_readout_candidate_all_safe === true && mergedDiagnosticInputSnakeFlowImport.importedDiagnosticFlowSummary?.nextReadoutCandidateUnsafeCount === 0, "Combined diagnostic inputs did not normalize imported diagnostic flow candidate safety aliases");
 check(mergedDiagnosticInputExportPayload.importedReadoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Combined diagnostic inputs did not preserve imported readout completion summary for bridge_session_export_v1 bridge_import input");
 const mergedDiagnosticInputSnakeCompletionImport = obd.mergeDiagnosticInputs({
   bridge_import: {
@@ -10285,10 +10292,17 @@ const scanSessionSnakeDiagnosticFlowImport = obd.buildDiagnosticScanSession({
     checklist_blocked_ids: ["required_readouts"],
     blocking_reason_ids: ["missing_readouts"],
     primary_blocking_reason_id: "missing_readouts",
-    primary_blocking_readout_id: "readiness_snapshot"
+    primary_blocking_readout_id: "readiness_snapshot",
+    next_readout_candidate_safety_summary: {
+      schema_version: "next_readout_candidate_safety_summary_v1",
+      total_count: 1,
+      all_safe: true,
+      unsafe_count: 0
+    }
   }
 });
 check(scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowSummary?.schemaVersion === "diagnostic_flow_summary_v1" && scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowSummary?.nextReadoutId === "readiness_snapshot" && scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowComparisonSummary?.importedPendingReadoutCount === 2, "Diagnostic scan session did not normalize snake_case-only imported diagnostic flow summary");
+check(scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowSummary?.nextReadoutCandidateSafetySummary?.schema_version === "next_readout_candidate_safety_summary_v1" && scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowSummary?.next_readout_candidate_all_safe === true && scanSessionSnakeDiagnosticFlowImport.importedDiagnosticFlowSummary?.nextReadoutCandidateUnsafeCount === 0, "Diagnostic scan session did not normalize imported diagnostic flow candidate safety aliases");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.complete === false && scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingIds?.length === 5, "Diagnostic scan session did not expose top-level readout completion summary");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.pendingCount === 5 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.missingCount === 4 && scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyCount === 1, "Diagnostic scan session did not expose readout completion counts");
 check(scanSessionPlainCoverageOverride.readoutCompletionSummary?.emptyIds?.includes("freeze_frame_snapshot") && scanSessionPlainCoverageOverride.readoutCompletionSummary?.capturedIds?.includes("dtc_snapshot"), "Diagnostic scan session did not expose top-level readout completion ids");

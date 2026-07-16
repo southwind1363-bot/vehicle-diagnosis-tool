@@ -5446,6 +5446,7 @@
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+    const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
     const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
     const blockingReasonIds = normalizeIds(summary.blockingReasonIds || summary.blocking_reason_ids);
@@ -5479,6 +5480,12 @@
       next_readout_queue_position: pickDefined(summary.next_readout_queue_position, summary.nextReadoutQueuePosition, null),
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
+      nextReadoutCandidateSafetySummary,
+      next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
+      nextReadoutCandidateAllSafe: pickDefined(summary.nextReadoutCandidateAllSafe, summary.next_readout_candidate_all_safe, nextReadoutCandidateSafetySummary?.allSafe, nextReadoutCandidateSafetySummary?.all_safe, false) === true,
+      next_readout_candidate_all_safe: pickDefined(summary.next_readout_candidate_all_safe, summary.nextReadoutCandidateAllSafe, nextReadoutCandidateSafetySummary?.all_safe, nextReadoutCandidateSafetySummary?.allSafe, false) === true,
+      nextReadoutCandidateUnsafeCount: toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0),
+      next_readout_candidate_unsafe_count: toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0),
       nextReadoutBridgeIntent: pickDefined(summary.nextReadoutBridgeIntent, summary.next_readout_bridge_intent, nextReadoutRequest?.bridgeIntent, null),
       next_readout_bridge_intent: pickDefined(summary.next_readout_bridge_intent, summary.nextReadoutBridgeIntent, nextReadoutRequest?.bridgeIntent, null),
       nextReadoutServiceMode: pickDefined(summary.nextReadoutServiceMode, summary.next_readout_service_mode, nextReadoutRequest?.serviceMode, null),
