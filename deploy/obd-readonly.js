@@ -9376,17 +9376,24 @@
       || payload?.session
       || null;
     if (!nested || typeof nested !== "object") return base;
-    const nestedSessionInput = nested.scanSession
-      || nested.scan_session
-      || nested.diagnosticScanSession
-      || nested.diagnostic_scan_session
-      || nested.diagnosticSession
-      || nested.diagnostic_session
-      || nested.obdScanSession
-      || nested.obd_scan_session
-      || nested.session
-      || null;
-    if (nestedSessionInput && typeof nestedSessionInput === "object") {
+    for (let depth = 0; depth < 3; depth += 1) {
+      const nestedSessionInput = nested.scanSession
+        || nested.scan_session
+        || nested.diagnosticScanSession
+        || nested.diagnostic_scan_session
+        || nested.diagnosticSession
+        || nested.diagnostic_session
+        || nested.obdScanSession
+        || nested.obd_scan_session
+        || nested.sessionPayload
+        || nested.session_payload
+        || nested.savedSession
+        || nested.saved_session
+        || nested.lastSession
+        || nested.last_session
+        || nested.session
+        || null;
+      if (!nestedSessionInput || typeof nestedSessionInput !== "object") break;
       nested = { ...nested, ...nestedSessionInput };
     }
     const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);
