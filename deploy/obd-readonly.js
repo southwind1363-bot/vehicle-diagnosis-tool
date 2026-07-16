@@ -13348,7 +13348,9 @@
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
-    const nextReadoutCandidateSafetySummary = coreSessionStatus.nextReadoutCandidateSafetySummary
+    const nextReadoutCandidateSafetySummary = sessionInput.nextReadoutCandidateSafetySummary
+      || sessionInput.next_readout_candidate_safety_summary
+      || coreSessionStatus.nextReadoutCandidateSafetySummary
       || coreSessionStatus.next_readout_candidate_safety_summary
       || diagnosticFlowSummary.nextReadoutCandidateSafetySummary
       || diagnosticFlowSummary.next_readout_candidate_safety_summary
