@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "次読取候補の安全フィルタとread-only正規化を反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.705.0";
+const APP_VERSION = "2.706.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3876,6 +3876,12 @@ function buildDiagnosticCoreProgressSnapshot() {
       label: "request gate / action",
       available: hasBridgeDiagnosticScanSessionSupport()
         && typeof window.ObdReadOnly?.mergeDiagnosticInputs === "function"
+    },
+    {
+      id: "readout_request_safety_note",
+      label: "readout request safety note",
+      available: typeof formatNextReadoutRequestSafetySummary === "function"
+        && typeof analyzeObdScannerImport === "function"
     }
   ];
   const doneLabels = checks.filter((check) => check.available).map((check) => check.label);
@@ -3884,6 +3890,7 @@ function buildDiagnosticCoreProgressSnapshot() {
   const totalCount = checks.length;
   const progressPercent = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
   const nextLabel = missingLabels[0] || "実機読取差分の確認";
+  const recentDoneLabels = doneLabels.slice(-4).join(" / ");
 
   return {
     ...OBD_CORE_PROGRESS_SNAPSHOT,
@@ -3892,6 +3899,7 @@ function buildDiagnosticCoreProgressSnapshot() {
     progressPercent,
     doneLabels,
     missingLabels,
+    recentDoneLabels,
     nextLabel
   };
 }
@@ -3961,7 +3969,7 @@ function renderObdProgressOverview() {
       trackingId: "diagnostic_core_progress",
       title: "診断コア進捗",
       primary: `内部構造 ${coreSnapshot.doneCount}/${coreSnapshot.totalCount}項目 (${coreSnapshot.progressPercent}%) / ${coreSnapshot.validationCheckLabel}`,
-      detail: `${coreSnapshot.recentMilestone}。${coreSnapshot.bridgeValidationCheckLabel}。${coreSnapshot.scopeNote}。次: ${coreSnapshot.nextLabel}`
+      detail: `${coreSnapshot.recentMilestone}。${coreSnapshot.bridgeValidationCheckLabel}。${coreSnapshot.scopeNote}。done: ${coreSnapshot.recentDoneLabels || "集計中"}。次: ${coreSnapshot.nextLabel}`
     },
     {
       tone: "score",
