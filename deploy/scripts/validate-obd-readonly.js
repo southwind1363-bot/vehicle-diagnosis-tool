@@ -2302,7 +2302,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2387+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2389+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2385,7 +2385,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.758.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for continued session readout safety validation");
+check(appSource.includes('const APP_VERSION = "2.759.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for diagnostic session alias readout safety validation");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
 check(appSource.includes('function formatNextReadoutRequestSafetySummary(request = null, plan = null, fallback = NO_DATA)') && appSource.includes('vehicle command off') && appSource.includes('execution off'), "OBD UI should format next readout request safety summaries");
 check(appSource.includes('function formatNextReadoutReasonSummary(summary = null, fallback = NO_DATA)') && appSource.includes('const reasonId = summary.reasonId || summary.reason_id || summary.reason || "";') && appSource.includes('parts.push(`queue ${Number(queuePositionValue)}`);'), "OBD UI should format next readout reason summaries");
@@ -2408,7 +2408,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "継続セッション安全を実データ検証"'), "OBD core progress snapshot should show the latest continued session readout safety milestone");
+check(appSource.includes('recentMilestone: "診断セッション別名安全を実データ検証"'), "OBD core progress snapshot should show the latest diagnostic session alias readout safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -10118,22 +10118,54 @@ const mergedDiagnosticInputDiagnosticScanSessionAlias = obd.mergeDiagnosticInput
 check(diagnosticScanSessionAliasInput.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticScanSessionAlias.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticScanSessionAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Diagnostic scan session aliases did not retain bridge export payload through build and merge");
 const diagnosticSessionAliasInput = obd.buildDiagnosticScanSession({
   diagnostic_session: scanSessionBridgeExportPayloadAlias,
-  session_id: "shop-test-diagnostic-session-alias"
+  session_id: "shop-test-diagnostic-session-alias",
+  next_readout_request_safety_summary: {
+    schema_version: "next_readout_request_safety_summary_v1",
+    safe: true,
+    vehicle_command_enabled: false
+  },
+  next_readout_reason_summary: {
+    schema_version: "next_readout_reason_summary_v1",
+    reason_id: "diagnostic_session_alias_reason"
+  },
+  next_readout_candidate_safety_summary: {
+    schema_version: "next_readout_candidate_safety_summary_v1",
+    total_count: 5,
+    unsafe_count: 0,
+    all_execution_disabled: true
+  }
 });
 const mergedDiagnosticInputDiagnosticSessionAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   diagnostic_session: diagnosticSessionAliasInput
 });
 check(diagnosticSessionAliasInput.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticSessionAlias.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputDiagnosticSessionAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "Diagnostic session aliases did not retain bridge export payload through build and merge");
+check(mergedDiagnosticInputDiagnosticSessionAlias.nextReadoutRequestSafetySummary?.schema_version === "next_readout_request_safety_summary_v1" && mergedDiagnosticInputDiagnosticSessionAlias.nextReadoutReasonSummary?.reason_id === "diagnostic_session_alias_reason" && mergedDiagnosticInputDiagnosticSessionAlias.nextReadoutCandidateSafetySummary?.total_count === 5, "Diagnostic session aliases did not retain readout safety metadata through merge");
 const obdScanSessionAliasInput = obd.buildDiagnosticScanSession({
   obd_scan_session: scanSessionBridgeExportPayloadAlias,
-  session_id: "shop-test-obd-scan-session-alias"
+  session_id: "shop-test-obd-scan-session-alias",
+  next_readout_request_safety_summary: {
+    schema_version: "next_readout_request_safety_summary_v1",
+    safe: true,
+    vehicle_command_enabled: false
+  },
+  next_readout_reason_summary: {
+    schema_version: "next_readout_reason_summary_v1",
+    reason_id: "obd_scan_session_alias_reason"
+  },
+  next_readout_candidate_safety_summary: {
+    schema_version: "next_readout_candidate_safety_summary_v1",
+    total_count: 6,
+    unsafe_count: 0,
+    all_execution_disabled: true
+  }
 });
 const mergedDiagnosticInputObdScanSessionAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   obdScanSession: obdScanSessionAliasInput
 });
 check(obdScanSessionAliasInput.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputObdScanSessionAlias.bridgeExportPayload?.schema_version === "bridge_session_export_v1" && mergedDiagnosticInputObdScanSessionAlias.bridgeSession?.adapterIdentity?.adapterFamily === "elm327", "OBD scan session aliases did not retain bridge export payload through build and merge");
+check(mergedDiagnosticInputObdScanSessionAlias.nextReadoutRequestSafetySummary?.schema_version === "next_readout_request_safety_summary_v1" && mergedDiagnosticInputObdScanSessionAlias.nextReadoutReasonSummary?.reason_id === "obd_scan_session_alias_reason" && mergedDiagnosticInputObdScanSessionAlias.nextReadoutCandidateSafetySummary?.total_count === 6, "OBD scan session aliases did not retain readout safety metadata through merge");
 const mergedDiagnosticInputGenericSessionAlias = obd.mergeDiagnosticInputs({
   scanner_text: "P0171",
   session: scanSessionBridgeExportPayloadAlias
@@ -11680,6 +11712,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2387");
+  console.log("OBD read-only safety checks: 2389");
   console.log("Errors: 0");
 }
