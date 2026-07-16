@@ -7392,9 +7392,11 @@
       changed("executionDisabled", "execution_disabled") ? "execution_disabled" : null,
       changed("planningReady", "planning_ready") ? "planning_ready" : null
     ].filter(Boolean);
+    const importedReadoutId = read(importedSummary, "readoutId", "readout_id");
+    const currentReadoutId = read(currentSummary, "readoutId", "readout_id");
     const readoutIdChanged = changed("readoutId", "readout_id");
     const bridgeIntentChanged = changed("bridgeIntent", "bridge_intent");
-    const changedReadoutIds = [...new Set([read(importedSummary, "readoutId", "readout_id"), read(currentSummary, "readoutId", "readout_id")].filter(Boolean))];
+    const changedReadoutIds = [...new Set([importedReadoutId, currentReadoutId].filter(Boolean))];
     const changedBridgeIntentIds = [...new Set([read(importedSummary, "bridgeIntent", "bridge_intent"), read(currentSummary, "bridgeIntent", "bridge_intent")].filter(Boolean))];
     const changedIds = [...new Set([...changedReadoutIds, ...changedBridgeIntentIds, ...changedFlagIds])];
     const hasChanges = [
@@ -7406,16 +7408,40 @@
       changed("serviceMode", "service_mode"),
       changedFlagIds.length > 0
     ].some(Boolean);
+    const reviewTargetReadoutIds = hasChanges ? [...new Set([currentReadoutId, importedReadoutId].filter(Boolean))] : [];
+    const reviewRequestSummaries = reviewTargetReadoutIds
+      .map((readoutId) => buildReadOnlyNextReadoutRequest({ id: readoutId, label: readoutId, status: "review" }))
+      .filter(Boolean);
+    const reviewRequestSafetySummary = buildReadoutRequestPlanSafetySummary(reviewRequestSummaries, []);
+    const reviewRequestPlanSummary = {
+      schemaVersion: "next_readout_guard_review_request_plan_v1",
+      schema_version: "next_readout_guard_review_request_plan_v1",
+      requestCount: reviewRequestSummaries.length,
+      request_count: reviewRequestSummaries.length,
+      readoutIds: reviewRequestSummaries.map((item) => item.readoutId).filter(Boolean),
+      readout_ids: reviewRequestSummaries.map((item) => item.readoutId).filter(Boolean),
+      bridgeIntents: [...new Set(reviewRequestSummaries.map((item) => item.bridgeIntent).filter(Boolean))],
+      bridge_intents: [...new Set(reviewRequestSummaries.map((item) => item.bridgeIntent).filter(Boolean))],
+      primaryRequest: reviewRequestSummaries[0] || null,
+      primary_request: reviewRequestSummaries[0] || null,
+      ...reviewRequestSafetySummary,
+      readOnly: reviewRequestSafetySummary.allReadOnly === true,
+      read_only: reviewRequestSafetySummary.allReadOnly === true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
     return {
       schemaVersion: "imported_next_readout_guard_comparison_v1",
       schema_version: "imported_next_readout_guard_comparison_v1",
       changed: hasChanges,
       changed_count: changedIds.length,
       changedCount: changedIds.length,
-      importedReadoutId: read(importedSummary, "readoutId", "readout_id"),
-      imported_readout_id: read(importedSummary, "readoutId", "readout_id"),
-      currentReadoutId: read(currentSummary, "readoutId", "readout_id"),
-      current_readout_id: read(currentSummary, "readoutId", "readout_id"),
+      importedReadoutId,
+      imported_readout_id: importedReadoutId,
+      currentReadoutId,
+      current_readout_id: currentReadoutId,
       readoutIdChanged,
       readout_id_changed: readoutIdChanged,
       readoutChanged: readoutIdChanged,
@@ -7481,7 +7507,19 @@
       serviceModeChanged: changed("serviceMode", "service_mode"),
       service_mode_changed: changed("serviceMode", "service_mode"),
       changedIds,
-      changed_ids: changedIds
+      changed_ids: changedIds,
+      reviewRequired: reviewRequestSummaries.length > 0,
+      review_required: reviewRequestSummaries.length > 0,
+      reviewTargetReadoutIds,
+      review_target_readout_ids: reviewTargetReadoutIds,
+      reviewRequestSummaries,
+      review_request_summaries: reviewRequestSummaries,
+      reviewRequestCount: reviewRequestSummaries.length,
+      review_request_count: reviewRequestSummaries.length,
+      reviewRequestPlanSummary,
+      review_request_plan_summary: reviewRequestPlanSummary,
+      primaryReviewRequest: reviewRequestSummaries[0] || null,
+      primary_review_request: reviewRequestSummaries[0] || null
     };
   }
 
