@@ -536,7 +536,7 @@ const bridgeSessionExportPayloadFunctionChecks = () => {
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;'), "buildBridgeSessionExportPayload should rebuild readout completion summary from core session status");
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;'), "buildBridgeSessionExportPayload should rebuild analysis readiness summary from core session status");
     check(functionBody.includes('const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary') && functionBody.includes('readout_quality_summary: readoutQualitySummary,'), "buildBridgeSessionExportPayload should serialize readout quality summary");
-    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeSessionExportPayload should serialize imported readout quality review request plan summaries");
+    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('summary.imported_session_comparison_summary?.readout_quality_review_request_plan_summary') && functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeSessionExportPayload should serialize imported readout quality review request plan summaries");
     check(functionBody.includes('const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary') && functionBody.includes('summary.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary') && functionBody.includes('imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,'), "buildBridgeSessionExportPayload should serialize imported next readout guard review request plan summaries");
     check(functionBody.includes('const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary') && functionBody.includes('imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,'), "buildBridgeSessionExportPayload should serialize imported applicability changed row summaries");
     check(functionBody.includes('const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary') && functionBody.includes('coreSessionStatus.readout_request_plan_gate_summary'), "buildBridgeSessionExportPayload should rebuild readout request plan gate summary from core session status");
@@ -569,7 +569,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const readoutCompletionSummary = summary.readoutCompletionSummary') && functionBody.includes('readoutCompletionSummary,'), "buildBridgeDiagnosticImport should preserve readout completion summary");
     check(functionBody.includes('const analysisReadinessSummary = summary.analysisReadinessSummary') && functionBody.includes('analysisReadinessSummary,'), "buildBridgeDiagnosticImport should preserve analysis readiness summary");
     check(functionBody.includes('const readoutQualitySummary = summary.readoutQualitySummary') && functionBody.includes('readoutQualitySummary,'), "buildBridgeDiagnosticImport should preserve readout quality summary");
-    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('exportPayload.session?.imported_readout_quality_review_request_plan_summary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should preserve imported readout quality review request plan summaries");
+    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('summary.imported_session_comparison_summary?.readout_quality_review_request_plan_summary') && functionBody.includes('exportPayload.session?.imported_session_comparison_summary?.readout_quality_review_request_plan_summary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should preserve imported readout quality review request plan summaries");
     check(functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should expose imported readout quality review request plan snake_case aliases");
     check(functionBody.includes('const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary') && functionBody.includes('summary.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary') && functionBody.includes('exportPayload.session?.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary') && functionBody.includes('importedNextReadoutGuardReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should preserve imported next readout guard review request plan summaries");
     check(functionBody.includes('imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,'), "buildBridgeDiagnosticImport should expose imported next readout guard review request plan snake_case aliases");
@@ -1178,7 +1178,7 @@ const mergeDiagnosticInputsFunctionChecks = () => {
     check(functionBody.includes('const importedSessionComparisonSummary = buildImportedSessionComparisonSummary({') && functionBody.includes('importedSessionComparisonSummary,'), "mergeDiagnosticInputs should summarize imported session comparison results");
     check(functionBody.includes('const importedVehicleApplicabilityChangedRowSummary = importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary') && functionBody.includes('bridgeImport?.imported_vehicle_applicability_changed_row_summary'), "mergeDiagnosticInputs should derive top-level applicability changed row summaries");
     check(functionBody.includes('importedVehicleApplicabilityChangedRowSummary,') && functionBody.includes('imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,'), "mergeDiagnosticInputs should expose top-level applicability changed row summary aliases");
-    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary') && functionBody.includes('bridgeImport?.imported_readout_quality_review_request_plan_summary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "mergeDiagnosticInputs should expose imported readout quality review request plan summaries");
+    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = bridgeImport?.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('bridgeImport?.imported_readout_quality_review_request_plan_summary') && functionBody.includes('bridgeImport?.imported_session_comparison_summary?.readout_quality_review_request_plan_summary') && functionBody.includes('importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "mergeDiagnosticInputs should expose imported readout quality review request plan summaries");
     check(functionBody.includes('const importedNextReadoutGuardReviewRequestPlanSummary = bridgeImport?.importedNextReadoutGuardReviewRequestPlanSummary') && functionBody.includes('bridgeImport?.imported_next_readout_guard_review_request_plan_summary') && functionBody.includes('bridgeImport?.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary') && functionBody.includes('importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary') && functionBody.includes('importedNextReadoutGuardReviewRequestPlanSummary,'), "mergeDiagnosticInputs should expose imported next readout guard review request plan summaries");
     check(functionBody.includes('const coreSessionStatus = buildCoreSessionStatus({') && functionBody.includes('nextReadoutCandidates: resolvedNextReadoutCandidates'), "mergeDiagnosticInputs should build core session status from merged diagnostic inputs");
     check(functionBody.includes('const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);') && functionBody.includes('diagnosticFlowSummary,'), "mergeDiagnosticInputs should expose a top-level diagnostic flow summary");
@@ -2053,7 +2053,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('imported_core_comparison_summary: importedCoreComparisonSummary,') && functionBody.includes('imported_diagnostic_flow_comparison_summary: importedDiagnosticFlowComparisonSummary,') && functionBody.includes('imported_analysis_readiness_comparison_summary: importedAnalysisReadinessComparisonSummary,'), "buildDiagnosticScanSession should expose imported comparison snake_case aliases");
     check(functionBody.includes('const importedVehicleApplicabilityChangedRowSummary = importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary') && functionBody.includes('sessionInput.imported_vehicle_applicability_changed_row_summary'), "buildDiagnosticScanSession should derive top-level applicability changed row summaries");
     check(functionBody.includes('importedVehicleApplicabilityChangedRowSummary,') && functionBody.includes('imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,'), "buildDiagnosticScanSession should expose top-level applicability changed row summary aliases");
-    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary') && functionBody.includes('sessionInput.imported_readout_quality_review_request_plan_summary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "buildDiagnosticScanSession should expose imported readout quality review request plan summaries");
+    check(functionBody.includes('const importedReadoutQualityReviewRequestPlanSummary = sessionInput.importedReadoutQualityReviewRequestPlanSummary') && functionBody.includes('sessionInput.imported_readout_quality_review_request_plan_summary') && functionBody.includes('sessionInput.imported_session_comparison_summary?.readout_quality_review_request_plan_summary') && functionBody.includes('importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary') && functionBody.includes('importedReadoutQualityReviewRequestPlanSummary,'), "buildDiagnosticScanSession should expose imported readout quality review request plan summaries");
     check(functionBody.includes('imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,'), "buildDiagnosticScanSession should expose imported readout quality review request plan snake_case aliases");
     check(functionBody.includes('const importedNextReadoutGuardReviewRequestPlanSummary = sessionInput.importedNextReadoutGuardReviewRequestPlanSummary') && functionBody.includes('sessionInput.imported_next_readout_guard_review_request_plan_summary') && functionBody.includes('sessionInput.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary') && functionBody.includes('importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary') && functionBody.includes('importedNextReadoutGuardReviewRequestPlanSummary,'), "buildDiagnosticScanSession should expose imported next readout guard review request plan summaries");
     check(functionBody.includes('imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,'), "buildDiagnosticScanSession should expose imported next readout guard review request plan snake_case aliases");
@@ -2351,7 +2351,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.720.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for imported next readout guard review plan restoration");
+check(appSource.includes('const APP_VERSION = "2.721.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-16";'), "OBD app version should advance for imported readout quality review plan restoration");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
 check(appSource.includes('function formatNextReadoutRequestSafetySummary(request = null, plan = null, fallback = NO_DATA)') && appSource.includes('vehicle command off') && appSource.includes('execution off'), "OBD UI should format next readout request safety summaries");
 check(appSource.includes('function formatNextReadoutReasonSummary(summary = null, fallback = NO_DATA)') && appSource.includes('const reasonId = summary.reasonId || summary.reason_id || summary.reason || "";') && appSource.includes('parts.push(`queue ${Number(queuePositionValue)}`);'), "OBD UI should format next readout reason summaries");
@@ -2374,7 +2374,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "計画差分の再確認読取を比較サマリから復元"'), "OBD core progress snapshot should show the latest imported next readout guard review plan restoration milestone");
+check(appSource.includes('recentMilestone: "品質確認要求を比較サマリから復元"'), "OBD core progress snapshot should show the latest imported readout quality review plan restoration milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4532,6 +4532,36 @@ const bridgeDiagnosticImportQualityReviewPlan = obd.buildBridgeDiagnosticImport(
   },
   dtcSnapshot: bridgeDtcSnapshot
 });
+const nestedReadoutQualityReviewPlanSummary = {
+  schemaVersion: "readout_quality_review_request_plan_v1",
+  schema_version: "readout_quality_review_request_plan_v1",
+  requestCount: 1,
+  request_count: 1,
+  readoutIds: ["live_pid_snapshot"],
+  readout_ids: ["live_pid_snapshot"],
+  bridgeIntents: ["read_live_pid_snapshot"],
+  bridge_intents: ["read_live_pid_snapshot"],
+  readOnly: true,
+  read_only: true,
+  wouldTransmit: false,
+  would_transmit: false,
+  vehicleCommandEnabled: false,
+  vehicle_command_enabled: false
+};
+const bridgeExportNestedSessionComparisonQualityReviewPlan = obd.buildBridgeSessionExportPayload({
+  imported_session_comparison_summary: {
+    schema_version: "imported_session_comparison_v1",
+    readout_quality_review_request_plan_summary: nestedReadoutQualityReviewPlanSummary
+  },
+  dtcSnapshot: bridgeDtcSnapshot
+});
+const bridgeDiagnosticImportNestedSessionComparisonQualityReviewPlan = obd.buildBridgeDiagnosticImport({
+  imported_session_comparison_summary: {
+    schema_version: "imported_session_comparison_v1",
+    readout_quality_review_request_plan_summary: nestedReadoutQualityReviewPlanSummary
+  },
+  dtcSnapshot: bridgeDtcSnapshot
+});
 const bridgeDiagnosticImportNextGuardReviewPlan = obd.buildBridgeDiagnosticImport({
   imported_next_readout_guard_review_request_plan_summary: {
     schemaVersion: "next_readout_guard_review_request_plan_v1",
@@ -4607,6 +4637,9 @@ check(bridgeDiagnosticImportQualityReviewPlan.imported_readout_quality_review_re
 check(bridgeDiagnosticImportQualityReviewPlan.bridgeSession?.importedReadoutQualityReviewRequestPlanSummary?.vehicleCommandEnabled === false, "Bridge diagnostic import did not retain imported readout quality review request plan summary on bridgeSession");
 check(bridgeDiagnosticImportQualityReviewPlan.bridgeSession?.imported_readout_quality_review_request_plan_summary?.vehicleCommandEnabled === false, "Bridge diagnostic import did not retain imported readout quality review request plan snake_case summary on bridgeSession");
 check(bridgeDiagnosticImportQualityReviewPlan.exportPayload.session.imported_readout_quality_review_request_plan_summary?.wouldTransmit === false, "Bridge diagnostic import did not retain imported readout quality review request plan summary on export payload");
+check(bridgeExportNestedSessionComparisonQualityReviewPlan.session?.imported_readout_quality_review_request_plan_summary?.readout_ids?.includes("live_pid_snapshot"), "Bridge export did not derive readout quality review request plans from imported session comparison summaries");
+check(bridgeDiagnosticImportNestedSessionComparisonQualityReviewPlan.importedReadoutQualityReviewRequestPlanSummary?.readoutIds?.includes("live_pid_snapshot"), "Bridge diagnostic import did not derive readout quality review request plans from imported session comparison summaries");
+check(bridgeDiagnosticImportNestedSessionComparisonQualityReviewPlan.exportPayload.session.imported_readout_quality_review_request_plan_summary?.vehicle_command_enabled === false, "Bridge diagnostic import did not retain derived readout quality review plans on export payload");
 check(bridgeDiagnosticImportNextGuardReviewPlan.importedNextReadoutGuardReviewRequestPlanSummary?.schemaVersion === "next_readout_guard_review_request_plan_v1", "Bridge diagnostic import did not expose imported next readout guard review request plan summary");
 check(bridgeDiagnosticImportNextGuardReviewPlan.imported_next_readout_guard_review_request_plan_summary?.schema_version === "next_readout_guard_review_request_plan_v1", "Bridge diagnostic import did not expose imported next readout guard review request plan snake_case summary");
 check(bridgeDiagnosticImportNextGuardReviewPlan.bridgeSession?.importedNextReadoutGuardReviewRequestPlanSummary?.vehicleCommandEnabled === false, "Bridge diagnostic import did not retain imported next readout guard review request plan summary on bridgeSession");
@@ -6158,6 +6191,15 @@ const mergedDiagnosticInputSnakeGateImport = obd.mergeDiagnosticInputs({
   }
 });
 check(mergedDiagnosticInputSnakeGateImport.importedReadoutRequestPlanGateSummary?.schemaVersion === "readout_request_plan_gate_v1" && mergedDiagnosticInputSnakeGateImport.importedReadoutRequestPlanGateSummary?.actionCount === 1, "Combined diagnostic inputs did not normalize imported readout request plan gate aliases");
+const mergedDiagnosticInputNestedSessionComparisonQualityReviewPlan = obd.mergeDiagnosticInputs({
+  bridge_import: {
+    imported_session_comparison_summary: {
+      schema_version: "imported_session_comparison_v1",
+      readout_quality_review_request_plan_summary: nestedReadoutQualityReviewPlanSummary
+    }
+  }
+});
+check(mergedDiagnosticInputNestedSessionComparisonQualityReviewPlan.importedReadoutQualityReviewRequestPlanSummary?.readoutIds?.includes("live_pid_snapshot"), "Combined diagnostic inputs did not derive readout quality review plans from imported session comparison summaries");
 const mergedDiagnosticInputNestedSessionComparisonNextGuardReviewPlan = obd.mergeDiagnosticInputs({
   bridge_import: {
     imported_session_comparison_summary: {
@@ -11142,9 +11184,9 @@ const scanSessionNestedNullOuterImportedSummaries = obd.buildDiagnosticScanSessi
     readout_quality_summary: { schema_version: "readout_quality_summary_v1", issue_count: 2, issue_ids: ["raw_pid_values_need_conversion"] },
     readout_request_plan_gate_summary: { schema_version: "readout_request_plan_gate_v1", state: "ready" },
     core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", total_value_count: 5, captured_readout_count: 2 },
-    imported_readout_quality_review_request_plan_summary: { schema_version: "readout_quality_review_request_plan_v1", request_count: 1, vehicle_command_enabled: false },
     imported_session_comparison_summary: {
       schema_version: "imported_session_comparison_v1",
+      readout_quality_review_request_plan_summary: nestedReadoutQualityReviewPlanSummary,
       next_readout_guard_review_request_plan_summary: nestedNextGuardReviewPlanSummary
     }
   }
@@ -11158,6 +11200,7 @@ check(scanSessionNestedNullOuterImportedSummaries.importedReadoutQualitySummary?
 check(scanSessionNestedNullOuterImportedSummaries.importedReadoutRequestPlanGateSummary?.state === "ready", "Diagnostic scan session did not preserve nested imported readout request plan gate summary when outer input was null");
 check(scanSessionNestedNullOuterImportedSummaries.importedCoreReadoutInventorySummary?.totalValueCount === 5, "Diagnostic scan session did not preserve nested imported core readout inventory summary when outer input was null");
 check(scanSessionNestedNullOuterImportedSummaries.importedReadoutQualityReviewRequestPlanSummary?.requestCount >= 1, "Diagnostic scan session did not preserve nested imported readout quality review requests when outer input was null");
+check(scanSessionNestedNullOuterImportedSummaries.importedReadoutQualityReviewRequestPlanSummary?.readoutIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not derive nested readout quality review plans from imported session comparison summaries");
 check(scanSessionNestedNullOuterImportedSummaries.importedReadoutQualityReviewRequestPlanSummary?.vehicleCommandEnabled === false, "Diagnostic scan session did not preserve nested imported readout quality review safety when outer input was null");
 const scanSessionNonInfrastructureBridgeExportPayload = obd.buildDiagnosticScanSession({
   bridge_export_payload: bridgeDiagnosticImportNonInfrastructureAliases.exportPayload,

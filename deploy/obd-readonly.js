@@ -2919,6 +2919,10 @@
       || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
+      || parts.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || parts.importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
+      || parts.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || parts.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = parts.importedNextReadoutGuardReviewRequestPlanSummary
       || parts.imported_next_readout_guard_review_request_plan_summary
@@ -3329,6 +3333,10 @@
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
+      || parts.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || parts.importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
+      || parts.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || parts.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = parts.importedNextReadoutGuardReviewRequestPlanSummary
       || parts.imported_next_readout_guard_review_request_plan_summary
@@ -9516,6 +9524,10 @@
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary
       || summary.imported_readout_quality_review_request_plan_summary
+      || summary.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || summary.importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
+      || summary.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || summary.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary
       || summary.imported_next_readout_guard_review_request_plan_summary
@@ -9726,6 +9738,12 @@
       || null;
     const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary
       || summary.imported_readout_quality_review_request_plan_summary
+      || summary.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || summary.importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
+      || summary.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || summary.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
+      || exportPayload.session?.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || exportPayload.session?.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
       || exportPayload.session?.imported_readout_quality_review_request_plan_summary
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = summary.importedNextReadoutGuardReviewRequestPlanSummary
@@ -10330,11 +10348,20 @@
       || bridgeSession?.importedVehicleApplicabilityChangedRowSummary
       || bridgeSession?.imported_vehicle_applicability_changed_row_summary
       || null;
-    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
-      || bridgeImport?.importedReadoutQualityReviewRequestPlanSummary
+    const importedReadoutQualityReviewRequestPlanSummary = bridgeImport?.importedReadoutQualityReviewRequestPlanSummary
       || bridgeImport?.imported_readout_quality_review_request_plan_summary
+      || bridgeImport?.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || bridgeImport?.importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
+      || bridgeImport?.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || bridgeImport?.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
       || bridgeSession?.importedReadoutQualityReviewRequestPlanSummary
       || bridgeSession?.imported_readout_quality_review_request_plan_summary
+      || bridgeSession?.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || bridgeSession?.importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
+      || bridgeSession?.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || bridgeSession?.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
+      || importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = bridgeImport?.importedNextReadoutGuardReviewRequestPlanSummary
       || bridgeImport?.imported_next_readout_guard_review_request_plan_summary
@@ -12778,9 +12805,14 @@
       || sessionInput.importedVehicleApplicabilityChangedRowSummary
       || sessionInput.imported_vehicle_applicability_changed_row_summary
       || null;
-    const importedReadoutQualityReviewRequestPlanSummary = importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
-      || sessionInput.importedReadoutQualityReviewRequestPlanSummary
+    const importedReadoutQualityReviewRequestPlanSummary = sessionInput.importedReadoutQualityReviewRequestPlanSummary
       || sessionInput.imported_readout_quality_review_request_plan_summary
+      || sessionInput.importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || sessionInput.importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
+      || sessionInput.imported_session_comparison_summary?.readoutQualityReviewRequestPlanSummary
+      || sessionInput.imported_session_comparison_summary?.readout_quality_review_request_plan_summary
+      || importedSessionComparisonSummary?.readoutQualityReviewRequestPlanSummary
+      || importedSessionComparisonSummary?.readout_quality_review_request_plan_summary
       || null;
     const importedNextReadoutGuardReviewRequestPlanSummary = sessionInput.importedNextReadoutGuardReviewRequestPlanSummary
       || sessionInput.imported_next_readout_guard_review_request_plan_summary
