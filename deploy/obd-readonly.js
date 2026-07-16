@@ -2941,6 +2941,13 @@
       || parts.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
       || parts.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || null;
+    const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(parts.importedCoreSessionStatus || parts.imported_core_session_status || null);
+    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || null);
+    const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(parts.importedReadoutCompletionSummary || parts.imported_readout_completion_summary || null);
+    const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || null);
+    const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
+    const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(parts.importedReadoutRequestPlanGateSummary || parts.imported_readout_request_plan_gate_summary || null);
+    const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(parts.importedCoreReadoutInventorySummary || parts.imported_core_readout_inventory_summary || null);
 
     return {
       source: parts.source || parts.source_type || "local_bridge",
@@ -2988,6 +2995,20 @@
       imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
+      importedCoreSessionStatus,
+      imported_core_session_status: importedCoreSessionStatus,
+      importedDiagnosticFlowSummary,
+      imported_diagnostic_flow_summary: importedDiagnosticFlowSummary,
+      importedReadoutCompletionSummary,
+      imported_readout_completion_summary: importedReadoutCompletionSummary,
+      importedAnalysisReadinessSummary,
+      imported_analysis_readiness_summary: importedAnalysisReadinessSummary,
+      importedReadoutQualitySummary,
+      imported_readout_quality_summary: importedReadoutQualitySummary,
+      importedReadoutRequestPlanGateSummary,
+      imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+      importedCoreReadoutInventorySummary,
+      imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
       readoutRequestPlanGateSummary,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
@@ -3032,6 +3053,20 @@
       || parts.imported_session_comparison_summary
       || parts.importedNextReadoutGuardReviewRequestPlanSummary
       || parts.imported_next_readout_guard_review_request_plan_summary
+      || parts.importedCoreSessionStatus
+      || parts.imported_core_session_status
+      || parts.importedDiagnosticFlowSummary
+      || parts.imported_diagnostic_flow_summary
+      || parts.importedReadoutCompletionSummary
+      || parts.imported_readout_completion_summary
+      || parts.importedAnalysisReadinessSummary
+      || parts.imported_analysis_readiness_summary
+      || parts.importedReadoutQualitySummary
+      || parts.imported_readout_quality_summary
+      || parts.importedReadoutRequestPlanGateSummary
+      || parts.imported_readout_request_plan_gate_summary
+      || parts.importedCoreReadoutInventorySummary
+      || parts.imported_core_readout_inventory_summary
       || Array.isArray(parts.warningFlags)
       || Array.isArray(parts.warning_flags)
       || parts.capturedAt
@@ -3169,6 +3204,20 @@
       monitor_value_summary: pickPresent(parts.monitor_value_summary, parts.monitorValueSummary, nested.monitor_value_summary, nested.monitorValueSummary, null),
       monitorInsights: pickPresent(parts.monitorInsights, parts.monitor_insights, nested.monitorInsights, nested.monitor_insights, null),
       monitor_insights: pickPresent(parts.monitor_insights, parts.monitorInsights, nested.monitor_insights, nested.monitorInsights, null),
+      importedCoreSessionStatus: pickPresent(parts.importedCoreSessionStatus, parts.imported_core_session_status, nested.importedCoreSessionStatus, nested.imported_core_session_status, null),
+      imported_core_session_status: pickPresent(parts.imported_core_session_status, parts.importedCoreSessionStatus, nested.imported_core_session_status, nested.importedCoreSessionStatus, null),
+      importedDiagnosticFlowSummary: pickPresent(parts.importedDiagnosticFlowSummary, parts.imported_diagnostic_flow_summary, nested.importedDiagnosticFlowSummary, nested.imported_diagnostic_flow_summary, null),
+      imported_diagnostic_flow_summary: pickPresent(parts.imported_diagnostic_flow_summary, parts.importedDiagnosticFlowSummary, nested.imported_diagnostic_flow_summary, nested.importedDiagnosticFlowSummary, null),
+      importedReadoutCompletionSummary: pickPresent(parts.importedReadoutCompletionSummary, parts.imported_readout_completion_summary, nested.importedReadoutCompletionSummary, nested.imported_readout_completion_summary, null),
+      imported_readout_completion_summary: pickPresent(parts.imported_readout_completion_summary, parts.importedReadoutCompletionSummary, nested.imported_readout_completion_summary, nested.importedReadoutCompletionSummary, null),
+      importedAnalysisReadinessSummary: pickPresent(parts.importedAnalysisReadinessSummary, parts.imported_analysis_readiness_summary, nested.importedAnalysisReadinessSummary, nested.imported_analysis_readiness_summary, null),
+      imported_analysis_readiness_summary: pickPresent(parts.imported_analysis_readiness_summary, parts.importedAnalysisReadinessSummary, nested.imported_analysis_readiness_summary, nested.importedAnalysisReadinessSummary, null),
+      importedReadoutQualitySummary: pickPresent(parts.importedReadoutQualitySummary, parts.imported_readout_quality_summary, nested.importedReadoutQualitySummary, nested.imported_readout_quality_summary, null),
+      imported_readout_quality_summary: pickPresent(parts.imported_readout_quality_summary, parts.importedReadoutQualitySummary, nested.imported_readout_quality_summary, nested.importedReadoutQualitySummary, null),
+      importedReadoutRequestPlanGateSummary: pickPresent(parts.importedReadoutRequestPlanGateSummary, parts.imported_readout_request_plan_gate_summary, nested.importedReadoutRequestPlanGateSummary, nested.imported_readout_request_plan_gate_summary, null),
+      imported_readout_request_plan_gate_summary: pickPresent(parts.imported_readout_request_plan_gate_summary, parts.importedReadoutRequestPlanGateSummary, nested.imported_readout_request_plan_gate_summary, nested.importedReadoutRequestPlanGateSummary, null),
+      importedCoreReadoutInventorySummary: pickPresent(parts.importedCoreReadoutInventorySummary, parts.imported_core_readout_inventory_summary, nested.importedCoreReadoutInventorySummary, nested.imported_core_readout_inventory_summary, null),
+      imported_core_readout_inventory_summary: pickPresent(parts.imported_core_readout_inventory_summary, parts.importedCoreReadoutInventorySummary, nested.imported_core_readout_inventory_summary, nested.importedCoreReadoutInventorySummary, null),
       ...mergedMetadata
     };
   }
@@ -3366,6 +3415,13 @@
       || parts.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
       || parts.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || null;
+    const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(parts.importedCoreSessionStatus || parts.imported_core_session_status || null);
+    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || null);
+    const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(parts.importedReadoutCompletionSummary || parts.imported_readout_completion_summary || null);
+    const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || null);
+    const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
+    const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(parts.importedReadoutRequestPlanGateSummary || parts.imported_readout_request_plan_gate_summary || null);
+    const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(parts.importedCoreReadoutInventorySummary || parts.imported_core_readout_inventory_summary || null);
     return {
       source: parts.source || parts.source_type || "local_bridge",
       source_type: parts.source_type || parts.source || "local_bridge",
@@ -3425,6 +3481,20 @@
       imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
       importedVehicleApplicabilityChangedRowSummary,
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
+      importedCoreSessionStatus,
+      imported_core_session_status: importedCoreSessionStatus,
+      importedDiagnosticFlowSummary,
+      imported_diagnostic_flow_summary: importedDiagnosticFlowSummary,
+      importedReadoutCompletionSummary,
+      imported_readout_completion_summary: importedReadoutCompletionSummary,
+      importedAnalysisReadinessSummary,
+      imported_analysis_readiness_summary: importedAnalysisReadinessSummary,
+      importedReadoutQualitySummary,
+      imported_readout_quality_summary: importedReadoutQualitySummary,
+      importedReadoutRequestPlanGateSummary,
+      imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+      importedCoreReadoutInventorySummary,
+      imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
