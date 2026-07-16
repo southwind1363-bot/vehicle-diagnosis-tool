@@ -3234,6 +3234,49 @@
       });
   }
 
+  function buildNextReadoutCandidateSafetySummary(candidates = []) {
+    const items = Array.isArray(candidates)
+      ? candidates.filter((item) => item && typeof item === "object")
+      : [];
+    const unsafeItems = items.filter((item) => !isSafeNextReadoutCandidate(item));
+    const readOnlyCount = items.filter((item) => pickDefined(item.readOnly, item.read_only) === true).length;
+    const transmittingCount = items.filter((item) => (
+      pickDefined(item.wouldTransmit, item.would_transmit) === true
+      || pickDefined(item.vehicleCommandEnabled, item.vehicle_command_enabled) === true
+    )).length;
+    const executableCount = items.filter((item) => pickDefined(item.executionEnabled, item.execution_enabled) === true).length;
+    const safeCount = Math.max(0, items.length - unsafeItems.length);
+    const unsafeIds = unsafeItems
+      .map((item) => item.id || item.readout_id || item.readoutId || "")
+      .filter(Boolean);
+    return {
+      schemaVersion: "next_readout_candidate_safety_summary_v1",
+      schema_version: "next_readout_candidate_safety_summary_v1",
+      totalCount: items.length,
+      total_count: items.length,
+      safeCount,
+      safe_count: safeCount,
+      unsafeCount: unsafeItems.length,
+      unsafe_count: unsafeItems.length,
+      readOnlyCount,
+      read_only_count: readOnlyCount,
+      transmittingCount,
+      transmitting_count: transmittingCount,
+      executableCount,
+      executable_count: executableCount,
+      allSafe: unsafeItems.length === 0,
+      all_safe: unsafeItems.length === 0,
+      allReadOnly: items.every((item) => pickDefined(item.readOnly, item.read_only) === true),
+      all_read_only: items.every((item) => pickDefined(item.readOnly, item.read_only) === true),
+      allNonTransmitting: transmittingCount === 0,
+      all_non_transmitting: transmittingCount === 0,
+      allExecutionDisabled: executableCount === 0,
+      all_execution_disabled: executableCount === 0,
+      unsafeIds,
+      unsafe_ids: unsafeIds
+    };
+  }
+
   function pickDefined(...values) {
     for (const value of values) {
       if (value !== undefined) return value;
@@ -3659,6 +3702,7 @@
     if (nextReadoutSummary && nextReadoutRequest) {
       nextReadoutSummary.readoutRequest = nextReadoutRequest;
     }
+    const nextReadoutCandidateSafetySummary = buildNextReadoutCandidateSafetySummary(nextReadoutCandidates);
     const pendingReadoutRequestQueue = pendingReadoutQueue
       .map((item) => {
         const request = buildReadOnlyNextReadoutRequest(item);
@@ -4269,6 +4313,8 @@
       core_workflow_summary: coreWorkflowSummary,
       nextReadoutCandidate,
       next_readout_candidate: nextReadoutCandidate,
+      nextReadoutCandidateSafetySummary,
+      next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       nextRecommendedReadoutId,
       next_recommended_readout_id: nextRecommendedReadoutId,
       nextReadoutSource,
