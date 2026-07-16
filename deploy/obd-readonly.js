@@ -3225,7 +3225,14 @@
   }
 
   function getBridgeSummaryInput(parts = {}) {
-    const nested = parts.bridgeSession || parts.bridge_session || parts.session || null;
+    const nested = parts.bridgeSession
+      || parts.bridge_session
+      || parts.session
+      || parts.bridgeExportPayload?.session
+      || parts.bridge_export_payload?.session
+      || parts.localBridgeExportPayload?.session
+      || parts.local_bridge_export_payload?.session
+      || null;
     if (!nested || typeof nested !== "object") return parts;
     const mergedMetadata = mergeNestedSessionMetadata(parts, nested);
     return {
