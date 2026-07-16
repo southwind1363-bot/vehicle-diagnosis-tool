@@ -9832,6 +9832,7 @@
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.importedAnalysisReadinessSummary || summary.imported_analysis_readiness_summary || parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || parts.session?.imported_analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.importedReadoutQualitySummary || summary.imported_readout_quality_summary || parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || parts.session?.imported_readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.importedReadoutRequestPlanGateSummary || summary.imported_readout_request_plan_gate_summary || parts.importedReadoutRequestPlanGateSummary || parts.imported_readout_request_plan_gate_summary || parts.session?.imported_readout_request_plan_gate_summary || null);
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(summary.importedNextReadoutGuardSummary || summary.imported_next_readout_guard_summary || parts.importedNextReadoutGuardSummary || parts.imported_next_readout_guard_summary || parts.session?.imported_next_readout_guard_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(summary.importedCoreReadoutInventorySummary || summary.imported_core_readout_inventory_summary || parts.importedCoreReadoutInventorySummary || parts.imported_core_readout_inventory_summary || parts.session?.imported_core_readout_inventory_summary || null);
     const importedReadoutQualityReviewRequestPlanSummary = summary.importedReadoutQualityReviewRequestPlanSummary
       || summary.imported_readout_quality_review_request_plan_summary
@@ -9970,6 +9971,7 @@
         imported_analysis_readiness_summary: importedAnalysisReadinessSummary,
         imported_readout_quality_summary: importedReadoutQualitySummary,
         imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+        imported_next_readout_guard_summary: importedNextReadoutGuardSummary,
         imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
         imported_session_comparison_summary: importedSessionComparisonSummary,
         imported_core_comparison_summary: importedCoreComparisonSummary,
@@ -10127,6 +10129,10 @@
       || diagnosticFlowSummary.readoutRequestPlanGateSummary
       || diagnosticFlowSummary.readout_request_plan_gate_summary
       || null;
+    const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(summary.importedNextReadoutGuardSummary
+      || summary.imported_next_readout_guard_summary
+      || exportPayload.session?.imported_next_readout_guard_summary
+      || null);
     const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(summary.nextReadoutRequest
       || summary.next_readout_request
       || nestedSessionMetadata.nextReadoutRequest
@@ -10250,6 +10256,8 @@
       imported_readout_quality_summary: importedReadoutQualitySummary,
       importedReadoutRequestPlanGateSummary,
       imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+      importedNextReadoutGuardSummary,
+      imported_next_readout_guard_summary: importedNextReadoutGuardSummary,
       importedCoreReadoutInventorySummary,
       imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
       importedSessionComparisonSummary,
@@ -10335,6 +10343,8 @@
         imported_readout_quality_summary: importedReadoutQualitySummary,
         importedReadoutRequestPlanGateSummary,
         imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
+        importedNextReadoutGuardSummary,
+        imported_next_readout_guard_summary: importedNextReadoutGuardSummary,
         importedCoreReadoutInventorySummary,
         imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
         importedSessionComparisonSummary,
