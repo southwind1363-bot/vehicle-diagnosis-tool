@@ -2901,18 +2901,19 @@
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(generatedReadoutRequestPlanSummary?.nextRequestId || generatedReadoutRequestPlanSummary?.next_request_id
       ? generatedReadoutRequestPlanSummary
       : savedReadoutRequestPlanSummary || generatedReadoutRequestPlanSummary);
-    const nextReadoutRequestSafetySummary = coreSessionStatus.nextReadoutRequestSafetySummary
+    const nextReadoutRequestSafetySummary = metadataOverrides.nextReadoutRequestSafetySummary
+      || metadataOverrides.next_readout_request_safety_summary
+      || coreSessionStatus.nextReadoutRequestSafetySummary
       || coreSessionStatus.next_readout_request_safety_summary
       || diagnosticFlowSummary.nextReadoutRequestSafetySummary
       || diagnosticFlowSummary.next_readout_request_safety_summary
-      || metadataOverrides.nextReadoutRequestSafetySummary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
-    const nextReadoutReasonSummary = coreSessionStatus.nextReadoutReasonSummary
+    const nextReadoutReasonSummary = metadataOverrides.nextReadoutReasonSummary
+      || metadataOverrides.next_readout_reason_summary
+      || coreSessionStatus.nextReadoutReasonSummary
       || coreSessionStatus.next_readout_reason_summary
       || diagnosticFlowSummary.nextReadoutReasonSummary
       || diagnosticFlowSummary.next_readout_reason_summary
-      || metadataOverrides.nextReadoutReasonSummary
-      || metadataOverrides.next_readout_reason_summary
       || null;
     const nextReadoutGuardSummary = coreSessionStatus.nextReadoutGuardSummary
       || coreSessionStatus.next_readout_guard_summary
@@ -9548,6 +9549,9 @@
       nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,
       nextReadoutRequest: normalizeReadoutRequestSummaryAliases(sessionInput.next_readout_request || sessionInput.nextReadoutRequest || null),
       nextReadoutRequestSafetySummary: sessionInput.next_readout_request_safety_summary || sessionInput.nextReadoutRequestSafetySummary || null,
+      next_readout_request_safety_summary: sessionInput.next_readout_request_safety_summary || sessionInput.nextReadoutRequestSafetySummary || null,
+      nextReadoutReasonSummary: sessionInput.next_readout_reason_summary || sessionInput.nextReadoutReasonSummary || null,
+      next_readout_reason_summary: sessionInput.next_readout_reason_summary || sessionInput.nextReadoutReasonSummary || null,
       readoutRequestPlanSummary: normalizeReadoutRequestPlanSummaryAliases(sessionInput.readout_request_plan_summary || sessionInput.readoutRequestPlanSummary || null),
       importClassification,
       toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints, importClassification?.toolHints, importClassification?.tool_hints),
