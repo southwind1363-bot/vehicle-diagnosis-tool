@@ -3215,7 +3215,15 @@
           ? Math.round(Number(pickDefined(item.priority, item.sort_order, item.sortOrder)))
           : 0,
         reason: pickDefined(item.reason, item.reason_label, item.reasonLabel, "") || "",
-        applicabilityStatus: pickDefined(item.applicabilityStatus, item.applicability_status, item.vehicleApplicabilityStatus, item.vehicle_applicability_status, null)
+        applicabilityStatus: pickDefined(item.applicabilityStatus, item.applicability_status, item.vehicleApplicabilityStatus, item.vehicle_applicability_status, null),
+        readOnly: true,
+        read_only: true,
+        wouldTransmit: false,
+        would_transmit: false,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        executionEnabled: false,
+        execution_enabled: false
       }))
       .sort((left, right) => {
         const rightPriority = Number.isFinite(right?.priority) ? right.priority : 0;
