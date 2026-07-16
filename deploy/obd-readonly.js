@@ -2931,6 +2931,9 @@
       || parts.imported_session_comparison_summary?.nextReadoutGuardReviewRequestPlanSummary
       || parts.imported_session_comparison_summary?.next_readout_guard_review_request_plan_summary
       || null;
+    const importedSessionComparisonSummary = parts.importedSessionComparisonSummary
+      || parts.imported_session_comparison_summary
+      || null;
     const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
       || parts.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
@@ -2977,6 +2980,8 @@
       next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       readoutCompletionSummary,
       analysisReadinessSummary,
+      importedSessionComparisonSummary,
+      imported_session_comparison_summary: importedSessionComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedNextReadoutGuardReviewRequestPlanSummary,
@@ -3351,6 +3356,9 @@
       || parts.importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || parts.imported_next_readout_guard_comparison_summary?.review_request_plan_summary
       || null;
+    const importedSessionComparisonSummary = parts.importedSessionComparisonSummary
+      || parts.imported_session_comparison_summary
+      || null;
     const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
       || parts.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
@@ -3409,6 +3417,8 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       readoutRequestPlanSummary,
       readout_request_plan_summary: readoutRequestPlanSummary,
+      importedSessionComparisonSummary,
+      imported_session_comparison_summary: importedSessionComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedNextReadoutGuardReviewRequestPlanSummary,
@@ -9609,6 +9619,9 @@
         onboardMonitorSnapshot: summary.onboardMonitorSnapshot,
         supportedPidMatrix: summary.supportedPidMatrix
       });
+    const importedSessionComparisonSummary = summary.importedSessionComparisonSummary
+      || summary.imported_session_comparison_summary
+      || null;
     return {
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
@@ -9650,6 +9663,7 @@
         readout_completion_summary: readoutCompletionSummary,
         analysis_readiness_summary: analysisReadinessSummary,
         readout_quality_summary: readoutQualitySummary,
+        imported_session_comparison_summary: importedSessionComparisonSummary,
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
         imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
         imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
@@ -9851,6 +9865,10 @@
     const codes = cloneBridgeArrayItems(dtcSnapshot.codes);
     const monitorValues = cloneBridgeArrayItems(summary.monitorValues);
     const monitorInsights = cloneBridgeArrayItems(summary.monitorInsights);
+    const importedSessionComparisonSummary = summary.importedSessionComparisonSummary
+      || summary.imported_session_comparison_summary
+      || exportPayload.session?.imported_session_comparison_summary
+      || null;
 
     return {
       source: "local_bridge",
@@ -9889,6 +9907,8 @@
       readoutCompletionSummary,
       analysisReadinessSummary,
       readoutQualitySummary,
+      importedSessionComparisonSummary,
+      imported_session_comparison_summary: importedSessionComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedNextReadoutGuardReviewRequestPlanSummary,
@@ -9942,6 +9962,8 @@
         readoutCompletionSummary,
         analysisReadinessSummary,
         readoutQualitySummary,
+        importedSessionComparisonSummary,
+        imported_session_comparison_summary: importedSessionComparisonSummary,
         importedReadoutQualityReviewRequestPlanSummary,
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
         importedNextReadoutGuardReviewRequestPlanSummary,
