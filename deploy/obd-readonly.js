@@ -9330,7 +9330,7 @@
     const base = payload && typeof payload === "object"
       ? { ...payload, ...input }
       : input;
-    const nested = input.session
+    let nested = input.session
       || input.sessionPayload
       || input.session_payload
       || input.savedSession
@@ -9376,6 +9376,19 @@
       || payload?.session
       || null;
     if (!nested || typeof nested !== "object") return base;
+    const nestedSessionInput = nested.scanSession
+      || nested.scan_session
+      || nested.diagnosticScanSession
+      || nested.diagnostic_scan_session
+      || nested.diagnosticSession
+      || nested.diagnostic_session
+      || nested.obdScanSession
+      || nested.obd_scan_session
+      || nested.session
+      || null;
+    if (nestedSessionInput && typeof nestedSessionInput === "object") {
+      nested = { ...nested, ...nestedSessionInput };
+    }
     const baseImportClassification = resolveImportClassification(base.importClassification || base.import_classification || null);
     const nestedImportClassification = resolveImportClassification(nested.importClassification || nested.import_classification || null);
     const importClassification = baseImportClassification || nestedImportClassification || null;
