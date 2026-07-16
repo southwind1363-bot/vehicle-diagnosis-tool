@@ -305,7 +305,8 @@ const resolveBridgeSummaryFunctionChecks = () => {
     const functionBody = resolveBridgeSummaryFunctionSource[0];
     check(functionBody.includes('const summaryInput = getBridgeSummaryInput(parts);'), "resolveBridgeSummary should derive bridge summary input before branching");
     check(functionBody.includes('return hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);'), "resolveBridgeSummary should normalize summary aliases before falling back to bridge session summary");
-    check(source.includes('parts.localBridgeExportPayload?.session') && source.includes('parts.local_bridge_export_payload?.session'), "getBridgeSummaryInput should accept local bridge export payload session aliases");
+    check(source.includes('function getNestedBridgePayloadSession(payload)') && source.includes('payload.session_payload') && source.includes('payload.diagnostic_scan_session'), "getNestedBridgePayloadSession should unwrap saved bridge payload session aliases");
+    check(source.includes('getNestedBridgePayloadSession(parts.localBridgeExportPayload)') && source.includes('getNestedBridgePayloadSession(parts.local_bridge_export_payload)'), "getBridgeSummaryInput should accept local bridge export payload session aliases");
   }
   check(Boolean(bridgeSummaryContentFunctionSource), "hasBridgeSummaryContent is missing from obd-readonly.js");
   if (bridgeSummaryContentFunctionSource) {
@@ -493,7 +494,7 @@ const bridgeSummaryInputFunctionChecks = () => {
   check(Boolean(bridgeSummaryInputFunctionSource), "getBridgeSummaryInput is missing from obd-readonly.js");
   if (bridgeSummaryInputFunctionSource) {
     const functionBody = bridgeSummaryInputFunctionSource[0];
-    check(functionBody.includes('const nested = parts.bridgeSession') && functionBody.includes('|| parts.bridge_session') && functionBody.includes('|| parts.session') && functionBody.includes('|| parts.local_bridge_export_payload?.session'), "getBridgeSummaryInput should prefer bridgeSession aliases before generic session");
+    check(functionBody.includes('const nested = parts.bridgeSession') && functionBody.includes('|| parts.bridge_session') && functionBody.includes('|| parts.session') && functionBody.includes('getNestedBridgePayloadSession(parts.local_bridge_export_payload)'), "getBridgeSummaryInput should prefer bridgeSession aliases before generic session");
     check(functionBody.includes('if (!nested || typeof nested !== \"object\") return parts;'), "getBridgeSummaryInput should return outer parts when nested bridge summary is unavailable");
     check(functionBody.includes('const mergedMetadata = mergeNestedSessionMetadata(parts, nested);'), "getBridgeSummaryInput should merge nested session metadata before rebuilding bridge summary input");
     check(functionBody.includes('...nested,') && functionBody.includes('...parts,'), "getBridgeSummaryInput should layer nested bridge summary fields before outer overrides");
@@ -576,7 +577,7 @@ const bridgeDiagnosticImportFunctionChecks = () => {
     check(functionBody.includes('const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot') && functionBody.includes('dtc_snapshot: dtcSnapshot,'), "buildBridgeDiagnosticImport should preserve DTC snapshots");
     check(functionBody.includes('const metadataFields = buildSummaryMetadataFields(summary);'), "buildBridgeDiagnosticImport should rebuild normalized summary metadata");
     check(functionBody.includes('vehicleProfile: metadataFields.vehicleProfile || null,') && functionBody.includes('vehicleProfile: bridgeSessionMetadataFields.vehicleProfile || null,'), "buildBridgeDiagnosticImport should import normalized vehicle profile metadata");
-    check(functionBody.includes('const directSessionMetadata = getSessionMetadataOverrides(parts);') && functionBody.includes('const nestedBridgeSession = parts.bridgeSession') && functionBody.includes('parts.local_bridge_export_payload?.session') && functionBody.includes('const nestedSessionMetadata = getSessionMetadataOverrides(nestedBridgeSession);'), "buildBridgeDiagnosticImport should derive direct and nested bridge session metadata overrides");
+    check(functionBody.includes('const directSessionMetadata = getSessionMetadataOverrides(parts);') && functionBody.includes('const nestedBridgeSession = parts.bridgeSession') && functionBody.includes('getNestedBridgePayloadSession(parts.local_bridge_export_payload)') && functionBody.includes('const nestedSessionMetadata = getSessionMetadataOverrides(nestedBridgeSession);'), "buildBridgeDiagnosticImport should derive direct and nested bridge session metadata overrides");
     check(functionBody.includes('const exportPayload = buildBridgeSessionExportPayload(summary);'), "buildBridgeDiagnosticImport should rebuild bridge export payload from resolved summary");
     check(functionBody.includes('const coreSessionStatus = summary.coreSessionStatus') && functionBody.includes('coreSessionStatus,'), "buildBridgeDiagnosticImport should preserve core session status");
     check(functionBody.includes('const diagnosticFlowSummary = summary.diagnosticFlowSummary') && functionBody.includes('diagnosticFlowSummary,'), "buildBridgeDiagnosticImport should preserve diagnostic flow summary");
@@ -2304,7 +2305,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2497+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2502+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2387,7 +2388,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.797.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for direct bridge export payload safety metadata validation");
+check(appSource.includes('const APP_VERSION = "2.798.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for bridge payload session alias safety metadata validation");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
 check(appSource.includes('function formatNextReadoutRequestSafetySummary(request = null, plan = null, fallback = NO_DATA)') && appSource.includes('vehicle command off') && appSource.includes('execution off'), "OBD UI should format next readout request safety summaries");
 check(appSource.includes('function formatNextReadoutReasonSummary(summary = null, fallback = NO_DATA)') && appSource.includes('const reasonId = summary.reasonId || summary.reason_id || summary.reason || "";') && appSource.includes('parts.push(`queue ${Number(queuePositionValue)}`);'), "OBD UI should format next readout reason summaries");
@@ -2410,7 +2411,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "bridge export payloadの安全メタデータ復元を実データ検証"'), "OBD core progress snapshot should show the latest bridge export payload safety metadata restoration milestone");
+check(appSource.includes('recentMilestone: "bridge payload session aliasの安全メタデータ復元を検証"'), "OBD core progress snapshot should show the latest bridge payload session alias safety metadata restoration milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -6866,6 +6867,48 @@ const bridgeDiagnosticImportLocalBridgeExportPayloadSnakeSafetyAlias = obd.build
   local_bridge_export_payload: { session: { ...bridgeExportPayloadSafetySession, next_readout_candidate_safety_summary: { ...bridgeExportPayloadSafetySession.next_readout_candidate_safety_summary, total_count: 109 } } }
 });
 check((bridgeDiagnosticImportLocalBridgeExportPayloadSnakeSafetyAlias.nextReadoutCandidateSafetySummary?.totalCount ?? bridgeDiagnosticImportLocalBridgeExportPayloadSnakeSafetyAlias.nextReadoutCandidateSafetySummary?.total_count) === 109, "Bridge diagnostic import did not retain safety metadata from local_bridge_export_payload session alias input");
+const bridgeSummaryBridgeExportPayloadSessionPayloadSafetyAlias = obd.buildBridgeSessionSummary({
+  bridgeExportPayload: {
+    session_payload: {
+      ...bridgeExportPayloadSafetySession,
+      next_readout_reason_summary: { ...bridgeExportPayloadSafetySession.next_readout_reason_summary, reason_id: "bridge_export_payload_session_payload_safety_alias" },
+      next_readout_candidate_safety_summary: { ...bridgeExportPayloadSafetySession.next_readout_candidate_safety_summary, total_count: 110 }
+    }
+  }
+});
+check((bridgeSummaryBridgeExportPayloadSessionPayloadSafetyAlias.nextReadoutCandidateSafetySummary?.totalCount ?? bridgeSummaryBridgeExportPayloadSessionPayloadSafetyAlias.nextReadoutCandidateSafetySummary?.total_count) === 110 && (bridgeSummaryBridgeExportPayloadSessionPayloadSafetyAlias.nextReadoutReasonSummary?.reasonId ?? bridgeSummaryBridgeExportPayloadSessionPayloadSafetyAlias.nextReadoutReasonSummary?.reason_id) === "bridge_export_payload_session_payload_safety_alias", "Bridge session summary did not unwrap bridgeExportPayload session_payload safety metadata");
+const bridgeSummaryLocalBridgeExportPayloadDiagnosticScanSafetyAlias = obd.buildBridgeSessionSummary({
+  local_bridge_export_payload: {
+    diagnostic_scan_session: {
+      ...bridgeExportPayloadSafetySession,
+      next_readout_reason_summary: { ...bridgeExportPayloadSafetySession.next_readout_reason_summary, reason_id: "local_bridge_export_payload_diagnostic_scan_safety_alias" },
+      next_readout_candidate_safety_summary: { ...bridgeExportPayloadSafetySession.next_readout_candidate_safety_summary, total_count: 111 }
+    }
+  }
+});
+check((bridgeSummaryLocalBridgeExportPayloadDiagnosticScanSafetyAlias.nextReadoutCandidateSafetySummary?.totalCount ?? bridgeSummaryLocalBridgeExportPayloadDiagnosticScanSafetyAlias.nextReadoutCandidateSafetySummary?.total_count) === 111 && (bridgeSummaryLocalBridgeExportPayloadDiagnosticScanSafetyAlias.nextReadoutReasonSummary?.reasonId ?? bridgeSummaryLocalBridgeExportPayloadDiagnosticScanSafetyAlias.nextReadoutReasonSummary?.reason_id) === "local_bridge_export_payload_diagnostic_scan_safety_alias", "Bridge session summary did not unwrap local_bridge_export_payload diagnostic_scan_session safety metadata");
+const bridgeDiagnosticImportBridgeExportPayloadSessionPayloadSafetyAlias = obd.buildBridgeDiagnosticImport({
+  import_type: "bridge_diagnostic_snapshot",
+  bridgeExportPayload: {
+    session_payload: {
+      ...bridgeExportPayloadSafetySession,
+      next_readout_reason_summary: { ...bridgeExportPayloadSafetySession.next_readout_reason_summary, reason_id: "bridge_diagnostic_import_session_payload_safety_alias" },
+      next_readout_candidate_safety_summary: { ...bridgeExportPayloadSafetySession.next_readout_candidate_safety_summary, total_count: 112 }
+    }
+  }
+});
+check((bridgeDiagnosticImportBridgeExportPayloadSessionPayloadSafetyAlias.nextReadoutCandidateSafetySummary?.totalCount ?? bridgeDiagnosticImportBridgeExportPayloadSessionPayloadSafetyAlias.nextReadoutCandidateSafetySummary?.total_count) === 112 && (bridgeDiagnosticImportBridgeExportPayloadSessionPayloadSafetyAlias.bridgeSession?.nextReadoutReasonSummary?.reasonId ?? bridgeDiagnosticImportBridgeExportPayloadSessionPayloadSafetyAlias.bridgeSession?.nextReadoutReasonSummary?.reason_id) === "bridge_diagnostic_import_session_payload_safety_alias", "Bridge diagnostic import did not unwrap bridgeExportPayload session_payload safety metadata");
+const bridgeDiagnosticImportLocalBridgeExportPayloadDiagnosticScanSafetyAlias = obd.buildBridgeDiagnosticImport({
+  import_type: "bridge_diagnostic_snapshot",
+  local_bridge_export_payload: {
+    diagnostic_scan_session: {
+      ...bridgeExportPayloadSafetySession,
+      next_readout_reason_summary: { ...bridgeExportPayloadSafetySession.next_readout_reason_summary, reason_id: "bridge_diagnostic_import_diagnostic_scan_safety_alias" },
+      next_readout_candidate_safety_summary: { ...bridgeExportPayloadSafetySession.next_readout_candidate_safety_summary, total_count: 113 }
+    }
+  }
+});
+check((bridgeDiagnosticImportLocalBridgeExportPayloadDiagnosticScanSafetyAlias.nextReadoutCandidateSafetySummary?.totalCount ?? bridgeDiagnosticImportLocalBridgeExportPayloadDiagnosticScanSafetyAlias.nextReadoutCandidateSafetySummary?.total_count) === 113 && (bridgeDiagnosticImportLocalBridgeExportPayloadDiagnosticScanSafetyAlias.bridgeSession?.nextReadoutReasonSummary?.reasonId ?? bridgeDiagnosticImportLocalBridgeExportPayloadDiagnosticScanSafetyAlias.bridgeSession?.nextReadoutReasonSummary?.reason_id) === "bridge_diagnostic_import_diagnostic_scan_safety_alias", "Bridge diagnostic import did not unwrap local_bridge_export_payload diagnostic_scan_session safety metadata");
 const bridgeSummaryNestedNullOuterInfrastructure = obd.buildBridgeSessionSummary({
   connection_status: null,
   vci_devices: null,
@@ -14275,6 +14318,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2497");
+  console.log("OBD read-only safety checks: 2502");
   console.log("Errors: 0");
 }

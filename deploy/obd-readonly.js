@@ -3224,14 +3224,34 @@
     );
   }
 
+  function getNestedBridgePayloadSession(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    return payload.session
+      || payload.sessionPayload
+      || payload.session_payload
+      || payload.savedSession
+      || payload.saved_session
+      || payload.lastSession
+      || payload.last_session
+      || payload.scanSession
+      || payload.scan_session
+      || payload.diagnosticScanSession
+      || payload.diagnostic_scan_session
+      || payload.diagnosticSession
+      || payload.diagnostic_session
+      || payload.obdScanSession
+      || payload.obd_scan_session
+      || null;
+  }
+
   function getBridgeSummaryInput(parts = {}) {
     const nested = parts.bridgeSession
       || parts.bridge_session
       || parts.session
-      || parts.bridgeExportPayload?.session
-      || parts.bridge_export_payload?.session
-      || parts.localBridgeExportPayload?.session
-      || parts.local_bridge_export_payload?.session
+      || getNestedBridgePayloadSession(parts.bridgeExportPayload)
+      || getNestedBridgePayloadSession(parts.bridge_export_payload)
+      || getNestedBridgePayloadSession(parts.localBridgeExportPayload)
+      || getNestedBridgePayloadSession(parts.local_bridge_export_payload)
       || null;
     if (!nested || typeof nested !== "object") return parts;
     const mergedMetadata = mergeNestedSessionMetadata(parts, nested);
@@ -10081,10 +10101,10 @@
     const nestedBridgeSession = parts.bridgeSession
       || parts.bridge_session
       || parts.session
-      || parts.bridgeExportPayload?.session
-      || parts.bridge_export_payload?.session
-      || parts.localBridgeExportPayload?.session
-      || parts.local_bridge_export_payload?.session
+      || getNestedBridgePayloadSession(parts.bridgeExportPayload)
+      || getNestedBridgePayloadSession(parts.bridge_export_payload)
+      || getNestedBridgePayloadSession(parts.localBridgeExportPayload)
+      || getNestedBridgePayloadSession(parts.local_bridge_export_payload)
       || {};
     const nestedSessionMetadata = getSessionMetadataOverrides(nestedBridgeSession);
     const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
