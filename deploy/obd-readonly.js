@@ -785,6 +785,10 @@
     const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
+    const dtcStatusSummary = buildDtcStatusSummary({
+      reportedStatuses: safety.ok && safety.blocked === false ? [defaultStatus] : [],
+      dtcs: normalizedDtcs
+    });
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -806,6 +810,8 @@
       pending_count: pendingCount,
       permanentCount,
       permanent_count: permanentCount,
+      dtcStatusSummary,
+      dtc_status_summary: dtcStatusSummary,
       protocol: readBridgeProtocol(data),
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
@@ -11208,6 +11214,41 @@
     };
   }
 
+  function buildDtcStatusSummary({ reportedStatuses = [], dtcs = [] } = {}) {
+    const expectedStatuses = ["stored", "pending", "permanent"];
+    const normalizeStatuses = (values) => [...new Set(
+      (Array.isArray(values) ? values : [values])
+        .map((value) => String(value || "").trim().toLowerCase())
+        .filter((value) => expectedStatuses.includes(value))
+    )].sort((left, right) => expectedStatuses.indexOf(left) - expectedStatuses.indexOf(right));
+    const observedStatuses = normalizeStatuses((Array.isArray(dtcs) ? dtcs : []).map((row) => row?.status));
+    const normalizedReportedStatuses = normalizeStatuses([...reportedStatuses, ...observedStatuses]);
+    const emptyStatuses = normalizedReportedStatuses.filter((status) => !observedStatuses.includes(status));
+    const unreportedStatuses = expectedStatuses.filter((status) => !normalizedReportedStatuses.includes(status));
+    return {
+      schemaVersion: "dtc_status_summary_v1",
+      schema_version: "dtc_status_summary_v1",
+      expectedStatuses,
+      expected_statuses: expectedStatuses,
+      reportedStatuses: normalizedReportedStatuses,
+      reported_statuses: normalizedReportedStatuses,
+      observedStatuses,
+      observed_statuses: observedStatuses,
+      emptyStatuses,
+      empty_statuses: emptyStatuses,
+      unreportedStatuses,
+      unreported_statuses: unreportedStatuses,
+      reportedCount: normalizedReportedStatuses.length,
+      reported_count: normalizedReportedStatuses.length,
+      observedCount: observedStatuses.length,
+      observed_count: observedStatuses.length,
+      emptyCount: emptyStatuses.length,
+      empty_count: emptyStatuses.length,
+      complete: unreportedStatuses.length === 0,
+      all_statuses_reported: unreportedStatuses.length === 0
+    };
+  }
+
   function normalizeDtcSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
@@ -11274,6 +11315,20 @@
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
     const unknownCount = normalizedDtcs.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
+    const dtcStatusSummary = buildDtcStatusSummary({
+      reportedStatuses: [
+        ...(Array.isArray(sourceInput.reportedStatuses) ? sourceInput.reportedStatuses : []),
+        ...(Array.isArray(sourceInput.reported_statuses) ? sourceInput.reported_statuses : []),
+        ...(Array.isArray(sourceInput.dtcStatusSummary?.reportedStatuses) ? sourceInput.dtcStatusSummary.reportedStatuses : []),
+        ...(Array.isArray(sourceInput.dtc_status_summary?.reported_statuses) ? sourceInput.dtc_status_summary.reported_statuses : []),
+        sourceInput.status,
+        sourceInput.dtcStatus,
+        sourceInput.dtc_status,
+        sourceInput.readoutStatus,
+        sourceInput.readout_status
+      ],
+      dtcs: normalizedDtcs
+    });
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -11296,6 +11351,8 @@
       permanent_count: permanentCount,
       unknownCount,
       unknown_count: unknownCount,
+      dtcStatusSummary,
+      dtc_status_summary: dtcStatusSummary,
       retainedRawText: false,
       retained_raw_text: false
     };
@@ -11980,6 +12037,13 @@
     const pendingCount = mergedRows.filter((item) => item.status === "pending").length;
     const permanentCount = mergedRows.filter((item) => item.status === "permanent").length;
     const unknownCount = mergedRows.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
+    const dtcStatusSummary = buildDtcStatusSummary({
+      reportedStatuses: snapshots.flatMap((snapshot) => [
+        ...(Array.isArray(snapshot?.dtcStatusSummary?.reportedStatuses) ? snapshot.dtcStatusSummary.reportedStatuses : []),
+        ...(Array.isArray(snapshot?.dtc_status_summary?.reported_statuses) ? snapshot.dtc_status_summary.reported_statuses : [])
+      ]),
+      dtcs: mergedRows
+    });
     return {
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
@@ -12002,6 +12066,8 @@
       permanent_count: permanentCount,
       unknownCount,
       unknown_count: unknownCount,
+      dtcStatusSummary,
+      dtc_status_summary: dtcStatusSummary,
       retainedRawText: false
     };
   }
