@@ -9481,6 +9481,20 @@
       || diagnosticFlowSummary.nextReadoutRequestSafetySummary
       || diagnosticFlowSummary.next_readout_request_safety_summary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const nextReadoutReasonSummary = summary.nextReadoutReasonSummary
+      || summary.next_readout_reason_summary
+      || coreSessionStatus.nextReadoutReasonSummary
+      || coreSessionStatus.next_readout_reason_summary
+      || diagnosticFlowSummary.nextReadoutReasonSummary
+      || diagnosticFlowSummary.next_readout_reason_summary
+      || null;
+    const nextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(summary.nextReadoutGuardSummary
+      || summary.next_readout_guard_summary
+      || coreSessionStatus.nextReadoutGuardSummary
+      || coreSessionStatus.next_readout_guard_summary
+      || diagnosticFlowSummary.nextReadoutGuardSummary
+      || diagnosticFlowSummary.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary));
     const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
       || summary.core_readout_inventory_summary
       || buildCoreReadoutInventorySummary({
@@ -9539,6 +9553,8 @@
         readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
         next_readout_request: nextReadoutRequest,
         next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
+        next_readout_reason_summary: nextReadoutReasonSummary,
+        next_readout_guard_summary: nextReadoutGuardSummary,
         readout_request_plan_summary: readoutRequestPlanSummary,
         core_readout_inventory_summary: coreReadoutInventorySummary,
         had_sensitive_identifier: metadataFields.had_sensitive_identifier,
@@ -9674,6 +9690,24 @@
       || diagnosticFlowSummary.nextReadoutRequestSafetySummary
       || diagnosticFlowSummary.next_readout_request_safety_summary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const nextReadoutReasonSummary = summary.nextReadoutReasonSummary
+      || summary.next_readout_reason_summary
+      || nestedSessionMetadata.nextReadoutReasonSummary
+      || exportPayload.session?.next_readout_reason_summary
+      || coreSessionStatus.nextReadoutReasonSummary
+      || coreSessionStatus.next_readout_reason_summary
+      || diagnosticFlowSummary.nextReadoutReasonSummary
+      || diagnosticFlowSummary.next_readout_reason_summary
+      || null;
+    const nextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(summary.nextReadoutGuardSummary
+      || summary.next_readout_guard_summary
+      || nestedSessionMetadata.nextReadoutGuardSummary
+      || exportPayload.session?.next_readout_guard_summary
+      || coreSessionStatus.nextReadoutGuardSummary
+      || coreSessionStatus.next_readout_guard_summary
+      || diagnosticFlowSummary.nextReadoutGuardSummary
+      || diagnosticFlowSummary.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary));
     const coreReadoutInventorySummary = summary.coreReadoutInventorySummary
       || summary.core_readout_inventory_summary
       || exportPayload.session?.core_readout_inventory_summary
@@ -9737,6 +9771,10 @@
       next_readout_request: nextReadoutRequest,
       nextReadoutRequestSafetySummary,
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
+      nextReadoutReasonSummary,
+      next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       readoutRequestPlanSummary,
       readout_request_plan_summary: readoutRequestPlanSummary,
       coreReadoutInventorySummary,
@@ -9784,6 +9822,10 @@
         next_readout_request: nextReadoutRequest,
         nextReadoutRequestSafetySummary,
         next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
+        nextReadoutReasonSummary,
+        next_readout_reason_summary: nextReadoutReasonSummary,
+        nextReadoutGuardSummary,
+        next_readout_guard_summary: nextReadoutGuardSummary,
         readoutRequestPlanSummary,
         readout_request_plan_summary: readoutRequestPlanSummary,
         coreReadoutInventorySummary,
