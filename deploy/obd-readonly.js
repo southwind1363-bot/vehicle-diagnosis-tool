@@ -9675,6 +9675,16 @@
       bridgeSessionMetadata.nextReadoutRequestSafetySummary,
       null
     ) || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const nextReadoutReasonSummary = pickDefined(
+      bridgeImportMetadata.nextReadoutReasonSummary,
+      bridgeSessionMetadata.nextReadoutReasonSummary,
+      null
+    );
+    const nextReadoutCandidateSafetySummary = pickDefined(
+      bridgeImportMetadata.nextReadoutCandidateSafetySummary,
+      bridgeSessionMetadata.nextReadoutCandidateSafetySummary,
+      null
+    );
     const importClassificationInput = pickDefined(
       bridgeImport?.importClassification,
       bridgeImport?.import_classification,
@@ -9691,6 +9701,8 @@
       nextReadoutCandidatesInput,
       nextReadoutRequest,
       nextReadoutRequestSafetySummary,
+      nextReadoutReasonSummary,
+      nextReadoutCandidateSafetySummary,
       readoutRequestPlanSummary,
       importClassification,
       toolHints: mergeUniqueStrings(bridgeImportMetadata.toolHints, bridgeSessionMetadata.toolHints),
