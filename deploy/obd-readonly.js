@@ -13365,19 +13365,19 @@
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(generatedReadoutRequestPlanSummary?.nextRequestId || generatedReadoutRequestPlanSummary?.next_request_id
       ? generatedReadoutRequestPlanSummary
       : savedReadoutRequestPlanSummary || generatedReadoutRequestPlanSummary);
-    const nextReadoutRequestSafetySummary = coreSessionStatus.nextReadoutRequestSafetySummary
+    const nextReadoutRequestSafetySummary = sessionInput.nextReadoutRequestSafetySummary
+      || sessionInput.next_readout_request_safety_summary
+      || coreSessionStatus.nextReadoutRequestSafetySummary
       || coreSessionStatus.next_readout_request_safety_summary
       || diagnosticFlowSummary.nextReadoutRequestSafetySummary
       || diagnosticFlowSummary.next_readout_request_safety_summary
-      || sessionInput.nextReadoutRequestSafetySummary
-      || sessionInput.next_readout_request_safety_summary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
-    const nextReadoutReasonSummary = coreSessionStatus.nextReadoutReasonSummary
+    const nextReadoutReasonSummary = sessionInput.nextReadoutReasonSummary
+      || sessionInput.next_readout_reason_summary
+      || coreSessionStatus.nextReadoutReasonSummary
       || coreSessionStatus.next_readout_reason_summary
       || diagnosticFlowSummary.nextReadoutReasonSummary
       || diagnosticFlowSummary.next_readout_reason_summary
-      || sessionInput.nextReadoutReasonSummary
-      || sessionInput.next_readout_reason_summary
       || null;
     const nextReadoutGuardSummary = coreSessionStatus.nextReadoutGuardSummary
       || coreSessionStatus.next_readout_guard_summary
