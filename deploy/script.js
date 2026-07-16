@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2309+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "計画差分の再確認読取をexport/import保持",
+  recentMilestone: "計画差分の再確認読取を画面表示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.718.0";
+const APP_VERSION = "2.719.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5046,30 +5046,39 @@ function formatNextReadoutGuardSummary(summary = null, fallback = NO_DATA) {
   return parts.join(" / ");
 }
 
-function formatNextReadoutGuardComparisonSummary(summary = null, fallback = NO_DATA) {
-  if (!summary || typeof summary !== "object") return fallback;
-  const changed = summary.changed === true || summary.hasChanges === true || summary.has_changes === true;
-  const changedCountValue = summary.changedCount ?? summary.changed_count;
+function formatNextReadoutGuardComparisonSummary(summary = null, fallback = NO_DATA, reviewPlan = null) {
+  const sourceSummary = summary && typeof summary === "object" ? summary : null;
+  const sourcePlan = reviewPlan && typeof reviewPlan === "object"
+    ? reviewPlan
+    : sourceSummary?.reviewRequestPlanSummary || sourceSummary?.review_request_plan_summary || null;
+  if (!sourceSummary && !sourcePlan) return fallback;
+  const summarySource = sourceSummary || {};
+  const changed = summarySource.changed === true || summarySource.hasChanges === true || summarySource.has_changes === true;
+  const changedCountValue = summarySource.changedCount ?? summarySource.changed_count;
   const changedCount = Number.isFinite(Number(changedCountValue)) ? Math.max(0, Math.round(Number(changedCountValue))) : null;
-  const importedReadoutId = summary.importedReadoutId || summary.imported_readout_id || "";
-  const currentReadoutId = summary.currentReadoutId || summary.current_readout_id || "";
-  const importedGateState = summary.importedGateState || summary.imported_gate_state || "";
-  const currentGateState = summary.currentGateState || summary.current_gate_state || "";
-  const importedBridgeIntent = summary.importedBridgeIntent || summary.imported_bridge_intent || "";
-  const currentBridgeIntent = summary.currentBridgeIntent || summary.current_bridge_intent || "";
-  const planningReadyChanged = summary.planningReadyChanged === true || summary.planning_ready_changed === true;
-  const safetyChanged = summary.safetyChanged === true || summary.safety_changed === true;
-  const bridgeIntentChanged = summary.bridgeIntentChanged === true || summary.bridge_intent_changed === true;
-  const readoutIdChanged = summary.readoutIdChanged === true || summary.readout_id_changed === true || summary.readoutChanged === true || summary.readout_changed === true;
-  const reviewRequestCountValue = summary.reviewRequestCount ?? summary.review_request_count ?? summary.reviewRequestPlanSummary?.requestCount ?? summary.review_request_plan_summary?.request_count;
+  const importedReadoutId = summarySource.importedReadoutId || summarySource.imported_readout_id || "";
+  const currentReadoutId = summarySource.currentReadoutId || summarySource.current_readout_id || "";
+  const importedGateState = summarySource.importedGateState || summarySource.imported_gate_state || "";
+  const currentGateState = summarySource.currentGateState || summarySource.current_gate_state || "";
+  const importedBridgeIntent = summarySource.importedBridgeIntent || summarySource.imported_bridge_intent || "";
+  const currentBridgeIntent = summarySource.currentBridgeIntent || summarySource.current_bridge_intent || "";
+  const planningReadyChanged = summarySource.planningReadyChanged === true || summarySource.planning_ready_changed === true;
+  const safetyChanged = summarySource.safetyChanged === true || summarySource.safety_changed === true;
+  const bridgeIntentChanged = summarySource.bridgeIntentChanged === true || summarySource.bridge_intent_changed === true;
+  const readoutIdChanged = summarySource.readoutIdChanged === true || summarySource.readout_id_changed === true || summarySource.readoutChanged === true || summarySource.readout_changed === true;
+  const reviewRequestCountValue = summarySource.reviewRequestCount ?? summarySource.review_request_count ?? sourcePlan?.requestCount ?? sourcePlan?.request_count;
   const reviewRequestCount = Number.isFinite(Number(reviewRequestCountValue)) ? Math.max(0, Math.round(Number(reviewRequestCountValue))) : 0;
-  const parts = [changed ? "changed" : "unchanged"];
+  const reviewReadoutIds = Array.isArray(sourcePlan?.readoutIds)
+    ? sourcePlan.readoutIds
+    : Array.isArray(sourcePlan?.readout_ids) ? sourcePlan.readout_ids : [];
+  const parts = [sourceSummary ? (changed ? "changed" : "unchanged") : "review"];
   if (changedCount !== null) parts.push(`${changedCount} fields`);
   if (reviewRequestCount > 0) parts.push(`review ${reviewRequestCount}`);
+  if (!sourceSummary && reviewReadoutIds[0]) parts.push(`target ${reviewReadoutIds[0]}`);
   if (readoutIdChanged) parts.push(`readout ${importedReadoutId || "-"} -> ${currentReadoutId || "-"}`);
   if (planningReadyChanged) parts.push("planning changed");
   if (safetyChanged) parts.push("safety changed");
-  if ((summary.gateStateChanged === true || summary.gate_state_changed === true) && (importedGateState || currentGateState)) parts.push(`gate ${importedGateState || "-"} -> ${currentGateState || "-"}`);
+  if ((summarySource.gateStateChanged === true || summarySource.gate_state_changed === true) && (importedGateState || currentGateState)) parts.push(`gate ${importedGateState || "-"} -> ${currentGateState || "-"}`);
   if (bridgeIntentChanged) parts.push(`intent ${importedBridgeIntent || "-"} -> ${currentBridgeIntent || "-"}`);
   return parts.join(" / ");
 }
@@ -6055,7 +6064,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
     : NO_DATA;
   const importedSessionComparisonSummary = session.importedSessionComparisonSummary || session.imported_session_comparison_summary || null;
   const importedNextReadoutGuardComparisonSummary = session.importedNextReadoutGuardComparisonSummary || session.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
-  const importedNextReadoutGuardComparisonLabel = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonSummary, NO_DATA);
+  const importedNextReadoutGuardReviewRequestPlanSummary = session.importedNextReadoutGuardReviewRequestPlanSummary || session.imported_next_readout_guard_review_request_plan_summary || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary || null;
+  const importedNextReadoutGuardComparisonLabel = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonSummary, NO_DATA, importedNextReadoutGuardReviewRequestPlanSummary);
   const primaryBlockerComparisonSummary = importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary || null;
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(primaryBlockerComparisonSummary, NO_DATA);
   const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
@@ -6116,7 +6126,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "次の読取", nextReadoutLabel);
   addObdDiagnosticFlowMetric(grid, "読取理由", nextReadoutReasonLabel, nextReadoutReasonSummary ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "計画安全", nextReadoutGuardLabel, nextReadoutGuardSummary?.safeForReadoutPlanning === true || nextReadoutGuardSummary?.safe_for_readout_planning === true ? "ready" : nextReadoutGuardSummary ? "blocked" : "");
-  addObdDiagnosticFlowMetric(grid, "計画差分", importedNextReadoutGuardComparisonLabel, importedNextReadoutGuardComparisonSummary?.changed === true || importedNextReadoutGuardComparisonSummary?.has_changes === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "計画差分", importedNextReadoutGuardComparisonLabel, importedNextReadoutGuardComparisonSummary?.changed === true || importedNextReadoutGuardComparisonSummary?.has_changes === true || Number(importedNextReadoutGuardReviewRequestPlanSummary?.requestCount ?? importedNextReadoutGuardReviewRequestPlanSummary?.request_count ?? 0) > 0 ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel, readoutRequestTone);
   addObdDiagnosticFlowMetric(grid, "要求安全", nextReadoutRequestSafetyLabel, nextReadoutRequestSafetySummary?.safe === true || nextReadoutRequestSafetySummary?.safe_for_readout_request === true ? "ready" : "pending");
   addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel, nextReadoutCandidateSafetySummary?.allSafe === true || nextReadoutCandidateSafetySummary?.all_safe === true ? "ready" : "pending");
@@ -6211,7 +6221,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(coreSessionStatus, 2, NO_DATA);
   const importedSessionComparisonSummary = session?.importedSessionComparisonSummary || session?.imported_session_comparison_summary || null;
   const importedNextReadoutGuardComparisonSummary = session?.importedNextReadoutGuardComparisonSummary || session?.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
-  const importedNextReadoutGuardComparisonLabel = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonSummary, NO_DATA);
+  const importedNextReadoutGuardReviewRequestPlanSummary = session?.importedNextReadoutGuardReviewRequestPlanSummary || session?.imported_next_readout_guard_review_request_plan_summary || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary || null;
+  const importedNextReadoutGuardComparisonLabel = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonSummary, NO_DATA, importedNextReadoutGuardReviewRequestPlanSummary);
   const changedIdDisplaySummary = importedSessionComparisonSummary?.changedIdDisplaySummary || importedSessionComparisonSummary?.changed_id_display_summary || null;
   const primaryBlockerComparisonLabel = formatPrimaryBlockerChangeSummary(importedSessionComparisonSummary?.primaryBlockerChangeSummary || importedSessionComparisonSummary?.primary_blocker_change_summary, NO_DATA);
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
@@ -6867,7 +6878,9 @@ function analyzeObdScannerImport() {
     notes.push(`品質比較 ${readoutQualityComparisonNote}`);
   }
   const importedSessionComparisonSummary = summarySource.importedSessionComparisonSummary || summarySource.imported_session_comparison_summary || null;
-  const importedNextReadoutGuardComparisonNote = formatNextReadoutGuardComparisonSummary(summarySource.importedNextReadoutGuardComparisonSummary || summarySource.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison, "");
+  const importedNextReadoutGuardComparisonForNote = summarySource.importedNextReadoutGuardComparisonSummary || summarySource.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
+  const importedNextReadoutGuardReviewRequestPlanForNote = summarySource.importedNextReadoutGuardReviewRequestPlanSummary || summarySource.imported_next_readout_guard_review_request_plan_summary || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary || importedNextReadoutGuardComparisonForNote?.reviewRequestPlanSummary || importedNextReadoutGuardComparisonForNote?.review_request_plan_summary || null;
+  const importedNextReadoutGuardComparisonNote = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonForNote, "", importedNextReadoutGuardReviewRequestPlanForNote);
   const readoutQualityReviewRequestNote = formatReadoutQualityReviewRequestSummary(summarySource.importedReadoutQualityReviewRequestPlanSummary || summarySource.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, "");
   if (readoutQualityReviewRequestNote) {
     notes.push(`品質確認要求 ${readoutQualityReviewRequestNote}`);
