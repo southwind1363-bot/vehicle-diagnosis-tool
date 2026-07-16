@@ -2498,6 +2498,57 @@
     };
   }
 
+  function buildNextReadoutGuardSummary(reasonSummary = null, requestSafetySummary = null, gateSummary = null) {
+    const reason = reasonSummary && typeof reasonSummary === "object" ? reasonSummary : null;
+    const safety = requestSafetySummary && typeof requestSafetySummary === "object" ? requestSafetySummary : null;
+    const gate = gateSummary && typeof gateSummary === "object" ? gateSummary : null;
+    if (!reason && !safety && !gate) return null;
+    const readoutId = reason?.readoutId || reason?.readout_id || safety?.readoutId || safety?.readout_id || null;
+    const gateState = gate?.state || "unknown";
+    const gateReady = gate?.ready === true || gateState === "ready";
+    const actionRequired = gate?.actionRequired === true || gate?.action_required === true;
+    const requestSafe = safety?.safe === true || safety?.safe_for_readout_request === true;
+    const readOnly = safety?.readOnly !== false && safety?.read_only !== false;
+    const nonTransmitting = safety?.nonTransmitting === true || safety?.non_transmitting === true;
+    const vehicleCommandDisabled = safety?.vehicleCommandDisabled === true || safety?.vehicle_command_disabled === true;
+    const executionDisabled = safety?.executionDisabled === true || safety?.execution_disabled === true;
+    const planningReady = Boolean(readoutId) && gateReady && !actionRequired && requestSafe && readOnly && nonTransmitting && vehicleCommandDisabled && executionDisabled;
+    return {
+      schemaVersion: "next_readout_guard_summary_v1",
+      schema_version: "next_readout_guard_summary_v1",
+      readoutId,
+      readout_id: readoutId,
+      reasonId: reason?.reasonId || reason?.reason_id || null,
+      reason_id: reason?.reasonId || reason?.reason_id || null,
+      gateState,
+      gate_state: gateState,
+      gateReady,
+      gate_ready: gateReady,
+      actionRequired,
+      action_required: actionRequired,
+      nextActionId: gate?.nextActionId || gate?.next_action_id || null,
+      next_action_id: gate?.nextActionId || gate?.next_action_id || null,
+      requestSafe,
+      request_safe: requestSafe,
+      readOnly,
+      read_only: readOnly,
+      nonTransmitting,
+      non_transmitting: nonTransmitting,
+      vehicleCommandDisabled,
+      vehicle_command_disabled: vehicleCommandDisabled,
+      executionDisabled,
+      execution_disabled: executionDisabled,
+      planningReady,
+      planning_ready: planningReady,
+      safeForReadoutPlanning: planningReady,
+      safe_for_readout_planning: planningReady,
+      bridgeIntent: safety?.bridgeIntent || safety?.bridge_intent || reason?.bridgeIntent || reason?.bridge_intent || null,
+      bridge_intent: safety?.bridgeIntent || safety?.bridge_intent || reason?.bridgeIntent || reason?.bridge_intent || null,
+      serviceMode: safety?.serviceMode || safety?.service_mode || reason?.serviceMode || reason?.service_mode || null,
+      service_mode: safety?.serviceMode || safety?.service_mode || reason?.serviceMode || reason?.service_mode || null
+    };
+  }
+
   function buildReadoutRequestPlanGateActionQueue(blockedReasonIds = [], blockedReasonById = {}) {
     const actionIdByReasonId = {
       unmapped_readout_requests: "map_readout_request",
@@ -2859,6 +2910,13 @@
       || metadataOverrides.nextReadoutReasonSummary
       || metadataOverrides.next_readout_reason_summary
       || null;
+    const nextReadoutGuardSummary = coreSessionStatus.nextReadoutGuardSummary
+      || coreSessionStatus.next_readout_guard_summary
+      || diagnosticFlowSummary.nextReadoutGuardSummary
+      || diagnosticFlowSummary.next_readout_guard_summary
+      || metadataOverrides.nextReadoutGuardSummary
+      || metadataOverrides.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const importedReadoutQualityReviewRequestPlanSummary = parts.importedReadoutQualityReviewRequestPlanSummary
       || parts.imported_readout_quality_review_request_plan_summary
       || null;
@@ -2915,6 +2973,8 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       readoutRequestPlanSummary,
       readout_request_plan_summary: readoutRequestPlanSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
@@ -4136,6 +4196,7 @@
       primary_blocking_summary: primaryBlockingSummary
     });
     const nextReadoutReasonSummary = buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
+    const nextReadoutGuardSummary = buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const analysisBlockerSummary = {
       schemaVersion: "analysis_blocker_summary_v1",
       schema_version: "analysis_blocker_summary_v1",
@@ -4308,6 +4369,8 @@
       next_readout_queue_position: nextReadoutSummary?.queuePosition || null,
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       readyForAnalysis,
       ready_for_analysis: readyForAnalysis,
       completionPercent: readoutProgressSummary.completionPercent,
@@ -4386,7 +4449,9 @@
       nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
       next_readout_queue_position: nextReadoutSummary?.queuePosition || null,
       nextReadoutReasonSummary,
-      next_readout_reason_summary: nextReadoutReasonSummary
+      next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary
     };
     return {
       schemaVersion: "core_session_status_v1",
@@ -4469,6 +4534,8 @@
       next_readout_summary: nextReadoutSummary,
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
       nextReadoutRequestSafetySummary,
@@ -4810,6 +4877,13 @@
       || readiness?.nextReadoutReasonSummary
       || readiness?.next_readout_reason_summary
       || buildNextReadoutReasonSummary(coreSessionStatus?.nextReadoutSummary || coreSessionStatus?.next_readout_summary || null, coreSessionStatus?.readoutCompletionSummary || coreSessionStatus?.readout_completion_summary || null);
+    const nextReadoutGuardSummary = coreSessionStatus?.nextReadoutGuardSummary
+      || coreSessionStatus?.next_readout_guard_summary
+      || workflow?.nextReadoutGuardSummary
+      || workflow?.next_readout_guard_summary
+      || readiness?.nextReadoutGuardSummary
+      || readiness?.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       schema_version: "diagnostic_flow_summary_v1",
@@ -4831,6 +4905,8 @@
       next_readout_queue_position: readAliasValue(workflow, "nextReadoutQueuePosition") || readAliasValue(readiness, "nextReadoutQueuePosition") || coreSessionStatus?.nextReadoutSummary?.queuePosition || coreSessionStatus?.next_readout_summary?.queue_position || null,
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
       nextReadoutRequestSafetySummary,
@@ -5467,6 +5543,13 @@
     const nextReadoutRequestSafetySummary = summary.nextReadoutRequestSafetySummary
       || summary.next_readout_request_safety_summary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const nextReadoutGuardSummary = summary.nextReadoutGuardSummary
+      || summary.next_readout_guard_summary
+      || coreWorkflowSummary?.nextReadoutGuardSummary
+      || coreWorkflowSummary?.next_readout_guard_summary
+      || analysisReadinessSummary?.nextReadoutGuardSummary
+      || analysisReadinessSummary?.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, analysisReadinessSummary?.ready, false) === true;
     return {
       ...summary,
@@ -5546,6 +5629,8 @@
       next_readout_summary: nextReadoutSummary,
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
       nextReadoutRequestSafetySummary,
@@ -5604,6 +5689,9 @@
     const nextReadoutRequestSafetySummary = summary.nextReadoutRequestSafetySummary
       || summary.next_readout_request_safety_summary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const nextReadoutGuardSummary = summary.nextReadoutGuardSummary
+      || summary.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const analysisChecklist = Array.isArray(summary.analysisChecklist)
       ? summary.analysisChecklist
       : Array.isArray(summary.analysis_checklist)
@@ -5661,6 +5749,8 @@
       next_readout_queue_position: pickDefined(summary.next_readout_queue_position, summary.nextReadoutQueuePosition, null),
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
       nextReadoutRequestSafetySummary,
@@ -9852,6 +9942,18 @@
       || diagnosticFlowSummary.nextReadoutReasonSummary
       || diagnosticFlowSummary.next_readout_reason_summary
       || null;
+    const nextReadoutGuardSummary = input.nextReadoutGuardSummary
+      || input.next_readout_guard_summary
+      || bridgeImport?.nextReadoutGuardSummary
+      || bridgeImport?.next_readout_guard_summary
+      || bridgeSession?.nextReadoutGuardSummary
+      || bridgeSession?.next_readout_guard_summary
+      || mergedBridgeMetadata.nextReadoutGuardSummary
+      || coreSessionStatus.nextReadoutGuardSummary
+      || coreSessionStatus.next_readout_guard_summary
+      || diagnosticFlowSummary.nextReadoutGuardSummary
+      || diagnosticFlowSummary.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       dtcSnapshot,
@@ -9968,6 +10070,8 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       readoutRequestPlanSummary,
       readout_request_plan_summary: readoutRequestPlanSummary,
       coreReadoutInventorySummary,
@@ -12277,6 +12381,13 @@
       || sessionInput.nextReadoutReasonSummary
       || sessionInput.next_readout_reason_summary
       || null;
+    const nextReadoutGuardSummary = coreSessionStatus.nextReadoutGuardSummary
+      || coreSessionStatus.next_readout_guard_summary
+      || diagnosticFlowSummary.nextReadoutGuardSummary
+      || diagnosticFlowSummary.next_readout_guard_summary
+      || sessionInput.nextReadoutGuardSummary
+      || sessionInput.next_readout_guard_summary
+      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
     const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
     const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
@@ -12383,6 +12494,8 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary,
       readoutRequestPlanSummary,
       readout_request_plan_summary: readoutRequestPlanSummary,
       importedCoreSessionStatus,
