@@ -4651,6 +4651,7 @@
       vehicle_command_enabled: false
     };
     const readoutRequestPlanSummary = coreSessionStatus?.readoutRequestPlanSummary || coreSessionStatus?.readout_request_plan_summary || buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
+    const nextReadoutCandidateSafetySummary = coreSessionStatus?.nextReadoutCandidateSafetySummary || coreSessionStatus?.next_readout_candidate_safety_summary || null;
     return {
       schemaVersion: "diagnostic_flow_summary_v1",
       schema_version: "diagnostic_flow_summary_v1",
@@ -4672,6 +4673,12 @@
       next_readout_queue_position: readAliasValue(workflow, "nextReadoutQueuePosition") || readAliasValue(readiness, "nextReadoutQueuePosition") || coreSessionStatus?.nextReadoutSummary?.queuePosition || coreSessionStatus?.next_readout_summary?.queue_position || null,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
+      nextReadoutCandidateSafetySummary,
+      next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
+      nextReadoutCandidateAllSafe: nextReadoutCandidateSafetySummary?.allSafe === true || nextReadoutCandidateSafetySummary?.all_safe === true,
+      next_readout_candidate_all_safe: nextReadoutCandidateSafetySummary?.allSafe === true || nextReadoutCandidateSafetySummary?.all_safe === true,
+      nextReadoutCandidateUnsafeCount: Number.isFinite(Number(readAliasValue(nextReadoutCandidateSafetySummary, "unsafeCount"))) ? Number(readAliasValue(nextReadoutCandidateSafetySummary, "unsafeCount")) : 0,
+      next_readout_candidate_unsafe_count: Number.isFinite(Number(readAliasValue(nextReadoutCandidateSafetySummary, "unsafeCount"))) ? Number(readAliasValue(nextReadoutCandidateSafetySummary, "unsafeCount")) : 0,
       nextReadoutBridgeIntent: nextReadoutRequest?.bridgeIntent || null,
       next_readout_bridge_intent: nextReadoutRequest?.bridgeIntent || null,
       nextReadoutServiceMode: nextReadoutRequest?.serviceMode || null,
