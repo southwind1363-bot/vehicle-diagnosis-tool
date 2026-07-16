@@ -10048,6 +10048,7 @@
     const summary = resolveBridgeSummary(parts);
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const metadataFields = buildSummaryMetadataFields(summary);
+    const directSessionMetadata = getSessionMetadataOverrides(parts);
     const nestedSessionMetadata = getSessionMetadataOverrides(parts.bridgeSession || parts.bridge_session || parts.session || {});
     const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
     const bridgeSessionMetadataFields = {
@@ -10073,11 +10074,11 @@
       importClassification: preserveNestedBridgeSessionMetadata
         ? resolveImportClassification(nestedSessionMetadata.importClassification || metadataFields.importClassification)
         : metadataFields.importClassification,
-      nextReadoutRequest: nestedSessionMetadata.nextReadoutRequest || metadataFields.nextReadoutRequest || null,
-      nextReadoutRequestSafetySummary: nestedSessionMetadata.nextReadoutRequestSafetySummary || metadataFields.nextReadoutRequestSafetySummary || null,
-      nextReadoutReasonSummary: nestedSessionMetadata.nextReadoutReasonSummary || metadataFields.nextReadoutReasonSummary || null,
-      nextReadoutCandidateSafetySummary: nestedSessionMetadata.nextReadoutCandidateSafetySummary || metadataFields.nextReadoutCandidateSafetySummary || null,
-      readoutRequestPlanSummary: nestedSessionMetadata.readoutRequestPlanSummary || metadataFields.readoutRequestPlanSummary || null,
+      nextReadoutRequest: directSessionMetadata.nextReadoutRequest || nestedSessionMetadata.nextReadoutRequest || metadataFields.nextReadoutRequest || null,
+      nextReadoutRequestSafetySummary: directSessionMetadata.nextReadoutRequestSafetySummary || nestedSessionMetadata.nextReadoutRequestSafetySummary || metadataFields.nextReadoutRequestSafetySummary || null,
+      nextReadoutReasonSummary: directSessionMetadata.nextReadoutReasonSummary || nestedSessionMetadata.nextReadoutReasonSummary || metadataFields.nextReadoutReasonSummary || null,
+      nextReadoutCandidateSafetySummary: directSessionMetadata.nextReadoutCandidateSafetySummary || nestedSessionMetadata.nextReadoutCandidateSafetySummary || metadataFields.nextReadoutCandidateSafetySummary || null,
+      readoutRequestPlanSummary: directSessionMetadata.readoutRequestPlanSummary || nestedSessionMetadata.readoutRequestPlanSummary || metadataFields.readoutRequestPlanSummary || null,
       hadSensitiveIdentifier: preserveNestedBridgeSessionMetadata
         ? metadataFields.hadSensitiveIdentifier === true || nestedSessionMetadata.hadSensitiveIdentifier === true
         : metadataFields.hadSensitiveIdentifier,
@@ -10101,7 +10102,9 @@
       || summary.diagnostic_flow_summary
       || exportPayload.session?.diagnostic_flow_summary
       || buildDiagnosticFlowSummary(coreSessionStatus);
-    const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary
+    const nextReadoutCandidateSafetySummary = directSessionMetadata.nextReadoutCandidateSafetySummary
+      || directSessionMetadata.next_readout_candidate_safety_summary
+      || summary.nextReadoutCandidateSafetySummary
       || summary.next_readout_candidate_safety_summary
       || nestedSessionMetadata.nextReadoutCandidateSafetySummary
       || nestedSessionMetadata.next_readout_candidate_safety_summary
@@ -10199,7 +10202,9 @@
       || diagnosticFlowSummary.readoutRequestPlanSummary
       || diagnosticFlowSummary.readout_request_plan_summary
       || null);
-    const nextReadoutRequestSafetySummary = summary.nextReadoutRequestSafetySummary
+    const nextReadoutRequestSafetySummary = directSessionMetadata.nextReadoutRequestSafetySummary
+      || directSessionMetadata.next_readout_request_safety_summary
+      || summary.nextReadoutRequestSafetySummary
       || summary.next_readout_request_safety_summary
       || nestedSessionMetadata.nextReadoutRequestSafetySummary
       || exportPayload.session?.next_readout_request_safety_summary
@@ -10208,7 +10213,9 @@
       || diagnosticFlowSummary.nextReadoutRequestSafetySummary
       || diagnosticFlowSummary.next_readout_request_safety_summary
       || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
-    const nextReadoutReasonSummary = summary.nextReadoutReasonSummary
+    const nextReadoutReasonSummary = directSessionMetadata.nextReadoutReasonSummary
+      || directSessionMetadata.next_readout_reason_summary
+      || summary.nextReadoutReasonSummary
       || summary.next_readout_reason_summary
       || nestedSessionMetadata.nextReadoutReasonSummary
       || exportPayload.session?.next_readout_reason_summary
