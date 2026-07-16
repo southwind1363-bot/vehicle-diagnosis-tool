@@ -2933,6 +2933,10 @@
       || null;
     const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
+      || parts.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || parts.importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
+      || parts.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || parts.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || null;
 
     return {
@@ -3349,6 +3353,10 @@
       || null;
     const importedVehicleApplicabilityChangedRowSummary = parts.importedVehicleApplicabilityChangedRowSummary
       || parts.imported_vehicle_applicability_changed_row_summary
+      || parts.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || parts.importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
+      || parts.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || parts.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || null;
     return {
       source: parts.source || parts.source_type || "local_bridge",
@@ -9540,6 +9548,10 @@
       || null;
     const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary
       || summary.imported_vehicle_applicability_changed_row_summary
+      || summary.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || summary.importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
+      || summary.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || summary.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
       || summary.readout_request_plan_gate_summary
@@ -9760,6 +9772,12 @@
       || null;
     const importedVehicleApplicabilityChangedRowSummary = summary.importedVehicleApplicabilityChangedRowSummary
       || summary.imported_vehicle_applicability_changed_row_summary
+      || summary.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || summary.importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
+      || summary.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || summary.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
+      || exportPayload.session?.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || exportPayload.session?.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || exportPayload.session?.imported_vehicle_applicability_changed_row_summary
       || null;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary
@@ -10341,12 +10359,20 @@
       nextReadoutGuardComparison: importedNextReadoutGuardComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
-    const importedVehicleApplicabilityChangedRowSummary = importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
-      || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
-      || bridgeImport?.importedVehicleApplicabilityChangedRowSummary
+    const importedVehicleApplicabilityChangedRowSummary = bridgeImport?.importedVehicleApplicabilityChangedRowSummary
       || bridgeImport?.imported_vehicle_applicability_changed_row_summary
+      || bridgeImport?.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || bridgeImport?.importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
+      || bridgeImport?.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || bridgeImport?.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || bridgeSession?.importedVehicleApplicabilityChangedRowSummary
       || bridgeSession?.imported_vehicle_applicability_changed_row_summary
+      || bridgeSession?.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || bridgeSession?.importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
+      || bridgeSession?.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || bridgeSession?.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
+      || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
       || null;
     const importedReadoutQualityReviewRequestPlanSummary = bridgeImport?.importedReadoutQualityReviewRequestPlanSummary
       || bridgeImport?.imported_readout_quality_review_request_plan_summary
@@ -12800,10 +12826,14 @@
       nextReadoutGuardComparison: importedNextReadoutGuardComparisonSummary,
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
-    const importedVehicleApplicabilityChangedRowSummary = importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
-      || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
-      || sessionInput.importedVehicleApplicabilityChangedRowSummary
+    const importedVehicleApplicabilityChangedRowSummary = sessionInput.importedVehicleApplicabilityChangedRowSummary
       || sessionInput.imported_vehicle_applicability_changed_row_summary
+      || sessionInput.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || sessionInput.importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
+      || sessionInput.imported_session_comparison_summary?.vehicleApplicabilityChangedRowSummary
+      || sessionInput.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
+      || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
+      || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary
       || null;
     const importedReadoutQualityReviewRequestPlanSummary = sessionInput.importedReadoutQualityReviewRequestPlanSummary
       || sessionInput.imported_readout_quality_review_request_plan_summary
