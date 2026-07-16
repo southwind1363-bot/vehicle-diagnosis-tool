@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "次読取候補の安全フィルタとread-only正規化を反映",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.704.0";
+const APP_VERSION = "2.705.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4972,6 +4972,26 @@ function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_D
   return parts.join(" / ");
 }
 
+function formatNextReadoutRequestSafetySummary(request = null, plan = null, fallback = NO_DATA) {
+  const sourceRequest = request && typeof request === "object" ? request : null;
+  const sourcePlan = plan && typeof plan === "object" ? plan : null;
+  if (!sourceRequest && !sourcePlan) return fallback;
+  const bridgeIntent = sourceRequest?.bridgeIntent || sourceRequest?.bridge_intent || sourcePlan?.nextBridgeIntent || sourcePlan?.next_bridge_intent || "";
+  const serviceMode = sourceRequest?.serviceMode || sourceRequest?.service_mode || sourcePlan?.nextServiceMode || sourcePlan?.next_service_mode || "";
+  const readOnly = sourceRequest?.readOnly !== false && sourceRequest?.read_only !== false && sourcePlan?.readOnly !== false && sourcePlan?.read_only !== false && sourcePlan?.nextReadOnly !== false && sourcePlan?.next_read_only !== false;
+  const wouldTransmit = sourceRequest?.wouldTransmit === true || sourceRequest?.would_transmit === true || sourcePlan?.wouldTransmit === true || sourcePlan?.would_transmit === true || sourcePlan?.nextWouldTransmit === true || sourcePlan?.next_would_transmit === true;
+  const vehicleCommandEnabled = sourceRequest?.vehicleCommandEnabled === true || sourceRequest?.vehicle_command_enabled === true || sourcePlan?.vehicleCommandEnabled === true || sourcePlan?.vehicle_command_enabled === true || sourcePlan?.nextVehicleCommandEnabled === true || sourcePlan?.next_vehicle_command_enabled === true;
+  const executionEnabled = sourceRequest?.executionEnabled === true || sourceRequest?.execution_enabled === true || sourcePlan?.nextExecutionEnabled === true || sourcePlan?.next_execution_enabled === true;
+  const parts = [];
+  if (bridgeIntent) parts.push(bridgeIntent);
+  if (serviceMode) parts.push(`Mode ${serviceMode}`);
+  parts.push(readOnly ? "read-only" : "read-only?");
+  parts.push(wouldTransmit ? "transmit?" : "non-transmit");
+  parts.push(vehicleCommandEnabled ? "vehicle command on" : "vehicle command off");
+  parts.push(executionEnabled ? "execution on" : "execution off");
+  return parts.join(" / ");
+}
+
 function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
@@ -6706,6 +6726,11 @@ function analyzeObdScannerImport() {
   const analysisCoreStatusLabel = formatCoreSessionStatusSummary(summaryCoreSessionStatus, "");
   const analysisEmptyReadoutLabel = formatCoreEmptyReadoutSummary(summaryCoreSessionStatus, 2, "");
   const analysisNextStepLabel = formatCoreNextStepSummary(summaryCoreSessionStatus, summaryNextReadoutCandidates, "");
+  const summaryDiagnosticFlow = summarySource.diagnosticFlowSummary || summarySource.diagnostic_flow_summary || null;
+  const summaryNextReadoutSummary = summaryCoreSessionStatus?.nextReadoutSummary || summaryCoreSessionStatus?.next_readout_summary || null;
+  const analysisNextReadoutRequest = summarySource.nextReadoutRequest || summarySource.next_readout_request || summaryCoreSessionStatus?.nextReadoutRequest || summaryCoreSessionStatus?.next_readout_request || summaryNextReadoutSummary?.readoutRequest || summaryNextReadoutSummary?.readout_request || summaryDiagnosticFlow?.nextReadoutRequest || summaryDiagnosticFlow?.next_readout_request || null;
+  const analysisReadoutRequestPlan = summarySource.readoutRequestPlanSummary || summarySource.readout_request_plan_summary || summaryCoreSessionStatus?.readoutRequestPlanSummary || summaryCoreSessionStatus?.readout_request_plan_summary || summaryDiagnosticFlow?.pendingReadoutRequestPlan || summaryDiagnosticFlow?.pending_readout_request_plan || summaryDiagnosticFlow?.readoutRequestPlanSummary || summaryDiagnosticFlow?.readout_request_plan_summary || null;
+  const analysisNextReadoutRequestSafetyNote = formatNextReadoutRequestSafetySummary(analysisNextReadoutRequest, analysisReadoutRequestPlan, "");
   const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary || summaryCoreSessionStatus?.nextReadoutCandidateSafetySummary || summaryCoreSessionStatus?.next_readout_candidate_safety_summary || summarySource.diagnosticFlowSummary?.nextReadoutCandidateSafetySummary || summarySource.diagnosticFlowSummary?.next_readout_candidate_safety_summary || summarySource.diagnostic_flow_summary?.nextReadoutCandidateSafetySummary || summarySource.diagnostic_flow_summary?.next_readout_candidate_safety_summary, "");
   if (analysisVehicleLabel) {
     notes.push(`車両 ${analysisVehicleLabel}`);
@@ -6745,6 +6770,9 @@ function analyzeObdScannerImport() {
   }
   if (analysisNextStepLabel) {
     notes.push(`次操作 ${analysisNextStepLabel}`);
+  }
+  if (analysisNextReadoutRequestSafetyNote) {
+    notes.push(`読取要求 ${analysisNextReadoutRequestSafetyNote}`);
   }
   if (analysisNextReadoutCandidateSafetyNote) {
     notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);
