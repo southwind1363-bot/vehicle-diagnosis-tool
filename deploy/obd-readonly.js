@@ -10123,45 +10123,93 @@
         : null;
     const monitorById = new Map();
     const bridgeSession = bridgeImport?.bridgeSession || bridgeImport?.bridge_session || null;
-    const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(bridgeImport?.coreSessionStatus
+    const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(input.importedCoreSessionStatus
+      || input.imported_core_session_status
+      || bridgeImport?.importedCoreSessionStatus
+      || bridgeImport?.imported_core_session_status
+      || bridgeImport?.coreSessionStatus
       || bridgeImport?.core_session_status
+      || bridgeSession?.importedCoreSessionStatus
+      || bridgeSession?.imported_core_session_status
       || bridgeSession?.coreSessionStatus
       || bridgeSession?.core_session_status
+      || bridgeImportInput?.importedCoreSessionStatus
+      || bridgeImportInput?.imported_core_session_status
       || bridgeImportInput?.coreSessionStatus
       || bridgeImportInput?.core_session_status
       || null);
-    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(bridgeImport?.diagnosticFlowSummary
+    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(input.importedDiagnosticFlowSummary
+      || input.imported_diagnostic_flow_summary
+      || bridgeImport?.importedDiagnosticFlowSummary
+      || bridgeImport?.imported_diagnostic_flow_summary
+      || bridgeImport?.diagnosticFlowSummary
       || bridgeImport?.diagnostic_flow_summary
+      || bridgeSession?.importedDiagnosticFlowSummary
+      || bridgeSession?.imported_diagnostic_flow_summary
       || bridgeSession?.diagnosticFlowSummary
       || bridgeSession?.diagnostic_flow_summary
+      || bridgeImportInput?.importedDiagnosticFlowSummary
+      || bridgeImportInput?.imported_diagnostic_flow_summary
       || bridgeImportInput?.diagnosticFlowSummary
       || bridgeImportInput?.diagnostic_flow_summary
       || null);
-    const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(bridgeImport?.readoutCompletionSummary
+    const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(input.importedReadoutCompletionSummary
+      || input.imported_readout_completion_summary
+      || bridgeImport?.importedReadoutCompletionSummary
+      || bridgeImport?.imported_readout_completion_summary
+      || bridgeImport?.readoutCompletionSummary
       || bridgeImport?.readout_completion_summary
+      || bridgeSession?.importedReadoutCompletionSummary
+      || bridgeSession?.imported_readout_completion_summary
       || bridgeSession?.readoutCompletionSummary
       || bridgeSession?.readout_completion_summary
+      || bridgeImportInput?.importedReadoutCompletionSummary
+      || bridgeImportInput?.imported_readout_completion_summary
       || bridgeImportInput?.readoutCompletionSummary
       || bridgeImportInput?.readout_completion_summary
       || null);
-    const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(bridgeImport?.analysisReadinessSummary
+    const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(input.importedAnalysisReadinessSummary
+      || input.imported_analysis_readiness_summary
+      || bridgeImport?.importedAnalysisReadinessSummary
+      || bridgeImport?.imported_analysis_readiness_summary
+      || bridgeImport?.analysisReadinessSummary
       || bridgeImport?.analysis_readiness_summary
+      || bridgeSession?.importedAnalysisReadinessSummary
+      || bridgeSession?.imported_analysis_readiness_summary
       || bridgeSession?.analysisReadinessSummary
       || bridgeSession?.analysis_readiness_summary
+      || bridgeImportInput?.importedAnalysisReadinessSummary
+      || bridgeImportInput?.imported_analysis_readiness_summary
       || bridgeImportInput?.analysisReadinessSummary
       || bridgeImportInput?.analysis_readiness_summary
       || null);
-    const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(bridgeImport?.readoutQualitySummary
+    const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(input.importedReadoutQualitySummary
+      || input.imported_readout_quality_summary
+      || bridgeImport?.importedReadoutQualitySummary
+      || bridgeImport?.imported_readout_quality_summary
+      || bridgeImport?.readoutQualitySummary
       || bridgeImport?.readout_quality_summary
+      || bridgeSession?.importedReadoutQualitySummary
+      || bridgeSession?.imported_readout_quality_summary
       || bridgeSession?.readoutQualitySummary
       || bridgeSession?.readout_quality_summary
+      || bridgeImportInput?.importedReadoutQualitySummary
+      || bridgeImportInput?.imported_readout_quality_summary
       || bridgeImportInput?.readoutQualitySummary
       || bridgeImportInput?.readout_quality_summary
       || null);
-    const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(bridgeImport?.readoutRequestPlanGateSummary
+    const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(input.importedReadoutRequestPlanGateSummary
+      || input.imported_readout_request_plan_gate_summary
+      || bridgeImport?.importedReadoutRequestPlanGateSummary
+      || bridgeImport?.imported_readout_request_plan_gate_summary
+      || bridgeImport?.readoutRequestPlanGateSummary
       || bridgeImport?.readout_request_plan_gate_summary
+      || bridgeSession?.importedReadoutRequestPlanGateSummary
+      || bridgeSession?.imported_readout_request_plan_gate_summary
       || bridgeSession?.readoutRequestPlanGateSummary
       || bridgeSession?.readout_request_plan_gate_summary
+      || bridgeImportInput?.importedReadoutRequestPlanGateSummary
+      || bridgeImportInput?.imported_readout_request_plan_gate_summary
       || bridgeImportInput?.readoutRequestPlanGateSummary
       || bridgeImportInput?.readout_request_plan_gate_summary
       || null);
@@ -10174,10 +10222,18 @@
       || bridgeImportInput?.nextReadoutGuardSummary
       || bridgeImportInput?.next_readout_guard_summary
       || null);
-    const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(bridgeImport?.coreReadoutInventorySummary
+    const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(input.importedCoreReadoutInventorySummary
+      || input.imported_core_readout_inventory_summary
+      || bridgeImport?.importedCoreReadoutInventorySummary
+      || bridgeImport?.imported_core_readout_inventory_summary
+      || bridgeImport?.coreReadoutInventorySummary
       || bridgeImport?.core_readout_inventory_summary
+      || bridgeSession?.importedCoreReadoutInventorySummary
+      || bridgeSession?.imported_core_readout_inventory_summary
       || bridgeSession?.coreReadoutInventorySummary
       || bridgeSession?.core_readout_inventory_summary
+      || bridgeImportInput?.importedCoreReadoutInventorySummary
+      || bridgeImportInput?.imported_core_readout_inventory_summary
       || bridgeImportInput?.coreReadoutInventorySummary
       || bridgeImportInput?.core_readout_inventory_summary
       || null);
