@@ -2890,6 +2890,7 @@
       || null;
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
+    const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
     const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || metadataOverrides.nextReadoutRequest || null);
     const generatedReadoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
@@ -2948,6 +2949,23 @@
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(parts.importedReadoutRequestPlanGateSummary || parts.imported_readout_request_plan_gate_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(parts.importedCoreReadoutInventorySummary || parts.imported_core_readout_inventory_summary || null);
+    const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
+    const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
+    const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
+    const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
+    const importedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
+    const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
+    const generatedImportedSessionComparisonSummary = buildImportedSessionComparisonSummary({
+      coreComparison: importedCoreComparisonSummary,
+      diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
+      readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
+      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
+      readoutQualityComparison: importedReadoutQualityComparisonSummary,
+      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
+    });
+    const resolvedImportedSessionComparisonSummary = importedSessionComparisonSummary || generatedImportedSessionComparisonSummary;
 
     return {
       source: parts.source || parts.source_type || "local_bridge",
@@ -2982,13 +3000,19 @@
       warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
+      core_session_status: coreSessionStatus,
       diagnosticFlowSummary,
+      diagnostic_flow_summary: diagnosticFlowSummary,
       nextReadoutCandidateSafetySummary,
       next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       readoutCompletionSummary,
+      readout_completion_summary: readoutCompletionSummary,
       analysisReadinessSummary,
-      importedSessionComparisonSummary,
-      imported_session_comparison_summary: importedSessionComparisonSummary,
+      analysis_readiness_summary: analysisReadinessSummary,
+      readoutQualitySummary,
+      readout_quality_summary: readoutQualitySummary,
+      importedSessionComparisonSummary: resolvedImportedSessionComparisonSummary,
+      imported_session_comparison_summary: resolvedImportedSessionComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedNextReadoutGuardReviewRequestPlanSummary,
@@ -3009,6 +3033,20 @@
       imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
       importedCoreReadoutInventorySummary,
       imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
+      importedCoreComparisonSummary,
+      imported_core_comparison_summary: importedCoreComparisonSummary,
+      importedDiagnosticFlowComparisonSummary,
+      imported_diagnostic_flow_comparison_summary: importedDiagnosticFlowComparisonSummary,
+      importedReadoutCompletionComparisonSummary,
+      imported_readout_completion_comparison_summary: importedReadoutCompletionComparisonSummary,
+      importedAnalysisReadinessComparisonSummary,
+      imported_analysis_readiness_comparison_summary: importedAnalysisReadinessComparisonSummary,
+      importedReadoutQualityComparisonSummary,
+      imported_readout_quality_comparison_summary: importedReadoutQualityComparisonSummary,
+      importedReadoutRequestPlanGateComparisonSummary,
+      imported_readout_request_plan_gate_comparison_summary: importedReadoutRequestPlanGateComparisonSummary,
+      importedCoreReadoutInventoryComparisonSummary,
+      imported_core_readout_inventory_comparison_summary: importedCoreReadoutInventoryComparisonSummary,
       readoutRequestPlanGateSummary,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
@@ -3341,6 +3379,52 @@
       readoutCoverage: derivedReadoutCoverage
     });
     const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });
+    const resolvedReadoutCoverage = resolveReadoutCoverageSnapshot(
+      getReadoutCoverageInput(parts),
+      derivedReadoutCoverage
+    );
+    const resolvedWarnings = resolveWarningList(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings);
+    const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
+      Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
+        ? nextReadoutCandidatesInput
+        : buildNextReadoutCandidates(
+          getReadoutCoverageInput(parts) || resolvedReadoutCoverage,
+          metadataOverrides.vehicleApplicability || {},
+          ecuInfoSnapshot,
+          dtcSnapshot,
+          supportedPidMatrix
+        )
+    );
+    const coreSessionStatus = normalizeCoreSessionStatusAliases(parts.coreSessionStatus || parts.core_session_status || null)
+      || buildCoreSessionStatus({
+        readoutCoverage: resolvedReadoutCoverage,
+        vehicleApplicability: resolvedMetadata.vehicleApplicability,
+        dtcSnapshot,
+        freezeFrameSnapshot,
+        readinessSnapshot,
+        ecuInfoSnapshot,
+        onboardMonitorSnapshot,
+        livePidSnapshot,
+        supportedPidMatrix,
+        warnings: resolvedWarnings,
+        nextReadoutCandidates: resolvedNextReadoutCandidates
+      });
+    const diagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(parts.diagnosticFlowSummary || parts.diagnostic_flow_summary || null)
+      || buildDiagnosticFlowSummary(coreSessionStatus);
+    const readoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(parts.readoutCompletionSummary || parts.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || coreSessionStatus.readout_completion_summary || null);
+    const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.analysisReadinessSummary || parts.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || coreSessionStatus.analysis_readiness_summary || null);
+    const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.readoutQualitySummary || parts.readout_quality_summary || coreSessionStatus.readoutQualitySummary || coreSessionStatus.readout_quality_summary || diagnosticFlowSummary.readoutQualitySummary || diagnosticFlowSummary.readout_quality_summary || null);
+    const coreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(parts.coreReadoutInventorySummary || parts.core_readout_inventory_summary || null)
+      || buildCoreReadoutInventorySummary({
+        readoutCoverage: resolvedReadoutCoverage,
+        dtcSnapshot,
+        livePidSnapshot,
+        freezeFrameSnapshot,
+        readinessSnapshot,
+        ecuInfoSnapshot,
+        onboardMonitorSnapshot,
+        supportedPidMatrix
+      });
     const readoutRequestPlanGateSummary = parts.readoutRequestPlanGateSummary
       || parts.readout_request_plan_gate_summary
       || parts.coreSessionStatus?.readoutRequestPlanGateSummary
@@ -3422,6 +3506,23 @@
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(parts.importedReadoutRequestPlanGateSummary || parts.imported_readout_request_plan_gate_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(parts.importedCoreReadoutInventorySummary || parts.imported_core_readout_inventory_summary || null);
+    const importedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);
+    const importedDiagnosticFlowComparisonSummary = buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary, diagnosticFlowSummary);
+    const importedReadoutCompletionComparisonSummary = buildImportedReadoutCompletionComparisonSummary(importedReadoutCompletionSummary, readoutCompletionSummary);
+    const importedAnalysisReadinessComparisonSummary = buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary, analysisReadinessSummary);
+    const importedReadoutQualityComparisonSummary = buildImportedReadoutQualityComparisonSummary(importedReadoutQualitySummary, readoutQualitySummary);
+    const importedReadoutRequestPlanGateComparisonSummary = buildImportedReadoutRequestPlanGateComparisonSummary(importedReadoutRequestPlanGateSummary, readoutRequestPlanGateSummary);
+    const importedCoreReadoutInventoryComparisonSummary = buildImportedCoreReadoutInventoryComparisonSummary(importedCoreReadoutInventorySummary, coreReadoutInventorySummary);
+    const generatedImportedSessionComparisonSummary = buildImportedSessionComparisonSummary({
+      coreComparison: importedCoreComparisonSummary,
+      diagnosticFlowComparison: importedDiagnosticFlowComparisonSummary,
+      readoutCompletionComparison: importedReadoutCompletionComparisonSummary,
+      analysisReadinessComparison: importedAnalysisReadinessComparisonSummary,
+      readoutQualityComparison: importedReadoutQualityComparisonSummary,
+      readoutRequestPlanGateComparison: importedReadoutRequestPlanGateComparisonSummary,
+      coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
+    });
+    const resolvedImportedSessionComparisonSummary = importedSessionComparisonSummary || generatedImportedSessionComparisonSummary;
     return {
       source: parts.source || parts.source_type || "local_bridge",
       source_type: parts.source_type || parts.source || "local_bridge",
@@ -3443,10 +3544,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
-      readoutCoverage: resolveReadoutCoverageSnapshot(
-        getReadoutCoverageInput(parts),
-        derivedReadoutCoverage
-      ),
+      readoutCoverage: resolvedReadoutCoverage,
       freezeFrameSnapshot,
       monitorValues,
       monitorValueSummary,
@@ -3454,18 +3552,20 @@
       importClassification,
       import_classification: importClassification,
       toolHints: resolvedMetadata.toolHints,
-      warnings: resolveWarningList(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings),
-      nextReadoutCandidates: normalizeNextReadoutCandidates(
-        Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
-          ? nextReadoutCandidatesInput
-          : buildNextReadoutCandidates(
-            getReadoutCoverageInput(parts) || derivedReadoutCoverage,
-            metadataOverrides.vehicleApplicability || {},
-            ecuInfoSnapshot,
-            dtcSnapshot,
-            supportedPidMatrix
-          )
-      ),
+      warnings: resolvedWarnings,
+      nextReadoutCandidates: resolvedNextReadoutCandidates,
+      coreSessionStatus,
+      core_session_status: coreSessionStatus,
+      diagnosticFlowSummary,
+      diagnostic_flow_summary: diagnosticFlowSummary,
+      readoutCompletionSummary,
+      readout_completion_summary: readoutCompletionSummary,
+      analysisReadinessSummary,
+      analysis_readiness_summary: analysisReadinessSummary,
+      readoutQualitySummary,
+      readout_quality_summary: readoutQualitySummary,
+      coreReadoutInventorySummary,
+      core_readout_inventory_summary: coreReadoutInventorySummary,
       readoutRequestPlanGateSummary,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
@@ -3473,8 +3573,8 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       readoutRequestPlanSummary,
       readout_request_plan_summary: readoutRequestPlanSummary,
-      importedSessionComparisonSummary,
-      imported_session_comparison_summary: importedSessionComparisonSummary,
+      importedSessionComparisonSummary: resolvedImportedSessionComparisonSummary,
+      imported_session_comparison_summary: resolvedImportedSessionComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
       imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
       importedNextReadoutGuardReviewRequestPlanSummary,
@@ -3495,6 +3595,20 @@
       imported_readout_request_plan_gate_summary: importedReadoutRequestPlanGateSummary,
       importedCoreReadoutInventorySummary,
       imported_core_readout_inventory_summary: importedCoreReadoutInventorySummary,
+      importedCoreComparisonSummary,
+      imported_core_comparison_summary: importedCoreComparisonSummary,
+      importedDiagnosticFlowComparisonSummary,
+      imported_diagnostic_flow_comparison_summary: importedDiagnosticFlowComparisonSummary,
+      importedReadoutCompletionComparisonSummary,
+      imported_readout_completion_comparison_summary: importedReadoutCompletionComparisonSummary,
+      importedAnalysisReadinessComparisonSummary,
+      imported_analysis_readiness_comparison_summary: importedAnalysisReadinessComparisonSummary,
+      importedReadoutQualityComparisonSummary,
+      imported_readout_quality_comparison_summary: importedReadoutQualityComparisonSummary,
+      importedReadoutRequestPlanGateComparisonSummary,
+      imported_readout_request_plan_gate_comparison_summary: importedReadoutRequestPlanGateComparisonSummary,
+      importedCoreReadoutInventoryComparisonSummary,
+      imported_core_readout_inventory_comparison_summary: importedCoreReadoutInventoryComparisonSummary,
       hadSensitiveIdentifier: resolvedMetadata.hadSensitiveIdentifier,
       sourceLength: resolvedMetadata.sourceLength,
       ...buildReadOnlyFlags({
