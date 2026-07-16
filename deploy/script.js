@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2378+件",
+  validationCheckLabel: "OBD安全検証 2381+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "ローカル再読込で読取安全を保持",
+  recentMilestone: "スキャナ取込で読取安全を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.752.0";
+const APP_VERSION = "2.753.0";
 const APP_LAST_UPDATED = "2026-07-16";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6750,6 +6750,9 @@ function analyzeObdScannerImport() {
   const currentCoreSessionStatus = currentSession?.coreSessionStatus || currentSession?.core_session_status || null;
   const currentNextReadoutRequest = currentSession?.nextReadoutRequest || currentSession?.next_readout_request || currentDiagnosticFlowSummary?.nextReadoutRequest || currentDiagnosticFlowSummary?.next_readout_request || currentCoreSessionStatus?.nextReadoutRequest || currentCoreSessionStatus?.next_readout_request || currentCoreSessionStatus?.nextReadoutSummary?.readoutRequest || currentCoreSessionStatus?.next_readout_summary?.readout_request || null;
   const currentReadoutRequestPlanSummary = currentSession?.readoutRequestPlanSummary || currentSession?.readout_request_plan_summary || currentDiagnosticFlowSummary?.readoutRequestPlanSummary || currentDiagnosticFlowSummary?.readout_request_plan_summary || currentCoreSessionStatus?.readoutRequestPlanSummary || currentCoreSessionStatus?.readout_request_plan_summary || null;
+  const currentNextReadoutRequestSafetySummary = currentSession?.nextReadoutRequestSafetySummary || currentSession?.next_readout_request_safety_summary || currentDiagnosticFlowSummary?.nextReadoutRequestSafetySummary || currentDiagnosticFlowSummary?.next_readout_request_safety_summary || currentCoreSessionStatus?.nextReadoutRequestSafetySummary || currentCoreSessionStatus?.next_readout_request_safety_summary || null;
+  const currentNextReadoutReasonSummary = currentSession?.nextReadoutReasonSummary || currentSession?.next_readout_reason_summary || currentDiagnosticFlowSummary?.nextReadoutReasonSummary || currentDiagnosticFlowSummary?.next_readout_reason_summary || currentCoreSessionStatus?.nextReadoutReasonSummary || currentCoreSessionStatus?.next_readout_reason_summary || null;
+  const currentNextReadoutCandidateSafetySummary = currentSession?.nextReadoutCandidateSafetySummary || currentSession?.next_readout_candidate_safety_summary || currentDiagnosticFlowSummary?.nextReadoutCandidateSafetySummary || currentDiagnosticFlowSummary?.next_readout_candidate_safety_summary || currentCoreSessionStatus?.nextReadoutCandidateSafetySummary || currentCoreSessionStatus?.next_readout_candidate_safety_summary || null;
   const currentStartedAt = currentSession?.startedAt || currentSession?.started_at;
   const currentEndedAt = currentSession?.endedAt || currentSession?.ended_at;
   const currentCapturedAt = currentSession?.capturedAt || currentSession?.captured_at;
@@ -6785,6 +6788,9 @@ function analyzeObdScannerImport() {
       readoutCoverage: currentReadoutCoverage,
       nextReadoutCandidates: currentNextReadoutCandidates,
       nextReadoutRequest: currentNextReadoutRequest,
+      nextReadoutRequestSafetySummary: currentNextReadoutRequestSafetySummary,
+      nextReadoutReasonSummary: currentNextReadoutReasonSummary,
+      nextReadoutCandidateSafetySummary: currentNextReadoutCandidateSafetySummary,
       readoutRequestPlanSummary: currentReadoutRequestPlanSummary,
       warnings: currentWarnings,
       toolHints: currentToolHints,
