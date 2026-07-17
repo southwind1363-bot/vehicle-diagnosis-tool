@@ -740,10 +740,15 @@
   }
 
   function readBridgeResponseSafety(response = {}) {
+    const explicitlyBlocked = hasExplicitReadoutBlock(response);
+    const explicitlyUnblocked = isExplicitFalseFlag(response?.blocked)
+      || isExplicitFalseFlag(response?.isBlocked)
+      || isExplicitFalseFlag(response?.is_blocked);
+    const wouldTransmit = hasReadoutTransportViolation(response);
     return {
-      ok: response.ok === true,
-      blocked: response.blocked !== false && response.isBlocked !== false,
-      wouldTransmit: response.would_transmit === true || response.wouldTransmit === true
+      ok: isExplicitTrueFlag(response?.ok),
+      blocked: explicitlyBlocked || wouldTransmit || !explicitlyUnblocked,
+      wouldTransmit
     };
   }
 

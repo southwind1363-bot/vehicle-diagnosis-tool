@@ -58,7 +58,7 @@ const bridgeRequestEvaluationFunctionSource = source.match(/function evaluateLoc
 const preparedVehicleRequestFunctionSource = source.match(/function requestPreparedVehicleRequest[\s\S]*?blockedByMode\r?\n    \};\r?\n  \}/);
 const outboundSafetyFunctionSource = source.match(/function evaluateOutboundSafety[\s\S]*?reason: isStateChanging[\s\S]*?\r?\n    \};\r?\n  \}/);
 const vehicleOperationRequestFunctionSource = source.match(/function requestVehicleOperation[\s\S]*?requiredBeforeEnable: operation \? \[\.\.\.operation\.requiredBeforeEnable\] : \[\]\r?\n    \};\r?\n  \}/);
-const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
+const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgeSnapshotSafetyFunctionSource = source.match(/function readBridgeSnapshotSafety[\s\S]*?blocked: inferredSnapshotSafety \? false : safety\.blocked\r?\n    \};\r?\n  \}/);
 const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.obd_protocol \|\| data\.communication_protocol[\s\S]*?\|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
@@ -380,9 +380,9 @@ const bridgeResponseSafetyFunctionChecks = () => {
   check(Boolean(bridgeResponseSafetyFunctionSource), "readBridgeResponseSafety is missing from obd-readonly.js");
   if (bridgeResponseSafetyFunctionSource) {
     const functionBody = bridgeResponseSafetyFunctionSource[0];
-    check(functionBody.includes('ok: response.ok === true'), "readBridgeResponseSafety should only mark bridge responses ok on explicit true");
-    check(functionBody.includes('blocked: response.blocked !== false && response.isBlocked !== false'), "readBridgeResponseSafety should fail closed unless blocked/isBlocked is explicitly false");
-    check(functionBody.includes('wouldTransmit: response.would_transmit === true || response.wouldTransmit === true'), "readBridgeResponseSafety should normalize wouldTransmit aliases only from explicit true");
+    check(functionBody.includes('ok: isExplicitTrueFlag(response?.ok)'), "readBridgeResponseSafety should normalize explicit ok flags");
+    check(functionBody.includes('blocked: explicitlyBlocked || wouldTransmit || !explicitlyUnblocked'), "readBridgeResponseSafety should fail closed for blocked or transmitting bridge responses");
+    check(functionBody.includes('const wouldTransmit = hasReadoutTransportViolation(response);'), "readBridgeResponseSafety should normalize transmitting aliases before accepting readouts");
   }
   check(Boolean(bridgeProtocolFunctionSource), "readBridgeProtocol is missing from obd-readonly.js");
   if (bridgeProtocolFunctionSource) {
@@ -2410,8 +2410,8 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.823.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for string transmitting readout handling");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.823.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.823.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.824.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for bridge boolean response normalization");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.824.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.824.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
@@ -2439,7 +2439,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "文字列送信兆候を遮断"'), "OBD core progress snapshot should show the latest string transmitting readout milestone");
+check(appSource.includes('recentMilestone: "ブリッジboolean応答を正規化"'), "OBD core progress snapshot should show the latest bridge boolean response milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2938,6 +2938,21 @@ const transmittingCoreReadoutSession = obd.buildDiagnosticScanSession({
   supportedPidMatrix: { ok: true, blocked: false, would_transmit: true, supportedPids: ["0C"] }
 });
 check(Object.values(transmittingCoreReadoutSession.coreReadoutInventorySummary?.countsById || {}).every((count) => count === 0) && transmittingCoreReadoutSession.coreReadoutInventorySummary?.totalValueCount === 0 && transmittingCoreReadoutSession.readoutCoverage?.missingCategories === 7 && transmittingCoreReadoutSession.dtcSnapshot?.dtcReadoutStatus === "blocked" && transmittingCoreReadoutSession.coreSessionStatus?.readyForAnalysis === false && transmittingCoreReadoutSession.vehicleCommandEnabled === false, "Transmitting core readouts were promoted to captured diagnostic data");
+const stringBooleanBridgeDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: "true",
+  blocked: "false",
+  would_transmit: "false",
+  data: { dtcs: [{ code: "P0171" }] }
+});
+const stringBooleanBridgeTransportSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: "true",
+  blocked: "false",
+  would_transmit: "true",
+  data: { dtcs: [{ code: "P0171" }] }
+});
+check(stringBooleanBridgeDtcSnapshot.dtcReadoutStatus === "reported" && stringBooleanBridgeDtcSnapshot.blocked === false && stringBooleanBridgeDtcSnapshot.wouldTransmit === false && stringBooleanBridgeTransportSnapshot.dtcReadoutStatus === "blocked" && stringBooleanBridgeTransportSnapshot.blocked === true && stringBooleanBridgeTransportSnapshot.wouldTransmit === true, "String bridge safety flags were not normalized fail-closed");
 const blockedRawPidWarningSession = obd.buildDiagnosticScanSession({
   live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ ok: false, blocked: true, data: { monitor_values: [{ pid: "0C", value: "01 90", decoded: false }] } })
 });
