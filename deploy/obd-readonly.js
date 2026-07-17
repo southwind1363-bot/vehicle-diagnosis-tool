@@ -679,6 +679,7 @@
       .map((item) => Object.freeze({
         id: item.id,
         label: item.label,
+        deviceModel: item.device_model || "未確認",
         interfaceFamily: item.interface_family || "unknown",
         transport: item.transport || "unknown",
         primaryUse: item.primary_use || "",
@@ -692,6 +693,7 @@
         etaTarget: item.eta_target || "時期未定",
         connectionEnabled: false,
         vehicleCommandEnabled: false,
+        hardwareCompatibilityConfirmed: item.hardware_compatibility_confirmed === true,
         verificationRequired: Object.freeze(Array.isArray(item.verification_required) ? [...item.verification_required] : []),
         integrationNote: item.integration_note || "",
         confidence: item.confidence || "未検証",

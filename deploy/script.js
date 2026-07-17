@@ -14,7 +14,7 @@ const BRIDGE_BACKED_INTERFACE_IDS = Object.freeze([
 ]);
 const INTERFACE_CANDIDATE_DISPLAY_NAMES = Object.freeze({
   "user-vci-thinkcar-bluetooth": "THINKCAR系候補",
-  "user-vci-techstream-j2534": "J2534候補",
+  "user-vci-techstream-j2534": "有線OBD2（J2534適合確認）",
   "user-vci-rcmall-mks-canable-v2-pro": "CANable候補"
 });
 const BRIDGE_BACKED_IMPLEMENTATION_CHECK_BUILDERS = Object.freeze({
@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.887.0";
+const APP_VERSION = "2.888.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1747,7 +1747,7 @@ function getSelectedObdInterfaceLabel() {
   const label = {
     "user-vci-elm327": "Web Serial / ELM327（必須）",
     "user-vci-thinkcar-bluetooth": "THINKCAR Bluetooth",
-    "user-vci-techstream-j2534": "J2534 Pass-Thru（必須）",
+    "user-vci-techstream-j2534": "有線OBD2（J2534適合確認）",
     "user-vci-rcmall-mks-canable-v2-pro": "CANable候補"
   }[resolvedInterfaceId] || "未選択";
   return requestedInterfaceId === "auto" ? `${label}（自動判定）` : label;
@@ -1771,7 +1771,7 @@ function getObdInterfaceSelectionNote(capability = window.ObdReadOnly?.getCapabi
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   if (isMobileDevice()) return "自動判定: スマホのため Bluetooth 系を優先";
   if (serialReady) return "自動判定: Web Serial 対応のため ELM327 を優先";
-  return "自動判定: Web Serial 非対応のため J2534 を優先";
+  return "自動判定: Web Serial 非対応のため有線OBD2/J2534適合確認を優先";
 }
 
 function getObdInterfaceReadoutRoute(interfaceId) {
@@ -1788,18 +1788,18 @@ function getObdInterfaceReadoutRoute(interfaceId) {
 
 function getObdInterfaceStrategyNote(interfaceId) {
   if (interfaceId === "user-vci-elm327") return "必須ルート。最小構成の実車読取入口で、複数VCI対応の基準動作として使います。";
-  if (interfaceId === "user-vci-techstream-j2534") return "必須ルート。G-scan/AUTEL級に近づけるためPC系VCIの主経路として優先します。";
+  if (interfaceId === "user-vci-techstream-j2534") return "有線OBD2機器のJ2534適合が確認できた場合に、PC系VCIの主経路として扱います。";
   return {
     "user-vci-elm327": "最小構成の実車読取入口。複数VCI対応の基準動作として使います。",
     "user-vci-thinkcar-bluetooth": "iPhone対応アプリのread-only結果取込を主経路にし、PCローカルブリッジは別系統として育てます。",
-    "user-vci-techstream-j2534": "重要ルート。G-scan/AUTEL級に近づけるためPC系VCIの主経路として優先します。",
+    "user-vci-techstream-j2534": "有線OBD2候補。J2534 DLL適合を確認できた場合だけPC系VCIの主経路として育てます。",
     "user-vci-rcmall-mks-canable-v2-pro": "CAN系候補。J2534後に読取専用取込の幅を広げる用途です。"
   }[interfaceId] || "複数VCIを選べる前提で、読取専用の安全範囲から順に増やします。";
 }
 
 function getObdDevelopmentOperationNote(interfaceId) {
   if (interfaceId === "user-vci-elm327") return "運用: 読取前プレビュー確認 -> Web Serial読取開始 -> DTC/ライブデータ読取 -> OBD側で保存と確認";
-  if (interfaceId === "user-vci-techstream-j2534") return "運用: 読取前プレビュー確認 -> J2534ドライバ確認 -> ローカルブリッジ確認 -> 読取専用 DTC/ECU情報から実測";
+  if (interfaceId === "user-vci-techstream-j2534") return "運用: 型番/J2534 DLL確認 -> 読取前プレビュー確認 -> ローカルブリッジ確認 -> 読取専用 DTC/ECU情報から実測";
   if (interfaceId === "user-vci-thinkcar-bluetooth") return "運用: iPhone対応アプリでread-only読取 -> 結果を共有・貼付 -> OBD側でセッション化して保存と確認";
   return "運用: 読取前プレビュー確認 -> 読取準備 -> 読取専用で取れる項目だけ確認 -> OBD側で保存と確認";
 }
@@ -1808,7 +1808,7 @@ function getObdAvailableReadoutNote(interfaceId) {
   return {
     "user-vci-elm327": "現在使える読取: DTC / ライブデータ / フリーズフレーム / 対応PIDの読取前確認、PCではWeb Serial読取へ移行。",
     "user-vci-thinkcar-bluetooth": "現在使える読取: DTC / ライブデータ / ECU情報の読取前確認。iPhone対応アプリのread-only結果取込を確認。",
-    "user-vci-techstream-j2534": "現在使える読取: DTC / ECU情報 / Mode06 / 対応PIDの読取前確認、読取はPC J2534経由。",
+    "user-vci-techstream-j2534": "現在使える読取: DTC / ECU情報 / Mode06 / 対応PIDの読取前確認。実機読取はJ2534 DLL適合確認後にPCで行う。",
     "user-vci-rcmall-mks-canable-v2-pro": "現在使える読取: CAN系 読取専用応答、対応PID、診断取込の読取前確認。"
   }[interfaceId] || "現在使える読取項目を表示します。";
 }
@@ -1817,7 +1817,7 @@ function getObdPrimaryActionLabel(interfaceId, state = {}) {
   if (state.connected) return "読取中";
   if (!state.unlocked) {
     if (interfaceId === "user-vci-elm327") return "ELM327読取を有効化";
-    if (interfaceId === "user-vci-techstream-j2534") return "J2534確認を有効化";
+    if (interfaceId === "user-vci-techstream-j2534") return "有線OBD2適合確認を有効化";
     if (interfaceId === "user-vci-thinkcar-bluetooth") return "Bluetooth確認を有効化";
     if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") return "CAN確認を有効化";
     return "詳細読取を有効化";
@@ -1825,7 +1825,7 @@ function getObdPrimaryActionLabel(interfaceId, state = {}) {
   if (interfaceId === "user-vci-elm327") {
     return state.serialReady ? "ELM327読取を開始" : "PCでELM327読取";
   }
-  if (interfaceId === "user-vci-techstream-j2534") return "J2534確認を開始";
+  if (interfaceId === "user-vci-techstream-j2534") return "有線OBD2適合確認を開始";
   if (interfaceId === "user-vci-thinkcar-bluetooth") return "Bluetooth確認を開始";
   if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") return "CAN確認を開始";
   return "読取確認を開始";
@@ -1843,7 +1843,7 @@ function getObdAccessStatusMessage(unlocked, capability = window.ObdReadOnly?.ge
       : `${autoPrefix}ELM327 を使います。読取はデスクトップ版Chrome系ブラウザから開始します。`;
   }
   if (interfaceId === "user-vci-techstream-j2534") {
-    return `${autoPrefix}J2534 を使います。PC側ドライバとローカルブリッジ確認から進めます。`;
+    return `${autoPrefix}有線OBD2機器を使います。J2534 DLL適合とPC側ローカルブリッジ確認から進めます。`;
   }
   if (interfaceId === "user-vci-thinkcar-bluetooth") {
     return `${autoPrefix}THINKCAR Bluetooth を使います。iPhone対応アプリでのread-only結果取込から進めます。`;
@@ -1867,8 +1867,8 @@ function renderObdSetupActionButtons() {
       prepare: "Bluetooth確認を準備"
     },
     "user-vci-techstream-j2534": {
-      preview: "J2534で読取前プレビュー",
-      prepare: "J2534確認を準備"
+      preview: "有線OBD2で読取前プレビュー",
+      prepare: "J2534適合確認を準備"
     },
     "user-vci-rcmall-mks-canable-v2-pro": {
       preview: "CANで読取前プレビュー",
@@ -1898,8 +1898,8 @@ function renderObdConnectionGuide() {
       "安全: DTC / ライブデータ / ECU情報の読取専用確認"
     ],
     "user-vci-techstream-j2534": [
-      "端末: PC側ドライバ前提",
-      "読取手順: J2534ドライバとローカルブリッジで確認",
+      "端末: Windows側ドライバ前提",
+      "読取手順: 型番/J2534 DLL適合を確認後にローカルブリッジで確認",
       "安全: 読取専用 ECU情報 / DTCから開始"
     ],
     "user-vci-rcmall-mks-canable-v2-pro": [
@@ -3406,11 +3406,13 @@ function buildBridgeBackedInterfaceSnapshot(item = {}) {
   const missingLabels = checks.filter((check) => !check.available).map((check) => check.label);
   const progressPercent = checks.length ? Math.round((doneCount / checks.length) * 100) : 0;
   const guide = getInterfaceCandidateGuideByItem(item);
-  const currentStatus = doneCount >= checks.length - 1
+  const hardwareCompatibilityConfirmed = item?.hardwareCompatibilityConfirmed === true;
+  const implementationStatus = doneCount >= checks.length - 1
     ? guide?.statusReady || "実機読取確認待ち"
     : doneCount >= 6
       ? guide?.statusMid || "read-only取込あり"
       : guide?.statusEarly || "読取器を整備中";
+  const currentStatus = hardwareCompatibilityConfirmed ? implementationStatus : "実機適合確認待ち";
 
   return {
     progressPercent,
@@ -3418,9 +3420,9 @@ function buildBridgeBackedInterfaceSnapshot(item = {}) {
     totalCount: checks.length,
     missingLabels,
     currentStatus,
-    currentBasis: guide?.basisPrefix
+    currentBasis: `${guide?.basisPrefix
       ? `${guide.basisPrefix} ${doneCount}/${checks.length}項目を実装済み。${guide.basisSuffix || ""}`.trim()
-      : `bridge候補の読取器 ${doneCount}/${checks.length}項目を実装済み。`,
+      : `bridge候補の読取器 ${doneCount}/${checks.length}項目を実装済み。`} 実機適合: ${hardwareCompatibilityConfirmed ? "確認済み" : "未確認"}`,
     nextBuild: guide?.nextBuild || "実機読取応答を同じ read-only 契約へ揃える。",
     etaTarget: doneCount >= checks.length - 1 ? "2026-Q3 見込み" : "2026-Q3 後半見込み"
   };
@@ -3444,6 +3446,11 @@ function getInterfaceCatalogDisplayState(item) {
     : null;
   return {
     ...item,
+    implementationProgressPercent: Number.isFinite(bridgeBackedSnapshot?.progressPercent)
+      ? bridgeBackedSnapshot.progressPercent
+      : Number.isFinite(progress?.progressPercent)
+        ? progress.progressPercent
+        : item?.progressPercent || 0,
     currentStatus: bridgeBackedSnapshot?.currentStatus || item?.currentStatus || "確認中",
     progressPercent: Number.isFinite(bridgeBackedSnapshot?.progressPercent)
       ? bridgeBackedSnapshot.progressPercent
@@ -3555,7 +3562,7 @@ const INTERFACE_CANDIDATE_GUIDE_BUILDERS = Object.freeze({
     readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のread-only結果取込を確認済みです。次にDTC、フリーズフレーム、ライブデータ、ECU情報を同じセッションで確認できます。`
   }),
   "user-vci-techstream-j2534": (interfaceId) => ({
-    actionLabel: "J2534読取確認",
+    actionLabel: "有線OBD2適合確認",
     statusEarly: "読取器を整備中",
     statusMid: "read-only読取あり",
     statusReady: "実機読取確認待ち",
@@ -7015,7 +7022,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     title.textContent = item.label;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
-    badge.textContent = `${display.progressPercent || 0}%`;
+    badge.textContent = `${display.implementationProgressPercent || display.progressPercent || 0}% 実装`;
     head.append(title, badge);
 
     const role = document.createElement("p");
@@ -7025,7 +7032,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     scope.textContent = display.readScopeCandidates.slice(0, 4).join(" / ") || display.interfaceFamily;
 
     const status = document.createElement("p");
-    status.textContent = `${display.currentStatus || "確認中"} / ${display.currentBasis || ""}`;
+    status.textContent = `${display.currentStatus || "確認中"} / 実機適合: ${display.hardwareCompatibilityConfirmed === true ? "確認済み" : "未確認"} / ${display.currentBasis || ""}`;
 
     const next = document.createElement("p");
     next.textContent = display.nextBuild || "";
