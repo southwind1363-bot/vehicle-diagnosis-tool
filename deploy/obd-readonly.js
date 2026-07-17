@@ -937,6 +937,18 @@
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const safety = readBridgeResponseSafety(response);
+    const hasExplicitSafety = response && typeof response === "object" && ["ok", "blocked", "isBlocked"].some((key) => Object.prototype.hasOwnProperty.call(response, key));
+    const hasBridgeValueList = Array.isArray(data.values)
+      || Array.isArray(data.monitor_values)
+      || Array.isArray(data.monitorValues)
+      || Array.isArray(data.pid_values)
+      || Array.isArray(data.pidValues)
+      || Array.isArray(data.live_pid_values)
+      || Array.isArray(data.livePidValues)
+      || Array.isArray(data.live_data)
+      || Array.isArray(data.liveData)
+      || Array.isArray(data.items);
+    const inferredSnapshotSafety = !hasExplicitSafety && hasBridgeValueList;
     const values = Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.monitor_values)
@@ -961,6 +973,10 @@
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
+    const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
+    const readoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
+      ? String(explicitReadoutStatus).trim().toLowerCase()
+      : inferredSnapshotSafety || safety.ok ? "reported" : safety.blocked && hasExplicitSafety ? "blocked" : "unknown";
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
@@ -973,8 +989,8 @@
     return {
       source: "local_bridge",
       intent: "read_live_pid_snapshot",
-      ok: safety.ok,
-      blocked: safety.blocked,
+      ok: inferredSnapshotSafety || safety.ok,
+      blocked: inferredSnapshotSafety ? false : safety.blocked,
       wouldTransmit: safety.wouldTransmit,
       protocol: readBridgeProtocol(data),
       supportedPids,
@@ -987,6 +1003,8 @@
       monitor_value_summary: monitorValueSummary,
       monitorInsights,
       monitor_insights: monitorInsights,
+      livePidReadoutStatus: readoutStatus,
+      live_pid_readout_status: readoutStatus,
       retainedRawText: false,
       retained_raw_text: false
     };
@@ -1370,11 +1388,18 @@
           normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")
         )
       : null;
+    const livePidResponseInput = livePidSnapshotInput?.data && typeof livePidSnapshotInput.data === "object"
+      ? {
+        ...livePidSnapshotInput.data,
+        protocol: livePidSnapshotInput.data.protocol || livePidSnapshotInput.data.obd_protocol || livePidSnapshotInput.protocol || livePidSnapshotInput.obd_protocol || null,
+        captured_at: livePidSnapshotInput.data.captured_at || livePidSnapshotInput.data.capturedAt || livePidSnapshotInput.captured_at || livePidSnapshotInput.capturedAt || null
+      }
+      : livePidSnapshotInput;
     const livePidSnapshot = hasLivePidSnapshotInput
       ? (livePidSnapshotInput?.monitorValues
           ? livePidSnapshotInput
-          : (livePidSnapshotInput?.raw || livePidSnapshotInput?.response || Array.isArray(livePidSnapshotInput?.bytes))
-            ? decodeLivePidResponse(livePidSnapshotInput)
+          : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
+            ? decodeLivePidResponse(livePidResponseInput)
             : normalizeBridgeLivePidSnapshot(livePidSnapshotInput))
       : null;
     const freezeFrameSnapshot = hasFreezeFrameSnapshotInput
@@ -1426,7 +1451,7 @@
       {
         id: "live_pid_snapshot",
         label: "ライブPID",
-        available: livePidSnapshot?.blocked === false || Array.isArray(livePidSnapshot?.monitorValues),
+        available: !["unparsed", "blocked"].includes(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status) && (livePidSnapshot?.blocked === false || Array.isArray(livePidSnapshot?.monitorValues)),
         count: Array.isArray(livePidSnapshot?.monitorValues) ? livePidSnapshot.monitorValues.length : 0
       },
       {
@@ -1658,6 +1683,8 @@
       const coverageItem = coverage.itemById?.[item.id] || null;
       const explicitReadoutStatus = item.id === "readiness_snapshot"
         ? readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null
+        : item.id === "live_pid_snapshot"
+          ? livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status || null
         : item.id === "ecu_info_snapshot"
           ? ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || null
           : item.id === "onboard_monitor_snapshot"
@@ -3458,7 +3485,14 @@
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
       dtcSnapshot,
-      livePidSnapshot: { blocked: false, monitorValues, supportedPids: supportedPidMatrix.supportedPids || [], monitorValueSummary },
+      livePidSnapshot: {
+        blocked: false,
+        monitorValues,
+        supportedPids: supportedPidMatrix.supportedPids || [],
+        monitorValueSummary,
+        livePidReadoutStatus: livePidSnapshot.livePidReadoutStatus || livePidSnapshot.live_pid_readout_status || null,
+        live_pid_readout_status: livePidSnapshot.livePidReadoutStatus || livePidSnapshot.live_pid_readout_status || null
+      },
       freezeFrameSnapshot,
       readinessSnapshot,
       ecuInfoSnapshot,
@@ -3687,6 +3721,8 @@
       onboardMonitorSnapshot,
       readoutCoverage: resolvedReadoutCoverage,
       freezeFrameSnapshot,
+      livePidSnapshot,
+      live_pid_snapshot: livePidSnapshot,
       monitorValues,
       monitorValueSummary,
       monitorInsights,
@@ -4131,6 +4167,8 @@
         || snapshot?.freeze_frame_readout_status
         || snapshot?.supportedPidReadoutStatus
         || snapshot?.supported_pid_readout_status
+        || snapshot?.livePidReadoutStatus
+        || snapshot?.live_pid_readout_status
       ))
       && (
         Boolean(snapshot?.capturedAt)
@@ -9957,6 +9995,10 @@
   function buildBridgeSessionExportPayload(parts = {}) {
     const summary = resolveBridgeSummary(parts);
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
+    const livePidSnapshot = summary.livePidSnapshot || summary.live_pid_snapshot || normalizeBridgeLivePidSnapshot({
+      monitor_values: summary.monitorValues || summary.monitor_values || [],
+      monitor_value_summary: summary.monitorValueSummary || summary.monitor_value_summary || null
+    });
     const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });
     const coreSessionStatus = summary.coreSessionStatus || summary.core_session_status || buildCoreSessionStatusFromSummary(summary, {
       vehicleApplicability: metadataFields.vehicle_applicability,
@@ -10098,6 +10140,7 @@
         readiness_snapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
         ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
+        live_pid_snapshot: livePidSnapshot,
         readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
@@ -12231,6 +12274,7 @@
   function decodeLivePidResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
+    const hasMode01Frame = bytes.some((byte, index) => byte === 0x41 && index + 2 < bytes.length);
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
@@ -12249,6 +12293,7 @@
         protocol: input.protocol || input.obd_protocol || null,
         supported_pids: [],
         values,
+        live_pid_readout_status: hasMode01Frame ? "reported" : "unparsed",
         captured_at: input.captured_at || input.capturedAt || null
       }
     });
