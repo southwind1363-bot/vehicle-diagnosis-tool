@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial初回トークン設定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.835.0";
+const APP_VERSION = "2.836.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4269,6 +4269,32 @@ async function identifyObdDeveloperVci() {
   await runObdDeveloperRead("VCI確認", ["ATI", "AT@1"]);
 }
 
+function buildWebSerialAdapterIdentity(commandResponses = []) {
+  const atiResponse = commandResponses.find((item) => item?.command === "ATI")?.response || "";
+  const match = String(atiResponse).match(/\b(ELM327|STN\d{3,4}|OBDLINK(?:\s+[A-Z0-9+.-]+)?)(?:\s+(?:V(?:ERSION)?\s*)?(\d+(?:\.\d+){0,3}))?\b/i);
+  if (!match) return null;
+
+  const adapterName = match[1].replace(/\s+/g, " ").trim().slice(0, 40);
+  const adapterFamily = /^STN/i.test(adapterName)
+    ? "STN compatible"
+    : /^OBDLINK/i.test(adapterName)
+      ? "OBDLink"
+      : "ELM327";
+  const firmwareVersion = match[2] ? `v${match[2]}` : null;
+  return {
+    source: "web_serial",
+    intent: "adapter_identity",
+    ok: true,
+    blocked: false,
+    wouldTransmit: false,
+    adapterName,
+    adapterFamily,
+    firmwareVersion,
+    vehicleCommandEnabled: false,
+    retainedRawText: false
+  };
+}
+
 async function readObdDeveloperDtc() {
   await runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
 }
@@ -4526,15 +4552,23 @@ async function runObdDeveloperRead(label, commands) {
   try {
     obdDevStatus.textContent = `${label}中です。`;
     const chunks = [];
+    const commandResponses = [];
     for (const command of commands) {
       chunks.push(`>${command}`);
-      chunks.push(await sendElmDeveloperCommand(command, 3500));
+      const response = await sendElmDeveloperCommand(command, 3500);
+      commandResponses.push({ command, response });
+      chunks.push(["ATI", "AT@1"].includes(command) ? "[adapter identity response not retained]" : response);
     }
     appendObdDeveloperLog(chunks.join("\n"));
-    const session = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
+    const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
+    if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
+    const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
       session_id: "web-serial-dev-readout",
       protocol: "ELM327"
     });
+    const session = obdDevSession.adapterIdentity
+      ? { ...scanSession, adapterIdentity: obdDevSession.adapterIdentity, adapter_identity: obdDevSession.adapterIdentity }
+      : scanSession;
     obdDevSession.lastSession = session;
     renderObdDeveloperReadout(session);
     obdDevStatus.textContent = `${label}が完了しました。取れた値だけ表示します。`;
