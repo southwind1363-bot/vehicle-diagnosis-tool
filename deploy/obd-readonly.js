@@ -1133,6 +1133,7 @@
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
         protocol: readBridgeProtocol(data),
+        readiness_readout_status: safety.blocked ? "blocked" : safety.ok ? "unparsed" : "unknown",
         monitors: []
       }));
     }
@@ -1164,6 +1165,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       protocol: readBridgeProtocol(data),
+      readiness_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown",
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
       monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
         const supported = (byte & supportedBit) !== 0;
@@ -1433,7 +1435,9 @@
       {
         id: "readiness_snapshot",
         label: "レディネス",
-        available: readinessSnapshot?.blocked === false || Array.isArray(readinessSnapshot?.monitors),
+        available: ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
+          ? false
+          : readinessSnapshot?.blocked === false || Array.isArray(readinessSnapshot?.monitors),
         count: Array.isArray(readinessSnapshot?.monitors) ? readinessSnapshot.monitorCount || readinessSnapshot.monitors.length : 0
       },
       {
@@ -1645,7 +1649,12 @@
     ];
     const items = definitions.map((item) => {
       const coverageItem = coverage.itemById?.[item.id] || null;
-      const status = item.count > 0 ? "captured" : coverageItem?.status || "missing";
+      const readinessReadoutStatus = item.id === "readiness_snapshot"
+        ? readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null
+        : null;
+      const status = ["unparsed", "blocked"].includes(readinessReadoutStatus)
+        ? "missing"
+        : item.count > 0 ? "captured" : coverageItem?.status || "missing";
       return {
         ...item,
         label: coverageItem?.label || item.id,
@@ -4096,8 +4105,11 @@
       || dtcSnapshot?.dtc_status_summary
       || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
     const isCapturedReadout = (snapshot, key) => (
-      Boolean(snapshot?.capturedAt)
-      || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
+      !(["unparsed", "blocked"].includes(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status))
+      && (
+        Boolean(snapshot?.capturedAt)
+        || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
+      )
     );
     const coverageItems = (normalizedCoverage.items || [])
       .filter((item) => item && typeof item.id === "string");
@@ -11546,6 +11558,17 @@
     const incompleteCount = normalized.filter((item) => item.supported && !item.complete).length;
     const notSupportedCount = normalized.filter((item) => !item.supported).length;
     const knownMonitorCount = knownMonitors.length;
+    const explicitReadoutStatus = pickDefined(
+      sourceInput.readinessReadoutStatus,
+      sourceInput.readiness_readout_status,
+      sourceInput.readoutStatus,
+      sourceInput.readout_status
+    );
+    const normalizedReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
+      ? String(explicitReadoutStatus).trim().toLowerCase()
+      : monitorCount > 0
+        ? "reported"
+        : "unknown";
 
     return {
       schemaVersion: "readiness_snapshot_v1",
@@ -11566,6 +11589,8 @@
       not_supported_count: notSupportedCount,
       knownMonitorCount,
       known_monitor_count: knownMonitorCount,
+      readinessReadoutStatus: normalizedReadoutStatus,
+      readiness_readout_status: normalizedReadoutStatus,
       monitors: normalized,
       knownMonitors,
       known_monitors: knownMonitors,
@@ -12238,6 +12263,7 @@
       return normalizeReadinessSnapshot({
         source: input.source || "obd_response_decoder",
         captured_at: input.captured_at || input.capturedAt || null,
+        readiness_readout_status: "unparsed",
         monitors: []
       });
     }
@@ -12278,6 +12304,7 @@
     return normalizeReadinessSnapshot({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
+      readiness_readout_status: "reported",
       mil_on: (a & 0x80) !== 0,
       monitors
     });

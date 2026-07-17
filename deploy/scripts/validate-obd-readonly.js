@@ -451,10 +451,11 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(data.readiness_values)') && functionBody.includes('Array.isArray(data.readinessRows)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('Array.isArray(response.monitorValues)'), "normalizeBridgeReadinessSnapshot should accept readiness value aliases");
     check(functionBody.includes('data.readinessStatusByteB !== undefined') && functionBody.includes('data.statusByteD !== undefined'), "normalizeBridgeReadinessSnapshot should accept direct readiness status byte aliases");
     check(functionBody.includes('const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {'), "normalizeBridgeReadinessSnapshot should build readiness values by normalized id");
-    check(functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('monitors: []'), "normalizeBridgeReadinessSnapshot should return an empty normalized snapshot without B/C/D bytes");
+    check(functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('readiness_readout_status: safety.blocked ? "blocked" : safety.ok ? "unparsed" : "unknown"'), "normalizeBridgeReadinessSnapshot should distinguish blocked and unparsed readiness responses without B/C/D bytes");
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
     check(functionBody.includes('["nox_scr", c, 0x02, 0x20]') && functionBody.includes('["evaporative_system", c, 0x08, 0x80]'), "normalizeBridgeReadinessSnapshot should preserve compression and spark monitor layouts");
     check(functionBody.includes('status: supported ? (complete ? "complete" : "not_complete") : "not_supported"'), "normalizeBridgeReadinessSnapshot should derive readiness monitor status from supported and incomplete bits");
+    check(functionBody.includes('readiness_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown"'), "normalizeBridgeReadinessSnapshot should mark complete bridge readiness responses as reported");
   }
   check(Boolean(bridgeEcuInfoSnapshotFunctionSource), "normalizeBridgeEcuInfoSnapshot is missing from obd-readonly.js");
   if (bridgeEcuInfoSnapshotFunctionSource) {
@@ -1361,6 +1362,7 @@ const readinessSnapshotFunctionChecks = () => {
     check(functionBody.includes('mil_on: milOn') && functionBody.includes('monitor_count: monitorCount'), "normalizeReadinessSnapshot should expose snake_case MIL and monitor count aliases");
     check(functionBody.includes('complete_count: completeCount') && functionBody.includes('incomplete_count: incompleteCount') && functionBody.includes('not_supported_count: notSupportedCount'), "normalizeReadinessSnapshot should expose snake_case readiness completion count aliases");
     check(functionBody.includes('known_monitor_count: knownMonitorCount') && functionBody.includes('known_monitors: knownMonitors') && functionBody.includes('retained_raw_text: false'), "normalizeReadinessSnapshot should expose snake_case known monitor and retained raw flags");
+    check(functionBody.includes('const explicitReadoutStatus = pickDefined(') && functionBody.includes('readinessReadoutStatus: normalizedReadoutStatus') && functionBody.includes('readiness_readout_status: normalizedReadoutStatus'), "normalizeReadinessSnapshot should preserve normalized readiness readout status aliases");
   }
 };
 const ecuResponseSummaryFunctionChecks = () => {
@@ -1598,10 +1600,10 @@ const decodeReadinessResponseFunctionChecks = () => {
     const functionBody = decodeReadinessResponseFunctionSource[0];
     check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeReadinessResponse should normalize raw readiness bytes");
     check(functionBody.includes('byte === 0x41 && bytes[index + 1] === 0x01'), "decodeReadinessResponse should locate Mode 01 PID 01 readiness responses");
-    check(functionBody.includes('if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length)') && functionBody.includes('monitors: []'), "decodeReadinessResponse should return an empty readiness snapshot without enough bytes");
+    check(functionBody.includes('if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length)') && functionBody.includes('readiness_readout_status: "unparsed"'), "decodeReadinessResponse should mark incomplete raw responses as unparsed");
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "decodeReadinessResponse should branch monitor definitions by ignition type");
     check(functionBody.includes('nox_scr') && functionBody.includes('catalyst'), "decodeReadinessResponse should support diesel and spark readiness monitor sets");
-    check(functionBody.includes('mil_on: (a & 0x80) !== 0') && functionBody.includes('normalizeReadinessSnapshot({'), "decodeReadinessResponse should return a normalized readiness snapshot with MIL state");
+    check(functionBody.includes('readiness_readout_status: "reported"') && functionBody.includes('mil_on: (a & 0x80) !== 0') && functionBody.includes('normalizeReadinessSnapshot({'), "decodeReadinessResponse should mark valid responses as reported with MIL state");
   }
 };
 const decodeOnboardMonitorResponseFunctionChecks = () => {
@@ -2307,7 +2309,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2517+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2523+件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2390,7 +2392,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.803.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for saved DTC status alias reimport validation");
+check(appSource.includes('const APP_VERSION = "2.804.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for readiness unparsed response handling");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC readout status");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
@@ -2415,7 +2417,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "保存済みDTC読取状態の別名再取込を検証"'), "OBD core progress snapshot should show the latest saved DTC status alias reimport milestone");
+check(appSource.includes('recentMilestone: "レディネス解析不能応答を未読取として分離"'), "OBD core progress snapshot should show the latest readiness readout-state milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -5019,8 +5021,10 @@ check(bridgeReadinessSnapshot.milOn === true, "Bridge readiness did not carry MI
 check(bridgeReadinessSnapshot.incompleteCount === 1, "Bridge readiness did not count incomplete monitors");
 check(bridgeReadinessSnapshot.mil_on === true && bridgeReadinessSnapshot.monitor_count === bridgeReadinessSnapshot.monitorCount, "Bridge readiness did not expose snake_case MIL and monitor aliases");
 check(bridgeReadinessSnapshot.incomplete_count === 1 && bridgeReadinessSnapshot.complete_count === bridgeReadinessSnapshot.completeCount && bridgeReadinessSnapshot.not_supported_count === bridgeReadinessSnapshot.notSupportedCount, "Bridge readiness did not expose snake_case completion count aliases");
+check(bridgeReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeReadinessSnapshot.readiness_readout_status === "reported", "Bridge readiness did not mark a complete B/C/D response as reported");
 const bridgeEmptyReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({});
 check(bridgeEmptyReadinessSnapshot.monitorCount === 0 && bridgeEmptyReadinessSnapshot.blocked === true, "Empty Bridge readiness response was not fail-closed");
+check(bridgeEmptyReadinessSnapshot.readinessReadoutStatus === "blocked", "Empty Bridge readiness response was incorrectly treated as an empty reported readout");
 const bridgeObjectReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
@@ -10098,6 +10102,9 @@ check(decodedReadiness.milOn === true, "レディネス応答からMIL状態を�
 check(decodedReadiness.monitors.find((item) => item.id === "catalyst")?.complete === false, "触媒レディネス未完了をデコードできません");
 check(decodedReadiness.monitors.find((item) => item.id === "evaporative_system")?.supported === false, "EVAPレディネス対応ビットをデコードできません");
 check(decodedReadiness.retainedRawText === false, "レディネスデコードが原文保持になっています");
+check(decodedReadiness.readinessReadoutStatus === "reported" && obd.decodeReadinessResponse({ raw: "41 01" }).readiness_readout_status === "unparsed", "Readiness decoder did not distinguish valid and incomplete raw responses");
+const unparsedReadinessSession = obd.buildDiagnosticScanSession({ readinessResponse: { raw: "41 01", captured_at: "2026-07-17T00:00:00Z" } });
+check(unparsedReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.status === "missing" && unparsedReadinessSession.coreSessionStatus?.readoutStateById?.readiness_snapshot?.status === "missing" && unparsedReadinessSession.vehicleCommandEnabled === false, "Unparsed readiness responses were incorrectly treated as empty completed readouts");
 const normalizedReadinessAliasSnapshot = obd.normalizeReadinessSnapshot({
   source_type: "bridge_import",
   communication_protocol: "ISO15765-4",
@@ -14364,6 +14371,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2517");
+  console.log("OBD read-only safety checks: 2523");
   console.log("Errors: 0");
 }
