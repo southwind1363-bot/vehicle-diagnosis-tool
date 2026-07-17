@@ -490,7 +490,7 @@ const bridgePidValueFunctionChecks = () => {
     check(functionBody.includes('row.id || row.monitor_id || row.monitorId || row.sensor_id || row.sensorId || row.pid') && functionBody.includes('row.pid_id || row.pidId'), "normalizeBridgePidValue should accept PID and monitor id aliases");
     check(functionBody.includes('monitorDefinitions.find((item) => item.id === id)') && functionBody.includes('item.pid === row.pid_id || item.pid === row.pidId') && functionBody.includes('isMonitorLabelMatch(normalizedLabelAlias, alias)'), "normalizeBridgePidValue should resolve monitor definitions by id, PID, and label aliases");
     check(functionBody.includes('bridgeComputedPidDefinitions[id]'), "normalizeBridgePidValue should preserve computed bridge PID definitions");
-    check(functionBody.includes('const isUndecodedRaw = row.decoded === false;'), "normalizeBridgePidValue should preserve explicit undecoded raw rows");
+    check(functionBody.includes('const decodedAlias = pickDefined(row.decoded, row.is_decoded, row.isDecoded);') && functionBody.includes('const rawValueType = String(pickDefined(row.value_type, row.valueType, "")).trim().toLowerCase();') && functionBody.includes('rawValueType === "raw_hex"'), "normalizeBridgePidValue should preserve undecoded raw value aliases");
     check(functionBody.includes('row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue'), "normalizeBridgePidValue should accept value aliases");
     check(functionBody.includes('typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number"'), "normalizeBridgePidValue should infer text versus numeric values from raw value shape");
     check(functionBody.includes('if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;'), "normalizeBridgePidValue should reject non-finite numeric values unless they are raw undecoded values");
@@ -2410,8 +2410,8 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.829.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for nested readiness normalization");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.829.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.829.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.830.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for undecoded PID alias retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.830.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.830.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
@@ -2439,7 +2439,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "入れ子レディネス読取を正規化"'), "OBD core progress snapshot should show the latest readiness normalization milestone");
+check(appSource.includes('recentMilestone: "未換算PID別名をRAW保持"'), "OBD core progress snapshot should show the latest PID alias retention milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4998,6 +4998,25 @@ check(bridgePidSnapshot.monitorValues.find((item) => item.id === "fuel_system_st
 check(bridgePidSnapshot.monitorInsights.length > 0, "ブリッジPIDから相関ヒントを生成できません");
 check(bridgePidSnapshot.retainedRawText === false, "ブリッジPID変換が原文保持になっています");
 check(bridgePidSnapshot.livePidReadoutStatus === "reported" && bridgePidSnapshot.live_pid_readout_status === "reported", "ブリッジPID読取状態を取得済みとして保持できません");
+const bridgeRawPidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    monitor_values: [
+      { pid: "75", raw_value: "01 90", is_decoded: "false" },
+      { pid: "7A", raw_value: "00 64", value_type: "raw_hex" }
+    ]
+  }
+});
+const bridgeRawFreezeFrameAliasSnapshot = obd.normalizeFreezeFrameSnapshot({
+  freeze_frame_values: [
+    { pid: "75", raw_value: "01 90", isDecoded: "false" },
+    { pid: "7A", raw_value: "00 64", valueType: "raw_hex" }
+  ]
+});
+check(bridgeRawPidAliasSnapshot.monitorValues.length === 2 && bridgeRawPidAliasSnapshot.monitorValues.every((item) => item.decoded === false && item.valueType === "raw_hex") && bridgeRawPidAliasSnapshot.monitorValueSummary.undecodedRawCount === 2, "Bridge PID undecoded raw aliases were not retained");
+check(bridgeRawFreezeFrameAliasSnapshot.monitorValues.length === 2 && bridgeRawFreezeFrameAliasSnapshot.monitorValues.every((item) => item.decoded === false && item.valueType === "raw_hex") && bridgeRawFreezeFrameAliasSnapshot.monitorValueSummary.undecodedRawCount === 2, "Freeze-frame undecoded raw aliases were not retained");
 const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,

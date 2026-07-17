@@ -1349,7 +1349,11 @@
       || (normalizedLabelAlias ? monitorDefinitions.find((item) => item.aliases.some((alias) => isMonitorLabelMatch(normalizedLabelAlias, alias))) : null)
       || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
-    const isUndecodedRaw = row.decoded === false;
+    const decodedAlias = pickDefined(row.decoded, row.is_decoded, row.isDecoded);
+    const rawValueType = String(pickDefined(row.value_type, row.valueType, "")).trim().toLowerCase();
+    const isUndecodedRaw = decodedAlias === false
+      || ["false", "0", "no", "raw", "raw_hex", "undecoded"].includes(String(decodedAlias ?? "").trim().toLowerCase())
+      || rawValueType === "raw_hex";
     const rawValue = row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null;
     const valueType = definition?.valueType || row.value_type || row.valueType || (typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number");
     const parsedValue = valueType === "boolean" ? rawValue === true : valueType === "text" || isUndecodedRaw ? String(rawValue ?? "").slice(0, 160) : Number(rawValue);
