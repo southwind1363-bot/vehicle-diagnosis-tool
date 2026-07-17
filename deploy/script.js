@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial接続時のVCI識別・セッション分離",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.842.0";
+const APP_VERSION = "2.843.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -426,6 +426,7 @@ const obdDevLockButton = document.querySelector("#obdDevLockButton");
 const obdDevModeBadge = document.querySelector("#obdDevModeBadge");
 const obdDevControls = document.querySelector("#obdDevControls");
 const obdDevIdentifyButton = document.querySelector("#obdDevIdentifyButton");
+const obdDevCoreScanButton = document.querySelector("#obdDevCoreScanButton");
 const obdDevReadDtcButton = document.querySelector("#obdDevReadDtcButton");
 const obdDevReadFreezeFrameButton = document.querySelector("#obdDevReadFreezeFrameButton");
 const obdDevReadReadinessButton = document.querySelector("#obdDevReadReadinessButton");
@@ -498,6 +499,7 @@ const obdDevSession = {
   readLoopActive: false,
   readInProgress: false,
   initializing: false,
+  coreScanInProgress: false,
   lastRawText: "",
   connectedAt: null,
   scanSessionId: null,
@@ -626,6 +628,7 @@ obdDevUnlockButton.addEventListener("click", unlockObdDeveloperMode);
 obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
 obdDevConnectButton.addEventListener("click", handleObdPrimaryAction);
 obdDevIdentifyButton.addEventListener("click", identifyObdDeveloperVci);
+obdDevCoreScanButton.addEventListener("click", readObdDeveloperCoreScan);
 obdDevReadDtcButton.addEventListener("click", readObdDeveloperDtc);
 obdDevReadFreezeFrameButton.addEventListener("click", readObdDeveloperFreezeFrame);
 obdDevReadReadinessButton.addEventListener("click", readObdDeveloperReadiness);
@@ -4060,7 +4063,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   const selectedInterfaceId = resolveObdInterfaceId(capability);
   const primaryActionNeedsSerial = selectedInterfaceId === "user-vci-elm327";
   const readBusy = obdDevSession.readInProgress === true;
-  const serialBusy = readBusy || obdDevSession.initializing === true;
+  const serialBusy = readBusy || obdDevSession.initializing === true || obdDevSession.coreScanInProgress === true;
 
   obdDevModeBadge.textContent = unlocked ? "詳細有効" : "ロック中";
   obdDevControls.hidden = !unlocked;
@@ -4068,6 +4071,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevConnectButton.disabled = !unlocked || connected || (primaryActionNeedsSerial && !serialReady);
   obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady });
   obdDevIdentifyButton.disabled = !unlocked || !connected || serialBusy;
+  obdDevCoreScanButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadDtcButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadFreezeFrameButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadReadinessButton.disabled = !unlocked || !connected || serialBusy;
@@ -4311,6 +4315,29 @@ function buildWebSerialAdapterIdentity(commandResponses = []) {
 
 async function readObdDeveloperDtc() {
   await runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
+}
+
+async function readObdDeveloperCoreScan() {
+  if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
+  obdDevSession.coreScanInProgress = true;
+  renderObdDeveloperGate();
+  const readSteps = [
+    readObdDeveloperDtc,
+    readObdDeveloperFreezeFrame,
+    readObdDeveloperReadiness,
+    readObdDeveloperEcuInfo,
+    readObdDeveloperOnboardMonitor,
+    readObdDeveloperLiveSnapshot
+  ];
+  try {
+    for (const readStep of readSteps) {
+      if (!obdDevSession.port) break;
+      await readStep();
+    }
+  } finally {
+    obdDevSession.coreScanInProgress = false;
+    renderObdDeveloperGate();
+  }
 }
 
 async function readObdDeveloperFreezeFrame() {
