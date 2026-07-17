@@ -766,14 +766,21 @@
     return input?.blocked === true || input?.isBlocked === true || input?.is_blocked === true;
   }
 
-  function preserveExplicitReadoutBlock(snapshot = {}, input = {}, statusKeys = []) {
-    if (!hasExplicitReadoutBlock(input)) return snapshot;
-    return statusKeys.reduce((result, key) => ({ ...result, [key]: "blocked" }), {
+  function getExplicitReadoutFailureStatus(input = {}) {
+    if (hasExplicitReadoutBlock(input)) return "blocked";
+    return input?.ok === false ? "unparsed" : null;
+  }
+
+  function preserveExplicitReadoutFailure(snapshot = {}, input = {}, statusKeys = []) {
+    const failureStatus = getExplicitReadoutFailureStatus(input);
+    if (!failureStatus) return snapshot;
+    const blocked = failureStatus === "blocked";
+    return statusKeys.reduce((result, key) => ({ ...result, [key]: failureStatus }), {
       ...(snapshot && typeof snapshot === "object" ? snapshot : {}),
       ok: false,
-      blocked: true,
-      isBlocked: true,
-      is_blocked: true,
+      blocked,
+      isBlocked: blocked,
+      is_blocked: blocked,
       wouldTransmit: false,
       would_transmit: false
     });
@@ -1392,6 +1399,13 @@
     const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfoResponse || input.ecu_info_response || {};
     const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitorResponse || input.onboard_monitor_response || {};
     const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPidSnapshot || input.supported_pid_snapshot || input.supportedPidResponse || input.supported_pid_response || {};
+    const dtcSnapshotSafetyInput = input.dtcSnapshotSafetyInput || input.dtc_snapshot_safety_input || dtcSnapshotInput;
+    const livePidSnapshotSafetyInput = input.livePidSnapshotSafetyInput || input.live_pid_snapshot_safety_input || livePidSnapshotInput;
+    const freezeFrameSnapshotSafetyInput = input.freezeFrameSnapshotSafetyInput || input.freeze_frame_snapshot_safety_input || freezeFrameSnapshotInput;
+    const readinessSnapshotSafetyInput = input.readinessSnapshotSafetyInput || input.readiness_snapshot_safety_input || readinessSnapshotInput;
+    const ecuInfoSnapshotSafetyInput = input.ecuInfoSnapshotSafetyInput || input.ecu_info_snapshot_safety_input || ecuInfoSnapshotInput;
+    const onboardMonitorSnapshotSafetyInput = input.onboardMonitorSnapshotSafetyInput || input.onboard_monitor_snapshot_safety_input || onboardMonitorSnapshotInput;
+    const supportedPidMatrixSafetyInput = input.supportedPidMatrixSafetyInput || input.supported_pid_matrix_safety_input || supportedPidMatrixInput;
     const hasConnectionStatusInput = hasObjectContent(connectionStatusInput);
     const hasAdapterIdentityInput = hasObjectContent(adapterIdentityInput);
     const hasDtcSnapshotInput = hasObjectContent(dtcSnapshotInput);
@@ -1466,9 +1480,10 @@
       && !snapshot?.capturedAt
       && !snapshot?.captured_at
       && !(Array.isArray(snapshot?.[key]) && snapshot[key].length > 0);
-    const isUnavailableReadout = (snapshot, readoutStatus) => snapshot?.blocked === true
+    const isUnavailableReadout = (snapshot, readoutStatus, input = {}) => snapshot?.blocked === true
       || snapshot?.isBlocked === true
       || snapshot?.is_blocked === true
+      || Boolean(getExplicitReadoutFailureStatus(input))
       || ["unparsed", "blocked"].includes(String(readoutStatus || "").trim().toLowerCase());
     const items = [
       ...(includeInfrastructure ? [
@@ -1493,28 +1508,28 @@
       ] : []),
       {
         id: "dtc_snapshot",
-        responseUnavailable: isUnavailableReadout(dtcSnapshot, dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status),
+        responseUnavailable: isUnavailableReadout(dtcSnapshot, dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status, dtcSnapshotSafetyInput),
         label: "DTC",
         available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && !isUnknownWithoutEvidence(dtcSnapshot, "codes", dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes)),
         count: Array.isArray(dtcSnapshot?.codes) ? dtcSnapshot.codes.length : 0
       },
       {
         id: "live_pid_snapshot",
-        responseUnavailable: isUnavailableReadout(livePidSnapshot, livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status),
+        responseUnavailable: isUnavailableReadout(livePidSnapshot, livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status, livePidSnapshotSafetyInput),
         label: "ライブPID",
         available: !["unparsed", "blocked"].includes(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status) && !isUnknownWithoutEvidence(livePidSnapshot, "monitorValues", livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status) && (livePidSnapshot?.blocked === false || Array.isArray(livePidSnapshot?.monitorValues)),
         count: Array.isArray(livePidSnapshot?.monitorValues) ? livePidSnapshot.monitorValues.length : 0
       },
       {
         id: "freeze_frame_snapshot",
-        responseUnavailable: isUnavailableReadout(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status),
+        responseUnavailable: isUnavailableReadout(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, freezeFrameSnapshotSafetyInput),
         label: "フリーズフレーム",
         available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues)),
         count: Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0
       },
       {
         id: "readiness_snapshot",
-        responseUnavailable: isUnavailableReadout(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status),
+        responseUnavailable: isUnavailableReadout(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, readinessSnapshotSafetyInput),
         label: "レディネス",
         available: ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status) || isUnknownWithoutEvidence(readinessSnapshot, "monitors", readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
           ? false
@@ -1523,7 +1538,7 @@
       },
       {
         id: "ecu_info_snapshot",
-        responseUnavailable: isUnavailableReadout(ecuInfoSnapshot, ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status),
+        responseUnavailable: isUnavailableReadout(ecuInfoSnapshot, ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, ecuInfoSnapshotSafetyInput),
         label: "ECU情報",
         available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status) || isUnknownWithoutEvidence(ecuInfoSnapshot, "items", ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
           ? false
@@ -1532,7 +1547,7 @@
       },
       {
         id: "onboard_monitor_snapshot",
-        responseUnavailable: isUnavailableReadout(onboardMonitorSnapshot, onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status),
+        responseUnavailable: isUnavailableReadout(onboardMonitorSnapshot, onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status, onboardMonitorSnapshotSafetyInput),
         label: "Mode06",
         available: ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status) || isUnknownWithoutEvidence(onboardMonitorSnapshot, "tests", onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
           ? false
@@ -1541,7 +1556,7 @@
       },
       {
         id: "supported_pid_matrix",
-        responseUnavailable: isUnavailableReadout(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status),
+        responseUnavailable: isUnavailableReadout(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status, supportedPidMatrixSafetyInput),
         label: "対応PID",
         available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
         count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : 0
@@ -2983,12 +2998,19 @@
       vciDevices: vciList.devices,
       adapterIdentity,
       dtcSnapshot,
+      dtcSnapshotSafetyInput: dtcSnapshotInput,
       livePidSnapshot,
+      livePidSnapshotSafetyInput: livePidSnapshotInput,
       freezeFrameSnapshot,
+      freezeFrameSnapshotSafetyInput: freezeFrameSnapshotInput,
       readinessSnapshot,
+      readinessSnapshotSafetyInput: readinessSnapshotInput,
       ecuInfoSnapshot,
+      ecuInfoSnapshotSafetyInput: ecuInfoSnapshotInput,
       onboardMonitorSnapshot,
-      supportedPidMatrix
+      onboardMonitorSnapshotSafetyInput: onboardMonitorSnapshotInput,
+      supportedPidMatrix,
+      supportedPidMatrixSafetyInput: supportedPidMatrixInput
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
@@ -13646,7 +13668,7 @@
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
-    const dtcSnapshot = preserveExplicitReadoutBlock(withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion
+    const dtcSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion
       ? dtcSnapshotInput
       : hasTypedDtcSnapshotInput
         ? mergeDtcSnapshots(
@@ -13664,7 +13686,7 @@
           }
           : livePidSnapshotInput)
       : livePidSnapshotInput;
-    const livePidSnapshot = preserveExplicitReadoutBlock(livePidSnapshotInput?.monitorValues
+    const livePidSnapshot = preserveExplicitReadoutFailure(livePidSnapshotInput?.monitorValues
       ? livePidSnapshotInput
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
@@ -13714,28 +13736,28 @@
           }
           : ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput;
-    const freezeFrameSnapshot = preserveExplicitReadoutBlock(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
+    const freezeFrameSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)), freezeFrameSnapshotInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
-    const readinessSnapshot = preserveExplicitReadoutBlock(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
+    const readinessSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSnapshotInput, ["readinessReadoutStatus", "readiness_readout_status"]);
-    const onboardMonitorSnapshot = preserveExplicitReadoutBlock(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
+    const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
         : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSnapshotInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
     const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput));
-    const ecuInfoSnapshot = preserveExplicitReadoutBlock(withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
+    const ecuInfoSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? ecuInfoSnapshotInput
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
         : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSnapshotInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
-    const supportedPidMatrix = preserveExplicitReadoutBlock(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
+    const supportedPidMatrix = preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
@@ -13798,12 +13820,19 @@
       vciDevices: vciList.devices,
       adapterIdentity,
       dtcSnapshot,
+      dtcSnapshotSafetyInput: dtcSnapshotInput,
       livePidSnapshot,
+      livePidSnapshotSafetyInput: livePidSnapshotInput,
       freezeFrameSnapshot,
+      freezeFrameSnapshotSafetyInput: freezeFrameSnapshotInput,
       readinessSnapshot,
+      readinessSnapshotSafetyInput: readinessSnapshotInput,
       ecuInfoSnapshot,
+      ecuInfoSnapshotSafetyInput: ecuInfoSnapshotInput,
       onboardMonitorSnapshot,
-      supportedPidMatrix
+      onboardMonitorSnapshotSafetyInput: onboardMonitorSnapshotInput,
+      supportedPidMatrix,
+      supportedPidMatrixSafetyInput: supportedPidMatrixInput
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
