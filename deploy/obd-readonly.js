@@ -5888,6 +5888,7 @@
     const readoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
     const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
+    const dtcStatusSummary = normalizeObject("dtcStatusSummary", "dtc_status_summary");
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
     const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
@@ -5964,6 +5965,8 @@
       readout_request_plan_summary: readoutRequestPlanSummary,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      dtcStatusSummary,
+      dtc_status_summary: dtcStatusSummary,
       nextPendingReadoutId: pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutIds[0], null),
       next_pending_readout_id: pickDefined(summary.next_pending_readout_id, summary.nextPendingReadoutId, pendingReadoutIds[0], null),
       nextPendingReadoutState: summary.nextPendingReadoutState || summary.next_pending_readout_state || null,
@@ -6070,6 +6073,7 @@
     const blockingWarningsChecklist = summary.blockingWarningsChecklist || summary.blocking_warnings_checklist || null;
     const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
+    const dtcStatusSummary = summary.dtcStatusSummary || summary.dtc_status_summary || {};
     const vehicleApplicabilityChecklist = summary.vehicleApplicabilityChecklist || summary.vehicle_applicability_checklist || null;
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || {};
     const vehicleApplicabilityEvidenceSummary = summary.vehicleApplicabilityEvidenceSummary
@@ -6172,6 +6176,8 @@
       readout_quality_checklist: readoutQualityChecklist,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      dtcStatusSummary,
+      dtc_status_summary: dtcStatusSummary,
       readoutQualityReviewRequired: pickDefined(summary.readoutQualityReviewRequired, summary.readout_quality_review_required, false) === true,
       readout_quality_review_required: pickDefined(summary.readout_quality_review_required, summary.readoutQualityReviewRequired, false) === true,
       readoutQualityIssueCount: toCount("readoutQualityIssueCount", "readout_quality_issue_count", readoutQualityIssueIds.length),
