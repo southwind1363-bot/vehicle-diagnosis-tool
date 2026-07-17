@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "未換算PID別名をRAW保持",
+  recentMilestone: "Web Serialコア読取を拡張",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.830.0";
+const APP_VERSION = "2.831.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -427,7 +427,11 @@ const obdDevModeBadge = document.querySelector("#obdDevModeBadge");
 const obdDevControls = document.querySelector("#obdDevControls");
 const obdDevIdentifyButton = document.querySelector("#obdDevIdentifyButton");
 const obdDevReadDtcButton = document.querySelector("#obdDevReadDtcButton");
+const obdDevReadFreezeFrameButton = document.querySelector("#obdDevReadFreezeFrameButton");
+const obdDevReadReadinessButton = document.querySelector("#obdDevReadReadinessButton");
 const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
+const obdDevReadEcuInfoButton = document.querySelector("#obdDevReadEcuInfoButton");
+const obdDevReadOnboardMonitorButton = document.querySelector("#obdDevReadOnboardMonitorButton");
 const obdDevBridgeStatusButton = document.querySelector("#obdDevBridgeStatusButton");
 const obdDevBridgeVciButton = document.querySelector("#obdDevBridgeVciButton");
 const obdDevBridgeDtcButton = document.querySelector("#obdDevBridgeDtcButton");
@@ -465,12 +469,12 @@ const tabButtons = document.querySelectorAll("[data-tab-target]");
 
 const OBD_NEXT_READOUT_ACTIONS = Object.freeze({
   dtc_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeDtcButton : obdDevReadDtcButton), label: "DTC読取" }),
-  freeze_frame_snapshot: Object.freeze({ button: () => obdDevBridgeFreezeFrameButton, label: "フリーズフレーム読取" }),
-  readiness_snapshot: Object.freeze({ button: () => obdDevBridgeLiveButton, label: "ライブデータ/レディネス読取" }),
-  ecu_info_snapshot: Object.freeze({ button: () => obdDevBridgeEcuInfoButton, label: "ECU情報読取" }),
+  freeze_frame_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeFreezeFrameButton : obdDevReadFreezeFrameButton), label: "フリーズフレーム読取" }),
+  readiness_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeLiveButton : obdDevReadReadinessButton), label: "ライブデータ/レディネス読取" }),
+  ecu_info_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeEcuInfoButton : obdDevReadEcuInfoButton), label: "ECU情報読取" }),
   live_pid_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeLiveButton : obdDevSnapshotButton), label: "ライブデータ読取" }),
-  supported_pid_matrix: Object.freeze({ button: () => obdDevBridgeSupportedPidButton, label: "対応PID読取" }),
-  onboard_monitor_snapshot: Object.freeze({ button: () => obdDevBridgeMonitorButton, label: "Mode06/監視結果読取" }),
+  supported_pid_matrix: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeSupportedPidButton : obdDevSnapshotButton), label: "対応PID読取" }),
+  onboard_monitor_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeMonitorButton : obdDevReadOnboardMonitorButton), label: "Mode06/監視結果読取" }),
   connection_status: Object.freeze({ button: () => obdDevBridgeStatusButton, label: "接続状態確認" }),
   vci_devices: Object.freeze({ button: () => obdDevBridgeVciButton, label: "VCI一覧読取" }),
   adapter_identity: Object.freeze({ button: () => obdDevIdentifyButton, label: "アダプター確認" })
@@ -620,7 +624,11 @@ obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
 obdDevConnectButton.addEventListener("click", handleObdPrimaryAction);
 obdDevIdentifyButton.addEventListener("click", identifyObdDeveloperVci);
 obdDevReadDtcButton.addEventListener("click", readObdDeveloperDtc);
+obdDevReadFreezeFrameButton.addEventListener("click", readObdDeveloperFreezeFrame);
+obdDevReadReadinessButton.addEventListener("click", readObdDeveloperReadiness);
 obdDevSnapshotButton.addEventListener("click", readObdDeveloperLiveSnapshot);
+obdDevReadEcuInfoButton.addEventListener("click", readObdDeveloperEcuInfo);
+obdDevReadOnboardMonitorButton.addEventListener("click", readObdDeveloperOnboardMonitor);
 obdDevBridgeStatusButton.addEventListener("click", startGeneralBridgeCheck);
 obdDevBridgeVciButton.addEventListener("click", listObdLocalBridgeVci);
 obdDevBridgeDtcButton.addEventListener("click", readObdLocalBridgeDtc);
@@ -4056,7 +4064,11 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady });
   obdDevIdentifyButton.disabled = !unlocked || !connected;
   obdDevReadDtcButton.disabled = !unlocked || !connected;
+  obdDevReadFreezeFrameButton.disabled = !unlocked || !connected;
+  obdDevReadReadinessButton.disabled = !unlocked || !connected;
   obdDevSnapshotButton.disabled = !unlocked || !connected;
+  obdDevReadEcuInfoButton.disabled = !unlocked || !connected;
+  obdDevReadOnboardMonitorButton.disabled = !unlocked || !connected;
   obdDevBridgeStatusButton.disabled = !unlocked;
   obdDevBridgeVciButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
@@ -4253,7 +4265,23 @@ async function identifyObdDeveloperVci() {
 }
 
 async function readObdDeveloperDtc() {
-  await runObdDeveloperRead("DTC読取", ["03", "07"]);
+  await runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
+}
+
+async function readObdDeveloperFreezeFrame() {
+  await runObdDeveloperRead("フリーズフレーム読取", ["0202"]);
+}
+
+async function readObdDeveloperReadiness() {
+  await runObdDeveloperRead("レディネス読取", ["0101"]);
+}
+
+async function readObdDeveloperEcuInfo() {
+  await runObdDeveloperRead("ECU情報読取", ["0900", "0904", "0906", "090A"]);
+}
+
+async function readObdDeveloperOnboardMonitor() {
+  await runObdDeveloperRead("Mode06読取", ["06"]);
 }
 
 async function readObdDeveloperPermanentDtc() {
@@ -4494,7 +4522,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
 function isAllowedObdDeveloperCommand(command) {
   return [
     "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1",
-    "03", "07", "0A", "0100",
+    "03", "07", "0A", "0100", "0101", "0202", "06", "0900", "0904", "0906", "090A",
     ...obdDevSession.selectedPidList
   ].includes(command);
 }
