@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial初回トークン設定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.838.0";
+const APP_VERSION = "2.839.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -499,6 +499,7 @@ const obdDevSession = {
   readInProgress: false,
   lastRawText: "",
   connectedAt: null,
+  scanSessionId: null,
   bridgeEndpoint: null,
   bridgeStatus: null,
   bridgeVciList: null,
@@ -4220,6 +4221,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.readLoopActive = true;
     obdDevSession.lastRawText = "";
     obdDevSession.connectedAt = new Date().toISOString();
+    obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
     obdDevSession.lastSession = null;
     obdDevStatus.textContent = `VCI読取を開始しました。通信速度 ${baudRate}。`;
     readElmDeveloperLoop();
@@ -4569,7 +4571,7 @@ async function runObdDeveloperRead(label, commands) {
     if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
     const capturedAt = new Date().toISOString();
     const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
-      session_id: "web-serial-dev-readout",
+      session_id: obdDevSession.scanSessionId || "web-serial-dev-readout",
       protocol: "ELM327",
       started_at: obdDevSession.connectedAt || capturedAt,
       ended_at: capturedAt,
