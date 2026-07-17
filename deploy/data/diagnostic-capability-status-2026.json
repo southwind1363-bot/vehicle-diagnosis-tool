@@ -27,25 +27,27 @@
         "id":  "capability-live-data",
         "label":  "データモニター",
         "target_level":  "症状別に見るべき値を提示し、値の相関まで見る",
-        "current_status":  "基礎辞書あり",
-        "progress_percent":  42,
-        "current_basis":  "データモニター辞書165項目、貼り付け解析、フリーズフレーム、対応PID、ブリッジ取込モデル、nested session alias 吸収あり",
+        "current_status":  "時系列読取基盤あり",
+        "progress_percent":  50,
+        "current_basis":  "データモニター辞書165項目、貼り付け解析、フリーズフレーム、対応PID、ブリッジ取込モデル、nested session alias 吸収、read-only時系列履歴と前回比較あり",
         "done":  [
                      "主要PIDと拡張候補の辞書化",
                      "貼り付けデータから値を抽出",
                      "燃料補正、電圧、温度、MAPなどの相関ヒント生成",
                      "フリーズフレーム値と対応PIDを同一セッションへ保持",
-                     "bridge/session alias を吸収してライブデータ要約へ統合"
+                     "bridge/session alias を吸収してライブデータ要約へ統合",
+                     "読取済みライブPIDを最大60件の時刻付き履歴として保持し、同一PIDの前回比較を表示"
                  ],
         "missing":  [
                         "車種別基準値",
                         "測定条件別の正常範囲",
-                        "グラフ、時系列記録、症状再現時比較"
+                        "グラフ表示",
+                        "症状再現時比較の観察条件管理"
                     ],
         "next_build":  "症状別ワークフローに必要PID、観察条件、異常時の次点検を紐付ける。",
         "safety_gate":  "未対応PIDを推測補完しない",
         "source":  "ローカル検証集計と開発ロードマップ",
-        "source_date":  "2026-06-28",
+        "source_date":  "2026-07-17",
         "eta_target":  "2026-Q3 見込み"
     },
     {
