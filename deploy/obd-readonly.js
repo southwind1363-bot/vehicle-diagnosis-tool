@@ -156,6 +156,33 @@
     })
   ]);
 
+  const interfaceReadoutRoutePlan = Object.freeze([
+    Object.freeze({
+      interfaceId: "user-vci-thinkcar-bluetooth",
+      platform: "ios",
+      route: "app_export_import",
+      requiresDesktop: false,
+      currentAvailability: "対応iPhoneアプリと読取結果形式の実機確認待ち",
+      requiredBeforeReadout: Object.freeze(["正確なTHINKCAR機種と対応iPhoneアプリの確認", "アプリ側でDTC/フリーズフレーム/PID/ECU情報をread-only取得", "共有・貼付できる結果形式の確認", "識別情報を保存前にマスク", "取込結果を診断セッションへ正規化"])
+    }),
+    Object.freeze({
+      interfaceId: "user-vci-elm327",
+      platform: "ios",
+      route: "app_export_import",
+      requiresDesktop: false,
+      currentAvailability: "Bluetooth方式と対応iPhoneアプリの実機確認待ち",
+      requiredBeforeReadout: Object.freeze(["ELM327のBluetooth方式とiPhone対応アプリの確認", "アプリ側でMode 03/07/02/01のread-only結果を取得", "共有・貼付できる結果形式の確認", "AT初期化差分とタイムアウト停止をアプリ側で確認", "取込結果を診断セッションへ正規化"])
+    }),
+    Object.freeze({
+      interfaceId: "user-vci-techstream-j2534",
+      platform: "desktop",
+      route: "desktop_local_bridge",
+      requiresDesktop: true,
+      currentAvailability: "Windows側J2534 DLLとread-onlyローカルブリッジの実機確認待ち",
+      requiredBeforeReadout: Object.freeze(["VCI機種・J2534 DLL・Windows対応の確認", "対象車両・ECU・通信プロトコル適合の確認", "読取系APIだけを許可するローカルブリッジ境界の確認", "DTC/フリーズフレーム/PID/ECU情報の応答正規化", "変更系APIを遮断した実機読取確認"])
+    })
+  ]);
+
   const vehicleConnectionProfile = Object.freeze({
     interfaceType: "web-serial-obd-adapter",
     currentState: "safety-gated",
@@ -879,6 +906,47 @@
       wouldTransmit: false,
       would_transmit: false,
       reason: "モバイル経路の適用範囲を判定するだけで、このモデルからBluetooth接続や車両送信は開始しません。"
+    };
+  }
+
+  function getInterfaceReadoutRoutePlan() {
+    return interfaceReadoutRoutePlan.map((item) => ({
+      ...item,
+      requiredBeforeReadout: [...item.requiredBeforeReadout]
+    }));
+  }
+
+  function evaluateInterfaceReadoutRoute(input = {}) {
+    const interfaceId = String(input.interfaceId || input.interface_id || "");
+    const platform = String(input.platform || "").toLowerCase();
+    const route = interfaceReadoutRoutePlan.find((item) => item.interfaceId === interfaceId && item.platform === platform)
+      || interfaceReadoutRoutePlan.find((item) => item.interfaceId === interfaceId)
+      || null;
+    const requiredBeforeReadout = route
+      ? [...route.requiredBeforeReadout]
+      : ["インターフェース、端末、対応アプリまたはローカルブリッジの確認"];
+
+    return {
+      schemaVersion: "interface_readout_route_v1",
+      schema_version: "interface_readout_route_v1",
+      interfaceId: interfaceId || null,
+      interface_id: interfaceId || null,
+      platform: platform || null,
+      route: route?.route || "unconfirmed",
+      currentAvailability: route?.currentAvailability || "インターフェースと端末の組み合わせ確認待ち",
+      requiresDesktop: route?.requiresDesktop === true,
+      requires_desktop: route?.requiresDesktop === true,
+      requiredBeforeReadout,
+      required_before_readout: [...requiredBeforeReadout],
+      directBrowserReadoutEnabled: false,
+      direct_browser_readout_enabled: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      reason: "複数VCIの読取経路を端末別に分離し、実機確認前の接続・車両送信を有効化しません。"
     };
   }
 
@@ -15068,6 +15136,8 @@
     buildServiceOperationReadiness,
     getMobileReadoutTransportPlan,
     evaluateMobileReadoutTransport,
+    getInterfaceReadoutRoutePlan,
+    evaluateInterfaceReadoutRoute,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
