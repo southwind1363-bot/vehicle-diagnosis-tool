@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Web Serial基本読取の工程成否を明確化",
+  recentMilestone: "Web Serial途中失敗時の部分読取を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.845.0";
+const APP_VERSION = "2.846.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4605,46 +4605,53 @@ async function runObdDeveloperRead(label, commands) {
 
   obdDevSession.readInProgress = true;
   renderObdDeveloperGate();
+  const chunks = [];
+  const commandResponses = [];
   try {
     obdDevStatus.textContent = `${label}中です。`;
-    const chunks = [];
-    const commandResponses = [];
     for (const command of commands) {
       chunks.push(`>${command}`);
       const response = await sendElmDeveloperCommand(command, 3500);
       commandResponses.push({ command, response });
       chunks.push(["ATI", "AT@1"].includes(command) ? "[adapter identity response not retained]" : response);
     }
-    appendObdDeveloperLog(chunks.join("\n"));
-    const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
-    if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
-    const capturedAt = new Date().toISOString();
-    const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
-      session_id: obdDevSession.scanSessionId || "web-serial-dev-readout",
-      protocol: "ELM327",
-      started_at: obdDevSession.connectedAt || capturedAt,
-      ended_at: capturedAt,
-      captured_at: capturedAt
-    });
-    const session = obdDevSession.adapterIdentity
-      ? { ...scanSession, adapterIdentity: obdDevSession.adapterIdentity, adapter_identity: obdDevSession.adapterIdentity }
-      : scanSession;
-    obdDevSession.lastSession = session;
-    renderObdDeveloperReadout(session);
+    retainObdDeveloperReadout(commandResponses, chunks);
     obdDevStatus.textContent = `${label}が完了しました。取れた値だけ表示します。`;
     return true;
   } catch (error) {
     const message = error?.message || String(error);
     const timedOut = message.startsWith("elm_response_timeout:");
+    const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks));
     if (timedOut) await disconnectObdDeveloperVci();
     obdDevStatus.textContent = timedOut
-      ? `${label}の応答がタイムアウトしたため、安全に切断しました。`
-      : `${label}に失敗しました: ${message}`;
+      ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`
+      : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`;
     return false;
   } finally {
     obdDevSession.readInProgress = false;
     renderObdDeveloperGate();
   }
+}
+
+function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
+  if (!commandResponses.length) return null;
+  appendObdDeveloperLog(chunks.join("\n"));
+  const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
+  if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
+  const capturedAt = new Date().toISOString();
+  const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
+    session_id: obdDevSession.scanSessionId || "web-serial-dev-readout",
+    protocol: "ELM327",
+    started_at: obdDevSession.connectedAt || capturedAt,
+    ended_at: capturedAt,
+    captured_at: capturedAt
+  });
+  const session = obdDevSession.adapterIdentity
+    ? { ...scanSession, adapterIdentity: obdDevSession.adapterIdentity, adapter_identity: obdDevSession.adapterIdentity }
+    : scanSession;
+  obdDevSession.lastSession = session;
+  renderObdDeveloperReadout(session);
+  return session;
 }
 
 async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
