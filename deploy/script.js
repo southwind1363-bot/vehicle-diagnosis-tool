@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Web Serial標準ライブPID候補を拡張",
+  recentMilestone: "Web SerialフリーズフレームPID読取を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.850.0";
+const APP_VERSION = "2.851.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -511,7 +511,8 @@ const obdDevSession = {
   lastSession: null,
   previewMode: null,
   requestedInterfaceId: null,
-  selectedPidList: ["010C", "0105", "010F", "010D", "0104", "010B", "0110", "0111", "0106", "0107", "0142", "011C", "0151"]
+  selectedPidList: ["010C", "0105", "010F", "010D", "0104", "010B", "0110", "0111", "0106", "0107", "0142", "011C", "0151"],
+  freezeFramePidList: ["020C", "0205", "020F", "020D", "0204", "020B", "0210", "0211", "0206", "0207", "0242"]
 };
 
 appVersion.textContent = APP_VERSION;
@@ -4352,7 +4353,22 @@ async function readObdDeveloperCoreScan() {
 }
 
 async function readObdDeveloperFreezeFrame() {
-  return runObdDeveloperRead("フリーズフレーム読取", ["0202"]);
+  if (!await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"])) return false;
+  const triggerDtc = obdDevSession.lastSession?.freezeFrameSnapshot?.triggerDtc;
+  if (!triggerDtc) {
+    obdDevStatus.textContent = "フリーズフレーム起点DTCがないため、追加PID要求を送りませんでした。";
+    renderObdDeveloperGate();
+    return true;
+  }
+  if (!await readObdDeveloperSupportedPidMaps()) return false;
+  const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
+  const supportedCommands = obdDevSession.freezeFramePidList.filter((command) => supportedPids.has(command.slice(2)));
+  if (!supportedCommands.length) {
+    obdDevStatus.textContent = "対応PIDが確認できないため、フリーズフレーム値の追加要求を送りませんでした。";
+    renderObdDeveloperGate();
+    return true;
+  }
+  return runObdDeveloperRead("フリーズフレーム値読取", supportedCommands);
 }
 
 async function readObdDeveloperReadiness() {
@@ -4721,6 +4737,7 @@ function isAllowedObdDeveloperCommand(command) {
   return [
     "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1",
     "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0202", "06", "0900", "0904", "0906", "090A",
+    ...obdDevSession.freezeFramePidList,
     ...obdDevSession.selectedPidList
   ].includes(command);
 }
