@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Web Serial接続時のVCI識別・セッション分離",
+  recentMilestone: "Web Serial基本読取と未完了項目の集約",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.843.0";
+const APP_VERSION = "2.844.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4322,17 +4322,27 @@ async function readObdDeveloperCoreScan() {
   obdDevSession.coreScanInProgress = true;
   renderObdDeveloperGate();
   const readSteps = [
-    readObdDeveloperDtc,
-    readObdDeveloperFreezeFrame,
-    readObdDeveloperReadiness,
-    readObdDeveloperEcuInfo,
-    readObdDeveloperOnboardMonitor,
-    readObdDeveloperLiveSnapshot
+    { label: "DTC", read: readObdDeveloperDtc },
+    { label: "FF", read: readObdDeveloperFreezeFrame },
+    { label: "レディネス", read: readObdDeveloperReadiness },
+    { label: "ECU情報", read: readObdDeveloperEcuInfo },
+    { label: "Mode06", read: readObdDeveloperOnboardMonitor },
+    { label: "ライブデータ", read: readObdDeveloperLiveSnapshot }
   ];
+  const incompleteLabels = [];
   try {
     for (const readStep of readSteps) {
       if (!obdDevSession.port) break;
-      await readStep();
+      const sessionBeforeRead = obdDevSession.lastSession;
+      await readStep.read();
+      if (obdDevSession.port && obdDevSession.lastSession === sessionBeforeRead) incompleteLabels.push(readStep.label);
+    }
+    if (!obdDevSession.port) {
+      obdDevStatus.textContent = "基本読取を切断により停止しました。";
+    } else if (incompleteLabels.length) {
+      obdDevStatus.textContent = `基本読取完了: 未完了 ${incompleteLabels.join(" / ")}`;
+    } else {
+      obdDevStatus.textContent = "基本読取を完了しました。";
     }
   } finally {
     obdDevSession.coreScanInProgress = false;
