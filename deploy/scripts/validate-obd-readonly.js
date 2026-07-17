@@ -1685,10 +1685,10 @@ const textDtcSnapshotFunctionChecks = () => {
   if (textDtcSnapshotFunctionSource) {
     const functionBody = textDtcSnapshotFunctionSource[0];
     check(functionBody.includes('const lines = String(value || "").split(/\\r?\\n/);'), "extractTextDtcSnapshot should process text line by line");
-    check(functionBody.includes('let currentStatus = "stored";'), "extractTextDtcSnapshot should default text-only DTC status to stored");
-    check(functionBody.includes('if (/\\bpending\\b/.test(normalized)) currentStatus = "pending";'), "extractTextDtcSnapshot should switch to pending status from headings");
-    check(functionBody.includes('else if (/\\bpermanent\\b/.test(normalized)) currentStatus = "permanent";'), "extractTextDtcSnapshot should switch to permanent status from headings");
-    check(functionBody.includes('else if (/\\bcurrent\\b|\\bstored\\b|\\bconfirmed\\b|\\bhistory\\b|\\bdtc(?:s)?\\b|\\bcodes?\\b/.test(normalized)) currentStatus = "stored";'), "extractTextDtcSnapshot should map current, stored, confirmed, history, DTC, and code headings to stored");
+    check(functionBody.includes('let currentStatus = "unknown";'), "extractTextDtcSnapshot should leave unlabeled text-only DTC status unknown");
+    check(functionBody.includes('const resolveHeadingStatus = (text) => {') && functionBody.includes('保留') && functionBody.includes('永久'), "extractTextDtcSnapshot should recognize explicit English and Japanese DTC headings");
+    check(functionBody.includes('if (headingStatus) currentStatus = headingStatus;'), "extractTextDtcSnapshot should apply only explicit heading statuses");
+    check(functionBody.includes('if (!headingStatus) currentStatus = "unknown";'), "extractTextDtcSnapshot should prevent a DTC heading status from leaking into another section");
     check(functionBody.includes('const codes = extractDtcCodes(text);') && functionBody.includes('codes.forEach((code) => rows.push({ code, status: currentStatus }));'), "extractTextDtcSnapshot should attach current heading status to extracted DTC codes");
     check(functionBody.includes('source: "obd_text_status_headings"') && functionBody.includes('dtcs: rows'), "extractTextDtcSnapshot should normalize text-only DTC rows with an explicit source");
   }
@@ -2285,6 +2285,14 @@ const iphoneThinkcarImport = obd.analyzeScannerText("THINKCAR\nStored DTCs\nP042
 const iphoneElmImport = obd.analyzeScannerText("ELM327\nPending Codes\nP0171\nCoolant Temp: 88 C\nSTFT B1: 3.1 %");
 check(iphoneThinkcarImport.toolHints.includes("THINKCAR") && iphoneThinkcarImport.codes.includes("P0420") && iphoneThinkcarImport.monitorValues.some((item) => item.id === "engine_speed") && iphoneThinkcarImport.hadSensitiveIdentifier === true && iphoneThinkcarImport.retainedRawText === false, "iPhone THINKCARのread-only結果取込を安全に解析できません");
 check(iphoneElmImport.toolHints.includes("ELM327") && iphoneElmImport.codes.includes("P0171") && iphoneElmImport.monitorValues.some((item) => item.id === "coolant_temp") && iphoneElmImport.monitorValues.some((item) => item.id === "stft_b1") && iphoneElmImport.retainedRawText === false, "iPhone ELM327のread-only結果取込を安全に解析できません");
+check(iphoneThinkcarImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0420" && item.status === "stored"), "Scanner text import did not retain an explicit stored DTC heading");
+check(iphoneElmImport.dtc_snapshot?.dtcs.some((item) => item.code === "P0171" && item.status === "pending"), "Scanner text import did not retain an explicit pending DTC heading");
+const unknownHeadingDtcImport = obd.analyzeScannerText("P0300\nLive Data\nP0420");
+check(unknownHeadingDtcImport.dtcSnapshot?.dtcs.every((item) => item.status === "unknown"), "Unlabeled scanner text DTCs were incorrectly inferred as stored");
+const resetHeadingDtcImport = obd.analyzeScannerText("Permanent DTC\nP0440\nLive Data\nP0420");
+check(resetHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0440" && item.status === "permanent") && resetHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0420" && item.status === "unknown"), "Scanner DTC heading status leaked across a non-DTC section");
+const japaneseHeadingDtcImport = obd.analyzeScannerText("保存DTC\nP0171\n保留DTC\nP0300\n永久DTC\nP0420");
+check(japaneseHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0171" && item.status === "stored") && japaneseHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0300" && item.status === "pending") && japaneseHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0420" && item.status === "permanent"), "Scanner text import did not preserve explicit Japanese DTC headings");
 check(analysis.codes.join(",") === "P0171,P0300", "DTC抽出または重複除外が不正です");
 check(analysis.hadSensitiveIdentifier === true, "車台番号候補を検出できません");
 check(analysis.retainedRawText === false, "入力原文を保持する設定になっています");
@@ -2487,8 +2495,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.892.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner text session persistence");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.892.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.892.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.893.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for typed scanner DTC status import");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.893.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.893.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
 check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
@@ -14914,6 +14922,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2547");
+  console.log("OBD read-only safety checks: 2552");
   console.log("Errors: 0");
 }

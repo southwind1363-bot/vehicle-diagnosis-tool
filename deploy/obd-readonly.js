@@ -13844,16 +13844,24 @@
   function extractTextDtcSnapshot(value) {
     const lines = String(value || "").split(/\r?\n/);
     const rows = [];
-    let currentStatus = "stored";
+    let currentStatus = "unknown";
+    const resolveHeadingStatus = (text) => {
+      const normalized = String(text || "").toLowerCase();
+      if (/\b(?:pending|tentative)\b|保留/.test(normalized)) return "pending";
+      if (/\bpermanent\b|永久/.test(normalized)) return "permanent";
+      if (/\b(?:current|stored|confirmed|history|active)\b|(?:保存|現在|確定|履歴)\s*(?:dtc|コード|故障)/.test(normalized)) return "stored";
+      return null;
+    };
     lines.forEach((line) => {
       const text = String(line || "").trim();
       if (!text) return;
-      const normalized = text.toLowerCase();
-      if (/\bpending\b/.test(normalized)) currentStatus = "pending";
-      else if (/\bpermanent\b/.test(normalized)) currentStatus = "permanent";
-      else if (/\bcurrent\b|\bstored\b|\bconfirmed\b|\bhistory\b|\bdtc(?:s)?\b|\bcodes?\b/.test(normalized)) currentStatus = "stored";
       const codes = extractDtcCodes(text);
-      if (!codes.length) return;
+      const headingStatus = resolveHeadingStatus(text);
+      if (headingStatus) currentStatus = headingStatus;
+      if (!codes.length) {
+        if (!headingStatus) currentStatus = "unknown";
+        return;
+      }
       codes.forEach((code) => rows.push({ code, status: currentStatus }));
     });
     return normalizeDtcSnapshot({
@@ -15045,9 +15053,12 @@
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
     const monitorValues = extractMonitorValues(redacted);
+    const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
-      codes: extractDtcCodes(redacted),
+      codes: dtcSnapshot.codes,
+      dtcSnapshot,
+      dtc_snapshot: dtcSnapshot,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
