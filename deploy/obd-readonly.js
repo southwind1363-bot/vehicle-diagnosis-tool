@@ -1037,9 +1037,11 @@
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
-    const readoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
-      ? String(explicitReadoutStatus).trim().toLowerCase()
-      : bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown";
+    const readoutStatus = bridgeSafety.blocked
+      ? "blocked"
+      : ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
+        ? String(explicitReadoutStatus).trim().toLowerCase()
+        : bridgeSafety.ok ? "reported" : "unknown";
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
@@ -1096,7 +1098,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
       protocol: readBridgeProtocol(data),
-      supported_pid_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
+      supported_pid_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
       supported_pids: supportedPids
       }),
       intent: "read_supported_pids",
@@ -1133,7 +1135,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      freeze_frame_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
+      freeze_frame_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
       values: freezeFrameValues
       }),
@@ -1250,7 +1252,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      readiness_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
+      readiness_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
       monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
         const supported = (byte & supportedBit) !== 0;
@@ -1269,7 +1271,7 @@
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
         protocol: readBridgeProtocol(data),
-        ecu_info_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown"
+        ecu_info_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown"
       }),
       intent: "read_ecu_info",
       ok: bridgeSafety.ok,
@@ -1311,7 +1313,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      onboard_monitor_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
+      onboard_monitor_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
       tests
       }),
       intent: "read_onboard_monitor",
