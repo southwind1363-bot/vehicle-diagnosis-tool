@@ -1551,6 +1551,7 @@ const decodeSupportedPidResponseFunctionChecks = () => {
     check(functionBody.includes('const bitBytes = bytes.slice(index + 2, index + 6);'), "decodeSupportedPidResponse should use the four bitmap bytes after the base PID");
     check(functionBody.includes('for (let bit = 7; bit >= 0; bit--)') && functionBody.includes('basePid + byteIndex * 8 + (8 - bit)'), "decodeSupportedPidResponse should map supported PID bits in MSB order");
     check(functionBody.includes('supported_pids: [...new Set(supportedPids)]'), "decodeSupportedPidResponse should deduplicate supported PID ids");
+    check(functionBody.includes('const hasSupportedPidFrame = bytes.some((byte, index) => byte === 0x41 && isSupportedPidBase(bytes[index + 1]) && index + 5 < bytes.length);'), "decodeSupportedPidResponse should distinguish complete supported-PID bitmap frames");
   }
 };
 const supportedPidBaseFunctionChecks = () => {
@@ -2396,7 +2397,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.807.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for unparsed freeze-frame response handling");
+check(appSource.includes('const APP_VERSION = "2.808.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for unparsed supported-PID response handling");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC readout status");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
@@ -9960,6 +9961,7 @@ check(decodedSupportedPids.supportedPids.includes("04") && decodedSupportedPids.
 check(decodedSupportedPids.supportedPids.includes("20") && decodedSupportedPids.supportedPids.includes("21") && decodedSupportedPids.supportedPids.includes("40"), "複数レンジの対応PIDビットマップをデコードできません");
 check(decodedSupportedPids.supportedCount >= 4, "対応PIDマトリクスへ対応状態を反映できません");
 check(decodedSupportedPids.supported_pids.includes("40") && decodedSupportedPids.supported_count === decodedSupportedPids.supportedCount, "Decoded supported PID matrix did not expose snake_case aliases");
+check(decodedSupportedPids.supportedPidReadoutStatus === "reported" && obd.decodeSupportedPidResponse({ raw: "41" }).supported_pid_readout_status === "unparsed", "Supported PID decoder did not distinguish valid and incomplete bitmap responses");
 check(obd.buildSupportedPidMatrix({ obd_protocol: "ISO9141-2", supported_pids: ["0C"] }).protocol === "ISO9141-2", "Supported PID matrix did not preserve obd_protocol aliases");
 const ignoredNonBitmapPid = obd.decodeSupportedPidResponse({ raw: "41 0C 1A F8 41 05 7B" });
 check(ignoredNonBitmapPid.supportedPids.length === 0, "ライブPID応答を対応PIDビットマップとして誤読しています");

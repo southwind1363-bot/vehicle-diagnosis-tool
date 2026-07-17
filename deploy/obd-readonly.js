@@ -1462,7 +1462,7 @@
       {
         id: "supported_pid_matrix",
         label: "対応PID",
-        available: supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids),
+        available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
         count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : 0
       }
     ].map((item) => Object.freeze({
@@ -1664,7 +1664,9 @@
             ? onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || null
             : item.id === "freeze_frame_snapshot"
               ? freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || null
-              : null;
+              : item.id === "supported_pid_matrix"
+                ? supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || null
+                : null;
       const status = ["unparsed", "blocked"].includes(explicitReadoutStatus)
         ? "missing"
         : item.count > 0 ? "captured" : coverageItem?.status || "missing";
@@ -4127,6 +4129,8 @@
         || snapshot?.onboard_monitor_readout_status
         || snapshot?.freezeFrameReadoutStatus
         || snapshot?.freeze_frame_readout_status
+        || snapshot?.supportedPidReadoutStatus
+        || snapshot?.supported_pid_readout_status
       ))
       && (
         Boolean(snapshot?.capturedAt)
@@ -12194,6 +12198,7 @@
   function decodeSupportedPidResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const supportedPids = [];
+    const hasSupportedPidFrame = bytes.some((byte, index) => byte === 0x41 && isSupportedPidBase(bytes[index + 1]) && index + 5 < bytes.length);
     for (let index = 0; index + 5 < bytes.length; index++) {
       if (bytes[index] !== 0x41 || !Number.isInteger(bytes[index + 1])) continue;
       if (!isSupportedPidBase(bytes[index + 1])) continue;
@@ -12209,11 +12214,12 @@
       index += 5;
     }
     if (!supportedPids.length) {
-      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [] });
+      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [], supported_pid_readout_status: hasSupportedPidFrame ? "reported" : "unparsed" });
     }
     return buildSupportedPidMatrix({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
+      supported_pid_readout_status: "reported",
       supported_pids: [...new Set(supportedPids)]
     });
   }
@@ -13362,6 +13368,7 @@
     const supportedCount = items.filter((item) => item.supported).length;
     const unsupportedCount = items.filter((item) => !item.supported).length;
     const knownPidCount = items.length;
+    const readoutStatus = sourceInput.supportedPidReadoutStatus || sourceInput.supported_pid_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (supportedPids.length ? "reported" : "unknown");
 
     return {
       schemaVersion: "supported_pid_matrix_v1",
@@ -13378,6 +13385,8 @@
       unsupported_count: unsupportedCount,
       knownPidCount,
       known_pid_count: knownPidCount,
+      supportedPidReadoutStatus: readoutStatus,
+      supported_pid_readout_status: readoutStatus,
       items,
       retainedRawText: false,
       retained_raw_text: false
