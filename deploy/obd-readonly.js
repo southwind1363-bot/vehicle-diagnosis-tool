@@ -1183,7 +1183,8 @@
         ...data,
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
-        protocol: readBridgeProtocol(data)
+        protocol: readBridgeProtocol(data),
+        ecu_info_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown"
       }),
       intent: "read_ecu_info",
       ok: safety.ok,
@@ -1443,7 +1444,9 @@
       {
         id: "ecu_info_snapshot",
         label: "ECU情報",
-        available: ecuInfoSnapshot?.blocked === false || Array.isArray(ecuInfoSnapshot?.items),
+        available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
+          ? false
+          : ecuInfoSnapshot?.blocked === false || Array.isArray(ecuInfoSnapshot?.items),
         count: Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.itemCount || ecuInfoSnapshot.items.length : 0
       },
       {
@@ -1649,10 +1652,12 @@
     ];
     const items = definitions.map((item) => {
       const coverageItem = coverage.itemById?.[item.id] || null;
-      const readinessReadoutStatus = item.id === "readiness_snapshot"
+      const explicitReadoutStatus = item.id === "readiness_snapshot"
         ? readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null
-        : null;
-      const status = ["unparsed", "blocked"].includes(readinessReadoutStatus)
+        : item.id === "ecu_info_snapshot"
+          ? ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || null
+          : null;
+      const status = ["unparsed", "blocked"].includes(explicitReadoutStatus)
         ? "missing"
         : item.count > 0 ? "captured" : coverageItem?.status || "missing";
       return {
@@ -4105,7 +4110,12 @@
       || dtcSnapshot?.dtc_status_summary
       || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
     const isCapturedReadout = (snapshot, key) => (
-      !(["unparsed", "blocked"].includes(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status))
+      !(["unparsed", "blocked"].includes(
+        snapshot?.readinessReadoutStatus
+        || snapshot?.readiness_readout_status
+        || snapshot?.ecuInfoReadoutStatus
+        || snapshot?.ecu_info_readout_status
+      ))
       && (
         Boolean(snapshot?.capturedAt)
         || (Array.isArray(snapshot?.[key]) && snapshot[key].length > 0)
@@ -11797,6 +11807,17 @@
     const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured);
     const supportedInfoTypesItem = items.find((item) => item.id === "supported_info_types_00");
     const supportedInfoTypesSummary = decodeMode09SupportedInfoTypes(supportedInfoTypesItem?.value);
+    const explicitReadoutStatus = pickDefined(
+      sourceInput.ecuInfoReadoutStatus,
+      sourceInput.ecu_info_readout_status,
+      sourceInput.readoutStatus,
+      sourceInput.readout_status
+    );
+    const normalizedReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
+      ? String(explicitReadoutStatus).trim().toLowerCase()
+      : items.length > 0
+        ? "reported"
+        : "unknown";
     const keyItemSummary = {
       totalCount: keyItems.length,
       total_count: keyItems.length,
@@ -11832,6 +11853,8 @@
       support_info_types_captured: supportedInfoTypesCaptured,
       supportInfoTypesSummary: supportedInfoTypesSummary,
       support_info_types_summary: supportedInfoTypesSummary,
+      ecuInfoReadoutStatus: normalizedReadoutStatus,
+      ecu_info_readout_status: normalizedReadoutStatus,
       retainedRawText: false
     };
   }
@@ -12232,6 +12255,7 @@
   function decodeEcuInfoResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
+    const hasMode09Frame = bytes.some((byte, index) => byte === 0x49 && index + 2 < bytes.length);
 
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x49) continue;
@@ -12252,6 +12276,7 @@
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
+      ecu_info_readout_status: hasMode09Frame ? "reported" : "unparsed",
       values
     });
   }
