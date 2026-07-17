@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial燃料系状態と点火時期を読取候補へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.855.0";
+const APP_VERSION = "2.856.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1611,6 +1611,19 @@ function formatVehicleProfileLabel(profile, fallback = "") {
     return `${profile?.maker || ""} ${profile?.model || ""}`.trim();
   }
   return profile?.label || fallback || "";
+}
+
+function formatObdReportedProfile(profile, fallback = "") {
+  if (!profile || typeof profile !== "object") return fallback || "";
+  const obdStandard = profile.obdStandard || profile.obd_standard || "";
+  const fuelType = profile.fuelType || profile.fuel_type || "";
+  const reportedPidIds = Array.isArray(profile.reportedPidIds)
+    ? profile.reportedPidIds
+    : Array.isArray(profile.reported_pid_ids)
+      ? profile.reported_pid_ids
+      : [];
+  const evidence = reportedPidIds.length ? `PID ${reportedPidIds.join(", ")}` : "";
+  return [obdStandard && `OBD ${obdStandard}`, fuelType && `Fuel ${fuelType}`, evidence].filter(Boolean).join(" / ") || fallback || "";
 }
 
 function getTopNextReadoutCandidates(candidates, limit = 4) {
@@ -5680,6 +5693,7 @@ function renderObdBridgeSessionDetails(session = null) {
   const sessionVciDevices = session?.vciDevices || session?.vci_devices || session?.vciList?.devices || session?.vci_list?.devices || null;
   const sessionVehicleProfile = session?.vehicleProfile || session?.vehicle_profile || null;
   const sessionVehicleApplicability = session?.vehicleApplicability || session?.vehicle_applicability || null;
+  const sessionObdReportedProfile = session?.obdReportedProfile || session?.obd_reported_profile || null;
   const connectionStatus = sessionConnectionStatus
     ? { ...(obdDevSession.bridgeStatus || {}), ...sessionConnectionStatus }
     : obdDevSession.bridgeStatus;
@@ -6530,6 +6544,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
   const vehicleLabel = formatVehicleProfileLabel(sessionVehicleProfile, obdVehicleInput.value.trim() || NO_DATA) || NO_DATA;
+  const obdReportedProfileLabel = formatObdReportedProfile(sessionObdReportedProfile, NO_DATA) || NO_DATA;
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(sessionVehicleApplicability, NO_DATA) || NO_DATA;
   const vehicleApplicabilityEvidenceSummary = coreSessionStatus?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.evidenceSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.evidence_summary || null;
   const vehicleApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(vehicleApplicabilityEvidenceSummary, NO_DATA) || NO_DATA;
@@ -6632,6 +6647,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   ];
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
   values.splice(4, 0, ["読取実行", webSerialReadoutLabel]);
+  values.splice(5, 0, ["ECU報告プロファイル", obdReportedProfileLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
