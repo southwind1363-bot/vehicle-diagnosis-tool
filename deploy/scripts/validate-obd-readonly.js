@@ -10329,6 +10329,24 @@ const nestedReadinessAliasSnapshot = obd.normalizeReadinessSnapshot({
 });
 check(nestedReadinessAliasSnapshot.source === "bridge_import" && nestedReadinessAliasSnapshot.protocol === "ISO15765-4" && nestedReadinessAliasSnapshot.capturedAt === "2026-07-17T00:00:00Z", "normalizeReadinessSnapshot did not retain outer metadata for nested data input");
 check(nestedReadinessAliasSnapshot.milOn === false && nestedReadinessAliasSnapshot.monitorCount === 1 && nestedReadinessAliasSnapshot.incompleteCount === 1 && nestedReadinessAliasSnapshot.readinessReadoutStatus === "reported", "normalizeReadinessSnapshot did not normalize nested readiness data input");
+const nestedReadinessRoundTripSession = obd.buildDiagnosticScanSession({
+  readiness_snapshot: {
+    source_type: "bridge_import",
+    captured_at: "2026-07-17T00:00:00Z",
+    communication_protocol: "ISO15765-4",
+    data: {
+      milStatus: "off",
+      readiness_values: [
+        { monitor_id: "catalyst", is_supported: true, is_complete: false }
+      ]
+    }
+  }
+});
+const reimportedNestedReadinessRoundTripSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(nestedReadinessRoundTripSession)
+});
+check(nestedReadinessRoundTripSession.readinessSnapshot?.monitorCount === 1 && nestedReadinessRoundTripSession.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured", "Nested readiness data was not included in the diagnostic scan session");
+check(reimportedNestedReadinessRoundTripSession.readinessSnapshot?.source === "bridge_import" && reimportedNestedReadinessRoundTripSession.readinessSnapshot?.incompleteCount === 1 && reimportedNestedReadinessRoundTripSession.readinessSnapshot?.readinessReadoutStatus === "reported", "Nested readiness data was not preserved through read-only export and reimport");
 const normalizedReadinessPidValuesAliasSnapshot = obd.normalizeReadinessSnapshot({
   milStatus: "off",
   pid_values: [
