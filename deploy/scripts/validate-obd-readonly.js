@@ -6137,6 +6137,14 @@ const bridgeSummaryMissingSupportedTypeCandidates = obd.buildNextReadoutCandidat
   }
 );
 check(bridgeSummaryMissingSupportedTypeCandidates.find((item) => item.id === "ecu_info_snapshot")?.reason === "対応ECU情報不足のため再確認候補", "Next readout candidates did not explain missing supported ECU info types");
+const blockedDtcReadoutCandidates = obd.buildNextReadoutCandidates({
+  includeInfrastructure: false,
+  items: [
+    { id: "dtc_snapshot", label: "DTC", status: "blocked", available: false, count: 0 },
+    { id: "freeze_frame_snapshot", label: "Freeze frame", status: "missing", available: false, count: 0 }
+  ]
+}, { status: "matched" });
+check(blockedDtcReadoutCandidates.length === 1 && blockedDtcReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Next readout candidates should not treat blocked DTC readouts as retryable collection work");
 const scanSessionMissingSupportedTypePriority = obd.buildDiagnosticScanSession({
   session_id: "shop-test-missing-supported-type-priority",
   readout_coverage: {
