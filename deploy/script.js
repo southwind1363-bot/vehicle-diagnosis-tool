@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2513+件",
+  validationCheckLabel: "OBD安全検証 2515+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "DTC読取状態を診断セッション要約へ接続",
+  recentMilestone: "DTC読取状態を読取結果画面へ表示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.801.0";
+const APP_VERSION = "2.802.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4721,6 +4721,25 @@ function formatObdBridgeDtcStatusLabel(status = "unknown") {
   }[status] || status;
 }
 
+function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const readList = (camelKey, snakeKey) => Array.isArray(summary[camelKey])
+    ? summary[camelKey]
+    : Array.isArray(summary[snakeKey]) ? summary[snakeKey] : [];
+  const formatStatuses = (statuses) => statuses
+    .map((status) => formatObdBridgeDtcStatusLabel(status))
+    .filter(Boolean)
+    .join(" / ");
+  const reported = formatStatuses(readList("reportedStatuses", "reported_statuses"));
+  const empty = formatStatuses(readList("emptyStatuses", "empty_statuses"));
+  const unreported = formatStatuses(readList("unreportedStatuses", "unreported_statuses"));
+  const parts = [];
+  if (reported) parts.push(`取得 ${reported}`);
+  if (empty) parts.push(`空 ${empty}`);
+  if (unreported) parts.push(`未読取 ${unreported}`);
+  return parts.length ? parts.join(" / ") : fallback;
+}
+
 function formatObdBridgeCompositeValue(value, depth = 0) {
   if (value === null || value === undefined || value === "") return NO_DATA;
   if (Array.isArray(value)) {
@@ -6213,6 +6232,16 @@ function renderObdDeveloperSessionSummary(session = null) {
   const onboardMonitorSnapshot = session?.onboardMonitorSnapshot || session?.onboard_monitor_snapshot || null;
   const supportedPidMatrix = session?.supportedPidMatrix || session?.supported_pid_matrix || null;
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
+  const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary
+    || dtcSnapshot?.dtc_status_summary
+    || coreSessionStatus?.dtcStatusSummary
+    || coreSessionStatus?.dtc_status_summary
+    || session?.diagnosticFlowSummary?.dtcStatusSummary
+    || session?.diagnosticFlowSummary?.dtc_status_summary
+    || session?.diagnostic_flow_summary?.dtcStatusSummary
+    || session?.diagnostic_flow_summary?.dtc_status_summary
+    || null;
+  const dtcReadoutStatusLabel = formatObdDtcReadoutStatusSummary(dtcReadoutStatusSummary, NO_DATA);
   const coverage = getReadoutCoverageDisplay(session?.readoutCoverage || session?.readout_coverage);
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
@@ -6280,6 +6309,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["状態", connectionStatus?.displayStatus || NO_DATA],
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
+    ["DTC読取状態", dtcReadoutStatusLabel],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
