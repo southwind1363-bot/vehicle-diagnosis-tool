@@ -1102,17 +1102,42 @@
       .map((sample) => {
         const item = sample && typeof sample === "object" ? sample : {};
         const snapshotInput = item.livePidSnapshot || item.live_pid_snapshot || item;
-        const snapshot = normalizeBridgeLivePidSnapshot(
-          Array.isArray(snapshotInput?.monitorValues)
-            ? {
-              ...snapshotInput,
-              monitor_values: snapshotInput.monitorValues,
-              ok: snapshotInput.ok ?? ((snapshotInput.livePidReadoutStatus || snapshotInput.live_pid_readout_status) === "reported"),
-              blocked: snapshotInput.blocked ?? false,
-              wouldTransmit: snapshotInput.wouldTransmit ?? snapshotInput.would_transmit ?? false
-            }
-            : snapshotInput
-        );
+        const retainedSample = Array.isArray(snapshotInput?.monitorValues)
+          && (snapshotInput.livePidReadoutStatus || snapshotInput.live_pid_readout_status) === "reported"
+          && snapshotInput.blocked !== true
+          && snapshotInput.wouldTransmit !== true
+          && snapshotInput.would_transmit !== true;
+        const retainedMonitorValues = retainedSample
+          ? snapshotInput.monitorValues.map((row) => {
+            if (!row || typeof row !== "object" || !row.id) return null;
+            const value = row.value;
+            if (!(Number.isFinite(value) || (typeof value === "string" && value.trim()))) return null;
+            return {
+              id: String(row.id).slice(0, 80),
+              label: String(row.label || row.id).slice(0, 160),
+              value: typeof value === "string" ? value.slice(0, 160) : value,
+              unit: String(row.unit || "").slice(0, 40),
+              category: String(row.category || "").slice(0, 80),
+              valueType: row.valueType || row.value_type || (typeof value === "string" ? "text" : "number"),
+              service: row.service || null,
+              pid: row.pid || null,
+              scope: row.scope || null,
+              decoded: row.decoded !== false,
+              note: row.note ? String(row.note).slice(0, 160) : null
+            };
+          }).filter(Boolean)
+          : [];
+        const snapshot = retainedSample
+          ? {
+            protocol: snapshotInput.protocol || snapshotInput.obd_protocol || null,
+            capturedAt: snapshotInput.capturedAt || snapshotInput.captured_at || null,
+            monitorValues: retainedMonitorValues,
+            monitorValueSummary: resolveMonitorValueSummary(retainedMonitorValues, snapshotInput.monitorValueSummary || snapshotInput.monitor_value_summary || null),
+            livePidReadoutStatus: "reported",
+            blocked: false,
+            wouldTransmit: false
+          }
+          : normalizeBridgeLivePidSnapshot(snapshotInput);
         const capturedAt = item.capturedAt || item.captured_at || snapshot.capturedAt || snapshot.captured_at || null;
         if (snapshot.livePidReadoutStatus !== "reported" || snapshot.blocked || snapshot.wouldTransmit || !capturedAt || !snapshot.monitorValues.length) return null;
         return {
@@ -1148,6 +1173,59 @@
       would_transmit: false,
       retainedRawText: false,
       retained_raw_text: false
+    };
+  }
+
+  function buildLivePidTimelineSummary(input = {}) {
+    const timeline = normalizeLivePidTimeline(input);
+    const samples = timeline.samples;
+    const latestSample = samples.at(-1) || null;
+    const previousSample = samples.length > 1 ? samples.at(-2) : null;
+    const previousValuesById = new Map(
+      (previousSample?.monitorValues || [])
+        .filter((item) => item?.id && Number.isFinite(item?.value))
+        .map((item) => [item.id, item])
+    );
+    const changes = (latestSample?.monitorValues || [])
+      .filter((item) => item?.id && Number.isFinite(item?.value) && previousValuesById.has(item.id))
+      .map((item) => {
+        const previous = previousValuesById.get(item.id);
+        const delta = item.value - previous.value;
+        return {
+          id: item.id,
+          label: item.label || item.id,
+          unit: item.unit || previous.unit || "",
+          previousValue: previous.value,
+          previous_value: previous.value,
+          latestValue: item.value,
+          latest_value: item.value,
+          delta,
+          capturedAt: latestSample.capturedAt,
+          captured_at: latestSample.capturedAt,
+          previousCapturedAt: previousSample?.capturedAt || null,
+          previous_captured_at: previousSample?.capturedAt || null
+        };
+      })
+      .filter((item) => item.delta !== 0)
+      .slice(0, 8);
+    return {
+      schemaVersion: "live_pid_timeline_summary_v1",
+      schema_version: "live_pid_timeline_summary_v1",
+      sampleCount: timeline.sampleCount,
+      sample_count: timeline.sampleCount,
+      comparisonAvailable: Boolean(previousSample && latestSample),
+      comparison_available: Boolean(previousSample && latestSample),
+      previousCapturedAt: previousSample?.capturedAt || null,
+      previous_captured_at: previousSample?.capturedAt || null,
+      latestCapturedAt: latestSample?.capturedAt || null,
+      latest_captured_at: latestSample?.capturedAt || null,
+      changedValueCount: changes.length,
+      changed_value_count: changes.length,
+      changes,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
     };
   }
 
@@ -14031,6 +14109,7 @@
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput), livePidSnapshotInput, ["livePidReadoutStatus", "live_pid_readout_status"]);
     const livePidTimeline = normalizeLivePidTimeline(livePidTimelineInput);
+    const livePidTimelineSummary = buildLivePidTimelineSummary(livePidTimeline);
     const obdReportedProfile = buildObdReportedProfile(livePidSnapshot, getObdReportedProfileInput(sessionInput));
     const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
       ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
@@ -14365,6 +14444,8 @@
       live_pid_snapshot: livePidSnapshot,
       livePidTimeline,
       live_pid_timeline: livePidTimeline,
+      livePidTimelineSummary,
+      live_pid_timeline_summary: livePidTimelineSummary,
       supportedPidMatrix,
       supported_pid_matrix: supportedPidMatrix,
       readoutCoverage,
@@ -14832,6 +14913,7 @@
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
     normalizeLivePidTimeline,
+    buildLivePidTimelineSummary,
     normalizeBridgeSupportedPidSnapshot,
     normalizeBridgeFreezeFrameSnapshot,
     normalizeBridgeReadinessSnapshot,

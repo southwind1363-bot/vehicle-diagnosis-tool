@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.864.0";
+const APP_VERSION = "2.865.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4753,6 +4753,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
   const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({
     samples: [...obdDevSession.livePidTimeline, { livePidSnapshot: scanSession.livePidSnapshot }]
   });
+  const livePidTimelineSummary = window.ObdReadOnly.buildLivePidTimelineSummary(livePidTimeline);
   obdDevSession.livePidTimeline = livePidTimeline.samples;
   const session = {
     ...scanSession,
@@ -4760,7 +4761,9 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
     webSerialReadoutSummary,
     web_serial_readout_summary: webSerialReadoutSummary,
     livePidTimeline,
-    live_pid_timeline: livePidTimeline
+    live_pid_timeline: livePidTimeline,
+    livePidTimelineSummary,
+    live_pid_timeline_summary: livePidTimelineSummary
   };
   obdDevSession.lastSession = session;
   renderObdDeveloperReadout(session);
@@ -6552,6 +6555,12 @@ function renderObdDeveloperSessionSummary(session = null) {
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
   const livePidSnapshot = session?.livePidSnapshot || session?.live_pid_snapshot || null;
   const livePidTimeline = session?.livePidTimeline || session?.live_pid_timeline || null;
+  const livePidTimelineSummary = session?.livePidTimelineSummary || session?.live_pid_timeline_summary || null;
+  const livePidTimelineComparisonLabel = !livePidTimelineSummary?.comparisonAvailable
+    ? NO_DATA
+    : livePidTimelineSummary.changedValueCount
+      ? `${livePidTimelineSummary.changedValueCount}項目`
+      : "差分なし";
   const readinessSnapshot = session?.readinessSnapshot || session?.readiness_snapshot || null;
   const onboardMonitorSnapshot = session?.onboardMonitorSnapshot || session?.onboard_monitor_snapshot || null;
   const supportedPidMatrix = session?.supportedPidMatrix || session?.supported_pid_matrix || null;
@@ -6666,6 +6675,7 @@ function renderObdDeveloperSessionSummary(session = null) {
       : 0],
     ["ライブ値読取状態", livePidReadoutStatusLabel],
     ["ライブ履歴", livePidTimeline?.sampleCount ? `${livePidTimeline.sampleCount}回` : 0],
+    ["前回比較", livePidTimelineComparisonLabel],
     ["レディネス", readinessSnapshot?.monitorCount || readinessSnapshot?.knownMonitorCount
       ? formatObdBridgeReadinessSummary(readinessSnapshot)
       : 0],
