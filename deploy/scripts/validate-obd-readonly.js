@@ -88,6 +88,7 @@ const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverag
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missing_labels: normalizedMissingLabels\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
+const readoutInterfaceSnapshotFunctionSource = source.match(/function normalizeReadoutInterfaceSnapshot[\s\S]*?would_transmit: false\r?\n    \};\r?\n  \}/);
 const vehicleApplicabilityInputFunctionSource = source.match(/function getVehicleApplicabilityInput[\s\S]*?source\.applicability,\r?\n      null\r?\n    \);\r?\n  \}/);
 const vehicleProfileInputFunctionSource = source.match(/function getVehicleProfileInput[\s\S]*?source\.car_selection,\r?\n      source\.vehicle,\r?\n      source\.car,\r?\n      null\r?\n    \)\);\r?\n  \}/);
 const vehicleApplicabilityWarningsFunctionSource = source.match(/function appendVehicleApplicabilityWarnings[\s\S]*?vehicle_profile_manual"\);\r?\n    \}\r?\n  \}/);
@@ -2076,6 +2077,8 @@ const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
     const functionBody = diagnosticScanSessionFunctionSource[0];
+    check(Boolean(readoutInterfaceSnapshotFunctionSource), "normalizeReadoutInterfaceSnapshot is missing from obd-readonly.js");
+    check(functionBody.includes('readoutInterface: resolvedMetadata.readoutInterface,') && functionBody.includes('readout_interface: resolvedMetadata.readoutInterface,'), "buildDiagnosticScanSession should expose normalized readout interface aliases");
     check(functionBody.includes('const sessionInput = getDiagnosticSessionInput(input);') && functionBody.includes('const metadataOverrides = getSessionMetadataOverrides(sessionInput);'), "buildDiagnosticScanSession should normalize session input and metadata overrides first");
     check(functionBody.includes('source: sessionInput.source || sessionInput.source_type || "diagnostic_core",') && functionBody.includes('source_type: sessionInput.source_type || sessionInput.source || "diagnostic_core",'), "buildDiagnosticScanSession should emit source type aliases");
     check(functionBody.includes('obd_protocol: protocol,'), "buildDiagnosticScanSession should emit obd_protocol aliases");
@@ -2484,8 +2487,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.889.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for observed interface usage");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.889.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.889.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.891.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for readout interface session provenance");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.891.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.891.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
@@ -14864,11 +14867,36 @@ const scanSessionNestedWebSerialExecutionSummary = obd.buildDiagnosticScanSessio
   }
 });
 check(scanSessionNestedWebSerialExecutionSummary.webSerialReadoutSummary?.partial_count === 1 && scanSessionNestedWebSerialExecutionSummary.web_serial_readout_summary?.latest_attempt?.label === "Live PID", "Diagnostic scan session did not preserve nested Web Serial execution aliases");
+const readoutInterfaceSnapshot = obd.normalizeReadoutInterfaceSnapshot({
+  interface_id: "user-vci-thinkcar-bluetooth",
+  interface_label: "THINKCAR TCMa",
+  device_model: "TCMa",
+  readout_route: "app_export_import",
+  platform: "ios",
+  observed_use: "iPhone app read-only result import",
+  hardware_compatibility_confirmed: false,
+  serial_number: "do-not-retain",
+  activation_code: "do-not-retain"
+});
+check(readoutInterfaceSnapshot.interfaceId === "user-vci-thinkcar-bluetooth" && readoutInterfaceSnapshot.interface_label === "THINKCAR TCMa", "Readout interface normalization did not preserve safe identity aliases");
+check(readoutInterfaceSnapshot.route === "app_export_import" && readoutInterfaceSnapshot.hardwareCompatibilityConfirmed === false, "Readout interface normalization did not preserve route and compatibility state");
+check(readoutInterfaceSnapshot.readOnly === true && readoutInterfaceSnapshot.vehicleCommandEnabled === false && readoutInterfaceSnapshot.wouldTransmit === false, "Readout interface normalization did not force read-only safety flags");
+check(!Object.hasOwn(readoutInterfaceSnapshot, "serial_number") && !Object.hasOwn(readoutInterfaceSnapshot, "activation_code"), "Readout interface normalization retained prohibited device credentials");
+const readoutInterfaceSession = obd.buildDiagnosticScanSession({
+  readout_interface: readoutInterfaceSnapshot,
+  dtc_snapshot: { dtcs: [{ code: "P0300" }] }
+});
+check(readoutInterfaceSession.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && readoutInterfaceSession.readout_interface?.device_model === "TCMa", "Diagnostic scan session did not preserve normalized readout interface aliases");
+check(!JSON.stringify(readoutInterfaceSession).includes("do-not-retain"), "Diagnostic scan session retained prohibited device credentials");
+const readoutInterfaceExport = obd.buildBridgeSessionExportPayload(readoutInterfaceSession);
+check(readoutInterfaceExport.session?.readout_interface?.route === "app_export_import" && !JSON.stringify(readoutInterfaceExport).includes("do-not-retain"), "Bridge export did not retain only safe readout interface provenance");
+const reimportedReadoutInterfaceSession = obd.buildDiagnosticScanSession({ bridge_export_payload: readoutInterfaceExport });
+check(reimportedReadoutInterfaceSession.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && reimportedReadoutInterfaceSession.readout_interface?.vehicle_command_enabled === false, "Bridge import did not preserve safe readout interface provenance");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2536");
+  console.log("OBD read-only safety checks: 2544");
   console.log("Errors: 0");
 }

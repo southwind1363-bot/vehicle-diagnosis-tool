@@ -4333,6 +4333,8 @@
       obd_protocol: parts.obd_protocol || parts.protocol || null,
       vehicleProfile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      readoutInterface: resolvedMetadata.readoutInterface,
+      readout_interface: resolvedMetadata.readoutInterface,
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
@@ -4777,12 +4779,54 @@
     return {
       vehicleProfile: metadataOverrides.vehicleProfile || deriveVehicleProfileFromApplicability(vehicleApplicability),
       vehicleApplicability,
+      readoutInterface: normalizeReadoutInterfaceSnapshot(metadataOverrides.readoutInterface),
       toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
         || metadataOverrides.hadSensitiveIdentifier === true,
       sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
         ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
         : 0
+    };
+  }
+
+  function normalizeReadoutInterfaceSnapshot(input = null) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const text = (...values) => {
+      const value = values.find((item) => typeof item === "string" && item.trim());
+      return value ? value.trim().slice(0, 160) : null;
+    };
+    const interfaceId = text(source.interfaceId, source.interface_id, source.id);
+    const label = text(source.label, source.interfaceLabel, source.interface_label);
+    const deviceModel = text(source.deviceModel, source.device_model);
+    const route = text(source.route, source.readoutRoute, source.readout_route);
+    const platform = text(source.platform);
+    const observedUse = text(source.observedUse, source.observed_use);
+    const hardwareCompatibilityConfirmed = source.hardwareCompatibilityConfirmed === true
+      || source.hardware_compatibility_confirmed === true;
+    return {
+      schemaVersion: "readout_interface_v1",
+      schema_version: "readout_interface_v1",
+      interfaceId,
+      interface_id: interfaceId,
+      label,
+      interfaceLabel: label,
+      interface_label: label,
+      deviceModel,
+      device_model: deviceModel,
+      route,
+      readoutRoute: route,
+      readout_route: route,
+      platform,
+      observedUse,
+      observed_use: observedUse,
+      hardwareCompatibilityConfirmed,
+      hardware_compatibility_confirmed: hardwareCompatibilityConfirmed,
+      readOnly: true,
+      read_only: true,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
     };
   }
 
@@ -10424,6 +10468,7 @@
     return {
       vehicleProfile: getVehicleProfileInput(sessionInput),
       vehicleApplicability: getVehicleApplicabilityInput(sessionInput),
+      readoutInterface: normalizeReadoutInterfaceSnapshot(sessionInput.readoutInterface || sessionInput.readout_interface || null),
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
       webSerialReadoutSummary: normalizeWebSerialReadoutSummary(sessionInput.web_serial_readout_summary || sessionInput.webSerialReadoutSummary || null),
       nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,
@@ -10448,6 +10493,7 @@
     const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(
       getVehicleApplicabilityInput(summary) || {}
     );
+    const readoutInterface = normalizeReadoutInterfaceSnapshot(summary.readoutInterface || summary.readout_interface || null);
     const importClassificationInput = summary.importClassification || summary.import_classification;
     const importClassification = resolveImportClassification(importClassificationInput);
     const toolHints = mergeUniqueStrings(summary.toolHints, summary.tool_hints, importClassification?.toolHints, importClassification?.tool_hints);
@@ -10474,6 +10520,7 @@
       ? {
         vehicle_profile: vehicleProfile,
         vehicle_applicability: vehicleApplicability,
+        readout_interface: readoutInterface,
         import_classification: importClassification,
         tool_hints: toolHints,
         warnings,
@@ -10490,6 +10537,7 @@
       : {
         vehicleProfile,
         vehicleApplicability,
+        readoutInterface,
         importClassification,
         toolHints,
         warnings,
@@ -10862,6 +10910,7 @@
         protocol: summary.protocol || null,
         vehicle_profile: metadataFields.vehicle_profile || null,
         vehicle_applicability: metadataFields.vehicle_applicability,
+        readout_interface: metadataFields.readout_interface,
         obd_reported_profile: obdReportedProfile,
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: cloneBridgeArrayItems(summary.vciDevices),
@@ -10963,6 +11012,9 @@
       vehicleProfile: preserveNestedBridgeSessionMetadata
         ? nestedSessionMetadata.vehicleProfile || metadataFields.vehicleProfile
         : metadataFields.vehicleProfile,
+      readoutInterface: directSessionMetadata.readoutInterface
+        || (preserveNestedBridgeSessionMetadata ? nestedSessionMetadata.readoutInterface : null)
+        || metadataFields.readoutInterface,
       toolHints: preserveNestedBridgeSessionMetadata
         ? mergeUniqueStrings(metadataFields.toolHints, nestedSessionMetadata.toolHints)
         : metadataFields.toolHints,
@@ -11179,6 +11231,8 @@
       capturedAt: summary.capturedAt || null,
       vehicleProfile: metadataFields.vehicleProfile || null,
       vehicleApplicability: metadataFields.vehicleApplicability,
+      readoutInterface: bridgeSessionMetadataFields.readoutInterface,
+      readout_interface: bridgeSessionMetadataFields.readoutInterface,
       obdReportedProfile,
       obd_reported_profile: obdReportedProfile,
       codes,
@@ -11270,6 +11324,8 @@
         protocol: summary.protocol || null,
         vehicleProfile: bridgeSessionMetadataFields.vehicleProfile || null,
         vehicleApplicability: metadataFields.vehicleApplicability,
+        readoutInterface: bridgeSessionMetadataFields.readoutInterface,
+        readout_interface: bridgeSessionMetadataFields.readoutInterface,
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vciDevices: cloneBridgeArrayItems(summary.vciDevices),
         adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
@@ -14657,6 +14713,8 @@
       vehicle_profile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       vehicle_applicability: resolvedMetadata.vehicleApplicability,
+      readoutInterface: resolvedMetadata.readoutInterface,
+      readout_interface: resolvedMetadata.readoutInterface,
       obdReportedProfile,
       obd_reported_profile: obdReportedProfile,
       connectionStatus,
@@ -15170,6 +15228,7 @@
     buildReadoutCoverageSnapshot,
     normalizeReadoutCoverageSnapshot,
     normalizeVehicleApplicabilitySnapshot,
+    normalizeReadoutInterfaceSnapshot,
     normalizeObdReportedProfile,
     buildObdReportedProfile,
     buildNextReadoutCandidates,
