@@ -10105,6 +10105,8 @@ check(decodedReadiness.retainedRawText === false, "レディネスデコード�
 check(decodedReadiness.readinessReadoutStatus === "reported" && obd.decodeReadinessResponse({ raw: "41 01" }).readiness_readout_status === "unparsed", "Readiness decoder did not distinguish valid and incomplete raw responses");
 const unparsedReadinessSession = obd.buildDiagnosticScanSession({ readinessResponse: { raw: "41 01", captured_at: "2026-07-17T00:00:00Z" } });
 check(unparsedReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.status === "missing" && unparsedReadinessSession.coreSessionStatus?.readoutStateById?.readiness_snapshot?.status === "missing" && unparsedReadinessSession.vehicleCommandEnabled === false, "Unparsed readiness responses were incorrectly treated as empty completed readouts");
+const reimportedUnparsedReadinessSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedReadinessSession) });
+check(reimportedUnparsedReadinessSession.readinessSnapshot?.readiness_readout_status === "unparsed" && reimportedUnparsedReadinessSession.coreSessionStatus?.readoutStateById?.readiness_snapshot?.status === "missing" && reimportedUnparsedReadinessSession.vehicleCommandEnabled === false, "Saved unparsed readiness responses were not preserved through read-only reimport");
 const normalizedReadinessAliasSnapshot = obd.normalizeReadinessSnapshot({
   source_type: "bridge_import",
   communication_protocol: "ISO15765-4",
