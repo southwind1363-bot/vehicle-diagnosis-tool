@@ -2963,6 +2963,16 @@ const transmittingStringBooleanBridgeSnapshots = [
   { snapshot: obd.normalizeBridgeOnboardMonitorSnapshot({ ok: "true", blocked: "false", would_transmit: "true", data: { tests: [{ test_id: "01", component_id: "01", value: 1, min: 0, max: 2 }] } }), status: "onboardMonitorReadoutStatus" }
 ];
 check(transmittingStringBooleanBridgeSnapshots.every(({ snapshot, status }) => snapshot.blocked === true && snapshot.wouldTransmit === true && snapshot[status] === "blocked"), "Transmitting bridge readouts could override blocked status with reported data");
+const normalizedTransmittingBridgeSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: transmittingStringBooleanBridgeSnapshots[0].snapshot,
+  live_pid_snapshot: transmittingStringBooleanBridgeSnapshots[1].snapshot,
+  supported_pid_matrix: transmittingStringBooleanBridgeSnapshots[2].snapshot,
+  freeze_frame_snapshot: transmittingStringBooleanBridgeSnapshots[3].snapshot,
+  readiness_snapshot: transmittingStringBooleanBridgeSnapshots[4].snapshot,
+  ecu_info_snapshot: transmittingStringBooleanBridgeSnapshots[5].snapshot,
+  onboard_monitor_snapshot: transmittingStringBooleanBridgeSnapshots[6].snapshot
+});
+check(normalizedTransmittingBridgeSession.readoutCoverage?.missingCategories === 7 && normalizedTransmittingBridgeSession.coreReadoutInventorySummary?.totalValueCount === 0 && normalizedTransmittingBridgeSession.coreSessionStatus?.readyForAnalysis === false && normalizedTransmittingBridgeSession.vehicleCommandEnabled === false, "Blocked normalized bridge readouts leaked into diagnostic session coverage or analysis");
 const blockedRawPidWarningSession = obd.buildDiagnosticScanSession({
   live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ ok: false, blocked: true, data: { monitor_values: [{ pid: "0C", value: "01 90", decoded: false }] } })
 });
