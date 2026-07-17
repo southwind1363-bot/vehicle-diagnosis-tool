@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Web Serial実行履歴のJSON入出力を正規化",
+  recentMilestone: "Web Serial対応PID検出を標準全範囲へ拡張",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.848.0";
+const APP_VERSION = "2.849.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4401,7 +4401,7 @@ async function readObdDeveloperLiveSnapshot() {
 
 async function readObdDeveloperSupportedPidMaps() {
   if (!await runObdDeveloperRead("対応PID確認", ["0100"])) return false;
-  for (const basePid of ["20", "40"]) {
+  for (const basePid of ["20", "40", "60", "80", "A0", "C0", "E0"]) {
     const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
     if (!supportedPids.has(basePid)) break;
     if (!await runObdDeveloperRead("対応PID確認", [`01${basePid}`])) return false;
@@ -4720,7 +4720,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
 function isAllowedObdDeveloperCommand(command) {
   return [
     "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1",
-    "03", "07", "0A", "0100", "0101", "0120", "0140", "0202", "06", "0900", "0904", "0906", "090A",
+    "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0202", "06", "0900", "0904", "0906", "090A",
     ...obdDevSession.selectedPidList
   ].includes(command);
 }
