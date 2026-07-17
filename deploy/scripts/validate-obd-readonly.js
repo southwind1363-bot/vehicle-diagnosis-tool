@@ -3,6 +3,7 @@ import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8");
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventListener(\"submit\""));
 const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
 const syncVehicleInputSource = appSource.slice(appSource.indexOf("function syncVehicleInput()"), appSource.indexOf("function selectedVehicleYear()"));
@@ -2277,6 +2278,10 @@ check(obd?.policy?.connectionPreparationEnabled === true, "接続準備レイヤ
 const analysis = obd.analyzeScannerText("P0171 p0300 JTDKN3DU0A0123456 P0171");
 check(obd.analyzeScannerText("Toyota Techstream J2534 health check").toolHints.join(",") === "Techstream,J2534", "Scanner text tool hints were not detected");
 check(obd.analyzeScannerText("GTS CONSULT-III HDS IDS").toolHints.join(",") === "Techstream,CONSULT,HDS,IDS", "Expanded scanner tool hints were not detected");
+const iphoneThinkcarImport = obd.analyzeScannerText("THINKCAR\nStored DTCs\nP0420\nEngine RPM: 780 rpm\nControl Module Voltage: 14.2 V\nJTDKN3DU0A0123456");
+const iphoneElmImport = obd.analyzeScannerText("ELM327\nPending Codes\nP0171\nCoolant Temp: 88 C\nSTFT B1: 3.1 %");
+check(iphoneThinkcarImport.toolHints.includes("THINKCAR") && iphoneThinkcarImport.codes.includes("P0420") && iphoneThinkcarImport.monitorValues.some((item) => item.id === "engine_speed") && iphoneThinkcarImport.hadSensitiveIdentifier === true && iphoneThinkcarImport.retainedRawText === false, "iPhone THINKCARのread-only結果取込を安全に解析できません");
+check(iphoneElmImport.toolHints.includes("ELM327") && iphoneElmImport.codes.includes("P0171") && iphoneElmImport.monitorValues.some((item) => item.id === "coolant_temp") && iphoneElmImport.monitorValues.some((item) => item.id === "stft_b1") && iphoneElmImport.retainedRawText === false, "iPhone ELM327のread-only結果取込を安全に解析できません");
 check(analysis.codes.join(",") === "P0171,P0300", "DTC抽出または重複除外が不正です");
 check(analysis.hadSensitiveIdentifier === true, "車台番号候補を検出できません");
 check(analysis.retainedRawText === false, "入力原文を保持する設定になっています");
@@ -2474,8 +2479,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.886.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for iPhone readout guidance");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.886.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.886.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.887.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for iPhone import guidance");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.887.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.887.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
@@ -2661,6 +2666,7 @@ check(iphoneElmRoute.route === "app_export_import" && iphoneElmRoute.required_be
 check(desktopJ2534Route.route === "desktop_local_bridge" && desktopJ2534Route.requiresDesktop === true, "J2534のデスクトップ読取経路を判定できません");
 check([iphoneThinkcarRoute, iphoneElmRoute, desktopJ2534Route].every((item) => item.directBrowserReadoutEnabled === false && item.vehicleCommandEnabled === false && item.executionEnabled === false && item.wouldTransmit === false), "複数インターフェース経路が接続または車両送信を有効にしています");
 check(appSource.includes('function getObdInterfaceReadoutRoute(interfaceId)') && appSource.includes('iPhone対応アプリのread-only結果取込') && appSource.includes('iPhone対応アプリ -> read-only結果取込'), "iPhone VCIの結果取込経路が診断機画面へ反映されていません");
+check(indexSource.includes('THINKCAR / ELM327') && indexSource.includes('iPhone対応アプリのread-only結果'), "iPhone VCIの文字結果取込案内が画面にありません");
 const connectionProfile = obd.getVehicleConnectionProfile();
 check(connectionProfile.transportEnabled === false, "通信トランスポートが安全ゲート外で有効です");
 check(connectionProfile.failClosed === true, "通信トランスポートが失敗時安全停止になっていません");
