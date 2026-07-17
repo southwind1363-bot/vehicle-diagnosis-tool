@@ -2301,6 +2301,96 @@
     ));
   }
 
+  function getObdReportedProfileInput(source = {}) {
+    if (!source || typeof source !== "object") return null;
+    return pickDefined(
+      source.obdReportedProfile,
+      source.obd_reported_profile,
+      source.observedObdProfile,
+      source.observed_obd_profile,
+      source.reportedObdProfile,
+      source.reported_obd_profile,
+      null
+    );
+  }
+
+  function normalizeObdReportedProfile(input = null) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const obdStandard = typeof input.obdStandard === "string"
+      ? input.obdStandard.trim() || null
+      : typeof input.obd_standard === "string"
+        ? input.obd_standard.trim() || null
+        : null;
+    const fuelType = typeof input.fuelType === "string"
+      ? input.fuelType.trim() || null
+      : typeof input.fuel_type === "string"
+        ? input.fuel_type.trim() || null
+        : null;
+    const reportedPidIds = [...new Set((Array.isArray(input.reportedPidIds)
+      ? input.reportedPidIds
+      : Array.isArray(input.reported_pid_ids)
+        ? input.reported_pid_ids
+        : [])
+      .map((value) => String(value || "").trim().toUpperCase())
+      .filter((value) => value === "1C" || value === "51"))];
+    if (!obdStandard && !fuelType && !reportedPidIds.length) return null;
+    const readoutStatus = ["reported", "unparsed", "unknown"].includes(String(input.livePidReadoutStatus || input.live_pid_readout_status || input.readoutStatus || input.readout_status || "").trim().toLowerCase())
+      ? String(input.livePidReadoutStatus || input.live_pid_readout_status || input.readoutStatus || input.readout_status).trim().toLowerCase()
+      : "reported";
+    const capturedAt = input.capturedAt || input.captured_at || null;
+    return {
+      schemaVersion: "obd_reported_profile_v1",
+      schema_version: "obd_reported_profile_v1",
+      source: "live_pid_snapshot",
+      source_type: "live_pid_snapshot",
+      capturedAt,
+      captured_at: capturedAt,
+      livePidReadoutStatus: readoutStatus,
+      live_pid_readout_status: readoutStatus,
+      obdStandard,
+      obd_standard: obdStandard,
+      fuelType,
+      fuel_type: fuelType,
+      reportedPidIds,
+      reported_pid_ids: reportedPidIds,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function buildObdReportedProfile(livePidSnapshot = null, storedProfile = null) {
+    const stored = normalizeObdReportedProfile(storedProfile);
+    const snapshot = livePidSnapshot && typeof livePidSnapshot === "object" ? livePidSnapshot : {};
+    const readoutStatus = String(snapshot.livePidReadoutStatus || snapshot.live_pid_readout_status || "unknown").trim().toLowerCase();
+    if (readoutStatus !== "reported") return stored;
+    const values = Array.isArray(snapshot.monitorValues)
+      ? snapshot.monitorValues
+      : Array.isArray(snapshot.monitor_values)
+        ? snapshot.monitor_values
+        : [];
+    const byId = new Map(values.map((item) => [String(item?.id || "").trim(), item]));
+    const obdStandard = typeof byId.get("obd_standard")?.value === "string"
+      ? byId.get("obd_standard").value.trim() || null
+      : stored?.obdStandard || null;
+    const fuelType = typeof byId.get("fuel_type")?.value === "string"
+      ? byId.get("fuel_type").value.trim() || null
+      : stored?.fuelType || null;
+    const reportedPidIds = [...new Set([
+      ...(stored?.reportedPidIds || []),
+      ...(byId.has("obd_standard") ? ["1C"] : []),
+      ...(byId.has("fuel_type") ? ["51"] : [])
+    ])];
+    return normalizeObdReportedProfile({
+      obdStandard,
+      fuelType,
+      reportedPidIds,
+      capturedAt: byId.has("obd_standard") || byId.has("fuel_type")
+        ? snapshot.capturedAt || snapshot.captured_at || null
+        : stored?.capturedAt || null,
+      livePidReadoutStatus: "reported"
+    });
+  }
+
   function appendVehicleApplicabilityWarnings(warnings, applicability = {}) {
     if (!hasObjectContent(applicability)) return;
     const normalized = normalizeVehicleApplicabilitySnapshot(applicability || {});
@@ -9720,6 +9810,13 @@
       getVehicleProfileInput(nested),
       null
     );
+    const mergedObdReportedProfile = pickPresent(
+      getObdReportedProfileInput(input),
+      getObdReportedProfileInput(payload),
+      getObdReportedProfileInput(base),
+      getObdReportedProfileInput(nested),
+      null
+    );
     return {
       ...nested,
       ...base,
@@ -9736,6 +9833,8 @@
       vehicle_profile: mergedVehicleProfile,
       vehicleApplicability: mergedVehicleApplicability,
       vehicle_applicability: mergedVehicleApplicability,
+      obdReportedProfile: mergedObdReportedProfile,
+      obd_reported_profile: mergedObdReportedProfile,
       connectionStatus: pickPresent(input.connectionStatus, input.connection_status, input.connectionStatusResponse, input.connection_status_response, payload?.connectionStatus, payload?.connection_status, payload?.connectionStatusResponse, payload?.connection_status_response, nested.connectionStatus, nested.connection_status, nested.connectionStatusResponse, nested.connection_status_response, null),
       connection_status: pickPresent(input.connection_status, input.connectionStatus, input.connection_status_response, input.connectionStatusResponse, payload?.connection_status, payload?.connectionStatus, payload?.connection_status_response, payload?.connectionStatusResponse, nested.connection_status, nested.connectionStatus, nested.connection_status_response, nested.connectionStatusResponse, null),
       vciDevices: pickPresent(input.vciDevices, input.vci_devices, input.vciList, input.vci_list, input.listVciResponse, input.list_vci_response, payload?.vciDevices, payload?.vci_devices, payload?.vciList, payload?.vci_list, payload?.listVciResponse, payload?.list_vci_response, nested.vciDevices, nested.vci_devices, nested.vciList, nested.vci_list, nested.listVciResponse, nested.list_vci_response, null),
@@ -10449,6 +10548,19 @@
       || getNestedBridgePayloadSession(parts.local_bridge_export_payload)
       || {};
     const nestedSessionMetadata = getSessionMetadataOverrides(nestedBridgeSession);
+    const obdReportedProfile = buildObdReportedProfile(
+      summary.livePidSnapshot || summary.live_pid_snapshot || {
+        monitorValues: summary.monitorValues || summary.monitor_values || [],
+        livePidReadoutStatus: summary.livePidReadoutStatus || summary.live_pid_readout_status || "unknown",
+        capturedAt: summary.capturedAt || summary.captured_at || null
+      },
+      pickPresent(
+        getObdReportedProfileInput(parts),
+        getObdReportedProfileInput(summary),
+        getObdReportedProfileInput(nestedBridgeSession),
+        null
+      )
+    );
     const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
     const bridgeSessionMetadataFields = {
       vehicleProfile: preserveNestedBridgeSessionMetadata
@@ -10670,6 +10782,8 @@
       capturedAt: summary.capturedAt || null,
       vehicleProfile: metadataFields.vehicleProfile || null,
       vehicleApplicability: metadataFields.vehicleApplicability,
+      obdReportedProfile,
+      obd_reported_profile: obdReportedProfile,
       codes,
       dtcSnapshot,
       dtc_snapshot: dtcSnapshot,
@@ -12830,6 +12944,7 @@
       ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
       captured_at: sessionInput.captured_at || sessionInput.capturedAt || null,
       ...metadataOverrides,
+      obdReportedProfile: getObdReportedProfileInput(sessionInput),
       dtcSnapshot,
       livePidSnapshot,
       freezeFrameSnapshot,
@@ -13805,6 +13920,7 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput), livePidSnapshotInput, ["livePidReadoutStatus", "live_pid_readout_status"]);
+    const obdReportedProfile = buildObdReportedProfile(livePidSnapshot, getObdReportedProfileInput(sessionInput));
     const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
       ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
           ? {
@@ -14112,6 +14228,8 @@
       vehicle_profile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       vehicle_applicability: resolvedMetadata.vehicleApplicability,
+      obdReportedProfile,
+      obd_reported_profile: obdReportedProfile,
       connectionStatus,
       connection_status: connectionStatus,
       vciDevices: vciList.devices || [],
@@ -14611,6 +14729,8 @@
     buildReadoutCoverageSnapshot,
     normalizeReadoutCoverageSnapshot,
     normalizeVehicleApplicabilitySnapshot,
+    normalizeObdReportedProfile,
+    buildObdReportedProfile,
     buildNextReadoutCandidates,
     normalizeNextReadoutCandidates,
     mergeDiagnosticInputs,
