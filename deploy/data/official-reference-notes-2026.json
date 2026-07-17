@@ -22,5 +22,17 @@
     "source_date": "2026-05-31",
     "last_verified_date": "2026-05-31",
     "service_manual_required": true
+  },
+  {
+    "id": "official-mlit-current-vehicle-obd-information-2026-07",
+    "note_type": "compatibility_scope",
+    "title": "現行車向け基礎OBD情報の段階提供",
+    "summary": "国土交通省の2026年度計画資料では、基礎OBD情報の提供開始を予定し、高度OBD情報は認証等の安全基盤を整えた後に段階拡大するとしている。車種別の対応可否、利用条件、実装時期はメーカー・公式提供窓口で都度確認する。",
+    "check_order": ["車両型式・年式・ECUを確定する", "OBD検査対象車型式と公式の適用情報を確認する", "メーカーまたは正規提供元の読取情報と照合し、未確認項目は未確認として保存する"],
+    "source": "国土交通省 自動車整備技術の高度化検討会 資料4",
+    "source_url": "https://www.mlit.go.jp/jidosha/content/001966447.pdf",
+    "source_date": "2025-10-27",
+    "last_verified_date": "2026-07-18",
+    "service_manual_required": true
   }
 ]

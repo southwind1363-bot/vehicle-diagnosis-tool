@@ -1,13 +1,13 @@
 [
   {
-    "id": "sae-j2012-current-2026-05",
+    "id": "sae-j2012-current-2025-09",
     "title": "SAE J2012 Diagnostic Trouble Code Definitions",
     "reference_type": "standard",
     "summary": "標準DTCの形式、説明、メーカー独自用途として予約された範囲を確認する基準資料。個別DTCの正式登録は正規データで検証する。",
     "source": "SAE International",
-    "source_url": "https://saemobilus.sae.org/standards/j2012_201612-diagnostic-trouble-code-definitions",
-    "source_date": "2026-05-21",
-    "last_verified_date": "2026-05-31",
+    "source_url": "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
+    "source_date": "2025-09-01",
+    "last_verified_date": "2026-07-18",
     "service_manual_required": true
   },
   {
@@ -19,6 +19,17 @@
     "source_url": "https://saemobilus.sae.org/standards/supplements",
     "source_date": "2025-10-24",
     "last_verified_date": "2026-05-31",
+    "service_manual_required": true
+  },
+  {
+    "id": "sae-j1979da-current-2026-05",
+    "title": "SAE J1979DA Digital Annex of E/E Diagnostic Test Modes",
+    "reference_type": "licensed_dataset",
+    "summary": "規制対象の排出・推進系OBDデータ識別子を維持するデジタル付属資料。現行PID/情報タイプの拡張根拠として参照し、個別定義の取込みは利用権と出典確認後に限定する。",
+    "source": "SAE International",
+    "source_url": "https://saemobilus.sae.org/standards/j1979da_202504-j1979-da-digital-annex-e-e-diagnostic-test-modes",
+    "source_date": "2026-05-27",
+    "last_verified_date": "2026-07-18",
     "service_manual_required": true
   },
   {

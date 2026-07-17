@@ -34,6 +34,12 @@ const diagnosticCapabilityStatus = JSON.parse(
 const diagnosticWorkflowsPractical = JSON.parse(
   fs.readFileSync(new URL("../data/diagnostic-workflows-practical-2026.json", import.meta.url), "utf8")
 );
+const dtcStandardsReference = JSON.parse(
+  fs.readFileSync(new URL("../data/dtc-standards-reference-2026.json", import.meta.url), "utf8")
+);
+const officialReferenceNotes = JSON.parse(
+  fs.readFileSync(new URL("../data/official-reference-notes-2026.json", import.meta.url), "utf8")
+);
 const context = {
   window: { isSecureContext: true },
   navigator: { serial: {} }
@@ -2323,6 +2329,9 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-br
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-guided-diagnostics" && item.done.includes("bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ統合")), "診断支援ワークフロー alias 統合の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-guided-diagnostics" && item.done.includes("selected vehicle label retained across analysis summaries")), "診断支援ワークフローの車両ラベル保持進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.current_basis.includes("ブリッジDTC統合あり")), "汎用OBD2 DTCのブリッジ統合根拠が不足しています");
+check(dtcStandardsReference.some((item) => item.id === "sae-j2012-current-2025-09" && item.source_url.includes("j2012_202509") && item.last_verified_date === "2026-07-18"), "最新SAE J2012出典が不足しています");
+check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-05" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "現行J1979デジタル付属資料の利用制約が不足しています");
+check(officialReferenceNotes.some((item) => item.id === "official-mlit-current-vehicle-obd-information-2026-07" && item.note_type === "compatibility_scope" && item.service_manual_required === true), "現行車OBD情報の公式適用範囲が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.current_basis.includes("貼り付け解析入口")), "メーカー固有DTCの貼り付け解析入口が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.done.includes("Techstream等の読取結果貼り付けを先行解析する方針")), "メーカー固有DTCの貼り付け解析方針が不足しています");
 const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -2464,8 +2473,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.881.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for verified chassis DTC definitions");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.881.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.881.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.882.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for current-source verification");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.882.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.882.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
