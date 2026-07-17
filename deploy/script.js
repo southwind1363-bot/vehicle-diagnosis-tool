@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.867.0";
+const APP_VERSION = "2.868.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5948,7 +5948,69 @@ function renderObdBridgeSessionDetails(session = null) {
     card.append(heading, list);
     obdDevSessionDetails.appendChild(card);
   });
+  const timelineChartRows = buildLivePidTimelineChartRows(livePidTimeline);
+  if (timelineChartRows.length) {
+    const card = document.createElement("article");
+    card.className = "obd-session-detail-card obd-timeline-chart-card";
+    const heading = document.createElement("strong");
+    heading.textContent = "ライブ推移";
+    const chart = document.createElement("div");
+    chart.className = "obd-timeline-chart";
+    timelineChartRows.forEach((row) => {
+      const chartRow = document.createElement("div");
+      chartRow.className = "obd-timeline-chart-row";
+      const label = document.createElement("span");
+      label.className = "obd-timeline-chart-label";
+      label.textContent = `${row.label}${row.unit ? ` (${row.unit})` : ""}`;
+      const bars = document.createElement("div");
+      bars.className = "obd-timeline-chart-bars";
+      row.points.forEach((point) => {
+        const bar = document.createElement("span");
+        bar.className = "obd-timeline-chart-bar";
+        bar.style.setProperty("--obd-timeline-height", `${point.heightPercent}%`);
+        bar.title = `${formatDateTime(point.capturedAt)}: ${point.value}${row.unit ? ` ${row.unit}` : ""}`;
+        bars.appendChild(bar);
+      });
+      chartRow.append(label, bars);
+      chart.appendChild(chartRow);
+    });
+    card.append(heading, chart);
+    obdDevSessionDetails.appendChild(card);
+  }
   obdDevSessionDetails.hidden = false;
+}
+
+function buildLivePidTimelineChartRows(timeline = null) {
+  const samples = Array.isArray(timeline?.samples) ? timeline.samples : [];
+  const latestCondition = samples.at(-1)?.observationCondition || samples.at(-1)?.observation_condition || "unspecified";
+  const rowsById = new Map();
+  samples
+    .filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)
+    .forEach((sample) => {
+      (sample?.monitorValues || sample?.monitor_values || []).forEach((item) => {
+        if (!item?.id || !Number.isFinite(item.value)) return;
+        const row = rowsById.get(item.id) || { id: item.id, label: item.label || item.id, unit: item.unit || "", points: [] };
+        row.points.push({ value: item.value, capturedAt: sample.capturedAt || sample.captured_at || null });
+        rowsById.set(item.id, row);
+      });
+    });
+  return [...rowsById.values()]
+    .filter((row) => row.points.length >= 2)
+    .sort((left, right) => right.points.length - left.points.length || left.label.localeCompare(right.label, "ja"))
+    .slice(0, 4)
+    .map((row) => {
+      const values = row.points.map((point) => point.value);
+      const minimum = Math.min(...values);
+      const maximum = Math.max(...values);
+      const range = maximum - minimum;
+      return {
+        ...row,
+        points: row.points.map((point) => ({
+          ...point,
+          heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55
+        }))
+      };
+    });
 }
 
 function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
