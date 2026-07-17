@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Web Serial基本読取と未完了項目の集約",
+  recentMilestone: "Web Serial基本読取の工程成否を明確化",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.844.0";
+const APP_VERSION = "2.845.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4314,7 +4314,7 @@ function buildWebSerialAdapterIdentity(commandResponses = []) {
 }
 
 async function readObdDeveloperDtc() {
-  await runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
+  return runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
 }
 
 async function readObdDeveloperCoreScan() {
@@ -4333,9 +4333,8 @@ async function readObdDeveloperCoreScan() {
   try {
     for (const readStep of readSteps) {
       if (!obdDevSession.port) break;
-      const sessionBeforeRead = obdDevSession.lastSession;
-      await readStep.read();
-      if (obdDevSession.port && obdDevSession.lastSession === sessionBeforeRead) incompleteLabels.push(readStep.label);
+      const readCompleted = await readStep.read();
+      if (obdDevSession.port && readCompleted !== true) incompleteLabels.push(readStep.label);
     }
     if (!obdDevSession.port) {
       obdDevStatus.textContent = "基本読取を切断により停止しました。";
@@ -4351,15 +4350,16 @@ async function readObdDeveloperCoreScan() {
 }
 
 async function readObdDeveloperFreezeFrame() {
-  await runObdDeveloperRead("フリーズフレーム読取", ["0202"]);
+  return runObdDeveloperRead("フリーズフレーム読取", ["0202"]);
 }
 
 async function readObdDeveloperReadiness() {
-  await runObdDeveloperRead("レディネス読取", ["0101"]);
+  return runObdDeveloperRead("レディネス読取", ["0101"]);
 }
 
 async function readObdDeveloperEcuInfo() {
-  await runObdDeveloperRead("ECU情報対応確認", ["0900"]);
+  const supportReadCompleted = await runObdDeveloperRead("ECU情報対応確認", ["0900"]);
+  if (!supportReadCompleted) return false;
   const supportedInfoTypes = new Set(obdDevSession.lastSession?.ecuInfoSnapshot?.supportInfoTypesSummary?.ids || []);
   const supportedCommands = [
     ["04", "0904"],
@@ -4371,38 +4371,40 @@ async function readObdDeveloperEcuInfo() {
   if (!supportedCommands.length) {
     obdDevStatus.textContent = "対応する非識別ECU情報が確認できないため、追加要求を送りませんでした。";
     renderObdDeveloperGate();
-    return;
+    return true;
   }
-  await runObdDeveloperRead("ECU情報読取", supportedCommands);
+  return runObdDeveloperRead("ECU情報読取", supportedCommands);
 }
 
 async function readObdDeveloperOnboardMonitor() {
-  await runObdDeveloperRead("Mode06読取", ["06"]);
+  return runObdDeveloperRead("Mode06読取", ["06"]);
 }
 
 async function readObdDeveloperPermanentDtc() {
-  await runObdDeveloperRead("永久DTC読取", ["0A"]);
+  return runObdDeveloperRead("永久DTC読取", ["0A"]);
 }
 
 async function readObdDeveloperLiveSnapshot() {
-  await readObdDeveloperSupportedPidMaps();
+  const supportReadCompleted = await readObdDeveloperSupportedPidMaps();
+  if (!supportReadCompleted) return false;
   const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
   const supportedCommands = obdDevSession.selectedPidList.filter((command) => supportedPids.has(command.slice(2)));
   if (!supportedCommands.length) {
     obdDevStatus.textContent = "対応PIDが確認できないため、ライブデータ要求を送りませんでした。";
     renderObdDeveloperGate();
-    return;
+    return true;
   }
-  await runObdDeveloperRead("ライブデータ読取", supportedCommands);
+  return runObdDeveloperRead("ライブデータ読取", supportedCommands);
 }
 
 async function readObdDeveloperSupportedPidMaps() {
-  await runObdDeveloperRead("対応PID確認", ["0100"]);
+  if (!await runObdDeveloperRead("対応PID確認", ["0100"])) return false;
   for (const basePid of ["20", "40"]) {
     const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
     if (!supportedPids.has(basePid)) break;
-    await runObdDeveloperRead("対応PID確認", [`01${basePid}`]);
+    if (!await runObdDeveloperRead("対応PID確認", [`01${basePid}`])) return false;
   }
+  return true;
 }
 
 async function probeObdLocalBridge(contextLabel = "ローカルブリッジ") {
@@ -4597,9 +4599,9 @@ async function sendObdLocalBridgeStatusIntent(intent, payload = {}, options = {}
 async function runObdDeveloperRead(label, commands) {
   if (!obdDevSession.writer || !obdDevSession.reader) {
     obdDevStatus.textContent = "VCI読取が開始されていません。";
-    return;
+    return false;
   }
-  if (obdDevSession.readInProgress) return;
+  if (obdDevSession.readInProgress) return false;
 
   obdDevSession.readInProgress = true;
   renderObdDeveloperGate();
@@ -4630,6 +4632,7 @@ async function runObdDeveloperRead(label, commands) {
     obdDevSession.lastSession = session;
     renderObdDeveloperReadout(session);
     obdDevStatus.textContent = `${label}が完了しました。取れた値だけ表示します。`;
+    return true;
   } catch (error) {
     const message = error?.message || String(error);
     const timedOut = message.startsWith("elm_response_timeout:");
@@ -4637,6 +4640,7 @@ async function runObdDeveloperRead(label, commands) {
     obdDevStatus.textContent = timedOut
       ? `${label}の応答がタイムアウトしたため、安全に切断しました。`
       : `${label}に失敗しました: ${message}`;
+    return false;
   } finally {
     obdDevSession.readInProgress = false;
     renderObdDeveloperGate();
