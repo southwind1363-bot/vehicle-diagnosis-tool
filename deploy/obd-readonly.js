@@ -1201,6 +1201,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
+      onboard_monitor_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown",
       tests: Array.isArray(data.tests)
         ? data.tests
         : Array.isArray(data.values)
@@ -1452,7 +1453,9 @@
       {
         id: "onboard_monitor_snapshot",
         label: "Mode06",
-        available: onboardMonitorSnapshot?.blocked === false || Array.isArray(onboardMonitorSnapshot?.tests),
+        available: ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
+          ? false
+          : onboardMonitorSnapshot?.blocked === false || Array.isArray(onboardMonitorSnapshot?.tests),
         count: Array.isArray(onboardMonitorSnapshot?.tests) ? onboardMonitorSnapshot.testCount || onboardMonitorSnapshot.tests.length : 0
       },
       {
@@ -1656,7 +1659,9 @@
         ? readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null
         : item.id === "ecu_info_snapshot"
           ? ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || null
-          : null;
+          : item.id === "onboard_monitor_snapshot"
+            ? onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || null
+            : null;
       const status = ["unparsed", "blocked"].includes(explicitReadoutStatus)
         ? "missing"
         : item.count > 0 ? "captured" : coverageItem?.status || "missing";
@@ -4115,6 +4120,8 @@
         || snapshot?.readiness_readout_status
         || snapshot?.ecuInfoReadoutStatus
         || snapshot?.ecu_info_readout_status
+        || snapshot?.onboardMonitorReadoutStatus
+        || snapshot?.onboard_monitor_readout_status
       ))
       && (
         Boolean(snapshot?.capturedAt)
@@ -11934,6 +11941,17 @@
     const passedCount = tests.filter((test) => test.status === "pass").length;
     const failedCount = tests.filter((test) => test.status === "fail").length;
     const unknownCount = tests.filter((test) => test.status === "unknown").length;
+    const explicitReadoutStatus = pickDefined(
+      sourceInput.onboardMonitorReadoutStatus,
+      sourceInput.onboard_monitor_readout_status,
+      sourceInput.readoutStatus,
+      sourceInput.readout_status
+    );
+    const normalizedReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
+      ? String(explicitReadoutStatus).trim().toLowerCase()
+      : testCount > 0
+        ? "reported"
+        : "unknown";
 
     return {
       schemaVersion: "onboard_monitor_snapshot_v1",
@@ -11950,6 +11968,8 @@
       failed_count: failedCount,
       unknownCount,
       unknown_count: unknownCount,
+      onboardMonitorReadoutStatus: normalizedReadoutStatus,
+      onboard_monitor_readout_status: normalizedReadoutStatus,
       tests,
       retainedRawText: false,
       retained_raw_text: false
@@ -12338,6 +12358,7 @@
   function decodeOnboardMonitorResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const tests = [];
+    const hasMode06Frame = bytes.some((byte, index) => byte === 0x46 && index + 8 < bytes.length);
     for (let index = 0; index < bytes.length - 8; index++) {
       if (bytes[index] !== 0x46) continue;
       const testId = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
@@ -12353,6 +12374,7 @@
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
+      onboard_monitor_readout_status: hasMode06Frame ? "reported" : "unparsed",
       tests
     });
   }
