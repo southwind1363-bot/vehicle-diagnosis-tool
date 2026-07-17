@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Web Serial途中失敗時の部分読取を保持",
+  recentMilestone: "Web Serial読取実行履歴をscan sessionへ保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.846.0";
+const APP_VERSION = "2.847.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -503,6 +503,7 @@ const obdDevSession = {
   lastRawText: "",
   connectedAt: null,
   scanSessionId: null,
+  readoutAttempts: [],
   bridgeEndpoint: null,
   bridgeStatus: null,
   bridgeVciList: null,
@@ -4232,6 +4233,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.lastRawText = "";
     obdDevSession.connectedAt = new Date().toISOString();
     obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
+    obdDevSession.readoutAttempts = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
     obdDevStatus.textContent = `VCI読取を開始しました。通信速度 ${baudRate}。`;
@@ -4605,6 +4607,7 @@ async function runObdDeveloperRead(label, commands) {
 
   obdDevSession.readInProgress = true;
   renderObdDeveloperGate();
+  const startedAt = new Date().toISOString();
   const chunks = [];
   const commandResponses = [];
   try {
@@ -4615,12 +4618,14 @@ async function runObdDeveloperRead(label, commands) {
       commandResponses.push({ command, response });
       chunks.push(["ATI", "AT@1"].includes(command) ? "[adapter identity response not retained]" : response);
     }
+    recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status: "completed" });
     retainObdDeveloperReadout(commandResponses, chunks);
     obdDevStatus.textContent = `${label}が完了しました。取れた値だけ表示します。`;
     return true;
   } catch (error) {
     const message = error?.message || String(error);
     const timedOut = message.startsWith("elm_response_timeout:");
+    recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status: commandResponses.length ? "partial" : "failed", timedOut });
     const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks));
     if (timedOut) await disconnectObdDeveloperVci();
     obdDevStatus.textContent = timedOut
@@ -4631,6 +4636,48 @@ async function runObdDeveloperRead(label, commands) {
     obdDevSession.readInProgress = false;
     renderObdDeveloperGate();
   }
+}
+
+function recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status, timedOut = false }) {
+  const requestedCommands = Array.isArray(commands) ? commands.map((command) => String(command || "").trim().toUpperCase()).filter(Boolean) : [];
+  const completedCommands = Array.isArray(commandResponses) ? commandResponses.map((item) => String(item?.command || "").trim().toUpperCase()).filter(Boolean) : [];
+  const attempt = {
+    label: String(label || "Web Serial読取"),
+    status: status === "completed" || status === "partial" ? status : "failed",
+    startedAt: startedAt || new Date().toISOString(),
+    endedAt: new Date().toISOString(),
+    requestedCommandCount: requestedCommands.length,
+    completedCommandCount: completedCommands.length,
+    timedOut: timedOut === true,
+    readOnly: true,
+    vehicleCommandEnabled: false
+  };
+  obdDevSession.readoutAttempts = [...(obdDevSession.readoutAttempts || []), attempt].slice(-30);
+  return attempt;
+}
+
+function buildWebSerialReadoutSummary() {
+  const attempts = Array.isArray(obdDevSession.readoutAttempts) ? obdDevSession.readoutAttempts : [];
+  const countByStatus = (status) => attempts.filter((item) => item?.status === status).length;
+  const latestAttempt = attempts.at(-1) || null;
+  return {
+    schemaVersion: "web_serial_readout_execution_v1",
+    schema_version: "web_serial_readout_execution_v1",
+    source: "web_serial",
+    attemptCount: attempts.length,
+    attempt_count: attempts.length,
+    completedCount: countByStatus("completed"),
+    completed_count: countByStatus("completed"),
+    partialCount: countByStatus("partial"),
+    partial_count: countByStatus("partial"),
+    failedCount: countByStatus("failed"),
+    failed_count: countByStatus("failed"),
+    latestAttempt,
+    latest_attempt: latestAttempt,
+    attempts: attempts.map((item) => ({ ...item })),
+    vehicleCommandEnabled: false,
+    vehicle_command_enabled: false
+  };
 }
 
 function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
@@ -4646,9 +4693,13 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
     ended_at: capturedAt,
     captured_at: capturedAt
   });
-  const session = obdDevSession.adapterIdentity
-    ? { ...scanSession, adapterIdentity: obdDevSession.adapterIdentity, adapter_identity: obdDevSession.adapterIdentity }
-    : scanSession;
+  const webSerialReadoutSummary = buildWebSerialReadoutSummary();
+  const session = {
+    ...scanSession,
+    ...(obdDevSession.adapterIdentity ? { adapterIdentity: obdDevSession.adapterIdentity, adapter_identity: obdDevSession.adapterIdentity } : {}),
+    webSerialReadoutSummary,
+    web_serial_readout_summary: webSerialReadoutSummary
+  };
   obdDevSession.lastSession = session;
   renderObdDeveloperReadout(session);
   return session;
@@ -5164,6 +5215,18 @@ function formatCoreEmptyReadoutSummary(coreSessionStatus, limit = 2, fallback = 
     .map((item) => formatCoreReadoutLabel(item, item))
     .filter(Boolean);
   return labels.length ? labels.join(" / ") : fallback;
+}
+
+function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const attemptCount = Number(summary.attemptCount ?? summary.attempt_count ?? 0);
+  if (!Number.isFinite(attemptCount) || attemptCount < 1) return fallback;
+  const completedCount = Number(summary.completedCount ?? summary.completed_count ?? 0) || 0;
+  const partialCount = Number(summary.partialCount ?? summary.partial_count ?? 0) || 0;
+  const failedCount = Number(summary.failedCount ?? summary.failed_count ?? 0) || 0;
+  const latestAttempt = summary.latestAttempt || summary.latest_attempt || null;
+  const latestLabel = latestAttempt?.label ? ` 最終:${latestAttempt.label}` : "";
+  return `${attemptCount}工程 / 完了${completedCount} / 部分${partialCount} / 失敗${failedCount}${latestLabel}`;
 }
 
 function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fallback = NO_DATA) {
@@ -6415,6 +6478,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const readinessSnapshot = session?.readinessSnapshot || session?.readiness_snapshot || null;
   const onboardMonitorSnapshot = session?.onboardMonitorSnapshot || session?.onboard_monitor_snapshot || null;
   const supportedPidMatrix = session?.supportedPidMatrix || session?.supported_pid_matrix || null;
+  const webSerialReadoutSummary = session?.webSerialReadoutSummary || session?.web_serial_readout_summary || null;
   const dtcStatusSummary = formatObdBridgeDtcStatusSummary(dtcSnapshot?.dtcs || []).replace(/^ 内訳: /, "").replace(/。$/, "");
   const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary
     || dtcSnapshot?.dtc_status_summary
@@ -6470,6 +6534,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const endedAtValue = session?.endedAt || session?.ended_at;
   const capturedAtValue = session?.capturedAt || session?.captured_at;
   const sourceLengthLabel = sourceLengthValue ? `${sourceLengthValue}文字` : NO_DATA;
+  const webSerialReadoutLabel = formatWebSerialReadoutSummary(webSerialReadoutSummary, NO_DATA);
   const sensitiveLabel = hadSensitiveIdentifier ? "検出" : "なし";
   const startedAtLabel = startedAtValue
     ? formatDateTime(startedAtValue)
@@ -6537,6 +6602,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["未取得", coverage?.missingLabels?.length ? coverage.missingLabels.join(" / ") : "なし"]
   ];
   values.splice(2, 0, ["入力源", sourceLabel], ["入力長", sourceLengthLabel]);
+  values.splice(4, 0, ["読取実行", webSerialReadoutLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
