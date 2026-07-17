@@ -954,8 +954,6 @@
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
-    const hasExplicitSafety = response && typeof response === "object" && ["ok", "blocked", "isBlocked"].some((key) => Object.prototype.hasOwnProperty.call(response, key));
     const hasBridgeValueList = Array.isArray(data.values)
       || Array.isArray(data.monitor_values)
       || Array.isArray(data.monitorValues)
@@ -966,7 +964,7 @@
       || Array.isArray(data.live_data)
       || Array.isArray(data.liveData)
       || Array.isArray(data.items);
-    const inferredSnapshotSafety = !hasExplicitSafety && hasBridgeValueList;
+    const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList);
     const values = Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.monitor_values)
@@ -994,7 +992,7 @@
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
     const readoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
       ? String(explicitReadoutStatus).trim().toLowerCase()
-      : inferredSnapshotSafety || safety.ok ? "reported" : safety.blocked && hasExplicitSafety ? "blocked" : "unknown";
+      : bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown";
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
@@ -1007,9 +1005,9 @@
     return {
       source: "local_bridge",
       intent: "read_live_pid_snapshot",
-      ok: inferredSnapshotSafety || safety.ok,
-      blocked: inferredSnapshotSafety ? false : safety.blocked,
-      wouldTransmit: safety.wouldTransmit,
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit,
       protocol: readBridgeProtocol(data),
       supportedPids,
       supported_pids: supportedPids,
