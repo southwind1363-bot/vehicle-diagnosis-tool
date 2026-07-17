@@ -1087,6 +1087,70 @@
     };
   }
 
+  function normalizeLivePidTimeline(input = {}) {
+    const source = input && typeof input === "object" ? input : {};
+    const sampleInput = Array.isArray(input)
+      ? input
+      : Array.isArray(source.samples)
+        ? source.samples
+        : Array.isArray(source.livePidSamples)
+          ? source.livePidSamples
+          : Array.isArray(source.live_pid_samples)
+            ? source.live_pid_samples
+            : [];
+    const samples = sampleInput
+      .map((sample) => {
+        const item = sample && typeof sample === "object" ? sample : {};
+        const snapshotInput = item.livePidSnapshot || item.live_pid_snapshot || item;
+        const snapshot = normalizeBridgeLivePidSnapshot(
+          Array.isArray(snapshotInput?.monitorValues)
+            ? {
+              ...snapshotInput,
+              monitor_values: snapshotInput.monitorValues,
+              ok: snapshotInput.ok ?? ((snapshotInput.livePidReadoutStatus || snapshotInput.live_pid_readout_status) === "reported"),
+              blocked: snapshotInput.blocked ?? false,
+              wouldTransmit: snapshotInput.wouldTransmit ?? snapshotInput.would_transmit ?? false
+            }
+            : snapshotInput
+        );
+        const capturedAt = item.capturedAt || item.captured_at || snapshot.capturedAt || snapshot.captured_at || null;
+        if (snapshot.livePidReadoutStatus !== "reported" || snapshot.blocked || snapshot.wouldTransmit || !capturedAt || !snapshot.monitorValues.length) return null;
+        return {
+          capturedAt,
+          captured_at: capturedAt,
+          protocol: snapshot.protocol || null,
+          obd_protocol: snapshot.protocol || null,
+          monitorValues: cloneBridgeArrayItems(snapshot.monitorValues),
+          monitor_values: cloneBridgeArrayItems(snapshot.monitorValues),
+          monitorValueSummary: snapshot.monitorValueSummary,
+          monitor_value_summary: snapshot.monitorValueSummary,
+          livePidReadoutStatus: "reported",
+          live_pid_readout_status: "reported",
+          vehicleCommandEnabled: false,
+          vehicle_command_enabled: false,
+          wouldTransmit: false,
+          would_transmit: false,
+          retainedRawText: false,
+          retained_raw_text: false
+        };
+      })
+      .filter(Boolean)
+      .slice(-60);
+    return {
+      schemaVersion: "live_pid_timeline_v1",
+      schema_version: "live_pid_timeline_v1",
+      samples,
+      sample_count: samples.length,
+      sampleCount: samples.length,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      retainedRawText: false,
+      retained_raw_text: false
+    };
+  }
+
   function collectBridgeSupportedPids(data = {}) {
     if (Array.isArray(data.supported_pids)) return data.supported_pids;
     if (Array.isArray(data.supportedPids)) return data.supportedPids;
@@ -2982,6 +3046,7 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || []);
     const monitorValues = Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length
       ? directMonitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorValues);
@@ -3306,6 +3371,8 @@
       monitorValues,
       monitorValueSummary,
       monitorInsights,
+      livePidTimeline,
+      live_pid_timeline: livePidTimeline,
       importClassification,
       import_classification: importClassification,
       toolHints: resolvedMetadata.toolHints,
@@ -3580,6 +3647,8 @@
       dtc_snapshot: pickPresent(parts.dtc_snapshot, parts.dtcSnapshot, nested.dtc_snapshot, nested.dtcSnapshot, null),
       livePidSnapshot: pickPresent(parts.livePidSnapshot, parts.live_pid_snapshot, parts.livePidResponse, parts.live_pid_response, nested.livePidSnapshot, nested.live_pid_snapshot, nested.livePidResponse, nested.live_pid_response, null),
       live_pid_snapshot: pickPresent(parts.live_pid_snapshot, parts.livePidSnapshot, parts.live_pid_response, parts.livePidResponse, nested.live_pid_snapshot, nested.livePidSnapshot, nested.live_pid_response, nested.livePidResponse, null),
+      livePidTimeline: pickPresent(parts.livePidTimeline, parts.live_pid_timeline, parts.livePidSamples, parts.live_pid_samples, nested.livePidTimeline, nested.live_pid_timeline, nested.livePidSamples, nested.live_pid_samples, null),
+      live_pid_timeline: pickPresent(parts.live_pid_timeline, parts.livePidTimeline, parts.live_pid_samples, parts.livePidSamples, nested.live_pid_timeline, nested.livePidTimeline, nested.live_pid_samples, nested.livePidSamples, null),
       supportedPidMatrix: pickPresent(parts.supportedPidMatrix, parts.supported_pid_matrix, parts.supportedPidSnapshot, parts.supported_pid_snapshot, parts.supportedPidResponse, parts.supported_pid_response, nested.supportedPidMatrix, nested.supported_pid_matrix, nested.supportedPidSnapshot, nested.supported_pid_snapshot, nested.supportedPidResponse, nested.supported_pid_response, null),
       supported_pid_matrix: pickPresent(parts.supported_pid_matrix, parts.supportedPidMatrix, parts.supported_pid_snapshot, parts.supportedPidSnapshot, parts.supported_pid_response, parts.supportedPidResponse, nested.supported_pid_matrix, nested.supportedPidMatrix, nested.supported_pid_snapshot, nested.supportedPidSnapshot, nested.supported_pid_response, nested.supportedPidResponse, null),
       freezeFrameSnapshot: pickPresent(parts.freezeFrameSnapshot, parts.freeze_frame_snapshot, parts.freezeFrameResponse, parts.freeze_frame_response, nested.freezeFrameSnapshot, nested.freeze_frame_snapshot, nested.freezeFrameResponse, nested.freeze_frame_response, null),
@@ -3698,6 +3767,7 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
+    const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || []);
     const monitorValues = Array.isArray(monitorValuesInput) && monitorValuesInput.length
       ? monitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : Array.isArray(livePidSnapshot.monitorValues)
@@ -3968,6 +4038,8 @@
       freezeFrameSnapshot,
       livePidSnapshot,
       live_pid_snapshot: livePidSnapshot,
+      livePidTimeline,
+      live_pid_timeline: livePidTimeline,
       monitorValues,
       monitorValueSummary,
       monitorInsights,
@@ -9846,6 +9918,8 @@
       adapter_identity: pickPresent(input.adapter_identity, input.adapterIdentity, input.adapter_identity_response, input.adapterIdentityResponse, payload?.adapter_identity, payload?.adapterIdentity, payload?.adapter_identity_response, payload?.adapterIdentityResponse, nested.adapter_identity, nested.adapterIdentity, nested.adapter_identity_response, nested.adapterIdentityResponse, null),
       webSerialReadoutSummary: pickPresent(input.webSerialReadoutSummary, input.web_serial_readout_summary, payload?.webSerialReadoutSummary, payload?.web_serial_readout_summary, nested.webSerialReadoutSummary, nested.web_serial_readout_summary, null),
       web_serial_readout_summary: pickPresent(input.web_serial_readout_summary, input.webSerialReadoutSummary, payload?.web_serial_readout_summary, payload?.webSerialReadoutSummary, nested.web_serial_readout_summary, nested.webSerialReadoutSummary, null),
+      livePidTimeline: pickPresent(input.livePidTimeline, input.live_pid_timeline, input.livePidSamples, input.live_pid_samples, payload?.livePidTimeline, payload?.live_pid_timeline, payload?.livePidSamples, payload?.live_pid_samples, nested.livePidTimeline, nested.live_pid_timeline, nested.livePidSamples, nested.live_pid_samples, null),
+      live_pid_timeline: pickPresent(input.live_pid_timeline, input.livePidTimeline, input.live_pid_samples, input.livePidSamples, payload?.live_pid_timeline, payload?.livePidTimeline, payload?.live_pid_samples, payload?.livePidSamples, nested.live_pid_timeline, nested.livePidTimeline, nested.live_pid_samples, nested.livePidSamples, null),
       readoutCoverage: pickPresent(input.readoutCoverage, input.readout_coverage, payload?.readoutCoverage, payload?.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
       readout_coverage: pickPresent(input.readout_coverage, input.readoutCoverage, payload?.readout_coverage, payload?.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
       coreSessionStatus: pickPresent(input.coreSessionStatus, input.core_session_status, input.importedCoreSessionStatus, input.imported_core_session_status, payload?.coreSessionStatus, payload?.core_session_status, payload?.importedCoreSessionStatus, payload?.imported_core_session_status, nested.coreSessionStatus, nested.core_session_status, nested.importedCoreSessionStatus, nested.imported_core_session_status, null),
@@ -10342,6 +10416,7 @@
       monitor_values: summary.monitorValues || summary.monitor_values || [],
       monitor_value_summary: summary.monitorValueSummary || summary.monitor_value_summary || null
     });
+    const livePidTimeline = normalizeLivePidTimeline(summary.livePidTimeline || summary.live_pid_timeline || parts.livePidTimeline || parts.live_pid_timeline || []);
     const obdReportedProfile = buildObdReportedProfile(
       livePidSnapshot,
       getObdReportedProfileInput(summary) || getObdReportedProfileInput(parts)
@@ -10489,6 +10564,7 @@
         ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
         onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
         live_pid_snapshot: livePidSnapshot,
+        live_pid_timeline: livePidTimeline,
         readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
@@ -10568,6 +10644,9 @@
         getObdReportedProfileInput(nestedBridgeSession),
         null
       )
+    );
+    const livePidTimeline = normalizeLivePidTimeline(
+      summary.livePidTimeline || summary.live_pid_timeline || nestedBridgeSession.livePidTimeline || nestedBridgeSession.live_pid_timeline || []
     );
     const preserveNestedBridgeSessionMetadata = parts.importType === "bridge_diagnostic_snapshot" || parts.import_type === "bridge_diagnostic_snapshot";
     const bridgeSessionMetadataFields = {
@@ -10798,6 +10877,8 @@
       monitorValues,
       monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
       monitorInsights,
+      livePidTimeline,
+      live_pid_timeline: livePidTimeline,
       importClassification: metadataFields.importClassification,
       import_classification: metadataFields.importClassification,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
@@ -10895,6 +10976,8 @@
         monitorValues,
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,
+        livePidTimeline,
+        live_pid_timeline: livePidTimeline,
         importClassification: bridgeSessionMetadataFields.importClassification,
         import_classification: bridgeSessionMetadataFields.importClassification,
         toolHints: bridgeSessionMetadataFields.toolHints,
@@ -13912,6 +13995,11 @@
           monitor_insights: sessionInput.monitorInsights || sessionInput.monitor_insights || []
         }
         : {});
+    const livePidTimelineInput = sessionInput.livePidTimeline
+      || sessionInput.live_pid_timeline
+      || sessionInput.livePidSamples
+      || sessionInput.live_pid_samples
+      || [];
     const freezeFrameSnapshotInput = sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || sessionInput.freezeFrame || sessionInput.freeze_frame || {};
     const readinessSnapshotInput = sessionInput.readinessSnapshot || sessionInput.readiness_snapshot || sessionInput.readinessResponse || sessionInput.readiness_response || sessionInput.readiness || {};
     const onboardMonitorSnapshotInput = sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot || sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || sessionInput.onboardMonitor || sessionInput.onboard_monitor || {};
@@ -13942,6 +14030,7 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput), livePidSnapshotInput, ["livePidReadoutStatus", "live_pid_readout_status"]);
+    const livePidTimeline = normalizeLivePidTimeline(livePidTimelineInput);
     const obdReportedProfile = buildObdReportedProfile(livePidSnapshot, getObdReportedProfileInput(sessionInput));
     const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
       ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"
@@ -14274,6 +14363,8 @@
       ecu_info_snapshot: ecuInfoSnapshot,
       livePidSnapshot,
       live_pid_snapshot: livePidSnapshot,
+      livePidTimeline,
+      live_pid_timeline: livePidTimeline,
       supportedPidMatrix,
       supported_pid_matrix: supportedPidMatrix,
       readoutCoverage,
@@ -14740,6 +14831,7 @@
     normalizeBridgeAdapterIdentity,
     normalizeBridgeDtcSnapshot,
     normalizeBridgeLivePidSnapshot,
+    normalizeLivePidTimeline,
     normalizeBridgeSupportedPidSnapshot,
     normalizeBridgeFreezeFrameSnapshot,
     normalizeBridgeReadinessSnapshot,

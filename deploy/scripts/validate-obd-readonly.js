@@ -2443,11 +2443,13 @@ check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSo
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
 check(appSource.includes('function formatObdReportedProfile(profile, fallback = "")') && appSource.includes('const sessionObdReportedProfile = session?.obdReportedProfile || session?.obd_reported_profile || null;') && appSource.includes('["ECU報告プロファイル", obdReportedProfileLabel]'), "OBD session summary should display ECU-reported profile separately from selected vehicle metadata");
+check(source.includes('function normalizeLivePidTimeline(input = {})') && source.includes('slice(-60)') && source.includes('live_pid_timeline: livePidTimeline,'), "Live PID timeline should be bounded and retained in diagnostic sessions");
+check(appSource.includes('livePidTimeline: [],') && appSource.includes('window.ObdReadOnly.normalizeLivePidTimeline({') && appSource.includes('["ライブ履歴", livePidTimeline?.sampleCount'), "Web Serial and bridge readouts should retain and display bounded live PID history");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
-check(appSource.includes('const APP_VERSION = "2.863.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for readiness alias intake");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.863.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.863.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.864.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for live PID timeline retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.864.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.864.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
@@ -10255,6 +10257,24 @@ const restoredObdProfileSession = obd.buildDiagnosticScanSession({
   livePidSnapshot: { values: [], live_pid_readout_status: "unknown" }
 });
 check(restoredObdProfileSession.obdReportedProfile?.fuel_type === "diesel" && restoredObdProfileSession.obd_reported_profile?.vehicle_command_enabled === false, "Saved ECU-reported OBD profile was not preserved across session import");
+const reportedLivePidTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-07-17T00:00:00Z", live_pid_snapshot: decodedLivePids },
+    { captured_at: "2026-07-17T00:00:01Z", live_pid_snapshot: { monitor_values: [{ id: "rpm", value: 900 }], live_pid_readout_status: "unparsed" } },
+    { captured_at: "2026-07-17T00:00:02Z", live_pid_snapshot: { monitor_values: [{ id: "rpm", value: 900 }], live_pid_readout_status: "reported", blocked: true } }
+  ]
+});
+check(reportedLivePidTimeline.schemaVersion === "live_pid_timeline_v1" && reportedLivePidTimeline.sampleCount === 1 && reportedLivePidTimeline.samples[0]?.live_pid_readout_status === "reported" && reportedLivePidTimeline.vehicle_command_enabled === false, "Live PID timeline did not retain only reported read-only samples");
+const cappedLivePidTimeline = obd.normalizeLivePidTimeline({
+  samples: Array.from({ length: 65 }, (_item, index) => ({
+    captured_at: `2026-07-17T00:00:${String(index).padStart(2, "0")}Z`,
+    live_pid_snapshot: { ...decodedLivePids, captured_at: `2026-07-17T00:00:${String(index).padStart(2, "0")}Z` }
+  }))
+});
+check(cappedLivePidTimeline.sampleCount === 60 && cappedLivePidTimeline.samples[0]?.captured_at === "2026-07-17T00:00:05Z" && cappedLivePidTimeline.would_transmit === false, "Live PID timeline was not bounded to the newest safe samples");
+const timelineSession = obd.buildDiagnosticScanSession({ live_pid_timeline: reportedLivePidTimeline });
+const reimportedTimelineSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(timelineSession) });
+check(timelineSession.livePidTimeline?.sample_count === 1 && reimportedTimelineSession.live_pid_timeline?.sample_count === 1 && reimportedTimelineSession.vehicleCommandEnabled === false, "Live PID timeline was not preserved through read-only session export and import");
 check(decodedLivePids.monitorValues.find((item) => item.id === "o2_b1s1_voltage")?.value === 0.64, "O2 sensor voltage PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "o2_b1s1_stft")?.value === 12.5, "O2 sensor short trim PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "wide_o2_b1s1_ratio")?.value === 1, "Wide O2 voltage-style equivalence ratio PID was not decoded");

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.863.0";
+const APP_VERSION = "2.864.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -506,6 +506,7 @@ const obdDevSession = {
   supportedPidDiscoveryComplete: false,
   supportedPidSet: [],
   readoutAttempts: [],
+  livePidTimeline: [],
   bridgeEndpoint: null,
   bridgeStatus: null,
   bridgeVciList: null,
@@ -4252,6 +4253,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.supportedPidDiscoveryComplete = false;
     obdDevSession.supportedPidSet = [];
     obdDevSession.readoutAttempts = [];
+    obdDevSession.livePidTimeline = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
     obdDevStatus.textContent = `VCI読取を開始しました。通信速度 ${baudRate}。`;
@@ -4275,6 +4277,7 @@ async function disconnectObdDeveloperVci() {
   obdDevSession.readLoopActive = false;
   obdDevSession.supportedPidDiscoveryComplete = false;
   obdDevSession.supportedPidSet = [];
+  obdDevSession.livePidTimeline = [];
 
   try {
     if (reader) {
@@ -4747,11 +4750,17 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
     captured_at: capturedAt
   });
   const webSerialReadoutSummary = buildWebSerialReadoutSummary();
+  const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({
+    samples: [...obdDevSession.livePidTimeline, { livePidSnapshot: scanSession.livePidSnapshot }]
+  });
+  obdDevSession.livePidTimeline = livePidTimeline.samples;
   const session = {
     ...scanSession,
     ...(obdDevSession.adapterIdentity ? { adapterIdentity: obdDevSession.adapterIdentity, adapter_identity: obdDevSession.adapterIdentity } : {}),
     webSerialReadoutSummary,
-    web_serial_readout_summary: webSerialReadoutSummary
+    web_serial_readout_summary: webSerialReadoutSummary,
+    livePidTimeline,
+    live_pid_timeline: livePidTimeline
   };
   obdDevSession.lastSession = session;
   renderObdDeveloperReadout(session);
@@ -4864,6 +4873,12 @@ function renderObdBridgeReadout(parts = {}) {
   const previousNextReadoutReasonSummary = previousSession.nextReadoutReasonSummary || previousSession.next_readout_reason_summary || previousDiagnosticFlowSummary?.nextReadoutReasonSummary || previousDiagnosticFlowSummary?.next_readout_reason_summary || previousCoreSessionStatus?.nextReadoutReasonSummary || previousCoreSessionStatus?.next_readout_reason_summary || null;
   const previousNextReadoutCandidateSafetySummary = previousSession.nextReadoutCandidateSafetySummary || previousSession.next_readout_candidate_safety_summary || previousDiagnosticFlowSummary?.nextReadoutCandidateSafetySummary || previousDiagnosticFlowSummary?.next_readout_candidate_safety_summary || previousCoreSessionStatus?.nextReadoutCandidateSafetySummary || previousCoreSessionStatus?.next_readout_candidate_safety_summary || null;
   const previousReadoutRequestPlanSummary = previousSession.readoutRequestPlanSummary || previousSession.readout_request_plan_summary || previousDiagnosticFlowSummary?.readoutRequestPlanSummary || previousDiagnosticFlowSummary?.readout_request_plan_summary || previousCoreSessionStatus?.readoutRequestPlanSummary || previousCoreSessionStatus?.readout_request_plan_summary || null;
+  const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({
+    samples: [
+      ...(previousSession.livePidTimeline?.samples || previousSession.live_pid_timeline?.samples || []),
+      ...(parts.livePidResponse ? [{ livePidSnapshot }] : [])
+    ]
+  });
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
@@ -4895,6 +4910,7 @@ function renderObdBridgeReadout(parts = {}) {
     capturedAt: importResult.capturedAt || previousSession.capturedAt || undefined,
     dtcSnapshot: dtcSnapshot || { dtcs: [] },
     livePidSnapshot: livePidSnapshot || { values: [] },
+    livePidTimeline,
     readinessSnapshot: readinessSnapshot || { monitors: [] },
     freezeFrameSnapshot: freezeFrameSnapshot || { values: [] },
     ecuInfoSnapshot: ecuInfoSnapshot || { values: [] },
@@ -6535,6 +6551,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const ecuInfoSnapshot = session?.ecuInfoSnapshot || session?.ecu_info_snapshot || null;
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
   const livePidSnapshot = session?.livePidSnapshot || session?.live_pid_snapshot || null;
+  const livePidTimeline = session?.livePidTimeline || session?.live_pid_timeline || null;
   const readinessSnapshot = session?.readinessSnapshot || session?.readiness_snapshot || null;
   const onboardMonitorSnapshot = session?.onboardMonitorSnapshot || session?.onboard_monitor_snapshot || null;
   const supportedPidMatrix = session?.supportedPidMatrix || session?.supported_pid_matrix || null;
@@ -6648,6 +6665,7 @@ function renderObdDeveloperSessionSummary(session = null) {
       ? formatObdBridgeMonitorSummary(livePidSnapshot?.monitorValueSummary)
       : 0],
     ["ライブ値読取状態", livePidReadoutStatusLabel],
+    ["ライブ履歴", livePidTimeline?.sampleCount ? `${livePidTimeline.sampleCount}回` : 0],
     ["レディネス", readinessSnapshot?.monitorCount || readinessSnapshot?.knownMonitorCount
       ? formatObdBridgeReadinessSummary(readinessSnapshot)
       : 0],
