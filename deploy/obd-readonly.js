@@ -106,6 +106,23 @@
     })
   ]);
 
+  const serviceOperationReadinessRequirements = Object.freeze({
+    clear_dtc: Object.freeze([
+      Object.freeze({ id: "operator_authentication", label: "操作者認証", evidenceKey: "operatorAuthenticated" }),
+      Object.freeze({ id: "vehicle_applicability_confirmed", label: "車種・ECU適合確認", evidenceKey: "vehicleApplicabilityConfirmed" }),
+      Object.freeze({ id: "full_system_scan_saved", label: "全システムスキャン保存", evidenceKey: "fullSystemScanSaved" }),
+      Object.freeze({ id: "freeze_frame_saved", label: "フリーズフレーム保存", evidenceKey: "freezeFrameSaved" }),
+      Object.freeze({ id: "pre_clear_snapshot_saved", label: "消去前DTC状態保存", evidenceKey: "preClearSnapshotSaved" }),
+      Object.freeze({ id: "repair_context_recorded", label: "修理前後の比較根拠", evidenceKey: "repairContextRecorded" }),
+      Object.freeze({ id: "impact_acknowledged", label: "影響範囲とレディネス再設定の確認", evidenceKey: "impactAcknowledged" }),
+      Object.freeze({ id: "cancellation_path_ready", label: "取消導線", evidenceKey: "cancellationPathReady" }),
+      Object.freeze({ id: "post_clear_rescan_plan", label: "消去後再スキャン計画", evidenceKey: "postClearRescanPlan" }),
+      Object.freeze({ id: "recovery_plan", label: "失敗時復旧計画", evidenceKey: "recoveryPlan" }),
+      Object.freeze({ id: "hardware_protocol_qualified", label: "VCI・通信条件の実機確認", evidenceKey: "hardwareProtocolQualified" }),
+      Object.freeze({ id: "independent_safety_review", label: "独立した安全検証", evidenceKey: "independentSafetyReview" })
+    ])
+  });
+
   const vehicleConnectionProfile = Object.freeze({
     interfaceType: "web-serial-obd-adapter",
     currentState: "safety-gated",
@@ -750,6 +767,49 @@
       blocked: explicitlyBlocked || wouldTransmit || !explicitlyUnblocked,
       unparsed: !wouldTransmit && !explicitlyBlocked && explicitlyUnblocked && isExplicitFalseFlag(response?.ok),
       wouldTransmit
+    };
+  }
+
+  function getServiceOperationReadinessRequirements(operationId) {
+    return (serviceOperationReadinessRequirements[operationId] || []).map((item) => ({ ...item }));
+  }
+
+  function buildServiceOperationReadiness(operationId, evidence = {}) {
+    const operation = vehicleOperationPlan.find((item) => item.id === operationId) || null;
+    const requirements = getServiceOperationReadinessRequirements(operationId);
+    const checks = requirements.map((item) => ({
+      ...item,
+      complete: evidence?.[item.evidenceKey] === true
+    }));
+    const missingRequirementIds = checks.filter((item) => !item.complete).map((item) => item.id);
+
+    return {
+      schemaVersion: "service_operation_readiness_v1",
+      schema_version: "service_operation_readiness_v1",
+      operationId: operationId || null,
+      operation_id: operationId || null,
+      label: operation?.label || operationId || "unknown",
+      commandClass: operation?.commandClass || "unknown",
+      state: "development-gated",
+      currentAvailability: "安全条件の実装・検証中。実車実行は未開放",
+      checks,
+      missingRequirementIds,
+      missing_requirement_ids: [...missingRequirementIds],
+      completedCount: checks.length - missingRequirementIds.length,
+      completed_count: checks.length - missingRequirementIds.length,
+      totalCount: checks.length,
+      total_count: checks.length,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      canExecute: false,
+      can_execute: false,
+      requiresExternalSafetyValidation: true,
+      requires_external_safety_validation: true,
+      reason: "準備条件の記録と検証だけを行います。このモデルから車両へコマンドは送信しません。"
     };
   }
 
@@ -14935,6 +14995,8 @@
     getReadinessMonitors,
     getEcuInfoItems,
     getVehicleOperationPlan,
+    getServiceOperationReadinessRequirements,
+    buildServiceOperationReadiness,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
