@@ -802,7 +802,8 @@
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
     const dtcStatusSummary = buildDtcStatusSummary({
       reportedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false ? [defaultStatus] : [],
-      dtcs: normalizedDtcs
+      dtcs: normalizedDtcs,
+      includeObservedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false
     });
     const dtcReadoutStatus = bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown";
 
@@ -11339,7 +11340,7 @@
     };
   }
 
-  function buildDtcStatusSummary({ reportedStatuses = [], dtcs = [] } = {}) {
+  function buildDtcStatusSummary({ reportedStatuses = [], dtcs = [], includeObservedStatuses = true } = {}) {
     const expectedStatuses = ["stored", "pending", "permanent"];
     const normalizeStatuses = (values) => [...new Set(
       (Array.isArray(values) ? values : [values])
@@ -11347,7 +11348,7 @@
         .filter((value) => expectedStatuses.includes(value))
     )].sort((left, right) => expectedStatuses.indexOf(left) - expectedStatuses.indexOf(right));
     const observedStatuses = normalizeStatuses((Array.isArray(dtcs) ? dtcs : []).map((row) => row?.status));
-    const normalizedReportedStatuses = normalizeStatuses([...reportedStatuses, ...observedStatuses]);
+    const normalizedReportedStatuses = normalizeStatuses([...reportedStatuses, ...(includeObservedStatuses ? observedStatuses : [])]);
     const emptyStatuses = normalizedReportedStatuses.filter((status) => !observedStatuses.includes(status));
     const unreportedStatuses = expectedStatuses.filter((status) => !normalizedReportedStatuses.includes(status));
     return {
@@ -11441,6 +11442,7 @@
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
     const unknownCount = normalizedDtcs.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
+    const requestedReadoutStatus = String(sourceInput.dtcReadoutStatus || sourceInput.dtc_readout_status || "").trim().toLowerCase();
     const dtcStatusSummary = buildDtcStatusSummary({
       reportedStatuses: [
         ...(Array.isArray(sourceInput.reportedStatuses) ? sourceInput.reportedStatuses : []),
@@ -11453,9 +11455,9 @@
         sourceInput.readoutStatus,
         sourceInput.readout_status
       ],
-      dtcs: normalizedDtcs
+      dtcs: normalizedDtcs,
+      includeObservedStatuses: requestedReadoutStatus !== "blocked"
     });
-    const requestedReadoutStatus = String(sourceInput.dtcReadoutStatus || sourceInput.dtc_readout_status || "").trim().toLowerCase();
     const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
@@ -12220,12 +12222,16 @@
     const pendingCount = mergedRows.filter((item) => item.status === "pending").length;
     const permanentCount = mergedRows.filter((item) => item.status === "permanent").length;
     const unknownCount = mergedRows.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
+    const reportedRows = snapshots
+      .filter((snapshot) => !["blocked", "unparsed"].includes(snapshot?.dtcReadoutStatus || snapshot?.dtc_readout_status || "unknown"))
+      .flatMap((snapshot) => Array.isArray(snapshot?.dtcs) ? snapshot.dtcs : []);
     const dtcStatusSummary = buildDtcStatusSummary({
       reportedStatuses: snapshots.flatMap((snapshot) => [
         ...(Array.isArray(snapshot?.dtcStatusSummary?.reportedStatuses) ? snapshot.dtcStatusSummary.reportedStatuses : []),
         ...(Array.isArray(snapshot?.dtc_status_summary?.reported_statuses) ? snapshot.dtc_status_summary.reported_statuses : [])
       ]),
-      dtcs: mergedRows
+      dtcs: reportedRows,
+      includeObservedStatuses: true
     });
     const childReadoutStatuses = snapshots
       .map((snapshot) => snapshot?.dtcReadoutStatus || snapshot?.dtc_readout_status || "unknown");
