@@ -2396,7 +2396,7 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.806.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for Mode 06 unparsed response handling");
+check(appSource.includes('const APP_VERSION = "2.807.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for unparsed freeze-frame response handling");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC readout status");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
@@ -5784,7 +5784,7 @@ const bridgeSummaryApplicabilityPartial = obd.buildBridgeSessionSummary({
 check(bridgeSummaryApplicabilityPartial.warnings.includes("vehicle_applicability_partial"), "Bridge session summary did not emit partial applicability warning");
 check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Bridge session summary did not prioritize freeze_frame_snapshot as the next readout candidate");
 check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Bridge session summary did not prioritize ecu_info_snapshot after freeze_frame for partial applicability");
-check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[0]?.reason === "読取応答が空のため再確認候補", "Bridge session summary next readout reason should stay concise for partial applicability");
+check(bridgeSummaryApplicabilityPartial.nextReadoutCandidates[0]?.reason === "未読取のため次候補", "Bridge session summary should identify blocked freeze-frame input as unread for partial applicability");
 const bridgeSummaryApplicabilityManual = obd.buildBridgeSessionSummary({
   vehicle_profile: { maker: "Toyota", model: "Prius" },
   vehicle_applicability: { status: "manual" },
@@ -10063,6 +10063,11 @@ check(freezeUndecodedNumberPid.monitorValues.find((item) => item.id === "vehicle
 check(freezeUndecodedNumberPid.monitorValueSummary.undecodedRawCount === 1, "フリーズフレームの未換算RAW件数を集計できません");
 check(freezeUndecodedNumberPid.monitorValueSummary.undecoded_raw_count === 1 && freezeUndecodedNumberPid.monitorValueSummary.numeric_count === freezeUndecodedNumberPid.monitorValueSummary.numericCount, "Freeze-frame summary did not expose snake_case count aliases");
 check(decodedFreezeFrame.retainedRawText === false, "フリーズフレームデコードが原文保持になっています");
+check(decodedFreezeFrame.freezeFrameReadoutStatus === "reported", "フリーズフレームの有効応答をreportedとして保持できません");
+const unparsedFreezeFrameSession = obd.buildDiagnosticScanSession({ freezeFrameResponse: { raw: "42", captured_at: "2026-07-17T00:00:00Z" } });
+check(unparsedFreezeFrameSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "missing" && unparsedFreezeFrameSession.coreSessionStatus?.readoutStateById?.freeze_frame_snapshot?.status === "missing" && unparsedFreezeFrameSession.vehicleCommandEnabled === false, "不完全なフリーズフレーム応答を未読取として保持できません");
+const reimportedUnparsedFreezeFrameSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedFreezeFrameSession) });
+check(reimportedUnparsedFreezeFrameSession.freezeFrameSnapshot?.freeze_frame_readout_status === "unparsed" && reimportedUnparsedFreezeFrameSession.vehicleCommandEnabled === false, "保存済み不完全フリーズフレーム応答を再取込できません");
 const decodedEcuInfo = obd.decodeEcuInfoResponse({ raw: "49 02 01 4A 54 44 4B 4E 33 44 55 30 41 30 31 32 33 34 35 36 49 04 01 43 41 4C 2D 31 32 33 34 49 0A 01 45 6E 67 69 6E 65 20 45 43 55" });
 check(decodedEcuInfo.hadSensitiveIdentifier === true, "Mode 09 VINを識別情報として検出できません");
 check(!JSON.stringify(decodedEcuInfo).includes("JTDKN3DU0A0123456"), "Mode 09デコードにVIN生値が残っています");

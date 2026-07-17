@@ -1032,6 +1032,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
+      freeze_frame_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown",
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
       values: Array.isArray(data.values)
         ? data.values
@@ -1431,7 +1432,7 @@
       {
         id: "freeze_frame_snapshot",
         label: "フリーズフレーム",
-        available: freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues),
+        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues)),
         count: Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0
       },
       {
@@ -1661,7 +1662,9 @@
           ? ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || null
           : item.id === "onboard_monitor_snapshot"
             ? onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || null
-            : null;
+            : item.id === "freeze_frame_snapshot"
+              ? freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || null
+              : null;
       const status = ["unparsed", "blocked"].includes(explicitReadoutStatus)
         ? "missing"
         : item.count > 0 ? "captured" : coverageItem?.status || "missing";
@@ -4122,6 +4125,8 @@
         || snapshot?.ecu_info_readout_status
         || snapshot?.onboardMonitorReadoutStatus
         || snapshot?.onboard_monitor_readout_status
+        || snapshot?.freezeFrameReadoutStatus
+        || snapshot?.freeze_frame_readout_status
       ))
       && (
         Boolean(snapshot?.capturedAt)
@@ -11476,6 +11481,7 @@
     const capturedItemCount = monitorValues.length;
     const expectedItemCount = expectedItems.length;
     const monitorInsights = analyzeMonitorValues(monitorValues);
+    const readoutStatus = sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (monitorValues.length ? "reported" : "unknown");
 
     return {
       schemaVersion: "freeze_frame_snapshot_v1",
@@ -11498,6 +11504,8 @@
       expected_item_count: expectedItemCount,
       monitorInsights,
       monitor_insights: monitorInsights,
+      freezeFrameReadoutStatus: readoutStatus,
+      freeze_frame_readout_status: readoutStatus,
       retainedRawText: false,
       retained_raw_text: false
     };
@@ -12244,6 +12252,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     let triggerDtc = null;
+    const hasMode02Frame = bytes.some((byte, index) => byte === 0x42 && index + 2 < bytes.length);
 
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x42) continue;
@@ -12267,6 +12276,7 @@
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
+      freeze_frame_readout_status: hasMode02Frame ? "reported" : "unparsed",
       trigger_dtc: triggerDtc,
       values
     });
