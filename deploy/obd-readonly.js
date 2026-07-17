@@ -748,6 +748,7 @@
     return {
       ok: isExplicitTrueFlag(response?.ok),
       blocked: explicitlyBlocked || wouldTransmit || !explicitlyUnblocked,
+      unparsed: !wouldTransmit && !explicitlyBlocked && explicitlyUnblocked && isExplicitFalseFlag(response?.ok),
       wouldTransmit
     };
   }
@@ -755,16 +756,23 @@
   function readBridgeSnapshotSafety(response = {}, hasSnapshotData = false) {
     const safety = readBridgeResponseSafety(response);
     const hasExplicitSafety = Boolean(response && typeof response === "object" && (
-      response.ok !== undefined || response.blocked !== undefined || response.isBlocked !== undefined || response.would_transmit !== undefined || response.wouldTransmit !== undefined
+      response.ok !== undefined || response.blocked !== undefined || response.isBlocked !== undefined || response.is_blocked !== undefined || response.would_transmit !== undefined || response.wouldTransmit !== undefined
     ));
     const inferredSnapshotSafety = !hasExplicitSafety && hasSnapshotData;
     return {
       ...safety,
       hasExplicitSafety,
       inferredSnapshotSafety,
+      unparsed: inferredSnapshotSafety ? false : safety.unparsed,
       ok: inferredSnapshotSafety || safety.ok,
       blocked: inferredSnapshotSafety ? false : safety.blocked
     };
+  }
+
+  function getBridgeReadoutStatus(bridgeSafety = {}) {
+    if (bridgeSafety.blocked) return "blocked";
+    if (bridgeSafety.unparsed) return "unparsed";
+    return bridgeSafety.ok ? "reported" : "unknown";
   }
 
   function isExplicitTrueFlag(value) {
@@ -848,7 +856,7 @@
       dtcs: normalizedDtcs,
       includeObservedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false
     });
-    const dtcReadoutStatus = bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown";
+    const dtcReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -1038,8 +1046,8 @@
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
-    const readoutStatus = bridgeSafety.blocked
-      ? "blocked"
+    const readoutStatus = bridgeSafety.blocked || bridgeSafety.unparsed
+      ? getBridgeReadoutStatus(bridgeSafety)
       : ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
         ? String(explicitReadoutStatus).trim().toLowerCase()
         : bridgeSafety.ok ? "reported" : "unknown";
@@ -1100,7 +1108,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
       protocol: readBridgeProtocol(data),
-      supported_pid_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
+      supported_pid_readout_status: getBridgeReadoutStatus(bridgeSafety),
       supported_pids: supportedPids
       }),
       intent: "read_supported_pids",
@@ -1138,7 +1146,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      freeze_frame_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
+      freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
       values: freezeFrameValues
       }),
@@ -1202,6 +1210,7 @@
           ].filter(Boolean);
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
       || [data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
+    const bridgeReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
       intent: "readiness_snapshot",
@@ -1225,7 +1234,7 @@
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
         protocol: readBridgeProtocol(data),
-        readiness_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "unparsed" : "unknown",
+        readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus,
         monitors: []
       }));
     }
@@ -1257,7 +1266,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      readiness_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
+      readiness_readout_status: bridgeReadoutStatus,
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
       monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
         const supported = (byte & supportedBit) !== 0;
@@ -1276,7 +1285,7 @@
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
         protocol: readBridgeProtocol(data),
-        ecu_info_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown"
+        ecu_info_readout_status: getBridgeReadoutStatus(bridgeSafety)
       }),
       intent: "read_ecu_info",
       ok: bridgeSafety.ok,
@@ -1319,7 +1328,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      onboard_monitor_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown",
+      onboard_monitor_readout_status: getBridgeReadoutStatus(bridgeSafety),
       tests
       }),
       intent: "read_onboard_monitor",
