@@ -3,6 +3,12 @@ import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8");
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventListener(\"submit\""));
+const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
+const developerSessionSummarySource = appSource.slice(
+  appSource.indexOf("function renderObdDeveloperSessionSummary(session = null)"),
+  appSource.indexOf("function renderObdOperationPlan(items)")
+);
 const monitorDefinitions = JSON.parse(
   fs.readFileSync(new URL("../data/obd-monitor-definitions.json", import.meta.url), "utf8")
 );
@@ -2443,7 +2449,8 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('function formatObdReportedProfile(profile, fallback = "")') && appSource.includes('const sessionObdReportedProfile = session?.obdReportedProfile || session?.obd_reported_profile || null;') && appSource.includes('["ECU報告プロファイル", obdReportedProfileLabel]'), "OBD session summary should display ECU-reported profile separately from selected vehicle metadata");
+check(!appBootstrapSource.includes("initializeObdReadOnlyPanel();") && loadDataSource.includes("initializeObdReadOnlyPanel();"), "OBD initialization should wait for interface guide constants before rendering the panel");
+check(appSource.includes('function formatObdReportedProfile(profile, fallback = "")') && developerSessionSummarySource.includes('const sessionObdReportedProfile = session?.obdReportedProfile || session?.obd_reported_profile || null;') && developerSessionSummarySource.includes('["ECU報告プロファイル", obdReportedProfileLabel]'), "OBD session summary should display ECU-reported profile separately from selected vehicle metadata");
 check(source.includes('function normalizeLivePidTimeline(input = {})') && source.includes('slice(-60)') && source.includes('const allowLivePidTimelineFallback = allowLivePidTimelineFallbackInput === true || !hasLivePidSnapshotInput;') && source.includes('allowLivePidTimelineFallback,') && source.includes('live_pid_timeline: livePidTimeline,'), "Live PID timeline should be bounded, retained, and used only as a missing-snapshot coverage fallback");
 check(source.includes('function buildLivePidTimelineSummary(input = {})') && source.includes('comparisonAvailable') && source.includes('changedValueCount'), "Live PID timeline should derive comparison values without diagnostic classification");
 check(appSource.includes('livePidTimeline: [],') && appSource.includes('window.ObdReadOnly.normalizeLivePidTimeline({') && appSource.includes('window.ObdReadOnly.buildLivePidTimelineSummary(livePidTimeline)') && appSource.includes('["ライブ履歴", livePidTimeline?.sampleCount') && appSource.includes('["前回比較", livePidTimelineComparisonLabel]'), "Web Serial and bridge readouts should retain and display bounded live PID history");
@@ -2453,8 +2460,8 @@ check(appSource.includes('function buildLivePidTimelineChartRows(timeline = null
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
-check(appSource.includes('const APP_VERSION = "2.872.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for conditioned live PID change display");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.872.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.872.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.873.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for OBD initialization recovery");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.873.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.873.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");

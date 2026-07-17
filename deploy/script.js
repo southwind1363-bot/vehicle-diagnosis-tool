@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.872.0";
+const APP_VERSION = "2.873.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -529,7 +529,6 @@ renderSimilarCases();
 updateCaseQualityPreview();
 showInitialNotice();
 updateAiButtonLabel();
-initializeObdReadOnlyPanel();
 registerOfflineCache();
 
 form.addEventListener("submit", (event) => {
@@ -6642,6 +6641,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const sessionVciDevices = session?.vciDevices || session?.vci_devices || session?.vciList?.devices || session?.vci_list?.devices || null;
   const sessionVehicleProfile = session?.vehicleProfile || session?.vehicle_profile || null;
   const sessionVehicleApplicability = session?.vehicleApplicability || session?.vehicle_applicability || null;
+  const sessionObdReportedProfile = session?.obdReportedProfile || session?.obd_reported_profile || null;
   const connectionStatus = sessionConnectionStatus
     ? { ...(obdDevSession.bridgeStatus || {}), ...sessionConnectionStatus }
     : obdDevSession.bridgeStatus;
