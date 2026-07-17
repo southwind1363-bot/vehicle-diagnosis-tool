@@ -1359,7 +1359,7 @@ const readinessSnapshotFunctionChecks = () => {
   check(Boolean(readinessSnapshotFunctionSource), "normalizeReadinessSnapshot is missing from obd-readonly.js");
   if (readinessSnapshotFunctionSource) {
     const functionBody = readinessSnapshotFunctionSource[0];
-    check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) ? input : {};') && functionBody.includes('sourceInput.source_type') && functionBody.includes('sourceInput.sourceType'), "normalizeReadinessSnapshot should default source from normalized source aliases");
+    check(functionBody.includes('input.data && typeof input.data === "object"') && functionBody.includes('input.data.source_type') && functionBody.includes('sourceInput.source_type') && functionBody.includes('sourceInput.sourceType'), "normalizeReadinessSnapshot should normalize nested data and source aliases");
     check(functionBody.includes('Array.isArray(sourceInput.readinessValues)') && functionBody.includes('Array.isArray(sourceInput.readiness_rows)') && functionBody.includes('Array.isArray(sourceInput.pid_values)') && functionBody.includes('Array.isArray(sourceInput.items)'), "normalizeReadinessSnapshot should accept readiness monitor array aliases");
     check(functionBody.includes('readinessMonitorCatalog.find((entry) => entry.id === id)') && functionBody.includes('diagnosticUse: catalogItem?.diagnosticUse || ""'), "normalizeReadinessSnapshot should enrich monitors from readiness catalog");
     check(functionBody.includes('monitor?.monitorId') && functionBody.includes('monitor?.monitor_id') && functionBody.includes('monitor?.display_label'), "normalizeReadinessSnapshot should normalize monitor id and label aliases");
@@ -2410,8 +2410,8 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.828.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for typed DTC export deduplication");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.828.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.828.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.829.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for nested readiness normalization");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.829.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.829.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
@@ -2439,7 +2439,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "DTC保存時の重複を抑止"'), "OBD core progress snapshot should show the latest DTC export deduplication milestone");
+check(appSource.includes('recentMilestone: "入れ子レディネス読取を正規化"'), "OBD core progress snapshot should show the latest readiness normalization milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -10316,6 +10316,19 @@ check(normalizedReadinessAliasSnapshot.milOn === true && normalizedReadinessAlia
 check(normalizedReadinessAliasSnapshot.mil_on === true && normalizedReadinessAliasSnapshot.monitor_count === 3 && normalizedReadinessAliasSnapshot.retained_raw_text === false, "normalizeReadinessSnapshot did not expose snake_case readiness aliases");
 check(normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "catalyst")?.complete === false && normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "catalyst")?.label === "Catalyst alias", "normalizeReadinessSnapshot did not normalize monitor id, label, and complete aliases");
 check(normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "evaporative_system")?.supported === false && normalizedReadinessAliasSnapshot.monitors.find((item) => item.id === "oxygen_sensor")?.complete === true, "normalizeReadinessSnapshot did not normalize supported and readiness status aliases");
+const nestedReadinessAliasSnapshot = obd.normalizeReadinessSnapshot({
+  source_type: "bridge_import",
+  captured_at: "2026-07-17T00:00:00Z",
+  communication_protocol: "ISO15765-4",
+  data: {
+    milStatus: "off",
+    readiness_values: [
+      { monitor_id: "catalyst", is_supported: "true", is_complete: "false" }
+    ]
+  }
+});
+check(nestedReadinessAliasSnapshot.source === "bridge_import" && nestedReadinessAliasSnapshot.protocol === "ISO15765-4" && nestedReadinessAliasSnapshot.capturedAt === "2026-07-17T00:00:00Z", "normalizeReadinessSnapshot did not retain outer metadata for nested data input");
+check(nestedReadinessAliasSnapshot.milOn === false && nestedReadinessAliasSnapshot.monitorCount === 1 && nestedReadinessAliasSnapshot.incompleteCount === 1 && nestedReadinessAliasSnapshot.readinessReadoutStatus === "reported", "normalizeReadinessSnapshot did not normalize nested readiness data input");
 const normalizedReadinessPidValuesAliasSnapshot = obd.normalizeReadinessSnapshot({
   milStatus: "off",
   pid_values: [
