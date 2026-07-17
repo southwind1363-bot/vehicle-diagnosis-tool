@@ -2436,8 +2436,8 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.847.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for Web Serial execution summaries");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.847.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.847.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.848.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for Web Serial execution summary import normalization");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.848.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.848.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
@@ -2465,7 +2465,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "Web Serial読取実行履歴をscan sessionへ保持"'), "OBD core progress snapshot should show the latest Web Serial readout milestone");
+check(appSource.includes('recentMilestone: "Web Serial実行履歴のJSON入出力を正規化"'), "OBD core progress snapshot should show the latest Web Serial readout milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -14661,6 +14661,34 @@ check(scanSessionNestedOuterOverride.vehicleProfile?.model === "Allion", "Diagno
 check(scanSessionNestedOuterOverride.vehicleApplicability?.status === "partial", "Diagnostic scan session did not let outer vehicle_applicability override scan_session alias input");
 check(scanSessionNestedOuterOverride.readoutCoverage?.capturedPercent === 29, "Diagnostic scan session did not let outer readout_coverage override scan_session alias input");
 check(scanSessionNestedOuterOverride.ecuInfoSnapshot?.items?.[0]?.value === "Outer Override ECU", "Diagnostic scan session did not let outer ecu_info_snapshot override scan_session alias input");
+const scanSessionWebSerialExecutionSummary = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "untrusted_execution_schema",
+    attempt_count: 30,
+    completed_count: 29,
+    partial_count: 0,
+    failed_count: 1,
+    vehicle_command_enabled: true,
+    attempts: [
+      { label: "DTC", status: "completed", requested_command_count: 3, completed_command_count: 3, commands: ["03", "07", "0A"] },
+      { label: "PID", status: "untrusted", requested_command_count: 2, completed_command_count: 9, vehicle_command_enabled: true }
+    ]
+  }
+});
+check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.schemaVersion === "web_serial_readout_execution_v1" && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.attempt_count === 2, "Diagnostic scan session did not normalize Web Serial execution summary schema and attempt count");
+check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.completedCount === 1 && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.failed_count === 1, "Diagnostic scan session did not normalize Web Serial execution statuses");
+check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[1]?.completedCommandCount === 2 && scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.vehicleCommandEnabled === false, "Diagnostic scan session did not clamp Web Serial execution counts or preserve read-only mode");
+check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[0]?.commands === undefined && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.attempts?.[0]?.vehicle_command_enabled === false, "Diagnostic scan session retained unsafe Web Serial execution command bodies or write flags");
+const scanSessionNestedWebSerialExecutionSummary = obd.buildDiagnosticScanSession({
+  scan_session: {
+    webSerialReadoutSummary: {
+      attemptCount: 1,
+      partialCount: 1,
+      latestAttempt: { label: "Live PID", status: "partial", requestedCommandCount: 4, completedCommandCount: 2 }
+    }
+  }
+});
+check(scanSessionNestedWebSerialExecutionSummary.webSerialReadoutSummary?.partial_count === 1 && scanSessionNestedWebSerialExecutionSummary.web_serial_readout_summary?.latest_attempt?.label === "Live PID", "Diagnostic scan session did not preserve nested Web Serial execution aliases");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));

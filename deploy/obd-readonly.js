@@ -9742,6 +9742,8 @@
       vci_devices: pickPresent(input.vci_devices, input.vciDevices, input.vci_list, input.vciList, input.list_vci_response, input.listVciResponse, payload?.vci_devices, payload?.vciDevices, payload?.vci_list, payload?.vciList, payload?.list_vci_response, payload?.listVciResponse, nested.vci_devices, nested.vciDevices, nested.vci_list, nested.vciList, nested.list_vci_response, nested.listVciResponse, null),
       adapterIdentity: pickPresent(input.adapterIdentity, input.adapter_identity, input.adapterIdentityResponse, input.adapter_identity_response, payload?.adapterIdentity, payload?.adapter_identity, payload?.adapterIdentityResponse, payload?.adapter_identity_response, nested.adapterIdentity, nested.adapter_identity, nested.adapterIdentityResponse, nested.adapter_identity_response, null),
       adapter_identity: pickPresent(input.adapter_identity, input.adapterIdentity, input.adapter_identity_response, input.adapterIdentityResponse, payload?.adapter_identity, payload?.adapterIdentity, payload?.adapter_identity_response, payload?.adapterIdentityResponse, nested.adapter_identity, nested.adapterIdentity, nested.adapter_identity_response, nested.adapterIdentityResponse, null),
+      webSerialReadoutSummary: pickPresent(input.webSerialReadoutSummary, input.web_serial_readout_summary, payload?.webSerialReadoutSummary, payload?.web_serial_readout_summary, nested.webSerialReadoutSummary, nested.web_serial_readout_summary, null),
+      web_serial_readout_summary: pickPresent(input.web_serial_readout_summary, input.webSerialReadoutSummary, payload?.web_serial_readout_summary, payload?.webSerialReadoutSummary, nested.web_serial_readout_summary, nested.webSerialReadoutSummary, null),
       readoutCoverage: pickPresent(input.readoutCoverage, input.readout_coverage, payload?.readoutCoverage, payload?.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
       readout_coverage: pickPresent(input.readout_coverage, input.readoutCoverage, payload?.readout_coverage, payload?.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
       coreSessionStatus: pickPresent(input.coreSessionStatus, input.core_session_status, input.importedCoreSessionStatus, input.imported_core_session_status, payload?.coreSessionStatus, payload?.core_session_status, payload?.importedCoreSessionStatus, payload?.imported_core_session_status, nested.coreSessionStatus, nested.core_session_status, nested.importedCoreSessionStatus, nested.imported_core_session_status, null),
@@ -9868,6 +9870,62 @@
     };
   }
 
+  function normalizeWebSerialReadoutSummary(input = null) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const normalizeAttempt = (attempt) => {
+      if (!attempt || typeof attempt !== "object" || Array.isArray(attempt)) return null;
+      const status = attempt.status === "completed" || attempt.status === "partial" ? attempt.status : "failed";
+      const requestedCommandCount = Math.max(0, Math.min(30, Number(attempt.requestedCommandCount ?? attempt.requested_command_count ?? 0) || 0));
+      const completedCommandCount = Math.max(0, Math.min(requestedCommandCount, Number(attempt.completedCommandCount ?? attempt.completed_command_count ?? 0) || 0));
+      return {
+        label: String(attempt.label || "Web Serial読取").slice(0, 80),
+        status,
+        startedAt: attempt.startedAt || attempt.started_at || null,
+        started_at: attempt.started_at || attempt.startedAt || null,
+        endedAt: attempt.endedAt || attempt.ended_at || null,
+        ended_at: attempt.ended_at || attempt.endedAt || null,
+        requestedCommandCount,
+        requested_command_count: requestedCommandCount,
+        completedCommandCount,
+        completed_command_count: completedCommandCount,
+        timedOut: attempt.timedOut === true || attempt.timed_out === true,
+        timed_out: attempt.timedOut === true || attempt.timed_out === true,
+        readOnly: true,
+        read_only: true,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false
+      };
+    };
+    const attempts = (Array.isArray(input.attempts) ? input.attempts : []).map(normalizeAttempt).filter(Boolean).slice(-30);
+    const countByStatus = (status) => attempts.filter((item) => item.status === status).length;
+    const readCount = (camelKey, snakeKey) => Math.max(0, Math.min(30, Number(input[camelKey] ?? input[snakeKey] ?? 0) || 0));
+    const completedCount = attempts.length ? countByStatus("completed") : readCount("completedCount", "completed_count");
+    const partialCount = attempts.length ? countByStatus("partial") : readCount("partialCount", "partial_count");
+    const failedCount = attempts.length ? countByStatus("failed") : readCount("failedCount", "failed_count");
+    const attemptCount = attempts.length || Math.max(readCount("attemptCount", "attempt_count"), completedCount + partialCount + failedCount);
+    const latestAttempt = attempts.at(-1) || normalizeAttempt(input.latestAttempt || input.latest_attempt || null);
+    return {
+      schemaVersion: "web_serial_readout_execution_v1",
+      schema_version: "web_serial_readout_execution_v1",
+      source: "web_serial",
+      attemptCount,
+      attempt_count: attemptCount,
+      completedCount,
+      completed_count: completedCount,
+      partialCount,
+      partial_count: partialCount,
+      failedCount,
+      failed_count: failedCount,
+      latestAttempt,
+      latest_attempt: latestAttempt,
+      attempts,
+      readOnly: true,
+      read_only: true,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function getSessionMetadataOverrides(sessionInput = {}) {
     const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);
     const hadSensitiveIdentifier = sessionInput.hadSensitiveIdentifier === true
@@ -9881,6 +9939,7 @@
       vehicleProfile: getVehicleProfileInput(sessionInput),
       vehicleApplicability: getVehicleApplicabilityInput(sessionInput),
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
+      webSerialReadoutSummary: normalizeWebSerialReadoutSummary(sessionInput.web_serial_readout_summary || sessionInput.webSerialReadoutSummary || null),
       nextReadoutCandidates: sessionInput.next_readout_candidates || sessionInput.nextReadoutCandidates || null,
       nextReadoutRequest: normalizeReadoutRequestSummaryAliases(sessionInput.next_readout_request || sessionInput.nextReadoutRequest || null),
       nextReadoutRequestSafetySummary: sessionInput.next_readout_request_safety_summary || sessionInput.nextReadoutRequestSafetySummary || null,
@@ -13164,6 +13223,8 @@
 
     return {
       ...outputSession,
+      webSerialReadoutSummary: metadataOverrides.webSerialReadoutSummary,
+      web_serial_readout_summary: metadataOverrides.webSerialReadoutSummary,
       dtcSnapshot: outputDtcSnapshot,
       dtc_snapshot: outputDtcSnapshot,
       source: "obd_text_import",
@@ -13682,6 +13743,7 @@
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
+    const webSerialReadoutSummary = metadataOverrides.webSerialReadoutSummary;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(sessionInput.importedCoreSessionStatus || sessionInput.imported_core_session_status || sessionInput.coreSessionStatus || sessionInput.core_session_status || null);
     const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(sessionInput.importedDiagnosticFlowSummary || sessionInput.imported_diagnostic_flow_summary || sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(sessionInput.importedReadoutCompletionSummary || sessionInput.imported_readout_completion_summary || sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null);
@@ -14056,6 +14118,8 @@
       vci_devices: vciList.devices || [],
       adapterIdentity,
       adapter_identity: adapterIdentity,
+      webSerialReadoutSummary,
+      web_serial_readout_summary: webSerialReadoutSummary,
       ecuResponseSummary,
       ecu_response_summary: ecuResponseSummary,
       dtcSnapshot,
