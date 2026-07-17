@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.885.0";
+const APP_VERSION = "2.886.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1774,12 +1774,24 @@ function getObdInterfaceSelectionNote(capability = window.ObdReadOnly?.getCapabi
   return "自動判定: Web Serial 非対応のため J2534 を優先";
 }
 
+function getObdInterfaceReadoutRoute(interfaceId) {
+  const userAgent = navigator.userAgent || "";
+  const appleMobile = /iPhone|iPad|iPod/i.test(userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const platform = interfaceId === "user-vci-techstream-j2534"
+    ? "desktop"
+    : appleMobile
+      ? "ios"
+      : "desktop";
+  return window.ObdReadOnly?.evaluateInterfaceReadoutRoute?.({ interfaceId, platform }) || null;
+}
+
 function getObdInterfaceStrategyNote(interfaceId) {
   if (interfaceId === "user-vci-elm327") return "必須ルート。最小構成の実車読取入口で、複数VCI対応の基準動作として使います。";
   if (interfaceId === "user-vci-techstream-j2534") return "必須ルート。G-scan/AUTEL級に近づけるためPC系VCIの主経路として優先します。";
   return {
     "user-vci-elm327": "最小構成の実車読取入口。複数VCI対応の基準動作として使います。",
-    "user-vci-thinkcar-bluetooth": "スマホBT系候補。単体読取ではなくPCローカルブリッジ連携を前提に育てます。",
+    "user-vci-thinkcar-bluetooth": "iPhone対応アプリのread-only結果取込を主経路にし、PCローカルブリッジは別系統として育てます。",
     "user-vci-techstream-j2534": "重要ルート。G-scan/AUTEL級に近づけるためPC系VCIの主経路として優先します。",
     "user-vci-rcmall-mks-canable-v2-pro": "CAN系候補。J2534後に読取専用取込の幅を広げる用途です。"
   }[interfaceId] || "複数VCIを選べる前提で、読取専用の安全範囲から順に増やします。";
@@ -1788,13 +1800,14 @@ function getObdInterfaceStrategyNote(interfaceId) {
 function getObdDevelopmentOperationNote(interfaceId) {
   if (interfaceId === "user-vci-elm327") return "運用: 読取前プレビュー確認 -> Web Serial読取開始 -> DTC/ライブデータ読取 -> OBD側で保存と確認";
   if (interfaceId === "user-vci-techstream-j2534") return "運用: 読取前プレビュー確認 -> J2534ドライバ確認 -> ローカルブリッジ確認 -> 読取専用 DTC/ECU情報から実測";
+  if (interfaceId === "user-vci-thinkcar-bluetooth") return "運用: iPhone対応アプリでread-only読取 -> 結果を共有・貼付 -> OBD側でセッション化して保存と確認";
   return "運用: 読取前プレビュー確認 -> 読取準備 -> 読取専用で取れる項目だけ確認 -> OBD側で保存と確認";
 }
 
 function getObdAvailableReadoutNote(interfaceId) {
   return {
     "user-vci-elm327": "現在使える読取: DTC / ライブデータ / フリーズフレーム / 対応PIDの読取前確認、PCではWeb Serial読取へ移行。",
-    "user-vci-thinkcar-bluetooth": "現在使える読取: DTC / ライブデータ / ECU情報の読取前確認、読取はスマホBT後にPCローカルブリッジ経由。",
+    "user-vci-thinkcar-bluetooth": "現在使える読取: DTC / ライブデータ / ECU情報の読取前確認。iPhone対応アプリのread-only結果取込を確認。",
     "user-vci-techstream-j2534": "現在使える読取: DTC / ECU情報 / Mode06 / 対応PIDの読取前確認、読取はPC J2534経由。",
     "user-vci-rcmall-mks-canable-v2-pro": "現在使える読取: CAN系 読取専用応答、対応PID、診断取込の読取前確認。"
   }[interfaceId] || "現在使える読取項目を表示します。";
@@ -1833,7 +1846,7 @@ function getObdAccessStatusMessage(unlocked, capability = window.ObdReadOnly?.ge
     return `${autoPrefix}J2534 を使います。PC側ドライバとローカルブリッジ確認から進めます。`;
   }
   if (interfaceId === "user-vci-thinkcar-bluetooth") {
-    return `${autoPrefix}THINKCAR Bluetooth を使います。スマホBT読取後にローカルブリッジ確認へ進めます。`;
+    return `${autoPrefix}THINKCAR Bluetooth を使います。iPhone対応アプリでのread-only結果取込から進めます。`;
   }
   if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") {
     return `${autoPrefix}CANable 候補を使います。CAN系 読取専用応答確認から進めます。`;
@@ -1880,8 +1893,8 @@ function renderObdConnectionGuide() {
       "安全: DTC / ライブデータ / FFの読取専用のみ"
     ],
     "user-vci-thinkcar-bluetooth": [
-      "端末: スマホ単体では表示確認のみ",
-      "読取手順: スマホBT読取後にPCローカルブリッジへ流す",
+      "端末: iPhone対応アプリでread-only読取",
+      "読取手順: アプリのDTC/PID/FF/ECU結果を共有・貼付して取込",
       "安全: DTC / ライブデータ / ECU情報の読取専用確認"
     ],
     "user-vci-techstream-j2534": [
@@ -1897,6 +1910,7 @@ function renderObdConnectionGuide() {
   }[interfaceId];
   obdConnectionGuide.innerHTML = "";
   const interfaceStrategyNote = getObdInterfaceStrategyNote(interfaceId);
+  const interfaceRoute = getObdInterfaceReadoutRoute(interfaceId);
   [
     ["車両", selectedVehicle],
     ["方式", getSelectedObdInterfaceLabel()],
@@ -1921,6 +1935,18 @@ function renderObdConnectionGuide() {
   operationLabel.textContent = "現場運用";
   operationItem.append(operationLabel, document.createTextNode(getObdDevelopmentOperationNote(interfaceId)));
   obdConnectionGuide.appendChild(operationItem);
+  if (interfaceRoute?.route && interfaceRoute.route !== "unconfirmed") {
+    const routeItem = document.createElement("span");
+    const routeLabel = document.createElement("strong");
+    routeLabel.textContent = "実装経路";
+    const routeValue = interfaceRoute.route === "app_export_import"
+      ? "アプリ結果取込（接続・送信は未有効化）"
+      : interfaceRoute.route === "desktop_local_bridge"
+        ? "Windowsローカルブリッジ（接続・送信は未有効化）"
+        : interfaceRoute.route;
+    routeItem.append(routeLabel, document.createTextNode(routeValue));
+    obdConnectionGuide.appendChild(routeItem);
+  }
   renderObdAccessGate();
   renderObdSetupActionButtons();
   if (obdAvailableReadoutSummary) {
@@ -1993,7 +2019,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
     nextAction = "デスクトップ版Chrome系ブラウザでWeb Serial読取を開始";
   } else if (selectedInterfaceId === "user-vci-thinkcar-bluetooth") {
     nextAction = detailUnlocked
-      ? "スマホでBluetooth読取後にローカルブリッジ確認"
+      ? "iPhone対応アプリでread-only読取後に結果を共有・貼付"
       : "必要なら詳細トークンを入れてBluetooth確認を有効化";
   } else if (selectedInterfaceId === "user-vci-techstream-j2534") {
     nextAction = detailUnlocked
@@ -2023,7 +2049,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
     : bridgeReady
       ? "ローカルブリッジ読取"
       : selectedInterfaceId === "user-vci-thinkcar-bluetooth"
-        ? "スマホBT -> ローカルブリッジ読取"
+        ? "iPhone対応アプリ -> read-only結果取込"
         : selectedInterfaceId === "user-vci-techstream-j2534"
           ? "J2534 -> ローカルブリッジ読取"
           : selectedInterface;
@@ -3520,13 +3546,13 @@ const INTERFACE_CANDIDATE_GUIDE_BUILDERS = Object.freeze({
     statusMid: "read-only読取あり",
     statusReady: "実機読取確認待ち",
     basisPrefix: "スマホ/BT候補の読取器",
-    basisSuffix: "ローカルブリッジ経由の read-only 読取を優先。",
-    nextBuild: "THINKCAR系の実機読取応答をローカルブリッジへ流し、DTC / フリーズフレーム / ライブデータ / ECU情報を同じ契約で確認する。",
-    operatorNote: "スマホ側でBluetooth読取を開始し、PC側はローカルブリッジの read-only 応答確認へ寄せます。",
-    checkSummary: "先に確認: 1.スマホBT読取開始 2.PC側ローカルブリッジ応答 3.DTC/フリーズフレーム/ライブデータ/ECU情報の読取",
-    startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。先にスマホ側でBluetooth読取を開始し、その後PC側のローカルブリッジ応答を確認します。`,
-    idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。スマホ側Bluetooth読取後に、PC側のローカルブリッジ応答を確認できます。`,
-    readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のローカルブリッジ確認済みです。次に VCI一覧、DTC、フリーズフレーム、ライブデータ、ECU情報の読取を試せます。`
+    basisSuffix: "iPhone対応アプリのread-only結果取込を優先。",
+    nextBuild: "THINKCAR系アプリの実機読取結果を取込み、DTC / フリーズフレーム / ライブデータ / ECU情報を同じセッション契約で確認する。",
+    operatorNote: "iPhone対応アプリでBluetooth読取を行い、read-only結果を共有・貼付して診断セッションへ取り込みます。",
+    checkSummary: "先に確認: 1.iPhoneアプリ読取 2.結果共有・貼付 3.DTC/フリーズフレーム/ライブデータ/ECU情報の取込",
+    startStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を確認します。先にiPhone対応アプリでread-only読取を行い、結果取込を確認します。`,
+    idleStatus: `${getInterfaceCandidateDisplayName(interfaceId)}を選択中です。iPhone対応アプリのread-only結果を取り込めます。`,
+    readyStatus: `${getInterfaceCandidateDisplayName(interfaceId)}のread-only結果取込を確認済みです。次にDTC、フリーズフレーム、ライブデータ、ECU情報を同じセッションで確認できます。`
   }),
   "user-vci-techstream-j2534": (interfaceId) => ({
     actionLabel: "J2534読取確認",
@@ -3739,13 +3765,13 @@ function getObdInterfacePreviewConfig(interfaceId) {
     "user-vci-thinkcar-bluetooth": {
       label: "THINKCAR Bluetooth",
       adapterIdentity: { adapterName: "THINKCAR Sample", adapterFamily: "THINKCAR", firmwareVersion: "bt-sim" },
-      connectionStatus: { displayStatus: "Bluetooth読取前プレビュー中", nextAction: "読取はスマホBT読取後にPCローカルブリッジで確認" },
+      connectionStatus: { displayStatus: "Bluetooth読取前プレビュー中", nextAction: "読取はiPhone対応アプリのread-only結果取込で確認" },
       dtcs: [
         { code: "P0420", status: "stored" },
         { code: "P0133", status: "pending" }
       ],
       ecuResponses: [{ address: "7E8", status: "ok", dtcCount: 2, services: ["01", "03", "09"], negativeResponseCount: 0 }],
-      operatorNote: "スマホ側でBluetooth読取を開始し、PC側ローカルブリッジへ流す前提です。"
+      operatorNote: "iPhone対応アプリでBluetooth読取を行い、read-only結果を取り込む前提です。"
     },
     "user-vci-techstream-j2534": {
       label: "J2534",
@@ -3761,7 +3787,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
   };
   const selected = table[interfaceId] || table["user-vci-elm327"];
   const previewRoute = interfaceId === "user-vci-thinkcar-bluetooth"
-    ? "1.スマホBluetooth読取開始 2.PCローカルブリッジ確認 3.DTC/フリーズフレーム/ライブデータ/ECU情報確認"
+    ? "1.iPhone対応アプリでread-only読取 2.結果共有・貼付 3.DTC/フリーズフレーム/ライブデータ/ECU情報確認"
     : interfaceId === "user-vci-techstream-j2534"
       ? "1.PCでJ2534ドライバ確認 2.ローカルブリッジ確認 3.VCI一覧/ECU情報/DTC確認"
       : "1.Web Serial読取開始 2.DTC/ライブデータ/FF確認 3.保存と比較";
@@ -3770,7 +3796,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
     statusText: `${selected.label}の読取前プレビューです。今見える項目を確認し、読取は ${selected.connectionStatus.nextAction}。`,
     previewStatus: `読取前プレビュー中: 今見える項目を確認。読取は ${selected.connectionStatus.nextAction}`,
     previewGuide: [
-      `スマホ単体: ${interfaceId === "user-vci-thinkcar-bluetooth" ? "Bluetooth読取開始までは進行可" : "表示確認のみ"}`,
+      `スマホ単体: ${interfaceId === "user-vci-thinkcar-bluetooth" ? "対応アプリでread-only読取後に結果取込" : "表示確認のみ"}`,
       `読取入口: ${selected.connectionStatus.nextAction.replace(/^読取は/, "").replace(/で確認$/, "")}`,
       `操作順: ${previewRoute}`,
       "表示項目: DTC / フリーズフレーム / ライブデータ / ECU情報 / Mode06 / 対応PID"
