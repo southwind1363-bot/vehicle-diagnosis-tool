@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.865.0";
+const APP_VERSION = "2.866.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5753,6 +5753,8 @@ function renderObdBridgeSessionDetails(session = null) {
   const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
   const ecuInfoSnapshot = session?.ecuInfoSnapshot || session?.ecu_info_snapshot || null;
   const readinessSnapshot = session?.readinessSnapshot || session?.readiness_snapshot || null;
+  const livePidTimeline = session?.livePidTimeline || session?.live_pid_timeline || null;
+  const livePidTimelineSummary = session?.livePidTimelineSummary || session?.live_pid_timeline_summary || null;
   const supportedPidMatrix = session?.supportedPidMatrix || session?.supported_pid_matrix || null;
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
   const onboardMonitorSnapshot = session?.onboardMonitorSnapshot || session?.onboard_monitor_snapshot || null;
@@ -5845,6 +5847,25 @@ function renderObdBridgeSessionDetails(session = null) {
       `FW: ${adapterIdentity.firmwareVersion || NO_DATA}`,
       `通信ヒント: ${adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA}`
     ]]);
+  }
+
+  if (livePidTimeline?.sampleCount) {
+    const lines = [`取得回数: ${livePidTimeline.sampleCount}`];
+    if (livePidTimelineSummary?.comparisonAvailable) {
+      lines.push(`比較: ${formatDateTime(livePidTimelineSummary.previousCapturedAt)} -> ${formatDateTime(livePidTimelineSummary.latestCapturedAt)}`);
+      if (livePidTimelineSummary.changedValueCount) {
+        lines.push(...livePidTimelineSummary.changes.slice(0, 6).map((item) => {
+          const unit = item.unit ? ` ${item.unit}` : "";
+          const delta = Number.isFinite(item.delta) ? ` / 差分 ${item.delta >= 0 ? "+" : ""}${item.delta}${unit}` : "";
+          return `${item.label || item.id}: ${item.previousValue} -> ${item.latestValue}${unit}${delta}`;
+        }));
+      } else {
+        lines.push("同一PIDの数値差分なし");
+      }
+    } else {
+      lines.push("前回比較は2回以上の読取後に表示");
+    }
+    sections.push(["ライブ履歴", lines]);
   }
 
   const monitorTests = onboardMonitorSnapshot?.tests || [];
