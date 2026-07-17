@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "対応ECU情報のみWeb Serial読取",
+  recentMilestone: "Web Serial初回トークン設定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.834.0";
+const APP_VERSION = "2.835.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4156,10 +4156,15 @@ function lockObdAccess() {
 }
 
 function unlockObdDeveloperMode() {
-  const configuredToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
+  let configuredToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
   if (configuredToken.length < 12) {
-    obdDevStatus.textContent = "この端末に詳細トークンが未設定です。";
-    return;
+    const initialToken = obdDevPasswordInput.value.trim();
+    if (initialToken.length < 12) {
+      obdDevStatus.textContent = "初回の詳細トークンは12文字以上で設定してください。";
+      return;
+    }
+    localStorage.setItem(OBD_DEV_TOKEN_KEY, initialToken);
+    configuredToken = initialToken;
   }
   if (obdDevPasswordInput.value !== configuredToken) {
     obdDevStatus.textContent = "詳細トークンが違います。";
