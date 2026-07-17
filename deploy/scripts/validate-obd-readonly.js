@@ -2487,8 +2487,10 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.891.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for readout interface session provenance");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.891.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.891.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.892.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner text session persistence");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.892.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.892.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
+check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
@@ -14892,11 +14894,26 @@ const readoutInterfaceExport = obd.buildBridgeSessionExportPayload(readoutInterf
 check(readoutInterfaceExport.session?.readout_interface?.route === "app_export_import" && !JSON.stringify(readoutInterfaceExport).includes("do-not-retain"), "Bridge export did not retain only safe readout interface provenance");
 const reimportedReadoutInterfaceSession = obd.buildDiagnosticScanSession({ bridge_export_payload: readoutInterfaceExport });
 check(reimportedReadoutInterfaceSession.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && reimportedReadoutInterfaceSession.readout_interface?.vehicle_command_enabled === false, "Bridge import did not preserve safe readout interface provenance");
+const scannerTextImportSession = obd.buildDiagnosticScanSession({
+  session_id: "scanner-text-import-session",
+  source: "scanner_text",
+  dtcSnapshot: { source: "scanner_text", codes: ["P0300"] },
+  livePidSnapshot: {
+    source: "scanner_text",
+    monitorValues: [{ id: "engine_speed", label: "エンジン回転数", value: 800, unit: "rpm", category: "エンジン", sourceLine: 3 }]
+  },
+  toolHints: ["ELM327"],
+  sourceLength: 32,
+  readoutInterface: { interface_id: "user-vci-elm327", route: "app_export_import", platform: "ios" }
+});
+check(scannerTextImportSession.source === "scanner_text" && scannerTextImportSession.dtcSnapshot?.codes?.includes("P0300"), "Scanner text import session did not preserve parsed DTC data");
+check(scannerTextImportSession.readoutInterface?.interfaceId === "user-vci-elm327" && scannerTextImportSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed"), "Scanner text import session did not retain parsed live data with interface provenance");
+check(scannerTextImportSession.retainedRawText === false && !JSON.stringify(scannerTextImportSession).includes("ELM327\\nP0300"), "Scanner text import session retained raw scanner text");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2544");
+  console.log("OBD read-only safety checks: 2547");
   console.log("Errors: 0");
 }

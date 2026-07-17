@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.891.0";
+const APP_VERSION = "2.892.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7368,7 +7368,26 @@ function analyzeObdScannerImport() {
       readoutInterface: currentReadoutInterface
     });
   }
-  const mergedSession = bridgeImport ? (obdDevSession.lastSession || null) : null;
+  if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport()) {
+    const textImportVehicleProfile = buildSelectedObdVehicleProfile();
+    obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
+      session_id: "scanner-text-import-session",
+      source: "scanner_text",
+      dtcSnapshot: { source: "scanner_text", codes: analysis.codes },
+      livePidSnapshot: {
+        source: "scanner_text",
+        monitorValues: analysis.monitorValues,
+        monitorInsights: analysis.monitorInsights
+      },
+      toolHints: analysis.toolHints,
+      sourceLength: analysis.sourceLength,
+      hadSensitiveIdentifier: analysis.hadSensitiveIdentifier === true,
+      vehicleProfile: textImportVehicleProfile || undefined,
+      vehicleApplicability: buildSelectedObdVehicleApplicability(textImportVehicleProfile) || undefined,
+      readoutInterface: buildSelectedObdReadoutInterface()
+    });
+  }
+  const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;
   const mergedCodes = mergedSession?.dtcSnapshot?.codes || analysis.codes;
   const mergedMonitorValues = mergedSession?.livePidSnapshot?.monitorValues || analysis.monitorValues;
   const summarySource = mergedSession || analysis;
