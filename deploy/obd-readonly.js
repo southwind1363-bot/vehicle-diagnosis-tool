@@ -845,7 +845,8 @@
 
   function normalizeBridgeConnectionStatus(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
+    const hasConnectionStatusData = ["status", "bridge_version", "bridgeVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected"].some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    const bridgeSafety = readBridgeSnapshotSafety(response, hasConnectionStatusData);
     const status = String(data.status || "not_connected");
     const paired = data.paired === true || data.is_paired === true || data.isPaired === true;
     const vciConnected = data.vci_connected === true || data.vciConnected === true || data.vci_ready === true || data.vciReady === true;
@@ -873,9 +874,9 @@
     return {
       source: "local_bridge",
       intent: "bridge_status",
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit,
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit,
       bridgeVersion: data.bridge_version || data.bridgeVersion || null,
       apiVersion: data.api_version || data.apiVersion || localBridgeContract.apiVersion,
       status,
@@ -893,7 +894,6 @@
 
   function normalizeBridgeVciList(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
     const devices = Array.isArray(response)
       ? response
       : Array.isArray(data)
@@ -905,6 +905,7 @@
         : Array.isArray(data.items)
           ? data.items
           : [];
+    const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(response) || Array.isArray(data) || [data.devices, data.vci_devices, data.items].some(Array.isArray));
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
     const normalizedDevices = devices.map((device, index) => {
       const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
@@ -922,9 +923,9 @@
     return {
       source: "local_bridge",
       intent: "list_vci",
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit,
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit,
       driverStatus: data.driver_status || data.driverStatus || "not_checked",
       selectedDeviceId,
       devices: normalizedDevices,
@@ -937,13 +938,14 @@
 
   function normalizeBridgeAdapterIdentity(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
+    const hasAdapterIdentityData = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version"].some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
     return {
       source: "local_bridge",
       intent: "adapter_identity",
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit,
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit,
       adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : data.name ? String(data.name).slice(0, 80) : data.adapter ? String(data.adapter).slice(0, 80) : null,
       adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : data.family ? String(data.family).slice(0, 80) : null,
       firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : data.version ? String(data.version).slice(0, 80) : null,
