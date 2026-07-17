@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial初回トークン設定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.836.0";
+const APP_VERSION = "2.837.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4562,9 +4562,13 @@ async function runObdDeveloperRead(label, commands) {
     appendObdDeveloperLog(chunks.join("\n"));
     const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
     if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
+    const capturedAt = new Date().toISOString();
     const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
       session_id: "web-serial-dev-readout",
-      protocol: "ELM327"
+      protocol: "ELM327",
+      started_at: obdDevSession.connectedAt || capturedAt,
+      ended_at: capturedAt,
+      captured_at: capturedAt
     });
     const session = obdDevSession.adapterIdentity
       ? { ...scanSession, adapterIdentity: obdDevSession.adapterIdentity, adapter_identity: obdDevSession.adapterIdentity }
