@@ -2308,8 +2308,10 @@ check(obd.configureVehicleInterfaceCatalog(vehicleInterfaceCatalog) === true, "V
 const interfaceCatalog = obd.getVehicleInterfaceCatalog();
 check(interfaceCatalog.length >= 4, "VCI候補カタログが不足しています");
 check(interfaceCatalog.some((item) => item.id === "user-vci-techstream-j2534" && item.interfaceFamily === "potential-j2534-passthru" && item.hardwareCompatibilityConfirmed === false), "有線OBD2機器のJ2534適合未確認状態を保持できません");
+check(interfaceCatalog.some((item) => item.id === "user-vci-techstream-j2534" && item.observedUse.includes("Techstream") && item.observedUse.includes("DLLは未確認")), "Techstream使用実績とJ2534 DLL未確認状態を分離できません");
 check(interfaceCatalog.some((item) => item.id === "user-vci-thinkcar-bluetooth" && item.deviceModel === "TCMa" && item.hardwareCompatibilityConfirmed === false), "THINKCAR TCMaの実機適合確認状態を保持できません");
 check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.deviceModel === "ELM327 mini" && item.hardwareCompatibilityConfirmed === false), "ELM327 miniの実機適合確認状態を保持できません");
+check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.observedUse.includes("スマホアプリ") && item.observedUse.includes("Bluetooth読取")), "ELM327 miniのスマホBluetooth使用実績を保持できません");
 check(vehicleInterfaceCatalog.every((item) => !Object.keys(item).some((key) => /serial|activation/i.test(key))), "VCIカタログに個体識別子または認証情報を保存しています");
 check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.readScopeCandidates.includes("Mode 03 保存DTC")), "ELM327候補の読取範囲が不足しています");
 check(interfaceCatalog.some((item) => item.id === "user-vci-rcmall-mks-canable-v2-pro" && item.tooling.includes("SavvyCAN")), "CANable/SavvyCAN候補がありません");
@@ -2482,8 +2484,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.888.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for verified interface inventory");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.888.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.888.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.889.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for observed interface usage");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.889.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.889.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");

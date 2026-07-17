@@ -694,6 +694,7 @@
         connectionEnabled: false,
         vehicleCommandEnabled: false,
         hardwareCompatibilityConfirmed: item.hardware_compatibility_confirmed === true,
+        observedUse: item.observed_use || "実機使用実績は未確認",
         verificationRequired: Object.freeze(Array.isArray(item.verification_required) ? [...item.verification_required] : []),
         integrationNote: item.integration_note || "",
         confidence: item.confidence || "未検証",

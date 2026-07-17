@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.888.0";
+const APP_VERSION = "2.889.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7034,6 +7034,9 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     const status = document.createElement("p");
     status.textContent = `${display.currentStatus || "確認中"} / 実機適合: ${display.hardwareCompatibilityConfirmed === true ? "確認済み" : "未確認"} / ${display.currentBasis || ""}`;
 
+    const observedUse = document.createElement("p");
+    observedUse.textContent = `実機実績: ${display.observedUse || "未確認"}`;
+
     const next = document.createElement("p");
     next.textContent = display.nextBuild || "";
 
@@ -7065,7 +7068,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
       });
     }
 
-    card.append(head, role, scope, status, next, eta, note, implementation, checks, button);
+    card.append(head, role, scope, status, observedUse, next, eta, note, implementation, checks, button);
     obdInterfaceRoadmapGrid.appendChild(card);
   });
 }
