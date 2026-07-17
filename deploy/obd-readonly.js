@@ -770,9 +770,14 @@
     return input?.wouldTransmit === true || input?.would_transmit === true;
   }
 
+  function isExplicitFalseFlag(value) {
+    if (value === false || value === 0) return true;
+    return typeof value === "string" && ["false", "0", "no", "off"].includes(value.trim().toLowerCase());
+  }
+
   function getExplicitReadoutFailureStatus(input = {}) {
     if (hasExplicitReadoutBlock(input) || hasReadoutTransportViolation(input)) return "blocked";
-    return input?.ok === false ? "unparsed" : null;
+    return isExplicitFalseFlag(input?.ok) ? "unparsed" : null;
   }
 
   function preserveExplicitReadoutFailure(snapshot = {}, input = {}, statusKeys = []) {
