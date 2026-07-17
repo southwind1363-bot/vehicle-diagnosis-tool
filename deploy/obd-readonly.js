@@ -766,8 +766,12 @@
     return input?.blocked === true || input?.isBlocked === true || input?.is_blocked === true;
   }
 
+  function hasReadoutTransportViolation(input = {}) {
+    return input?.wouldTransmit === true || input?.would_transmit === true;
+  }
+
   function getExplicitReadoutFailureStatus(input = {}) {
-    if (hasExplicitReadoutBlock(input)) return "blocked";
+    if (hasExplicitReadoutBlock(input) || hasReadoutTransportViolation(input)) return "blocked";
     return input?.ok === false ? "unparsed" : null;
   }
 
