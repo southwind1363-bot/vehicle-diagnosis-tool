@@ -11574,8 +11574,12 @@
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
       }));
     });
+    const typedDtcCodes = new Set(rows
+      .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
+      .map((row) => row.code));
+    const deduplicatedRows = rows.filter((row) => !(["", "unknown"].includes(String(row.status || "").trim().toLowerCase()) && typedDtcCodes.has(row.code)));
     const byCode = new Map();
-    rows.forEach((row) => {
+    deduplicatedRows.forEach((row) => {
       const key = `${row.code}::${row.status || "unknown"}`;
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
     });
