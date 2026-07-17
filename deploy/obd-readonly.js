@@ -1270,6 +1270,7 @@
       protocol: readBridgeProtocol(data),
       readiness_readout_status: bridgeReadoutStatus,
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
+      readiness_ignition_type: compressionIgnition ? "compression" : "spark",
       monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
         const supported = (byte & supportedBit) !== 0;
         const complete = supported ? (byte & incompleteBit) === 0 : false;
@@ -12022,6 +12023,15 @@
       : monitorCount > 0
         ? "reported"
         : "unknown";
+    const ignitionTypeInput = pickDefined(
+      sourceInput.readinessIgnitionType,
+      sourceInput.readiness_ignition_type,
+      sourceInput.monitorStatusIgnitionType,
+      sourceInput.monitor_status_ignition_type
+    );
+    const readinessIgnitionType = normalizedReadoutStatus === "reported" && ["spark", "compression"].includes(String(ignitionTypeInput || "").trim().toLowerCase())
+      ? String(ignitionTypeInput).trim().toLowerCase()
+      : null;
 
     return {
       schemaVersion: "readiness_snapshot_v1",
@@ -12044,6 +12054,8 @@
       known_monitor_count: knownMonitorCount,
       readinessReadoutStatus: normalizedReadoutStatus,
       readiness_readout_status: normalizedReadoutStatus,
+      readinessIgnitionType,
+      readiness_ignition_type: readinessIgnitionType,
       monitors: normalized,
       knownMonitors,
       known_monitors: knownMonitors,
@@ -12821,6 +12833,7 @@
       captured_at: input.captured_at || input.capturedAt || null,
       readiness_readout_status: "reported",
       mil_on: (a & 0x80) !== 0,
+      readiness_ignition_type: compressionIgnition ? "compression" : "spark",
       monitors
     });
   }

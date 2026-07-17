@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial燃料系状態と点火時期を読取候補へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.859.0";
+const APP_VERSION = "2.860.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5853,6 +5853,10 @@ function renderObdBridgeSessionDetails(session = null) {
       `MIL: ${readinessSnapshot.milOn ? "ON" : "OFF"} / ${formatObdBridgeReadinessSummary(readinessSnapshot, { includeObservedCount: true })}`,
       ...visible.map((item) => `${item.label || item.id}: ${item.complete ? "完了" : "未完了"}${item.diagnosticUse ? ` / ${item.diagnosticUse}` : ""}`)
     ];
+    const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;
+    if (readinessIgnitionType === "spark" || readinessIgnitionType === "compression") {
+      lines.splice(1, 0, `PID 01 観測点火方式: ${readinessIgnitionType === "compression" ? "圧縮着火" : "火花点火"}`);
+    }
     if (unsupported.length) {
       lines.push(`非対応: ${unsupported.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
     }
