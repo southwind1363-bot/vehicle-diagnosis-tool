@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Mode 06解析不能応答を未読取として分離",
+  recentMilestone: "読取状態を結果画面へ統合",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.808.0";
+const APP_VERSION = "2.809.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4740,6 +4740,15 @@ function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : fallback;
 }
 
+function formatObdReadoutStatus(status = null, fallback = NO_DATA) {
+  return {
+    reported: "取得済み",
+    unparsed: "応答未解析",
+    blocked: "読取拒否",
+    unknown: "状態未確認"
+  }[String(status || "").trim().toLowerCase()] || fallback;
+}
+
 function formatObdBridgeCompositeValue(value, depth = 0) {
   if (value === null || value === undefined || value === "") return NO_DATA;
   if (Array.isArray(value)) {
@@ -6242,6 +6251,11 @@ function renderObdDeveloperSessionSummary(session = null) {
     || session?.diagnostic_flow_summary?.dtc_status_summary
     || null;
   const dtcReadoutStatusLabel = formatObdDtcReadoutStatusSummary(dtcReadoutStatusSummary, NO_DATA);
+  const ecuInfoReadoutStatusLabel = formatObdReadoutStatus(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, NO_DATA);
+  const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
+  const readinessReadoutStatusLabel = formatObdReadoutStatus(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, NO_DATA);
+  const onboardMonitorReadoutStatusLabel = formatObdReadoutStatus(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status, NO_DATA);
+  const supportedPidReadoutStatusLabel = formatObdReadoutStatus(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status, NO_DATA);
   const coverage = getReadoutCoverageDisplay(session?.readoutCoverage || session?.readout_coverage);
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
@@ -6312,20 +6326,25 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC読取状態", dtcReadoutStatusLabel],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],
+    ["ECU情報状態", ecuInfoReadoutStatusLabel],
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
     ["Mode09対応", ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],
     ["Mode09対応タイプ00", ecuInfoSnapshot?.supportInfoTypesCaptured === false ? "未取得" : "取得済み"],
     ["FF", freezeFrameSnapshot?.monitorValues?.length
       ? `${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}${freezeFrameSnapshot?.triggerDtc ? ` / 起点${freezeFrameSnapshot.triggerDtc}` : ""}`
       : 0],
+    ["FF読取状態", freezeFrameReadoutStatusLabel],
     ["ライブ値", livePidSnapshot?.monitorValues?.length
       ? formatObdBridgeMonitorSummary(livePidSnapshot?.monitorValueSummary)
       : 0],
     ["レディネス", readinessSnapshot?.monitorCount || readinessSnapshot?.knownMonitorCount
       ? formatObdBridgeReadinessSummary(readinessSnapshot)
       : 0],
+    ["レディネス読取状態", readinessReadoutStatusLabel],
     ["Mode06", onboardMonitorSnapshot?.testCount ? formatObdBridgeOnboardMonitorSummary(onboardMonitorSnapshot) : 0],
+    ["Mode06読取状態", onboardMonitorReadoutStatusLabel],
     ["対応PID", supportedPidMatrix?.supportedCount ?? 0],
+    ["対応PID読取状態", supportedPidReadoutStatusLabel],
     ["開始", startedAtLabel],
     ["終了", endedAtLabel],
     ["取得時刻", capturedAtLabel],
