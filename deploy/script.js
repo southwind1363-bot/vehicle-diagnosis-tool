@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "Web Serial対応PID検出を接続単位で再利用",
+  recentMilestone: "Web Serial対応PID集合を接続単位で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.852.0";
+const APP_VERSION = "2.853.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -504,6 +504,7 @@ const obdDevSession = {
   connectedAt: null,
   scanSessionId: null,
   supportedPidDiscoveryComplete: false,
+  supportedPidSet: [],
   readoutAttempts: [],
   bridgeEndpoint: null,
   bridgeStatus: null,
@@ -4236,6 +4237,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.connectedAt = new Date().toISOString();
     obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
     obdDevSession.supportedPidDiscoveryComplete = false;
+    obdDevSession.supportedPidSet = [];
     obdDevSession.readoutAttempts = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
@@ -4259,6 +4261,7 @@ async function disconnectObdDeveloperVci() {
   obdDevSession.port = null;
   obdDevSession.readLoopActive = false;
   obdDevSession.supportedPidDiscoveryComplete = false;
+  obdDevSession.supportedPidSet = [];
 
   try {
     if (reader) {
@@ -4364,7 +4367,7 @@ async function readObdDeveloperFreezeFrame() {
     return true;
   }
   if (!await readObdDeveloperSupportedPidMaps()) return false;
-  const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
+  const supportedPids = new Set(obdDevSession.supportedPidSet);
   const supportedCommands = obdDevSession.freezeFramePidList.filter((command) => supportedPids.has(command.slice(2)));
   if (!supportedCommands.length) {
     obdDevStatus.textContent = "対応PIDが確認できないため、フリーズフレーム値の追加要求を送りませんでした。";
@@ -4408,7 +4411,7 @@ async function readObdDeveloperPermanentDtc() {
 async function readObdDeveloperLiveSnapshot() {
   const supportReadCompleted = await readObdDeveloperSupportedPidMaps();
   if (!supportReadCompleted) return false;
-  const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
+  const supportedPids = new Set(obdDevSession.supportedPidSet);
   const supportedCommands = obdDevSession.selectedPidList.filter((command) => supportedPids.has(command.slice(2)));
   if (!supportedCommands.length) {
     obdDevStatus.textContent = "対応PIDが確認できないため、ライブデータ要求を送りませんでした。";
@@ -4426,7 +4429,11 @@ async function readObdDeveloperSupportedPidMaps() {
     if (!supportedPids.has(basePid)) break;
     if (!await runObdDeveloperRead("対応PID確認", [`01${basePid}`])) return false;
   }
-  obdDevSession.supportedPidDiscoveryComplete = obdDevSession.lastSession?.supportedPidMatrix?.supportedPidReadoutStatus === "reported";
+  const supportedPidMatrix = obdDevSession.lastSession?.supportedPidMatrix || null;
+  obdDevSession.supportedPidSet = supportedPidMatrix?.supportedPidReadoutStatus === "reported"
+    ? [...new Set(supportedPidMatrix.supportedPids || [])]
+    : [];
+  obdDevSession.supportedPidDiscoveryComplete = supportedPidMatrix?.supportedPidReadoutStatus === "reported";
   return true;
 }
 
