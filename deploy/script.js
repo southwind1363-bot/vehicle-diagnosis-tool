@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.866.0";
+const APP_VERSION = "2.867.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -431,6 +431,7 @@ const obdDevReadDtcButton = document.querySelector("#obdDevReadDtcButton");
 const obdDevReadFreezeFrameButton = document.querySelector("#obdDevReadFreezeFrameButton");
 const obdDevReadReadinessButton = document.querySelector("#obdDevReadReadinessButton");
 const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
+const obdLiveObservationCondition = document.querySelector("#obdLiveObservationCondition");
 const obdDevReadEcuInfoButton = document.querySelector("#obdDevReadEcuInfoButton");
 const obdDevReadOnboardMonitorButton = document.querySelector("#obdDevReadOnboardMonitorButton");
 const obdDevBridgeStatusButton = document.querySelector("#obdDevBridgeStatusButton");
@@ -4751,7 +4752,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
   });
   const webSerialReadoutSummary = buildWebSerialReadoutSummary();
   const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({
-    samples: [...obdDevSession.livePidTimeline, { livePidSnapshot: scanSession.livePidSnapshot }]
+    samples: [...obdDevSession.livePidTimeline, { livePidSnapshot: scanSession.livePidSnapshot, observationCondition: obdLiveObservationCondition?.value || "unspecified" }]
   });
   const livePidTimelineSummary = window.ObdReadOnly.buildLivePidTimelineSummary(livePidTimeline);
   obdDevSession.livePidTimeline = livePidTimeline.samples;
@@ -4879,7 +4880,7 @@ function renderObdBridgeReadout(parts = {}) {
   const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({
     samples: [
       ...(previousSession.livePidTimeline?.samples || previousSession.live_pid_timeline?.samples || []),
-      ...(parts.livePidResponse ? [{ livePidSnapshot }] : [])
+      ...(parts.livePidResponse ? [{ livePidSnapshot, observationCondition: obdLiveObservationCondition?.value || "unspecified" }] : [])
     ]
   });
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
@@ -5863,7 +5864,7 @@ function renderObdBridgeSessionDetails(session = null) {
         lines.push("同一PIDの数値差分なし");
       }
     } else {
-      lines.push("前回比較は2回以上の読取後に表示");
+      lines.push(livePidTimelineSummary?.comparisonBlockedByCondition ? "前回と観察条件が異なるため差分比較は行いません" : "前回比較は2回以上の読取後に表示");
     }
     sections.push(["ライブ履歴", lines]);
   }

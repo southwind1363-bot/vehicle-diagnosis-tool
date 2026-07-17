@@ -1088,6 +1088,7 @@
   }
 
   function normalizeLivePidTimeline(input = {}) {
+    const observationConditions = new Set(["unspecified", "cold", "warm", "symptom_reproduced"]);
     const source = input && typeof input === "object" ? input : {};
     const sampleInput = Array.isArray(input)
       ? input
@@ -1139,10 +1140,15 @@
           }
           : normalizeBridgeLivePidSnapshot(snapshotInput);
         const capturedAt = item.capturedAt || item.captured_at || snapshot.capturedAt || snapshot.captured_at || null;
+        const observationCondition = observationConditions.has(String(item.observationCondition || item.observation_condition || "unspecified"))
+          ? String(item.observationCondition || item.observation_condition || "unspecified")
+          : "unspecified";
         if (snapshot.livePidReadoutStatus !== "reported" || snapshot.blocked || snapshot.wouldTransmit || !capturedAt || !snapshot.monitorValues.length) return null;
         return {
           capturedAt,
           captured_at: capturedAt,
+          observationCondition,
+          observation_condition: observationCondition,
           protocol: snapshot.protocol || null,
           obd_protocol: snapshot.protocol || null,
           monitorValues: cloneBridgeArrayItems(snapshot.monitorValues),
@@ -1181,12 +1187,13 @@
     const samples = timeline.samples;
     const latestSample = samples.at(-1) || null;
     const previousSample = samples.length > 1 ? samples.at(-2) : null;
+    const observationConditionMatches = Boolean(previousSample && latestSample && previousSample.observationCondition === latestSample.observationCondition);
     const previousValuesById = new Map(
       (previousSample?.monitorValues || [])
         .filter((item) => item?.id && Number.isFinite(item?.value))
         .map((item) => [item.id, item])
     );
-    const changes = (latestSample?.monitorValues || [])
+    const changes = (observationConditionMatches ? latestSample?.monitorValues || [] : [])
       .filter((item) => item?.id && Number.isFinite(item?.value) && previousValuesById.has(item.id))
       .map((item) => {
         const previous = previousValuesById.get(item.id);
@@ -1213,8 +1220,14 @@
       schema_version: "live_pid_timeline_summary_v1",
       sampleCount: timeline.sampleCount,
       sample_count: timeline.sampleCount,
-      comparisonAvailable: Boolean(previousSample && latestSample),
-      comparison_available: Boolean(previousSample && latestSample),
+      comparisonAvailable: observationConditionMatches,
+      comparison_available: observationConditionMatches,
+      comparisonBlockedByCondition: Boolean(previousSample && latestSample && !observationConditionMatches),
+      comparison_blocked_by_condition: Boolean(previousSample && latestSample && !observationConditionMatches),
+      previousObservationCondition: previousSample?.observationCondition || null,
+      previous_observation_condition: previousSample?.observationCondition || null,
+      latestObservationCondition: latestSample?.observationCondition || null,
+      latest_observation_condition: latestSample?.observationCondition || null,
       previousCapturedAt: previousSample?.capturedAt || null,
       previous_captured_at: previousSample?.capturedAt || null,
       latestCapturedAt: latestSample?.capturedAt || null,
