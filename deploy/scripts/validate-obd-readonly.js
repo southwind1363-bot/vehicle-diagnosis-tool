@@ -5017,6 +5017,15 @@ const bridgeRawFreezeFrameAliasSnapshot = obd.normalizeFreezeFrameSnapshot({
 });
 check(bridgeRawPidAliasSnapshot.monitorValues.length === 2 && bridgeRawPidAliasSnapshot.monitorValues.every((item) => item.decoded === false && item.valueType === "raw_hex") && bridgeRawPidAliasSnapshot.monitorValueSummary.undecodedRawCount === 2, "Bridge PID undecoded raw aliases were not retained");
 check(bridgeRawFreezeFrameAliasSnapshot.monitorValues.length === 2 && bridgeRawFreezeFrameAliasSnapshot.monitorValues.every((item) => item.decoded === false && item.valueType === "raw_hex") && bridgeRawFreezeFrameAliasSnapshot.monitorValueSummary.undecodedRawCount === 2, "Freeze-frame undecoded raw aliases were not retained");
+const rawAliasScanSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: bridgeRawPidAliasSnapshot,
+  freeze_frame_snapshot: bridgeRawFreezeFrameAliasSnapshot
+});
+const reimportedRawAliasScanSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(rawAliasScanSession)
+});
+check(rawAliasScanSession.readoutQualitySummary?.rawPidUndecodedCount === 4 && rawAliasScanSession.warnings.includes("raw_pid_values_need_conversion"), "Undecoded raw PID aliases did not trigger readout-quality review");
+check(reimportedRawAliasScanSession.readoutQualitySummary?.rawPidUndecodedCount === 4 && reimportedRawAliasScanSession.livePidSnapshot?.monitorValues?.every((item) => item.decoded === false) && reimportedRawAliasScanSession.freezeFrameSnapshot?.monitorValues?.every((item) => item.decoded === false), "Undecoded raw PID aliases were not preserved through read-only export and reimport");
 const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
