@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial初回トークン設定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.837.0";
+const APP_VERSION = "2.838.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -496,6 +496,7 @@ const obdDevSession = {
   encoder: null,
   textBuffer: "",
   readLoopActive: false,
+  readInProgress: false,
   lastRawText: "",
   connectedAt: null,
   bridgeEndpoint: null,
@@ -4056,19 +4057,20 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId(capability);
   const primaryActionNeedsSerial = selectedInterfaceId === "user-vci-elm327";
+  const readBusy = obdDevSession.readInProgress === true;
 
   obdDevModeBadge.textContent = unlocked ? "詳細有効" : "ロック中";
   obdDevControls.hidden = !unlocked;
   obdDevLockButton.disabled = !unlocked;
   obdDevConnectButton.disabled = !unlocked || connected || (primaryActionNeedsSerial && !serialReady);
   obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady });
-  obdDevIdentifyButton.disabled = !unlocked || !connected;
-  obdDevReadDtcButton.disabled = !unlocked || !connected;
-  obdDevReadFreezeFrameButton.disabled = !unlocked || !connected;
-  obdDevReadReadinessButton.disabled = !unlocked || !connected;
-  obdDevSnapshotButton.disabled = !unlocked || !connected;
-  obdDevReadEcuInfoButton.disabled = !unlocked || !connected;
-  obdDevReadOnboardMonitorButton.disabled = !unlocked || !connected;
+  obdDevIdentifyButton.disabled = !unlocked || !connected || readBusy;
+  obdDevReadDtcButton.disabled = !unlocked || !connected || readBusy;
+  obdDevReadFreezeFrameButton.disabled = !unlocked || !connected || readBusy;
+  obdDevReadReadinessButton.disabled = !unlocked || !connected || readBusy;
+  obdDevSnapshotButton.disabled = !unlocked || !connected || readBusy;
+  obdDevReadEcuInfoButton.disabled = !unlocked || !connected || readBusy;
+  obdDevReadOnboardMonitorButton.disabled = !unlocked || !connected || readBusy;
   obdDevBridgeStatusButton.disabled = !unlocked;
   obdDevBridgeVciButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
@@ -4548,7 +4550,10 @@ async function runObdDeveloperRead(label, commands) {
     obdDevStatus.textContent = "VCI読取が開始されていません。";
     return;
   }
+  if (obdDevSession.readInProgress) return;
 
+  obdDevSession.readInProgress = true;
+  renderObdDeveloperGate();
   try {
     obdDevStatus.textContent = `${label}中です。`;
     const chunks = [];
@@ -4584,6 +4589,7 @@ async function runObdDeveloperRead(label, commands) {
       ? `${label}の応答がタイムアウトしたため、安全に切断しました。`
       : `${label}に失敗しました: ${message}`;
   } finally {
+    obdDevSession.readInProgress = false;
     renderObdDeveloperGate();
   }
 }
