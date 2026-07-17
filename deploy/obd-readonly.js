@@ -10339,6 +10339,10 @@
       monitor_values: summary.monitorValues || summary.monitor_values || [],
       monitor_value_summary: summary.monitorValueSummary || summary.monitor_value_summary || null
     });
+    const obdReportedProfile = buildObdReportedProfile(
+      livePidSnapshot,
+      getObdReportedProfileInput(summary) || getObdReportedProfileInput(parts)
+    );
     const metadataFields = buildSummaryMetadataFields(summary, { snakeCase: true });
     const coreSessionStatus = summary.coreSessionStatus || summary.core_session_status || buildCoreSessionStatusFromSummary(summary, {
       vehicleApplicability: metadataFields.vehicle_applicability,
@@ -10470,6 +10474,7 @@
         protocol: summary.protocol || null,
         vehicle_profile: metadataFields.vehicle_profile || null,
         vehicle_applicability: metadataFields.vehicle_applicability,
+        obd_reported_profile: obdReportedProfile,
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
         vci_devices: cloneBridgeArrayItems(summary.vciDevices),
         adapter_identity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),

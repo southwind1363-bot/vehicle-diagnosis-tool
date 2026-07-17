@@ -2442,8 +2442,9 @@ check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSo
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
 check(appSource.includes('function formatObdReportedProfile(profile, fallback = "")') && appSource.includes('const sessionObdReportedProfile = session?.obdReportedProfile || session?.obd_reported_profile || null;') && appSource.includes('["ECU報告プロファイル", obdReportedProfileLabel]'), "OBD session summary should display ECU-reported profile separately from selected vehicle metadata");
-check(appSource.includes('const APP_VERSION = "2.856.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for ECU-reported profile display");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.856.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.856.0", "OBD offline cache version should match the active app version");
+check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
+check(appSource.includes('const APP_VERSION = "2.857.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for ECU-reported profile bridge export");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.857.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.857.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
@@ -10225,6 +10226,15 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "oxygen_sensors_p
 check(decodedLivePids.monitorValues.find((item) => item.id === "auxiliary_input_status")?.value === "pto_active", "Auxiliary input status PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "obd_standard")?.value === "eobd", "OBD standard PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_type")?.value === "diesel", "Fuel type PID was not decoded");
+const bridgeExportObdReportedProfile = obd.buildBridgeSessionExportPayload({
+  vehicleProfile: { maker: "Toyota", model: "Aqua", fuel_type: "hybrid_gasoline" },
+  livePidSnapshot: decodedLivePids
+});
+check(bridgeExportObdReportedProfile.session?.obd_reported_profile?.obd_standard === "eobd" && bridgeExportObdReportedProfile.session?.obd_reported_profile?.fuel_type === "diesel", "Bridge export did not retain ECU-reported OBD profile");
+const bridgeImportedObdReportedProfile = obd.buildBridgeDiagnosticImport(bridgeExportObdReportedProfile);
+check(bridgeImportedObdReportedProfile.obdReportedProfile?.reportedPidIds?.includes("1C") && bridgeImportedObdReportedProfile.obd_reported_profile?.vehicle_command_enabled === false, "Bridge import did not retain the saved ECU-reported OBD profile safely");
+const bridgeReimportedObdProfileSession = obd.buildDiagnosticScanSession({ bridge_export_payload: bridgeExportObdReportedProfile });
+check(bridgeReimportedObdProfileSession.obdReportedProfile?.fuelType === "diesel" && bridgeReimportedObdProfileSession.vehicleProfile?.fuelType === "hybrid_gasoline" && bridgeReimportedObdProfileSession.vehicleCommandEnabled === false, "Bridge OBD profile round trip overwrote selected vehicle metadata or read-only safety");
 const observedObdProfileSession = obd.buildDiagnosticScanSession({
   vehicleProfile: { maker: "Toyota", model: "Aqua", fuel_type: "hybrid_gasoline" },
   livePidSnapshot: decodedLivePids
