@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2536+件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "ライブPID未解析応答を未読取として分離",
+  recentMilestone: "DTC未解析応答を未読取として分離",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.810.0";
+const APP_VERSION = "2.811.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6251,6 +6251,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     || session?.diagnostic_flow_summary?.dtc_status_summary
     || null;
   const dtcReadoutStatusLabel = formatObdDtcReadoutStatusSummary(dtcReadoutStatusSummary, NO_DATA);
+  const dtcResponseStatusLabel = formatObdReadoutStatus(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status, NO_DATA);
   const livePidReadoutStatusLabel = formatObdReadoutStatus(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status, NO_DATA);
   const ecuInfoReadoutStatusLabel = formatObdReadoutStatus(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, NO_DATA);
   const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
@@ -6324,6 +6325,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["状態", connectionStatus?.displayStatus || NO_DATA],
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
+    ["DTC応答状態", dtcResponseStatusLabel],
     ["DTC読取状態", dtcReadoutStatusLabel],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],

@@ -789,6 +789,7 @@
       reportedStatuses: safety.ok && safety.blocked === false ? [defaultStatus] : [],
       dtcs: normalizedDtcs
     });
+    const dtcReadoutStatus = safety.blocked ? "blocked" : safety.ok ? "reported" : "unknown";
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -812,6 +813,8 @@
       permanent_count: permanentCount,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReadoutStatus,
+      dtc_readout_status: dtcReadoutStatus,
       protocol: readBridgeProtocol(data),
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
@@ -1445,7 +1448,7 @@
       {
         id: "dtc_snapshot",
         label: "DTC",
-        available: dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes),
+        available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes)),
         count: Array.isArray(dtcSnapshot?.codes) ? dtcSnapshot.codes.length : 0
       },
       {
@@ -1683,6 +1686,8 @@
       const coverageItem = coverage.itemById?.[item.id] || null;
       const explicitReadoutStatus = item.id === "readiness_snapshot"
         ? readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null
+        : item.id === "dtc_snapshot"
+          ? dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || null
         : item.id === "live_pid_snapshot"
           ? livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status || null
         : item.id === "ecu_info_snapshot"
@@ -4157,7 +4162,9 @@
       || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
     const isCapturedReadout = (snapshot, key) => (
       !(["unparsed", "blocked"].includes(
-        snapshot?.readinessReadoutStatus
+        snapshot?.dtcReadoutStatus
+        || snapshot?.dtc_readout_status
+        || snapshot?.readinessReadoutStatus
         || snapshot?.readiness_readout_status
         || snapshot?.ecuInfoReadoutStatus
         || snapshot?.ecu_info_readout_status
@@ -11350,7 +11357,8 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
-        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
+        dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null
       }
       : input;
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
@@ -11424,6 +11432,10 @@
       ],
       dtcs: normalizedDtcs
     });
+    const requestedReadoutStatus = String(sourceInput.dtcReadoutStatus || sourceInput.dtc_readout_status || "").trim().toLowerCase();
+    const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
+      ? requestedReadoutStatus
+      : normalizedDtcs.length > 0 ? "reported" : "unknown";
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -11448,6 +11460,8 @@
       unknown_count: unknownCount,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReadoutStatus,
+      dtc_readout_status: dtcReadoutStatus,
       retainedRawText: false,
       retained_raw_text: false
     };
@@ -12130,12 +12144,14 @@
 
   function decodeObdDtcResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const hasResponseInput = Array.isArray(input.bytes) || input.raw !== undefined || input.response !== undefined;
     const serviceByte = bytes.find((byte) => byte === 0x43 || byte === 0x47 || byte === 0x4A);
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
         capturedAt: input.captured_at || input.capturedAt || null,
         protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: hasResponseInput ? "unparsed" : "unknown",
         dtcs: []
       });
     }
@@ -12153,6 +12169,7 @@
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
       status,
+      dtc_readout_status: "reported",
       dtcs: [...new Set(codes)].map((code) => ({ code, status }))
     });
   }
@@ -12181,6 +12198,15 @@
       ]),
       dtcs: mergedRows
     });
+    const childReadoutStatuses = snapshots
+      .map((snapshot) => snapshot?.dtcReadoutStatus || snapshot?.dtc_readout_status || "unknown");
+    const dtcReadoutStatus = childReadoutStatuses.includes("blocked")
+      ? "blocked"
+      : childReadoutStatuses.includes("unparsed")
+        ? "unparsed"
+        : childReadoutStatuses.includes("reported")
+          ? "reported"
+          : "unknown";
     return {
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
@@ -12205,6 +12231,8 @@
       unknown_count: unknownCount,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReadoutStatus,
+      dtc_readout_status: dtcReadoutStatus,
       retainedRawText: false
     };
   }
@@ -12852,6 +12880,12 @@
     const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
     const readResponseOption = (camelKey, snakeKey, bucketName) => sessionInput[camelKey] || sessionInput[snakeKey] || { raw: firstOrEmpty(bucketName), protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+    const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {
+      const explicitResponse = sessionInput[camelKey] || sessionInput[snakeKey];
+      if (explicitResponse) return explicitResponse;
+      const raw = firstOrEmpty(bucketName);
+      return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+    };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -12878,9 +12912,9 @@
       warnings: metadataOverrides.warnings,
       sourceLength: metadataOverrides.sourceLength,
       hadSensitiveIdentifier: metadataOverrides.hadSensitiveIdentifier,
-      storedDtcResponse: readResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses"),
-      pendingDtcResponse: readResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
-      permanentDtcResponse: readResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
+      storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses"),
+      pendingDtcResponse: readDtcResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
+      permanentDtcResponse: readDtcResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
       supportedPidResponse: readResponseOption("supportedPidResponse", "supported_pid_response", "supportedPidResponses"),
       livePidResponse: readResponseOption("livePidResponse", "live_pid_response", "livePidResponses"),
       freezeFrameResponse: readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses"),
