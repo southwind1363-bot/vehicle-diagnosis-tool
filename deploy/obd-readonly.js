@@ -123,6 +123,39 @@
     ])
   });
 
+  const mobileReadoutTransportPlan = Object.freeze([
+    Object.freeze({
+      id: "android_chrome_ble_gatt",
+      platform: "android",
+      browser: "chrome",
+      adapterTransport: "ble-gatt",
+      route: "direct_browser_candidate",
+      currentAvailability: "BLE GATTのVCI仕様確認待ち",
+      requiresCompanionBridge: false,
+      requiredBeforeReadout: Object.freeze(["HTTPS", "利用者操作によるBluetooth許可", "VCIのBLE GATT service/characteristic確認", "読取専用AT/OBD初期化とタイムアウト停止", "実機応答のセッション正規化"])
+    }),
+    Object.freeze({
+      id: "android_bluetooth_classic",
+      platform: "android",
+      browser: "chrome",
+      adapterTransport: "bluetooth-classic",
+      route: "companion_import_required",
+      currentAvailability: "Bluetooth Classicの実機経路確認待ち",
+      requiresCompanionBridge: true,
+      requiredBeforeReadout: Object.freeze(["対応アプリまたはローカルブリッジの読取専用取込", "DTC/FF/PID/ECU情報の形式確認", "識別情報を保存しない確認", "読取失敗時の停止"])
+    }),
+    Object.freeze({
+      id: "ios_webkit_bluetooth",
+      platform: "ios",
+      browser: "webkit",
+      adapterTransport: "ble-gatt-or-classic",
+      route: "companion_import_required",
+      currentAvailability: "Web Bluetooth非対応のためコンパニオン取込のみ準備中",
+      requiresCompanionBridge: true,
+      requiredBeforeReadout: Object.freeze(["対応アプリのread-only読取", "共有/貼付データの正規化", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク"])
+    })
+  ]);
+
   const vehicleConnectionProfile = Object.freeze({
     interfaceType: "web-serial-obd-adapter",
     currentState: "safety-gated",
@@ -810,6 +843,42 @@
       requiresExternalSafetyValidation: true,
       requires_external_safety_validation: true,
       reason: "準備条件の記録と検証だけを行います。このモデルから車両へコマンドは送信しません。"
+    };
+  }
+
+  function getMobileReadoutTransportPlan() {
+    return mobileReadoutTransportPlan.map((item) => ({
+      ...item,
+      requiredBeforeReadout: [...item.requiredBeforeReadout]
+    }));
+  }
+
+  function evaluateMobileReadoutTransport(input = {}) {
+    const platform = String(input.platform || "").toLowerCase();
+    const adapterTransport = String(input.adapterTransport || input.adapter_transport || "").toLowerCase();
+    const route = mobileReadoutTransportPlan.find((item) => item.platform === platform && item.adapterTransport === adapterTransport)
+      || mobileReadoutTransportPlan.find((item) => item.platform === platform)
+      || null;
+
+    return {
+      schemaVersion: "mobile_readout_transport_v1",
+      schema_version: "mobile_readout_transport_v1",
+      platform: platform || null,
+      adapterTransport: adapterTransport || null,
+      adapter_transport: adapterTransport || null,
+      route: route?.route || "unconfirmed",
+      currentAvailability: route?.currentAvailability || "端末とVCI方式の確認待ち",
+      requiresCompanionBridge: route?.requiresCompanionBridge !== false,
+      requires_companion_bridge: route?.requiresCompanionBridge !== false,
+      requiredBeforeReadout: route ? [...route.requiredBeforeReadout] : ["端末・ブラウザ・VCI接続方式の確認"],
+      required_before_readout: route ? [...route.requiredBeforeReadout] : ["端末・ブラウザ・VCI接続方式の確認"],
+      directBrowserReadoutEnabled: false,
+      direct_browser_readout_enabled: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      reason: "モバイル経路の適用範囲を判定するだけで、このモデルからBluetooth接続や車両送信は開始しません。"
     };
   }
 
@@ -14997,6 +15066,8 @@
     getVehicleOperationPlan,
     getServiceOperationReadinessRequirements,
     buildServiceOperationReadiness,
+    getMobileReadoutTransportPlan,
+    evaluateMobileReadoutTransport,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
