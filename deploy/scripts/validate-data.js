@@ -44,6 +44,19 @@ function isSourceUrl(value) {
   return isNonEmptyString(value) || isNonEmptyStringArray(value);
 }
 
+function sourceUrlList(value) {
+  return Array.isArray(value) ? value : [value];
+}
+
+function hasGenericDtcPrimarySource(value) {
+  return sourceUrlList(value).some((url) => isNonEmptyString(url)
+    && /^https:\/\/(saemobilus\.sae\.org|webstore\.ansi\.org)\//.test(url.trim()));
+}
+
+function isIsoDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value || "");
+}
+
 for (const file of jsonFiles) {
   const raw = fs.readFileSync(path.join(dataDir, file), "utf8");
   let rows;
@@ -106,6 +119,16 @@ for (const file of jsonFiles) {
     if (!legacySourceOptionalFiles.has(file)) {
       if (!row.source) reportError(`${label}: source がありません`);
       if (!row.source_date) reportError(`${label}: source_date がありません`);
+    }
+
+    if (/^generic-obd-codes-modern-2026(?:-part\d+)?\.json$/.test(file)) {
+      if (!isDtc(row.code)) reportError(`${label}: generic 2026 DTC code is invalid`);
+      if (!isNonEmptyString(row.title)) reportError(`${label}: generic 2026 DTC title is missing`);
+      if (!isSourceUrl(row.source_url) || !hasGenericDtcPrimarySource(row.source_url)) {
+        reportError(`${label}: generic 2026 DTC requires an SAE or ANSI primary-standard source_url`);
+      }
+      if (!isIsoDate(row.last_verified_date)) reportError(`${label}: generic 2026 DTC last_verified_date is invalid`);
+      if (row.service_manual_required !== true) reportError(`${label}: generic 2026 DTC must require the service manual`);
     }
 
     if (file === "vehicle-model-catalog-domestic-2026.json" || file === "vehicle-model-catalog-domestic-2004-2026.json") {
