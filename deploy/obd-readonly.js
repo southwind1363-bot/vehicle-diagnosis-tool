@@ -762,12 +762,17 @@
     };
   }
 
+  function isExplicitTrueFlag(value) {
+    if (value === true || value === 1) return true;
+    return typeof value === "string" && ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
+  }
+
   function hasExplicitReadoutBlock(input = {}) {
-    return input?.blocked === true || input?.isBlocked === true || input?.is_blocked === true;
+    return isExplicitTrueFlag(input?.blocked) || isExplicitTrueFlag(input?.isBlocked) || isExplicitTrueFlag(input?.is_blocked);
   }
 
   function hasReadoutTransportViolation(input = {}) {
-    return input?.wouldTransmit === true || input?.would_transmit === true;
+    return isExplicitTrueFlag(input?.wouldTransmit) || isExplicitTrueFlag(input?.would_transmit);
   }
 
   function isExplicitFalseFlag(value) {
