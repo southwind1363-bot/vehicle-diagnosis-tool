@@ -858,6 +858,7 @@
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
+      would_transmit: bridgeSafety.wouldTransmit,
       codes,
       codeCount,
       code_count: codeCount,
@@ -1057,6 +1058,7 @@
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
+      would_transmit: bridgeSafety.wouldTransmit,
       protocol: readBridgeProtocol(data),
       supportedPids,
       supported_pids: supportedPids,
@@ -1104,7 +1106,8 @@
       intent: "read_supported_pids",
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit
+      wouldTransmit: bridgeSafety.wouldTransmit,
+      would_transmit: bridgeSafety.wouldTransmit
     };
   }
 
@@ -1142,7 +1145,8 @@
       intent: "read_freeze_frame",
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit
+      wouldTransmit: bridgeSafety.wouldTransmit,
+      would_transmit: bridgeSafety.wouldTransmit
     };
   }
 
@@ -1203,7 +1207,8 @@
       intent: "readiness_snapshot",
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit
+      wouldTransmit: bridgeSafety.wouldTransmit,
+      would_transmit: bridgeSafety.wouldTransmit
     });
     const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {
       const rowKey = String(
@@ -1276,7 +1281,8 @@
       intent: "read_ecu_info",
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit
+      wouldTransmit: bridgeSafety.wouldTransmit,
+      would_transmit: bridgeSafety.wouldTransmit
     };
   }
 
@@ -1319,7 +1325,8 @@
       intent: "read_onboard_monitor",
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit
+      wouldTransmit: bridgeSafety.wouldTransmit,
+      would_transmit: bridgeSafety.wouldTransmit
     };
   }
 
