@@ -747,14 +747,29 @@
     };
   }
 
+  function readBridgeSnapshotSafety(response = {}, hasSnapshotData = false) {
+    const safety = readBridgeResponseSafety(response);
+    const hasExplicitSafety = Boolean(response && typeof response === "object" && (
+      response.ok !== undefined || response.blocked !== undefined || response.isBlocked !== undefined || response.would_transmit !== undefined || response.wouldTransmit !== undefined
+    ));
+    const inferredSnapshotSafety = !hasExplicitSafety && hasSnapshotData;
+    return {
+      ...safety,
+      hasExplicitSafety,
+      inferredSnapshotSafety,
+      ok: inferredSnapshotSafety || safety.ok,
+      blocked: inferredSnapshotSafety ? false : safety.blocked
+    };
+  }
+
   function readBridgeProtocol(data = {}) {
     return data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || data.protocol_name || data.protocolName || data.bus_protocol || data.busProtocol || null;
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
+    const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes));
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
     const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
       ? response.intent
@@ -786,19 +801,19 @@
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
     const dtcStatusSummary = buildDtcStatusSummary({
-      reportedStatuses: safety.ok && safety.blocked === false ? [defaultStatus] : [],
+      reportedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false ? [defaultStatus] : [],
       dtcs: normalizedDtcs
     });
-    const dtcReadoutStatus = safety.blocked ? "blocked" : safety.ok ? "reported" : "unknown";
+    const dtcReadoutStatus = bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown";
 
     return {
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
       source: "local_bridge",
       intent,
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit,
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit,
       codes,
       codeCount,
       code_count: codeCount,
@@ -1029,62 +1044,63 @@
 
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
     const supportedPids = collectBridgeSupportedPids(data);
+    const bridgeSafety = readBridgeSnapshotSafety(response, [data.supported_pids, data.supportedPids, data.pids, data.pid_list, data.pidList, data.supportedPidRows].some(Array.isArray));
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
       protocol: readBridgeProtocol(data),
+      supported_pid_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
       supported_pids: supportedPids
       }),
       intent: "read_supported_pids",
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit
     };
   }
 
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
+    const freezeFrameValues = Array.isArray(data.values)
+      ? data.values
+      : Array.isArray(data.freeze_frame_values)
+        ? data.freeze_frame_values
+        : Array.isArray(data.freezeFrameValues)
+          ? data.freezeFrameValues
+          : Array.isArray(data.freeze_frame_rows)
+            ? data.freeze_frame_rows
+            : Array.isArray(data.freezeFrameRows)
+              ? data.freezeFrameRows
+              : Array.isArray(data.monitor_values)
+                ? data.monitor_values
+                : Array.isArray(data.monitorValues)
+                  ? data.monitorValues
+                  : Array.isArray(data.pid_values)
+                    ? data.pid_values
+                    : Array.isArray(data.pidValues)
+                      ? data.pidValues
+                      : [];
+    const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray));
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      freeze_frame_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown",
+      freeze_frame_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
-      values: Array.isArray(data.values)
-        ? data.values
-        : Array.isArray(data.freeze_frame_values)
-          ? data.freeze_frame_values
-          : Array.isArray(data.freezeFrameValues)
-            ? data.freezeFrameValues
-          : Array.isArray(data.freeze_frame_rows)
-            ? data.freeze_frame_rows
-            : Array.isArray(data.freezeFrameRows)
-              ? data.freezeFrameRows
-          : Array.isArray(data.monitor_values)
-            ? data.monitor_values
-            : Array.isArray(data.monitorValues)
-              ? data.monitorValues
-            : Array.isArray(data.pid_values)
-              ? data.pid_values
-              : Array.isArray(data.pidValues)
-                ? data.pidValues
-            : []
+      values: freezeFrameValues
       }),
       intent: "read_freeze_frame",
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit
     };
   }
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
     const readinessRowIdAliases = {
       milstatus: "mil_status",
       mil: "mil_status",
@@ -1133,12 +1149,14 @@
             data.statusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.statusByteC } : null,
             data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
           ].filter(Boolean);
+    const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
+      || [data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
       intent: "readiness_snapshot",
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit
     });
     const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {
       const rowKey = String(
@@ -1155,7 +1173,7 @@
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
         protocol: readBridgeProtocol(data),
-        readiness_readout_status: safety.blocked ? "blocked" : safety.ok ? "unparsed" : "unknown",
+        readiness_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "unparsed" : "unknown",
         monitors: []
       }));
     }
@@ -1187,7 +1205,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      readiness_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown",
+      readiness_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
       monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
         const supported = (byte & supportedBit) !== 0;
@@ -1199,65 +1217,62 @@
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
-    const hasExplicitSafety = Boolean(response && typeof response === "object" && (
-      response.ok !== undefined || response.blocked !== undefined || response.isBlocked !== undefined || response.would_transmit !== undefined || response.wouldTransmit !== undefined
-    ));
-    const inferredSnapshotSafety = !hasExplicitSafety && collectEcuInfoRows(data).length > 0;
+    const bridgeSafety = readBridgeSnapshotSafety(response, collectEcuInfoRows(data).length > 0);
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
         protocol: readBridgeProtocol(data),
-        ecu_info_readout_status: inferredSnapshotSafety || safety.ok ? "reported" : safety.blocked ? "blocked" : "unknown"
+        ecu_info_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown"
       }),
       intent: "read_ecu_info",
-      ok: inferredSnapshotSafety || safety.ok,
-      blocked: inferredSnapshotSafety ? false : safety.blocked,
-      wouldTransmit: safety.wouldTransmit
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit
     };
   }
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const safety = readBridgeResponseSafety(response);
+    const tests = Array.isArray(data.tests)
+      ? data.tests
+      : Array.isArray(data.values)
+        ? data.values
+        : Array.isArray(data.mode06_tests)
+          ? data.mode06_tests
+          : Array.isArray(data.mode06Tests)
+            ? data.mode06Tests
+            : Array.isArray(data.mode06_rows)
+              ? data.mode06_rows
+              : Array.isArray(data.mode06Rows)
+                ? data.mode06Rows
+                : Array.isArray(data.monitor_tests)
+                  ? data.monitor_tests
+                  : Array.isArray(data.monitorTests)
+                    ? data.monitorTests
+                    : Array.isArray(data.test_rows)
+                      ? data.test_rows
+                      : Array.isArray(data.testRows)
+                        ? data.testRows
+                        : Array.isArray(data.onboard_monitor_tests)
+                          ? data.onboard_monitor_tests
+                          : Array.isArray(data.onboardMonitorTests)
+                            ? data.onboardMonitorTests
+                            : [];
+    const bridgeSafety = readBridgeSnapshotSafety(response, [data.tests, data.values, data.mode06_tests, data.mode06Tests, data.mode06_rows, data.mode06Rows, data.monitor_tests, data.monitorTests, data.test_rows, data.testRows, data.onboard_monitor_tests, data.onboardMonitorTests].some(Array.isArray));
     return {
       ...normalizeOnboardMonitorSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      onboard_monitor_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown",
-      tests: Array.isArray(data.tests)
-        ? data.tests
-        : Array.isArray(data.values)
-          ? data.values
-          : Array.isArray(data.mode06_tests)
-            ? data.mode06_tests
-            : Array.isArray(data.mode06Tests)
-              ? data.mode06Tests
-            : Array.isArray(data.mode06_rows)
-              ? data.mode06_rows
-              : Array.isArray(data.mode06Rows)
-                ? data.mode06Rows
-            : Array.isArray(data.monitor_tests)
-              ? data.monitor_tests
-              : Array.isArray(data.monitorTests)
-                ? data.monitorTests
-                : Array.isArray(data.test_rows)
-                  ? data.test_rows
-                  : Array.isArray(data.testRows)
-                    ? data.testRows
-                : Array.isArray(data.onboard_monitor_tests)
-                  ? data.onboard_monitor_tests
-                  : Array.isArray(data.onboardMonitorTests)
-                    ? data.onboardMonitorTests
-                    : []
+      onboard_monitor_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown",
+      tests
       }),
       intent: "read_onboard_monitor",
-      ok: safety.ok,
-      blocked: safety.blocked,
-      wouldTransmit: safety.wouldTransmit
+      ok: bridgeSafety.ok,
+      blocked: bridgeSafety.blocked,
+      wouldTransmit: bridgeSafety.wouldTransmit
     };
   }
 

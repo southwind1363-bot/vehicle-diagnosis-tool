@@ -59,15 +59,16 @@ const preparedVehicleRequestFunctionSource = source.match(/function requestPrepa
 const outboundSafetyFunctionSource = source.match(/function evaluateOutboundSafety[\s\S]*?reason: isStateChanging[\s\S]*?\r?\n    \};\r?\n  \}/);
 const vehicleOperationRequestFunctionSource = source.match(/function requestVehicleOperation[\s\S]*?requiredBeforeEnable: operation \? \[\.\.\.operation\.requiredBeforeEnable\] : \[\]\r?\n    \};\r?\n  \}/);
 const bridgeResponseSafetyFunctionSource = source.match(/function readBridgeResponseSafety[\s\S]*?wouldTransmit: response\.would_transmit === true \|\| response\.wouldTransmit === true\r?\n    \};\r?\n  \}/);
+const bridgeSnapshotSafetyFunctionSource = source.match(/function readBridgeSnapshotSafety[\s\S]*?blocked: inferredSnapshotSafety \? false : safety\.blocked\r?\n    \};\r?\n  \}/);
 const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\s\S]*?return data\.protocol \|\| data\.obd_protocol \|\| data\.communication_protocol[\s\S]*?\|\| null;\r?\n  \}/);
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
 const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDtcSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
-const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
-const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?wouldTransmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?wouldTransmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgeReadinessSnapshotFunctionSource = source.match(/function normalizeBridgeReadinessSnapshot[\s\S]*?monitors: monitorBits\.map[\s\S]*?\r?\n    \}\)\);\r?\n  \}/);
-const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBridgeEcuInfoSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
-const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?wouldTransmit: safety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBridgeEcuInfoSnapshot[\s\S]*?wouldTransmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?wouldTransmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
 const bridgePidValueFunctionSource = source.match(/function normalizeBridgePidValue[\s\S]*?sourceLine: index \+ 1\r?\n    \};\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missing_labels: normalizedMissingLabels\r?\n    \};\r?\n  \}/);
@@ -399,6 +400,11 @@ const bridgeResponseSafetyFunctionChecks = () => {
   }
 };
 const bridgeCoreReadoutNormalizerFunctionChecks = () => {
+  check(Boolean(bridgeSnapshotSafetyFunctionSource), "readBridgeSnapshotSafety is missing from obd-readonly.js");
+  if (bridgeSnapshotSafetyFunctionSource) {
+    const functionBody = bridgeSnapshotSafetyFunctionSource[0];
+    check(functionBody.includes('const inferredSnapshotSafety = !hasExplicitSafety && hasSnapshotData;') && functionBody.includes('ok: inferredSnapshotSafety || safety.ok') && functionBody.includes('blocked: inferredSnapshotSafety ? false : safety.blocked'), "readBridgeSnapshotSafety should infer only data-bearing saved snapshots while preserving explicit bridge safety");
+  }
   check(Boolean(bridgeDtcSnapshotFunctionSource), "normalizeBridgeDtcSnapshot is missing from obd-readonly.js");
   if (bridgeDtcSnapshotFunctionSource) {
     const functionBody = bridgeDtcSnapshotFunctionSource[0];
@@ -413,6 +419,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount') && functionBody.includes('stored_count: storedCount'), "normalizeBridgeDtcSnapshot should expose snake_case DTC count aliases");
     check(functionBody.includes('pending_count: pendingCount') && functionBody.includes('permanent_count: permanentCount') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeDtcSnapshot should expose snake_case status count and raw retention aliases");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeDtcSnapshot should not retain raw bridge text");
+    check(functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response,') && functionBody.includes('dtcReadoutStatus = bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "reported" : "unknown"'), "normalizeBridgeDtcSnapshot should preserve saved snapshots without weakening explicit bridge safety");
   }
   check(Boolean(bridgeLivePidSnapshotFunctionSource), "normalizeBridgeLivePidSnapshot is missing from obd-readonly.js");
   if (bridgeLivePidSnapshotFunctionSource) {
@@ -432,7 +439,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);'), "normalizeBridgeSupportedPidSnapshot should normalize supported PID aliases before matrix building");
     check(functionBody.includes('...buildSupportedPidMatrix({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeSupportedPidSnapshot should reuse the supported PID matrix builder");
     check(functionBody.includes('protocol: readBridgeProtocol(data)') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeSupportedPidSnapshot should pass protocol and supported PID rows into the matrix builder");
-    check(functionBody.includes('intent: "read_supported_pids"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeSupportedPidSnapshot should preserve bridge intent and safety metadata");
+    check(functionBody.includes('intent: "read_supported_pids"') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeSupportedPidSnapshot should preserve bridge intent and saved snapshot safety metadata");
   }
   check(Boolean(bridgeFreezeFrameSnapshotFunctionSource), "normalizeBridgeFreezeFrameSnapshot is missing from obd-readonly.js");
   if (bridgeFreezeFrameSnapshotFunctionSource) {
@@ -440,7 +447,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('...normalizeFreezeFrameSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeFreezeFrameSnapshot should reuse the core freeze-frame normalizer");
     check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC aliases");
     check(functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame value aliases");
-    check(functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeFreezeFrameSnapshot should preserve bridge intent and safety metadata");
+    check(functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeFreezeFrameSnapshot should preserve bridge intent and saved snapshot safety metadata");
   }
 };
 const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
@@ -451,26 +458,26 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(data.readiness_values)') && functionBody.includes('Array.isArray(data.readinessRows)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('Array.isArray(response.monitorValues)'), "normalizeBridgeReadinessSnapshot should accept readiness value aliases");
     check(functionBody.includes('data.readinessStatusByteB !== undefined') && functionBody.includes('data.statusByteD !== undefined'), "normalizeBridgeReadinessSnapshot should accept direct readiness status byte aliases");
     check(functionBody.includes('const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {'), "normalizeBridgeReadinessSnapshot should build readiness values by normalized id");
-    check(functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('readiness_readout_status: safety.blocked ? "blocked" : safety.ok ? "unparsed" : "unknown"'), "normalizeBridgeReadinessSnapshot should distinguish blocked and unparsed readiness responses without B/C/D bytes");
+    check(functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('readiness_readout_status: bridgeSafety.blocked ? "blocked" : bridgeSafety.ok ? "unparsed" : "unknown"'), "normalizeBridgeReadinessSnapshot should distinguish blocked and unparsed readiness responses without B/C/D bytes");
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
     check(functionBody.includes('["nox_scr", c, 0x02, 0x20]') && functionBody.includes('["evaporative_system", c, 0x08, 0x80]'), "normalizeBridgeReadinessSnapshot should preserve compression and spark monitor layouts");
     check(functionBody.includes('status: supported ? (complete ? "complete" : "not_complete") : "not_supported"'), "normalizeBridgeReadinessSnapshot should derive readiness monitor status from supported and incomplete bits");
-    check(functionBody.includes('readiness_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown"'), "normalizeBridgeReadinessSnapshot should mark complete bridge readiness responses as reported");
+    check(functionBody.includes('readiness_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown"') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeReadinessSnapshot should mark complete bridge readiness responses as reported");
   }
   check(Boolean(bridgeEcuInfoSnapshotFunctionSource), "normalizeBridgeEcuInfoSnapshot is missing from obd-readonly.js");
   if (bridgeEcuInfoSnapshotFunctionSource) {
     const functionBody = bridgeEcuInfoSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeEcuInfoSnapshot({') && functionBody.includes('...data,'), "normalizeBridgeEcuInfoSnapshot should delegate bridge ECU info data to the core normalizer");
     check(functionBody.includes('source: "local_bridge"') && functionBody.includes('protocol: readBridgeProtocol(data)'), "normalizeBridgeEcuInfoSnapshot should preserve local bridge source and protocol");
-    check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge intent and safety metadata");
-    check(functionBody.includes('const inferredSnapshotSafety = !hasExplicitSafety && collectEcuInfoRows(data).length > 0;') && functionBody.includes('ecu_info_readout_status: inferredSnapshotSafety || safety.ok ? "reported" : safety.blocked ? "blocked" : "unknown"'), "normalizeBridgeEcuInfoSnapshot should preserve saved ECU info snapshots without weakening blocked bridge responses");
+    check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge intent and safety metadata");
+    check(functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, collectEcuInfoRows(data).length > 0);') && functionBody.includes('ecu_info_readout_status: bridgeSafety.ok ? "reported" : bridgeSafety.blocked ? "blocked" : "unknown"'), "normalizeBridgeEcuInfoSnapshot should preserve saved ECU info snapshots without weakening blocked bridge responses");
   }
   check(Boolean(bridgeOnboardMonitorSnapshotFunctionSource), "normalizeBridgeOnboardMonitorSnapshot is missing from obd-readonly.js");
   if (bridgeOnboardMonitorSnapshotFunctionSource) {
     const functionBody = bridgeOnboardMonitorSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should reuse the core Mode 06 normalizer");
     check(functionBody.includes('Array.isArray(data.mode06_tests)') && functionBody.includes('Array.isArray(data.mode06Rows)') && functionBody.includes('Array.isArray(data.onboardMonitorTests)'), "normalizeBridgeOnboardMonitorSnapshot should accept Mode 06 test aliases");
-    check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge intent and safety metadata");
+    check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge intent and saved snapshot safety metadata");
   }
 };
 const bridgePidValueFunctionChecks = () => {
@@ -2402,8 +2409,8 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.812.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for absent-response status handling");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.812.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.812.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.813.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for saved bridge snapshot safety handling");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.813.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.813.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
@@ -2431,7 +2438,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "未入力読取を未解析応答から分離"'), "OBD core progress snapshot should show the latest response-presence milestone");
+check(appSource.includes('recentMilestone: "保存済みブリッジ読取を安全に再取込"'), "OBD core progress snapshot should show the latest saved bridge snapshot safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4793,6 +4800,18 @@ const genericLocalBridgeExportPayloadSavedSessionSafetyAlias = obd.buildDiagnost
 check(genericLocalBridgeExportPayloadSavedSessionSafetyAlias.nextReadoutRequestSafetySummary?.schema_version === "next_readout_request_safety_summary_v1" && genericLocalBridgeExportPayloadSavedSessionSafetyAlias.nextReadoutReasonSummary?.reason_id === "generic_local_bridge_export_payload_saved_session_reason" && genericLocalBridgeExportPayloadSavedSessionSafetyAlias.nextReadoutCandidateSafetySummary?.total_count === 105, "Diagnostic scan session did not retain local_bridge_export_payload saved_session diagnostic_scan_session readout safety metadata");
 const bridgeEmptyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({});
 check(bridgeEmptyDtcSnapshot.codes.length === 0 && bridgeEmptyDtcSnapshot.dtcs.length === 0 && bridgeEmptyDtcSnapshot.blocked === true, "空DTCブリッジ応答を安全側へ整形できません");
+const savedBridgeDtcSnapshot = obd.normalizeBridgeDtcSnapshot({ dtcs: [{ code: "P0171" }] });
+check(savedBridgeDtcSnapshot.ok === true && savedBridgeDtcSnapshot.blocked === false && savedBridgeDtcSnapshot.dtcReadoutStatus === "reported", "保存済みDTCスナップショットを読取済みとして再取込できません");
+const savedBridgeSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({ supported_pids: ["0C", "05"] });
+check(savedBridgeSupportedPidSnapshot.ok === true && savedBridgeSupportedPidSnapshot.blocked === false && savedBridgeSupportedPidSnapshot.supportedPidReadoutStatus === "reported", "保存済み対応PIDスナップショットを読取済みとして再取込できません");
+const savedBridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({ monitor_values: [{ pid: "0C", value: 900, unit: "rpm" }] });
+check(savedBridgeFreezeFrameSnapshot.ok === true && savedBridgeFreezeFrameSnapshot.blocked === false && savedBridgeFreezeFrameSnapshot.freezeFrameReadoutStatus === "reported", "保存済みフリーズフレームを読取済みとして再取込できません");
+const savedBridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({ readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 });
+check(savedBridgeReadinessSnapshot.ok === true && savedBridgeReadinessSnapshot.blocked === false && savedBridgeReadinessSnapshot.readinessReadoutStatus === "reported", "保存済みレディネスを読取済みとして再取込できません");
+const savedBridgeEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({ items: [{ id: "calibration_id", value: "CAL-SAVED" }] });
+check(savedBridgeEcuInfoSnapshot.ok === true && savedBridgeEcuInfoSnapshot.blocked === false && savedBridgeEcuInfoSnapshot.ecuInfoReadoutStatus === "reported", "保存済みECU情報を読取済みとして再取込できません");
+const savedBridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({ tests: [{ test_id: "01", component_id: "01", value: 2, min: 1, max: 3 }] });
+check(savedBridgeOnboardMonitorSnapshot.ok === true && savedBridgeOnboardMonitorSnapshot.blocked === false && savedBridgeOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "reported", "保存済みMode 06を読取済みとして再取込できません");
 const outboundRead = obd.evaluateOutboundSafety({ service: "03", stateChanging: false });
 check(outboundRead.blocked === true && outboundRead.wouldTransmit === false && outboundRead.failClosed === true, "読取系アウトバウンドが安全ゲートで停止していません");
 const outboundClear = obd.evaluateOutboundSafety({ service: "04", stateChanging: true });
