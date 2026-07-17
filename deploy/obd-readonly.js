@@ -1200,17 +1200,21 @@
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const safety = readBridgeResponseSafety(response);
+    const hasExplicitSafety = Boolean(response && typeof response === "object" && (
+      response.ok !== undefined || response.blocked !== undefined || response.isBlocked !== undefined || response.would_transmit !== undefined || response.wouldTransmit !== undefined
+    ));
+    const inferredSnapshotSafety = !hasExplicitSafety && collectEcuInfoRows(data).length > 0;
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
         protocol: readBridgeProtocol(data),
-        ecu_info_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown"
+        ecu_info_readout_status: inferredSnapshotSafety || safety.ok ? "reported" : safety.blocked ? "blocked" : "unknown"
       }),
       intent: "read_ecu_info",
-      ok: safety.ok,
-      blocked: safety.blocked,
+      ok: inferredSnapshotSafety || safety.ok,
+      blocked: inferredSnapshotSafety ? false : safety.blocked,
       wouldTransmit: safety.wouldTransmit
     };
   }
@@ -1424,6 +1428,10 @@
             ? decodeSupportedPidResponse(supportedPidMatrixInput)
             : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput))
       : null;
+    const isUnknownWithoutEvidence = (snapshot, key, readoutStatus) => String(readoutStatus || "").trim().toLowerCase() === "unknown"
+      && !snapshot?.capturedAt
+      && !snapshot?.captured_at
+      && !(Array.isArray(snapshot?.[key]) && snapshot[key].length > 0);
     const items = [
       ...(includeInfrastructure ? [
       {
@@ -1448,25 +1456,25 @@
       {
         id: "dtc_snapshot",
         label: "DTC",
-        available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes)),
+        available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && !isUnknownWithoutEvidence(dtcSnapshot, "codes", dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes)),
         count: Array.isArray(dtcSnapshot?.codes) ? dtcSnapshot.codes.length : 0
       },
       {
         id: "live_pid_snapshot",
         label: "ライブPID",
-        available: !["unparsed", "blocked"].includes(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status) && (livePidSnapshot?.blocked === false || Array.isArray(livePidSnapshot?.monitorValues)),
+        available: !["unparsed", "blocked"].includes(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status) && !isUnknownWithoutEvidence(livePidSnapshot, "monitorValues", livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status) && (livePidSnapshot?.blocked === false || Array.isArray(livePidSnapshot?.monitorValues)),
         count: Array.isArray(livePidSnapshot?.monitorValues) ? livePidSnapshot.monitorValues.length : 0
       },
       {
         id: "freeze_frame_snapshot",
         label: "フリーズフレーム",
-        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues)),
+        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues)),
         count: Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0
       },
       {
         id: "readiness_snapshot",
         label: "レディネス",
-        available: ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
+        available: ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status) || isUnknownWithoutEvidence(readinessSnapshot, "monitors", readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
           ? false
           : readinessSnapshot?.blocked === false || Array.isArray(readinessSnapshot?.monitors),
         count: Array.isArray(readinessSnapshot?.monitors) ? readinessSnapshot.monitorCount || readinessSnapshot.monitors.length : 0
@@ -1474,7 +1482,7 @@
       {
         id: "ecu_info_snapshot",
         label: "ECU情報",
-        available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
+        available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status) || isUnknownWithoutEvidence(ecuInfoSnapshot, "items", ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
           ? false
           : ecuInfoSnapshot?.blocked === false || Array.isArray(ecuInfoSnapshot?.items),
         count: Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.itemCount || ecuInfoSnapshot.items.length : 0
@@ -1482,7 +1490,7 @@
       {
         id: "onboard_monitor_snapshot",
         label: "Mode06",
-        available: ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
+        available: ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status) || isUnknownWithoutEvidence(onboardMonitorSnapshot, "tests", onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
           ? false
           : onboardMonitorSnapshot?.blocked === false || Array.isArray(onboardMonitorSnapshot?.tests),
         count: Array.isArray(onboardMonitorSnapshot?.tests) ? onboardMonitorSnapshot.testCount || onboardMonitorSnapshot.tests.length : 0
@@ -1490,7 +1498,7 @@
       {
         id: "supported_pid_matrix",
         label: "対応PID",
-        available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
+        available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
         count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : 0
       }
     ].map((item) => Object.freeze({
@@ -12142,9 +12150,15 @@
     return (text.match(/\b[0-9A-F]{2}\b/gi) || []).map((byte) => parseInt(byte, 16));
   }
 
+  function hasObdResponseInput(input = {}) {
+    if (typeof input === "string" || Array.isArray(input)) return true;
+    if (!input || typeof input !== "object") return false;
+    return Array.isArray(input.bytes) || input.raw !== undefined || input.response !== undefined;
+  }
+
   function decodeObdDtcResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
-    const hasResponseInput = Array.isArray(input.bytes) || input.raw !== undefined || input.response !== undefined;
+    const hasResponseInput = hasObdResponseInput(input);
     const serviceByte = bytes.find((byte) => byte === 0x43 || byte === 0x47 || byte === 0x4A);
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
@@ -12270,6 +12284,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const supportedPids = [];
     const hasSupportedPidFrame = bytes.some((byte, index) => byte === 0x41 && isSupportedPidBase(bytes[index + 1]) && index + 5 < bytes.length);
+    const readoutStatus = hasSupportedPidFrame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index + 5 < bytes.length; index++) {
       if (bytes[index] !== 0x41 || !Number.isInteger(bytes[index + 1])) continue;
       if (!isSupportedPidBase(bytes[index + 1])) continue;
@@ -12285,7 +12300,7 @@
       index += 5;
     }
     if (!supportedPids.length) {
-      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [], supported_pid_readout_status: hasSupportedPidFrame ? "reported" : "unparsed" });
+      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [], supported_pid_readout_status: readoutStatus });
     }
     return buildSupportedPidMatrix({
       source: input.source || "obd_response_decoder",
@@ -12303,6 +12318,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const hasMode01Frame = bytes.some((byte, index) => byte === 0x41 && index + 2 < bytes.length);
+    const readoutStatus = hasMode01Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
@@ -12321,7 +12337,7 @@
         protocol: input.protocol || input.obd_protocol || null,
         supported_pids: [],
         values,
-        live_pid_readout_status: hasMode01Frame ? "reported" : "unparsed",
+        live_pid_readout_status: readoutStatus,
         captured_at: input.captured_at || input.capturedAt || null
       }
     });
@@ -12332,6 +12348,7 @@
     const values = [];
     let triggerDtc = null;
     const hasMode02Frame = bytes.some((byte, index) => byte === 0x42 && index + 2 < bytes.length);
+    const readoutStatus = hasMode02Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x42) continue;
@@ -12355,7 +12372,7 @@
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
-      freeze_frame_readout_status: hasMode02Frame ? "reported" : "unparsed",
+      freeze_frame_readout_status: readoutStatus,
       trigger_dtc: triggerDtc,
       values
     });
@@ -12365,6 +12382,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const hasMode09Frame = bytes.some((byte, index) => byte === 0x49 && index + 2 < bytes.length);
+    const readoutStatus = hasMode09Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x49) continue;
@@ -12385,7 +12403,7 @@
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
-      ecu_info_readout_status: hasMode09Frame ? "reported" : "unparsed",
+      ecu_info_readout_status: readoutStatus,
       values
     });
   }
@@ -12397,7 +12415,7 @@
       return normalizeReadinessSnapshot({
         source: input.source || "obd_response_decoder",
         captured_at: input.captured_at || input.capturedAt || null,
-        readiness_readout_status: "unparsed",
+        readiness_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown",
         monitors: []
       });
     }
@@ -12448,6 +12466,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const tests = [];
     const hasMode06Frame = bytes.some((byte, index) => byte === 0x46 && index + 8 < bytes.length);
+    const readoutStatus = hasMode06Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index < bytes.length - 8; index++) {
       if (bytes[index] !== 0x46) continue;
       const testId = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
@@ -12463,7 +12482,7 @@
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
-      onboard_monitor_readout_status: hasMode06Frame ? "reported" : "unparsed",
+      onboard_monitor_readout_status: readoutStatus,
       tests
     });
   }
@@ -12879,7 +12898,12 @@
     const textDtcSnapshot = extractTextDtcSnapshot(value);
     const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
     const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
-    const readResponseOption = (camelKey, snakeKey, bucketName) => sessionInput[camelKey] || sessionInput[snakeKey] || { raw: firstOrEmpty(bucketName), protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+    const readResponseOption = (camelKey, snakeKey, bucketName) => {
+      const explicitResponse = sessionInput[camelKey] || sessionInput[snakeKey];
+      if (explicitResponse) return explicitResponse;
+      const raw = firstOrEmpty(bucketName);
+      return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+    };
     const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {
       const explicitResponse = sessionInput[camelKey] || sessionInput[snakeKey];
       if (explicitResponse) return explicitResponse;

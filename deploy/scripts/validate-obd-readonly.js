@@ -463,7 +463,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('...normalizeEcuInfoSnapshot({') && functionBody.includes('...data,'), "normalizeBridgeEcuInfoSnapshot should delegate bridge ECU info data to the core normalizer");
     check(functionBody.includes('source: "local_bridge"') && functionBody.includes('protocol: readBridgeProtocol(data)'), "normalizeBridgeEcuInfoSnapshot should preserve local bridge source and protocol");
     check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('wouldTransmit: safety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge intent and safety metadata");
-    check(functionBody.includes('ecu_info_readout_status: safety.ok && !safety.blocked ? "reported" : safety.blocked ? "blocked" : "unknown"'), "normalizeBridgeEcuInfoSnapshot should distinguish reported and blocked ECU info responses");
+    check(functionBody.includes('const inferredSnapshotSafety = !hasExplicitSafety && collectEcuInfoRows(data).length > 0;') && functionBody.includes('ecu_info_readout_status: inferredSnapshotSafety || safety.ok ? "reported" : safety.blocked ? "blocked" : "unknown"'), "normalizeBridgeEcuInfoSnapshot should preserve saved ECU info snapshots without weakening blocked bridge responses");
   }
   check(Boolean(bridgeOnboardMonitorSnapshotFunctionSource), "normalizeBridgeOnboardMonitorSnapshot is missing from obd-readonly.js");
   if (bridgeOnboardMonitorSnapshotFunctionSource) {
@@ -1507,7 +1507,7 @@ const decodeObdDtcResponseFunctionChecks = () => {
     const functionBody = decodeObdDtcResponseFunctionSource[0];
     check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeObdDtcResponse should normalize raw DTC response bytes");
     check(functionBody.includes('byte === 0x43 || byte === 0x47 || byte === 0x4A'), "decodeObdDtcResponse should accept stored, pending, and permanent DTC service responses");
-    check(functionBody.includes('if (serviceByte === undefined)') && functionBody.includes('dtc_readout_status: hasResponseInput ? "unparsed" : "unknown"') && functionBody.includes('dtcs: []'), "decodeObdDtcResponse should distinguish an unparsed DTC response from an absent response");
+    check(functionBody.includes('const hasResponseInput = hasObdResponseInput(input);') && functionBody.includes('if (serviceByte === undefined)') && functionBody.includes('dtc_readout_status: hasResponseInput ? "unparsed" : "unknown"') && functionBody.includes('dtcs: []'), "decodeObdDtcResponse should distinguish an unparsed DTC response from an absent response");
     check(functionBody.includes('if (high === 0 && low === 0) continue;') && functionBody.includes('decodeDtcPair(high, low)'), "decodeObdDtcResponse should ignore zero padding and decode byte pairs");
     check(functionBody.includes('serviceByte === 0x47 ? "pending" : serviceByte === 0x4A ? "permanent" : "stored"'), "decodeObdDtcResponse should preserve stored, pending, and permanent DTC status");
     check(functionBody.includes('dtc_readout_status: "reported"'), "decodeObdDtcResponse should mark valid DTC service responses as reported");
@@ -1554,6 +1554,7 @@ const decodeSupportedPidResponseFunctionChecks = () => {
     check(functionBody.includes('for (let bit = 7; bit >= 0; bit--)') && functionBody.includes('basePid + byteIndex * 8 + (8 - bit)'), "decodeSupportedPidResponse should map supported PID bits in MSB order");
     check(functionBody.includes('supported_pids: [...new Set(supportedPids)]'), "decodeSupportedPidResponse should deduplicate supported PID ids");
     check(functionBody.includes('const hasSupportedPidFrame = bytes.some((byte, index) => byte === 0x41 && isSupportedPidBase(bytes[index + 1]) && index + 5 < bytes.length);'), "decodeSupportedPidResponse should distinguish complete supported-PID bitmap frames");
+    check(functionBody.includes('const readoutStatus = hasSupportedPidFrame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeSupportedPidResponse should distinguish absent input from unparsed responses");
   }
 };
 const supportedPidBaseFunctionChecks = () => {
@@ -1572,6 +1573,7 @@ const decodeLivePidResponseFunctionChecks = () => {
     check(functionBody.includes('getStandardPidPayloadLength(pid)') && functionBody.includes('getResponsePayload(bytes, index + 2, payloadLength, 0x41)'), "decodeLivePidResponse should bound payload extraction by standard PID length");
     check(functionBody.includes('decodeStandardPidValue(pid, payload)'), "decodeLivePidResponse should decode standard PID payloads into monitor values");
     check(functionBody.includes('if (Array.isArray(decoded)) values.push(...decoded);') && functionBody.includes('else if (decoded) values.push(decoded);'), "decodeLivePidResponse should collect scalar and grouped decoded values");
+    check(functionBody.includes('const readoutStatus = hasMode01Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeLivePidResponse should distinguish absent input from unparsed responses");
     check(functionBody.includes('would_transmit: false') && functionBody.includes('normalizeBridgeLivePidSnapshot({'), "decodeLivePidResponse should return a read-only normalized live PID snapshot");
   }
 };
@@ -1584,6 +1586,7 @@ const decodeFreezeFrameResponseFunctionChecks = () => {
     check(functionBody.includes('const frameNumber = bytes[index + 2];'), "decodeFreezeFrameResponse should preserve the freeze-frame number byte");
     check(functionBody.includes('if (pid === "02"') && functionBody.includes('triggerDtc = decoded'), "decodeFreezeFrameResponse should decode trigger DTC from PID 02");
     check(functionBody.includes('freeze_frame_number: frameNumber'), "decodeFreezeFrameResponse should attach frame numbers to decoded PID values");
+    check(functionBody.includes('const readoutStatus = hasMode02Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeFreezeFrameResponse should distinguish absent input from unparsed responses");
     check(functionBody.includes('normalizeFreezeFrameSnapshot({') && functionBody.includes('trigger_dtc: triggerDtc'), "decodeFreezeFrameResponse should return a normalized freeze-frame snapshot with trigger DTC");
   }
 };
@@ -1597,7 +1600,7 @@ const decodeEcuInfoResponseFunctionChecks = () => {
     check(functionBody.includes('trimEcuInfoPayload(bytes.slice(index + 2, end))'), "decodeEcuInfoResponse should trim Mode 09 payload framing bytes");
     check(functionBody.includes('ecuInfoItemCatalog.find((item) => item.infoType === infoType)') && functionBody.includes('if (!catalogItem) continue;'), "decodeEcuInfoResponse should accept only cataloged Mode 09 info types");
     check(functionBody.includes('decodeEcuInfoPayload(payload, catalogItem.valueType)') && functionBody.includes('normalizeEcuInfoSnapshot({'), "decodeEcuInfoResponse should decode typed values into a normalized ECU info snapshot");
-    check(functionBody.includes('const hasMode09Frame = bytes.some((byte, index) => byte === 0x49 && index + 2 < bytes.length);') && functionBody.includes('ecu_info_readout_status: hasMode09Frame ? "reported" : "unparsed"'), "decodeEcuInfoResponse should distinguish framed Mode 09 data from unparsed raw input");
+    check(functionBody.includes('const hasMode09Frame = bytes.some((byte, index) => byte === 0x49 && index + 2 < bytes.length);') && functionBody.includes('const readoutStatus = hasMode09Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";') && functionBody.includes('ecu_info_readout_status: readoutStatus'), "decodeEcuInfoResponse should distinguish absent input from unparsed Mode 09 data");
   }
 };
 const decodeReadinessResponseFunctionChecks = () => {
@@ -1606,7 +1609,7 @@ const decodeReadinessResponseFunctionChecks = () => {
     const functionBody = decodeReadinessResponseFunctionSource[0];
     check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeReadinessResponse should normalize raw readiness bytes");
     check(functionBody.includes('byte === 0x41 && bytes[index + 1] === 0x01'), "decodeReadinessResponse should locate Mode 01 PID 01 readiness responses");
-    check(functionBody.includes('if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length)') && functionBody.includes('readiness_readout_status: "unparsed"'), "decodeReadinessResponse should mark incomplete raw responses as unparsed");
+    check(functionBody.includes('if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length)') && functionBody.includes('readiness_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown"'), "decodeReadinessResponse should distinguish incomplete raw responses from absent input");
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "decodeReadinessResponse should branch monitor definitions by ignition type");
     check(functionBody.includes('nox_scr') && functionBody.includes('catalyst'), "decodeReadinessResponse should support diesel and spark readiness monitor sets");
     check(functionBody.includes('readiness_readout_status: "reported"') && functionBody.includes('mil_on: (a & 0x80) !== 0') && functionBody.includes('normalizeReadinessSnapshot({'), "decodeReadinessResponse should mark valid responses as reported with MIL state");
@@ -1622,7 +1625,7 @@ const decodeOnboardMonitorResponseFunctionChecks = () => {
     check(functionBody.includes('const componentId = bytes[index + 2].toString(16).toUpperCase().padStart(2, "0");'), "decodeOnboardMonitorResponse should normalize component ids as uppercase hex");
     check(functionBody.includes('const value = (bytes[index + 3] * 256) + bytes[index + 4];') && functionBody.includes('const max = (bytes[index + 7] * 256) + bytes[index + 8];'), "decodeOnboardMonitorResponse should decode value, min, and max words");
     check(functionBody.includes('normalizeOnboardMonitorSnapshot({') && functionBody.includes('tests'), "decodeOnboardMonitorResponse should return a normalized onboard monitor snapshot");
-    check(functionBody.includes('const hasMode06Frame = bytes.some((byte, index) => byte === 0x46 && index + 8 < bytes.length);') && functionBody.includes('onboard_monitor_readout_status: hasMode06Frame ? "reported" : "unparsed"'), "decodeOnboardMonitorResponse should distinguish framed Mode 06 data from unparsed raw input");
+    check(functionBody.includes('const hasMode06Frame = bytes.some((byte, index) => byte === 0x46 && index + 8 < bytes.length);') && functionBody.includes('const readoutStatus = hasMode06Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";') && functionBody.includes('onboard_monitor_readout_status: readoutStatus'), "decodeOnboardMonitorResponse should distinguish absent input from unparsed Mode 06 data");
   }
 };
 const decodedObdScanSessionFunctionChecks = () => {
@@ -1646,7 +1649,7 @@ const scanSessionFromObdTextFunctionChecks = () => {
     const functionBody = scanSessionFromObdTextFunctionSource[0];
     check(functionBody.includes('const classified = classifyObdResponseLines(value);'), "buildScanSessionFromObdText should classify OBD response lines before decoding");
     check(functionBody.includes('const textDtcSnapshot = extractTextDtcSnapshot(value);'), "buildScanSessionFromObdText should preserve text-only DTC extraction");
-    check(functionBody.includes('const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";'), "buildScanSessionFromObdText should feed decoded sessions from classified response buckets");
+    check(functionBody.includes('const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";') && functionBody.includes('return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };'), "buildScanSessionFromObdText should preserve absent response buckets as unknown");
     check(functionBody.includes('const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {') && functionBody.includes('storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses")') && functionBody.includes('ecuInfoResponse: readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs without fabricating absent DTC responses");
     check(functionBody.includes('protocol: sessionInput.protocol || sessionInput.obd_protocol || null'), "buildScanSessionFromObdText should pass obd_protocol aliases into decoded response buckets");
     check(functionBody.includes('const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);'), "buildScanSessionFromObdText should merge decoded and text-extracted DTC snapshots");
@@ -2399,8 +2402,8 @@ check(appSource.includes('coreSessionStatus?.readout_quality_summary') && appSou
 check(appSource.includes('["読取内訳", coreReadoutInventoryLabel]') && appSource.includes('["在庫比較", coreReadoutInventoryComparisonLabel]'), "OBD session summary should expose core readout inventory summaries");
 check(appSource.includes('["読取品質", readoutQualityLabel]') && appSource.includes('const readoutQualityNote = formatReadoutQualitySummary'), "OBD session summary and notes should expose readout quality summaries");
 check(appSource.includes('const coreReadoutInventoryNote = formatCoreReadoutInventorySummary(summarySource.coreReadoutInventorySummary || summarySource.core_readout_inventory_summary, "");') && appSource.includes('const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");'), "OBD analysis notes should include core readout inventory summaries");
-check(appSource.includes('const APP_VERSION = "2.811.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for unparsed DTC response handling");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.811.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.811.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.812.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-17";'), "OBD app version should advance for absent-response status handling");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.812.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.812.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
@@ -2428,7 +2431,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "DTC未解析応答を未読取として分離"'), "OBD core progress snapshot should show the latest DTC readout-state milestone");
+check(appSource.includes('recentMilestone: "未入力読取を未解析応答から分離"'), "OBD core progress snapshot should show the latest response-presence milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -10184,6 +10187,17 @@ check(decodedOnboardMonitor.test_count === 2 && decodedOnboardMonitor.failed_cou
 check(decodedOnboardMonitor.onboardMonitorReadoutStatus === "reported", "Mode 06 decoder did not mark a framed response as reported");
 const unparsedOnboardMonitorSession = obd.buildDiagnosticScanSession({ onboardMonitorResponse: { raw: "46", captured_at: "2026-07-17T00:00:00Z" } });
 check(unparsedOnboardMonitorSession.readoutCoverage?.itemById?.onboard_monitor_snapshot?.status === "missing" && unparsedOnboardMonitorSession.coreSessionStatus?.readoutStateById?.onboard_monitor_snapshot?.status === "missing" && unparsedOnboardMonitorSession.vehicleCommandEnabled === false, "Unparsed Mode 06 responses were incorrectly treated as empty completed readouts");
+const absentResponseDecodedSession = obd.buildDecodedObdScanSession({});
+const absentResponseStatuses = [
+  absentResponseDecodedSession.dtcSnapshot?.dtcReadoutStatus,
+  absentResponseDecodedSession.livePidSnapshot?.livePidReadoutStatus,
+  absentResponseDecodedSession.freezeFrameSnapshot?.freezeFrameReadoutStatus,
+  absentResponseDecodedSession.readinessSnapshot?.readinessReadoutStatus,
+  absentResponseDecodedSession.ecuInfoSnapshot?.ecuInfoReadoutStatus,
+  absentResponseDecodedSession.onboardMonitorSnapshot?.onboardMonitorReadoutStatus,
+  absentResponseDecodedSession.supportedPidMatrix?.supportedPidReadoutStatus
+];
+check(absentResponseStatuses.every((status) => status === "unknown") && absentResponseDecodedSession.readoutCoverage?.items?.every((item) => item.status === "missing") && absentResponseDecodedSession.coreSessionStatus?.capturedReadoutIds?.length === 0 && absentResponseDecodedSession.vehicleCommandEnabled === false, "Absent OBD responses were incorrectly treated as unparsed or completed readouts");
 const decodedScanSession = obd.buildDecodedObdScanSession({
   session_id: "decoded-test",
   storedDtcResponse: { raw: "43 01 71 03 00 00 00" },
@@ -11750,7 +11764,7 @@ check(scanSessionApplicabilityPartial.diagnosticFlowSummary?.vehicleApplicabilit
 check(Array.isArray(scanSessionApplicabilityPartial.nextReadoutCandidates) && scanSessionApplicabilityPartial.nextReadoutCandidates.length > 0, "Diagnostic scan session did not derive next readout candidates");
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.id === "freeze_frame_snapshot", "Diagnostic scan session did not prioritize freeze_frame_snapshot as the next readout candidate");
 check(scanSessionApplicabilityPartial.nextReadoutCandidates[1]?.id === "ecu_info_snapshot", "Diagnostic scan session did not prioritize ecu_info_snapshot after freeze_frame for partial applicability");
-check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.reason === "読取応答が空のため再確認候補", "Diagnostic scan session next readout reason should stay concise for partial applicability");
+check(scanSessionApplicabilityPartial.nextReadoutCandidates[0]?.reason === "未読取のため次候補", "Diagnostic scan session should distinguish absent readouts from completed empty responses for partial applicability");
 check(scanSessionApplicabilityPartial.coreSessionStatus?.nextRecommendedReadoutId === "freeze_frame_snapshot", "Diagnostic scan session did not expose nextRecommendedReadoutId in coreSessionStatus");
 check(!scanSessionApplicabilityPartial.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_partial"), "Diagnostic scan session incorrectly treated partial applicability warning as a blocking warning");
 check(scanSessionApplicabilityPartial.coreSessionStatus?.readyForAnalysis === false, "Diagnostic scan session incorrectly marked partial readout inputs as analysis-ready");
