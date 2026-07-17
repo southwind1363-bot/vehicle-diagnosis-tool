@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.868.0";
+const APP_VERSION = "2.869.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5961,7 +5961,8 @@ function renderObdBridgeSessionDetails(session = null) {
       chartRow.className = "obd-timeline-chart-row";
       const label = document.createElement("span");
       label.className = "obd-timeline-chart-label";
-      label.textContent = `${row.label}${row.unit ? ` (${row.unit})` : ""}`;
+      const unit = row.unit ? ` ${row.unit}` : "";
+      label.textContent = `${row.label}${unit} / 最小 ${row.minimum}${unit} / 最大 ${row.maximum}${unit} / 最新 ${row.latest}${unit}`;
       const bars = document.createElement("div");
       bars.className = "obd-timeline-chart-bars";
       row.points.forEach((point) => {
@@ -6005,6 +6006,9 @@ function buildLivePidTimelineChartRows(timeline = null) {
       const range = maximum - minimum;
       return {
         ...row,
+        minimum,
+        maximum,
+        latest: row.points.at(-1)?.value ?? null,
         points: row.points.map((point) => ({
           ...point,
           heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55
