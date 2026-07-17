@@ -1724,11 +1724,14 @@
               : item.id === "supported_pid_matrix"
                 ? supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || null
                 : null;
-      const status = ["unparsed", "blocked"].includes(explicitReadoutStatus)
+      const responseUnavailable = ["unparsed", "blocked"].includes(explicitReadoutStatus);
+      const count = responseUnavailable ? 0 : item.count;
+      const status = responseUnavailable
         ? "missing"
-        : item.count > 0 ? "captured" : coverageItem?.status || "missing";
+        : count > 0 ? "captured" : coverageItem?.status || "missing";
       return {
         ...item,
+        count,
         label: coverageItem?.label || item.id,
         status,
         captured: status === "captured",
