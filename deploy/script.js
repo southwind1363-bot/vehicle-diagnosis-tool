@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial燃料系状態と点火時期を読取候補へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.857.0";
+const APP_VERSION = "2.858.0";
 const APP_LAST_UPDATED = "2026-07-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4306,21 +4306,31 @@ async function initializeElmDeveloperAdapter() {
 }
 
 async function identifyObdDeveloperVci() {
-  await runObdDeveloperRead("VCI確認", ["ATI", "AT@1"]);
+  await runObdDeveloperRead("VCI確認", ["ATI", "AT@1", "ATDP"]);
+}
+
+function getWebSerialAdapterProtocolHint(commandResponses = []) {
+  const response = commandResponses.find((item) => item?.command === "ATDP")?.response || "";
+  return String(response)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .find((line) => line && line !== "AUTO" && !/^(?:OK|NO DATA|SEARCHING|UNABLE TO CONNECT|STOPPED|ERROR)$/i.test(line))
+    ?.slice(0, 80) || null;
 }
 
 function buildWebSerialAdapterIdentity(commandResponses = []) {
   const atiResponse = commandResponses.find((item) => item?.command === "ATI")?.response || "";
   const match = String(atiResponse).match(/\b(ELM327|STN\d{3,4}|OBDLINK(?:\s+[A-Z0-9+.-]+)?)(?:\s+(?:V(?:ERSION)?\s*)?(\d+(?:\.\d+){0,3}))?\b/i);
-  if (!match) return null;
+  const adapterProtocolHint = getWebSerialAdapterProtocolHint(commandResponses);
+  if (!match && !adapterProtocolHint) return null;
 
-  const adapterName = match[1].replace(/\s+/g, " ").trim().slice(0, 40);
-  const adapterFamily = /^STN/i.test(adapterName)
+  const adapterName = match ? match[1].replace(/\s+/g, " ").trim().slice(0, 40) : null;
+  const adapterFamily = /^STN/i.test(adapterName || "")
     ? "STN compatible"
-    : /^OBDLINK/i.test(adapterName)
+    : /^OBDLINK/i.test(adapterName || "")
       ? "OBDLink"
-      : "ELM327";
-  const firmwareVersion = match[2] ? `v${match[2]}` : null;
+      : adapterName ? "ELM327" : null;
+  const firmwareVersion = match?.[2] ? `v${match[2]}` : null;
   return {
     source: "web_serial",
     intent: "adapter_identity",
@@ -4330,6 +4340,8 @@ function buildWebSerialAdapterIdentity(commandResponses = []) {
     adapterName,
     adapterFamily,
     firmwareVersion,
+    adapterProtocolHint,
+    adapter_protocol_hint: adapterProtocolHint,
     vehicleCommandEnabled: false,
     retainedRawText: false
   };
@@ -4657,7 +4669,7 @@ async function runObdDeveloperRead(label, commands) {
       chunks.push(`>${command}`);
       const response = await sendElmDeveloperCommand(command, 3500);
       commandResponses.push({ command, response });
-      chunks.push(["ATI", "AT@1"].includes(command) ? "[adapter identity response not retained]" : response);
+      chunks.push(["ATI", "AT@1", "ATDP"].includes(command) ? "[adapter identity response not retained]" : response);
     }
     recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status: "completed" });
     retainObdDeveloperReadout(commandResponses, chunks);
@@ -4760,7 +4772,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
 
 function isAllowedObdDeveloperCommand(command) {
   return [
-    "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1",
+    "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP",
     "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0202", "06", "0900", "0904", "0906", "090A",
     ...obdDevSession.freezeFramePidList,
     ...obdDevSession.selectedPidList

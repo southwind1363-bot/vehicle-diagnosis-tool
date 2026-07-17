@@ -991,7 +991,7 @@
 
   function normalizeBridgeAdapterIdentity(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const hasAdapterIdentityData = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version"].some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    const hasAdapterIdentityData = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint"].some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
     return {
       source: "local_bridge",
@@ -1002,6 +1002,8 @@
       adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : data.name ? String(data.name).slice(0, 80) : data.adapter ? String(data.adapter).slice(0, 80) : null,
       adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : data.family ? String(data.family).slice(0, 80) : null,
       firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : data.version ? String(data.version).slice(0, 80) : null,
+      adapterProtocolHint: data.adapter_protocol_hint ? String(data.adapter_protocol_hint).slice(0, 80) : data.adapterProtocolHint ? String(data.adapterProtocolHint).slice(0, 80) : data.protocol_hint ? String(data.protocol_hint).slice(0, 80) : data.protocolHint ? String(data.protocolHint).slice(0, 80) : null,
+      adapter_protocol_hint: data.adapter_protocol_hint ? String(data.adapter_protocol_hint).slice(0, 80) : data.adapterProtocolHint ? String(data.adapterProtocolHint).slice(0, 80) : data.protocol_hint ? String(data.protocol_hint).slice(0, 80) : data.protocolHint ? String(data.protocolHint).slice(0, 80) : null,
       vehicleCommandEnabled: false,
       retainedRawText: false
     };
