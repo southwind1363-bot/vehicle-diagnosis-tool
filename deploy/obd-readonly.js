@@ -12027,7 +12027,9 @@
       sourceInput.readinessIgnitionType,
       sourceInput.readiness_ignition_type,
       sourceInput.monitorStatusIgnitionType,
-      sourceInput.monitor_status_ignition_type
+      sourceInput.monitor_status_ignition_type,
+      sourceInput.ignitionType,
+      sourceInput.ignition_type
     );
     const readinessIgnitionType = normalizedReadoutStatus === "reported" && ["spark", "compression"].includes(String(ignitionTypeInput || "").trim().toLowerCase())
       ? String(ignitionTypeInput).trim().toLowerCase()
