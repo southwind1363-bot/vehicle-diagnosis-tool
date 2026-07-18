@@ -13505,6 +13505,7 @@
   function decodeEcuInfoResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
+    const sourceEcu = readObdResponseSourceEcu(input);
     const hasMode09Frame = bytes.some((byte, index) => byte === 0x49 && index + 2 < bytes.length);
     const readoutStatus = hasMode09Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
@@ -13519,7 +13520,8 @@
       values.push({
         id: catalogItem.id,
         info_type: infoType,
-        value: decodeEcuInfoPayload(payload, catalogItem.valueType)
+        value: decodeEcuInfoPayload(payload, catalogItem.valueType),
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {})
       });
     }
 
@@ -13594,6 +13596,7 @@
   function decodeOnboardMonitorResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const tests = [];
+    const sourceEcu = readObdResponseSourceEcu(input);
     const hasMode06Frame = bytes.some((byte, index) => byte === 0x46 && index + 8 < bytes.length);
     const readoutStatus = hasMode06Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index < bytes.length - 8; index++) {
@@ -13603,7 +13606,7 @@
       const value = (bytes[index + 3] * 256) + bytes[index + 4];
       const min = (bytes[index + 5] * 256) + bytes[index + 6];
       const max = (bytes[index + 7] * 256) + bytes[index + 8];
-      tests.push({ test_id: testId, component_id: componentId, value, min, max });
+      tests.push({ test_id: testId, component_id: componentId, value, min, max, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) });
       index += 8;
     }
 

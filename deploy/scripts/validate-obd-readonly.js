@@ -1629,7 +1629,7 @@ const decodeEcuInfoResponseFunctionChecks = () => {
     check(functionBody.includes('const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && byte === 0x49);'), "decodeEcuInfoResponse should split repeated Mode 09 response segments");
     check(functionBody.includes('trimEcuInfoPayload(bytes.slice(index + 2, end))'), "decodeEcuInfoResponse should trim Mode 09 payload framing bytes");
     check(functionBody.includes('ecuInfoItemCatalog.find((item) => item.infoType === infoType)') && functionBody.includes('if (!catalogItem) continue;'), "decodeEcuInfoResponse should accept only cataloged Mode 09 info types");
-    check(functionBody.includes('decodeEcuInfoPayload(payload, catalogItem.valueType)') && functionBody.includes('normalizeEcuInfoSnapshot({'), "decodeEcuInfoResponse should decode typed values into a normalized ECU info snapshot");
+    check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(input);') && functionBody.includes('decodeEcuInfoPayload(payload, catalogItem.valueType)') && functionBody.includes('...(sourceEcu ? { source_ecu: sourceEcu } : {})') && functionBody.includes('normalizeEcuInfoSnapshot({'), "decodeEcuInfoResponse should decode typed values into a normalized ECU info snapshot with a response source when available");
     check(functionBody.includes('const hasMode09Frame = bytes.some((byte, index) => byte === 0x49 && index + 2 < bytes.length);') && functionBody.includes('const readoutStatus = hasMode09Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";') && functionBody.includes('ecu_info_readout_status: readoutStatus'), "decodeEcuInfoResponse should distinguish absent input from unparsed Mode 09 data");
   }
 };
@@ -1654,7 +1654,7 @@ const decodeOnboardMonitorResponseFunctionChecks = () => {
     check(functionBody.includes('const testId = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");'), "decodeOnboardMonitorResponse should normalize test ids as uppercase hex");
     check(functionBody.includes('const componentId = bytes[index + 2].toString(16).toUpperCase().padStart(2, "0");'), "decodeOnboardMonitorResponse should normalize component ids as uppercase hex");
     check(functionBody.includes('const value = (bytes[index + 3] * 256) + bytes[index + 4];') && functionBody.includes('const max = (bytes[index + 7] * 256) + bytes[index + 8];'), "decodeOnboardMonitorResponse should decode value, min, and max words");
-    check(functionBody.includes('normalizeOnboardMonitorSnapshot({') && functionBody.includes('tests'), "decodeOnboardMonitorResponse should return a normalized onboard monitor snapshot");
+    check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(input);') && functionBody.includes('tests.push({ test_id: testId, component_id: componentId, value, min, max, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) });') && functionBody.includes('normalizeOnboardMonitorSnapshot({') && functionBody.includes('tests'), "decodeOnboardMonitorResponse should return a normalized onboard monitor snapshot with a response source when available");
     check(functionBody.includes('const hasMode06Frame = bytes.some((byte, index) => byte === 0x46 && index + 8 < bytes.length);') && functionBody.includes('const readoutStatus = hasMode06Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";') && functionBody.includes('onboard_monitor_readout_status: readoutStatus'), "decodeOnboardMonitorResponse should distinguish absent input from unparsed Mode 06 data");
   }
 };
@@ -12066,6 +12066,11 @@ check(compactCanSession.livePidSnapshot.monitorValues.every((item) => item.sourc
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount === 2, "Compact CAN log did not keep ECU response count");
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.services.includes("41"), "Compact CAN log did not keep ECU service list");
 check(compactCanSession.wouldTransmit === false && compactCanSession.retainedRawFrames === false, "Compact CAN log import retained raw frames or allowed transmit");
+const rawEcuInfoSourceSnapshot = obd.decodeEcuInfoResponse({ raw: "49 04 01 43 41 4C", source_ecu: "7E8" });
+check(rawEcuInfoSourceSnapshot.items.find((item) => item.id === "calibration_id")?.sourceEcu === "7E8" && rawEcuInfoSourceSnapshot.items.find((item) => item.id === "calibration_id")?.source_ecu === "7E8", "Raw Mode 09 ECU information did not retain an explicit source ECU");
+const rawMode06SourceSnapshot = obd.decodeOnboardMonitorResponse({ raw: "46 01 01 00 64 00 32 00 C8", source_ecu: "7E8" });
+const rawMode06SourceSession = obd.buildDiagnosticScanSession({ onboard_monitor_response: { raw: "46 01 01 00 64 00 32 00 C8", source_ecu: "7E8" } });
+check(rawMode06SourceSnapshot.tests[0]?.sourceEcu === "7E8" && rawMode06SourceSnapshot.tests[0]?.source_ecu === "7E8" && rawMode06SourceSession.onboardMonitorSnapshot?.tests[0]?.source_ecu === "7E8" && rawMode06SourceSession.vehicleCommandEnabled === false, "Raw Mode 06 monitor result did not retain an explicit source ECU safely");
 const compactFreezeFrameSession = obd.buildScanSessionFromObdText([
   "can0 7E8#054202000171",
   "can0 7E8#05420C001AF8"
