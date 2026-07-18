@@ -13939,6 +13939,19 @@
     const livePidTimeline = hasValue(livePidTimelineInput)
       ? normalizeLivePidTimeline(livePidTimelineInput)
       : null;
+    const latestLivePidTimelineSample = livePidTimeline?.samples?.at(-1) || null;
+    const importedLivePidSnapshot = livePidSnapshot || (latestLivePidTimelineSample
+      ? {
+        ...normalizeBridgeLivePidSnapshot({
+          source: scannerJsonSource,
+          captured_at: latestLivePidTimelineSample.capturedAt || latestLivePidTimelineSample.captured_at || null,
+          protocol: latestLivePidTimelineSample.protocol || latestLivePidTimelineSample.obd_protocol || null,
+          observation_condition: latestLivePidTimelineSample.observationCondition || latestLivePidTimelineSample.observation_condition || "unspecified",
+          monitor_values: latestLivePidTimelineSample.monitorValues || latestLivePidTimelineSample.monitor_values || []
+        }),
+        source: scannerJsonSource
+      }
+      : null);
     const timelineCapturedAtValues = (livePidTimeline?.samples || []).map((sample) => sample?.capturedAt || sample?.captured_at || null).filter(Boolean);
     const timelineIsoCaptures = timelineCapturedAtValues
       .map((capturedAt) => ({ capturedAt, milliseconds: /^\d{4}-\d{2}-\d{2}T/.test(capturedAt) ? Date.parse(capturedAt) : Number.NaN }))
@@ -13965,13 +13978,13 @@
     const ecuResponseSummary = hasValue(ecuResponseInput)
       ? normalizeEcuResponseSummary(Array.isArray(ecuResponseInput) ? { ecus: ecuResponseInput, source: scannerJsonSource } : toSnapshotInput(ecuResponseInput, "ecus"))
       : null;
-    if (![dtcSnapshot, livePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
+    if (![dtcSnapshot, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const observedProtocols = [...new Set([
       scannerJsonProtocol,
       ...(Array.isArray(input.observedProtocols) ? input.observedProtocols : Array.isArray(input.observed_protocols) ? input.observed_protocols : []),
       dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || null,
-      livePidSnapshot?.protocol || livePidSnapshot?.obd_protocol || null,
+      importedLivePidSnapshot?.protocol || importedLivePidSnapshot?.obd_protocol || null,
       ...(livePidTimeline?.samples || []).map((sample) => sample?.protocol || sample?.obd_protocol || null),
       freezeFrameSnapshot?.protocol || freezeFrameSnapshot?.obd_protocol || null,
       readinessSnapshot?.protocol || readinessSnapshot?.obd_protocol || null,
@@ -13987,7 +14000,7 @@
       format: "json",
       bucketCounts: {
         dtcRows: dtcSnapshot?.dtcCount || 0,
-        livePidRows: livePidSnapshot?.monitorValues?.length || 0,
+        livePidRows: importedLivePidSnapshot?.monitorValues?.length || 0,
         livePidSamples: livePidTimeline?.sampleCount || 0,
         freezeFrameRows: freezeFrameSnapshot?.monitorValues?.length || 0,
         readinessRows: readinessSnapshot?.monitors?.length || 0,
@@ -13998,7 +14011,7 @@
       },
       bucket_counts: {
         dtc_rows: dtcSnapshot?.dtcCount || 0,
-        live_pid_rows: livePidSnapshot?.monitorValues?.length || 0,
+        live_pid_rows: importedLivePidSnapshot?.monitorValues?.length || 0,
         live_pid_samples: livePidTimeline?.sampleCount || 0,
         freeze_frame_rows: freezeFrameSnapshot?.monitorValues?.length || 0,
         readiness_rows: readinessSnapshot?.monitors?.length || 0,
@@ -14030,7 +14043,7 @@
       started_at: scannerJsonStartedAt,
       ended_at: scannerJsonEndedAt,
       dtcSnapshot: dtcSnapshot || undefined,
-      livePidSnapshot: livePidSnapshot || undefined,
+      livePidSnapshot: importedLivePidSnapshot || undefined,
       livePidTimeline: livePidTimeline || undefined,
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
       readinessSnapshot: readinessSnapshot || undefined,
