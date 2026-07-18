@@ -15154,6 +15154,10 @@ check(scannerCsvReadoutMetadataSession?.onboardMonitorSnapshot?.capturedAt === "
 check(scannerCsvReadoutMetadataSession?.supportedPidMatrix?.capturedAt === "2026-07-18T09:45:05+09:00", "Structured CSV import did not retain supported-PID timestamp");
 check(scannerCsvReadoutMetadataSession?.ecuResponseSummary?.capturedAt === "2026-07-18T09:45:06+09:00", "Structured CSV import did not retain ECU-response timestamp");
 check(scannerCsvReadoutMetadataSession?.vehicleCommandEnabled === false, "Structured CSV import changed read-only safety while retaining metadata");
+const reimportedCsvReadoutMetadataSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerCsvReadoutMetadataSession)
+});
+check(reimportedCsvReadoutMetadataSession?.dtcSnapshot?.capturedAt === "2026-07-18T09:45:00+09:00" && reimportedCsvReadoutMetadataSession.freezeFrameSnapshot?.capturedAt === "2026-07-18T09:45:01+09:00" && reimportedCsvReadoutMetadataSession.readinessSnapshot?.capturedAt === "2026-07-18T09:45:02+09:00" && reimportedCsvReadoutMetadataSession.ecuInfoSnapshot?.capturedAt === "2026-07-18T09:45:03+09:00" && reimportedCsvReadoutMetadataSession.onboardMonitorSnapshot?.capturedAt === "2026-07-18T09:45:04+09:00" && reimportedCsvReadoutMetadataSession.supportedPidMatrix?.capturedAt === "2026-07-18T09:45:05+09:00" && reimportedCsvReadoutMetadataSession.ecuResponseSummary?.capturedAt === "2026-07-18T09:45:06+09:00" && reimportedCsvReadoutMetadataSession.vehicleCommandEnabled === false, "CSV readout metadata was not preserved through read-only export and reimport");
 const scannerCsvSessionMetadata = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status,Captured At,Protocol",
   "P0300,Stored,2026-07-18T09:45:00+09:00,CAN_11BIT_500K"
