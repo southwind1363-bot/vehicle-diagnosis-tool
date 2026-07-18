@@ -1342,6 +1342,10 @@
               service: row.service || null,
               pid: row.pid || null,
               scope: row.scope || null,
+              sourceEcu: row.sourceEcu || row.source_ecu || null,
+              source_ecu: row.source_ecu || row.sourceEcu || null,
+              sourceEcuName: row.sourceEcuName || row.source_ecu_name || null,
+              source_ecu_name: row.source_ecu_name || row.sourceEcuName || null,
               decoded: row.decoded !== false,
               note: row.note ? String(row.note).slice(0, 160) : null
             };
@@ -1748,6 +1752,10 @@
       service: definition?.service || row.service || null,
       pid: definition?.pid || row.pid || row.pid_code || row.pidCode || row.pid_id || row.pidId || null,
       scope: definition?.scope || "local-bridge",
+      sourceEcu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
+      source_ecu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
+      sourceEcuName: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
+      source_ecu_name: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
       supportNote: definition?.supportNote || "ローカルブリッジ応答を既存データモニター表示へ整形",
       freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null,
       decoded: isUndecodedRaw ? false : true,
@@ -14195,6 +14203,8 @@
           ...(label ? { label } : {}),
           value: rawValue,
           unit: cellAt(unitIndex, 40),
+          ...(ecu ? { source_ecu: ecu } : {}),
+          ...(ecuName ? { source_ecu_name: ecuName } : {}),
           ...(Number.isInteger(frameNumber) && frameNumber >= 0 && frameNumber <= 255 ? { freeze_frame_number: frameNumber } : {})
         };
         if (isFreezeFrameRow) {
