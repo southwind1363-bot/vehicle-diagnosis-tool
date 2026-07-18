@@ -1536,8 +1536,10 @@
       captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
       protocol: readBridgeProtocol(data),
       supported_pid_readout_status: getBridgeReadoutStatus(bridgeSafety),
+      source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       supported_pid_page_bases: supportedPidPageBases,
-      supported_pids: supportedPids
+      supported_pids: supportedPids,
+      supported_pid_ecu_snapshots: data.supported_pid_ecu_snapshots || data.supportedPidEcuSnapshots || data.ecu_snapshots || data.ecuSnapshots || []
       }),
       intent: "read_supported_pids",
       ok: bridgeSafety.ok,
@@ -13405,6 +13407,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const supportedPids = [];
     const supportedPidPageBases = [];
+    const sourceEcu = readObdResponseSourceEcu(input);
     const hasSupportedPidFrame = bytes.some((byte, index) => byte === 0x41 && isSupportedPidBase(bytes[index + 1]) && index + 5 < bytes.length);
     const readoutStatus = hasSupportedPidFrame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index + 5 < bytes.length; index++) {
@@ -13423,10 +13426,11 @@
       index += 5;
     }
     if (!supportedPids.length) {
-      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [], supported_pid_page_bases: [...new Set(supportedPidPageBases)], supported_pid_readout_status: readoutStatus });
+      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", ...(sourceEcu ? { source_ecu: sourceEcu } : {}), supportedPids: [], supported_pid_page_bases: [...new Set(supportedPidPageBases)], supported_pid_readout_status: readoutStatus });
     }
     return buildSupportedPidMatrix({
       source: input.source || "obd_response_decoder",
+      ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       supported_pid_readout_status: "reported",
       supported_pid_page_bases: [...new Set(supportedPidPageBases)],
@@ -13724,6 +13728,8 @@
       ? supportedPidMatrixInput
       : supportedPidMatrixInput?.schema_version
         ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
+        : Array.isArray(supportedPidResponseInput?.supportedPidEcuSnapshots) || Array.isArray(supportedPidResponseInput?.supported_pid_ecu_snapshots)
+          ? buildSupportedPidMatrix(supportedPidResponseInput)
         : supportedPidResponseInput?.schemaVersion
           ? supportedPidResponseInput
           : supportedPidResponseInput?.schema_version
@@ -14163,6 +14169,38 @@
       }
       return readResponseOption("onboardMonitorResponse", "onboard_monitor_response", "onboardMonitorResponses");
     };
+    const readSupportedPidResponseOption = () => {
+      const explicitResponse = sessionInput.supportedPidResponse || sessionInput.supported_pid_response;
+      if (explicitResponse) return explicitResponse;
+      const rows = classified.responseBuckets.supportedPidResponses || [];
+      if (rows.length > 1) {
+        const snapshots = rows.map((row) => decodeSupportedPidResponse({
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        }));
+        const supportedPids = [...new Set(snapshots.flatMap((snapshot) => snapshot.supportedPids || snapshot.supported_pids || []))];
+        const supportedPidPageBases = [...new Set(snapshots.flatMap((snapshot) => snapshot.supportedPidPageBases || snapshot.supported_pid_page_bases || []))];
+        const supportedPidEcuSnapshots = snapshots.flatMap((snapshot) => snapshot.supportedPidEcuSnapshots || snapshot.supported_pid_ecu_snapshots || []);
+        const readoutStatus = snapshots.some((snapshot) => (snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status) === "reported")
+          ? "reported"
+          : snapshots.some((snapshot) => (snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status) === "unparsed")
+            ? "unparsed"
+            : "unknown";
+        return {
+          source: "obd_response_decoder",
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          supported_pids: supportedPids,
+          supported_pid_page_bases: supportedPidPageBases,
+          supported_pid_ecu_snapshots: supportedPidEcuSnapshots,
+          supported_pid_readout_status: readoutStatus,
+          retained_raw_text: false,
+          would_transmit: false,
+          vehicle_command_enabled: false
+        };
+      }
+      return readResponseOption("supportedPidResponse", "supported_pid_response", "supportedPidResponses");
+    };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -14192,7 +14230,7 @@
       storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses"),
       pendingDtcResponse: readDtcResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
       permanentDtcResponse: readDtcResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
-      supportedPidResponse: readResponseOption("supportedPidResponse", "supported_pid_response", "supportedPidResponses"),
+      supportedPidResponse: readSupportedPidResponseOption(),
       livePidResponse: readLivePidResponseOption(),
       freezeFrameResponse: readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses"),
       readinessResponse: readResponseOption("readinessResponse", "readiness_response", "readinessResponses"),
@@ -15482,11 +15520,13 @@
       ? {
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const supportedRows = Array.isArray(input)
       ? input
       : Array.isArray(sourceInput.supported_pids)
@@ -15561,11 +15601,70 @@
     const unsupportedCount = items.filter((item) => !item.supported).length;
     const knownPidCount = items.length;
     const readoutStatus = sourceInput.supportedPidReadoutStatus || sourceInput.supported_pid_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (supportedPids.length ? "reported" : "unknown");
+    const ecuSnapshotRows = Array.isArray(sourceInput.supportedPidEcuSnapshots)
+      ? sourceInput.supportedPidEcuSnapshots
+      : Array.isArray(sourceInput.supported_pid_ecu_snapshots)
+        ? sourceInput.supported_pid_ecu_snapshots
+        : Array.isArray(sourceInput.ecuSnapshots)
+          ? sourceInput.ecuSnapshots
+          : Array.isArray(sourceInput.ecu_snapshots)
+            ? sourceInput.ecu_snapshots
+            : [];
+    const normalizeEcuSnapshot = (row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+      const ecu = readObdResponseSourceEcu(row);
+      if (!ecu) return null;
+      const pidRows = Array.isArray(row.supported_pids)
+        ? row.supported_pids
+        : Array.isArray(row.supportedPids)
+          ? row.supportedPids
+          : Array.isArray(row.pids)
+            ? row.pids
+            : [];
+      const pids = [...new Set(pidRows.map((pid) => String(pid?.pid || pid?.code || pid?.id || pid?.value || pid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0")).filter(Boolean))];
+      const pageRows = row.supportedPidPageBases || row.supported_pid_page_bases || row.queriedPidBases || row.queried_pid_bases || [];
+      const pageBases = [...new Set((Array.isArray(pageRows) ? pageRows : [pageRows])
+        .map((value) => String(value?.pid || value?.base || value?.value || value || "").trim().toUpperCase().replace(/^0X/, ""))
+        .filter((value) => /^[0-9A-F]{1,2}$/.test(value))
+        .map((value) => value.padStart(2, "0"))
+        .filter((value) => isSupportedPidBase(parseInt(value, 16)))
+      )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
+      const status = row.supportedPidReadoutStatus || row.supported_pid_readout_status || (pids.length ? "reported" : "unknown");
+      return {
+        sourceEcu: ecu,
+        source_ecu: ecu,
+        supportedPids: pids,
+        supported_pids: pids,
+        supportedPidPageBases: pageBases,
+        supported_pid_page_bases: pageBases,
+        supportedCount: pids.length,
+        supported_count: pids.length,
+        supportedPidReadoutStatus: status,
+        supported_pid_readout_status: status
+      };
+    };
+    const supportedPidEcuSnapshots = ecuSnapshotRows.map(normalizeEcuSnapshot).filter(Boolean);
+    if (!supportedPidEcuSnapshots.length && sourceEcu) {
+      supportedPidEcuSnapshots.push({
+        sourceEcu,
+        source_ecu: sourceEcu,
+        supportedPids,
+        supported_pids: supportedPids,
+        supportedPidPageBases,
+        supported_pid_page_bases: supportedPidPageBases,
+        supportedCount: supportedPids.length,
+        supported_count: supportedPids.length,
+        supportedPidReadoutStatus: readoutStatus,
+        supported_pid_readout_status: readoutStatus
+      });
+    }
 
     return {
       schemaVersion: "supported_pid_matrix_v1",
       schema_version: "supported_pid_matrix_v1",
       source,
+      sourceEcu,
+      source_ecu: sourceEcu,
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -15575,6 +15674,8 @@
       supported_pid_page_bases: supportedPidPageBases,
       supportedPidPageSummary,
       supported_pid_page_summary: supportedPidPageSummary,
+      supportedPidEcuSnapshots,
+      supported_pid_ecu_snapshots: supportedPidEcuSnapshots,
       supportedCount,
       supported_count: supportedCount,
       unsupportedCount,
