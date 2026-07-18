@@ -2320,6 +2320,17 @@ const scannerReadinessSession = obd.buildDiagnosticScanSession({
   readinessSnapshot: scannerReadinessImport.readinessSnapshot
 });
 check(scannerReadinessSession.readinessSnapshot?.incompleteCount === 1 && scannerReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured", "Scanner text session did not preserve readiness separately");
+const scannerEcuInfoImport = obd.analyzeScannerText("ECU Information\nECU Name: Engine Control Module\nCALID: 89661-52A10\nCVN: 1A2B3C4D\nVIN: 1HGCM82633A004352\nLive Data\nEngine RPM: 800 rpm");
+check(scannerEcuInfoImport.ecuInfoSnapshot?.ecuInfoReadoutStatus === "reported" && scannerEcuInfoImport.ecu_info_snapshot?.itemCount === 3, "Scanner text import did not create a typed ECU information snapshot");
+check(scannerEcuInfoImport.ecuInfoSnapshot?.items?.some((item) => item.id === "ecu_name" && item.value === "Engine Control Module") && scannerEcuInfoImport.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "89661-52A10") && scannerEcuInfoImport.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_verification_number" && item.value === "1A2B3C4D"), "Scanner text import did not preserve explicit ECU information values");
+check(!scannerEcuInfoImport.ecuInfoSnapshot?.items?.some((item) => item.id === "vin") && !JSON.stringify(scannerEcuInfoImport.ecuInfoSnapshot).includes("1HGCM82633A004352"), "Scanner text ECU information import retained a VIN");
+const unmarkedEcuInfoImport = obd.analyzeScannerText("ECU Name: Engine Control Module\nCALID: 89661-52A10");
+check(unmarkedEcuInfoImport.ecuInfoSnapshot === null, "Scanner text import inferred ECU information without an explicit heading");
+const scannerEcuInfoSession = obd.buildDiagnosticScanSession({
+  source: "scanner_text",
+  ecuInfoSnapshot: scannerEcuInfoImport.ecuInfoSnapshot
+});
+check(scannerEcuInfoSession.ecuInfoSnapshot?.itemCount === 3 && scannerEcuInfoSession.readoutCoverage?.itemById?.ecu_info_snapshot?.status === "captured", "Scanner text session did not preserve ECU information separately");
 check(analysis.codes.join(",") === "P0171,P0300", "DTC抽出または重複除外が不正です");
 check(analysis.hadSensitiveIdentifier === true, "車台番号候補を検出できません");
 check(analysis.retainedRawText === false, "入力原文を保持する設定になっています");
@@ -2522,8 +2533,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.895.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner readiness import");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.895.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.895.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.896.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner ECU information import");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.896.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.896.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
 check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
@@ -14949,6 +14960,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2564");
+  console.log("OBD read-only safety checks: 2569");
   console.log("Errors: 0");
 }

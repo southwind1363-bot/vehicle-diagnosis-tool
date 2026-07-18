@@ -15149,6 +15149,45 @@
     });
   }
 
+  function collectTextEcuInfoSection(value) {
+    const ecuInfoLines = [];
+    let inEcuInfo = false;
+    const isEcuInfoHeading = (text) => /(?:\becu\s*(?:info|information)\b|\bmode\s*0?9\b|ecu\s*情報|車両\s*情報)/i.test(text);
+    const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|mode\s*0?6|onboard\s*monitor|supported\s*pid|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|対応\s*pid|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
+    String(value || "").split(/\r?\n/).forEach((line) => {
+      const text = String(line || "").trim();
+      if (isEcuInfoHeading(text)) {
+        inEcuInfo = true;
+        return;
+      }
+      if (inEcuInfo && isSectionBoundary(text)) inEcuInfo = false;
+      if (inEcuInfo) ecuInfoLines.push(line);
+    });
+    return ecuInfoLines;
+  }
+
+  function extractTextEcuInfoSnapshot(value) {
+    const rowMatchers = [
+      ["calibration_verification_number", "06", /(?:\bcvn\b|calibration\s*verification\s*number)/i],
+      ["calibration_id", "04", /(?:\bcal(?:ibration)?\s*(?:id|identification)\b|\bcalid\b)/i],
+      ["ecu_name", "0A", /(?:\becu\s*name\b|\bmodule\s*name\b|\bmodule\s*label\b|ecu名|モジュール名)/i]
+    ];
+    const rows = [];
+    collectTextEcuInfoSection(value).forEach((line) => {
+      const match = String(line || "").trim().match(/^(.{1,100}?)\s*[:：]\s*(.{1,240})$/);
+      if (!match) return;
+      const row = rowMatchers.find(([, , pattern]) => pattern.test(match[1]));
+      if (!row || rows.some((item) => item.id === row[0])) return;
+      rows.push({ id: row[0], infoType: row[1], value: match[2] });
+    });
+    if (!rows.length) return null;
+    return normalizeEcuInfoSnapshot({
+      source: "scanner_text_ecu_info",
+      values: rows,
+      ecuInfoReadoutStatus: "reported"
+    });
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
@@ -15156,6 +15195,7 @@
     const monitorValues = extractMonitorValues(freezeFrameSection.nonFreezeLines.join("\n"));
     const freezeFrameSnapshot = extractTextFreezeFrameSnapshot(freezeFrameSection);
     const readinessSnapshot = extractTextReadinessSnapshot(redacted);
+    const ecuInfoSnapshot = extractTextEcuInfoSnapshot(redacted);
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
@@ -15166,6 +15206,8 @@
       freeze_frame_snapshot: freezeFrameSnapshot,
       readinessSnapshot,
       readiness_snapshot: readinessSnapshot,
+      ecuInfoSnapshot,
+      ecu_info_snapshot: ecuInfoSnapshot,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
