@@ -2583,8 +2583,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.954.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for CSV readout interface retention");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.954.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.954.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.955.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for Mode 06 JSON alias retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.955.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.955.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(appSource.includes('const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"') && appSource.includes('const csvImportSession = !bridgeImport && !jsonImportSession && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromCsv === "function"') && appSource.includes('if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())'), "OBD scanner import should prefer safe structured JSON or CSV sessions before text parsing");
@@ -15103,6 +15103,16 @@ const reimportedScannerJsonInterfaceSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonImportSession)
 });
 check(reimportedScannerJsonInterfaceSession?.vehicleProfile?.maker === "Toyota" && reimportedScannerJsonInterfaceSession?.vehicleProfile?.modelCode === "ZVW50" && reimportedScannerJsonInterfaceSession?.vehicleApplicability?.status === "matched" && reimportedScannerJsonInterfaceSession?.vehicleApplicability?.sourceVerified === true && reimportedScannerJsonInterfaceSession?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && reimportedScannerJsonInterfaceSession?.readoutInterface?.deviceModel === "TCMa" && reimportedScannerJsonInterfaceSession?.vehicleCommandEnabled === false && !JSON.stringify(reimportedScannerJsonInterfaceSession).includes("1HGCM82633A004352") && !JSON.stringify(reimportedScannerJsonInterfaceSession).includes("do-not-retain"), "Safe JSON vehicle and interface provenance was not preserved through read-only export and reimport");
+const scannerJsonMode06AliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: {
+    mode_06: [{ test_id: "01", component_id: "02", value: 15, min: 10, max: 20, source_ecu: "7E8" }]
+  }
+}));
+check(scannerJsonMode06AliasSession?.onboardMonitorSnapshot?.testCount === 1 && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.testId === "01" && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.componentId === "02" && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.passed === true && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.sourceEcu === "7E8" && scannerJsonMode06AliasSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain a Mode 06 alias readout");
+const reimportedScannerJsonMode06AliasSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonMode06AliasSession)
+});
+check(reimportedScannerJsonMode06AliasSession?.onboardMonitorSnapshot?.testCount === 1 && reimportedScannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.testId === "01" && reimportedScannerJsonMode06AliasSession?.vehicleCommandEnabled === false, "Mode 06 alias readout was not preserved through read-only export and reimport");
 const scannerJsonMixedProtocolSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     protocol: "CAN_11BIT_500K",
@@ -15298,6 +15308,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2614");
+  console.log("OBD read-only safety checks: 2616");
   console.log("Errors: 0");
 }

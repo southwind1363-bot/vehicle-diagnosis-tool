@@ -13916,7 +13916,7 @@
     const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness");
     const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items");
     const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids");
-    const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot");
+    const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
     const sessionInput = getDiagnosticSessionInput(options);
     const scannerJsonSource = "scanner_json_import";
