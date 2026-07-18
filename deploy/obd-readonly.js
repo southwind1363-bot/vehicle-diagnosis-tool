@@ -14144,6 +14144,10 @@
     let milOn = null;
     let readinessIgnitionType = null;
     let capturedAt = null;
+    let startedAt = null;
+    let startedAtMilliseconds = null;
+    let endedAt = null;
+    let endedAtMilliseconds = null;
     let protocol = null;
     lines.slice(1, 5001).forEach((line) => {
       const cells = parseRow(line);
@@ -14153,6 +14157,17 @@
       const rowProtocol = cellAt(protocolIndex, 80) || null;
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!capturedAt) capturedAt = rowCapturedAt;
+      const rowCapturedAtMilliseconds = /^\d{4}-\d{2}-\d{2}T/.test(rowCapturedAt || "") ? Date.parse(rowCapturedAt) : Number.NaN;
+      if (Number.isFinite(rowCapturedAtMilliseconds)) {
+        if (startedAtMilliseconds === null || rowCapturedAtMilliseconds < startedAtMilliseconds) {
+          startedAt = rowCapturedAt;
+          startedAtMilliseconds = rowCapturedAtMilliseconds;
+        }
+        if (endedAtMilliseconds === null || rowCapturedAtMilliseconds > endedAtMilliseconds) {
+          endedAt = rowCapturedAt;
+          endedAtMilliseconds = rowCapturedAtMilliseconds;
+        }
+      }
       if (!protocol) protocol = rowProtocol;
       const dtc = cellAt(dtcIndex, 48);
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
@@ -14266,6 +14281,7 @@
         }
       }
     });
+    if (endedAt) capturedAt = endedAt;
     const dtcSnapshot = dtcs.length || reportedDtcStatuses.size
       ? normalizeDtcSnapshot({ source, dtcs, ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
       : null;
@@ -14344,6 +14360,10 @@
       },
       sourceLength: text.length,
       source_length: text.length,
+      startedAt,
+      started_at: startedAt,
+      endedAt,
+      ended_at: endedAt,
       capturedAt,
       captured_at: capturedAt,
       protocol,
@@ -14360,6 +14380,8 @@
     const output = buildDiagnosticScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "scanner-csv-import",
       source,
+      started_at: startedAt || sessionInput.started_at || sessionInput.startedAt || null,
+      ended_at: endedAt || sessionInput.ended_at || sessionInput.endedAt || null,
       protocol: protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
       captured_at: capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null,
       dtcSnapshot: dtcSnapshot || undefined,
