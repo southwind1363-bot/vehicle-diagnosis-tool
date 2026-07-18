@@ -13425,9 +13425,16 @@
     return [0x00, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xE0].includes(pid);
   }
 
+  function readObdResponseSourceEcu(input = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const value = source.source_ecu || source.sourceEcu || source.ecu || source.address || null;
+    return redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+  }
+
   function decodeLivePidResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
+    const sourceEcu = readObdResponseSourceEcu(input);
     const hasMode01Frame = bytes.some((byte, index) => byte === 0x41 && index + 2 < bytes.length);
     const readoutStatus = hasMode01Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index < bytes.length - 2; index++) {
@@ -13436,8 +13443,8 @@
       const payloadLength = getStandardPidPayloadLength(pid);
       const payload = getResponsePayload(bytes, index + 2, payloadLength, 0x41);
       const decoded = decodeStandardPidValue(pid, payload);
-      if (Array.isArray(decoded)) values.push(...decoded);
-      else if (decoded) values.push(decoded);
+      if (Array.isArray(decoded)) values.push(...decoded.map((item) => sourceEcu ? { ...item, source_ecu: sourceEcu } : item));
+      else if (decoded) values.push(sourceEcu ? { ...decoded, source_ecu: sourceEcu } : decoded);
       index += 1 + payload.length;
     }
     return normalizeBridgeLivePidSnapshot({
@@ -13457,6 +13464,7 @@
   function decodeFreezeFrameResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
+    const sourceEcu = readObdResponseSourceEcu(input);
     let triggerDtc = null;
     let triggerFrameNumber = null;
     const hasMode02Frame = bytes.some((byte, index) => byte === 0x42 && index + 2 < bytes.length);
@@ -13478,8 +13486,8 @@
         continue;
       }
       const decoded = decodeStandardPidValue(pid, payload);
-      if (Array.isArray(decoded)) values.push(...decoded.map((item) => ({ ...item, freeze_frame_number: frameNumber })));
-      else if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber });
+      if (Array.isArray(decoded)) values.push(...decoded.map((item) => ({ ...item, freeze_frame_number: frameNumber, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) })));
+      else if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) });
       index += 2 + payload.length;
     }
 
@@ -14019,12 +14027,28 @@
     const toolHints = detectScannerToolHints(value);
     const textDtcSnapshot = extractTextDtcSnapshot(value);
     const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
-    const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";
+    const firstOrEmpty = (bucketName) => (classified.responseBuckets[bucketName] || []).map((row) => {
+      const response = String(row?.response || "").trim();
+      const bytes = response.match(/[0-9A-F]{2}/gi) || [];
+      const frameLength = Number(row?.frameLength);
+      const firstByte = bytes.length ? Number.parseInt(bytes[0], 16) : Number.NaN;
+      if (Number.isInteger(frameLength) && frameLength >= 0 && bytes.length > frameLength && firstByte === frameLength) {
+        return bytes.slice(1, frameLength + 1).join(" ");
+      }
+      return response;
+    }).filter(Boolean).join(" ");
+    const getBucketSourceEcu = (bucketName) => {
+      const ecus = [...new Set((classified.responseBuckets[bucketName] || [])
+        .map((row) => String(row?.ecu || row?.address || "").trim())
+        .filter(Boolean))];
+      return ecus.length === 1 ? ecus[0] : null;
+    };
     const readResponseOption = (camelKey, snakeKey, bucketName) => {
       const explicitResponse = sessionInput[camelKey] || sessionInput[snakeKey];
       if (explicitResponse) return explicitResponse;
       const raw = firstOrEmpty(bucketName);
-      return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+      const sourceEcu = getBucketSourceEcu(bucketName);
+      return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     };
     const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {
       const explicitResponse = sessionInput[camelKey] || sessionInput[snakeKey];

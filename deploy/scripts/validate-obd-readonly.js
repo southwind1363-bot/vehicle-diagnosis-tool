@@ -1602,7 +1602,7 @@ const decodeLivePidResponseFunctionChecks = () => {
     check(functionBody.includes('if (bytes[index] !== 0x41) continue;'), "decodeLivePidResponse should only parse Mode 01 live PID responses");
     check(functionBody.includes('getStandardPidPayloadLength(pid)') && functionBody.includes('getResponsePayload(bytes, index + 2, payloadLength, 0x41)'), "decodeLivePidResponse should bound payload extraction by standard PID length");
     check(functionBody.includes('decodeStandardPidValue(pid, payload)'), "decodeLivePidResponse should decode standard PID payloads into monitor values");
-    check(functionBody.includes('if (Array.isArray(decoded)) values.push(...decoded);') && functionBody.includes('else if (decoded) values.push(decoded);'), "decodeLivePidResponse should collect scalar and grouped decoded values");
+    check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(input);') && functionBody.includes('if (Array.isArray(decoded)) values.push(...decoded.map') && functionBody.includes('else if (decoded) values.push(sourceEcu ? { ...decoded, source_ecu: sourceEcu } : decoded);'), "decodeLivePidResponse should collect scalar and grouped decoded values with an explicit response source when available");
     check(functionBody.includes('const readoutStatus = hasMode01Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeLivePidResponse should distinguish absent input from unparsed responses");
     check(functionBody.includes('would_transmit: false') && functionBody.includes('normalizeBridgeLivePidSnapshot({'), "decodeLivePidResponse should return a read-only normalized live PID snapshot");
   }
@@ -1679,7 +1679,7 @@ const scanSessionFromObdTextFunctionChecks = () => {
     const functionBody = scanSessionFromObdTextFunctionSource[0];
     check(functionBody.includes('const classified = classifyObdResponseLines(value);'), "buildScanSessionFromObdText should classify OBD response lines before decoding");
     check(functionBody.includes('const textDtcSnapshot = extractTextDtcSnapshot(value);'), "buildScanSessionFromObdText should preserve text-only DTC extraction");
-    check(functionBody.includes('const firstOrEmpty = (bucketName) => classified.responseBuckets[bucketName]?.map((row) => row.response).join(" ") || "";') && functionBody.includes('return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };'), "buildScanSessionFromObdText should preserve absent response buckets as unknown");
+    check(functionBody.includes('const firstOrEmpty = (bucketName) => (classified.responseBuckets[bucketName] || []).map((row) => {') && functionBody.includes('const getBucketSourceEcu = (bucketName) => {') && functionBody.includes('return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };'), "buildScanSessionFromObdText should preserve absent response buckets as unknown while retaining an unambiguous source ECU");
     check(functionBody.includes('const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {') && functionBody.includes('storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses")') && functionBody.includes('ecuInfoResponse: readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs without fabricating absent DTC responses");
     check(functionBody.includes('protocol: sessionInput.protocol || sessionInput.obd_protocol || null'), "buildScanSessionFromObdText should pass obd_protocol aliases into decoded response buckets");
     check(functionBody.includes('const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);'), "buildScanSessionFromObdText should merge decoded and text-extracted DTC snapshots");
@@ -12062,9 +12062,20 @@ const compactCanSession = obd.buildScanSessionFromObdText(compactCanLog, { sessi
 check(compactCanSession.importClassification.bucketCounts.livePidResponses === 2, "Compact CAN log live PID responses were not classified");
 check(compactCanSession.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Compact CAN log did not decode engine RPM");
 check(compactCanSession.livePidSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "Compact CAN log did not decode coolant temperature");
+check(compactCanSession.livePidSnapshot.monitorValues.every((item) => item.sourceEcu === "7E8" && item.source_ecu === "7E8"), "Compact CAN log did not retain its single source ECU on live PID values");
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount === 2, "Compact CAN log did not keep ECU response count");
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.services.includes("41"), "Compact CAN log did not keep ECU service list");
 check(compactCanSession.wouldTransmit === false && compactCanSession.retainedRawFrames === false, "Compact CAN log import retained raw frames or allowed transmit");
+const compactFreezeFrameSession = obd.buildScanSessionFromObdText([
+  "can0 7E8#054202000171",
+  "can0 7E8#05420C001AF8"
+].join("\n"), { session_id: "compact-freeze-frame", protocol: "ISO15765-4" });
+check(compactFreezeFrameSession.freezeFrameSnapshot?.triggerDtc === "P0171" && compactFreezeFrameSession.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.sourceEcu === "7E8" && compactFreezeFrameSession.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.freezeFrameNumber === 0 && compactFreezeFrameSession.vehicleCommandEnabled === false, "Compact CAN freeze-frame log did not retain source ECU and frame number safely");
+const mixedEcuCompactSession = obd.buildScanSessionFromObdText([
+  "can0 7E8#04410C1AF8",
+  "can0 7E9#04410C0FA0"
+].join("\n"), { session_id: "compact-mixed-ecu", protocol: "ISO15765-4" });
+check(mixedEcuCompactSession.livePidSnapshot?.monitorValues?.length === 2 && mixedEcuCompactSession.livePidSnapshot.monitorValues.every((item) => item.sourceEcu === null && item.source_ecu === null) && mixedEcuCompactSession.ecuResponseSummary?.ecuCount === 2 && mixedEcuCompactSession.vehicleCommandEnabled === false, "Mixed-ECU CAN log assigned a source ECU without an unambiguous readout scope");
 const bracketCanClassification = obd.classifyObdResponseLines("can0  7E8   [4]  41 0C 1A F8");
 check(bracketCanClassification.responseBuckets.livePidResponses[0]?.ecu === "7E8", "Bracket CAN log did not keep ECU address");
 check(bracketCanClassification.responseBuckets.livePidResponses[0]?.frameLength === 4, "Bracket CAN log did not keep frame length");
