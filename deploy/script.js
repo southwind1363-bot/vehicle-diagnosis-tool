@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.900.0";
+const APP_VERSION = "2.901.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7809,6 +7809,24 @@ function loadObdMonitorSample() {
     "P0420",
     "Permanent DTC",
     "P0440",
+    "Freeze Frame DTC: P0171",
+    "Engine RPM: 1500 rpm",
+    "Coolant Temp: 76 C",
+    "I/M Readiness",
+    "MIL Status: OFF",
+    "Misfire: Complete",
+    "Fuel System: Not Ready",
+    "ECU Information",
+    "ECU Name: Engine Control Module",
+    "CALID: 89661-52A10",
+    "CVN: 1A2B3C4D",
+    "Supported PIDs: 01, 05, 0C, 0D",
+    "Mode 06",
+    "TID: 01 CID: 02 Value: 3 Min: 1 Max: 5",
+    "ECU Responses",
+    "Engine Control Module: Responded",
+    "ABS/VSC: No Response",
+    "Live Data",
     "Engine RPM: 780 rpm",
     "Vehicle Speed: 0 km/h",
     "Coolant Temp: 88 C",
