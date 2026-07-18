@@ -12850,6 +12850,8 @@
           max: Number.isFinite(max) ? max : null,
           passed,
           status,
+          sourceEcu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
+          source_ecu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
           sourceIndex: index + 1,
           interpretationNote: "Mode 06 TID/CID meaning and units are vehicle-specific. Confirm the test item in the service manual."
         };
@@ -14172,7 +14174,8 @@
           value: Number(rawValue),
           ...(Number.isFinite(Number(minimum)) && minimum ? { min: Number(minimum) } : {}),
           ...(Number.isFinite(Number(maximum)) && maximum ? { max: Number(maximum) } : {}),
-          ...(cellAt(statusIndex, 40) ? { status: cellAt(statusIndex, 40).toLowerCase() } : {})
+          ...(cellAt(statusIndex, 40) ? { status: cellAt(statusIndex, 40).toLowerCase() } : {}),
+          ...(ecu ? { source_ecu: ecu } : {})
         });
         return;
       }
