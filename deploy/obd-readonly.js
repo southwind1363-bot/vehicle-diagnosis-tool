@@ -1028,20 +1028,33 @@
         ? data.intent
         : "read_stored_dtc";
     const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";
-    const entries = dtcRows.flatMap((row) => {
-      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: defaultStatus }));
+    const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null) => rows.flatMap((row) => {
+      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu }));
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       return extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "").map(({ code, subcode }) => ({
         code,
         subcode: rowValue.subcode || rowValue.sub_code || subcode || null,
-        status: row.status || row.kind || rowValue.status || rowValue.kind || defaultStatus,
-        ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
+        status: row.status || row.kind || rowValue.status || rowValue.kind || fallbackStatus,
+        ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
       }));
     });
+    const ecuDtcRows = ecuRows.flatMap((ecuRow) => {
+      const rows = Array.isArray(ecuRow?.dtcs) ? ecuRow.dtcs : Array.isArray(ecuRow?.dtc_codes) ? ecuRow.dtc_codes : Array.isArray(ecuRow?.dtcCodes) ? ecuRow.dtcCodes : [];
+      const ecu = ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
+      const status = ecuRow?.dtc_status || ecuRow?.dtcStatus || ecuRow?.dtc_kind || ecuRow?.dtcKind || defaultStatus;
+      return normalizeDtcRows(rows, status, ecu);
+    });
+    const entries = [...normalizeDtcRows(dtcRows, defaultStatus), ...ecuDtcRows];
+    const scopedEntriesByKey = new Map();
+    entries.filter((entry) => entry.ecu).forEach((entry) => {
+      const key = `${entry.code}::${entry.subcode || ""}::${entry.status}`;
+      if (!scopedEntriesByKey.has(key)) scopedEntriesByKey.set(key, entry);
+    });
+    const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(`${entry.code}::${entry.subcode || ""}::${entry.status}`) || entry);
     const seen = new Set();
-    const dtcs = entries.filter((entry) => {
+    const dtcs = resolvedEntries.filter((entry) => {
       const key = `${entry.code}::${entry.subcode || ""}::${entry.ecu || ""}::${entry.status}`;
       if (seen.has(key)) return false;
       seen.add(key);
