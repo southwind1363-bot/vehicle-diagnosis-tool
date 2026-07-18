@@ -14060,6 +14060,7 @@
     const freezeFrameNumberIndex = findIndex("freeze frame number", "frame number", "freeze_frame_number", "フリーズフレーム番号");
     const triggerDtcIndex = findIndex("trigger dtc", "freeze frame dtc", "trigger code", "trigger_dtc", "トリガーdtc");
     const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id");
+    const readinessIgnitionTypeIndex = findIndex("readiness ignition type", "ignition type", "ignition_type");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
     const ecuNameIndex = findIndex("ecu name", "module name", "control module name", "system name", "ecu label", "module label");
@@ -14121,6 +14122,7 @@
     const ecuResponseRows = [];
     let freezeFrameTriggerDtc = null;
     let milOn = null;
+    let readinessIgnitionType = null;
     let capturedAt = null;
     let protocol = null;
     lines.slice(1, 5001).forEach((line) => {
@@ -14151,6 +14153,8 @@
         const milText = cellAt(milIndex, 40).toLowerCase();
         if (milOn === null && ["on", "true", "1", "yes", "mil_on"].includes(milText)) milOn = true;
         if (milOn === null && ["off", "false", "0", "no", "mil_off"].includes(milText)) milOn = false;
+        const ignitionType = cellAt(readinessIgnitionTypeIndex, 24).toLowerCase();
+        if (readinessIgnitionType === null && ["spark", "compression"].includes(ignitionType)) readinessIgnitionType = ignitionType;
       }
       const hasDtcCode = Boolean(dtc && extractDtcReferences(dtc).length);
       if (dtcReadoutKind && (hasDtcCode || isExplicitEmptyDtcReadout(cellAt(statusIndex, 80)))) reportedDtcStatuses.add(dtcReadoutKind);
@@ -14256,7 +14260,7 @@
       ? normalizeFreezeFrameSnapshot({ source, values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
       : null;
     const readinessSnapshot = readinessMonitors.length
-      ? normalizeReadinessSnapshot({ source, monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), readinessReadoutStatus: "reported" })
+      ? normalizeReadinessSnapshot({ source, monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), ...(readinessIgnitionType ? { readinessIgnitionType } : {}), readinessReadoutStatus: "reported" })
       : null;
     const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
     const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
