@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const DTC_PATTERN = /\b[PCBU][0-9A-F]{4}\b/gi;
+  const DTC_REFERENCE_PATTERN = /\b([PCBU][0-9A-F]{4})(?:\s*[:\-]\s*([0-9A-F]{2,4}))?\b/gi;
   const VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
   const NUMBER_PATTERN = /[-+]?\d+(?:\.\d+)?/;
 
@@ -1029,16 +1029,17 @@
         : "read_stored_dtc";
     const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";
     const entries = dtcRows.flatMap((row) => {
-      if (typeof row === "string") return extractDtcCodes(row).map((code) => ({ code, status: defaultStatus }));
+      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: defaultStatus }));
       if (!row || typeof row !== "object") return [];
-      return extractDtcCodes(row.code || row.dtc || row.id || "").map((code) => ({
+      return extractDtcReferences(row.code || row.dtc || row.id || "").map(({ code, subcode }) => ({
         code,
+        subcode: row.subcode || row.sub_code || subcode || null,
         status: row.status || row.kind || defaultStatus
       }));
     });
     const seen = new Set();
     const dtcs = entries.filter((entry) => {
-      const key = `${entry.code}::${entry.status}`;
+      const key = `${entry.code}::${entry.subcode || ""}::${entry.status}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -12195,14 +12196,15 @@
     ];
     const rows = rawRows.flatMap((row) => {
       if (typeof row === "string") {
-        return extractDtcCodes(row).map((code) => ({ code }));
+        return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: "unknown" }));
       }
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || sourceInput.status || "unknown";
-      const codes = extractDtcCodes(rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "");
-      return codes.map((code) => ({
+      const codes = extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "");
+      return codes.map(({ code, subcode }) => ({
         code,
+        subcode: rowValue.subcode || rowValue.sub_code || subcode || null,
         status: rowStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
@@ -12210,11 +12212,11 @@
     });
     const typedDtcCodes = new Set(rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
-      .map((row) => row.code));
-    const deduplicatedRows = rows.filter((row) => !(["", "unknown"].includes(String(row.status || "").trim().toLowerCase()) && typedDtcCodes.has(row.code)));
+      .map((row) => `${row.code}::${row.subcode || ""}`));
+    const deduplicatedRows = rows.filter((row) => !(["", "unknown"].includes(String(row.status || "").trim().toLowerCase()) && typedDtcCodes.has(`${row.code}::${row.subcode || ""}`)));
     const byCode = new Map();
     deduplicatedRows.forEach((row) => {
-      const key = `${row.code}::${row.status || "unknown"}`;
+      const key = `${row.code}::${row.subcode || ""}::${row.status || "unknown"}`;
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
     });
 
@@ -13016,7 +13018,7 @@
       .flatMap((snapshot) => snapshot.dtcs.map((row) => ({ ...row, source: row.source || snapshot.source || "diagnostic_core" })));
     const byCodeAndStatus = new Map();
     rows.forEach((row) => {
-      const key = `${row.code || ""}::${row.status || "unknown"}`;
+      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.status || "unknown"}`;
       if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
     });
     const mergedRows = [...byCodeAndStatus.values()];
@@ -13855,14 +13857,14 @@
     lines.forEach((line) => {
       const text = String(line || "").trim();
       if (!text) return;
-      const codes = extractDtcCodes(text);
+      const codes = extractDtcReferences(text);
       const headingStatus = resolveHeadingStatus(text);
       if (headingStatus) currentStatus = headingStatus;
       if (!codes.length) {
         if (!headingStatus) currentStatus = "unknown";
         return;
       }
-      codes.forEach((code) => rows.push({ code, status: currentStatus }));
+      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: currentStatus }));
     });
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
@@ -14968,9 +14970,21 @@
     return monitorDefinitions;
   }
 
+  function extractDtcReferences(value) {
+    const matches = [...String(value || "").toUpperCase().matchAll(DTC_REFERENCE_PATTERN)];
+    const seen = new Set();
+    return matches.flatMap((match) => {
+      const code = match[1];
+      const subcode = match[2] || null;
+      const key = `${code}::${subcode || ""}`;
+      if (!code || seen.has(key)) return [];
+      seen.add(key);
+      return [{ code, subcode }];
+    });
+  }
+
   function extractDtcCodes(value) {
-    const matches = String(value || "").toUpperCase().match(DTC_PATTERN) || [];
-    return [...new Set(matches)];
+    return [...new Set(extractDtcReferences(value).map((item) => item.code))];
   }
 
   function redactSensitiveText(value) {
