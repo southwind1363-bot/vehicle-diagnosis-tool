@@ -13921,6 +13921,42 @@
       ? normalizeEcuResponseSummary(Array.isArray(ecuResponseInput) ? { ecus: ecuResponseInput, source: scannerJsonSource } : toSnapshotInput(ecuResponseInput, "ecus"))
       : null;
     if (![dtcSnapshot, livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
+    const hadSensitiveIdentifier = text !== redactSensitiveText(text);
+    const importClassification = {
+      schemaVersion: "scanner_json_import_v1",
+      schema_version: "scanner_json_import_v1",
+      format: "json",
+      bucketCounts: {
+        dtcRows: dtcSnapshot?.dtcCount || 0,
+        livePidRows: livePidSnapshot?.monitorValues?.length || 0,
+        freezeFrameRows: freezeFrameSnapshot?.monitorValues?.length || 0,
+        readinessRows: readinessSnapshot?.monitors?.length || 0,
+        ecuInfoRows: ecuInfoSnapshot?.itemCount || 0,
+        supportedPidRows: supportedPidMatrix?.supportedPids?.length || 0,
+        onboardMonitorRows: onboardMonitorSnapshot?.testCount || 0,
+        ecuResponseRows: ecuResponseSummary?.ecus?.length || 0
+      },
+      bucket_counts: {
+        dtc_rows: dtcSnapshot?.dtcCount || 0,
+        live_pid_rows: livePidSnapshot?.monitorValues?.length || 0,
+        freeze_frame_rows: freezeFrameSnapshot?.monitorValues?.length || 0,
+        readiness_rows: readinessSnapshot?.monitors?.length || 0,
+        ecu_info_rows: ecuInfoSnapshot?.itemCount || 0,
+        supported_pid_rows: supportedPidMatrix?.supportedPids?.length || 0,
+        onboard_monitor_rows: onboardMonitorSnapshot?.testCount || 0,
+        ecu_response_rows: ecuResponseSummary?.ecus?.length || 0
+      },
+      sourceLength: text.length,
+      source_length: text.length,
+      hadSensitiveIdentifier,
+      had_sensitive_identifier: hadSensitiveIdentifier,
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
     const output = buildDiagnosticScanSession({
       session_id: String(pick("session_id", "sessionId") || sessionInput.session_id || sessionInput.sessionId || "scanner-json-import").slice(0, 120),
       source: scannerJsonSource,
@@ -13935,7 +13971,10 @@
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
       supportedPidMatrix: supportedPidMatrix || undefined,
       onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
-      ecuResponseSummary: ecuResponseSummary || undefined
+      ecuResponseSummary: ecuResponseSummary || undefined,
+      importClassification,
+      sourceLength: text.length,
+      hadSensitiveIdentifier
     });
     return {
       ...output,
@@ -13943,6 +13982,10 @@
       source_type: scannerJsonSource,
       sourceLength: text.length,
       source_length: text.length,
+      importClassification,
+      import_classification: importClassification,
+      hadSensitiveIdentifier,
+      had_sensitive_identifier: hadSensitiveIdentifier,
       retainedRawText: false,
       retained_raw_text: false,
       retainedRawFrames: false,
