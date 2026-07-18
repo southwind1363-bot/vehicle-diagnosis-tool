@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.902.0";
+const APP_VERSION = "2.903.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -620,7 +620,7 @@ seedDummyButton.addEventListener("click", seedDummyCases);
 runSelfTestButton.addEventListener("click", runSelfCheck);
 clearStorageButton.addEventListener("click", clearAllLocalStorage);
 obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
-obdImportPasteButton.addEventListener("click", pasteObdScannerImport);
+obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
