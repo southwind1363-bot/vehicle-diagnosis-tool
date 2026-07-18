@@ -14097,7 +14097,7 @@
     };
     const normalizeDtcReadoutKind = (cell) => {
       const normalized = sanitizeCell(cell, 80).toLowerCase();
-      if (/(?:stored|mode\s*0?3)/.test(normalized)) return "stored";
+      if (/(?:stored|current|confirmed|active|mode\s*0?3)/.test(normalized)) return "stored";
       if (/(?:pending|mode\s*0?7)/.test(normalized)) return "pending";
       if (/(?:permanent|mode\s*0?A)/i.test(normalized)) return "permanent";
       return null;
