@@ -2346,6 +2346,8 @@ check(scannerSupportedPidSession.supportedPidMatrix?.supportedPids?.includes("0C
 const scannerMode06Import = obd.analyzeScannerText("Mode 06\nTID: 01 CID: 02 Value: 3 Min: 1 Max: 5\nTID: 03 CID: 04 Value: 6 Min: 1 Max: 5\nLive Data\nEngine RPM: 800 rpm");
 check(scannerMode06Import.onboardMonitorSnapshot?.onboardMonitorReadoutStatus === "reported" && scannerMode06Import.mode06_snapshot?.testCount === 2, "Scanner text import did not create a typed Mode 06 snapshot");
 check(scannerMode06Import.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.componentId === "02" && item.status === "pass") && scannerMode06Import.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "03" && item.componentId === "04" && item.status === "fail"), "Scanner text import did not preserve explicit Mode 06 limits and results");
+const japaneseScannerMode06Import = obd.analyzeScannerText("モード06\nTID: 05 CID: 06 測定値: 4 下限: 1 上限: 5");
+check(japaneseScannerMode06Import.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "05" && item.componentId === "06" && item.value === 4 && item.status === "pass"), "Scanner text import did not preserve explicitly labeled Japanese Mode 06 values");
 const unmarkedMode06Import = obd.analyzeScannerText("TID: 01 CID: 02 Value: 3 Min: 1 Max: 5");
 check(unmarkedMode06Import.onboardMonitorSnapshot === null, "Scanner text import inferred Mode 06 data without an explicit heading");
 const rawMode06Import = obd.analyzeScannerText("Mode 06\n46 01 02 00 03 00 01 00 05");
@@ -2567,8 +2569,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.899.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner ECU response import");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.899.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.899.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.900.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for Japanese scanner Mode 06 import");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.900.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.900.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
 check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
@@ -14994,6 +14996,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2583");
+  console.log("OBD read-only safety checks: 2584");
   console.log("Errors: 0");
 }
