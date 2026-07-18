@@ -13858,6 +13858,102 @@
     };
   }
 
+  function buildDiagnosticScanSessionFromJson(value, options = {}) {
+    const text = String(value || "").trim();
+    if (!text || text.length > 500000 || !/^[{]/.test(text)) return null;
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return null;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const exportPayload = parsed.bridge_export_payload || parsed.bridgeExportPayload || parsed;
+    const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
+    if (!session || typeof session !== "object" || Array.isArray(session)) return null;
+    const input = session.data && typeof session.data === "object" && !Array.isArray(session.data) ? { ...session, ...session.data } : session;
+    const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
+    const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
+    const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes");
+    const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "monitorValues", "monitor_values");
+    const freezeFrameInput = pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame");
+    const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness");
+    const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items");
+    const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids");
+    const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot");
+    const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
+    const sessionInput = getDiagnosticSessionInput(options);
+    const scannerJsonSource = "scanner_json_import";
+    const toSnapshotInput = (item, key) => Array.isArray(item) ? { [key]: item, source: scannerJsonSource } : { ...item, source: scannerJsonSource };
+    const isSensitiveEcuInfoRow = (row) => /(?:\bvin\b|vehicle\s*identification|\u8eca\u53f0\u756a\u53f7)/i.test(String(row?.id || row?.label || row?.name || row?.key || ""));
+    const sanitizeEcuInfoInput = (item) => {
+      if (Array.isArray(item)) return item.filter((row) => !isSensitiveEcuInfoRow(row));
+      if (!item || typeof item !== "object") return item;
+      const sanitized = { ...item };
+      ["items", "values", "ecu_info", "ecu_info_items", "ecu_info_rows", "ecuInfo", "ecuInfoItems", "ecuInfoRows", "mode09_items", "mode09Items", "mode09_values"].forEach((key) => {
+        if (Array.isArray(sanitized[key])) sanitized[key] = sanitized[key].filter((row) => !isSensitiveEcuInfoRow(row));
+      });
+      return sanitized;
+    };
+    const safeEcuInfoInput = sanitizeEcuInfoInput(ecuInfoInput);
+    const dtcSnapshot = hasValue(dtcInput)
+      ? normalizeDtcSnapshot(Array.isArray(dtcInput) ? { dtcs: dtcInput, source: scannerJsonSource } : toSnapshotInput(dtcInput, "dtcs"))
+      : null;
+    const livePidSnapshot = hasValue(livePidInput)
+      ? normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values"))
+      : null;
+    const freezeFrameSnapshot = hasValue(freezeFrameInput)
+      ? normalizeFreezeFrameSnapshot(Array.isArray(freezeFrameInput) ? { monitor_values: freezeFrameInput, source: scannerJsonSource } : toSnapshotInput(freezeFrameInput, "monitor_values"))
+      : null;
+    const readinessSnapshot = hasValue(readinessInput)
+      ? normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors"))
+      : null;
+    const ecuInfoSnapshot = hasValue(safeEcuInfoInput)
+      ? normalizeEcuInfoSnapshot(Array.isArray(safeEcuInfoInput) ? { items: safeEcuInfoInput, source: scannerJsonSource } : toSnapshotInput(safeEcuInfoInput, "items"))
+      : null;
+    const supportedPidMatrix = hasValue(supportedPidInput)
+      ? normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput) ? { supported_pids: supportedPidInput, source: scannerJsonSource } : toSnapshotInput(supportedPidInput, "supported_pids"))
+      : null;
+    const onboardMonitorSnapshot = hasValue(onboardMonitorInput)
+      ? normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests"))
+      : null;
+    const ecuResponseSummary = hasValue(ecuResponseInput)
+      ? normalizeEcuResponseSummary(Array.isArray(ecuResponseInput) ? { ecus: ecuResponseInput, source: scannerJsonSource } : toSnapshotInput(ecuResponseInput, "ecus"))
+      : null;
+    if (![dtcSnapshot, livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
+    const output = buildDiagnosticScanSession({
+      session_id: String(pick("session_id", "sessionId") || sessionInput.session_id || sessionInput.sessionId || "scanner-json-import").slice(0, 120),
+      source: scannerJsonSource,
+      protocol: String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null,
+      captured_at: pick("captured_at", "capturedAt", "timestamp") || sessionInput.captured_at || sessionInput.capturedAt || null,
+      started_at: pick("started_at", "startedAt") || sessionInput.started_at || sessionInput.startedAt || null,
+      ended_at: pick("ended_at", "endedAt") || sessionInput.ended_at || sessionInput.endedAt || null,
+      dtcSnapshot: dtcSnapshot || undefined,
+      livePidSnapshot: livePidSnapshot || undefined,
+      freezeFrameSnapshot: freezeFrameSnapshot || undefined,
+      readinessSnapshot: readinessSnapshot || undefined,
+      ecuInfoSnapshot: ecuInfoSnapshot || undefined,
+      supportedPidMatrix: supportedPidMatrix || undefined,
+      onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
+      ecuResponseSummary: ecuResponseSummary || undefined
+    });
+    return {
+      ...output,
+      source: scannerJsonSource,
+      source_type: scannerJsonSource,
+      sourceLength: text.length,
+      source_length: text.length,
+      retainedRawText: false,
+      retained_raw_text: false,
+      retainedRawFrames: false,
+      retained_raw_frames: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function mergeUniqueStrings(...groups) {
     return [...new Set(groups.flatMap((group) => Array.isArray(group) ? group : []).filter(Boolean))];
   }
@@ -15591,6 +15687,7 @@
     buildDecodedObdScanSession,
     classifyObdResponseLines,
     buildScanSessionFromObdText,
+    buildDiagnosticScanSessionFromJson,
     buildSupportedPidMatrix,
     buildDiagnosticScanSession,
     evaluateOutboundSafety,

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.908.0";
+const APP_VERSION = "2.909.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7360,9 +7360,12 @@ function analyzeObdScannerImport() {
       hadSensitiveIdentifier: currentHadSensitiveIdentifier
     })
     : null;
-  const analysis = bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
+  const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"
+    ? window.ObdReadOnly.buildDiagnosticScanSessionFromJson(scannerText)
+    : null;
+  const analysis = jsonImportSession || (bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
     ? window.ObdReadOnly.mergeDiagnosticInputs({ scannerText, bridgeImport })
-    : window.ObdReadOnly.analyzeScannerText(scannerText);
+    : window.ObdReadOnly.analyzeScannerText(scannerText));
   if (bridgeImport && hasBridgeDiagnosticScanSessionSupport()) {
     obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
       session_id: obdDevSession.lastSession?.sessionId || "scanner-bridge-merge-session",
@@ -7370,7 +7373,16 @@ function analyzeObdScannerImport() {
       readoutInterface: currentReadoutInterface
     });
   }
-  if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport()) {
+  if (jsonImportSession && hasBridgeDiagnosticScanSessionSupport()) {
+    const jsonImportVehicleProfile = buildSelectedObdVehicleProfile();
+    obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
+      scan_session: jsonImportSession,
+      vehicleProfile: jsonImportVehicleProfile || undefined,
+      vehicleApplicability: buildSelectedObdVehicleApplicability(jsonImportVehicleProfile) || undefined,
+      readoutInterface: buildSelectedObdReadoutInterface()
+    });
+  }
+  if (!bridgeImport && !jsonImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport()) {
     const textImportVehicleProfile = buildSelectedObdVehicleProfile();
     obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
       session_id: "scanner-text-import-session",

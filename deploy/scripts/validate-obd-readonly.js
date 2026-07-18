@@ -107,7 +107,7 @@ const analyzeMonitorValuesFunctionSource = source.match(/function analyzeMonitor
 const fuelTrimInsightFunctionSource = source.match(/function addFuelTrimInsight[\s\S]*?\r?\n  \}/);
 const bridgeReadoutWarningsFunctionSource = source.match(/function appendBridgeReadoutCoverageWarnings[\s\S]*?bridge_readout_empty_sections"\);\r?\n  \}/);
 const bridgeSessionSummaryFunctionSource = source.match(/function buildBridgeSessionSummary[\s\S]*?\r?\n  \}/);
-const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession[\s\S]*?\r?\n  \}/);
+const diagnosticScanSessionFunctionSource = source.match(/function buildDiagnosticScanSession\([\s\S]*?\r?\n  \}/);
 const dtcSnapshotFunctionSource = source.match(/function normalizeDtcSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const dtcReferenceFunctionSource = source.match(/function extractDtcReferences[\s\S]*?return \[\{ code, subcode \}\];\r?\n    \}\);\r?\n  \}/);
 const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreezeFrameSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
@@ -134,6 +134,7 @@ const decodeReadinessResponseFunctionSource = source.match(/function decodeReadi
 const decodeOnboardMonitorResponseFunctionSource = source.match(/function decodeOnboardMonitorResponse[\s\S]*?tests\r?\n    \}\);\r?\n  \}/);
 const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedObdScanSession[\s\S]*?ecus: sessionInput\.ecus \|\| sessionInput\.ecu_responses \|\| \[\]\r?\n    \}\);\r?\n  \}/);
 const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicle_command_enabled: false\r?\n    \};\r?\n  \}/);
+const diagnosticJsonImportFunctionSource = source.match(/function buildDiagnosticScanSessionFromJson[\s\S]*?vehicle_command_enabled: false\r?\n    \};\r?\n  \}/);
 const textDtcSnapshotFunctionSource = source.match(/function extractTextDtcSnapshot[\s\S]*?dtcs: rows\r?\n    \}\);\r?\n  \}/);
 const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
@@ -1843,6 +1844,11 @@ const textImportMetadataFunctionChecks = () => {
   }
 };
 const scannerTextExtractionFunctionChecks = () => {
+  check(Boolean(diagnosticJsonImportFunctionSource), "buildDiagnosticScanSessionFromJson is missing from obd-readonly.js");
+  if (diagnosticJsonImportFunctionSource) {
+    const functionBody = diagnosticJsonImportFunctionSource[0];
+    check(functionBody.includes('parsed = JSON.parse(text);') && functionBody.includes('const safeEcuInfoInput = sanitizeEcuInfoInput(ecuInfoInput);') && functionBody.includes('vehicleCommandEnabled: false') && functionBody.includes('retainedRawText: false'), "Structured JSON import should sanitize ECU identifiers and remain read-only");
+  }
   check(Boolean(scannerToolHintsFunctionSource), "detectScannerToolHints is missing from obd-readonly.js");
   if (scannerToolHintsFunctionSource) {
     const functionBody = scannerToolHintsFunctionSource[0];
@@ -2577,11 +2583,12 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.908.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for ECU-name DTC retention");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.908.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.908.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.909.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for structured JSON scanner imports");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.909.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.909.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
-check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
+check(appSource.includes('const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"') && appSource.includes('if (jsonImportSession && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('if (!bridgeImport && !jsonImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())'), "OBD scanner import should prefer safe structured JSON sessions before text parsing");
+check(appSource.includes('if (!bridgeImport && !jsonImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
 check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
@@ -15047,11 +15054,24 @@ const textEcuDtcSession = obd.buildScanSessionFromObdText([
 ].join("\n"), { session_id: "text-ecu-dtc-session" });
 check(textEcuDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored" && item.ecu === "Engine Control Module") && textEcuDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "C0031" && item.status === "pending" && item.ecu === "ABS"), "Scanner text import did not preserve explicit ECU headings for DTC rows");
 check(textEcuDtcSession.vehicleCommandEnabled === false && textEcuDtcSession.retainedRawText === false, "ECU-scoped scanner text import did not remain read-only or safe to retain");
+const scannerJsonImportSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: {
+    session_id: "scanner-json-import-test",
+    vehicle_command_enabled: true,
+    dtc_snapshot: { dtcs: [{ code: "P0300", status: "stored", ecu: "7E8", ecu_name: "Engine", raw: "discard-json-raw" }] },
+    live_pid_snapshot: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }], raw: "discard-json-raw" },
+    ecu_info_snapshot: { items: [{ id: "vin", value: "1HGCM82633A004352" }] },
+    ecu_response_summary: { ecus: [{ address: "7E8", name: "Engine", dtcs: ["P0300"] }] }
+  }
+}));
+check(scannerJsonImportSession?.source === "scanner_json_import" && scannerJsonImportSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E8" && item.ecuName === "Engine") && scannerJsonImportSession.livePidSnapshot?.monitorValues?.some((item) => item.pid === "0C"), "Structured JSON import did not preserve normalized DTC and live PID readouts");
+check(scannerJsonImportSession?.vehicleCommandEnabled === false && scannerJsonImportSession?.retainedRawText === false && !JSON.stringify(scannerJsonImportSession).includes("discard-json-raw") && !JSON.stringify(scannerJsonImportSession).includes("1HGCM82633A004352"), "Structured JSON import retained unsafe raw data, VIN, or vehicle command state");
+check(obd.buildDiagnosticScanSessionFromJson("not-json") === null && obd.buildDiagnosticScanSessionFromJson("[]") === null, "Structured JSON import should reject invalid or array payloads");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2602");
+  console.log("OBD read-only safety checks: 2608");
   console.log("Errors: 0");
 }
