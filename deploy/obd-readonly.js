@@ -13943,10 +13943,21 @@
         : rowValue?.code || rowValue?.dtc || rowValue?.id || rowValue?.value || rowValue?.dtc_code || rowValue?.dtcCode || "";
       return extractDtcReferences(candidate).length > 0;
     });
+    const hasLivePidRows = (rows) => Array.isArray(rows) && rows.length > 0 && rows.every((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+      const pid = row.pid ?? row.pid_code ?? row.pidCode ?? row.pid_id ?? row.pidId;
+      const value = row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue;
+      return /^(?:0x)?[0-9a-f]{2}$/i.test(String(pid ?? "").trim()) && value !== undefined && value !== null && String(value).trim() !== "";
+    });
     const topLevelDtcRows = Array.isArray(parsed) ? parsed : null;
     const hasTopLevelDtcRows = hasDtcRows(topLevelDtcRows);
-    if (!parsed || typeof parsed !== "object" || (Array.isArray(parsed) && !hasTopLevelDtcRows)) return null;
-    const parsedPayload = hasTopLevelDtcRows ? { dtcs: topLevelDtcRows } : parsed;
+    const hasTopLevelLivePidRows = hasLivePidRows(topLevelDtcRows);
+    if (!parsed || typeof parsed !== "object" || (Array.isArray(parsed) && !hasTopLevelDtcRows && !hasTopLevelLivePidRows)) return null;
+    const parsedPayload = hasTopLevelDtcRows
+      ? { dtcs: topLevelDtcRows }
+      : hasTopLevelLivePidRows
+        ? { live_pid_snapshot: { monitor_values: topLevelDtcRows } }
+        : parsed;
     const exportPayload = parsedPayload.bridge_export_payload || parsedPayload.bridgeExportPayload || parsedPayload;
     const isTrustedBridgeSessionExport = [parsedPayload, exportPayload].some((payload) => (
       payload && typeof payload === "object" && (payload.schema_version === "bridge_session_export_v1" || payload.schemaVersion === "bridge_session_export_v1")
@@ -13954,11 +13965,15 @@
     const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
     if (!session || typeof session !== "object" || Array.isArray(session)) return null;
     const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => session[key] !== undefined && session[key] !== null);
+    const hasExplicitLivePidCollection = ["livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values"].some((key) => session[key] !== undefined && session[key] !== null);
     const hasArrayDataDtcRows = !hasExplicitDtcCollection && hasDtcRows(session.data);
+    const hasArrayDataLivePidRows = !hasExplicitDtcCollection && !hasExplicitLivePidCollection && hasLivePidRows(session.data);
     const input = session.data && typeof session.data === "object" && !Array.isArray(session.data)
       ? { ...session, ...session.data }
       : hasArrayDataDtcRows
         ? { ...session, dtcs: session.data }
+        : hasArrayDataLivePidRows
+          ? { ...session, live_pid_snapshot: { monitor_values: session.data } }
         : session;
     const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
