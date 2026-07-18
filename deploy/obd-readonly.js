@@ -14250,7 +14250,6 @@
     const dtcSnapshot = dtcs.length || reportedDtcStatuses.size
       ? normalizeDtcSnapshot({ source, dtcs, ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
       : null;
-    const livePidSnapshot = monitorValues.length ? { ...normalizeBridgeLivePidSnapshot({ source, values: monitorValues }), source } : null;
     const livePidTimelineSamples = [...livePidSamplesByCapturedAt.values()].sort((left, right) => {
       const leftTime = /^\d{4}-\d{2}-\d{2}T/.test(left.capturedAt) ? Date.parse(left.capturedAt) : Number.NaN;
       const rightTime = /^\d{4}-\d{2}-\d{2}T/.test(right.capturedAt) ? Date.parse(right.capturedAt) : Number.NaN;
@@ -14265,6 +14264,20 @@
           live_pid_snapshot: normalizeBridgeLivePidSnapshot({ source, captured_at: sample.capturedAt, protocol: sample.protocol, values: sample.values })
         }))
       })
+      : null;
+    const latestLivePidSample = livePidTimelineSamples.at(-1) || null;
+    const currentLivePidValues = latestLivePidSample
+      ? latestLivePidSample.values
+      : monitorValues;
+    const livePidSnapshot = currentLivePidValues.length
+      ? {
+        ...normalizeBridgeLivePidSnapshot({
+          source,
+          ...(latestLivePidSample ? { captured_at: latestLivePidSample.capturedAt, protocol: latestLivePidSample.protocol } : {}),
+          values: currentLivePidValues
+        }),
+        source
+      }
       : null;
     const freezeFrameSnapshot = freezeFrameValues.length
       ? normalizeFreezeFrameSnapshot({ source, values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
