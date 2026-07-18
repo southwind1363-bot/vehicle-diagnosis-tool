@@ -15100,7 +15100,7 @@ check(scannerJsonImportSession?.vehicleCommandEnabled === false && scannerJsonIm
 const reimportedScannerJsonInterfaceSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonImportSession)
 });
-check(reimportedScannerJsonInterfaceSession?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && reimportedScannerJsonInterfaceSession?.readoutInterface?.deviceModel === "TCMa" && reimportedScannerJsonInterfaceSession?.vehicleCommandEnabled === false && !JSON.stringify(reimportedScannerJsonInterfaceSession).includes("do-not-retain"), "Safe JSON readout interface provenance was not preserved through read-only export and reimport");
+check(reimportedScannerJsonInterfaceSession?.vehicleProfile?.maker === "Toyota" && reimportedScannerJsonInterfaceSession?.vehicleProfile?.modelCode === "ZVW50" && reimportedScannerJsonInterfaceSession?.vehicleApplicability?.status === "matched" && reimportedScannerJsonInterfaceSession?.vehicleApplicability?.sourceVerified === true && reimportedScannerJsonInterfaceSession?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && reimportedScannerJsonInterfaceSession?.readoutInterface?.deviceModel === "TCMa" && reimportedScannerJsonInterfaceSession?.vehicleCommandEnabled === false && !JSON.stringify(reimportedScannerJsonInterfaceSession).includes("1HGCM82633A004352") && !JSON.stringify(reimportedScannerJsonInterfaceSession).includes("do-not-retain"), "Safe JSON vehicle and interface provenance was not preserved through read-only export and reimport");
 const scannerJsonMixedProtocolSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     protocol: "CAN_11BIT_500K",
