@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.898.0";
+const APP_VERSION = "2.899.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5890,7 +5890,7 @@ function renderObdBridgeSessionDetails(session = null) {
       const services = item.services?.length ? ` / Svc ${item.services.join(",")}` : "";
       const negatives = item.negativeResponseCount ? ` / 否定応答${item.negativeResponseCount}` : "";
       const dtcs = Number.isInteger(item.dtcCount) ? ` / DTC ${item.dtcCount}` : "";
-      return `${item.address || item.id}: ${item.status || "unknown"}${dtcs}${services}${negatives}`;
+      return `${item.name || item.address || item.id}: ${item.status || "unknown"}${dtcs}${services}${negatives}`;
     })]);
   }
 
@@ -7384,6 +7384,7 @@ function analyzeObdScannerImport() {
       ecuInfoSnapshot: analysis.ecuInfoSnapshot || analysis.ecu_info_snapshot || undefined,
       supportedPidMatrix: analysis.supportedPidMatrix || analysis.supported_pid_matrix || undefined,
       onboardMonitorSnapshot: analysis.onboardMonitorSnapshot || analysis.onboard_monitor_snapshot || analysis.mode06Snapshot || analysis.mode06_snapshot || undefined,
+      ecuResponseSummary: analysis.ecuResponseSummary || analysis.ecu_response_summary || undefined,
       toolHints: analysis.toolHints,
       sourceLength: analysis.sourceLength,
       hadSensitiveIdentifier: analysis.hadSensitiveIdentifier === true,

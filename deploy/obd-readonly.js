@@ -15271,6 +15271,45 @@
     });
   }
 
+  function collectTextEcuResponseSection(value) {
+    const responseLines = [];
+    let inEcuResponseSection = false;
+    const isEcuResponseHeading = (text) => /(?:\becu\s*responses?\b|\bmodule\s*responses?\b|ecu\s*応答|モジュール\s*応答)/i.test(text);
+    const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|\becu\s*(?:info|information)\b|\bmode\s*0?[69]\b|\bonboard\s*monitor(?:ing)?\b|\bsupported\s*pids?\b|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|ecu\s*情報|モード\s*0?[69]|オンボード\s*モニター|対応\s*pid|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
+    String(value || "").split(/\r?\n/).forEach((line) => {
+      const text = String(line || "").trim();
+      if (isEcuResponseHeading(text)) {
+        inEcuResponseSection = true;
+        return;
+      }
+      if (inEcuResponseSection && isSectionBoundary(text)) inEcuResponseSection = false;
+      if (inEcuResponseSection) responseLines.push(line);
+    });
+    return responseLines;
+  }
+
+  function extractTextEcuResponseSummary(value) {
+    const ecus = [];
+    collectTextEcuResponseSection(value).forEach((line) => {
+      const match = String(line || "").trim().match(/^(.{1,120}?)\s*[:：]\s*(.+)$/);
+      if (!match) return;
+      const statusText = match[2].trim().toLowerCase();
+      const status = /(?:\bresponded\b|\bresponse\s*ok\b|\bok\b|\bsuccess\b|応答あり|応答済)/i.test(statusText)
+        ? "responded"
+        : /(?:\bno\s*response\b|\bnot\s*responding\b|応答なし|未応答)/i.test(statusText)
+          ? "no_response"
+          : /(?:\btimeout\b|\btimed\s*out\b|タイムアウト)/i.test(statusText)
+            ? "timeout"
+            : /(?:\bunsupported\b|\bnot\s*supported\b|非対応|未対応)/i.test(statusText)
+              ? "unsupported"
+              : null;
+      if (!status || ecus.some((item) => item.name === match[1])) return;
+      ecus.push({ id: `scanner_ecu_${ecus.length + 1}`, name: match[1], status });
+    });
+    if (!ecus.length) return null;
+    return normalizeEcuResponseSummary({ source: "scanner_text_ecu_responses", ecus });
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
@@ -15281,6 +15320,7 @@
     const ecuInfoSnapshot = extractTextEcuInfoSnapshot(redacted);
     const supportedPidMatrix = extractTextSupportedPidMatrix(redacted);
     const onboardMonitorSnapshot = extractTextOnboardMonitorSnapshot(redacted);
+    const ecuResponseSummary = extractTextEcuResponseSummary(redacted);
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
@@ -15299,6 +15339,8 @@
       onboard_monitor_snapshot: onboardMonitorSnapshot,
       mode06Snapshot: onboardMonitorSnapshot,
       mode06_snapshot: onboardMonitorSnapshot,
+      ecuResponseSummary,
+      ecu_response_summary: ecuResponseSummary,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
