@@ -2307,6 +2307,19 @@ const scannerFreezeFrameSession = obd.buildDiagnosticScanSession({
 });
 check(scannerFreezeFrameSession.freezeFrameSnapshot?.triggerDtc === "P0171" && scannerFreezeFrameSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1500), "Scanner text session did not preserve the freeze-frame snapshot");
 check(scannerFreezeFrameSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerFreezeFrameSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured", "Scanner text session did not keep live and freeze-frame readouts separate");
+const scannerReadinessImport = obd.analyzeScannerText("I/M Readiness\nMIL Status: OFF\nMisfire: Complete\nFuel System: Not Ready\nCatalyst: Not Supported\nLive Data\nEngine RPM: 800 rpm");
+check(scannerReadinessImport.readinessSnapshot?.milOn === false && scannerReadinessImport.readiness_snapshot?.readinessReadoutStatus === "reported", "Scanner text import did not create a typed readiness snapshot");
+check(scannerReadinessImport.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.status === "complete") && scannerReadinessImport.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && scannerReadinessImport.readinessSnapshot?.monitors?.some((item) => item.id === "catalyst" && item.status === "not_supported"), "Scanner text import did not preserve explicit readiness states");
+check(scannerReadinessImport.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800), "Scanner text import did not preserve live values after a readiness section");
+const unmarkedReadinessImport = obd.analyzeScannerText("Misfire: Complete\nFuel System: Not Ready");
+check(unmarkedReadinessImport.readinessSnapshot === null, "Scanner text import inferred readiness without an explicit heading");
+const incompleteReadinessImport = obd.analyzeScannerText("I/M Readiness\nMisfire: Complete\nFuel System: Not Ready");
+check(incompleteReadinessImport.readinessSnapshot === null, "Scanner text import inferred a MIL state when the readiness section did not report one");
+const scannerReadinessSession = obd.buildDiagnosticScanSession({
+  source: "scanner_text",
+  readinessSnapshot: scannerReadinessImport.readinessSnapshot
+});
+check(scannerReadinessSession.readinessSnapshot?.incompleteCount === 1 && scannerReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured", "Scanner text session did not preserve readiness separately");
 check(analysis.codes.join(",") === "P0171,P0300", "DTC抽出または重複除外が不正です");
 check(analysis.hadSensitiveIdentifier === true, "車台番号候補を検出できません");
 check(analysis.retainedRawText === false, "入力原文を保持する設定になっています");
@@ -2509,8 +2522,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.894.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner freeze-frame import");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.894.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.894.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.895.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner readiness import");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.895.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.895.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
 check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
@@ -14936,6 +14949,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2558");
+  console.log("OBD read-only safety checks: 2564");
   console.log("Errors: 0");
 }

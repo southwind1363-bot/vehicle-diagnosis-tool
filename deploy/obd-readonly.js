@@ -15085,12 +15085,77 @@
     });
   }
 
+  function collectTextReadinessSection(value) {
+    const readinessLines = [];
+    let inReadiness = false;
+    const isReadinessHeading = (text) => /(?:\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|レディネス(?:\s*状態)?)/i.test(text);
+    const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|mode\s*0?6|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|モード\s*0?6|対応\s*pid|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
+    String(value || "").split(/\r?\n/).forEach((line) => {
+      const text = String(line || "").trim();
+      if (isReadinessHeading(text)) {
+        inReadiness = true;
+        return;
+      }
+      if (inReadiness && isSectionBoundary(text)) inReadiness = false;
+      if (inReadiness) readinessLines.push(line);
+    });
+    return readinessLines;
+  }
+
+  function extractTextReadinessSnapshot(value) {
+    const readinessLines = collectTextReadinessSection(value);
+    if (!readinessLines.length) return null;
+    const monitorMatchers = [
+      ["oxygen_sensor_heater", /(?:oxygen\s*sensor\s*heater|o2\s*(?:sensor\s*)?heater|o2ヒーター)/i],
+      ["oxygen_sensor", /(?:oxygen\s*sensor|o2\s*sensor|o2センサー)/i],
+      ["heated_catalyst", /(?:heated\s*catalyst|加熱触媒)/i],
+      ["comprehensive_component", /(?:comprehensive\s*component|components?|総合コンポーネント)/i],
+      ["evaporative_system", /(?:evap(?:orative)?(?:\s*system)?|蒸発ガス)/i],
+      ["secondary_air", /(?:secondary\s*air|二次空気)/i],
+      ["exhaust_gas_sensor", /(?:exhaust\s*gas\s*sensor|排気ガスセンサー)/i],
+      ["boost_pressure", /(?:boost\s*pressure|過給圧)/i],
+      ["fuel_system", /(?:fuel\s*system|燃料システム)/i],
+      ["catalyst", /(?:catalyst|触媒)/i],
+      ["egr_vvt", /(?:egr|vvt)/i],
+      ["nox_scr", /(?:nox|scr)/i],
+      ["pm_filter", /(?:pm\s*filter|dpf|pmフィルター)/i],
+      ["misfire", /(?:misfire|失火)/i]
+    ];
+    const monitors = [];
+    let milOn = null;
+    readinessLines.forEach((line) => {
+      const text = String(line || "").trim();
+      if (/(?:\bmil\b|malfunction\s*indicator\s*lamp|エンジン警告灯)/i.test(text)) {
+        if (/(?:\bon\b|点灯)/i.test(text)) milOn = true;
+        if (/(?:\boff\b|消灯)/i.test(text)) milOn = false;
+      }
+      const match = monitorMatchers.find(([, pattern]) => pattern.test(text));
+      if (!match) return;
+      const status = /(?:not\s*(?:supported|available)|unsupported|非対応|未対応)/i.test(text)
+        ? "not_supported"
+        : /(?:not\s*(?:complete|ready)|incomplete|未完了|未実施)/i.test(text)
+          ? "not_complete"
+          : /(?:\bcomplete\b|\bready\b|完了|準備完了)/i.test(text)
+            ? "complete"
+            : null;
+      if (status && !monitors.some((item) => item.id === match[0])) monitors.push({ id: match[0], status });
+    });
+    if (!monitors.length || milOn === null) return null;
+    return normalizeReadinessSnapshot({
+      source: "scanner_text_readiness",
+      milOn: milOn === true,
+      monitors,
+      readinessReadoutStatus: "reported"
+    });
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
     const freezeFrameSection = collectTextFreezeFrameSection(redacted);
     const monitorValues = extractMonitorValues(freezeFrameSection.nonFreezeLines.join("\n"));
     const freezeFrameSnapshot = extractTextFreezeFrameSnapshot(freezeFrameSection);
+    const readinessSnapshot = extractTextReadinessSnapshot(redacted);
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
@@ -15099,6 +15164,8 @@
       dtc_snapshot: dtcSnapshot,
       freezeFrameSnapshot,
       freeze_frame_snapshot: freezeFrameSnapshot,
+      readinessSnapshot,
+      readiness_snapshot: readinessSnapshot,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
