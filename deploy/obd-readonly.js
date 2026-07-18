@@ -1521,6 +1521,13 @@
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const supportedPids = collectBridgeSupportedPids(data);
+    const supportedPidPageBases = data.supported_pid_page_bases
+      || data.supportedPidPageBases
+      || data.queried_pid_bases
+      || data.queriedPidBases
+      || data.supported_pid_pages
+      || data.supportedPidPages
+      || [];
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.supported_pids, data.supportedPids, data.pids, data.pid_list, data.pidList, data.supportedPidRows].some(Array.isArray));
     return {
       ...buildSupportedPidMatrix({
@@ -1528,6 +1535,7 @@
       captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
       protocol: readBridgeProtocol(data),
       supported_pid_readout_status: getBridgeReadoutStatus(bridgeSafety),
+      supported_pid_page_bases: supportedPidPageBases,
       supported_pids: supportedPids
       }),
       intent: "read_supported_pids",
@@ -13368,12 +13376,14 @@
   function decodeSupportedPidResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const supportedPids = [];
+    const supportedPidPageBases = [];
     const hasSupportedPidFrame = bytes.some((byte, index) => byte === 0x41 && isSupportedPidBase(bytes[index + 1]) && index + 5 < bytes.length);
     const readoutStatus = hasSupportedPidFrame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index + 5 < bytes.length; index++) {
       if (bytes[index] !== 0x41 || !Number.isInteger(bytes[index + 1])) continue;
       if (!isSupportedPidBase(bytes[index + 1])) continue;
       const basePid = bytes[index + 1];
+      supportedPidPageBases.push(basePid.toString(16).toUpperCase().padStart(2, "0"));
       const bitBytes = bytes.slice(index + 2, index + 6);
       bitBytes.forEach((byte, byteIndex) => {
         for (let bit = 7; bit >= 0; bit--) {
@@ -13385,12 +13395,13 @@
       index += 5;
     }
     if (!supportedPids.length) {
-      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [], supported_pid_readout_status: readoutStatus });
+      return buildSupportedPidMatrix({ source: input.source || "obd_response_decoder", supportedPids: [], supported_pid_page_bases: [...new Set(supportedPidPageBases)], supported_pid_readout_status: readoutStatus });
     }
     return buildSupportedPidMatrix({
       source: input.source || "obd_response_decoder",
       captured_at: input.captured_at || input.capturedAt || null,
       supported_pid_readout_status: "reported",
+      supported_pid_page_bases: [...new Set(supportedPidPageBases)],
       supported_pids: [...new Set(supportedPids)]
     });
   }
@@ -15361,6 +15372,27 @@
 
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const supportedPids = [...supported];
+    const supportedPidPageBasesInput = sourceInput.supportedPidPageBases
+      || sourceInput.supported_pid_page_bases
+      || sourceInput.queriedPidBases
+      || sourceInput.queried_pid_bases
+      || sourceInput.supportedPidPages
+      || sourceInput.supported_pid_pages
+      || [];
+    const supportedPidPageBases = [...new Set((Array.isArray(supportedPidPageBasesInput) ? supportedPidPageBasesInput : [supportedPidPageBasesInput])
+      .map((value) => String(value?.pid || value?.base || value?.value || value || "").trim().toUpperCase().replace(/^0X/, ""))
+      .filter((value) => /^[0-9A-F]{1,2}$/.test(value))
+      .map((value) => value.padStart(2, "0"))
+      .filter((value) => isSupportedPidBase(parseInt(value, 16)))
+    )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
+    const supportedPidPageSummary = {
+      schemaVersion: "supported_pid_page_summary_v1",
+      schema_version: "supported_pid_page_summary_v1",
+      pageBases: supportedPidPageBases,
+      page_bases: supportedPidPageBases,
+      pageCount: supportedPidPageBases.length,
+      page_count: supportedPidPageBases.length
+    };
     const supportedCount = items.filter((item) => item.supported).length;
     const unsupportedCount = items.filter((item) => !item.supported).length;
     const knownPidCount = items.length;
@@ -15375,6 +15407,10 @@
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       supportedPids,
       supported_pids: supportedPids,
+      supportedPidPageBases,
+      supported_pid_page_bases: supportedPidPageBases,
+      supportedPidPageSummary,
+      supported_pid_page_summary: supportedPidPageSummary,
       supportedCount,
       supported_count: supportedCount,
       unsupportedCount,

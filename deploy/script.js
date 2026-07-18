@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.986.0";
+const APP_VERSION = "2.987.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6805,6 +6805,8 @@ function renderObdDeveloperSessionSummary(session = null) {
       : NO_DATA;
   const onboardMonitorReadoutStatusLabel = formatObdReadoutStatus(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status, NO_DATA);
   const supportedPidReadoutStatusLabel = formatObdReadoutStatus(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status, NO_DATA);
+  const supportedPidPageBases = supportedPidMatrix?.supportedPidPageBases || supportedPidMatrix?.supported_pid_page_bases || supportedPidMatrix?.supportedPidPageSummary?.pageBases || supportedPidMatrix?.supported_pid_page_summary?.page_bases || null;
+  const supportedPidPageLabel = Array.isArray(supportedPidPageBases) && supportedPidPageBases.length ? supportedPidPageBases.join(" / ") : NO_DATA;
   const coverage = getReadoutCoverageDisplay(session?.readoutCoverage || session?.readout_coverage);
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId();
@@ -6909,6 +6911,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["Mode06", onboardMonitorSnapshot?.testCount ? formatObdBridgeOnboardMonitorSummary(onboardMonitorSnapshot) : 0],
     ["Mode06読取状態", onboardMonitorReadoutStatusLabel],
     ["対応PID", supportedPidMatrix?.supportedCount ?? 0],
+    ["対応PIDページ", supportedPidPageLabel],
     ["対応PID読取状態", supportedPidReadoutStatusLabel],
     ["開始", startedAtLabel],
     ["終了", endedAtLabel],
