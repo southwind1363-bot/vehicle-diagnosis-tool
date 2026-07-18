@@ -1743,9 +1743,12 @@
     if (!row || typeof row !== "object") return null;
     const labelAlias = row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName || row.displayLabel || row.display_label || null;
     const id = String(row.id || row.monitor_id || row.monitorId || row.sensor_id || row.sensorId || row.pid || row.code || row.pid_code || row.pidCode || row.pid_id || row.pidId || "").trim();
+    const pidAliases = [row.pid, row.code, row.pid_code, row.pidCode, row.pid_id, row.pidId]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
     const normalizedLabelAlias = labelAlias ? normalizeMonitorLabel(labelAlias) : "";
     const definition = monitorDefinitions.find((item) => item.id === id)
-      || monitorDefinitions.find((item) => item.pid === row.pid || item.pid === row.code || item.pid === row.pid_code || item.pid === row.pidCode || item.pid === row.pid_id || item.pid === row.pidId)
+      || (pidAliases.length ? monitorDefinitions.find((item) => pidAliases.includes(item.pid)) : null)
       || (normalizedLabelAlias ? monitorDefinitions.find((item) => item.aliases.some((alias) => isMonitorLabelMatch(normalizedLabelAlias, alias))) : null)
       || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
@@ -13920,12 +13923,12 @@
       : Object.values(statusSpecificDtcInput).some((item) => Array.isArray(item) && item.length)
         ? statusSpecificDtcInput
         : null;
-    const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "monitorValues", "monitor_values");
+    const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
-    const freezeFrameInput = pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame");
+    const freezeFrameInput = pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
     const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
-    const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items");
-    const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids");
+    const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
+    const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
     const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
     const sessionInput = getDiagnosticSessionInput(options);
@@ -14018,8 +14021,13 @@
     const ecuInfoSnapshot = hasValue(safeEcuInfoInput)
       ? normalizeEcuInfoSnapshot(Array.isArray(safeEcuInfoInput) ? { items: safeEcuInfoInput, source: scannerJsonSource } : toSnapshotInput(safeEcuInfoInput, "items"))
       : null;
-    const supportedPidMatrix = hasValue(supportedPidInput)
-      ? { ...normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput) ? { supported_pids: supportedPidInput, source: scannerJsonSource } : toSnapshotInput(supportedPidInput, "supported_pids")), source: scannerJsonSource }
+    const hasSupportedPidInput = hasValue(supportedPidInput) || (typeof supportedPidInput === "string" && supportedPidInput.trim());
+    const supportedPidMatrix = hasSupportedPidInput
+      ? { ...normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput)
+        ? { supported_pids: supportedPidInput, source: scannerJsonSource }
+        : typeof supportedPidInput === "string"
+          ? { supported_pid_list: supportedPidInput, source: scannerJsonSource }
+          : toSnapshotInput(supportedPidInput, "supported_pids")), source: scannerJsonSource }
       : null;
     const onboardMonitorSnapshot = hasValue(onboardMonitorInput)
       ? normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests"))

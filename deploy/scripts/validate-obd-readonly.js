@@ -507,7 +507,7 @@ const bridgePidValueFunctionChecks = () => {
     check(functionBody.includes('if (!row || typeof row !== "object") return null;'), "normalizeBridgePidValue should reject non-object PID rows");
     check(functionBody.includes('row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName') && functionBody.includes('row.display_label'), "normalizeBridgePidValue should accept monitor label aliases");
     check(functionBody.includes('row.id || row.monitor_id || row.monitorId || row.sensor_id || row.sensorId || row.pid') && functionBody.includes('row.pid_id || row.pidId'), "normalizeBridgePidValue should accept PID and monitor id aliases");
-    check(functionBody.includes('monitorDefinitions.find((item) => item.id === id)') && functionBody.includes('item.pid === row.pid_id || item.pid === row.pidId') && functionBody.includes('isMonitorLabelMatch(normalizedLabelAlias, alias)'), "normalizeBridgePidValue should resolve monitor definitions by id, PID, and label aliases");
+    check(functionBody.includes('monitorDefinitions.find((item) => item.id === id)') && functionBody.includes('const pidAliases = [row.pid, row.code, row.pid_code, row.pidCode, row.pid_id, row.pidId]') && functionBody.includes('pidAliases.includes(item.pid)') && functionBody.includes('isMonitorLabelMatch(normalizedLabelAlias, alias)'), "normalizeBridgePidValue should resolve monitor definitions by id, PID, and label aliases");
     check(functionBody.includes('bridgeComputedPidDefinitions[id]'), "normalizeBridgePidValue should preserve computed bridge PID definitions");
     check(functionBody.includes('const decodedAlias = pickDefined(row.decoded, row.is_decoded, row.isDecoded);') && functionBody.includes('const rawValueType = String(pickDefined(row.value_type, row.valueType, "")).trim().toLowerCase();') && functionBody.includes('rawValueType === "raw_hex"'), "normalizeBridgePidValue should preserve undecoded raw value aliases");
     check(functionBody.includes('row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue'), "normalizeBridgePidValue should accept value aliases");
@@ -2583,8 +2583,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.957.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for I/M readiness JSON alias retention");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.957.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.957.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.958.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for standard JSON readout aliases");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.958.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.958.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(appSource.includes('const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"') && appSource.includes('const csvImportSession = !bridgeImport && !jsonImportSession && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromCsv === "function"') && appSource.includes('if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())'), "OBD scanner import should prefer safe structured JSON or CSV sessions before text parsing");
@@ -15094,6 +15094,24 @@ const scannerJsonImportSession = obd.buildDiagnosticScanSessionFromJson(JSON.str
 }));
 check(scannerJsonImportSession?.source === "scanner_json_import" && scannerJsonImportSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E8" && item.ecuName === "Engine") && scannerJsonImportSession.livePidSnapshot?.monitorValues?.some((item) => item.pid === "0C") && scannerJsonImportSession.livePidSnapshot?.source === "scanner_json_import", "Structured JSON import did not preserve normalized DTC, live PID readouts, or source provenance");
 check(scannerJsonImportSession?.importClassification?.schemaVersion === "scanner_json_import_v1" && scannerJsonImportSession.importClassification?.bucketCounts?.dtcRows === 1 && scannerJsonImportSession.importClassification?.bucketCounts?.livePidRows === 1 && scannerJsonImportSession.importClassification?.bucketCounts?.ecuResponseRows === 1 && scannerJsonImportSession.importClassification?.hadSensitiveIdentifier === true, "Structured JSON import did not retain safe import classification metadata");
+const scannerJsonReadoutAliasesSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: {
+    live_data: [{ pid: "0C", value: 800, unit: "rpm" }],
+    freeze_frame_data: [{ pid: "05", value: 85, unit: "C" }],
+    mode09: [{ id: "calibration_id", value: "ECU-CAL-01" }],
+    supported_pid_list: "01; 05; 0C"
+  }
+}));
+check(scannerJsonReadoutAliasesSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerJsonReadoutAliasesSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 85) && scannerJsonReadoutAliasesSession.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01") && scannerJsonReadoutAliasesSession.supportedPidMatrix?.supportedPids?.join(",") === "01,05,0C" && scannerJsonReadoutAliasesSession.importClassification?.bucketCounts?.livePidRows === 1 && scannerJsonReadoutAliasesSession.importClassification?.bucketCounts?.freezeFrameRows === 1 && scannerJsonReadoutAliasesSession.importClassification?.bucketCounts?.ecuInfoRows === 1 && scannerJsonReadoutAliasesSession.importClassification?.bucketCounts?.supportedPidRows === 3 && scannerJsonReadoutAliasesSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain standard live, freeze-frame, Mode 09, and supported-PID aliases");
+const reimportedScannerJsonReadoutAliasesSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonReadoutAliasesSession)
+});
+check(reimportedScannerJsonReadoutAliasesSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && reimportedScannerJsonReadoutAliasesSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 85) && reimportedScannerJsonReadoutAliasesSession.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id") && reimportedScannerJsonReadoutAliasesSession.supportedPidMatrix?.supportedPids?.join(",") === "01,05,0C" && reimportedScannerJsonReadoutAliasesSession?.vehicleCommandEnabled === false, "Standard JSON readout aliases were not preserved through read-only export and reimport");
+const fallbackPidContext = { window: { isSecureContext: true }, navigator: { serial: {} } };
+vm.createContext(fallbackPidContext);
+vm.runInContext(source, fallbackPidContext);
+const fallbackUnknownPidSession = fallbackPidContext.window.ObdReadOnly.normalizeFreezeFrameSnapshot({ values: [{ value: 85, unit: "C" }] });
+check(fallbackUnknownPidSession.monitorValues.length === 0, "Unidentified fallback PID data was misclassified as a known monitor");
 const scannerJsonStatusDtcSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     stored_dtcs: [{ dtc_code: "P0171", ecu_id: "7E8" }],
@@ -15334,6 +15352,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2620");
+  console.log("OBD read-only safety checks: 2623");
   console.log("Errors: 0");
 }
