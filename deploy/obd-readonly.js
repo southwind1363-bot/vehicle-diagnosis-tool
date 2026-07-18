@@ -14046,11 +14046,14 @@
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
     const freezeFrameNumberIndex = findIndex("freeze frame number", "frame number", "freeze_frame_number", "フリーズフレーム番号");
     const triggerDtcIndex = findIndex("trigger dtc", "freeze frame dtc", "trigger code", "trigger_dtc", "トリガーdtc");
+    const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id");
+    const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
     const unitIndex = findIndex("unit", "units", "単位");
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex)))) return null;
+    const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
@@ -14065,7 +14068,9 @@
     const dtcs = [];
     const monitorValues = [];
     const freezeFrameValues = [];
+    const readinessMonitors = [];
     let freezeFrameTriggerDtc = null;
+    let milOn = null;
     lines.slice(1, 5001).forEach((line) => {
       const cells = parseRow(line);
       if (!cells) return;
@@ -14074,6 +14079,15 @@
       const ecu = cellAt(ecuIndex, 120);
       const readoutKind = cellAt(readoutKindIndex, 80);
       const isFreezeFrameRow = Number.isInteger(readoutKindIndex) && /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
+      const isReadinessRow = Number.isInteger(readoutKindIndex) && /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
+      if (isReadinessRow) {
+        const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
+        const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
+        if (monitorId && readinessStatus) readinessMonitors.push({ id: monitorId, status: readinessStatus });
+        const milText = cellAt(milIndex, 40).toLowerCase();
+        if (milOn === null && ["on", "true", "1", "yes", "mil_on"].includes(milText)) milOn = true;
+        if (milOn === null && ["off", "false", "0", "no", "mil_off"].includes(milText)) milOn = false;
+      }
       if (dtc && extractDtcReferences(dtc).length) {
         dtcs.push({
           code: dtc,
@@ -14111,7 +14125,10 @@
     const freezeFrameSnapshot = freezeFrameValues.length
       ? normalizeFreezeFrameSnapshot({ source, values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
       : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot) return null;
+    const readinessSnapshot = readinessMonitors.length
+      ? normalizeReadinessSnapshot({ source, monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), readinessReadoutStatus: "reported" })
+      : null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
@@ -14124,12 +14141,14 @@
       bucketCounts: {
         dtcRows: dtcs.length,
         livePidRows: monitorValues.length,
-        freezeFrameRows: freezeFrameValues.length
+        freezeFrameRows: freezeFrameValues.length,
+        readinessRows: readinessMonitors.length
       },
       bucket_counts: {
         dtc_rows: dtcs.length,
         live_pid_rows: monitorValues.length,
-        freeze_frame_rows: freezeFrameValues.length
+        freeze_frame_rows: freezeFrameValues.length,
+        readiness_rows: readinessMonitors.length
       },
       sourceLength: text.length,
       source_length: text.length,
@@ -14149,6 +14168,7 @@
       dtcSnapshot: dtcSnapshot || undefined,
       livePidSnapshot: livePidSnapshot || undefined,
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
+      readinessSnapshot: readinessSnapshot || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
