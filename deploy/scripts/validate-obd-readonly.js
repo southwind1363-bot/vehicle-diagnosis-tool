@@ -1541,7 +1541,7 @@ const decodeObdDtcResponseFunctionChecks = () => {
     check(functionBody.includes('if (high === 0 && low === 0) continue;') && functionBody.includes('decodeDtcPair(high, low)'), "decodeObdDtcResponse should ignore zero padding and decode byte pairs");
     check(functionBody.includes('serviceByte === 0x47 ? "pending" : serviceByte === 0x4A ? "permanent" : "stored"'), "decodeObdDtcResponse should preserve stored, pending, and permanent DTC status");
     check(functionBody.includes('dtc_readout_status: "reported"'), "decodeObdDtcResponse should mark valid DTC service responses as reported");
-    check(functionBody.includes('dtcs: [...new Set(codes)].map((code) => ({ code, status }))'), "decodeObdDtcResponse should deduplicate decoded DTC codes");
+    check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(input);') && functionBody.includes('dtcs: [...new Set(codes)].map((code) => ({ code, status, ...(sourceEcu ? { ecu: sourceEcu } : {}) }))'), "decodeObdDtcResponse should deduplicate decoded DTC codes while retaining an explicit source ECU");
   }
 };
 const mergeDtcSnapshotsFunctionChecks = () => {
@@ -1680,7 +1680,7 @@ const scanSessionFromObdTextFunctionChecks = () => {
     check(functionBody.includes('const classified = classifyObdResponseLines(value);'), "buildScanSessionFromObdText should classify OBD response lines before decoding");
     check(functionBody.includes('const textDtcSnapshot = extractTextDtcSnapshot(value);'), "buildScanSessionFromObdText should preserve text-only DTC extraction");
     check(functionBody.includes('const firstOrEmpty = (bucketName) => (classified.responseBuckets[bucketName] || []).map((row) => {') && functionBody.includes('const getBucketSourceEcu = (bucketName) => {') && functionBody.includes('return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };'), "buildScanSessionFromObdText should preserve absent response buckets as unknown while retaining an unambiguous source ECU");
-    check(functionBody.includes('const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {') && functionBody.includes('storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses")') && functionBody.includes('ecuInfoResponse: readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs without fabricating absent DTC responses");
+    check(functionBody.includes('const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {') && functionBody.includes('const sourceEcu = getBucketSourceEcu(bucketName);') && functionBody.includes('storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses")') && functionBody.includes('ecuInfoResponse: readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses")'), "buildScanSessionFromObdText should map classified core response buckets into decoded session inputs without fabricating absent DTC responses");
     check(functionBody.includes('protocol: sessionInput.protocol || sessionInput.obd_protocol || null'), "buildScanSessionFromObdText should pass obd_protocol aliases into decoded response buckets");
     check(functionBody.includes('const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);'), "buildScanSessionFromObdText should merge decoded and text-extracted DTC snapshots");
     check(functionBody.includes('retainedRawText: false') && functionBody.includes('retainedRawFrames: false') && functionBody.includes('wouldTransmit: false') && functionBody.includes('vehicleCommandEnabled: false'), "buildScanSessionFromObdText should return read-only imports without retaining raw text or frames");
@@ -12066,6 +12066,10 @@ check(compactCanSession.livePidSnapshot.monitorValues.every((item) => item.sourc
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount === 2, "Compact CAN log did not keep ECU response count");
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.services.includes("41"), "Compact CAN log did not keep ECU service list");
 check(compactCanSession.wouldTransmit === false && compactCanSession.retainedRawFrames === false, "Compact CAN log import retained raw frames or allowed transmit");
+const rawDtcSourceSnapshot = obd.decodeObdDtcResponse({ raw: "43 01 71", source_ecu: "7E8" });
+check(rawDtcSourceSnapshot.dtcs.some((item) => item.code === "P0171" && item.ecu === "7E8"), "Raw DTC response did not retain an explicit source ECU");
+const compactDtcSourceSession = obd.buildScanSessionFromObdText("can0 7E8#03430171", { session_id: "compact-dtc-source", protocol: "ISO15765-4" });
+check(compactDtcSourceSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8" && item.status === "stored") && compactDtcSourceSession.vehicleCommandEnabled === false, "Compact CAN DTC log did not retain its source ECU safely");
 const rawEcuInfoSourceSnapshot = obd.decodeEcuInfoResponse({ raw: "49 04 01 43 41 4C", source_ecu: "7E8" });
 check(rawEcuInfoSourceSnapshot.items.find((item) => item.id === "calibration_id")?.sourceEcu === "7E8" && rawEcuInfoSourceSnapshot.items.find((item) => item.id === "calibration_id")?.source_ecu === "7E8", "Raw Mode 09 ECU information did not retain an explicit source ECU");
 const rawMode06SourceSnapshot = obd.decodeOnboardMonitorResponse({ raw: "46 01 01 00 64 00 32 00 C8", source_ecu: "7E8" });

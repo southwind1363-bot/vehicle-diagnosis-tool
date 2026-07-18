@@ -13247,6 +13247,7 @@
   function decodeObdDtcResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const hasResponseInput = hasObdResponseInput(input);
+    const sourceEcu = readObdResponseSourceEcu(input);
     const serviceByte = bytes.find((byte) => byte === 0x43 || byte === 0x47 || byte === 0x4A);
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
@@ -13272,7 +13273,7 @@
       protocol: input.protocol || input.obd_protocol || null,
       status,
       dtc_readout_status: "reported",
-      dtcs: [...new Set(codes)].map((code) => ({ code, status }))
+      dtcs: [...new Set(codes)].map((code) => ({ code, status, ...(sourceEcu ? { ecu: sourceEcu } : {}) }))
     });
   }
 
@@ -14057,7 +14058,8 @@
       const explicitResponse = sessionInput[camelKey] || sessionInput[snakeKey];
       if (explicitResponse) return explicitResponse;
       const raw = firstOrEmpty(bucketName);
-      return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+      const sourceEcu = getBucketSourceEcu(bucketName);
+      return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
