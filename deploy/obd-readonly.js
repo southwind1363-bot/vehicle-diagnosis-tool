@@ -14083,7 +14083,7 @@
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
-    const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(pidIndex);
+    const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(pidIndex) || Number.isInteger(valueIndex));
     const hasExplicitEcuResponseColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex);
     const hasExplicitDtcReadoutStatusColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(statusIndex);
     if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns) return null;
@@ -14192,8 +14192,11 @@
         });
         return;
       }
-      if (isSupportedPidRow && /^[0-9A-F]{2}$/.test(pid)) {
-        supportedPids.add(pid);
+      if (isSupportedPidRow) {
+        const pidTokens = [pid, ...(rawValue.match(/\b(?:0X)?[0-9A-F]{2}\b/gi) || [])]
+          .map((item) => String(item).replace(/^0X/i, "").toUpperCase())
+          .filter((item) => /^[0-9A-F]{2}$/.test(item));
+        pidTokens.forEach((item) => supportedPids.add(item));
         return;
       }
       if (isOnboardMonitorRow && mode06TestId && mode06ComponentId && Number.isFinite(Number(rawValue))) {
