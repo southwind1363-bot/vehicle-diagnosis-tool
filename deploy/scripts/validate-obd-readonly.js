@@ -2442,7 +2442,7 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-guided-d
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-guided-diagnostics" && item.done.includes("selected vehicle label retained across analysis summaries")), "診断支援ワークフローの車両ラベル保持進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.current_basis.includes("ブリッジDTC統合あり")), "汎用OBD2 DTCのブリッジ統合根拠が不足しています");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012-current-2025-09" && item.source_url.includes("j2012_202509") && item.last_verified_date === "2026-07-18"), "最新SAE J2012出典が不足しています");
-check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2025-10" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "現行J1979デジタル付属資料の利用制約が不足しています");
+check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "現行J1979デジタル付属資料の利用制約が不足しています");
 check(officialReferenceNotes.some((item) => item.id === "official-mlit-current-vehicle-obd-information-2026-07" && item.note_type === "compatibility_scope" && item.service_manual_required === true), "現行車OBD情報の公式適用範囲が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.current_basis.includes("貼り付け解析入口")), "メーカー固有DTCの貼り付け解析入口が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.done.includes("Techstream等の読取結果貼り付けを先行解析する方針")), "メーカー固有DTCの貼り付け解析方針が不足しています");
@@ -2587,9 +2587,9 @@ check(appSource.includes('const registration = await navigator.serviceWorker.reg
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('const APP_VERSION = "2.984.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for DTC metadata summaries");
 check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.984.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.984.0", "OBD offline cache version should match the active app version");
-check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2025-10" && item.title.includes("J1979DA_202510") && item.source_url.includes("j1979da_202510") && item.source_date === "2025-10-20" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
+check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
-check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID source references are not aligned with the current J1979DA edition");
+check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(indexSource.includes('id="obdImportFileInput" type="file" accept="application/json,text/csv,text/plain,.json,.csv,.txt"') && appSource.includes('const obdImportFileInput = document.querySelector("#obdImportFileInput");') && appSource.includes('obdImportFileInput?.addEventListener("change", importObdScannerFile);'), "OBD scanner import should offer a local JSON, CSV, or text file picker");
@@ -15152,6 +15152,17 @@ const detailedDtcMetadataSnapshot = obd.normalizeDtcSnapshot({
 });
 const detailedDtcMetadataRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: detailedDtcMetadataSnapshot });
 check(detailedDtcMetadataSnapshot.dtcMetadataSummary?.totalCount === 3 && detailedDtcMetadataSnapshot.dtcMetadataSummary?.statusByteCount === 2 && detailedDtcMetadataSnapshot.dtcMetadataSummary?.severityCount === 2 && detailedDtcMetadataSnapshot.dtcMetadataSummary?.occurrenceCount === 2 && detailedDtcMetadataRoundTrip.dtcSnapshot?.dtc_metadata_summary?.occurrence_count === 2 && detailedDtcMetadataRoundTrip.vehicleCommandEnabled === false, "DTC metadata coverage was not retained through the read-only session contract");
+const mergedDtcMetadataSnapshot = obd.mergeDtcSnapshots(
+  obd.normalizeDtcSnapshot({
+    dtc_status_availability_mask: "0xA5",
+    dtcs: [{ dtc_code: "P0300", status_byte: "2F", severity: "critical", occurrence_count: 0 }]
+  }),
+  obd.normalizeDtcSnapshot({
+    dtc_status_availability_mask: "0x5A",
+    dtcs: [{ dtc_code: "P0171", severity: "warning", occurrence_count: 7, status: "pending" }]
+  })
+);
+check(mergedDtcMetadataSnapshot.dtcMetadataSummary?.totalCount === 2 && mergedDtcMetadataSnapshot.dtc_metadata_summary?.status_byte_count === 1 && mergedDtcMetadataSnapshot.dtcMetadataSummary?.severityCount === 2 && mergedDtcMetadataSnapshot.dtcMetadataSummary?.occurrenceCount === 2 && mergedDtcMetadataSnapshot.dtcMetadataSummary?.statusAvailabilityMaskCaptured === true && mergedDtcMetadataSnapshot.dtc_metadata_summary?.status_availability_mask_count === 2 && mergedDtcMetadataSnapshot.dtcStatusAvailabilityMask === null && Array.isArray(mergedDtcMetadataSnapshot.dtc_status_availability_masks) && mergedDtcMetadataSnapshot.dtc_status_availability_masks.length === 2 && mergedDtcMetadataSnapshot.vehicleCommandEnabled !== true, "Merged DTC snapshots did not retain reported metadata coverage without choosing an ambiguous status mask");
 const severityDtcSnapshot = obd.normalizeDtcSnapshot({
   dtcs: [
     { dtc_code: "P0300", dtc_severity: 3 },

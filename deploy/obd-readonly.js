@@ -12223,13 +12223,23 @@
     };
   }
 
-  function buildDtcMetadataSummary({ dtcs = [], statusAvailabilityMask = null } = {}) {
+  function buildDtcMetadataSummary({
+    dtcs = [],
+    statusAvailabilityMask = null,
+    statusAvailabilityMaskCaptured = null,
+    statusAvailabilityMaskCount = null
+  } = {}) {
     const rows = Array.isArray(dtcs) ? dtcs : [];
     const statusByteCount = rows.filter((row) => normalizeDtcStatusByte(row?.statusByte || row?.status_byte) !== null).length;
     const severityCount = rows.filter((row) => String(row?.severity || row?.dtc_severity || "").trim().length > 0).length;
     const occurrenceCount = rows.filter((row) => Number.isInteger(row?.occurrenceCount ?? row?.occurrence_count)).length;
     const totalCount = rows.length;
-    const statusAvailabilityMaskCaptured = normalizeDtcStatusByte(statusAvailabilityMask) !== null;
+    const normalizedStatusAvailabilityMaskCaptured = typeof statusAvailabilityMaskCaptured === "boolean"
+      ? statusAvailabilityMaskCaptured
+      : normalizeDtcStatusByte(statusAvailabilityMask) !== null;
+    const normalizedStatusAvailabilityMaskCount = Number.isInteger(statusAvailabilityMaskCount)
+      ? Math.max(0, statusAvailabilityMaskCount)
+      : normalizedStatusAvailabilityMaskCaptured ? 1 : 0;
     return {
       schemaVersion: "dtc_metadata_summary_v1",
       schema_version: "dtc_metadata_summary_v1",
@@ -12241,8 +12251,10 @@
       severity_count: severityCount,
       occurrenceCount,
       occurrence_count: occurrenceCount,
-      statusAvailabilityMaskCaptured,
-      status_availability_mask_captured: statusAvailabilityMaskCaptured,
+      statusAvailabilityMaskCaptured: normalizedStatusAvailabilityMaskCaptured,
+      status_availability_mask_captured: normalizedStatusAvailabilityMaskCaptured,
+      statusAvailabilityMaskCount: normalizedStatusAvailabilityMaskCount,
+      status_availability_mask_count: normalizedStatusAvailabilityMaskCount,
       retainedRawText: false,
       retained_raw_text: false,
       vehicleCommandEnabled: false,
@@ -13186,6 +13198,19 @@
         : childReadoutStatuses.includes("reported")
           ? "reported"
           : "unknown";
+    const dtcStatusAvailabilityMasks = [...new Set(
+      snapshots
+        .map((snapshot) => snapshot?.dtcStatusAvailabilityMask || snapshot?.dtc_status_availability_mask || null)
+        .map((value) => normalizeDtcStatusByte(value))
+        .filter((value) => value !== null)
+    )];
+    const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
+    const dtcMetadataSummary = buildDtcMetadataSummary({
+      dtcs: mergedRows,
+      statusAvailabilityMask: dtcStatusAvailabilityMask,
+      statusAvailabilityMaskCaptured: dtcStatusAvailabilityMasks.length > 0,
+      statusAvailabilityMaskCount: dtcStatusAvailabilityMasks.length
+    });
     return {
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
@@ -13212,6 +13237,12 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      dtcStatusAvailabilityMask,
+      dtc_status_availability_mask: dtcStatusAvailabilityMask,
+      dtcStatusAvailabilityMasks,
+      dtc_status_availability_masks: dtcStatusAvailabilityMasks,
+      dtcMetadataSummary,
+      dtc_metadata_summary: dtcMetadataSummary,
       retainedRawText: false
     };
   }
