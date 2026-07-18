@@ -14000,6 +14000,9 @@
     const statusIndex = findIndex("status", "dtc status", "state", "状態");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
+    const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
+    const freezeFrameNumberIndex = findIndex("freeze frame number", "frame number", "freeze_frame_number", "フリーズフレーム番号");
+    const triggerDtcIndex = findIndex("trigger dtc", "freeze frame dtc", "trigger code", "trigger_dtc", "トリガーdtc");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
@@ -14018,12 +14021,16 @@
     const sensitiveLabel = (label) => /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(label);
     const dtcs = [];
     const monitorValues = [];
+    const freezeFrameValues = [];
+    let freezeFrameTriggerDtc = null;
     lines.slice(1, 5001).forEach((line) => {
       const cells = parseRow(line);
       if (!cells) return;
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
       const dtc = cellAt(dtcIndex, 48);
       const ecu = cellAt(ecuIndex, 120);
+      const readoutKind = cellAt(readoutKindIndex, 80);
+      const isFreezeFrameRow = Number.isInteger(readoutKindIndex) && /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
       if (dtc && extractDtcReferences(dtc).length) {
         dtcs.push({
           code: dtc,
@@ -14037,23 +14044,38 @@
       const rawValue = cellAt(valueIndex, 160);
       if (!rawValue || sensitiveLabel(label)) return;
       if (pid || label) {
-        monitorValues.push({
+        const frameNumberText = cellAt(freezeFrameNumberIndex, 12);
+        const frameNumber = frameNumberText ? Number(frameNumberText) : null;
+        const row = {
           ...(pid ? { pid } : {}),
           ...(label ? { label } : {}),
           value: rawValue,
-          unit: cellAt(unitIndex, 40)
-        });
+          unit: cellAt(unitIndex, 40),
+          ...(Number.isInteger(frameNumber) && frameNumber >= 0 && frameNumber <= 255 ? { freeze_frame_number: frameNumber } : {})
+        };
+        if (isFreezeFrameRow) {
+          freezeFrameValues.push(row);
+          if (!freezeFrameTriggerDtc) {
+            freezeFrameTriggerDtc = extractDtcReferences(cellAt(triggerDtcIndex, 48) || dtc)[0]?.code || null;
+          }
+        } else {
+          monitorValues.push(row);
+        }
       }
     });
     const dtcSnapshot = dtcs.length ? normalizeDtcSnapshot({ source, dtcs }) : null;
     const livePidSnapshot = monitorValues.length ? { ...normalizeBridgeLivePidSnapshot({ source, values: monitorValues }), source } : null;
-    if (!dtcSnapshot && !livePidSnapshot) return null;
+    const freezeFrameSnapshot = freezeFrameValues.length
+      ? normalizeFreezeFrameSnapshot({ source, values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
+      : null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot) return null;
     const sessionInput = getDiagnosticSessionInput(options);
     const output = buildDiagnosticScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "scanner-csv-import",
       source,
       dtcSnapshot: dtcSnapshot || undefined,
-      livePidSnapshot: livePidSnapshot || undefined
+      livePidSnapshot: livePidSnapshot || undefined,
+      freezeFrameSnapshot: freezeFrameSnapshot || undefined
     });
     return {
       ...output,
