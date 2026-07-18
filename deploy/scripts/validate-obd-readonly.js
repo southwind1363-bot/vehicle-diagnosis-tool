@@ -1356,6 +1356,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('stored_count: storedCount') && functionBody.includes('pending_count: pendingCount') && functionBody.includes('permanent_count: permanentCount'), "normalizeDtcSnapshot should expose snake_case DTC status counts");
     check(functionBody.includes('unknown_count: unknownCount') && functionBody.includes('retained_raw_text: false'), "normalizeDtcSnapshot should expose snake_case unknown count and raw retention aliases");
     check(functionBody.includes('const dtcStatusSummary = buildDtcStatusSummary({') && functionBody.includes('reportedStatuses: [') && functionBody.includes('dtc_status_summary: dtcStatusSummary'), "normalizeDtcSnapshot should expose DTC readout status summaries without changing DTC rows");
+    check(functionBody.includes('const dtcMetadataSummary = buildDtcMetadataSummary({') && functionBody.includes('dtc_metadata_summary: dtcMetadataSummary'), "normalizeDtcSnapshot should summarize reported DTC metadata without changing diagnostic meaning");
   }
 };
 const freezeFrameSnapshotFunctionChecks = () => {
@@ -2584,8 +2585,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加"'), "OBD core progress should describe the latest completed import milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.983.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for DTC status availability mask intake");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.983.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.983.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.984.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for DTC metadata summaries");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.984.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.984.0", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2025-10" && item.title.includes("J1979DA_202510") && item.source_url.includes("j1979da_202510") && item.source_date === "2025-10-20" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID source references are not aligned with the current J1979DA edition");
@@ -2605,6 +2606,7 @@ check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionTy
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
 check(appSource.includes('const dtcStatusAvailabilityMask = dtcSnapshot?.dtcStatusAvailabilityMask || dtcSnapshot?.dtc_status_availability_mask || null;') && appSource.includes('DTC状態ビット可用マスク'), "OBD session summary should display a reported DTC status availability mask without inferring its meaning");
+check(appSource.includes('const dtcMetadataSummary = dtcSnapshot?.dtcMetadataSummary || dtcSnapshot?.dtc_metadata_summary || null;') && appSource.includes('DTC詳細報告値') && appSource.includes('mask ${dtcMetadataSummary?.statusAvailabilityMaskCaptured === true'), "OBD session summary should show only reported DTC metadata coverage");
 check(appSource.includes('function formatObdReadoutStatus(status = null, fallback = NO_DATA)') && appSource.includes('unparsed: "応答未解析"') && appSource.includes('blocked: "読取拒否"'), "OBD UI should format structured readout states without treating them as empty");
 check(appSource.includes('const livePidReadoutStatusLabel = formatObdReadoutStatus') && appSource.includes('const ecuInfoReadoutStatusLabel = formatObdReadoutStatus') && appSource.includes('const freezeFrameReadoutStatusLabel = formatObdReadoutStatus') && appSource.includes('const readinessReadoutStatusLabel = formatObdReadoutStatus') && appSource.includes('const onboardMonitorReadoutStatusLabel = formatObdReadoutStatus') && appSource.includes('const supportedPidReadoutStatusLabel = formatObdReadoutStatus'), "OBD session summary should retain structured readout status aliases");
 check(appSource.includes('["ライブ値読取状態", livePidReadoutStatusLabel]') && appSource.includes('["ECU情報状態", ecuInfoReadoutStatusLabel]') && appSource.includes('["FF読取状態", freezeFrameReadoutStatusLabel]') && appSource.includes('["レディネス読取状態", readinessReadoutStatusLabel]') && appSource.includes('["Mode06読取状態", onboardMonitorReadoutStatusLabel]') && appSource.includes('["対応PID読取状態", supportedPidReadoutStatusLabel]'), "OBD session summary should show all completed core readout statuses");
@@ -15132,7 +15134,7 @@ const statusAvailabilityMaskDtcSnapshot = obd.normalizeDtcSnapshot({
   dtc_status_availability_mask: 165,
   dtcs: [{ dtc_code: "P0300", status: "stored" }]
 });
-check(statusAvailabilityMaskDtcSnapshot.dtcStatusAvailabilityMask === "A5" && statusAvailabilityMaskDtcSnapshot.dtc_status_availability_mask === "A5", "DTC status availability mask was not retained without inferring its meaning");
+check(statusAvailabilityMaskDtcSnapshot.dtcStatusAvailabilityMask === "A5" && statusAvailabilityMaskDtcSnapshot.dtc_status_availability_mask === "A5" && statusAvailabilityMaskDtcSnapshot.dtcMetadataSummary?.statusAvailabilityMaskCaptured === true && statusAvailabilityMaskDtcSnapshot.dtc_metadata_summary?.total_count === 1, "DTC status availability mask was not retained without inferring its meaning");
 const statusAvailabilityMaskBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
@@ -15140,7 +15142,16 @@ const statusAvailabilityMaskBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
   data: { dtcStatusAvailabilityMask: "0x5A", dtcs: [{ dtc_code: "C0051" }] }
 });
 const statusAvailabilityMaskRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: statusAvailabilityMaskBridgeSnapshot });
-check(statusAvailabilityMaskBridgeSnapshot.dtc_status_availability_mask === "5A" && statusAvailabilityMaskRoundTrip.dtcSnapshot?.dtcStatusAvailabilityMask === "5A" && statusAvailabilityMaskRoundTrip.vehicleCommandEnabled === false, "Bridge DTC status availability mask was not preserved through read-only session normalization");
+check(statusAvailabilityMaskBridgeSnapshot.dtc_status_availability_mask === "5A" && statusAvailabilityMaskBridgeSnapshot.dtcMetadataSummary?.statusAvailabilityMaskCaptured === true && statusAvailabilityMaskRoundTrip.dtcSnapshot?.dtcStatusAvailabilityMask === "5A" && statusAvailabilityMaskRoundTrip.dtcSnapshot?.dtc_metadata_summary?.status_availability_mask_captured === true && statusAvailabilityMaskRoundTrip.vehicleCommandEnabled === false, "Bridge DTC status availability mask was not preserved through read-only session normalization");
+const detailedDtcMetadataSnapshot = obd.normalizeDtcSnapshot({
+  dtcs: [
+    { dtc_code: "P0300", status_byte: "0x2F", dtc_severity: 3, occurrence_count: 0 },
+    { dtc_code: "P0171", severity: "critical", occurrence_counter: 7, status: "pending" },
+    { dtc_code: "U0100", dtc_status_byte: 128, status: "stored" }
+  ]
+});
+const detailedDtcMetadataRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: detailedDtcMetadataSnapshot });
+check(detailedDtcMetadataSnapshot.dtcMetadataSummary?.totalCount === 3 && detailedDtcMetadataSnapshot.dtcMetadataSummary?.statusByteCount === 2 && detailedDtcMetadataSnapshot.dtcMetadataSummary?.severityCount === 2 && detailedDtcMetadataSnapshot.dtcMetadataSummary?.occurrenceCount === 2 && detailedDtcMetadataRoundTrip.dtcSnapshot?.dtc_metadata_summary?.occurrence_count === 2 && detailedDtcMetadataRoundTrip.vehicleCommandEnabled === false, "DTC metadata coverage was not retained through the read-only session contract");
 const severityDtcSnapshot = obd.normalizeDtcSnapshot({
   dtcs: [
     { dtc_code: "P0300", dtc_severity: 3 },

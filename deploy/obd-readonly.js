@@ -1083,6 +1083,10 @@
     });
     const dtcReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
     const dtcStatusAvailabilityMask = readDtcStatusAvailabilityMaskAlias(data);
+    const dtcMetadataSummary = buildDtcMetadataSummary({
+      dtcs: normalizedDtcs,
+      statusAvailabilityMask: dtcStatusAvailabilityMask
+    });
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -1111,6 +1115,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
+      dtcMetadataSummary,
+      dtc_metadata_summary: dtcMetadataSummary,
       protocol: readBridgeProtocol(data),
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
@@ -12217,6 +12223,33 @@
     };
   }
 
+  function buildDtcMetadataSummary({ dtcs = [], statusAvailabilityMask = null } = {}) {
+    const rows = Array.isArray(dtcs) ? dtcs : [];
+    const statusByteCount = rows.filter((row) => normalizeDtcStatusByte(row?.statusByte || row?.status_byte) !== null).length;
+    const severityCount = rows.filter((row) => String(row?.severity || row?.dtc_severity || "").trim().length > 0).length;
+    const occurrenceCount = rows.filter((row) => Number.isInteger(row?.occurrenceCount ?? row?.occurrence_count)).length;
+    const totalCount = rows.length;
+    const statusAvailabilityMaskCaptured = normalizeDtcStatusByte(statusAvailabilityMask) !== null;
+    return {
+      schemaVersion: "dtc_metadata_summary_v1",
+      schema_version: "dtc_metadata_summary_v1",
+      totalCount,
+      total_count: totalCount,
+      statusByteCount,
+      status_byte_count: statusByteCount,
+      severityCount,
+      severity_count: severityCount,
+      occurrenceCount,
+      occurrence_count: occurrenceCount,
+      statusAvailabilityMaskCaptured,
+      status_availability_mask_captured: statusAvailabilityMaskCaptured,
+      retainedRawText: false,
+      retained_raw_text: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function normalizeDtcSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
@@ -12316,6 +12349,10 @@
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
     const dtcStatusAvailabilityMask = readDtcStatusAvailabilityMaskAlias(sourceInput);
+    const dtcMetadataSummary = buildDtcMetadataSummary({
+      dtcs: normalizedDtcs,
+      statusAvailabilityMask: dtcStatusAvailabilityMask
+    });
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -12344,6 +12381,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
+      dtcMetadataSummary,
+      dtc_metadata_summary: dtcMetadataSummary,
       retainedRawText: false,
       retained_raw_text: false
     };
