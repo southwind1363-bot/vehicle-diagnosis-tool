@@ -13918,6 +13918,10 @@
     const sessionInput = getDiagnosticSessionInput(options);
     const scannerJsonSource = "scanner_json_import";
     const scannerJsonProtocol = String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null;
+    const scannerJsonReadoutInterfaceInput = pick("readoutInterface", "readout_interface");
+    const scannerJsonReadoutInterface = scannerJsonReadoutInterfaceInput && typeof scannerJsonReadoutInterfaceInput === "object" && !Array.isArray(scannerJsonReadoutInterfaceInput)
+      ? normalizeReadoutInterfaceSnapshot(scannerJsonReadoutInterfaceInput)
+      : null;
     const scannerJsonVehicleProfileInput = getVehicleProfileInput(input);
     const scannerJsonVehicleApplicabilityInput = getVehicleApplicabilityInput(input);
     const scannerJsonVehicleBasis = scannerJsonVehicleApplicabilityInput || scannerJsonVehicleProfileInput;
@@ -14085,6 +14089,7 @@
       ecuResponseSummary: ecuResponseSummary || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
+      readoutInterface: scannerJsonReadoutInterface || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
