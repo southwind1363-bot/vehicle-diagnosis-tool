@@ -14061,6 +14061,7 @@
     const unitIndex = findIndex("unit", "units", "単位");
     const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time");
     const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol");
+    const observationConditionIndex = findIndex("observation condition", "observation_condition", "measurement condition", "condition");
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
@@ -14075,6 +14076,10 @@
       if (/(?:permanent|恒久)/.test(normalized)) return "permanent";
       if (/(?:stored|current|confirmed|active|history|保存|現在|確定)/.test(normalized)) return "stored";
       return "unknown";
+    };
+    const normalizeObservationCondition = (cell) => {
+      const normalized = sanitizeCell(cell, 40).toLowerCase().replace(/[\s\-]+/g, "_");
+      return ["cold", "warm", "symptom_reproduced"].includes(normalized) ? normalized : "unspecified";
     };
     const hasFreezeFrame = (cell) => /^(?:1|true|yes|available|あり|有)$/i.test(sanitizeCell(cell, 40));
     const sensitiveLabel = (label) => /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(label);
@@ -14097,6 +14102,7 @@
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
       const rowCapturedAt = cellAt(capturedAtIndex, 80) || null;
       const rowProtocol = cellAt(protocolIndex, 80) || null;
+      const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!capturedAt) capturedAt = rowCapturedAt;
       if (!protocol) protocol = rowProtocol;
       const dtc = cellAt(dtcIndex, 48);
@@ -14178,7 +14184,7 @@
         } else {
           monitorValues.push(row);
           if (rowCapturedAt) {
-            const sample = livePidSamplesByCapturedAt.get(rowCapturedAt) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, values: [] };
+            const sample = livePidSamplesByCapturedAt.get(rowCapturedAt) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, observationCondition: rowObservationCondition, values: [] };
             sample.values.push(row);
             livePidSamplesByCapturedAt.set(rowCapturedAt, sample);
           }
@@ -14192,6 +14198,7 @@
         samples: [...livePidSamplesByCapturedAt.values()].map((sample) => ({
           captured_at: sample.capturedAt,
           protocol: sample.protocol,
+          observation_condition: sample.observationCondition,
           live_pid_snapshot: normalizeBridgeLivePidSnapshot({ source, captured_at: sample.capturedAt, protocol: sample.protocol, values: sample.values })
         }))
       })
