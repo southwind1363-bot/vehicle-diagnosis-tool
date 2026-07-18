@@ -14140,6 +14140,7 @@
     const onboardMonitorRows = [];
     const supportedPids = new Set();
     const ecuResponseRows = [];
+    const observedProtocols = new Set();
     const readoutMetadataById = new Map();
     const recordReadoutMetadata = (id, rowCapturedAt, rowProtocol) => {
       const current = readoutMetadataById.get(id) || { capturedAt: null, capturedAtMilliseconds: null, protocol: null };
@@ -14174,6 +14175,7 @@
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
       const rowCapturedAt = cellAt(capturedAtIndex, 80) || null;
       const rowProtocol = cellAt(protocolIndex, 80) || null;
+      if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!capturedAt) capturedAt = rowCapturedAt;
       const rowCapturedAtMilliseconds = /^\d{4}-\d{2}-\d{2}T/.test(rowCapturedAt || "") ? Date.parse(rowCapturedAt) : Number.NaN;
@@ -14354,6 +14356,8 @@
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
     if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
+    const observedProtocolList = [...observedProtocols];
+    const multipleProtocols = observedProtocolList.length > 1;
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
       schema_version: "scanner_csv_import_v1",
@@ -14395,6 +14399,10 @@
       capturedAt,
       captured_at: capturedAt,
       protocol,
+      observedProtocols: observedProtocolList,
+      observed_protocols: observedProtocolList,
+      multipleProtocols,
+      multiple_protocols: multipleProtocols,
       hadSensitiveIdentifier,
       had_sensitive_identifier: hadSensitiveIdentifier,
       retainedRawText: false,
