@@ -1691,7 +1691,7 @@ const textDtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('const resolveHeadingStatus = (text) => {') && functionBody.includes('保留') && functionBody.includes('永久'), "extractTextDtcSnapshot should recognize explicit English and Japanese DTC headings");
     check(functionBody.includes('if (headingStatus) currentStatus = headingStatus;'), "extractTextDtcSnapshot should apply only explicit heading statuses");
     check(functionBody.includes('if (!headingStatus) currentStatus = "unknown";'), "extractTextDtcSnapshot should prevent a DTC heading status from leaking into another section");
-    check(functionBody.includes('const codes = extractDtcReferences(text);') && functionBody.includes('codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: currentStatus }));'), "extractTextDtcSnapshot should attach current heading status to extracted DTC codes and subcodes");
+    check(functionBody.includes('const resolveEcuHeading = (text) => {') && functionBody.includes('if (!match || extractDtcReferences(text).length) return null;') && functionBody.includes('const codes = extractDtcReferences(text);') && functionBody.includes('codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: currentStatus, ecu: currentEcu }));'), "extractTextDtcSnapshot should attach only explicit ECU headings to extracted DTC codes");
     check(functionBody.includes('source: "obd_text_status_headings"') && functionBody.includes('dtcs: rows'), "extractTextDtcSnapshot should normalize text-only DTC rows with an explicit source");
   }
 };
@@ -2576,8 +2576,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.905.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for ECU-scoped DTC retention");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.905.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.905.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.906.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner-text ECU retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.906.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.906.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
@@ -15023,11 +15023,21 @@ const ecuScopedDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
 const ecuScopedRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: ecuScopedDtcSnapshot });
 check(ecuScopedDtcSnapshot.codeCount === 1 && ecuScopedDtcSnapshot.dtcCount === 2 && ecuScopedDtcSnapshot.dtcs.some((item) => item.ecu === "7E8" && item.freezeFrameAvailable === true) && ecuScopedDtcSnapshot.dtcs.some((item) => item.ecu === "7E9"), "Bridge DTC normalization did not preserve ECU-scoped DTC rows");
 check(ecuScopedRoundTrip.dtcSnapshot?.dtcs?.length === 2 && ecuScopedRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.ecu === "7E8") && ecuScopedRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.ecu === "7E9"), "ECU-scoped DTC rows did not survive diagnostic session normalization");
+const textEcuDtcSession = obd.buildScanSessionFromObdText([
+  "ECU: Engine Control Module",
+  "Stored DTC",
+  "P0171",
+  "Module: ABS",
+  "Pending DTC",
+  "C0031"
+].join("\n"), { session_id: "text-ecu-dtc-session" });
+check(textEcuDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored" && item.ecu === "Engine Control Module") && textEcuDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "C0031" && item.status === "pending" && item.ecu === "ABS"), "Scanner text import did not preserve explicit ECU headings for DTC rows");
+check(textEcuDtcSession.vehicleCommandEnabled === false && textEcuDtcSession.retainedRawText === false, "ECU-scoped scanner text import did not remain read-only or safe to retain");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2596");
+  console.log("OBD read-only safety checks: 2598");
   console.log("Errors: 0");
 }

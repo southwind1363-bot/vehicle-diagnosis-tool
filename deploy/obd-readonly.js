@@ -13850,6 +13850,7 @@
     const lines = String(value || "").split(/\r?\n/);
     const rows = [];
     let currentStatus = "unknown";
+    let currentEcu = null;
     const resolveHeadingStatus = (text) => {
       const normalized = String(text || "").toLowerCase();
       if (/\b(?:pending|tentative)\b|保留/.test(normalized)) return "pending";
@@ -13857,9 +13858,21 @@
       if (/\b(?:current|stored|confirmed|history|active)\b|(?:保存|現在|確定|履歴)\s*(?:dtc|コード|故障)/.test(normalized)) return "stored";
       return null;
     };
+    const resolveEcuHeading = (text) => {
+      const match = String(text || "").match(/^(?:ECU|MODULE|CONTROL\s+MODULE|SYSTEM|\u30e6\u30cb\u30c3\u30c8)\s*(?:NAME\s*)?[:\uff1a]\s*(.+)$/i);
+      if (!match || extractDtcReferences(text).length) return null;
+      const label = redactSensitiveText(match[1]).replace(/\s+/g, " ").trim().slice(0, 120);
+      return label || null;
+    };
     lines.forEach((line) => {
       const text = String(line || "").trim();
       if (!text) return;
+      const ecuHeading = resolveEcuHeading(text);
+      if (ecuHeading) {
+        currentEcu = ecuHeading;
+        currentStatus = "unknown";
+        return;
+      }
       const codes = extractDtcReferences(text);
       const headingStatus = resolveHeadingStatus(text);
       if (headingStatus) currentStatus = headingStatus;
@@ -13867,7 +13880,7 @@
         if (!headingStatus) currentStatus = "unknown";
         return;
       }
-      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: currentStatus }));
+      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: currentStatus, ecu: currentEcu }));
     });
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
