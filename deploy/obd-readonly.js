@@ -13281,8 +13281,16 @@
     const rows = snapshots
       .filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))
       .flatMap((snapshot) => snapshot.dtcs.map((row) => ({ ...row, source: row.source || snapshot.source || "diagnostic_core" })));
+    const typedCodeKeys = new Set(rows
+      .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
+      .map((row) => `${row.code || ""}::${row.subcode || row.sub_code || ""}`));
+    const normalizedRows = rows.filter((row) => {
+      const status = String(row.status || "unknown").trim().toLowerCase();
+      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}`;
+      return !["", "unknown"].includes(status) || !typedCodeKeys.has(key);
+    });
     const byCodeAndStatus = new Map();
-    rows.forEach((row) => {
+    normalizedRows.forEach((row) => {
       const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || ""}::${row.status || "unknown"}`;
       if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
     });
@@ -14031,7 +14039,7 @@
     const toolHints = detectScannerToolHints(value);
     const textDtcSnapshot = extractTextDtcSnapshot(value);
     const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
-    const firstOrEmpty = (bucketName) => (classified.responseBuckets[bucketName] || []).map((row) => {
+    const normalizeBucketResponse = (row) => {
       const response = String(row?.response || "").trim();
       const bytes = response.match(/[0-9A-F]{2}/gi) || [];
       const frameLength = Number(row?.frameLength);
@@ -14040,7 +14048,8 @@
         return bytes.slice(1, frameLength + 1).join(" ");
       }
       return response;
-    }).filter(Boolean).join(" ");
+    };
+    const firstOrEmpty = (bucketName) => (classified.responseBuckets[bucketName] || []).map(normalizeBucketResponse).filter(Boolean).join(" ");
     const getBucketSourceEcu = (bucketName) => {
       const ecus = [...new Set((classified.responseBuckets[bucketName] || [])
         .map((row) => String(row?.ecu || row?.address || "").trim())
@@ -14057,6 +14066,14 @@
     const readDtcResponseOption = (camelKey, snakeKey, bucketName) => {
       const explicitResponse = sessionInput[camelKey] || sessionInput[snakeKey];
       if (explicitResponse) return explicitResponse;
+      const rows = classified.responseBuckets[bucketName] || [];
+      if (rows.length > 1) {
+        return mergeDtcSnapshots(...rows.map((row) => decodeObdDtcResponse({
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        })));
+      }
       const raw = firstOrEmpty(bucketName);
       const sourceEcu = getBucketSourceEcu(bucketName);
       return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
