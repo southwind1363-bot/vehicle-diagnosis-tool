@@ -1418,12 +1418,14 @@
     const latestSample = samples.at(-1) || null;
     const previousSample = samples.length > 1 ? samples.at(-2) : null;
     const observationConditionMatches = Boolean(previousSample && latestSample && previousSample.observationCondition === latestSample.observationCondition);
+    const capturedAtDiffers = Boolean(previousSample && latestSample && previousSample.capturedAt !== latestSample.capturedAt);
+    const comparisonAvailable = observationConditionMatches && capturedAtDiffers;
     const previousValuesById = new Map(
       (previousSample?.monitorValues || [])
         .filter((item) => item?.id && Number.isFinite(item?.value))
         .map((item) => [item.id, item])
     );
-    const changes = (observationConditionMatches ? latestSample?.monitorValues || [] : [])
+    const changes = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
       .filter((item) => item?.id && Number.isFinite(item?.value) && previousValuesById.has(item.id))
       .map((item) => {
         const previous = previousValuesById.get(item.id);
@@ -1450,10 +1452,12 @@
       schema_version: "live_pid_timeline_summary_v1",
       sampleCount: timeline.sampleCount,
       sample_count: timeline.sampleCount,
-      comparisonAvailable: observationConditionMatches,
-      comparison_available: observationConditionMatches,
+      comparisonAvailable,
+      comparison_available: comparisonAvailable,
       comparisonBlockedByCondition: Boolean(previousSample && latestSample && !observationConditionMatches),
       comparison_blocked_by_condition: Boolean(previousSample && latestSample && !observationConditionMatches),
+      comparisonBlockedByTimestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
+      comparison_blocked_by_timestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
       previousObservationCondition: previousSample?.observationCondition || null,
       previous_observation_condition: previousSample?.observationCondition || null,
       latestObservationCondition: latestSample?.observationCondition || null,
@@ -14246,7 +14250,7 @@
         } else {
           monitorValues.push(row);
           if (rowCapturedAt) {
-            const sampleKey = `${rowCapturedAt}::${rowObservationCondition}`;
+            const sampleKey = `${rowCapturedAt}::${rowObservationCondition}::${rowProtocol || protocol || ""}`;
             const sample = livePidSamplesByCapturedAt.get(sampleKey) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, observationCondition: rowObservationCondition, values: [] };
             sample.values.push(row);
             livePidSamplesByCapturedAt.set(sampleKey, sample);
