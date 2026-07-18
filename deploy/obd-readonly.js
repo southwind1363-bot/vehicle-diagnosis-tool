@@ -1028,8 +1028,8 @@
         ? data.intent
         : "read_stored_dtc";
     const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";
-    const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null) => rows.flatMap((row) => {
-      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu }));
+    const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) => rows.flatMap((row) => {
+      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName }));
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       return extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "").map(({ code, subcode }) => ({
@@ -1037,14 +1037,16 @@
         subcode: rowValue.subcode || rowValue.sub_code || subcode || null,
         status: row.status || row.kind || rowValue.status || rowValue.kind || fallbackStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
+        ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
       }));
     });
     const ecuDtcRows = ecuRows.flatMap((ecuRow) => {
       const rows = Array.isArray(ecuRow?.dtcs) ? ecuRow.dtcs : Array.isArray(ecuRow?.dtc_codes) ? ecuRow.dtc_codes : Array.isArray(ecuRow?.dtcCodes) ? ecuRow.dtcCodes : [];
       const ecu = ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
+      const ecuName = ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.name || ecuRow?.label || ecuRow?.display_name || ecuRow?.displayName || null;
       const status = ecuRow?.dtc_status || ecuRow?.dtcStatus || ecuRow?.dtc_kind || ecuRow?.dtcKind || defaultStatus;
-      return normalizeDtcRows(rows, status, ecu);
+      return normalizeDtcRows(rows, status, ecu, ecuName);
     });
     const entries = [...normalizeDtcRows(dtcRows, defaultStatus), ...ecuDtcRows];
     const scopedEntriesByKey = new Map();
@@ -12223,6 +12225,7 @@
         subcode: rowValue.subcode || rowValue.sub_code || subcode || null,
         status: rowStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
+        ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
       }));
     });
