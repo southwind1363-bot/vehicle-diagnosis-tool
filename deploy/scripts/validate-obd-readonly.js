@@ -2583,8 +2583,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.942.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for CSV session time ranges");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.942.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.942.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.943.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for CSV readout metadata");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.943.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.943.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(appSource.includes('const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"') && appSource.includes('const csvImportSession = !bridgeImport && !jsonImportSession && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromCsv === "function"') && appSource.includes('if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())'), "OBD scanner import should prefer safe structured JSON or CSV sessions before text parsing");
@@ -15136,6 +15136,24 @@ const scannerCsvEcuResponseSession = obd.buildDiagnosticScanSessionFromCsv([
   "ECU Responses,7E9,ABS,no_response,120,1,09,subfunction_not_supported"
 ].join("\n"));
 check(scannerCsvEcuResponseSession?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.name === "Engine" && item.status === "responded" && item.responseTimeMs === 45) && scannerCsvEcuResponseSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.name === "ABS" && item.status === "no_response" && item.responseTimeMs === 120 && item.negativeResponseCount === 1 && item.negativeRequestedServices?.includes("09") && item.negativeResponseLabels?.includes("subfunction_not_supported")) && scannerCsvEcuResponseSession.importClassification?.bucketCounts?.ecuResponseRows === 2, "Structured CSV import did not preserve explicit ECU response rows and details");
+const scannerCsvReadoutMetadataSession = obd.buildDiagnosticScanSessionFromCsv([
+  ["Readout", "DTC", "Status", "PID", "Parameter", "Value", "Unit", "ECU Info ID", "Test ID", "Component ID", "Readiness Monitor ID", "ECU Response ID", "Captured At", "Protocol"].join(","),
+  ["Stored DTC", "P0300", "Stored", "", "", "", "", "", "", "", "", "", "2026-07-18T09:45:00+09:00", "CAN_11BIT_500K"].join(","),
+  ["Freeze Frame", "", "", "0C", "Engine Speed", "800", "rpm", "", "", "", "", "", "2026-07-18T09:45:01+09:00", "CAN_11BIT_500K"].join(","),
+  ["I/M Readiness", "", "ready", "", "", "", "", "", "", "", "misfire", "", "2026-07-18T09:45:02+09:00", "CAN_11BIT_500K"].join(","),
+  ["ECU Information", "", "", "", "", "CAL-01", "", "calibration_id", "", "", "", "", "2026-07-18T09:45:03+09:00", "CAN_11BIT_500K"].join(","),
+  ["Mode 06", "", "", "", "", "15", "", "", "01", "02", "", "", "2026-07-18T09:45:04+09:00", "CAN_11BIT_500K"].join(","),
+  ["Supported PIDs", "", "", "0C", "", "", "", "", "", "", "", "", "2026-07-18T09:45:05+09:00", "CAN_11BIT_500K"].join(","),
+  ["ECU Responses", "", "responded", "", "", "", "", "", "", "", "", "7E8", "2026-07-18T09:45:06+09:00", "CAN_11BIT_500K"].join(",")
+].join("\n"));
+check(scannerCsvReadoutMetadataSession?.dtcSnapshot?.capturedAt === "2026-07-18T09:45:00+09:00" && scannerCsvReadoutMetadataSession.dtcSnapshot?.protocol === "CAN_11BIT_500K", "Structured CSV import did not retain DTC timestamp and protocol");
+check(scannerCsvReadoutMetadataSession?.freezeFrameSnapshot?.capturedAt === "2026-07-18T09:45:01+09:00", "Structured CSV import did not retain freeze-frame timestamp");
+check(scannerCsvReadoutMetadataSession?.readinessSnapshot?.capturedAt === "2026-07-18T09:45:02+09:00", "Structured CSV import did not retain readiness timestamp");
+check(scannerCsvReadoutMetadataSession?.ecuInfoSnapshot?.capturedAt === "2026-07-18T09:45:03+09:00", "Structured CSV import did not retain ECU-info timestamp");
+check(scannerCsvReadoutMetadataSession?.onboardMonitorSnapshot?.capturedAt === "2026-07-18T09:45:04+09:00", "Structured CSV import did not retain Mode 06 timestamp");
+check(scannerCsvReadoutMetadataSession?.supportedPidMatrix?.capturedAt === "2026-07-18T09:45:05+09:00", "Structured CSV import did not retain supported-PID timestamp");
+check(scannerCsvReadoutMetadataSession?.ecuResponseSummary?.capturedAt === "2026-07-18T09:45:06+09:00", "Structured CSV import did not retain ECU-response timestamp");
+check(scannerCsvReadoutMetadataSession?.vehicleCommandEnabled === false, "Structured CSV import changed read-only safety while retaining metadata");
 const scannerCsvSessionMetadata = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status,Captured At,Protocol",
   "P0300,Stored,2026-07-18T09:45:00+09:00,CAN_11BIT_500K"

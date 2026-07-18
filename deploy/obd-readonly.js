@@ -14140,6 +14140,25 @@
     const onboardMonitorRows = [];
     const supportedPids = new Set();
     const ecuResponseRows = [];
+    const readoutMetadataById = new Map();
+    const recordReadoutMetadata = (id, rowCapturedAt, rowProtocol) => {
+      const current = readoutMetadataById.get(id) || { capturedAt: null, capturedAtMilliseconds: null, protocol: null };
+      const capturedAtMilliseconds = /^\d{4}-\d{2}-\d{2}T/.test(rowCapturedAt || "") ? Date.parse(rowCapturedAt) : Number.NaN;
+      if (!current.capturedAt && rowCapturedAt) current.capturedAt = rowCapturedAt;
+      if (Number.isFinite(capturedAtMilliseconds) && (current.capturedAtMilliseconds === null || capturedAtMilliseconds >= current.capturedAtMilliseconds)) {
+        current.capturedAt = rowCapturedAt;
+        current.capturedAtMilliseconds = capturedAtMilliseconds;
+        if (rowProtocol) current.protocol = rowProtocol;
+      }
+      if (!current.protocol && rowProtocol) current.protocol = rowProtocol;
+      readoutMetadataById.set(id, current);
+    };
+    const readoutMetadata = (id) => {
+      const metadata = readoutMetadataById.get(id);
+      return metadata
+        ? { ...(metadata.capturedAt ? { captured_at: metadata.capturedAt } : {}), ...(metadata.protocol ? { protocol: metadata.protocol } : {}) }
+        : {};
+    };
     let freezeFrameTriggerDtc = null;
     let milOn = null;
     let readinessIgnitionType = null;
@@ -14182,6 +14201,7 @@
       const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
       const dtcReadoutKind = normalizeDtcReadoutKind(readoutKind);
       if (isReadinessRow) {
+        recordReadoutMetadata("readiness", rowCapturedAt, rowProtocol);
         const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
         if (monitorId && readinessStatus) readinessMonitors.push({ id: monitorId, status: readinessStatus });
@@ -14192,7 +14212,10 @@
         if (readinessIgnitionType === null && ["spark", "compression"].includes(ignitionType)) readinessIgnitionType = ignitionType;
       }
       const hasDtcCode = Boolean(dtc && extractDtcReferences(dtc).length);
-      if (dtcReadoutKind && (hasDtcCode || isExplicitEmptyDtcReadout(cellAt(statusIndex, 80)))) reportedDtcStatuses.add(dtcReadoutKind);
+      if (dtcReadoutKind && (hasDtcCode || isExplicitEmptyDtcReadout(cellAt(statusIndex, 80)))) {
+        reportedDtcStatuses.add(dtcReadoutKind);
+        recordReadoutMetadata("dtc", rowCapturedAt, rowProtocol);
+      }
       if (hasDtcCode) {
         dtcs.push({
           code: dtc,
@@ -14210,6 +14233,7 @@
       const mode06TestId = cellAt(mode06TestIdIndex, 8);
       const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
       if (isEcuResponseRow) {
+        recordReadoutMetadata("ecu_response", rowCapturedAt, rowProtocol);
         const responseId = cellAt(ecuResponseIdIndex, 120) || ecu;
         const responseStatus = cellAt(statusIndex, 40).toLowerCase();
         const responseTimeMs = Number(cellAt(responseTimeIndex, 24));
@@ -14228,6 +14252,7 @@
         return;
       }
       if (isSupportedPidRow) {
+        recordReadoutMetadata("supported_pid", rowCapturedAt, rowProtocol);
         const pidTokens = [pid, ...(rawValue.match(/\b(?:0X)?[0-9A-F]{2}\b/gi) || [])]
           .map((item) => String(item).replace(/^0X/i, "").toUpperCase())
           .filter((item) => /^[0-9A-F]{2}$/.test(item));
@@ -14235,6 +14260,7 @@
         return;
       }
       if (isOnboardMonitorRow && mode06TestId && mode06ComponentId && Number.isFinite(Number(rawValue))) {
+        recordReadoutMetadata("onboard_monitor", rowCapturedAt, rowProtocol);
         const minimum = cellAt(minIndex, 40);
         const maximum = cellAt(maxIndex, 40);
         onboardMonitorRows.push({
@@ -14249,6 +14275,7 @@
         return;
       }
       if (isEcuInfoRow && ecuInfoId && rawValue) {
+        recordReadoutMetadata("ecu_info", rowCapturedAt, rowProtocol);
         if (!/(?:^vin$|vehicle_?identification|車台番号)/i.test(ecuInfoId)) ecuInfoRows.push({ id: ecuInfoId, value: rawValue, source_ecu: ecu || null });
         return;
       }
@@ -14266,6 +14293,7 @@
           ...(Number.isInteger(frameNumber) && frameNumber >= 0 && frameNumber <= 255 ? { freeze_frame_number: frameNumber } : {})
         };
         if (isFreezeFrameRow) {
+          recordReadoutMetadata("freeze_frame", rowCapturedAt, rowProtocol);
           freezeFrameValues.push(row);
           if (!freezeFrameTriggerDtc) {
             freezeFrameTriggerDtc = extractDtcReferences(cellAt(triggerDtcIndex, 48) || dtc)[0]?.code || null;
@@ -14283,7 +14311,7 @@
     });
     if (endedAt) capturedAt = endedAt;
     const dtcSnapshot = dtcs.length || reportedDtcStatuses.size
-      ? normalizeDtcSnapshot({ source, dtcs, ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
+      ? normalizeDtcSnapshot({ source, ...readoutMetadata("dtc"), dtcs, ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
       : null;
     const livePidTimelineSamples = [...livePidSamplesByCapturedAt.values()].sort((left, right) => {
       const leftTime = /^\d{4}-\d{2}-\d{2}T/.test(left.capturedAt) ? Date.parse(left.capturedAt) : Number.NaN;
@@ -14315,15 +14343,15 @@
       }
       : null;
     const freezeFrameSnapshot = freezeFrameValues.length
-      ? normalizeFreezeFrameSnapshot({ source, values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
+      ? normalizeFreezeFrameSnapshot({ source, ...readoutMetadata("freeze_frame"), values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
       : null;
     const readinessSnapshot = readinessMonitors.length
-      ? normalizeReadinessSnapshot({ source, monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), ...(readinessIgnitionType ? { readinessIgnitionType } : {}), readinessReadoutStatus: "reported" })
+      ? normalizeReadinessSnapshot({ source, ...readoutMetadata("readiness"), monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), ...(readinessIgnitionType ? { readinessIgnitionType } : {}), readinessReadoutStatus: "reported" })
       : null;
-    const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
-    const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
-    const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
-    const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ecus: ecuResponseRows }) : null;
+    const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, ...readoutMetadata("ecu_info"), items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
+    const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, ...readoutMetadata("onboard_monitor"), tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
+    const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, ...readoutMetadata("supported_pid"), supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
+    const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
     if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const importClassification = {
