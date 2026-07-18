@@ -428,8 +428,9 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(data.dtcs)') && functionBody.includes('Array.isArray(data.dtc_codes)') && functionBody.includes('Array.isArray(data.dtcCodes)'), "normalizeBridgeDtcSnapshot should accept DTC array aliases");
     check(functionBody.includes('"read_stored_dtc"') && functionBody.includes('"read_pending_dtc"') && functionBody.includes('"read_permanent_dtc"'), "normalizeBridgeDtcSnapshot should preserve stored, pending, and permanent DTC intents");
     check(functionBody.includes('const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";'), "normalizeBridgeDtcSnapshot should derive DTC status from bridge intent");
-    check(functionBody.includes('extractDtcReferences(row.code || row.dtc || row.id || "")'), "normalizeBridgeDtcSnapshot should normalize DTC row code aliases and subcodes");
-    check(functionBody.includes('const key = `${entry.code}::${entry.subcode || ""}::${entry.status}`;'), "normalizeBridgeDtcSnapshot should deduplicate by code, subcode, and status");
+    check(functionBody.includes('extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "")'), "normalizeBridgeDtcSnapshot should normalize DTC row code aliases and subcodes");
+    check(functionBody.includes('ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null') && functionBody.includes('freezeFrameAvailable: rowValue.freeze_frame_available === true'), "normalizeBridgeDtcSnapshot should preserve ECU and freeze-frame context");
+    check(functionBody.includes('const key = `${entry.code}::${entry.subcode || ""}::${entry.ecu || ""}::${entry.status}`;'), "normalizeBridgeDtcSnapshot should deduplicate by code, subcode, ECU, and status");
     check(functionBody.includes('const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));'), "normalizeBridgeDtcSnapshot should mark normalized DTC rows as local bridge sourced");
     check(functionBody.includes('schema_version: "dtc_snapshot_v1"') && functionBody.includes('captured_at: capturedAt'), "normalizeBridgeDtcSnapshot should expose snake_case schema and capture aliases");
     check(functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount') && functionBody.includes('stored_count: storedCount'), "normalizeBridgeDtcSnapshot should expose snake_case DTC count aliases");
@@ -1346,7 +1347,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('rowValue.dtc_code') && functionBody.includes('rowValue.dtcCode'), "normalizeDtcSnapshot should normalize row code aliases");
     check(functionBody.includes('row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus'), "normalizeDtcSnapshot should normalize DTC status aliases");
     check(functionBody.includes('rowValue.ecuId') && functionBody.includes('rowValue.module_id') && functionBody.includes('rowValue.freezeFrame === true'), "normalizeDtcSnapshot should preserve ECU and freeze-frame aliases");
-    check(functionBody.includes('const typedDtcCodes = new Set(rows') && functionBody.includes('typedDtcCodes.has(`${row.code}::${row.subcode || ""}`)') && functionBody.includes('const key = `${row.code}::${row.subcode || ""}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should suppress only matching untyped code/subcode duplicates");
+    check(functionBody.includes('const typedDtcCodes = new Set(rows') && functionBody.includes('typedDtcCodes.has(`${row.code}::${row.subcode || ""}::${row.ecu || ""}`)') && functionBody.includes('const key = `${row.code}::${row.subcode || ""}::${row.ecu || ""}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should suppress only matching untyped code/subcode/ECU duplicates");
     check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "normalizeDtcSnapshot should accept protocol aliases");
     check(functionBody.includes('schema_version: "dtc_snapshot_v1"'), "normalizeDtcSnapshot should expose snake_case schema version");
     check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount'), "normalizeDtcSnapshot should expose snake_case capture and DTC count aliases");
@@ -1545,8 +1546,8 @@ const mergeDtcSnapshotsFunctionChecks = () => {
     const functionBody = mergeDtcSnapshotsFunctionSource[0];
     check(functionBody.includes('.filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))'), "mergeDtcSnapshots should ignore missing snapshots and snapshots without DTC rows");
     check(functionBody.includes('snapshot.dtcs.map((row) => ({ ...row, source: row.source || snapshot.source || "diagnostic_core" }))'), "mergeDtcSnapshots should preserve row source with snapshot/default fallback");
-    check(functionBody.includes('const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.status || "unknown"}`;'), "mergeDtcSnapshots should deduplicate by DTC code, subcode, and status");
-    check(functionBody.includes('if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);'), "mergeDtcSnapshots should retain the first valid row for each code/subcode/status pair");
+    check(functionBody.includes('const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || ""}::${row.status || "unknown"}`;'), "mergeDtcSnapshots should deduplicate by DTC code, subcode, ECU, and status");
+    check(functionBody.includes('if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);'), "mergeDtcSnapshots should retain the first valid row for each code/subcode/ECU/status pair");
     check(functionBody.includes('source: "merged_dtc_snapshots"'), "mergeDtcSnapshots should mark merged DTC source explicitly");
     check(functionBody.includes('capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null') && functionBody.includes('snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol'), "mergeDtcSnapshots should carry capturedAt and protocol from the first available snapshot");
     check(functionBody.includes('snapshots.find((item) => item?.protocol || item?.obd_protocol)?.obd_protocol'), "mergeDtcSnapshots should accept obd_protocol aliases");
@@ -2575,8 +2576,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.904.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for DTC subcode retention");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.904.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.904.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.905.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for ECU-scoped DTC retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.905.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.905.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
@@ -15013,11 +15014,20 @@ const subcodeBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const subcodeRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: subcodeBridgeSnapshot });
 check(subcodeBridgeSnapshot.dtcCount === 2 && subcodeRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.subcode === "67") && subcodeRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.subcode === "00"), "Bridge DTC subcodes did not survive diagnostic session normalization");
+const ecuScopedDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: { dtcs: [{ code: "P0606", ecu: "7E8", freeze_frame_available: true }, { code: "P0606", module_id: "7E9" }] }
+});
+const ecuScopedRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: ecuScopedDtcSnapshot });
+check(ecuScopedDtcSnapshot.codeCount === 1 && ecuScopedDtcSnapshot.dtcCount === 2 && ecuScopedDtcSnapshot.dtcs.some((item) => item.ecu === "7E8" && item.freezeFrameAvailable === true) && ecuScopedDtcSnapshot.dtcs.some((item) => item.ecu === "7E9"), "Bridge DTC normalization did not preserve ECU-scoped DTC rows");
+check(ecuScopedRoundTrip.dtcSnapshot?.dtcs?.length === 2 && ecuScopedRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.ecu === "7E8") && ecuScopedRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.ecu === "7E9"), "ECU-scoped DTC rows did not survive diagnostic session normalization");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2593");
+  console.log("OBD read-only safety checks: 2596");
   console.log("Errors: 0");
 }

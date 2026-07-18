@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.904.0";
+const APP_VERSION = "2.905.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4884,7 +4884,7 @@ function renderObdDeveloperReadout(session) {
   if (monitorValues.length) renderObdMonitorValues(monitorValues, session.livePidSnapshot.monitorInsights || []);
   if (codes.length) {
     obdDetectedCodes.innerHTML = "";
-    [...new Map(codes.map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item)));
+    [...new Map(codes.map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item)));
     obdImportStatus.textContent = `${codes.length}件の車両DTCを読取りました。`;
   }
   renderObdDeveloperSessionSummary(session);
@@ -5008,7 +5008,7 @@ function renderObdBridgeReadout(parts = {}) {
   }
   if (currentCodes.length) {
     obdDetectedCodes.innerHTML = "";
-    [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item)));
+    [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item)));
     const statusSummary = formatObdBridgeDtcStatusSummary(dtcSnapshot.dtcs);
     obdImportStatus.textContent = `${currentCodes.length}件のブリッジDTCを読取りました。累計${dtcSnapshot.dtcs.length}件です。${statusSummary}`;
   } else if (currentDtcSnapshot) {
@@ -6096,7 +6096,7 @@ function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
     const code = item?.code;
     if (!code) return;
     const status = item.status || "unknown";
-    const key = `${code}::${item.subcode || item.sub_code || ""}::${status}`;
+    const key = `${code}::${item.subcode || item.sub_code || ""}::${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}::${status}`;
     if (!dtcsByKind.has(key)) dtcsByKind.set(key, { ...item, status });
   });
   const ecuResponses = [
@@ -7634,7 +7634,7 @@ function analyzeObdScannerImport() {
   } else {
     obdImportStatus.textContent = `${coreReadinessHeadline}${sourcePrefix}${mergedCodes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
     const displayedDtcs = mergedDtcs.length
-      ? [...new Map(mergedDtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}`, item])).values()]
+      ? [...new Map(mergedDtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()]
       : mergedCodes;
     displayedDtcs.forEach((item) => {
       obdDetectedCodes.appendChild(createObdDtcCard(item));
@@ -7696,7 +7696,8 @@ function createObdDtcCard(codeOrDtc) {
   const dtc = codeOrDtc && typeof codeOrDtc === "object" ? codeOrDtc : { code: codeOrDtc };
   const code = dtc.code;
   const subcode = dtc.subcode || dtc.sub_code || null;
-  const displayCode = subcode ? `${code}:${subcode}` : code;
+  const ecu = dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || null;
+  const displayCode = `${subcode ? `${code}:${subcode}` : code}${ecu ? ` [${ecu}]` : ""}`;
   const registered = findByCode(code);
   const modern = getModernGenericMatches(code)[0];
   const system = registered?.faultSystem || registered?.system || modern?.system;
