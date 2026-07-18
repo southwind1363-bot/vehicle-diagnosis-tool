@@ -13926,6 +13926,7 @@
     const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
     const freezeFrameInput = pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
+    const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode");
     const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
     const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
@@ -14012,8 +14013,15 @@
     const scannerJsonCapturedAt = pick("captured_at", "capturedAt", "timestamp") || sessionInput.captured_at || sessionInput.capturedAt || timelineIsoCaptures.at(-1)?.capturedAt || timelineCapturedAtValues[0] || null;
     const scannerJsonStartedAt = pick("started_at", "startedAt") || sessionInput.started_at || sessionInput.startedAt || timelineIsoCaptures[0]?.capturedAt || null;
     const scannerJsonEndedAt = pick("ended_at", "endedAt") || sessionInput.ended_at || sessionInput.endedAt || timelineIsoCaptures.at(-1)?.capturedAt || null;
-    const freezeFrameSnapshot = hasValue(freezeFrameInput)
-      ? normalizeFreezeFrameSnapshot(Array.isArray(freezeFrameInput) ? { monitor_values: freezeFrameInput, source: scannerJsonSource } : toSnapshotInput(freezeFrameInput, "monitor_values"))
+    const freezeFrameSnapshotInput = hasValue(freezeFrameInput)
+      ? (Array.isArray(freezeFrameInput) ? { monitor_values: freezeFrameInput, source: scannerJsonSource } : toSnapshotInput(freezeFrameInput, "monitor_values"))
+      : null;
+    const hasEmbeddedFreezeFrameTrigger = Boolean(freezeFrameSnapshotInput?.trigger_dtc || freezeFrameSnapshotInput?.triggerDtc || freezeFrameSnapshotInput?.trigger_code || freezeFrameSnapshotInput?.triggerCode || freezeFrameSnapshotInput?.freeze_dtc || freezeFrameSnapshotInput?.freezeDtc || freezeFrameSnapshotInput?.dtc || freezeFrameSnapshotInput?.dtcCode || freezeFrameSnapshotInput?.dtc_code);
+    const normalizedFreezeFrameInput = freezeFrameSnapshotInput && freezeFrameTriggerDtc && !hasEmbeddedFreezeFrameTrigger
+      ? { ...freezeFrameSnapshotInput, trigger_dtc: freezeFrameTriggerDtc }
+      : freezeFrameSnapshotInput;
+    const freezeFrameSnapshot = normalizedFreezeFrameInput
+      ? normalizeFreezeFrameSnapshot(normalizedFreezeFrameInput)
       : null;
     const readinessSnapshot = hasValue(readinessInput)
       ? normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors"))
