@@ -14048,12 +14048,14 @@
     const triggerDtcIndex = findIndex("trigger dtc", "freeze frame dtc", "trigger code", "trigger_dtc", "トリガーdtc");
     const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
+    const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
     const unitIndex = findIndex("unit", "units", "単位");
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns) return null;
+    const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
@@ -14069,6 +14071,7 @@
     const monitorValues = [];
     const freezeFrameValues = [];
     const readinessMonitors = [];
+    const ecuInfoRows = [];
     let freezeFrameTriggerDtc = null;
     let milOn = null;
     lines.slice(1, 5001).forEach((line) => {
@@ -14080,6 +14083,7 @@
       const readoutKind = cellAt(readoutKindIndex, 80);
       const isFreezeFrameRow = Number.isInteger(readoutKindIndex) && /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
       const isReadinessRow = Number.isInteger(readoutKindIndex) && /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
+      const isEcuInfoRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*(?:info|information)|mode\s*0?9|ecu情報)/i.test(readoutKind);
       if (isReadinessRow) {
         const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
@@ -14099,6 +14103,11 @@
       const pid = cellAt(pidIndex, 16).replace(/^0X/i, "").toUpperCase();
       const label = cellAt(labelIndex, 120);
       const rawValue = cellAt(valueIndex, 160);
+      const ecuInfoId = cellAt(ecuInfoIdIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
+      if (isEcuInfoRow && ecuInfoId && rawValue) {
+        if (!/(?:^vin$|vehicle_?identification|車台番号)/i.test(ecuInfoId)) ecuInfoRows.push({ id: ecuInfoId, value: rawValue });
+        return;
+      }
       if (!rawValue || sensitiveLabel(label)) return;
       if (pid || label) {
         const frameNumberText = cellAt(freezeFrameNumberIndex, 12);
@@ -14128,7 +14137,8 @@
     const readinessSnapshot = readinessMonitors.length
       ? normalizeReadinessSnapshot({ source, monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), readinessReadoutStatus: "reported" })
       : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot) return null;
+    const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
@@ -14142,13 +14152,15 @@
         dtcRows: dtcs.length,
         livePidRows: monitorValues.length,
         freezeFrameRows: freezeFrameValues.length,
-        readinessRows: readinessMonitors.length
+        readinessRows: readinessMonitors.length,
+        ecuInfoRows: ecuInfoRows.length
       },
       bucket_counts: {
         dtc_rows: dtcs.length,
         live_pid_rows: monitorValues.length,
         freeze_frame_rows: freezeFrameValues.length,
-        readiness_rows: readinessMonitors.length
+        readiness_rows: readinessMonitors.length,
+        ecu_info_rows: ecuInfoRows.length
       },
       sourceLength: text.length,
       source_length: text.length,
@@ -14169,6 +14181,7 @@
       livePidSnapshot: livePidSnapshot || undefined,
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
       readinessSnapshot: readinessSnapshot || undefined,
+      ecuInfoSnapshot: ecuInfoSnapshot || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
