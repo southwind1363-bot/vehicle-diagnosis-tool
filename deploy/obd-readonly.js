@@ -1037,6 +1037,8 @@
         subcode: readDtcSubcodeAlias(rowValue, subcode),
         statusByte: readDtcStatusByteAlias(rowValue),
         status_byte: readDtcStatusByteAlias(rowValue),
+        severity: readDtcSeverityAlias(rowValue),
+        dtc_severity: readDtcSeverityAlias(rowValue),
         status: row.status || row.kind || rowValue.status || rowValue.kind || fallbackStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName,
@@ -12260,6 +12262,8 @@
         subcode: readDtcSubcodeAlias(rowValue, subcode),
         statusByte: readDtcStatusByteAlias(rowValue),
         status_byte: readDtcStatusByteAlias(rowValue),
+        severity: readDtcSeverityAlias(rowValue),
+        dtc_severity: readDtcSeverityAlias(rowValue),
         status: rowStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null,
@@ -15857,6 +15861,30 @@
       row?.dtcStatusByte
     ].find((item) => item !== undefined && item !== null && item !== "");
     return normalizeDtcStatusByte(value);
+  }
+
+  function normalizeDtcSeverity(value) {
+    if (Number.isInteger(value) && value >= 0 && value <= 0xFF) {
+      return `0x${value.toString(16).toUpperCase().padStart(2, "0")}`;
+    }
+    const normalized = String(value ?? "").trim();
+    if (!normalized) return null;
+    const hexadecimal = normalized.toUpperCase().replace(/^0X/, "");
+    if (/^[0-9A-F]{1,2}$/.test(hexadecimal)) return `0x${hexadecimal.padStart(2, "0")}`;
+    return /^[A-Za-z][A-Za-z0-9 _-]{0,62}$/.test(normalized) ? normalized : null;
+  }
+
+  function readDtcSeverityAlias(row) {
+    const value = [
+      row?.severity,
+      row?.dtc_severity,
+      row?.dtcSeverity,
+      row?.severity_byte,
+      row?.severityByte,
+      row?.dtc_severity_byte,
+      row?.dtcSeverityByte
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcSeverity(value);
   }
 
   function extractDtcReferences(value) {

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.976.0";
+const APP_VERSION = "2.977.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7754,6 +7754,7 @@ function createObdDtcCard(codeOrDtc) {
   const code = dtc.code;
   const subcode = dtc.subcode || dtc.sub_code || null;
   const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;
+  const severity = dtc.severity || dtc.dtc_severity || dtc.dtcSeverity || dtc.severityByte || dtc.severity_byte || null;
   const ecu = dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || null;
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
@@ -7790,6 +7791,13 @@ function createObdDtcCard(codeOrDtc) {
     reportedStatusByte.className = "obd-dtc-check";
     reportedStatusByte.textContent = `DTC status byte: 0x${statusByte} (reported)`;
     wrapper.appendChild(reportedStatusByte);
+  }
+
+  if (severity) {
+    const reportedSeverity = document.createElement("p");
+    reportedSeverity.className = "obd-dtc-check";
+    reportedSeverity.textContent = `DTC severity: ${severity} (reported)`;
+    wrapper.appendChild(reportedSeverity);
   }
 
   if (firstCheck) {

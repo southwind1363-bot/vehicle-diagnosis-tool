@@ -2584,8 +2584,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.976.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for ELM327 iPhone import guidance");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.976.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.976.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.977.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for reported UDS DTC severity");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.977.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.977.0", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2025-10" && item.title.includes("J1979DA_202510") && item.source_url.includes("j1979da_202510") && item.source_date === "2025-10-20" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID source references are not aligned with the current J1979DA edition");
@@ -2599,6 +2599,7 @@ check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ?
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(indexSource.includes('ELM327 / iPhoneアプリ取込・Web Serial') && appSource.includes('if (interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios")') && appSource.includes('ELM327でread-only読取 -> アプリのDTC/PID/FF/ECU結果を共有または貼付'), "ELM327 iPhone route should guide read-only scanner export import instead of desktop-only Web Serial");
 check(appSource.includes('const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;') && appSource.includes('DTC status byte: 0x${statusByte} (reported)'), "OBD DTC cards should display a reported status byte without inferring its meaning");
+check(appSource.includes('const severity = dtc.severity || dtc.dtc_severity || dtc.dtcSeverity || dtc.severityByte || dtc.severity_byte || null;') && appSource.includes('DTC severity: ${severity} (reported)'), "OBD DTC cards should display a reported severity without inferring its meaning");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
@@ -15125,6 +15126,22 @@ const statusByteBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const statusByteRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: statusByteBridgeSnapshot });
 check(statusByteBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.statusByte === "80") && statusByteRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.status_byte === "80") && statusByteRoundTrip.vehicleCommandEnabled === false, "Bridge DTC status byte was not preserved through read-only session normalization");
+const severityDtcSnapshot = obd.normalizeDtcSnapshot({
+  dtcs: [
+    { dtc_code: "P0300", dtc_severity: 3 },
+    { dtcCode: "P0171", severityByte: "0xA5", status: "pending" },
+    { code: "U0100", severity: "critical", status: "stored" }
+  ]
+});
+check(severityDtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.severity === "0x03" && item.dtc_severity === "0x03") && severityDtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.severity === "0xA5" && item.status === "pending") && severityDtcSnapshot.dtcs.some((item) => item.code === "U0100" && item.severity === "critical"), "DTC severity aliases were not retained without inferring their meaning");
+const severityBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: { dtcs: [{ dtc_code: "C0051", dtcSeverityByte: 128 }] }
+});
+const severityRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: severityBridgeSnapshot });
+check(severityBridgeSnapshot.dtcs.some((item) => item.code === "C0051" && item.severity === "0x80") && severityRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.dtc_severity === "0x80") && severityRoundTrip.vehicleCommandEnabled === false, "Bridge DTC severity was not preserved through read-only session normalization");
 const ecuScopedDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
