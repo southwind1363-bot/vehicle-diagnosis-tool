@@ -14138,6 +14138,31 @@
       }
       return readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses");
     };
+    const readOnboardMonitorResponseOption = () => {
+      const explicitResponse = sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response;
+      if (explicitResponse) return explicitResponse;
+      const rows = classified.responseBuckets.onboardMonitorResponses || [];
+      if (rows.length > 1) {
+        const snapshots = rows.map((row) => decodeOnboardMonitorResponse({
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        }));
+        const tests = snapshots.flatMap((snapshot) => snapshot.tests || []);
+        const readoutStatus = snapshots.some((snapshot) => (snapshot.onboardMonitorReadoutStatus || snapshot.onboard_monitor_readout_status) === "reported")
+          ? "reported"
+          : snapshots.some((snapshot) => (snapshot.onboardMonitorReadoutStatus || snapshot.onboard_monitor_readout_status) === "unparsed")
+            ? "unparsed"
+            : "unknown";
+        return normalizeOnboardMonitorSnapshot({
+          source: "obd_response_decoder",
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          onboard_monitor_readout_status: readoutStatus,
+          tests
+        });
+      }
+      return readResponseOption("onboardMonitorResponse", "onboard_monitor_response", "onboardMonitorResponses");
+    };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -14171,7 +14196,7 @@
       livePidResponse: readLivePidResponseOption(),
       freezeFrameResponse: readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses"),
       readinessResponse: readResponseOption("readinessResponse", "readiness_response", "readinessResponses"),
-      onboardMonitorResponse: readResponseOption("onboardMonitorResponse", "onboard_monitor_response", "onboardMonitorResponses"),
+      onboardMonitorResponse: readOnboardMonitorResponseOption(),
       ecuInfoResponse: readEcuInfoResponseOption(),
       ecus: ecuResponses
     });
