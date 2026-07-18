@@ -1039,6 +1039,8 @@
         status_byte: readDtcStatusByteAlias(rowValue),
         severity: readDtcSeverityAlias(rowValue),
         dtc_severity: readDtcSeverityAlias(rowValue),
+        occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
+        occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: row.status || row.kind || rowValue.status || rowValue.kind || fallbackStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName,
@@ -12264,6 +12266,8 @@
         status_byte: readDtcStatusByteAlias(rowValue),
         severity: readDtcSeverityAlias(rowValue),
         dtc_severity: readDtcSeverityAlias(rowValue),
+        occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
+        occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: rowStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null,
@@ -14277,6 +14281,7 @@
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
     const statusIndex = findIndex("status", "dtc status", "state", "状態");
     const dtcSeverityIndex = findIndex("severity", "dtc severity", "severity byte", "dtc severity byte");
+    const dtcOccurrenceCountIndex = findIndex("occurrence count", "occurrence counter", "dtc occurrence count", "dtc occurrence counter", "fault occurrence counter");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
@@ -14416,6 +14421,7 @@
       const dtc = cellAt(dtcIndex, 48);
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const dtcSeverity = cellAt(dtcSeverityIndex, 80);
+      const dtcOccurrenceCount = cellAt(dtcOccurrenceCountIndex, 12);
       const ecu = cellAt(ecuIndex, 120);
       const ecuName = cellAt(ecuNameIndex, 120);
       const readoutKind = cellAt(readoutKindIndex, 80);
@@ -14447,6 +14453,7 @@
           code: dtc,
           subcode: /^[0-9A-F]{1,4}$/.test(dtcSubcode) ? dtcSubcode : null,
           ...(dtcSeverity ? { severity: dtcSeverity } : {}),
+          ...(dtcOccurrenceCount ? { occurrence_count: dtcOccurrenceCount } : {}),
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
           ecu_name: ecuName || null,
@@ -15903,6 +15910,27 @@
       row?.dtcSeverityByte
     ].find((item) => item !== undefined && item !== null && item !== "");
     return normalizeDtcSeverity(value);
+  }
+
+  function normalizeDtcOccurrenceCount(value) {
+    const numeric = typeof value === "string" && /^\d+$/.test(value.trim()) ? Number(value.trim()) : value;
+    return Number.isInteger(numeric) && numeric >= 0 && numeric <= 65535 ? numeric : null;
+  }
+
+  function readDtcOccurrenceCountAlias(row) {
+    const value = [
+      row?.occurrence_count,
+      row?.occurrenceCount,
+      row?.occurrence_counter,
+      row?.occurrenceCounter,
+      row?.dtc_occurrence_count,
+      row?.dtcOccurrenceCount,
+      row?.dtc_occurrence_counter,
+      row?.dtcOccurrenceCounter,
+      row?.fault_occurrence_counter,
+      row?.faultOccurrenceCounter
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcOccurrenceCount(value);
   }
 
   function extractDtcReferences(value) {
