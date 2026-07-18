@@ -15188,6 +15188,48 @@
     });
   }
 
+  function collectTextSupportedPidSection(value) {
+    const supportedPidLines = [];
+    let inSupportedPidSection = false;
+    const isSupportedPidHeading = (text) => /(?:\bsupported\s*pids?\b|対応\s*pid)/i.test(text);
+    const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|mode\s*0?6|onboard\s*monitor|\becu\s*(?:info|information)\b|\bmode\s*0?9\b|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
+    String(value || "").split(/\r?\n/).forEach((line) => {
+      const text = String(line || "").trim();
+      if (isSupportedPidHeading(text)) {
+        inSupportedPidSection = true;
+        supportedPidLines.push(line);
+        return;
+      }
+      if (inSupportedPidSection && isSectionBoundary(text)) inSupportedPidSection = false;
+      if (inSupportedPidSection) supportedPidLines.push(line);
+    });
+    return supportedPidLines;
+  }
+
+  function extractTextSupportedPidMatrix(value) {
+    const supported = new Set();
+    const addPid = (pid) => {
+      const normalized = String(pid || "").trim().toUpperCase().replace(/^0X/, "");
+      if (/^[0-9A-F]{2}$/.test(normalized)) supported.add(normalized);
+    };
+    collectTextSupportedPidSection(value).forEach((line) => {
+      const text = String(line || "").trim();
+      const listMatch = text.match(/(?:supported\s*pids?|対応\s*pid)\s*[:：]\s*(.+)$/i);
+      if (listMatch) {
+        listMatch[1].split(/[\s,;|/]+/).forEach(addPid);
+        return;
+      }
+      const itemMatch = text.match(/\bpid\s*(?:0x)?([0-9a-f]{2})\b/i);
+      if (itemMatch && /(?:\bsupported\b|\bavailable\b|\byes\b|対応|利用可)/i.test(text)) addPid(itemMatch[1]);
+    });
+    if (!supported.size) return null;
+    return buildSupportedPidMatrix({
+      source: "scanner_text_supported_pids",
+      supportedPids: [...supported],
+      supportedPidReadoutStatus: "reported"
+    });
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
@@ -15196,6 +15238,7 @@
     const freezeFrameSnapshot = extractTextFreezeFrameSnapshot(freezeFrameSection);
     const readinessSnapshot = extractTextReadinessSnapshot(redacted);
     const ecuInfoSnapshot = extractTextEcuInfoSnapshot(redacted);
+    const supportedPidMatrix = extractTextSupportedPidMatrix(redacted);
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
@@ -15208,6 +15251,8 @@
       readiness_snapshot: readinessSnapshot,
       ecuInfoSnapshot,
       ecu_info_snapshot: ecuInfoSnapshot,
+      supportedPidMatrix,
+      supported_pid_matrix: supportedPidMatrix,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
