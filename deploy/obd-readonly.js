@@ -13918,6 +13918,37 @@
     const sessionInput = getDiagnosticSessionInput(options);
     const scannerJsonSource = "scanner_json_import";
     const scannerJsonProtocol = String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null;
+    const scannerJsonVehicleProfileInput = getVehicleProfileInput(input);
+    const scannerJsonVehicleApplicabilityInput = getVehicleApplicabilityInput(input);
+    const scannerJsonVehicleBasis = scannerJsonVehicleApplicabilityInput || scannerJsonVehicleProfileInput;
+    const scannerJsonVehicle = normalizeVehicleApplicabilitySnapshot(scannerJsonVehicleBasis || {});
+    const hasScannerJsonVehicleIdentity = Boolean(scannerJsonVehicle.maker || scannerJsonVehicle.model || scannerJsonVehicle.modelCode || scannerJsonVehicle.year || scannerJsonVehicle.engineCode);
+    const scannerJsonVehicleProfile = hasScannerJsonVehicleIdentity
+      ? {
+        maker: scannerJsonVehicle.maker,
+        model: scannerJsonVehicle.model,
+        modelCode: scannerJsonVehicle.modelCode,
+        model_code: scannerJsonVehicle.modelCode,
+        year: scannerJsonVehicle.year,
+        engineCode: scannerJsonVehicle.engineCode,
+        engine_code: scannerJsonVehicle.engineCode,
+        grade: scannerJsonVehicle.grade,
+        trim: scannerJsonVehicle.trim,
+        market: scannerJsonVehicle.market,
+        region: scannerJsonVehicle.region,
+        transmission: scannerJsonVehicle.transmission,
+        transmission_type: scannerJsonVehicle.transmission_type,
+        drivetrain: scannerJsonVehicle.drivetrain,
+        drive_type: scannerJsonVehicle.drive_type,
+        fuelType: scannerJsonVehicle.fuelType,
+        fuel_type: scannerJsonVehicle.fuel_type,
+        electrification: scannerJsonVehicle.electrification,
+        hybrid_system: scannerJsonVehicle.hybrid_system
+      }
+      : null;
+    const scannerJsonVehicleApplicability = hasScannerJsonVehicleIdentity
+      ? scannerJsonVehicle
+      : null;
     const toSnapshotInput = (item, key) => Array.isArray(item) ? { [key]: item, source: scannerJsonSource } : { ...item, source: scannerJsonSource };
     const isSensitiveEcuInfoRow = (row) => /(?:\bvin\b|vehicle\s*identification|\u8eca\u53f0\u756a\u53f7)/i.test(String(row?.id || row?.label || row?.name || row?.key || ""));
     const sanitizeEcuInfoInput = (item) => {
@@ -14052,6 +14083,8 @@
       supportedPidMatrix: supportedPidMatrix || undefined,
       onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
       ecuResponseSummary: ecuResponseSummary || undefined,
+      vehicleProfile: scannerJsonVehicleProfile || undefined,
+      vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
