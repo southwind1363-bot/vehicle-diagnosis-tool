@@ -14276,6 +14276,7 @@
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
     const statusIndex = findIndex("status", "dtc status", "state", "状態");
+    const dtcSeverityIndex = findIndex("severity", "dtc severity", "severity byte", "dtc severity byte");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
@@ -14414,6 +14415,7 @@
       if (!protocol) protocol = rowProtocol;
       const dtc = cellAt(dtcIndex, 48);
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
+      const dtcSeverity = cellAt(dtcSeverityIndex, 80);
       const ecu = cellAt(ecuIndex, 120);
       const ecuName = cellAt(ecuNameIndex, 120);
       const readoutKind = cellAt(readoutKindIndex, 80);
@@ -14444,6 +14446,7 @@
         dtcs.push({
           code: dtc,
           subcode: /^[0-9A-F]{1,4}$/.test(dtcSubcode) ? dtcSubcode : null,
+          ...(dtcSeverity ? { severity: dtcSeverity } : {}),
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
           ecu_name: ecuName || null,
