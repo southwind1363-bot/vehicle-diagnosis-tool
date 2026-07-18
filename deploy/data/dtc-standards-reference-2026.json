@@ -22,13 +22,13 @@
     "service_manual_required": true
   },
   {
-    "id": "sae-j1979da-current-2025-10",
-    "title": "SAE J1979DA_202510 Digital Annex of E/E Diagnostic Test Modes",
+    "id": "sae-j1979da-current-2026-07",
+    "title": "SAE J1979DA_202607 Digital Annex of E/E Diagnostic Test Modes",
     "reference_type": "licensed_dataset",
     "summary": "規制対象の排出・推進系OBDデータ識別子を維持するデジタル付属資料。現行PID/情報タイプの拡張根拠として参照し、個別定義の取込みは利用権と出典確認後に限定する。",
     "source": "SAE International",
-    "source_url": "https://saemobilus.sae.org/standards/j1979da_202510-j1979-da-digital-annex-e-e-diagnostic-test-modes",
-    "source_date": "2025-10-20",
+    "source_url": "https://saemobilus.sae.org/standards/j1979da_202607-j1979-da-digital-annex-e-e-diagnostic-test-modes",
+    "source_date": "2026-07-16",
     "last_verified_date": "2026-07-18",
     "service_manual_required": true
   },
