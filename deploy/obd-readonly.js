@@ -13999,6 +13999,7 @@
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
     const statusIndex = findIndex("status", "dtc status", "state", "状態");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
+    const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
@@ -14013,6 +14014,7 @@
       if (/(?:stored|current|confirmed|active|history|保存|現在|確定)/.test(normalized)) return "stored";
       return "unknown";
     };
+    const hasFreezeFrame = (cell) => /^(?:1|true|yes|available|あり|有)$/i.test(sanitizeCell(cell, 40));
     const sensitiveLabel = (label) => /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(label);
     const dtcs = [];
     const monitorValues = [];
@@ -14023,7 +14025,12 @@
       const dtc = cellAt(dtcIndex, 48);
       const ecu = cellAt(ecuIndex, 120);
       if (dtc && extractDtcReferences(dtc).length) {
-        dtcs.push({ code: dtc, status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown", ecu: ecu || null });
+        dtcs.push({
+          code: dtc,
+          status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
+          ecu: ecu || null,
+          freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
+        });
       }
       const pid = cellAt(pidIndex, 16).replace(/^0X/i, "").toUpperCase();
       const label = cellAt(labelIndex, 120);
