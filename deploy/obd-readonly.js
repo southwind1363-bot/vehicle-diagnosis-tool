@@ -514,10 +514,11 @@
     Object.freeze({
       intent: "read_freeze_frame",
       label: "Freeze frame snapshot",
-      dataShape: Object.freeze(["protocol", "trigger_dtc", "trigger_frame_number", "values", "captured_at"]),
+      dataShape: Object.freeze(["protocol", "trigger_dtc", "trigger_dtc_entries", "trigger_frame_number", "values", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,
         trigger_dtc: null,
+        trigger_dtc_entries: Object.freeze([]),
         trigger_frame_number: null,
         values: Object.freeze([]),
         captured_at: null
@@ -1577,7 +1578,9 @@
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
       freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
+      source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
+      trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || [],
       trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
       values: freezeFrameValues
       }),
@@ -12453,6 +12456,7 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const rows = Array.isArray(sourceInput.values)
       ? sourceInput.values
       : Array.isArray(sourceInput.freeze_frame)
@@ -12512,13 +12516,43 @@
       sourceInput.dtc_code
     ].filter(Boolean).join(" "));
 
+    const triggerEntryRows = Array.isArray(sourceInput.triggerDtcEntries)
+      ? sourceInput.triggerDtcEntries
+      : Array.isArray(sourceInput.trigger_dtc_entries)
+        ? sourceInput.trigger_dtc_entries
+        : Array.isArray(sourceInput.freezeFrameTriggerEntries)
+          ? sourceInput.freezeFrameTriggerEntries
+          : Array.isArray(sourceInput.freeze_frame_trigger_entries)
+            ? sourceInput.freeze_frame_trigger_entries
+            : [];
+    const normalizeTriggerEntry = (row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+      const code = extractDtcCodes([row.code, row.dtc, row.trigger_dtc, row.triggerDtc, row.trigger_code, row.triggerCode].filter(Boolean).join(" "))[0] || null;
+      if (!code) return null;
+      const frameInput = pickDefined(row.frame_number, row.frameNumber, row.trigger_frame_number, row.triggerFrameNumber, null);
+      const frame = Number(frameInput);
+      const frameNumber = frameInput !== null && frameInput !== "" && Number.isInteger(frame) && frame >= 0 && frame <= 255 ? frame : null;
+      const ecu = readObdResponseSourceEcu(row);
+      return {
+        code,
+        frameNumber,
+        frame_number: frameNumber,
+        sourceEcu: ecu,
+        source_ecu: ecu
+      };
+    };
+    const triggerDtcEntries = [...new Map(triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).map((item) => [`${item.code}::${item.frameNumber ?? ""}::${item.sourceEcu || ""}`, item])).values()];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
-    const triggerDtc = triggerCodes[0] || null;
+    const triggerDtc = triggerDtcEntries.length === 1 ? triggerDtcEntries[0].code : triggerDtcEntries.length > 1 ? null : triggerCodes[0] || null;
     const triggerFrameNumberInput = pickDefined(sourceInput.trigger_frame_number, sourceInput.triggerFrameNumber, sourceInput.frame_number, sourceInput.frameNumber, null);
     const parsedTriggerFrameNumber = Number(triggerFrameNumberInput);
-    const triggerFrameNumber = triggerFrameNumberInput !== null && triggerFrameNumberInput !== "" && Number.isInteger(parsedTriggerFrameNumber) && parsedTriggerFrameNumber >= 0 && parsedTriggerFrameNumber <= 255
-      ? parsedTriggerFrameNumber
-      : null;
+    const triggerFrameNumber = triggerDtcEntries.length === 1
+      ? triggerDtcEntries[0].frameNumber
+      : triggerDtcEntries.length > 1
+        ? null
+        : triggerFrameNumberInput !== null && triggerFrameNumberInput !== "" && Number.isInteger(parsedTriggerFrameNumber) && parsedTriggerFrameNumber >= 0 && parsedTriggerFrameNumber <= 255
+          ? parsedTriggerFrameNumber
+          : null;
     const monitorValueSummary = buildMonitorValueSummary(monitorValues);
     const capturedItemCount = monitorValues.length;
     const expectedItemCount = expectedItems.length;
@@ -12530,11 +12564,15 @@
       schemaVersion: "freeze_frame_snapshot_v1",
       schema_version: "freeze_frame_snapshot_v1",
       source,
+      sourceEcu,
+      source_ecu: sourceEcu,
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       triggerDtc,
       trigger_dtc: triggerDtc,
+      triggerDtcEntries,
+      trigger_dtc_entries: triggerDtcEntries,
       triggerFrameNumber,
       trigger_frame_number: triggerFrameNumber,
       monitorValues,
@@ -13484,6 +13522,7 @@
     const sourceEcu = readObdResponseSourceEcu(input);
     let triggerDtc = null;
     let triggerFrameNumber = null;
+    const triggerDtcEntries = [];
     const hasMode02Frame = bytes.some((byte, index) => byte === 0x42 && index + 2 < bytes.length);
     const readoutStatus = hasMode02Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
@@ -13498,6 +13537,7 @@
         if (decoded !== "P0000") {
           triggerDtc = decoded;
           triggerFrameNumber = frameNumber;
+          triggerDtcEntries.push({ code: decoded, frame_number: frameNumber, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) });
         }
         index += 2 + payload.length;
         continue;
@@ -13510,10 +13550,12 @@
 
     return normalizeFreezeFrameSnapshot({
       source: input.source || "obd_response_decoder",
+      ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
       freeze_frame_readout_status: readoutStatus,
       trigger_dtc: triggerDtc,
+      trigger_dtc_entries: triggerDtcEntries,
       trigger_frame_number: triggerFrameNumber,
       values
     });
@@ -14201,6 +14243,33 @@
       }
       return readResponseOption("supportedPidResponse", "supported_pid_response", "supportedPidResponses");
     };
+    const readFreezeFrameResponseOption = () => {
+      const explicitResponse = sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response;
+      if (explicitResponse) return explicitResponse;
+      const rows = classified.responseBuckets.freezeFrameResponses || [];
+      if (rows.length > 1) {
+        const snapshots = rows.map((row) => decodeFreezeFrameResponse({
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        }));
+        const values = snapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
+        const triggerDtcEntries = snapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || []);
+        const readoutStatus = snapshots.some((snapshot) => (snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status) === "reported")
+          ? "reported"
+          : snapshots.some((snapshot) => (snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status) === "unparsed")
+            ? "unparsed"
+            : "unknown";
+        return normalizeFreezeFrameSnapshot({
+          source: "obd_response_decoder",
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          freeze_frame_readout_status: readoutStatus,
+          trigger_dtc_entries: triggerDtcEntries,
+          values
+        });
+      }
+      return readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses");
+    };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -14232,7 +14301,7 @@
       permanentDtcResponse: readDtcResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
       supportedPidResponse: readSupportedPidResponseOption(),
       livePidResponse: readLivePidResponseOption(),
-      freezeFrameResponse: readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses"),
+      freezeFrameResponse: readFreezeFrameResponseOption(),
       readinessResponse: readResponseOption("readinessResponse", "readiness_response", "readinessResponses"),
       onboardMonitorResponse: readOnboardMonitorResponseOption(),
       ecuInfoResponse: readEcuInfoResponseOption(),
