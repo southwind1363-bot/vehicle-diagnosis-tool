@@ -14069,13 +14069,46 @@
       ? normalizeFreezeFrameSnapshot({ source, values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
       : null;
     if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot) return null;
+    const hadSensitiveIdentifier = text !== redactSensitiveText(text);
+    const importClassification = {
+      schemaVersion: "scanner_csv_import_v1",
+      schema_version: "scanner_csv_import_v1",
+      format: "csv",
+      lineCount: lines.length,
+      line_count: lines.length,
+      columnCount: headers.length,
+      column_count: headers.length,
+      bucketCounts: {
+        dtcRows: dtcs.length,
+        livePidRows: monitorValues.length,
+        freezeFrameRows: freezeFrameValues.length
+      },
+      bucket_counts: {
+        dtc_rows: dtcs.length,
+        live_pid_rows: monitorValues.length,
+        freeze_frame_rows: freezeFrameValues.length
+      },
+      sourceLength: text.length,
+      source_length: text.length,
+      hadSensitiveIdentifier,
+      had_sensitive_identifier: hadSensitiveIdentifier,
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
     const sessionInput = getDiagnosticSessionInput(options);
     const output = buildDiagnosticScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "scanner-csv-import",
       source,
       dtcSnapshot: dtcSnapshot || undefined,
       livePidSnapshot: livePidSnapshot || undefined,
-      freezeFrameSnapshot: freezeFrameSnapshot || undefined
+      freezeFrameSnapshot: freezeFrameSnapshot || undefined,
+      importClassification,
+      sourceLength: text.length,
+      hadSensitiveIdentifier
     });
     return {
       ...output,
@@ -14083,6 +14116,10 @@
       source_type: source,
       sourceLength: text.length,
       source_length: text.length,
+      importClassification,
+      import_classification: importClassification,
+      hadSensitiveIdentifier,
+      had_sensitive_identifier: hadSensitiveIdentifier,
       retainedRawText: false,
       retained_raw_text: false,
       retainedRawFrames: false,
