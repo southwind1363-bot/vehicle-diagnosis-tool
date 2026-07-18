@@ -13916,6 +13916,7 @@
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
     const sessionInput = getDiagnosticSessionInput(options);
     const scannerJsonSource = "scanner_json_import";
+    const scannerJsonProtocol = String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null;
     const toSnapshotInput = (item, key) => Array.isArray(item) ? { [key]: item, source: scannerJsonSource } : { ...item, source: scannerJsonSource };
     const isSensitiveEcuInfoRow = (row) => /(?:\bvin\b|vehicle\s*identification|\u8eca\u53f0\u756a\u53f7)/i.test(String(row?.id || row?.label || row?.name || row?.key || ""));
     const sanitizeEcuInfoInput = (item) => {
@@ -13954,6 +13955,19 @@
       : null;
     if (![dtcSnapshot, livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
+    const observedProtocols = [...new Set([
+      scannerJsonProtocol,
+      ...(Array.isArray(input.observedProtocols) ? input.observedProtocols : Array.isArray(input.observed_protocols) ? input.observed_protocols : []),
+      dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || null,
+      livePidSnapshot?.protocol || livePidSnapshot?.obd_protocol || null,
+      freezeFrameSnapshot?.protocol || freezeFrameSnapshot?.obd_protocol || null,
+      readinessSnapshot?.protocol || readinessSnapshot?.obd_protocol || null,
+      ecuInfoSnapshot?.protocol || ecuInfoSnapshot?.obd_protocol || null,
+      supportedPidMatrix?.protocol || supportedPidMatrix?.obd_protocol || null,
+      onboardMonitorSnapshot?.protocol || onboardMonitorSnapshot?.obd_protocol || null,
+      ecuResponseSummary?.protocol || ecuResponseSummary?.obd_protocol || null
+    ].map((item) => String(item || "").trim().slice(0, 80)).filter(Boolean))];
+    const multipleProtocols = observedProtocols.length > 1;
     const importClassification = {
       schemaVersion: "scanner_json_import_v1",
       schema_version: "scanner_json_import_v1",
@@ -13980,6 +13994,10 @@
       },
       sourceLength: text.length,
       source_length: text.length,
+      observedProtocols,
+      observed_protocols: observedProtocols,
+      multipleProtocols,
+      multiple_protocols: multipleProtocols,
       hadSensitiveIdentifier,
       had_sensitive_identifier: hadSensitiveIdentifier,
       retainedRawText: false,
@@ -13992,7 +14010,7 @@
     const output = buildDiagnosticScanSession({
       session_id: String(pick("session_id", "sessionId") || sessionInput.session_id || sessionInput.sessionId || "scanner-json-import").slice(0, 120),
       source: scannerJsonSource,
-      protocol: String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null,
+      protocol: scannerJsonProtocol,
       captured_at: pick("captured_at", "capturedAt", "timestamp") || sessionInput.captured_at || sessionInput.capturedAt || null,
       started_at: pick("started_at", "startedAt") || sessionInput.started_at || sessionInput.startedAt || null,
       ended_at: pick("ended_at", "endedAt") || sessionInput.ended_at || sessionInput.endedAt || null,
