@@ -13908,6 +13908,7 @@
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes");
     const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "monitorValues", "monitor_values");
+    const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
     const freezeFrameInput = pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame");
     const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness");
     const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items");
@@ -13935,6 +13936,9 @@
     const livePidSnapshot = hasValue(livePidInput)
       ? { ...normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values")), source: scannerJsonSource }
       : null;
+    const livePidTimeline = hasValue(livePidTimelineInput)
+      ? normalizeLivePidTimeline(livePidTimelineInput)
+      : null;
     const freezeFrameSnapshot = hasValue(freezeFrameInput)
       ? normalizeFreezeFrameSnapshot(Array.isArray(freezeFrameInput) ? { monitor_values: freezeFrameInput, source: scannerJsonSource } : toSnapshotInput(freezeFrameInput, "monitor_values"))
       : null;
@@ -13953,13 +13957,14 @@
     const ecuResponseSummary = hasValue(ecuResponseInput)
       ? normalizeEcuResponseSummary(Array.isArray(ecuResponseInput) ? { ecus: ecuResponseInput, source: scannerJsonSource } : toSnapshotInput(ecuResponseInput, "ecus"))
       : null;
-    if (![dtcSnapshot, livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
+    if (![dtcSnapshot, livePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const observedProtocols = [...new Set([
       scannerJsonProtocol,
       ...(Array.isArray(input.observedProtocols) ? input.observedProtocols : Array.isArray(input.observed_protocols) ? input.observed_protocols : []),
       dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || null,
       livePidSnapshot?.protocol || livePidSnapshot?.obd_protocol || null,
+      ...(livePidTimeline?.samples || []).map((sample) => sample?.protocol || sample?.obd_protocol || null),
       freezeFrameSnapshot?.protocol || freezeFrameSnapshot?.obd_protocol || null,
       readinessSnapshot?.protocol || readinessSnapshot?.obd_protocol || null,
       ecuInfoSnapshot?.protocol || ecuInfoSnapshot?.obd_protocol || null,
@@ -13975,6 +13980,7 @@
       bucketCounts: {
         dtcRows: dtcSnapshot?.dtcCount || 0,
         livePidRows: livePidSnapshot?.monitorValues?.length || 0,
+        livePidSamples: livePidTimeline?.sampleCount || 0,
         freezeFrameRows: freezeFrameSnapshot?.monitorValues?.length || 0,
         readinessRows: readinessSnapshot?.monitors?.length || 0,
         ecuInfoRows: ecuInfoSnapshot?.itemCount || 0,
@@ -13985,6 +13991,7 @@
       bucket_counts: {
         dtc_rows: dtcSnapshot?.dtcCount || 0,
         live_pid_rows: livePidSnapshot?.monitorValues?.length || 0,
+        live_pid_samples: livePidTimeline?.sampleCount || 0,
         freeze_frame_rows: freezeFrameSnapshot?.monitorValues?.length || 0,
         readiness_rows: readinessSnapshot?.monitors?.length || 0,
         ecu_info_rows: ecuInfoSnapshot?.itemCount || 0,
@@ -14016,6 +14023,7 @@
       ended_at: pick("ended_at", "endedAt") || sessionInput.ended_at || sessionInput.endedAt || null,
       dtcSnapshot: dtcSnapshot || undefined,
       livePidSnapshot: livePidSnapshot || undefined,
+      livePidTimeline: livePidTimeline || undefined,
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
       readinessSnapshot: readinessSnapshot || undefined,
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
