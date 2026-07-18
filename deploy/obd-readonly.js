@@ -14191,6 +14191,10 @@
     const vehicleModelCodeIndex = findIndex("model code", "chassis code", "frame code", "vehicle model code", "body code");
     const vehicleYearIndex = findIndex("year", "model year", "registration year", "vehicle year");
     const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code");
+    const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
+    const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
+    const readoutRouteIndex = findIndex("readout route", "interface route");
+    const readoutPlatformIndex = findIndex("platform", "host platform");
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
@@ -14232,6 +14236,7 @@
     const supportedPids = new Set();
     const ecuResponseRows = [];
     const vehicleProfileValues = {};
+    const readoutInterfaceValues = {};
     const observedProtocols = new Set();
     const readoutMetadataById = new Map();
     const recordReadoutMetadata = (id, rowCapturedAt, rowProtocol) => {
@@ -14274,6 +14279,10 @@
       if (!vehicleProfileValues.modelCode) vehicleProfileValues.modelCode = cellAt(vehicleModelCodeIndex, 80) || null;
       if (!vehicleProfileValues.year) vehicleProfileValues.year = cellAt(vehicleYearIndex, 24) || null;
       if (!vehicleProfileValues.engineCode) vehicleProfileValues.engineCode = cellAt(vehicleEngineCodeIndex, 80) || null;
+      if (!readoutInterfaceValues.label) readoutInterfaceValues.label = cellAt(readoutInterfaceLabelIndex, 120) || null;
+      if (!readoutInterfaceValues.deviceModel) readoutInterfaceValues.deviceModel = cellAt(readoutDeviceModelIndex, 120) || null;
+      if (!readoutInterfaceValues.route) readoutInterfaceValues.route = cellAt(readoutRouteIndex, 80) || null;
+      if (!readoutInterfaceValues.platform) readoutInterfaceValues.platform = cellAt(readoutPlatformIndex, 80) || null;
       if (!capturedAt) capturedAt = rowCapturedAt;
       const rowCapturedAtMilliseconds = /^\d{4}-\d{2}-\d{2}T/.test(rowCapturedAt || "") ? Date.parse(rowCapturedAt) : Number.NaN;
       if (Number.isFinite(rowCapturedAtMilliseconds)) {
@@ -14464,6 +14473,10 @@
         engine_code: normalizedVehicleProfile.engineCode
       }
       : null;
+    const normalizedReadoutInterface = normalizeReadoutInterfaceSnapshot(readoutInterfaceValues);
+    const csvReadoutInterface = normalizedReadoutInterface.label || normalizedReadoutInterface.deviceModel || normalizedReadoutInterface.route || normalizedReadoutInterface.platform
+      ? normalizedReadoutInterface
+      : null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const observedProtocolList = [...observedProtocols];
     const multipleProtocols = observedProtocolList.length > 1;
@@ -14539,6 +14552,7 @@
       supportedPidMatrix: supportedPidMatrix || undefined,
       ecuResponseSummary: ecuResponseSummary || undefined,
       vehicleProfile: csvVehicleProfile || undefined,
+      readoutInterface: csvReadoutInterface || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier

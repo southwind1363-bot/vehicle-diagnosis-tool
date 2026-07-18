@@ -15156,10 +15156,14 @@ check(scannerCsvImportSession?.source === "scanner_csv_import" && scannerCsvImpo
 check(scannerCsvImportSession?.importClassification?.schemaVersion === "scanner_csv_import_v1" && scannerCsvImportSession.importClassification?.bucketCounts?.dtcRows === 2 && scannerCsvImportSession.importClassification?.bucketCounts?.livePidRows === 1 && scannerCsvImportSession.importClassification?.bucketCounts?.freezeFrameRows === 1 && scannerCsvImportSession.importClassification?.hadSensitiveIdentifier === true, "Structured CSV import did not retain safe import classification metadata");
 check(scannerCsvImportSession?.vehicleCommandEnabled === false && scannerCsvImportSession?.retainedRawText === false && !JSON.stringify(scannerCsvImportSession).includes("1HGCM82633A004352"), "Structured CSV import retained unsafe VIN or vehicle command state");
 const scannerCsvVehicleProfileSession = obd.buildDiagnosticScanSessionFromCsv([
-  "DTC,Status,Make,Model,Model Code,Year,Engine Code,VIN",
-  "P0300,Stored,Toyota,Prius,ZVW50,2023,2ZR-FXE,1HGCM82633A004352"
+  "DTC,Status,Make,Model,Model Code,Year,Engine Code,Readout Interface,Device Model,Readout Route,Platform,VIN,Serial Number",
+  "P0300,Stored,Toyota,Prius,ZVW50,2023,2ZR-FXE,THINKCAR TCMa,TCMa,app_export_import,ios,1HGCM82633A004352,do-not-retain"
 ].join("\n"));
-check(scannerCsvVehicleProfileSession?.vehicleProfile?.maker === "Toyota" && scannerCsvVehicleProfileSession?.vehicleProfile?.model === "Prius" && scannerCsvVehicleProfileSession?.vehicleProfile?.modelCode === "ZVW50" && scannerCsvVehicleProfileSession?.vehicleProfile?.year === "2023" && scannerCsvVehicleProfileSession?.vehicleProfile?.engineCode === "2ZR-FXE" && scannerCsvVehicleProfileSession?.vehicleCommandEnabled === false && !JSON.stringify(scannerCsvVehicleProfileSession).includes("1HGCM82633A004352"), "Structured CSV import did not retain an explicit safe vehicle profile without retaining VIN");
+check(scannerCsvVehicleProfileSession?.vehicleProfile?.maker === "Toyota" && scannerCsvVehicleProfileSession?.vehicleProfile?.model === "Prius" && scannerCsvVehicleProfileSession?.vehicleProfile?.modelCode === "ZVW50" && scannerCsvVehicleProfileSession?.vehicleProfile?.year === "2023" && scannerCsvVehicleProfileSession?.vehicleProfile?.engineCode === "2ZR-FXE" && scannerCsvVehicleProfileSession?.readoutInterface?.label === "THINKCAR TCMa" && scannerCsvVehicleProfileSession?.readoutInterface?.deviceModel === "TCMa" && scannerCsvVehicleProfileSession?.readoutInterface?.route === "app_export_import" && scannerCsvVehicleProfileSession?.readoutInterface?.platform === "ios" && scannerCsvVehicleProfileSession?.vehicleCommandEnabled === false && !JSON.stringify(scannerCsvVehicleProfileSession).includes("1HGCM82633A004352") && !JSON.stringify(scannerCsvVehicleProfileSession).includes("do-not-retain"), "Structured CSV import did not retain safe vehicle and interface provenance without retaining identifiers");
+const reimportedScannerCsvProvenanceSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerCsvVehicleProfileSession)
+});
+check(reimportedScannerCsvProvenanceSession?.vehicleProfile?.modelCode === "ZVW50" && reimportedScannerCsvProvenanceSession?.readoutInterface?.label === "THINKCAR TCMa" && reimportedScannerCsvProvenanceSession?.readoutInterface?.deviceModel === "TCMa" && reimportedScannerCsvProvenanceSession?.vehicleCommandEnabled === false && !JSON.stringify(reimportedScannerCsvProvenanceSession).includes("1HGCM82633A004352") && !JSON.stringify(reimportedScannerCsvProvenanceSession).includes("do-not-retain"), "Safe CSV vehicle and interface provenance was not preserved through read-only export and reimport");
 const scannerCsvReadinessSession = obd.buildDiagnosticScanSessionFromCsv([
   "Readout,Readiness Monitor ID,Status,MIL,Ignition Type",
   "Readiness,misfire,complete,on,spark",
@@ -15292,6 +15296,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2612");
+  console.log("OBD read-only safety checks: 2613");
   console.log("Errors: 0");
 }
