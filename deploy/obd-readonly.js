@@ -12598,11 +12598,13 @@
       ? {
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         captured_at: input.data.captured_at || input.data.capturedAt || input.data.timestamp || input.captured_at || input.capturedAt || input.timestamp,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const readinessStatusBytes = normalizeReadinessStatusBytes(sourceInput);
     const monitors = Array.isArray(input)
       ? input
@@ -12719,6 +12721,8 @@
       schemaVersion: "readiness_snapshot_v1",
       schema_version: "readiness_snapshot_v1",
       source,
+      sourceEcu,
+      source_ecu: sourceEcu,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -13545,10 +13549,12 @@
 
   function decodeReadinessResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
     const serviceIndex = bytes.findIndex((byte, index) => byte === 0x41 && bytes[index + 1] === 0x01);
     if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length) {
       return normalizeReadinessSnapshot({
         source: input.source || "obd_response_decoder",
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
         captured_at: input.captured_at || input.capturedAt || null,
         readiness_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown",
         monitors: []
@@ -13590,6 +13596,7 @@
 
     return normalizeReadinessSnapshot({
       source: input.source || "obd_response_decoder",
+      ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       readiness_readout_status: "reported",
       mil_on: (a & 0x80) !== 0,
