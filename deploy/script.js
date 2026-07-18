@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.985.0";
+const APP_VERSION = "2.986.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6788,6 +6788,10 @@ function renderObdDeveloperSessionSummary(session = null) {
   const livePidReadoutStatusLabel = formatObdReadoutStatus(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status, NO_DATA);
   const ecuInfoReadoutStatusLabel = formatObdReadoutStatus(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, NO_DATA);
   const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
+  const freezeFrameNumberSummary = freezeFrameSnapshot?.freezeFrameNumberSummary || freezeFrameSnapshot?.freeze_frame_number_summary || null;
+  const freezeFrameNumbersLabel = Array.isArray(freezeFrameNumberSummary?.frameValueCounts || freezeFrameNumberSummary?.frame_value_counts)
+    ? (freezeFrameNumberSummary.frameValueCounts || freezeFrameNumberSummary.frame_value_counts).map((item) => `#${item.frameNumber ?? item.frame_number}: ${item.valueCount ?? item.value_count}`).join(" / ") || NO_DATA
+    : NO_DATA;
   const readinessReadoutStatusLabel = formatObdReadoutStatus(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, NO_DATA);
   const readinessIgnitionType = readinessSnapshot?.readinessIgnitionType || readinessSnapshot?.readiness_ignition_type || null;
   const readinessStatusBytes = readinessSnapshot?.readinessStatusBytes || readinessSnapshot?.readiness_status_bytes || null;
@@ -6889,6 +6893,7 @@ function renderObdDeveloperSessionSummary(session = null) {
       ? `${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}${freezeFrameSnapshot?.triggerDtc ? ` / 起点${freezeFrameSnapshot.triggerDtc}` : ""}`
       : 0],
     ["FF読取状態", freezeFrameReadoutStatusLabel],
+    ["FF番号", freezeFrameNumbersLabel],
     ["ライブ値", livePidSnapshot?.monitorValues?.length
       ? formatObdBridgeMonitorSummary(livePidSnapshot?.monitorValueSummary)
       : 0],

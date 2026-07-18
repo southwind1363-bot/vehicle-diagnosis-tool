@@ -12500,6 +12500,7 @@
     const capturedItemCount = monitorValues.length;
     const expectedItemCount = expectedItems.length;
     const monitorInsights = analyzeMonitorValues(monitorValues);
+    const freezeFrameNumberSummary = buildFreezeFrameNumberSummary(monitorValues);
     const readoutStatus = sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (monitorValues.length ? "reported" : "unknown");
 
     return {
@@ -12523,10 +12524,49 @@
       expected_item_count: expectedItemCount,
       monitorInsights,
       monitor_insights: monitorInsights,
+      freezeFrameNumberSummary,
+      freeze_frame_number_summary: freezeFrameNumberSummary,
       freezeFrameReadoutStatus: readoutStatus,
       freeze_frame_readout_status: readoutStatus,
       retainedRawText: false,
       retained_raw_text: false
+    };
+  }
+
+  function buildFreezeFrameNumberSummary(monitorValues = []) {
+    const values = Array.isArray(monitorValues) ? monitorValues : [];
+    const countByFrame = new Map();
+    let unnumberedValueCount = 0;
+    values.forEach((item) => {
+      const frameNumber = Number.isInteger(item?.freezeFrameNumber)
+        ? item.freezeFrameNumber
+        : Number.isInteger(item?.freeze_frame_number)
+          ? item.freeze_frame_number
+          : null;
+      if (frameNumber === null || frameNumber < 0 || frameNumber > 255) {
+        unnumberedValueCount += 1;
+        return;
+      }
+      countByFrame.set(frameNumber, (countByFrame.get(frameNumber) || 0) + 1);
+    });
+    const frameNumbers = [...countByFrame.keys()].sort((left, right) => left - right);
+    const frameValueCounts = frameNumbers.map((frameNumber) => ({
+      frameNumber,
+      frame_number: frameNumber,
+      valueCount: countByFrame.get(frameNumber),
+      value_count: countByFrame.get(frameNumber)
+    }));
+    return {
+      schemaVersion: "freeze_frame_number_summary_v1",
+      schema_version: "freeze_frame_number_summary_v1",
+      frameNumbers,
+      frame_numbers: frameNumbers,
+      frameCount: frameNumbers.length,
+      frame_count: frameNumbers.length,
+      frameValueCounts,
+      frame_value_counts: frameValueCounts,
+      unnumberedValueCount,
+      unnumbered_value_count: unnumberedValueCount
     };
   }
 
