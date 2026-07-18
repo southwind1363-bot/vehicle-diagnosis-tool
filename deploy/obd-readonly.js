@@ -14068,6 +14068,10 @@
     const minIndex = findIndex("min", "minimum", "min limit");
     const maxIndex = findIndex("max", "maximum", "max limit");
     const ecuResponseIdIndex = findIndex("ecu response id", "ecu id", "module id", "response id");
+    const responseTimeIndex = findIndex("response time ms", "response_time_ms", "response time", "latency ms", "latency");
+    const negativeResponseCountIndex = findIndex("negative response count", "negative_response_count", "negative count");
+    const negativeResponseLabelIndex = findIndex("negative response label", "negative_response_label", "negative label");
+    const negativeRequestedServiceIndex = findIndex("negative requested service", "negative_requested_service", "requested service");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
@@ -14169,7 +14173,19 @@
       if (isEcuResponseRow) {
         const responseId = cellAt(ecuResponseIdIndex, 120) || ecu;
         const responseStatus = cellAt(statusIndex, 40).toLowerCase();
-        if (responseId && responseStatus) ecuResponseRows.push({ id: responseId, name: ecuName || responseId, status: responseStatus });
+        const responseTimeMs = Number(cellAt(responseTimeIndex, 24));
+        const negativeResponseCount = Number(cellAt(negativeResponseCountIndex, 12));
+        const negativeResponseLabel = cellAt(negativeResponseLabelIndex, 120);
+        const negativeRequestedService = cellAt(negativeRequestedServiceIndex, 24).toUpperCase();
+        if (responseId && responseStatus) ecuResponseRows.push({
+          id: responseId,
+          name: ecuName || responseId,
+          status: responseStatus,
+          ...(Number.isFinite(responseTimeMs) && responseTimeMs >= 0 ? { response_time_ms: responseTimeMs } : {}),
+          ...(Number.isInteger(negativeResponseCount) && negativeResponseCount >= 0 ? { negative_response_count: negativeResponseCount } : {}),
+          ...(negativeResponseLabel ? { negative_response_labels: [negativeResponseLabel] } : {}),
+          ...(negativeRequestedService ? { negative_requested_services: [negativeRequestedService] } : {})
+        });
         return;
       }
       if (isSupportedPidRow && /^[0-9A-F]{2}$/.test(pid)) {
