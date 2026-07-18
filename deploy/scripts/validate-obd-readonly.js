@@ -15111,6 +15111,10 @@ const scannerJsonTimelineSession = obd.buildDiagnosticScanSessionFromJson(JSON.s
   }
 }));
 check(scannerJsonTimelineSession?.livePidTimeline?.sampleCount === 2 && scannerJsonTimelineSession?.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerJsonTimelineSession?.importClassification?.bucketCounts?.livePidSamples === 2 && scannerJsonTimelineSession?.importClassification?.observedProtocols?.join(",") === "CAN_11BIT_500K" && scannerJsonTimelineSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain live PID timeline samples and protocol provenance");
+const reimportedScannerJsonTimelineSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonTimelineSession)
+});
+check(reimportedScannerJsonTimelineSession?.livePidTimeline?.sampleCount === 2 && reimportedScannerJsonTimelineSession?.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && reimportedScannerJsonTimelineSession?.vehicleCommandEnabled === false, "JSON live PID timeline was not preserved through read-only export and reimport");
 check(obd.buildDiagnosticScanSessionFromJson("not-json") === null && obd.buildDiagnosticScanSessionFromJson("[]") === null, "Structured JSON import should reject invalid or array payloads");
 const scannerCsvImportSession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status,ECU,ECU Name,Freeze Frame Available,Readout,Freeze Frame Number,PID,Parameter,Value,Unit,VIN",
