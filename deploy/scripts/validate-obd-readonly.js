@@ -2583,8 +2583,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.947.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for JSON live PID timeline retention");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.947.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.947.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.948.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for JSON live PID timeline temporal context");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.948.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.948.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(appSource.includes('const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"') && appSource.includes('const csvImportSession = !bridgeImport && !jsonImportSession && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromCsv === "function"') && appSource.includes('if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())'), "OBD scanner import should prefer safe structured JSON or CSV sessions before text parsing");
@@ -15110,11 +15110,22 @@ const scannerJsonTimelineSession = obd.buildDiagnosticScanSessionFromJson(JSON.s
     }
   }
 }));
-check(scannerJsonTimelineSession?.livePidTimeline?.sampleCount === 2 && scannerJsonTimelineSession?.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerJsonTimelineSession?.importClassification?.bucketCounts?.livePidSamples === 2 && scannerJsonTimelineSession?.importClassification?.observedProtocols?.join(",") === "CAN_11BIT_500K" && scannerJsonTimelineSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain live PID timeline samples and protocol provenance");
+check(scannerJsonTimelineSession?.livePidTimeline?.sampleCount === 2 && scannerJsonTimelineSession?.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerJsonTimelineSession?.startedAt === "2026-07-18T09:45:00+09:00" && scannerJsonTimelineSession?.endedAt === "2026-07-18T09:45:05+09:00" && scannerJsonTimelineSession?.capturedAt === "2026-07-18T09:45:05+09:00" && scannerJsonTimelineSession?.importClassification?.bucketCounts?.livePidSamples === 2 && scannerJsonTimelineSession?.importClassification?.observedProtocols?.join(",") === "CAN_11BIT_500K" && scannerJsonTimelineSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain live PID timeline samples, session range, and protocol provenance");
 const reimportedScannerJsonTimelineSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonTimelineSession)
 });
 check(reimportedScannerJsonTimelineSession?.livePidTimeline?.sampleCount === 2 && reimportedScannerJsonTimelineSession?.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && reimportedScannerJsonTimelineSession?.vehicleCommandEnabled === false, "JSON live PID timeline was not preserved through read-only export and reimport");
+const scannerJsonNonIsoTimelineSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: {
+    live_pid_timeline: {
+      samples: [
+        { captured_at: "first-capture", live_pid_snapshot: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] } },
+        { captured_at: "second-capture", live_pid_snapshot: { monitor_values: [{ pid: "0C", value: 1200, unit: "rpm" }] } }
+      ]
+    }
+  }
+}));
+check(scannerJsonNonIsoTimelineSession?.capturedAt === "first-capture" && scannerJsonNonIsoTimelineSession?.startedAt === null && scannerJsonNonIsoTimelineSession?.endedAt === null && scannerJsonNonIsoTimelineSession?.vehicleCommandEnabled === false, "Structured JSON import inferred a session range from non-ISO live PID timestamps");
 check(obd.buildDiagnosticScanSessionFromJson("not-json") === null && obd.buildDiagnosticScanSessionFromJson("[]") === null, "Structured JSON import should reject invalid or array payloads");
 const scannerCsvImportSession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status,ECU,ECU Name,Freeze Frame Available,Readout,Freeze Frame Number,PID,Parameter,Value,Unit,VIN",

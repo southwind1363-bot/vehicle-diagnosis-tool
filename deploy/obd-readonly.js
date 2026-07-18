@@ -13939,6 +13939,14 @@
     const livePidTimeline = hasValue(livePidTimelineInput)
       ? normalizeLivePidTimeline(livePidTimelineInput)
       : null;
+    const timelineCapturedAtValues = (livePidTimeline?.samples || []).map((sample) => sample?.capturedAt || sample?.captured_at || null).filter(Boolean);
+    const timelineIsoCaptures = timelineCapturedAtValues
+      .map((capturedAt) => ({ capturedAt, milliseconds: /^\d{4}-\d{2}-\d{2}T/.test(capturedAt) ? Date.parse(capturedAt) : Number.NaN }))
+      .filter((item) => Number.isFinite(item.milliseconds))
+      .sort((left, right) => left.milliseconds - right.milliseconds);
+    const scannerJsonCapturedAt = pick("captured_at", "capturedAt", "timestamp") || sessionInput.captured_at || sessionInput.capturedAt || timelineIsoCaptures.at(-1)?.capturedAt || timelineCapturedAtValues[0] || null;
+    const scannerJsonStartedAt = pick("started_at", "startedAt") || sessionInput.started_at || sessionInput.startedAt || timelineIsoCaptures[0]?.capturedAt || null;
+    const scannerJsonEndedAt = pick("ended_at", "endedAt") || sessionInput.ended_at || sessionInput.endedAt || timelineIsoCaptures.at(-1)?.capturedAt || null;
     const freezeFrameSnapshot = hasValue(freezeFrameInput)
       ? normalizeFreezeFrameSnapshot(Array.isArray(freezeFrameInput) ? { monitor_values: freezeFrameInput, source: scannerJsonSource } : toSnapshotInput(freezeFrameInput, "monitor_values"))
       : null;
@@ -14018,9 +14026,9 @@
       session_id: String(pick("session_id", "sessionId") || sessionInput.session_id || sessionInput.sessionId || "scanner-json-import").slice(0, 120),
       source: scannerJsonSource,
       protocol: scannerJsonProtocol,
-      captured_at: pick("captured_at", "capturedAt", "timestamp") || sessionInput.captured_at || sessionInput.capturedAt || null,
-      started_at: pick("started_at", "startedAt") || sessionInput.started_at || sessionInput.startedAt || null,
-      ended_at: pick("ended_at", "endedAt") || sessionInput.ended_at || sessionInput.endedAt || null,
+      captured_at: scannerJsonCapturedAt,
+      started_at: scannerJsonStartedAt,
+      ended_at: scannerJsonEndedAt,
       dtcSnapshot: dtcSnapshot || undefined,
       livePidSnapshot: livePidSnapshot || undefined,
       livePidTimeline: livePidTimeline || undefined,
