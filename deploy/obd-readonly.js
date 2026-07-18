@@ -14181,6 +14181,11 @@
     const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time");
     const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol");
     const observationConditionIndex = findIndex("observation condition", "observation_condition", "measurement condition", "condition");
+    const vehicleMakerIndex = findIndex("maker", "make", "manufacturer", "brand", "vehicle maker", "vehicle make");
+    const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model");
+    const vehicleModelCodeIndex = findIndex("model code", "chassis code", "frame code", "vehicle model code", "body code");
+    const vehicleYearIndex = findIndex("year", "model year", "registration year", "vehicle year");
+    const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code");
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
@@ -14221,6 +14226,7 @@
     const onboardMonitorRows = [];
     const supportedPids = new Set();
     const ecuResponseRows = [];
+    const vehicleProfileValues = {};
     const observedProtocols = new Set();
     const readoutMetadataById = new Map();
     const recordReadoutMetadata = (id, rowCapturedAt, rowProtocol) => {
@@ -14258,6 +14264,11 @@
       const rowProtocol = cellAt(protocolIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
+      if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
+      if (!vehicleProfileValues.model) vehicleProfileValues.model = cellAt(vehicleModelIndex, 120) || null;
+      if (!vehicleProfileValues.modelCode) vehicleProfileValues.modelCode = cellAt(vehicleModelCodeIndex, 80) || null;
+      if (!vehicleProfileValues.year) vehicleProfileValues.year = cellAt(vehicleYearIndex, 24) || null;
+      if (!vehicleProfileValues.engineCode) vehicleProfileValues.engineCode = cellAt(vehicleEngineCodeIndex, 80) || null;
       if (!capturedAt) capturedAt = rowCapturedAt;
       const rowCapturedAtMilliseconds = /^\d{4}-\d{2}-\d{2}T/.test(rowCapturedAt || "") ? Date.parse(rowCapturedAt) : Number.NaN;
       if (Number.isFinite(rowCapturedAtMilliseconds)) {
@@ -14436,6 +14447,18 @@
     const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, ...readoutMetadata("supported_pid"), supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
     if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary) return null;
+    const normalizedVehicleProfile = normalizeVehicleApplicabilitySnapshot(vehicleProfileValues);
+    const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.engineCode
+      ? {
+        maker: normalizedVehicleProfile.maker,
+        model: normalizedVehicleProfile.model,
+        modelCode: normalizedVehicleProfile.modelCode,
+        model_code: normalizedVehicleProfile.modelCode,
+        year: normalizedVehicleProfile.year,
+        engineCode: normalizedVehicleProfile.engineCode,
+        engine_code: normalizedVehicleProfile.engineCode
+      }
+      : null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const observedProtocolList = [...observedProtocols];
     const multipleProtocols = observedProtocolList.length > 1;
@@ -14510,6 +14533,7 @@
       onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
       supportedPidMatrix: supportedPidMatrix || undefined,
       ecuResponseSummary: ecuResponseSummary || undefined,
+      vehicleProfile: csvVehicleProfile || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
