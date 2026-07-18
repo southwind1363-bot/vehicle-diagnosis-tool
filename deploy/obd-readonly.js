@@ -14113,6 +14113,31 @@
       }
       return readResponseOption("livePidResponse", "live_pid_response", "livePidResponses");
     };
+    const readEcuInfoResponseOption = () => {
+      const explicitResponse = sessionInput.ecuInfoResponse || sessionInput.ecu_info_response;
+      if (explicitResponse) return explicitResponse;
+      const rows = classified.responseBuckets.ecuInfoResponses || [];
+      if (rows.length > 1) {
+        const snapshots = rows.map((row) => decodeEcuInfoResponse({
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        }));
+        const values = snapshots.flatMap((snapshot) => snapshot.items || []);
+        const readoutStatus = snapshots.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported")
+          ? "reported"
+          : snapshots.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "unparsed")
+            ? "unparsed"
+            : "unknown";
+        return normalizeEcuInfoSnapshot({
+          source: "obd_response_decoder",
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ecu_info_readout_status: readoutStatus,
+          values
+        });
+      }
+      return readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses");
+    };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -14147,7 +14172,7 @@
       freezeFrameResponse: readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses"),
       readinessResponse: readResponseOption("readinessResponse", "readiness_response", "readinessResponses"),
       onboardMonitorResponse: readResponseOption("onboardMonitorResponse", "onboard_monitor_response", "onboardMonitorResponses"),
-      ecuInfoResponse: readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses"),
+      ecuInfoResponse: readEcuInfoResponseOption(),
       ecus: ecuResponses
     });
     const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);
