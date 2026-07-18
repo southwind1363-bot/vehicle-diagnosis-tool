@@ -13910,6 +13910,16 @@
     const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes");
+    const statusSpecificDtcInput = {
+      stored_dtcs: pick("stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes"),
+      pending_dtcs: pick("pending_dtcs", "pendingDtcs", "pending_dtc_codes", "pendingDtcCodes", "pending_codes", "pendingCodes"),
+      permanent_dtcs: pick("permanent_dtcs", "permanentDtcs", "permanent_dtc_codes", "permanentDtcCodes", "permanent_codes", "permanentCodes")
+    };
+    const resolvedDtcInput = hasValue(dtcInput)
+      ? dtcInput
+      : Object.values(statusSpecificDtcInput).some((item) => Array.isArray(item) && item.length)
+        ? statusSpecificDtcInput
+        : null;
     const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
     const freezeFrameInput = pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame");
@@ -13968,8 +13978,8 @@
       return sanitized;
     };
     const safeEcuInfoInput = sanitizeEcuInfoInput(ecuInfoInput);
-    const dtcSnapshot = hasValue(dtcInput)
-      ? normalizeDtcSnapshot(Array.isArray(dtcInput) ? { dtcs: dtcInput, source: scannerJsonSource } : toSnapshotInput(dtcInput, "dtcs"))
+    const dtcSnapshot = hasValue(resolvedDtcInput)
+      ? normalizeDtcSnapshot(Array.isArray(resolvedDtcInput) ? { dtcs: resolvedDtcInput, source: scannerJsonSource } : toSnapshotInput(resolvedDtcInput, "dtcs"))
       : null;
     const livePidSnapshot = hasValue(livePidInput)
       ? { ...normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values")), source: scannerJsonSource }
