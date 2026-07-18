@@ -15099,7 +15099,7 @@ const scannerJsonMixedProtocolSession = obd.buildDiagnosticScanSessionFromJson(J
     live_pid_snapshot: { protocol: "ISO15765-4", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }
   }
 }));
-check(scannerJsonMixedProtocolSession?.protocol === "CAN_11BIT_500K" && scannerJsonMixedProtocolSession?.importClassification?.multipleProtocols === true && scannerJsonMixedProtocolSession?.importClassification?.observedProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && scannerJsonMixedProtocolSession?.warnings?.includes("mixed_protocol_readout") && scannerJsonMixedProtocolSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain mixed protocol provenance and read-only warning state");
+check(scannerJsonMixedProtocolSession?.protocol === "CAN_11BIT_500K" && scannerJsonMixedProtocolSession?.importClassification?.multipleProtocols === true && scannerJsonMixedProtocolSession?.importClassification?.observedProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && scannerJsonMixedProtocolSession?.warnings?.includes("mixed_protocol_readout") && !scannerJsonMixedProtocolSession?.coreSessionStatus?.blockingWarningIds?.includes("mixed_protocol_readout") && scannerJsonMixedProtocolSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain mixed protocol provenance and non-blocking read-only warning state");
 check(obd.buildDiagnosticScanSessionFromJson("not-json") === null && obd.buildDiagnosticScanSessionFromJson("[]") === null, "Structured JSON import should reject invalid or array payloads");
 const scannerCsvImportSession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status,ECU,ECU Name,Freeze Frame Available,Readout,Freeze Frame Number,PID,Parameter,Value,Unit,VIN",
