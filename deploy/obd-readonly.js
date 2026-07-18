@@ -1082,6 +1082,7 @@
       includeObservedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false
     });
     const dtcReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
+    const dtcStatusAvailabilityMask = readDtcStatusAvailabilityMaskAlias(data);
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -1108,6 +1109,8 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      dtcStatusAvailabilityMask,
+      dtc_status_availability_mask: dtcStatusAvailabilityMask,
       protocol: readBridgeProtocol(data),
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
@@ -12312,6 +12315,7 @@
     const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
+    const dtcStatusAvailabilityMask = readDtcStatusAvailabilityMaskAlias(sourceInput);
 
     return {
       schemaVersion: "dtc_snapshot_v1",
@@ -12338,6 +12342,8 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      dtcStatusAvailabilityMask,
+      dtc_status_availability_mask: dtcStatusAvailabilityMask,
       retainedRawText: false,
       retained_raw_text: false
     };
@@ -14281,6 +14287,7 @@
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
     const statusIndex = findIndex("status", "dtc status", "state", "状態");
     const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask");
+    const dtcStatusAvailabilityMaskIndex = findIndex("dtc status availability mask", "status availability mask", "dtc status mask availability");
     const dtcSeverityIndex = findIndex("severity", "dtc severity", "severity byte", "dtc severity byte");
     const dtcOccurrenceCountIndex = findIndex("occurrence count", "occurrence counter", "dtc occurrence count", "dtc occurrence counter", "fault occurrence counter");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
@@ -14389,6 +14396,7 @@
     let endedAt = null;
     let endedAtMilliseconds = null;
     let protocol = null;
+    let dtcStatusAvailabilityMask = null;
     lines.slice(1, 5001).forEach((line) => {
       const cells = parseRow(line);
       if (!cells) return;
@@ -14422,6 +14430,7 @@
       const dtc = cellAt(dtcIndex, 48);
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const dtcStatusByte = cellAt(dtcStatusByteIndex, 12);
+      if (dtcStatusAvailabilityMask === null) dtcStatusAvailabilityMask = cellAt(dtcStatusAvailabilityMaskIndex, 12) || null;
       const dtcSeverity = cellAt(dtcSeverityIndex, 80);
       const dtcOccurrenceCount = cellAt(dtcOccurrenceCountIndex, 12);
       const ecu = cellAt(ecuIndex, 120);
@@ -14548,7 +14557,7 @@
     });
     if (endedAt) capturedAt = endedAt;
     const dtcSnapshot = dtcs.length || reportedDtcStatuses.size
-      ? normalizeDtcSnapshot({ source, ...readoutMetadata("dtc"), dtcs, ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
+      ? normalizeDtcSnapshot({ source, ...readoutMetadata("dtc"), dtcs, ...(dtcStatusAvailabilityMask ? { dtc_status_availability_mask: dtcStatusAvailabilityMask } : {}), ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
       : null;
     const livePidTimelineSamples = [...livePidSamplesByCapturedAt.values()].sort((left, right) => {
       const leftTime = /^\d{4}-\d{2}-\d{2}T/.test(left.capturedAt) ? Date.parse(left.capturedAt) : Number.NaN;
@@ -15887,6 +15896,18 @@
       row?.statusByte,
       row?.dtc_status_byte,
       row?.dtcStatusByte
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcStatusByte(value);
+  }
+
+  function readDtcStatusAvailabilityMaskAlias(row) {
+    const value = [
+      row?.dtc_status_availability_mask,
+      row?.dtcStatusAvailabilityMask,
+      row?.status_availability_mask,
+      row?.statusAvailabilityMask,
+      row?.dtc_status_mask,
+      row?.dtcStatusMask
     ].find((item) => item !== undefined && item !== null && item !== "");
     return normalizeDtcStatusByte(value);
   }
