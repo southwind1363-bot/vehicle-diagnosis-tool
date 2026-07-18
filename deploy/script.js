@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.961.0";
+const APP_VERSION = "2.962.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -454,6 +454,7 @@ const obdNextReadoutList = document.querySelector("#obdNextReadoutList");
 const obdScannerText = document.querySelector("#obdScannerText");
 const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdImportPasteButton = document.querySelector("#obdImportPasteButton");
+const obdImportFileInput = document.querySelector("#obdImportFileInput");
 const obdSampleButton = document.querySelector("#obdSampleButton");
 const obdImportClearButton = document.querySelector("#obdImportClearButton");
 const obdImportStatus = document.querySelector("#obdImportStatus");
@@ -621,6 +622,7 @@ runSelfTestButton.addEventListener("click", runSelfCheck);
 clearStorageButton.addEventListener("click", clearAllLocalStorage);
 obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
 obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);
+obdImportFileInput?.addEventListener("change", importObdScannerFile);
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
@@ -7894,6 +7896,43 @@ async function pasteObdScannerImport() {
   } catch (error) {
     obdImportStatus.textContent = "クリップボードを読めませんでした。";
   }
+}
+
+function importObdScannerFile(event) {
+  const input = event.currentTarget;
+  const file = input?.files?.[0];
+  if (!file) return;
+
+  const acceptedTypes = new Set(["application/json", "text/csv", "text/plain"]);
+  const hasAcceptedExtension = /\.(json|csv|txt)$/i.test(file.name || "");
+  if (!hasAcceptedExtension && !acceptedTypes.has(file.type)) {
+    obdImportStatus.textContent = "JSON、CSV、またはテキスト形式の診断結果を選択してください。";
+    input.value = "";
+    return;
+  }
+  if (file.size > 500000) {
+    obdImportStatus.textContent = "診断結果ファイルは500 KB以下にしてください。";
+    input.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = typeof reader.result === "string" ? reader.result : "";
+    if (!text.trim()) {
+      obdImportStatus.textContent = "選択したファイルに診断結果がありません。";
+      input.value = "";
+      return;
+    }
+    obdScannerText.value = text;
+    input.value = "";
+    analyzeObdScannerImport();
+  };
+  reader.onerror = () => {
+    obdImportStatus.textContent = "診断結果ファイルを読めませんでした。";
+    input.value = "";
+  };
+  reader.readAsText(file, "utf-8");
 }
 
 function clearObdScannerImport() {
