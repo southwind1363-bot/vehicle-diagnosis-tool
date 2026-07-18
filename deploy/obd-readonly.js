@@ -14040,6 +14040,7 @@
     const headerIndex = new Map(headers.map((header, index) => [normalizeHeader(header), index]).filter(([header]) => header));
     const findIndex = (...aliases) => aliases.map((alias) => headerIndex.get(normalizeHeader(alias))).find((index) => Number.isInteger(index));
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
+    const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
     const statusIndex = findIndex("status", "dtc status", "state", "状態");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
@@ -14096,6 +14097,7 @@
       if (!capturedAt) capturedAt = cellAt(capturedAtIndex, 80) || null;
       if (!protocol) protocol = cellAt(protocolIndex, 80) || null;
       const dtc = cellAt(dtcIndex, 48);
+      const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const ecu = cellAt(ecuIndex, 120);
       const readoutKind = cellAt(readoutKindIndex, 80);
       const isFreezeFrameRow = Number.isInteger(readoutKindIndex) && /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
@@ -14115,6 +14117,7 @@
       if (dtc && extractDtcReferences(dtc).length) {
         dtcs.push({
           code: dtc,
+          subcode: /^[0-9A-F]{1,4}$/.test(dtcSubcode) ? dtcSubcode : null,
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
