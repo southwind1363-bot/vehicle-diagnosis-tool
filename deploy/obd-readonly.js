@@ -13954,6 +13954,117 @@
     };
   }
 
+  function buildDiagnosticScanSessionFromCsv(value, options = {}) {
+    const text = String(value || "").trim();
+    if (!text || text.length > 500000) return null;
+    const lines = text.split(/\r?\n/).filter((line) => String(line || "").trim());
+    if (lines.length < 2) return null;
+    const headerLine = lines[0].replace(/^\uFEFF/, "");
+    const delimiter = [",", ";", "\t"].reduce((best, candidate) => (
+      headerLine.split(candidate).length > headerLine.split(best).length ? candidate : best
+    ), ",");
+    if (!headerLine.includes(delimiter)) return null;
+    const parseRow = (line) => {
+      const cells = [];
+      let cell = "";
+      let quoted = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const character = line[index];
+        if (character === '"') {
+          if (quoted && line[index + 1] === '"') {
+            cell += '"';
+            index += 1;
+          } else {
+            quoted = !quoted;
+          }
+        } else if (character === delimiter && !quoted) {
+          cells.push(cell.trim());
+          cell = "";
+        } else {
+          cell += character;
+        }
+      }
+      cells.push(cell.trim());
+      return quoted ? null : cells;
+    };
+    const normalizeHeader = (cell) => String(cell || "")
+      .replace(/^\uFEFF/, "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_\-./()]+/g, "");
+    const headers = parseRow(headerLine);
+    if (!headers?.length) return null;
+    const headerIndex = new Map(headers.map((header, index) => [normalizeHeader(header), index]).filter(([header]) => header));
+    const findIndex = (...aliases) => aliases.map((alias) => headerIndex.get(normalizeHeader(alias))).find((index) => Number.isInteger(index));
+    const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
+    const statusIndex = findIndex("status", "dtc status", "state", "状態");
+    const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
+    const pidIndex = findIndex("pid", "obd pid", "parameter id");
+    const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
+    const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
+    const unitIndex = findIndex("unit", "units", "単位");
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex)))) return null;
+    const source = "scanner_csv_import";
+    const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
+    const normalizeStatus = (cell) => {
+      const normalized = sanitizeCell(cell, 80).toLowerCase();
+      if (/(?:pending|tentative|保留)/.test(normalized)) return "pending";
+      if (/(?:permanent|恒久)/.test(normalized)) return "permanent";
+      if (/(?:stored|current|confirmed|active|history|保存|現在|確定)/.test(normalized)) return "stored";
+      return "unknown";
+    };
+    const sensitiveLabel = (label) => /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(label);
+    const dtcs = [];
+    const monitorValues = [];
+    lines.slice(1, 5001).forEach((line) => {
+      const cells = parseRow(line);
+      if (!cells) return;
+      const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
+      const dtc = cellAt(dtcIndex, 48);
+      const ecu = cellAt(ecuIndex, 120);
+      if (dtc && extractDtcReferences(dtc).length) {
+        dtcs.push({ code: dtc, status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown", ecu: ecu || null });
+      }
+      const pid = cellAt(pidIndex, 16).replace(/^0X/i, "").toUpperCase();
+      const label = cellAt(labelIndex, 120);
+      const rawValue = cellAt(valueIndex, 160);
+      if (!rawValue || sensitiveLabel(label)) return;
+      if (pid || label) {
+        monitorValues.push({
+          ...(pid ? { pid } : {}),
+          ...(label ? { label } : {}),
+          value: rawValue,
+          unit: cellAt(unitIndex, 40)
+        });
+      }
+    });
+    const dtcSnapshot = dtcs.length ? normalizeDtcSnapshot({ source, dtcs }) : null;
+    const livePidSnapshot = monitorValues.length ? normalizeBridgeLivePidSnapshot({ source, values: monitorValues }) : null;
+    if (!dtcSnapshot && !livePidSnapshot) return null;
+    const sessionInput = getDiagnosticSessionInput(options);
+    const output = buildDiagnosticScanSession({
+      session_id: sessionInput.session_id || sessionInput.sessionId || "scanner-csv-import",
+      source,
+      dtcSnapshot: dtcSnapshot || undefined,
+      livePidSnapshot: livePidSnapshot || undefined
+    });
+    return {
+      ...output,
+      source,
+      source_type: source,
+      sourceLength: text.length,
+      source_length: text.length,
+      retainedRawText: false,
+      retained_raw_text: false,
+      retainedRawFrames: false,
+      retained_raw_frames: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function mergeUniqueStrings(...groups) {
     return [...new Set(groups.flatMap((group) => Array.isArray(group) ? group : []).filter(Boolean))];
   }
@@ -15688,6 +15799,7 @@
     classifyObdResponseLines,
     buildScanSessionFromObdText,
     buildDiagnosticScanSessionFromJson,
+    buildDiagnosticScanSessionFromCsv,
     buildSupportedPidMatrix,
     buildDiagnosticScanSession,
     evaluateOutboundSafety,
