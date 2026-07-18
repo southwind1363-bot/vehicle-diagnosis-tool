@@ -13939,7 +13939,13 @@
     const livePidTimeline = hasValue(livePidTimelineInput)
       ? normalizeLivePidTimeline(livePidTimelineInput)
       : null;
-    const latestLivePidTimelineSample = livePidTimeline?.samples?.at(-1) || null;
+    const timelineSamples = livePidTimeline?.samples || [];
+    const timelineCapturedAtValues = timelineSamples.map((sample) => sample?.capturedAt || sample?.captured_at || null).filter(Boolean);
+    const timelineIsoCaptures = timelineSamples
+      .map((sample) => ({ sample, capturedAt: sample?.capturedAt || sample?.captured_at || null, milliseconds: /^\d{4}-\d{2}-\d{2}T/.test(sample?.capturedAt || sample?.captured_at || "") ? Date.parse(sample.capturedAt || sample.captured_at) : Number.NaN }))
+      .filter((item) => Number.isFinite(item.milliseconds))
+      .sort((left, right) => left.milliseconds - right.milliseconds);
+    const latestLivePidTimelineSample = timelineIsoCaptures.at(-1)?.sample || timelineSamples.at(-1) || null;
     const importedLivePidSnapshot = livePidSnapshot || (latestLivePidTimelineSample
       ? {
         ...normalizeBridgeLivePidSnapshot({
@@ -13952,11 +13958,6 @@
         source: scannerJsonSource
       }
       : null);
-    const timelineCapturedAtValues = (livePidTimeline?.samples || []).map((sample) => sample?.capturedAt || sample?.captured_at || null).filter(Boolean);
-    const timelineIsoCaptures = timelineCapturedAtValues
-      .map((capturedAt) => ({ capturedAt, milliseconds: /^\d{4}-\d{2}-\d{2}T/.test(capturedAt) ? Date.parse(capturedAt) : Number.NaN }))
-      .filter((item) => Number.isFinite(item.milliseconds))
-      .sort((left, right) => left.milliseconds - right.milliseconds);
     const scannerJsonCapturedAt = pick("captured_at", "capturedAt", "timestamp") || sessionInput.captured_at || sessionInput.capturedAt || timelineIsoCaptures.at(-1)?.capturedAt || timelineCapturedAtValues[0] || null;
     const scannerJsonStartedAt = pick("started_at", "startedAt") || sessionInput.started_at || sessionInput.startedAt || timelineIsoCaptures[0]?.capturedAt || null;
     const scannerJsonEndedAt = pick("ended_at", "endedAt") || sessionInput.ended_at || sessionInput.endedAt || timelineIsoCaptures.at(-1)?.capturedAt || null;
