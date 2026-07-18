@@ -1230,6 +1230,7 @@
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const observationConditions = new Set(["unspecified", "cold", "warm", "symptom_reproduced"]);
     const hasBridgeValueList = Array.isArray(data.values)
       || Array.isArray(data.monitor_values)
       || Array.isArray(data.monitorValues)
@@ -1274,6 +1275,10 @@
         : bridgeSafety.ok ? "reported" : "unknown";
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
+    const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";
+    const observationCondition = observationConditions.has(String(observationConditionInput))
+      ? String(observationConditionInput)
+      : "unspecified";
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
     const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);
     const monitorInsights = [...new Map([
@@ -1293,6 +1298,8 @@
       supported_pids: supportedPids,
       capturedAt,
       captured_at: capturedAt,
+      observationCondition,
+      observation_condition: observationCondition,
       monitorValues,
       monitor_values: monitorValues,
       monitorValueSummary,
@@ -14273,7 +14280,7 @@
       ? {
         ...normalizeBridgeLivePidSnapshot({
           source,
-          ...(latestLivePidSample ? { captured_at: latestLivePidSample.capturedAt, protocol: latestLivePidSample.protocol } : {}),
+          ...(latestLivePidSample ? { captured_at: latestLivePidSample.capturedAt, protocol: latestLivePidSample.protocol, observation_condition: latestLivePidSample.observationCondition } : {}),
           values: currentLivePidValues
         }),
         source
