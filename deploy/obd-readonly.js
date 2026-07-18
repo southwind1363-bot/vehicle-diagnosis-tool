@@ -13905,14 +13905,15 @@
     } catch {
       return null;
     }
-    const topLevelDtcRows = Array.isArray(parsed) ? parsed : null;
-    const hasTopLevelDtcRows = topLevelDtcRows?.some((row) => {
+    const hasDtcRows = (rows) => Array.isArray(rows) && rows.some((row) => {
       const rowValue = row?.value && typeof row.value === "object" ? row.value : row;
       const candidate = typeof rowValue === "string"
         ? rowValue
         : rowValue?.code || rowValue?.dtc || rowValue?.id || rowValue?.value || rowValue?.dtc_code || rowValue?.dtcCode || "";
       return extractDtcReferences(candidate).length > 0;
-    }) === true;
+    });
+    const topLevelDtcRows = Array.isArray(parsed) ? parsed : null;
+    const hasTopLevelDtcRows = hasDtcRows(topLevelDtcRows);
     if (!parsed || typeof parsed !== "object" || (Array.isArray(parsed) && !hasTopLevelDtcRows)) return null;
     const parsedPayload = hasTopLevelDtcRows ? { dtcs: topLevelDtcRows } : parsed;
     const exportPayload = parsedPayload.bridge_export_payload || parsedPayload.bridgeExportPayload || parsedPayload;
@@ -13921,7 +13922,13 @@
     ));
     const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
     if (!session || typeof session !== "object" || Array.isArray(session)) return null;
-    const input = session.data && typeof session.data === "object" && !Array.isArray(session.data) ? { ...session, ...session.data } : session;
+    const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => session[key] !== undefined && session[key] !== null);
+    const hasArrayDataDtcRows = !hasExplicitDtcCollection && hasDtcRows(session.data);
+    const input = session.data && typeof session.data === "object" && !Array.isArray(session.data)
+      ? { ...session, ...session.data }
+      : hasArrayDataDtcRows
+        ? { ...session, dtcs: session.data }
+        : session;
     const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes");
