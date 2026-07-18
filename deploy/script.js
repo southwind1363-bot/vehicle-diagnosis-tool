@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.944.0";
+const APP_VERSION = "2.945.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5633,6 +5633,7 @@ function formatObdBridgeWarningLabel(code = "") {
     readiness_incomplete: "レディネス未完了あり",
     onboard_monitor_test_failed: "Mode06で範囲外あり",
     compare_values_under_same_conditions: "同条件比較が必要",
+    mixed_protocol_readout: "通信方式が混在、再読取で固定確認",
     raw_pid_values_need_conversion: "未換算PIDあり",
     save_before_clear: "消去前保存が必要",
     sensitive_identifier_redacted: "識別情報は伏せて保持"

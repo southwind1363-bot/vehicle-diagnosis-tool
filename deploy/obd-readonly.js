@@ -14967,6 +14967,7 @@
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
+    const importClassification = metadataOverrides.importClassification;
     const webSerialReadoutSummary = metadataOverrides.webSerialReadoutSummary;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(sessionInput.importedCoreSessionStatus || sessionInput.imported_core_session_status || sessionInput.coreSessionStatus || sessionInput.core_session_status || null);
     const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(sessionInput.importedDiagnosticFlowSummary || sessionInput.imported_diagnostic_flow_summary || sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null);
@@ -15135,6 +15136,7 @@
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
     const warnings = [];
+    if (importClassification?.multipleProtocols === true || importClassification?.multiple_protocols === true) warnings.push("mixed_protocol_readout");
     appendCommonCoreWarnings(warnings, {
       dtcWarning: "save_before_clear",
       hasDtcCodes: dtcSnapshot.codes.length > 0,
@@ -15201,7 +15203,6 @@
     appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const explicitWarnings = resolveWarningList(metadataOverrides.warnings);
-    const importClassification = metadataOverrides.importClassification;
     const resolvedWarnings = resolveWarningList(warnings, explicitWarnings);
     const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
       explicitCandidates: explicitNextReadoutCandidates,
