@@ -14239,9 +14239,10 @@
         } else {
           monitorValues.push(row);
           if (rowCapturedAt) {
-            const sample = livePidSamplesByCapturedAt.get(rowCapturedAt) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, observationCondition: rowObservationCondition, values: [] };
+            const sampleKey = `${rowCapturedAt}::${rowObservationCondition}`;
+            const sample = livePidSamplesByCapturedAt.get(sampleKey) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, observationCondition: rowObservationCondition, values: [] };
             sample.values.push(row);
-            livePidSamplesByCapturedAt.set(rowCapturedAt, sample);
+            livePidSamplesByCapturedAt.set(sampleKey, sample);
           }
         }
       }
