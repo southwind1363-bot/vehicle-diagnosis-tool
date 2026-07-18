@@ -1082,10 +1082,13 @@
       includeObservedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false
     });
     const dtcReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
-    const dtcStatusAvailabilityMask = readDtcStatusAvailabilityMaskAlias(data);
+    const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
+    const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
       dtcs: normalizedDtcs,
-      statusAvailabilityMask: dtcStatusAvailabilityMask
+      statusAvailabilityMask: dtcStatusAvailabilityMask,
+      statusAvailabilityMaskCaptured: dtcStatusAvailabilityMasks.length > 0,
+      statusAvailabilityMaskCount: dtcStatusAvailabilityMasks.length
     });
 
     return {
@@ -1115,6 +1118,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
+      dtcStatusAvailabilityMasks,
+      dtc_status_availability_masks: dtcStatusAvailabilityMasks,
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
       protocol: readBridgeProtocol(data),
@@ -12360,10 +12365,13 @@
     const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
-    const dtcStatusAvailabilityMask = readDtcStatusAvailabilityMaskAlias(sourceInput);
+    const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(sourceInput);
+    const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
       dtcs: normalizedDtcs,
-      statusAvailabilityMask: dtcStatusAvailabilityMask
+      statusAvailabilityMask: dtcStatusAvailabilityMask,
+      statusAvailabilityMaskCaptured: dtcStatusAvailabilityMasks.length > 0,
+      statusAvailabilityMaskCount: dtcStatusAvailabilityMasks.length
     });
 
     return {
@@ -12393,6 +12401,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
+      dtcStatusAvailabilityMasks,
+      dtc_status_availability_masks: dtcStatusAvailabilityMasks,
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
       retainedRawText: false,
@@ -13199,10 +13209,7 @@
           ? "reported"
           : "unknown";
     const dtcStatusAvailabilityMasks = [...new Set(
-      snapshots
-        .map((snapshot) => snapshot?.dtcStatusAvailabilityMask || snapshot?.dtc_status_availability_mask || null)
-        .map((value) => normalizeDtcStatusByte(value))
-        .filter((value) => value !== null)
+      snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -15970,16 +15977,26 @@
     return normalizeDtcStatusByte(value);
   }
 
-  function readDtcStatusAvailabilityMaskAlias(row) {
-    const value = [
+  function readDtcStatusAvailabilityMaskAliases(row) {
+    const values = [
+      row?.dtc_status_availability_masks,
+      row?.dtcStatusAvailabilityMasks,
+      row?.status_availability_masks,
+      row?.statusAvailabilityMasks,
       row?.dtc_status_availability_mask,
       row?.dtcStatusAvailabilityMask,
       row?.status_availability_mask,
       row?.statusAvailabilityMask,
       row?.dtc_status_mask,
       row?.dtcStatusMask
-    ].find((item) => item !== undefined && item !== null && item !== "");
-    return normalizeDtcStatusByte(value);
+    ].flatMap((item) => Array.isArray(item) ? item : [item]);
+    return [...new Set(values
+      .map((value) => normalizeDtcStatusByte(value))
+      .filter((value) => value !== null))];
+  }
+
+  function readDtcStatusAvailabilityMaskAlias(row) {
+    return readDtcStatusAvailabilityMaskAliases(row)[0] || null;
   }
 
   function normalizeDtcSeverity(value) {

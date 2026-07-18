@@ -15163,6 +15163,9 @@ const mergedDtcMetadataSnapshot = obd.mergeDtcSnapshots(
   })
 );
 check(mergedDtcMetadataSnapshot.dtcMetadataSummary?.totalCount === 2 && mergedDtcMetadataSnapshot.dtc_metadata_summary?.status_byte_count === 1 && mergedDtcMetadataSnapshot.dtcMetadataSummary?.severityCount === 2 && mergedDtcMetadataSnapshot.dtcMetadataSummary?.occurrenceCount === 2 && mergedDtcMetadataSnapshot.dtcMetadataSummary?.statusAvailabilityMaskCaptured === true && mergedDtcMetadataSnapshot.dtc_metadata_summary?.status_availability_mask_count === 2 && mergedDtcMetadataSnapshot.dtcStatusAvailabilityMask === null && Array.isArray(mergedDtcMetadataSnapshot.dtc_status_availability_masks) && mergedDtcMetadataSnapshot.dtc_status_availability_masks.length === 2 && mergedDtcMetadataSnapshot.vehicleCommandEnabled !== true, "Merged DTC snapshots did not retain reported metadata coverage without choosing an ambiguous status mask");
+const mergedDtcMetadataExport = obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtcSnapshot: mergedDtcMetadataSnapshot }));
+const reimportedMergedDtcMetadataSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: mergedDtcMetadataExport }));
+check(reimportedMergedDtcMetadataSession?.dtcSnapshot?.dtcStatusAvailabilityMask === null && Array.isArray(reimportedMergedDtcMetadataSession?.dtcSnapshot?.dtc_status_availability_masks) && reimportedMergedDtcMetadataSession.dtcSnapshot.dtc_status_availability_masks.length === 2 && reimportedMergedDtcMetadataSession.dtcSnapshot?.dtc_metadata_summary?.status_availability_mask_count === 2 && reimportedMergedDtcMetadataSession?.vehicleCommandEnabled === false, "Merged DTC status availability masks were not retained through read-only export and JSON reimport");
 const severityDtcSnapshot = obd.normalizeDtcSnapshot({
   dtcs: [
     { dtc_code: "P0300", dtc_severity: 3 },
