@@ -14058,6 +14058,8 @@
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
     const unitIndex = findIndex("unit", "units", "単位");
+    const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time");
+    const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol");
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
@@ -14085,10 +14087,14 @@
     const ecuResponseRows = [];
     let freezeFrameTriggerDtc = null;
     let milOn = null;
+    let capturedAt = null;
+    let protocol = null;
     lines.slice(1, 5001).forEach((line) => {
       const cells = parseRow(line);
       if (!cells) return;
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
+      if (!capturedAt) capturedAt = cellAt(capturedAtIndex, 80) || null;
+      if (!protocol) protocol = cellAt(protocolIndex, 80) || null;
       const dtc = cellAt(dtcIndex, 48);
       const ecu = cellAt(ecuIndex, 120);
       const readoutKind = cellAt(readoutKindIndex, 80);
@@ -14212,6 +14218,9 @@
       },
       sourceLength: text.length,
       source_length: text.length,
+      capturedAt,
+      captured_at: capturedAt,
+      protocol,
       hadSensitiveIdentifier,
       had_sensitive_identifier: hadSensitiveIdentifier,
       retainedRawText: false,
@@ -14225,6 +14234,8 @@
     const output = buildDiagnosticScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "scanner-csv-import",
       source,
+      protocol: protocol || sessionInput.protocol || sessionInput.obd_protocol || null,
+      captured_at: capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null,
       dtcSnapshot: dtcSnapshot || undefined,
       livePidSnapshot: livePidSnapshot || undefined,
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
