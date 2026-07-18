@@ -15230,6 +15230,47 @@
     });
   }
 
+  function collectTextOnboardMonitorSection(value) {
+    const monitorLines = [];
+    let inOnboardMonitor = false;
+    const isOnboardMonitorHeading = (text) => /(?:\bmode\s*0?6\b|\bonboard\s*monitor(?:ing)?\b|モード\s*0?6|オンボード\s*モニター)/i.test(text);
+    const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|\becu\s*(?:info|information)\b|\bmode\s*0?9\b|\bsupported\s*pids?\b|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|ecu\s*情報|対応\s*pid|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
+    String(value || "").split(/\r?\n/).forEach((line) => {
+      const text = String(line || "").trim();
+      if (isOnboardMonitorHeading(text)) {
+        inOnboardMonitor = true;
+        return;
+      }
+      if (inOnboardMonitor && isSectionBoundary(text)) inOnboardMonitor = false;
+      if (inOnboardMonitor) monitorLines.push(line);
+    });
+    return monitorLines;
+  }
+
+  function extractTextOnboardMonitorSnapshot(value) {
+    const tests = [];
+    const findNumber = (text, label) => {
+      const match = text.match(label);
+      return match ? Number(match[1]) : null;
+    };
+    collectTextOnboardMonitorSection(value).forEach((line) => {
+      const text = String(line || "").trim();
+      const testId = text.match(/\b(?:tid|test\s*id)\s*[:=]?\s*(?:0x)?([0-9a-f]{1,2})\b/i)?.[1];
+      const componentId = text.match(/\b(?:cid|component\s*id)\s*[:=]?\s*(?:0x)?([0-9a-f]{1,2})\b/i)?.[1];
+      const measured = findNumber(text, /\b(?:value|measured|result)\s*[:=]?\s*(-?\d+(?:\.\d+)?)/i);
+      const min = findNumber(text, /\b(?:min|minimum)\s*[:=]?\s*(-?\d+(?:\.\d+)?)/i);
+      const max = findNumber(text, /\b(?:max|maximum)\s*[:=]?\s*(-?\d+(?:\.\d+)?)/i);
+      if (!testId || !componentId || !Number.isFinite(measured) || !Number.isFinite(min) || !Number.isFinite(max)) return;
+      tests.push({ testId, componentId, value: measured, min, max });
+    });
+    if (!tests.length) return null;
+    return normalizeOnboardMonitorSnapshot({
+      source: "scanner_text_mode06",
+      tests,
+      onboardMonitorReadoutStatus: "reported"
+    });
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
@@ -15239,6 +15280,7 @@
     const readinessSnapshot = extractTextReadinessSnapshot(redacted);
     const ecuInfoSnapshot = extractTextEcuInfoSnapshot(redacted);
     const supportedPidMatrix = extractTextSupportedPidMatrix(redacted);
+    const onboardMonitorSnapshot = extractTextOnboardMonitorSnapshot(redacted);
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
@@ -15253,6 +15295,10 @@
       ecu_info_snapshot: ecuInfoSnapshot,
       supportedPidMatrix,
       supported_pid_matrix: supportedPidMatrix,
+      onboardMonitorSnapshot,
+      onboard_monitor_snapshot: onboardMonitorSnapshot,
+      mode06Snapshot: onboardMonitorSnapshot,
+      mode06_snapshot: onboardMonitorSnapshot,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
