@@ -1583,9 +1583,11 @@
       milstatus: "mil_status",
       mil: "mil_status",
       monitorstatusmil: "monitor_status_mil",
+      readinessstatusbytea: "readiness_status_byte_a",
       readinessstatusbyteb: "readiness_status_byte_b",
       readinessstatusbytec: "readiness_status_byte_c",
       readinessstatusbyted: "readiness_status_byte_d",
+      statusbytea: "readiness_status_byte_a",
       statusbyteb: "readiness_status_byte_b",
       statusbytec: "readiness_status_byte_c",
       statusbyted: "readiness_status_byte_d"
@@ -1614,21 +1616,25 @@
             data.mil_on !== undefined ? { id: "mil_status", value: data.mil_on } : null,
             data.milStatus !== undefined ? { id: "mil_status", value: data.milStatus } : null,
             data.mil !== undefined ? { id: "mil_status", value: data.mil } : null,
+            data.readiness_status_byte_a !== undefined ? { id: "readiness_status_byte_a", value: data.readiness_status_byte_a } : null,
             data.readiness_status_byte_b !== undefined ? { id: "readiness_status_byte_b", value: data.readiness_status_byte_b } : null,
             data.readiness_status_byte_c !== undefined ? { id: "readiness_status_byte_c", value: data.readiness_status_byte_c } : null,
             data.readiness_status_byte_d !== undefined ? { id: "readiness_status_byte_d", value: data.readiness_status_byte_d } : null,
+            data.readinessStatusByteA !== undefined ? { id: "readiness_status_byte_a", value: data.readinessStatusByteA } : null,
             data.readinessStatusByteB !== undefined ? { id: "readiness_status_byte_b", value: data.readinessStatusByteB } : null,
             data.readinessStatusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.readinessStatusByteC } : null,
             data.readinessStatusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.readinessStatusByteD } : null,
+            data.status_byte_a !== undefined ? { id: "readiness_status_byte_a", value: data.status_byte_a } : null,
             data.status_byte_b !== undefined ? { id: "readiness_status_byte_b", value: data.status_byte_b } : null,
             data.status_byte_c !== undefined ? { id: "readiness_status_byte_c", value: data.status_byte_c } : null,
             data.status_byte_d !== undefined ? { id: "readiness_status_byte_d", value: data.status_byte_d } : null,
+            data.statusByteA !== undefined ? { id: "readiness_status_byte_a", value: data.statusByteA } : null,
             data.statusByteB !== undefined ? { id: "readiness_status_byte_b", value: data.statusByteB } : null,
             data.statusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.statusByteC } : null,
             data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
           ].filter(Boolean);
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
-      || [data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
+      || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
     const bridgeReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
@@ -1645,6 +1651,7 @@
       const mappedId = readinessRowIdAliases[rowKey] || row.id || row.name || row.label;
       return [mappedId, row.value ?? row.result ?? row.raw_value ?? row.rawValue ?? row.reading];
     }));
+    const a = Number(valueById.get("readiness_status_byte_a"));
     const b = Number(valueById.get("readiness_status_byte_b"));
     const c = Number(valueById.get("readiness_status_byte_c"));
     const d = Number(valueById.get("readiness_status_byte_d"));
@@ -1654,6 +1661,10 @@
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
         protocol: readBridgeProtocol(data),
         readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus,
+        readiness_status_byte_a: Number.isFinite(a) ? a : null,
+        readiness_status_byte_b: Number.isFinite(b) ? b : null,
+        readiness_status_byte_c: Number.isFinite(c) ? c : null,
+        readiness_status_byte_d: Number.isFinite(d) ? d : null,
         monitors: []
       }));
     }
@@ -1686,6 +1697,10 @@
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       protocol: readBridgeProtocol(data),
       readiness_readout_status: bridgeReadoutStatus,
+      readiness_status_byte_a: Number.isFinite(a) ? a : null,
+      readiness_status_byte_b: b,
+      readiness_status_byte_c: c,
+      readiness_status_byte_d: d,
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
       readiness_ignition_type: compressionIgnition ? "compression" : "spark",
       monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
@@ -12525,6 +12540,7 @@
       }
       : input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const readinessStatusBytes = normalizeReadinessStatusBytes(sourceInput);
     const monitors = Array.isArray(input)
       ? input
       : Array.isArray(sourceInput.monitors)
@@ -12663,12 +12679,38 @@
       readiness_readout_status: normalizedReadoutStatus,
       readinessIgnitionType,
       readiness_ignition_type: readinessIgnitionType,
+      readinessStatusBytes,
+      readiness_status_bytes: readinessStatusBytes,
       monitors: normalized,
       knownMonitors,
       known_monitors: knownMonitors,
       retainedRawText: false,
       retained_raw_text: false
     };
+  }
+
+  function normalizeReadinessStatusBytes(input = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const nested = source.readinessStatusBytes || source.readiness_status_bytes || source.statusBytes || source.status_bytes || {};
+    const readByte = (letter) => {
+      const upper = letter.toUpperCase();
+      const value = [
+        nested?.[letter],
+        nested?.[upper],
+        source[`readiness_status_byte_${letter}`],
+        source[`readinessStatusByte${upper}`],
+        source[`status_byte_${letter}`],
+        source[`statusByte${upper}`]
+      ].find((item) => item !== undefined && item !== null && item !== "");
+      return normalizeDtcStatusByte(value);
+    };
+    const bytes = {
+      a: readByte("a"),
+      b: readByte("b"),
+      c: readByte("c"),
+      d: readByte("d")
+    };
+    return Object.values(bytes).some((value) => value !== null) ? bytes : null;
   }
 
   function normalizeEcuResponseSummary(input = {}) {
@@ -13462,6 +13504,10 @@
       readiness_readout_status: "reported",
       mil_on: (a & 0x80) !== 0,
       readiness_ignition_type: compressionIgnition ? "compression" : "spark",
+      readiness_status_byte_a: a,
+      readiness_status_byte_b: b,
+      readiness_status_byte_c: c,
+      readiness_status_byte_d: d,
       monitors
     });
   }

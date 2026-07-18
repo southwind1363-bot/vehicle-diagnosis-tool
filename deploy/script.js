@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.984.0";
+const APP_VERSION = "2.985.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6790,6 +6790,10 @@ function renderObdDeveloperSessionSummary(session = null) {
   const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
   const readinessReadoutStatusLabel = formatObdReadoutStatus(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, NO_DATA);
   const readinessIgnitionType = readinessSnapshot?.readinessIgnitionType || readinessSnapshot?.readiness_ignition_type || null;
+  const readinessStatusBytes = readinessSnapshot?.readinessStatusBytes || readinessSnapshot?.readiness_status_bytes || null;
+  const readinessStatusBytesLabel = readinessStatusBytes && typeof readinessStatusBytes === "object"
+    ? ["A", "B", "C", "D"].map((letter) => readinessStatusBytes[letter.toLowerCase()] ? `${letter}:0x${readinessStatusBytes[letter.toLowerCase()]}` : null).filter(Boolean).join(" / ") || NO_DATA
+    : NO_DATA;
   const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"
     ? "圧縮着火 (PID 01観測)"
     : readinessIgnitionType === "spark"
@@ -6895,6 +6899,7 @@ function renderObdDeveloperSessionSummary(session = null) {
       ? formatObdBridgeReadinessSummary(readinessSnapshot)
       : 0],
     ["レディネス点火方式", readinessIgnitionTypeLabel],
+    ["レディネス状態バイト", readinessStatusBytesLabel],
     ["レディネス読取状態", readinessReadoutStatusLabel],
     ["Mode06", onboardMonitorSnapshot?.testCount ? formatObdBridgeOnboardMonitorSummary(onboardMonitorSnapshot) : 0],
     ["Mode06読取状態", onboardMonitorReadoutStatusLabel],
