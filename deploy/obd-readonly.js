@@ -14080,6 +14080,7 @@
     const sensitiveLabel = (label) => /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(label);
     const dtcs = [];
     const monitorValues = [];
+    const livePidSamplesByCapturedAt = new Map();
     const freezeFrameValues = [];
     const readinessMonitors = [];
     const ecuInfoRows = [];
@@ -14094,8 +14095,10 @@
       const cells = parseRow(line);
       if (!cells) return;
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
-      if (!capturedAt) capturedAt = cellAt(capturedAtIndex, 80) || null;
-      if (!protocol) protocol = cellAt(protocolIndex, 80) || null;
+      const rowCapturedAt = cellAt(capturedAtIndex, 80) || null;
+      const rowProtocol = cellAt(protocolIndex, 80) || null;
+      if (!capturedAt) capturedAt = rowCapturedAt;
+      if (!protocol) protocol = rowProtocol;
       const dtc = cellAt(dtcIndex, 48);
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const ecu = cellAt(ecuIndex, 120);
@@ -14174,11 +14177,25 @@
           }
         } else {
           monitorValues.push(row);
+          if (rowCapturedAt) {
+            const sample = livePidSamplesByCapturedAt.get(rowCapturedAt) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, values: [] };
+            sample.values.push(row);
+            livePidSamplesByCapturedAt.set(rowCapturedAt, sample);
+          }
         }
       }
     });
     const dtcSnapshot = dtcs.length ? normalizeDtcSnapshot({ source, dtcs }) : null;
     const livePidSnapshot = monitorValues.length ? { ...normalizeBridgeLivePidSnapshot({ source, values: monitorValues }), source } : null;
+    const livePidTimeline = livePidSamplesByCapturedAt.size
+      ? normalizeLivePidTimeline({
+        samples: [...livePidSamplesByCapturedAt.values()].map((sample) => ({
+          captured_at: sample.capturedAt,
+          protocol: sample.protocol,
+          live_pid_snapshot: normalizeBridgeLivePidSnapshot({ source, captured_at: sample.capturedAt, protocol: sample.protocol, values: sample.values })
+        }))
+      })
+      : null;
     const freezeFrameSnapshot = freezeFrameValues.length
       ? normalizeFreezeFrameSnapshot({ source, values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
       : null;
@@ -14202,6 +14219,7 @@
       bucketCounts: {
         dtcRows: dtcs.length,
         livePidRows: monitorValues.length,
+        livePidSamples: livePidTimeline?.sampleCount || 0,
         freezeFrameRows: freezeFrameValues.length,
         readinessRows: readinessMonitors.length,
         ecuInfoRows: ecuInfoRows.length,
@@ -14212,6 +14230,7 @@
       bucket_counts: {
         dtc_rows: dtcs.length,
         live_pid_rows: monitorValues.length,
+        live_pid_samples: livePidTimeline?.sampleCount || 0,
         freeze_frame_rows: freezeFrameValues.length,
         readiness_rows: readinessMonitors.length,
         ecu_info_rows: ecuInfoRows.length,
@@ -14241,6 +14260,7 @@
       captured_at: capturedAt || sessionInput.captured_at || sessionInput.capturedAt || null,
       dtcSnapshot: dtcSnapshot || undefined,
       livePidSnapshot: livePidSnapshot || undefined,
+      livePidTimeline: livePidTimeline || undefined,
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
       readinessSnapshot: readinessSnapshot || undefined,
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
