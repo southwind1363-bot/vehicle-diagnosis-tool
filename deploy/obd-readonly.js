@@ -1370,6 +1370,7 @@
           }
           : normalizeBridgeLivePidSnapshot(snapshotInput);
         const capturedAt = item.capturedAt || item.captured_at || snapshot.capturedAt || snapshot.captured_at || null;
+        const protocol = snapshot.protocol || snapshot.obd_protocol || item.protocol || item.obd_protocol || null;
         const observationCondition = observationConditions.has(String(item.observationCondition || item.observation_condition || "unspecified"))
           ? String(item.observationCondition || item.observation_condition || "unspecified")
           : "unspecified";
@@ -1379,8 +1380,8 @@
           captured_at: capturedAt,
           observationCondition,
           observation_condition: observationCondition,
-          protocol: snapshot.protocol || null,
-          obd_protocol: snapshot.protocol || null,
+          protocol,
+          obd_protocol: protocol,
           monitorValues: cloneBridgeArrayItems(snapshot.monitorValues),
           monitor_values: cloneBridgeArrayItems(snapshot.monitorValues),
           monitorValueSummary: snapshot.monitorValueSummary,
@@ -1419,7 +1420,8 @@
     const previousSample = samples.length > 1 ? samples.at(-2) : null;
     const observationConditionMatches = Boolean(previousSample && latestSample && previousSample.observationCondition === latestSample.observationCondition);
     const capturedAtDiffers = Boolean(previousSample && latestSample && previousSample.capturedAt !== latestSample.capturedAt);
-    const comparisonAvailable = observationConditionMatches && capturedAtDiffers;
+    const protocolMatches = Boolean(previousSample && latestSample && (!previousSample.protocol || !latestSample.protocol || previousSample.protocol === latestSample.protocol));
+    const comparisonAvailable = observationConditionMatches && capturedAtDiffers && protocolMatches;
     const previousValuesById = new Map(
       (previousSample?.monitorValues || [])
         .filter((item) => item?.id && Number.isFinite(item?.value))
@@ -1458,6 +1460,8 @@
       comparison_blocked_by_condition: Boolean(previousSample && latestSample && !observationConditionMatches),
       comparisonBlockedByTimestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
       comparison_blocked_by_timestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
+      comparisonBlockedByProtocol: Boolean(previousSample && latestSample && observationConditionMatches && capturedAtDiffers && !protocolMatches),
+      comparison_blocked_by_protocol: Boolean(previousSample && latestSample && observationConditionMatches && capturedAtDiffers && !protocolMatches),
       previousObservationCondition: previousSample?.observationCondition || null,
       previous_observation_condition: previousSample?.observationCondition || null,
       latestObservationCondition: latestSample?.observationCondition || null,
