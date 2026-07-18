@@ -14067,7 +14067,8 @@
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(pidIndex);
     const hasExplicitEcuResponseColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex);
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns) return null;
+    const hasExplicitDtcReadoutStatusColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(statusIndex);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
@@ -14081,9 +14082,18 @@
       const normalized = sanitizeCell(cell, 40).toLowerCase().replace(/[\s\-]+/g, "_");
       return ["cold", "warm", "symptom_reproduced"].includes(normalized) ? normalized : "unspecified";
     };
+    const normalizeDtcReadoutKind = (cell) => {
+      const normalized = sanitizeCell(cell, 80).toLowerCase();
+      if (/(?:stored|mode\s*0?3)/.test(normalized)) return "stored";
+      if (/(?:pending|mode\s*0?7)/.test(normalized)) return "pending";
+      if (/(?:permanent|mode\s*0?A)/i.test(normalized)) return "permanent";
+      return null;
+    };
+    const isExplicitEmptyDtcReadout = (cell) => /^(?:no[_\s-]*codes?|no[_\s-]*faults?|empty|complete|reported)$/i.test(sanitizeCell(cell, 80));
     const hasFreezeFrame = (cell) => /^(?:1|true|yes|available|あり|有)$/i.test(sanitizeCell(cell, 40));
     const sensitiveLabel = (label) => /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(label);
     const dtcs = [];
+    const reportedDtcStatuses = new Set();
     const monitorValues = [];
     const livePidSamplesByCapturedAt = new Map();
     const freezeFrameValues = [];
@@ -14115,6 +14125,7 @@
       const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
       const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
       const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
+      const dtcReadoutKind = normalizeDtcReadoutKind(readoutKind);
       if (isReadinessRow) {
         const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
@@ -14123,7 +14134,9 @@
         if (milOn === null && ["on", "true", "1", "yes", "mil_on"].includes(milText)) milOn = true;
         if (milOn === null && ["off", "false", "0", "no", "mil_off"].includes(milText)) milOn = false;
       }
-      if (dtc && extractDtcReferences(dtc).length) {
+      const hasDtcCode = Boolean(dtc && extractDtcReferences(dtc).length);
+      if (dtcReadoutKind && (hasDtcCode || isExplicitEmptyDtcReadout(cellAt(statusIndex, 80)))) reportedDtcStatuses.add(dtcReadoutKind);
+      if (hasDtcCode) {
         dtcs.push({
           code: dtc,
           subcode: /^[0-9A-F]{1,4}$/.test(dtcSubcode) ? dtcSubcode : null,
@@ -14191,7 +14204,9 @@
         }
       }
     });
-    const dtcSnapshot = dtcs.length ? normalizeDtcSnapshot({ source, dtcs }) : null;
+    const dtcSnapshot = dtcs.length || reportedDtcStatuses.size
+      ? normalizeDtcSnapshot({ source, dtcs, ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
+      : null;
     const livePidSnapshot = monitorValues.length ? { ...normalizeBridgeLivePidSnapshot({ source, values: monitorValues }), source } : null;
     const livePidTimeline = livePidSamplesByCapturedAt.size
       ? normalizeLivePidTimeline({
@@ -14225,6 +14240,7 @@
       column_count: headers.length,
       bucketCounts: {
         dtcRows: dtcs.length,
+        dtcReadoutRows: reportedDtcStatuses.size,
         livePidRows: monitorValues.length,
         livePidSamples: livePidTimeline?.sampleCount || 0,
         freezeFrameRows: freezeFrameValues.length,
@@ -14236,6 +14252,7 @@
       },
       bucket_counts: {
         dtc_rows: dtcs.length,
+        dtc_readout_rows: reportedDtcStatuses.size,
         live_pid_rows: monitorValues.length,
         live_pid_samples: livePidTimeline?.sampleCount || 0,
         freeze_frame_rows: freezeFrameValues.length,
