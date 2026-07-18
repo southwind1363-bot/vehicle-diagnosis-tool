@@ -13900,7 +13900,7 @@
       ? normalizeDtcSnapshot(Array.isArray(dtcInput) ? { dtcs: dtcInput, source: scannerJsonSource } : toSnapshotInput(dtcInput, "dtcs"))
       : null;
     const livePidSnapshot = hasValue(livePidInput)
-      ? normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values"))
+      ? { ...normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values")), source: scannerJsonSource }
       : null;
     const freezeFrameSnapshot = hasValue(freezeFrameInput)
       ? normalizeFreezeFrameSnapshot(Array.isArray(freezeFrameInput) ? { monitor_values: freezeFrameInput, source: scannerJsonSource } : toSnapshotInput(freezeFrameInput, "monitor_values"))
@@ -13912,7 +13912,7 @@
       ? normalizeEcuInfoSnapshot(Array.isArray(safeEcuInfoInput) ? { items: safeEcuInfoInput, source: scannerJsonSource } : toSnapshotInput(safeEcuInfoInput, "items"))
       : null;
     const supportedPidMatrix = hasValue(supportedPidInput)
-      ? normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput) ? { supported_pids: supportedPidInput, source: scannerJsonSource } : toSnapshotInput(supportedPidInput, "supported_pids"))
+      ? { ...normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput) ? { supported_pids: supportedPidInput, source: scannerJsonSource } : toSnapshotInput(supportedPidInput, "supported_pids")), source: scannerJsonSource }
       : null;
     const onboardMonitorSnapshot = hasValue(onboardMonitorInput)
       ? normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests"))
@@ -14039,7 +14039,7 @@
       }
     });
     const dtcSnapshot = dtcs.length ? normalizeDtcSnapshot({ source, dtcs }) : null;
-    const livePidSnapshot = monitorValues.length ? normalizeBridgeLivePidSnapshot({ source, values: monitorValues }) : null;
+    const livePidSnapshot = monitorValues.length ? { ...normalizeBridgeLivePidSnapshot({ source, values: monitorValues }), source } : null;
     if (!dtcSnapshot && !livePidSnapshot) return null;
     const sessionInput = getDiagnosticSessionInput(options);
     const output = buildDiagnosticScanSession({
