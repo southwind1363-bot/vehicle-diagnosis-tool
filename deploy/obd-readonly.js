@@ -514,10 +514,11 @@
     Object.freeze({
       intent: "read_freeze_frame",
       label: "Freeze frame snapshot",
-      dataShape: Object.freeze(["protocol", "trigger_dtc", "values", "captured_at"]),
+      dataShape: Object.freeze(["protocol", "trigger_dtc", "trigger_frame_number", "values", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,
         trigger_dtc: null,
+        trigger_frame_number: null,
         values: Object.freeze([]),
         captured_at: null
       })
@@ -1575,6 +1576,7 @@
       protocol: readBridgeProtocol(data),
       freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
+      trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
       values: freezeFrameValues
       }),
       intent: "read_freeze_frame",
@@ -12510,6 +12512,11 @@
 
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const triggerDtc = triggerCodes[0] || null;
+    const triggerFrameNumberInput = pickDefined(sourceInput.trigger_frame_number, sourceInput.triggerFrameNumber, sourceInput.frame_number, sourceInput.frameNumber, null);
+    const parsedTriggerFrameNumber = Number(triggerFrameNumberInput);
+    const triggerFrameNumber = triggerFrameNumberInput !== null && triggerFrameNumberInput !== "" && Number.isInteger(parsedTriggerFrameNumber) && parsedTriggerFrameNumber >= 0 && parsedTriggerFrameNumber <= 255
+      ? parsedTriggerFrameNumber
+      : null;
     const monitorValueSummary = buildMonitorValueSummary(monitorValues);
     const capturedItemCount = monitorValues.length;
     const expectedItemCount = expectedItems.length;
@@ -12526,6 +12533,8 @@
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       triggerDtc,
       trigger_dtc: triggerDtc,
+      triggerFrameNumber,
+      trigger_frame_number: triggerFrameNumber,
       monitorValues,
       monitor_values: monitorValues,
       monitorValueSummary,
@@ -13449,6 +13458,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     let triggerDtc = null;
+    let triggerFrameNumber = null;
     const hasMode02Frame = bytes.some((byte, index) => byte === 0x42 && index + 2 < bytes.length);
     const readoutStatus = hasMode02Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
@@ -13460,7 +13470,10 @@
       const payload = getResponsePayload(bytes, index + 3, payloadLength, 0x42);
       if (pid === "02" && Number.isInteger(payload[0]) && Number.isInteger(payload[1])) {
         const decoded = decodeDtcPair(payload[0], payload[1]);
-        if (decoded !== "P0000") triggerDtc = decoded;
+        if (decoded !== "P0000") {
+          triggerDtc = decoded;
+          triggerFrameNumber = frameNumber;
+        }
         index += 2 + payload.length;
         continue;
       }
@@ -13476,6 +13489,7 @@
       protocol: input.protocol || input.obd_protocol || null,
       freeze_frame_readout_status: readoutStatus,
       trigger_dtc: triggerDtc,
+      trigger_frame_number: triggerFrameNumber,
       values
     });
   }
@@ -14568,6 +14582,7 @@
         : {};
     };
     let freezeFrameTriggerDtc = null;
+    let freezeFrameTriggerFrameNumber = null;
     let milOn = null;
     let readinessIgnitionType = null;
     let capturedAt = null;
@@ -14635,6 +14650,18 @@
         if (readinessIgnitionType === null && ["spark", "compression"].includes(ignitionType)) readinessIgnitionType = ignitionType;
       }
       const hasDtcCode = Boolean(dtc && extractDtcReferences(dtc).length);
+      const readFreezeFrameNumber = () => {
+        const frameNumberText = cellAt(freezeFrameNumberIndex, 12);
+        const frameNumber = frameNumberText ? Number(frameNumberText) : null;
+        return Number.isInteger(frameNumber) && frameNumber >= 0 && frameNumber <= 255 ? frameNumber : null;
+      };
+      if (isFreezeFrameRow && !freezeFrameTriggerDtc) {
+        const triggerDtc = extractDtcReferences(cellAt(triggerDtcIndex, 48) || dtc)[0]?.code || null;
+        if (triggerDtc) {
+          freezeFrameTriggerDtc = triggerDtc;
+          freezeFrameTriggerFrameNumber = readFreezeFrameNumber();
+        }
+      }
       if (dtcReadoutKind && (hasDtcCode || isExplicitEmptyDtcReadout(cellAt(statusIndex, 80)))) {
         reportedDtcStatuses.add(dtcReadoutKind);
         recordReadoutMetadata("dtc", rowCapturedAt, rowProtocol);
@@ -14707,8 +14734,7 @@
       }
       if (!rawValue || sensitiveLabel(label)) return;
       if (pid || label) {
-        const frameNumberText = cellAt(freezeFrameNumberIndex, 12);
-        const frameNumber = frameNumberText ? Number(frameNumberText) : null;
+        const frameNumber = readFreezeFrameNumber();
         const row = {
           ...(pid ? { pid } : {}),
           ...(label ? { label } : {}),
@@ -14723,6 +14749,7 @@
           freezeFrameValues.push(row);
           if (!freezeFrameTriggerDtc) {
             freezeFrameTriggerDtc = extractDtcReferences(cellAt(triggerDtcIndex, 48) || dtc)[0]?.code || null;
+            freezeFrameTriggerFrameNumber = frameNumber;
           }
         } else {
           monitorValues.push(row);
@@ -14769,7 +14796,7 @@
       }
       : null;
     const freezeFrameSnapshot = freezeFrameValues.length
-      ? normalizeFreezeFrameSnapshot({ source, ...readoutMetadata("freeze_frame"), values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, freezeFrameReadoutStatus: "reported" })
+      ? normalizeFreezeFrameSnapshot({ source, ...readoutMetadata("freeze_frame"), values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, ...(freezeFrameTriggerFrameNumber === null ? {} : { trigger_frame_number: freezeFrameTriggerFrameNumber }), freezeFrameReadoutStatus: "reported" })
       : null;
     const readinessSnapshot = readinessMonitors.length
       ? normalizeReadinessSnapshot({ source, ...readoutMetadata("readiness"), monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), ...(readinessIgnitionType ? { readinessIgnitionType } : {}), readinessReadoutStatus: "reported" })

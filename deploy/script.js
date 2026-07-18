@@ -6788,6 +6788,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const livePidReadoutStatusLabel = formatObdReadoutStatus(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status, NO_DATA);
   const ecuInfoReadoutStatusLabel = formatObdReadoutStatus(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, NO_DATA);
   const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
+  const freezeFrameTriggerNumber = freezeFrameSnapshot?.triggerFrameNumber ?? freezeFrameSnapshot?.trigger_frame_number ?? null;
   const freezeFrameNumberSummary = freezeFrameSnapshot?.freezeFrameNumberSummary || freezeFrameSnapshot?.freeze_frame_number_summary || null;
   const freezeFrameNumbersLabel = Array.isArray(freezeFrameNumberSummary?.frameValueCounts || freezeFrameNumberSummary?.frame_value_counts)
     ? (freezeFrameNumberSummary.frameValueCounts || freezeFrameNumberSummary.frame_value_counts).map((item) => `#${item.frameNumber ?? item.frame_number}: ${item.valueCount ?? item.value_count}`).join(" / ") || NO_DATA
@@ -6895,6 +6896,7 @@ function renderObdDeveloperSessionSummary(session = null) {
       ? `${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}${freezeFrameSnapshot?.triggerDtc ? ` / 起点${freezeFrameSnapshot.triggerDtc}` : ""}`
       : 0],
     ["FF読取状態", freezeFrameReadoutStatusLabel],
+    ["FF起点番号", freezeFrameTriggerNumber === null ? NO_DATA : `#${freezeFrameTriggerNumber}`],
     ["FF番号", freezeFrameNumbersLabel],
     ["ライブ値", livePidSnapshot?.monitorValues?.length
       ? formatObdBridgeMonitorSummary(livePidSnapshot?.monitorValueSummary)

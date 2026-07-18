@@ -465,7 +465,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   if (bridgeFreezeFrameSnapshotFunctionSource) {
     const functionBody = bridgeFreezeFrameSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeFreezeFrameSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeFreezeFrameSnapshot should reuse the core freeze-frame normalizer");
-    check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC aliases");
+    check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null') && functionBody.includes('trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
     check(functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame value aliases");
     check(functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety)') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeFreezeFrameSnapshot should preserve bridge failure status");
   }
@@ -1368,7 +1368,7 @@ const freezeFrameSnapshotFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(sourceInput.freezeFrameValues)') && functionBody.includes('Array.isArray(sourceInput.freeze_frame_rows)') && functionBody.includes('Array.isArray(sourceInput.pid_values)') && functionBody.includes('Array.isArray(sourceInput.monitorValues)') && functionBody.includes('Array.isArray(sourceInput.items)'), "normalizeFreezeFrameSnapshot should accept freeze-frame value array aliases");
     check(functionBody.includes('normalizeBridgePidValue(row, index)') && functionBody.includes('source: "freeze_frame"'), "normalizeFreezeFrameSnapshot should normalize rows through PID value normalization and mark freeze-frame source");
     check(functionBody.includes('freezeFramePriority: catalogItem?.priority || null') && functionBody.includes('interpretationNote: catalogItem?.interpretationNote || item.supportNote'), "normalizeFreezeFrameSnapshot should enrich values from freeze-frame item catalog");
-    check(functionBody.includes('sourceInput.trigger_dtc') && functionBody.includes('sourceInput.triggerCode') && functionBody.includes('sourceInput.dtcCode') && functionBody.includes('trigger_dtc: triggerDtc'), "normalizeFreezeFrameSnapshot should normalize trigger DTC aliases");
+    check(functionBody.includes('sourceInput.trigger_dtc') && functionBody.includes('sourceInput.triggerCode') && functionBody.includes('sourceInput.dtcCode') && functionBody.includes('trigger_dtc: triggerDtc') && functionBody.includes('const triggerFrameNumberInput = pickDefined(sourceInput.trigger_frame_number') && functionBody.includes('trigger_frame_number: triggerFrameNumber'), "normalizeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
     check(functionBody.includes('const monitorValueSummary = buildMonitorValueSummary(monitorValues);') && functionBody.includes('monitor_value_summary: monitorValueSummary'), "normalizeFreezeFrameSnapshot should summarize monitor values and expose snake_case summary aliases");
     check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('monitor_values: monitorValues') && functionBody.includes('retained_raw_text: false'), "normalizeFreezeFrameSnapshot should expose snake_case capture, values, and raw retention aliases");
     check(functionBody.includes('expected_items: expectedItems') && functionBody.includes('captured_item_count: capturedItemCount') && functionBody.includes('expected_item_count: expectedItemCount'), "normalizeFreezeFrameSnapshot should expose snake_case expected item aliases");
@@ -1614,7 +1614,7 @@ const decodeFreezeFrameResponseFunctionChecks = () => {
     check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeFreezeFrameResponse should normalize raw freeze-frame bytes");
     check(functionBody.includes('if (bytes[index] !== 0x42) continue;'), "decodeFreezeFrameResponse should only parse Mode 02 freeze-frame responses");
     check(functionBody.includes('const frameNumber = bytes[index + 2];'), "decodeFreezeFrameResponse should preserve the freeze-frame number byte");
-    check(functionBody.includes('if (pid === "02"') && functionBody.includes('triggerDtc = decoded'), "decodeFreezeFrameResponse should decode trigger DTC from PID 02");
+    check(functionBody.includes('if (pid === "02"') && functionBody.includes('triggerDtc = decoded') && functionBody.includes('triggerFrameNumber = frameNumber') && functionBody.includes('trigger_frame_number: triggerFrameNumber'), "decodeFreezeFrameResponse should decode trigger DTC and frame number from PID 02");
     check(functionBody.includes('freeze_frame_number: frameNumber'), "decodeFreezeFrameResponse should attach frame numbers to decoded PID values");
     check(functionBody.includes('const readoutStatus = hasMode02Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeFreezeFrameResponse should distinguish absent input from unparsed responses");
     check(functionBody.includes('normalizeFreezeFrameSnapshot({') && functionBody.includes('trigger_dtc: triggerDtc'), "decodeFreezeFrameResponse should return a normalized freeze-frame snapshot with trigger DTC");
@@ -2604,6 +2604,7 @@ check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ?
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
 check(appSource.includes('const readinessStatusBytes = readinessSnapshot?.readinessStatusBytes || readinessSnapshot?.readiness_status_bytes || null;') && appSource.includes('レディネス状態バイト'), "OBD session summary should display reported readiness status bytes without inferring their meaning");
 check(appSource.includes('const freezeFrameNumberSummary = freezeFrameSnapshot?.freezeFrameNumberSummary || freezeFrameSnapshot?.freeze_frame_number_summary || null;') && appSource.includes('FF番号'), "OBD session summary should display reported freeze-frame number coverage");
+check(appSource.includes('const freezeFrameTriggerNumber = freezeFrameSnapshot?.triggerFrameNumber ?? freezeFrameSnapshot?.trigger_frame_number ?? null;') && appSource.includes('FF起点番号'), "OBD session summary should display the reported freeze-frame trigger number");
 check(indexSource.includes('ELM327 / iPhoneアプリ取込・Web Serial') && appSource.includes('if (interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios")') && appSource.includes('ELM327でread-only読取 -> アプリのDTC/PID/FF/ECU結果を共有または貼付'), "ELM327 iPhone route should guide read-only scanner export import instead of desktop-only Web Serial");
 check(appSource.includes('const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;') && appSource.includes('DTC status byte: 0x${statusByte} (reported)'), "OBD DTC cards should display a reported status byte without inferring its meaning");
 check(appSource.includes('const severity = dtc.severity || dtc.dtc_severity || dtc.dtcSeverity || dtc.severityByte || dtc.severity_byte || null;') && appSource.includes('DTC severity: ${severity} (reported)'), "OBD DTC cards should display a reported severity without inferring its meaning");
@@ -5447,6 +5448,13 @@ const bridgeFreezeFrameRowAliases = obd.normalizeBridgeFreezeFrameSnapshot({
   }
 });
 check(bridgeFreezeFrameRowAliases.triggerDtc === "P0128", "Bridge freezeFrameRows trigger alias was not normalized");
+const bridgeFreezeFrameTriggerFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { trigger_dtc: "P0128", frameNumber: "2", values: [{ pid: "05", value: 72, unit: "C", freeze_frame_number: 2 }] }
+});
+check(bridgeFreezeFrameTriggerFrameSnapshot.triggerFrameNumber === 2 && bridgeFreezeFrameTriggerFrameSnapshot.trigger_frame_number === 2 && bridgeFreezeFrameTriggerFrameSnapshot.wouldTransmit === false, "Bridge freeze-frame trigger frame aliases were not normalized safely");
 check(bridgeFreezeFrameRowAliases.monitorValues.every((item) => item.freezeFrameNumber === 2 && item.freeze_frame_number === 2), "Bridge freeze-frame rows did not retain both frame-number aliases");
 const freezeFrameNumberRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freeze_frame_snapshot: bridgeFreezeFrameRowAliases }))
@@ -10607,6 +10615,11 @@ check(nestedUnparsedLivePidCoverage.itemById?.live_pid_snapshot?.status === "mis
 const reimportedUnparsedLivePidSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedLivePidSession) });
 check(reimportedUnparsedLivePidSession.livePidSnapshot?.live_pid_readout_status === "unparsed" && reimportedUnparsedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.status === "missing" && reimportedUnparsedLivePidSession.vehicleCommandEnabled === false, "保存済み不完全ライブPID応答を再取込できません");
 const decodedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 0E 00 80 42 05 00 7B" });
+check(decodedFreezeFrame.triggerDtc === "P0171" && decodedFreezeFrame.triggerFrameNumber === 0 && decodedFreezeFrame.trigger_frame_number === 0, "Decoded freeze-frame trigger frame number was not retained");
+const decodedFreezeFrameTriggerRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freeze_frame_snapshot: decodedFreezeFrame }))
+}));
+check(decodedFreezeFrameTriggerRoundTrip?.freezeFrameSnapshot?.triggerFrameNumber === 0 && decodedFreezeFrameTriggerRoundTrip?.freezeFrameSnapshot?.trigger_frame_number === 0 && decodedFreezeFrameTriggerRoundTrip.vehicleCommandEnabled === false, "Freeze-frame trigger frame number was not retained through read-only export and JSON reimport");
 check(decodedFreezeFrame.monitorValues.find((item) => item.id === "wide_o2_b1s1_voltage_wide")?.freeze_frame_number === 0, "Decoded freeze-frame value did not retain snake_case frame number");
 check(decodedFreezeFrame.triggerDtc === "P0171", "フリーズフレーム応答から起点DTCをデコードできません");
 check(decodedFreezeFrame.monitorValues.find((item) => item.id === "monitor_status_dtc_count")?.value === 2, "フリーズフレームのモニター状態DTC件数をデコードできません");
@@ -15412,6 +15425,7 @@ const scannerCsvImportSession = obd.buildDiagnosticScanSessionFromCsv([
   "P0300,Stored,7E8,Engine Control Module,Yes,,,0C,Engine Speed,800,rpm,1HGCM82633A004352",
   "P0300,,7E8,Engine Control Module,,Freeze Frame,0,05,Coolant Temperature,85,C,1HGCM82633A004352"
 ].join("\n"));
+check(scannerCsvImportSession?.freezeFrameSnapshot?.triggerFrameNumber === 0 && scannerCsvImportSession?.freezeFrameSnapshot?.trigger_frame_number === 0, "Structured CSV import did not retain the freeze-frame trigger number");
 check(scannerCsvImportSession?.source === "scanner_csv_import" && scannerCsvImportSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "7E8" && item.ecuName === "Engine Control Module" && item.freezeFrameAvailable === true) && scannerCsvImportSession.livePidSnapshot?.monitorValues?.some((item) => item.pid === "0C" && item.value === 800 && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module" && item.freezeFrameNumber === null) && !scannerCsvImportSession.livePidSnapshot?.monitorValues?.some((item) => item.pid === "05") && scannerCsvImportSession.freezeFrameSnapshot?.triggerDtc === "P0300" && scannerCsvImportSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.pid === "05" && item.value === 85 && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module" && item.freezeFrameNumber === 0) && scannerCsvImportSession.livePidSnapshot?.source === "scanner_csv_import", "Structured CSV import did not keep ECU-labelled DTC, freeze-frame availability, live PID, and freeze-frame values separated");
 check(scannerCsvImportSession?.importClassification?.schemaVersion === "scanner_csv_import_v1" && scannerCsvImportSession.importClassification?.bucketCounts?.dtcRows === 2 && scannerCsvImportSession.importClassification?.bucketCounts?.livePidRows === 1 && scannerCsvImportSession.importClassification?.bucketCounts?.freezeFrameRows === 1 && scannerCsvImportSession.importClassification?.hadSensitiveIdentifier === true, "Structured CSV import did not retain safe import classification metadata");
 check(scannerCsvImportSession?.vehicleCommandEnabled === false && scannerCsvImportSession?.retainedRawText === false && !JSON.stringify(scannerCsvImportSession).includes("1HGCM82633A004352"), "Structured CSV import retained unsafe VIN or vehicle command state");
