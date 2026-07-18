@@ -12457,13 +12457,14 @@
       const catalogItem = readinessMonitorCatalog.find((entry) => entry.id === id);
       const statusAlias = pickDefined(monitor?.status, monitor?.readinessStatus, monitor?.readiness_status, null);
       const statusText = typeof statusAlias === "string" ? statusAlias.trim().toLowerCase() : "";
+      const statusKey = statusText.replace(/[\s-]+/g, "_");
       const supportedAlias = pickDefined(monitor?.supported, monitor?.isSupported, monitor?.is_supported, monitor?.available, monitor?.isAvailable, monitor?.is_available, undefined);
       const supported = supportedAlias === undefined
-        ? statusText !== "not_supported" && statusText !== "unsupported"
+        ? statusKey !== "not_supported" && statusKey !== "unsupported"
         : readBooleanAlias(supportedAlias, true);
       const completeAlias = pickDefined(monitor?.complete, monitor?.isComplete, monitor?.is_complete, monitor?.ready, monitor?.isReady, monitor?.is_ready, undefined);
       const complete = completeAlias === undefined
-        ? ["complete", "ready", "ok"].includes(statusText)
+        ? ["complete", "ready", "ok"].includes(statusKey)
         : readBooleanAlias(completeAlias, false);
       return {
         id,
