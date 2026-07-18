@@ -4841,7 +4841,10 @@
       const value = values.find((item) => typeof item === "string" && item.trim());
       return value ? value.trim().slice(0, 160) : null;
     };
-    const interfaceId = text(source.interfaceId, source.interface_id, source.id);
+    const interfaceIdInput = text(source.interfaceId, source.interface_id, source.id);
+    const interfaceId = interfaceIdInput && !/(?:activation|license|password|secret|serial|token|\bkey\b)/i.test(interfaceIdInput) && !/^\d{8,}$/.test(interfaceIdInput.replace(/[\s-]/g, ""))
+      ? interfaceIdInput
+      : null;
     const label = text(source.label, source.interfaceLabel, source.interface_label);
     const deviceModel = text(source.deviceModel, source.device_model);
     const route = text(source.route, source.readoutRoute, source.readout_route);

@@ -15097,6 +15097,8 @@ check(scannerJsonImportSession?.importClassification?.schemaVersion === "scanner
 check(scannerJsonImportSession?.vehicleProfile?.maker === "Toyota" && scannerJsonImportSession?.vehicleProfile?.modelCode === "ZVW50" && scannerJsonImportSession?.vehicleApplicability?.status === "matched" && scannerJsonImportSession?.vehicleApplicability?.sourceVerified === true, "Structured JSON import did not retain normalized vehicle profile and applicability metadata");
 check(scannerJsonImportSession?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && scannerJsonImportSession?.readoutInterface?.deviceModel === "TCMa" && scannerJsonImportSession?.readoutInterface?.vehicleCommandEnabled === false, "Structured JSON import did not retain safe readout interface provenance");
 check(scannerJsonImportSession?.vehicleCommandEnabled === false && scannerJsonImportSession?.retainedRawText === false && !JSON.stringify(scannerJsonImportSession).includes("discard-json-raw") && !JSON.stringify(scannerJsonImportSession).includes("1HGCM82633A004352") && !JSON.stringify(scannerJsonImportSession).includes("do-not-retain"), "Structured JSON import retained unsafe raw data, credentials, VIN, or vehicle command state");
+const serialLikeInterface = obd.normalizeReadoutInterfaceSnapshot({ interface_id: "123456789012", device_model: "TCMa" });
+check(serialLikeInterface.interfaceId === null && serialLikeInterface.deviceModel === "TCMa" && serialLikeInterface.vehicleCommandEnabled === false, "Readout interface normalization retained a serial-like identifier");
 const reimportedScannerJsonInterfaceSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonImportSession)
 });
@@ -15296,6 +15298,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2613");
+  console.log("OBD read-only safety checks: 2614");
   console.log("Errors: 0");
 }
