@@ -2583,8 +2583,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.956.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for status-specific JSON DTC retention");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.956.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.956.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.957.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for I/M readiness JSON alias retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.957.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.957.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('"Freeze Frame DTC: P0171"') && appSource.includes('"I/M Readiness"') && appSource.includes('"ECU Information"') && appSource.includes('"Supported PIDs: 01, 05, 0C, 0D"') && appSource.includes('"Mode 06"') && appSource.includes('"ECU Responses"'), "OBD sample should demonstrate the typed scanner readout sections");
 check(appSource.includes('const obdImportPasteButton = document.querySelector("#obdImportPasteButton");') && appSource.includes('obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);') && appSource.includes('async function pasteObdScannerImport()') && appSource.includes('await navigator.clipboard.readText()') && appSource.includes('obdScannerText.value = text;') && appSource.includes('analyzeObdScannerImport();'), "OBD scanner import should support a cache-resilient clipboard paste flow");
 check(appSource.includes('const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"') && appSource.includes('const csvImportSession = !bridgeImport && !jsonImportSession && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromCsv === "function"') && appSource.includes('if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())'), "OBD scanner import should prefer safe structured JSON or CSV sessions before text parsing");
@@ -15106,6 +15106,20 @@ const reimportedScannerJsonStatusDtcSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonStatusDtcSession)
 });
 check(reimportedScannerJsonStatusDtcSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored") && reimportedScannerJsonStatusDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "pending") && reimportedScannerJsonStatusDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0420" && item.status === "permanent") && reimportedScannerJsonStatusDtcSession?.vehicleCommandEnabled === false, "Status-specific JSON DTC arrays were not preserved through read-only export and reimport");
+const scannerJsonReadinessAliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: {
+    i_m_readiness: {
+      mil_on: true,
+      readiness_ignition_type: "spark",
+      monitors: [{ id: "misfire", status: "complete" }, { id: "catalyst", status: "not_complete" }, { id: "evap", status: "not_supported" }]
+    }
+  }
+}));
+check(scannerJsonReadinessAliasSession?.readinessSnapshot?.milOn === true && scannerJsonReadinessAliasSession.readinessSnapshot?.readinessIgnitionType === "spark" && scannerJsonReadinessAliasSession.readinessSnapshot?.completeCount === 1 && scannerJsonReadinessAliasSession.readinessSnapshot?.incompleteCount === 1 && scannerJsonReadinessAliasSession.readinessSnapshot?.notSupportedCount === 1 && scannerJsonReadinessAliasSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain an I/M readiness alias readout");
+const reimportedScannerJsonReadinessAliasSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonReadinessAliasSession)
+});
+check(reimportedScannerJsonReadinessAliasSession?.readinessSnapshot?.incompleteCount === 1 && reimportedScannerJsonReadinessAliasSession.readinessSnapshot?.notSupportedCount === 1 && reimportedScannerJsonReadinessAliasSession?.vehicleCommandEnabled === false, "I/M readiness alias readout was not preserved through read-only export and reimport");
 check(scannerJsonImportSession?.vehicleProfile?.maker === "Toyota" && scannerJsonImportSession?.vehicleProfile?.modelCode === "ZVW50" && scannerJsonImportSession?.vehicleApplicability?.status === "matched" && scannerJsonImportSession?.vehicleApplicability?.sourceVerified === true, "Structured JSON import did not retain normalized vehicle profile and applicability metadata");
 check(scannerJsonImportSession?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && scannerJsonImportSession?.readoutInterface?.deviceModel === "TCMa" && scannerJsonImportSession?.readoutInterface?.vehicleCommandEnabled === false, "Structured JSON import did not retain safe readout interface provenance");
 check(scannerJsonImportSession?.vehicleCommandEnabled === false && scannerJsonImportSession?.retainedRawText === false && !JSON.stringify(scannerJsonImportSession).includes("discard-json-raw") && !JSON.stringify(scannerJsonImportSession).includes("1HGCM82633A004352") && !JSON.stringify(scannerJsonImportSession).includes("do-not-retain"), "Structured JSON import retained unsafe raw data, credentials, VIN, or vehicle command state");
@@ -15320,6 +15334,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2618");
+  console.log("OBD read-only safety checks: 2620");
   console.log("Errors: 0");
 }
