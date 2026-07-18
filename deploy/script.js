@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "2.968.0";
+const APP_VERSION = "2.976.0";
 const APP_LAST_UPDATED = "2026-07-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1749,7 +1749,7 @@ function getSelectedObdInterfaceLabel() {
   const requestedInterfaceId = obdInterfaceSelect.value || "";
   const resolvedInterfaceId = resolveObdInterfaceId();
   const label = {
-    "user-vci-elm327": "Web Serial / ELM327（必須）",
+    "user-vci-elm327": "ELM327 / iPhoneアプリ取込・Web Serial",
     "user-vci-thinkcar-bluetooth": "THINKCAR Bluetooth",
     "user-vci-techstream-j2534": "有線OBD2（J2534適合確認）",
     "user-vci-rcmall-mks-canable-v2-pro": "CANable候補"
@@ -1810,7 +1810,10 @@ function buildSelectedObdReadoutInterface() {
 }
 
 function getObdInterfaceStrategyNote(interfaceId) {
-  if (interfaceId === "user-vci-elm327") return "必須ルート。最小構成の実車読取入口で、複数VCI対応の基準動作として使います。";
+  if (interfaceId === "user-vci-elm327") {
+    if (getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios") return "iPhone対応アプリのread-only結果取込を主経路にし、PCのWeb Serial読取は別経路として扱います。";
+    return "最小構成の実車読取入口で、複数VCI対応の基準動作として使います。";
+  }
   if (interfaceId === "user-vci-techstream-j2534") return "有線OBD2機器のJ2534適合が確認できた場合に、PC系VCIの主経路として扱います。";
   return {
     "user-vci-elm327": "最小構成の実車読取入口。複数VCI対応の基準動作として使います。",
@@ -1821,13 +1824,20 @@ function getObdInterfaceStrategyNote(interfaceId) {
 }
 
 function getObdDevelopmentOperationNote(interfaceId) {
-  if (interfaceId === "user-vci-elm327") return "運用: 読取前プレビュー確認 -> Web Serial読取開始 -> DTC/ライブデータ読取 -> OBD側で保存と確認";
+  if (interfaceId === "user-vci-elm327") {
+    return getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios"
+      ? "運用: iPhone対応アプリでread-only読取 -> 結果を共有・貼付 -> OBD側でセッション化して保存と確認"
+      : "運用: 読取前プレビュー確認 -> Web Serial読取開始 -> DTC/ライブデータ読取 -> OBD側で保存と確認";
+  }
   if (interfaceId === "user-vci-techstream-j2534") return "運用: 型番/J2534 DLL確認 -> 読取前プレビュー確認 -> ローカルブリッジ確認 -> 読取専用 DTC/ECU情報から実測";
   if (interfaceId === "user-vci-thinkcar-bluetooth") return "運用: iPhone対応アプリでread-only読取 -> 結果を共有・貼付 -> OBD側でセッション化して保存と確認";
   return "運用: 読取前プレビュー確認 -> 読取準備 -> 読取専用で取れる項目だけ確認 -> OBD側で保存と確認";
 }
 
 function getObdAvailableReadoutNote(interfaceId) {
+  if (interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios") {
+    return "現在使える読取: iPhone対応アプリから共有した DTC / ライブデータ / フリーズフレーム / ECU情報のread-only取込。";
+  }
   return {
     "user-vci-elm327": "現在使える読取: DTC / ライブデータ / フリーズフレーム / 対応PIDの読取前確認、PCではWeb Serial読取へ移行。",
     "user-vci-thinkcar-bluetooth": "現在使える読取: DTC / ライブデータ / ECU情報の読取前確認。iPhone対応アプリのread-only結果取込を確認。",
@@ -1861,6 +1871,9 @@ function getObdAccessStatusMessage(unlocked, capability = window.ObdReadOnly?.ge
     return "パスワードを知っている端末だけ、この診断機画面を開けます。";
   }
   if (interfaceId === "user-vci-elm327") {
+    if (getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios") {
+      return `${autoPrefix}ELM327 を使います。iPhone対応アプリでread-only読取を行い、結果を共有・貼付して取り込みます。`;
+    }
     return capability?.webSerialSupported
       ? `${autoPrefix}ELM327 を使います。デスクトップ版Chrome系ブラウザから読取を開始できます。`
       : `${autoPrefix}ELM327 を使います。読取はデスクトップ版Chrome系ブラウザから開始します。`;
@@ -1909,7 +1922,12 @@ function renderObdConnectionGuide() {
   if (!obdConnectionGuide) return;
   const interfaceId = resolveObdInterfaceId();
   const selectedVehicle = obdVehicleInput.value.trim() || "未選択";
-  const lines = {
+  const isIosElm = interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios";
+  const lines = isIosElm ? [
+    "端末: iPhone対応アプリを使用",
+    "読取手順: ELM327でread-only読取 -> アプリのDTC/PID/FF/ECU結果を共有または貼付",
+    "安全: DTC / ライブデータ / FF / ECU情報の取込のみ"
+  ] : {
     "user-vci-elm327": [
       "端末: 読取はデスクトップ版Chrome系ブラウザが必要",
       "読取手順: Web SerialでELM327/STNを選択",
@@ -5164,17 +5182,21 @@ function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
 function summarizeObdBridgeReadiness(snapshot = null) {
   const monitors = Array.isArray(snapshot?.monitors) ? snapshot.monitors : [];
   const knownMonitors = Array.isArray(snapshot?.knownMonitors) ? snapshot.knownMonitors : [];
-  const supportedCount = monitors.filter((item) => item?.supported !== false).length;
-  const completeCount = monitors.filter((item) => item?.supported !== false && item?.complete === true).length;
-  const incompleteCount = monitors.filter((item) => item?.supported !== false && item?.complete !== true).length;
+  const supportedCount = monitors.filter((item) => item?.supported === true).length;
+  const completeCount = monitors.filter((item) => item?.supported === true && item?.complete === true).length;
+  const incompleteCount = monitors.filter((item) => item?.supported === true && item?.complete === false).length;
+  const completionUnknownCount = monitors.filter((item) => item?.supported === true && (item?.complete === null || item?.complete === undefined)).length;
   const unsupportedCount = monitors.filter((item) => item?.supported === false).length;
+  const supportUnknownCount = monitors.filter((item) => item?.supported === null || item?.supported === undefined).length;
   const unknownCount = knownMonitors.filter((item) => item?.observed === false).length;
   return {
     monitorCount: monitors.length,
     supportedCount,
     completeCount,
     incompleteCount,
+    completionUnknownCount,
     unsupportedCount,
+    supportUnknownCount,
     unknownCount
   };
 }
@@ -5186,8 +5208,10 @@ function formatObdBridgeReadinessSummary(snapshot = null, options = {}) {
   const parts = [];
   if (includeObservedCount && summary.monitorCount > 0) parts.push(`${summary.monitorCount}項目`);
   if (summary.incompleteCount > 0) parts.push(`未完了${summary.incompleteCount}`);
+  if (summary.completionUnknownCount > 0) parts.push(`完了状態不明${summary.completionUnknownCount}`);
   if (summary.completeCount > 0) parts.push(`完了${summary.completeCount}`);
   if (summary.unsupportedCount > 0) parts.push(`非対応${summary.unsupportedCount}`);
+  if (summary.supportUnknownCount > 0) parts.push(`対応状態不明${summary.supportUnknownCount}`);
   if (summary.unknownCount > 0) parts.push(`未取得${summary.unknownCount}`);
   return parts.length ? parts.join(" / ") : NO_DATA;
 }
@@ -5960,9 +5984,11 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const readinessMonitors = readinessSnapshot?.monitors || [];
   if (readinessMonitors.length) {
-    const incomplete = readinessMonitors.filter((item) => item.supported && !item.complete);
-    const supported = readinessMonitors.filter((item) => item.supported);
+    const incomplete = readinessMonitors.filter((item) => item.supported === true && item.complete === false);
+    const supported = readinessMonitors.filter((item) => item.supported === true && (item.complete === true || item.complete === false));
     const unsupported = readinessMonitors.filter((item) => item.supported === false);
+    const supportUnknown = readinessMonitors.filter((item) => item.supported === null || item.supported === undefined);
+    const completionUnknown = readinessMonitors.filter((item) => item.supported === true && (item.complete === null || item.complete === undefined));
     const visible = (incomplete.length ? incomplete : supported).slice(0, 6);
     const unknownLabels = (readinessSnapshot?.knownMonitors || [])
       .filter((item) => item?.observed === false)
@@ -5978,6 +6004,12 @@ function renderObdBridgeSessionDetails(session = null) {
     }
     if (unsupported.length) {
       lines.push(`非対応: ${unsupported.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
+    }
+    if (supportUnknown.length) {
+      lines.push(`対応状態不明: ${supportUnknown.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
+    }
+    if (completionUnknown.length) {
+      lines.push(`完了状態不明: ${completionUnknown.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
     }
     if (unknownLabels.length) {
       lines.push(`未取得: ${unknownLabels.join(" / ")}`);
@@ -7721,6 +7753,7 @@ function createObdDtcCard(codeOrDtc) {
   const dtc = codeOrDtc && typeof codeOrDtc === "object" ? codeOrDtc : { code: codeOrDtc };
   const code = dtc.code;
   const subcode = dtc.subcode || dtc.sub_code || null;
+  const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;
   const ecu = dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || null;
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
@@ -7751,6 +7784,13 @@ function createObdDtcCard(codeOrDtc) {
     ? `${system}に関するDTCです。コードだけで故障部品は確定しません。`
     : describeUnregisteredDtc(code);
   wrapper.appendChild(description);
+
+  if (statusByte) {
+    const reportedStatusByte = document.createElement("p");
+    reportedStatusByte.className = "obd-dtc-check";
+    reportedStatusByte.textContent = `DTC status byte: 0x${statusByte} (reported)`;
+    wrapper.appendChild(reportedStatusByte);
+  }
 
   if (firstCheck) {
     const check = document.createElement("p");

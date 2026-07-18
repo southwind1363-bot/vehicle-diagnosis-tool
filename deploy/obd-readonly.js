@@ -1034,7 +1034,9 @@
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       return extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "").map(({ code, subcode }) => ({
         code,
-        subcode: rowValue.subcode || rowValue.sub_code || subcode || null,
+        subcode: readDtcSubcodeAlias(rowValue, subcode),
+        statusByte: readDtcStatusByteAlias(rowValue),
+        status_byte: readDtcStatusByteAlias(rowValue),
         status: row.status || row.kind || rowValue.status || rowValue.kind || fallbackStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName,
@@ -12217,7 +12219,7 @@
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null
       }
-      : input;
+      : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const rawRows = [
       ...(Array.isArray(sourceInput.dtcs) ? sourceInput.dtcs : []),
@@ -12255,7 +12257,9 @@
       const codes = extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "");
       return codes.map(({ code, subcode }) => ({
         code,
-        subcode: rowValue.subcode || rowValue.sub_code || subcode || null,
+        subcode: readDtcSubcodeAlias(rowValue, subcode),
+        statusByte: readDtcStatusByteAlias(rowValue),
+        status_byte: readDtcStatusByteAlias(rowValue),
         status: rowStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null,
@@ -12339,7 +12343,7 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
-      : input;
+      : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const rows = Array.isArray(sourceInput.values)
       ? sourceInput.values
@@ -12477,6 +12481,14 @@
       if (["false", "0", "no", "off", "incomplete", "not_complete", "not supported", "not_supported", "unsupported"].includes(normalized)) return false;
       return fallback;
     };
+    const readOptionalBooleanAlias = (value) => {
+      if (value === true || value === 1) return true;
+      if (value === false || value === 0) return false;
+      const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+      if (["true", "1", "yes", "on", "complete", "ready", "supported"].includes(normalized)) return true;
+      if (["false", "0", "no", "off", "incomplete", "not_complete", "not supported", "not_supported", "unsupported"].includes(normalized)) return false;
+      return null;
+    };
     const normalized = monitors.map((monitor, index) => {
       const id = String(monitor?.id || monitor?.monitorId || monitor?.monitor_id || monitor?.name || `monitor_${index + 1}`).slice(0, 80);
       const catalogItem = readinessMonitorCatalog.find((entry) => entry.id === id);
@@ -12485,12 +12497,20 @@
       const statusKey = statusText.replace(/[\s-]+/g, "_");
       const supportedAlias = pickDefined(monitor?.supported, monitor?.isSupported, monitor?.is_supported, monitor?.available, monitor?.isAvailable, monitor?.is_available, undefined);
       const supported = supportedAlias === undefined
-        ? statusKey !== "not_supported" && statusKey !== "unsupported"
-        : readBooleanAlias(supportedAlias, true);
+        ? (statusKey === "not_supported" || statusKey === "unsupported"
+          ? false
+          : statusKey === "unknown" || statusKey === "unparsed"
+            ? null
+            : true)
+        : readOptionalBooleanAlias(supportedAlias);
       const completeAlias = pickDefined(monitor?.complete, monitor?.isComplete, monitor?.is_complete, monitor?.ready, monitor?.isReady, monitor?.is_ready, undefined);
       const complete = completeAlias === undefined
-        ? ["complete", "ready", "ok"].includes(statusKey)
-        : readBooleanAlias(completeAlias, false);
+        ? (["complete", "ready", "ok"].includes(statusKey)
+          ? true
+          : statusKey === "unknown" || statusKey === "unparsed"
+            ? null
+            : false)
+        : readOptionalBooleanAlias(completeAlias);
       return {
         id,
         label: String(monitor?.label || monitor?.displayLabel || monitor?.display_label || catalogItem?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
@@ -12512,9 +12532,11 @@
 
     const milOn = readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, false), false);
     const monitorCount = normalized.length;
-    const completeCount = normalized.filter((item) => item.supported && item.complete).length;
-    const incompleteCount = normalized.filter((item) => item.supported && !item.complete).length;
-    const notSupportedCount = normalized.filter((item) => !item.supported).length;
+    const completeCount = normalized.filter((item) => item.supported === true && item.complete === true).length;
+    const incompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length;
+    const completionUnknownCount = normalized.filter((item) => item.supported === true && item.complete === null).length;
+    const notSupportedCount = normalized.filter((item) => item.supported === false).length;
+    const supportUnknownCount = normalized.filter((item) => item.supported === null).length;
     const knownMonitorCount = knownMonitors.length;
     const explicitReadoutStatus = pickDefined(
       sourceInput.readinessReadoutStatus,
@@ -12554,8 +12576,12 @@
       complete_count: completeCount,
       incompleteCount,
       incomplete_count: incompleteCount,
+      completionUnknownCount,
+      completion_unknown_count: completionUnknownCount,
       notSupportedCount,
       not_supported_count: notSupportedCount,
+      supportUnknownCount,
+      support_unknown_count: supportUnknownCount,
       knownMonitorCount,
       known_monitor_count: knownMonitorCount,
       readinessReadoutStatus: normalizedReadoutStatus,
@@ -12578,7 +12604,7 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.data.timestamp || input.captured_at || input.capturedAt || input.timestamp,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
-      : input;
+      : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const rows = Array.isArray(sourceInput)
       ? input
@@ -12745,7 +12771,7 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
-      : input;
+      : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const rows = collectEcuInfoRows(sourceInput);
     const items = rows
@@ -12816,7 +12842,8 @@
       support_info_types_summary: supportedInfoTypesSummary,
       ecuInfoReadoutStatus: normalizedReadoutStatus,
       ecu_info_readout_status: normalizedReadoutStatus,
-      retainedRawText: false
+      retainedRawText: false,
+      retained_raw_text: false
     };
   }
 
@@ -12828,7 +12855,7 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
-      : input;
+      : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const rows = Array.isArray(sourceInput.tests)
       ? sourceInput.tests
@@ -15079,7 +15106,7 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
-      : input;
+      : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const supportedRows = Array.isArray(input)
       ? input
@@ -15791,6 +15818,45 @@
 
   function getMonitorDefinitions() {
     return monitorDefinitions;
+  }
+
+  function normalizeDtcSubcode(value) {
+    if (Number.isInteger(value) && value >= 0 && value <= 0xFF) {
+      return value.toString(16).toUpperCase().padStart(2, "0");
+    }
+    const normalized = String(value ?? "").trim().toUpperCase().replace(/^0X/, "");
+    return /^[0-9A-F]{1,4}$/.test(normalized) ? normalized : null;
+  }
+
+  function readDtcSubcodeAlias(row, fallback = null) {
+    const value = [
+      row?.subcode,
+      row?.sub_code,
+      row?.failure_type_byte,
+      row?.failureTypeByte,
+      row?.failure_type,
+      row?.failureType,
+      row?.ftb
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcSubcode(value) || normalizeDtcSubcode(fallback);
+  }
+
+  function normalizeDtcStatusByte(value) {
+    if (Number.isInteger(value) && value >= 0 && value <= 0xFF) {
+      return value.toString(16).toUpperCase().padStart(2, "0");
+    }
+    const normalized = String(value ?? "").trim().toUpperCase().replace(/^0X/, "");
+    return /^[0-9A-F]{1,2}$/.test(normalized) ? normalized.padStart(2, "0") : null;
+  }
+
+  function readDtcStatusByteAlias(row) {
+    const value = [
+      row?.status_byte,
+      row?.statusByte,
+      row?.dtc_status_byte,
+      row?.dtcStatusByte
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcStatusByte(value);
   }
 
   function extractDtcReferences(value) {

@@ -114,7 +114,7 @@ const freezeFrameSnapshotFunctionSource = source.match(/function normalizeFreeze
 const readinessSnapshotFunctionSource = source.match(/function normalizeReadinessSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
 const ecuResponseSummaryFunctionSource = source.match(/function normalizeEcuResponseSummary[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S]*?value: input\[key\]\r?\n      \}\)\);\r?\n  \}/);
-const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retainedRawText: false\r?\n    \};\r?\n  \}/);
+const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
 const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
@@ -1383,13 +1383,14 @@ const readinessSnapshotFunctionChecks = () => {
     check(functionBody.includes('readinessMonitorCatalog.find((entry) => entry.id === id)') && functionBody.includes('diagnosticUse: catalogItem?.diagnosticUse || ""'), "normalizeReadinessSnapshot should enrich monitors from readiness catalog");
     check(functionBody.includes('monitor?.monitorId') && functionBody.includes('monitor?.monitor_id') && functionBody.includes('monitor?.display_label'), "normalizeReadinessSnapshot should normalize monitor id and label aliases");
     check(functionBody.includes('monitor?.isSupported') && functionBody.includes('monitor?.is_supported') && functionBody.includes('monitor?.isComplete') && functionBody.includes('monitor?.is_complete'), "normalizeReadinessSnapshot should normalize supported and complete aliases");
-    check(functionBody.includes('const milOn = readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status') && functionBody.includes('const incompleteCount = normalized.filter((item) => item.supported && !item.complete).length'), "normalizeReadinessSnapshot should normalize MIL aliases and supported incomplete count");
+    check(functionBody.includes('const readOptionalBooleanAlias =') && functionBody.includes('statusKey === "unknown" || statusKey === "unparsed"') && functionBody.includes('const supportUnknownCount = normalized.filter((item) => item.supported === null).length') && functionBody.includes('const completionUnknownCount = normalized.filter((item) => item.supported === true && item.complete === null).length'), "normalizeReadinessSnapshot should preserve unknown support and completion state without treating it as incomplete");
+    check(functionBody.includes('const milOn = readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status') && functionBody.includes('const incompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length'), "normalizeReadinessSnapshot should normalize MIL aliases and supported incomplete count");
     check(functionBody.includes('sourceInput.readinessIgnitionType') && functionBody.includes('sourceInput.readiness_ignition_type') && functionBody.includes('sourceInput.ignitionType') && functionBody.includes('sourceInput.ignition_type') && functionBody.includes('readinessIgnitionType,') && functionBody.includes('readiness_ignition_type: readinessIgnitionType'), "normalizeReadinessSnapshot should retain reported readiness ignition type aliases");
     check(functionBody.includes('sourceInput.communicationProtocol') && functionBody.includes('sourceInput.communication_protocol'), "normalizeReadinessSnapshot should normalize protocol aliases");
     check(functionBody.includes('knownMonitors,') && functionBody.includes('retainedRawText: false'), "normalizeReadinessSnapshot should expose known monitors and never retain raw text");
     check(functionBody.includes('schema_version: "readiness_snapshot_v1"'), "normalizeReadinessSnapshot should expose snake_case schema version");
     check(functionBody.includes('mil_on: milOn') && functionBody.includes('monitor_count: monitorCount'), "normalizeReadinessSnapshot should expose snake_case MIL and monitor count aliases");
-    check(functionBody.includes('complete_count: completeCount') && functionBody.includes('incomplete_count: incompleteCount') && functionBody.includes('not_supported_count: notSupportedCount'), "normalizeReadinessSnapshot should expose snake_case readiness completion count aliases");
+    check(functionBody.includes('complete_count: completeCount') && functionBody.includes('incomplete_count: incompleteCount') && functionBody.includes('completion_unknown_count: completionUnknownCount') && functionBody.includes('not_supported_count: notSupportedCount') && functionBody.includes('support_unknown_count: supportUnknownCount'), "normalizeReadinessSnapshot should expose snake_case readiness completion count aliases");
     check(functionBody.includes('known_monitor_count: knownMonitorCount') && functionBody.includes('known_monitors: knownMonitors') && functionBody.includes('retained_raw_text: false'), "normalizeReadinessSnapshot should expose snake_case known monitor and retained raw flags");
     check(functionBody.includes('const explicitReadoutStatus = pickDefined(') && functionBody.includes('readinessReadoutStatus: normalizedReadoutStatus') && functionBody.includes('readiness_readout_status: normalizedReadoutStatus'), "normalizeReadinessSnapshot should preserve normalized readiness readout status aliases");
   }
@@ -1436,7 +1437,7 @@ const ecuInfoSnapshotFunctionChecks = () => {
     check(functionBody.includes('const expectedItems = ecuInfoItemCatalog.map((item) => ({') && functionBody.includes('captured: items.some((value) => value.id === item.id || value.infoType === item.infoType)'), "normalizeEcuInfoSnapshot should build expected ECU info catalog coverage");
     check(functionBody.includes('const keyItemIds = new Set(["vin", "calibration_id", "calibration_verification_number", "ecu_name"]);'), "normalizeEcuInfoSnapshot should define key Mode 09 item ids");
     check(functionBody.includes('hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),'), "normalizeEcuInfoSnapshot should surface detected sensitive identifiers");
-    check(functionBody.includes('supportInfoTypesSummary: supportedInfoTypesSummary,') && functionBody.includes('retainedRawText: false'), "normalizeEcuInfoSnapshot should summarize supported info types and never retain raw text");
+    check(functionBody.includes('supportInfoTypesSummary: supportedInfoTypesSummary,') && functionBody.includes('retainedRawText: false') && functionBody.includes('retained_raw_text: false'), "normalizeEcuInfoSnapshot should summarize supported info types and never retain raw text");
     check(functionBody.includes('schema_version: "ecu_info_snapshot_v1"'), "normalizeEcuInfoSnapshot should expose snake_case schema version");
     check(functionBody.includes('const keyItemSummary = {') && functionBody.includes('missing_count: missingKeyItems.length,') && functionBody.includes('missing_labels: missingKeyItems.map((item) => item.label)'), "normalizeEcuInfoSnapshot should expose snake_case key item summary fields");
     check(functionBody.includes('captured_at: sourceInput.captured_at') && functionBody.includes('item_count: items.length,') && functionBody.includes('expected_item_count: expectedItems.length,'), "normalizeEcuInfoSnapshot should expose snake_case top-level count aliases");
@@ -2583,8 +2584,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.968.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for corrected current PID source references");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.968.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.968.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.976.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for ELM327 iPhone import guidance");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.976.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.976.0", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2025-10" && item.title.includes("J1979DA_202510") && item.source_url.includes("j1979da_202510") && item.source_date === "2025-10-20" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID source references are not aligned with the current J1979DA edition");
@@ -2596,6 +2597,8 @@ check(appSource.includes('const jsonImportSession = !bridgeImport && hasScannerT
 check(appSource.includes('if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
 check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
+check(indexSource.includes('ELM327 / iPhoneアプリ取込・Web Serial') && appSource.includes('if (interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios")') && appSource.includes('ELM327でread-only読取 -> アプリのDTC/PID/FF/ECU結果を共有または貼付'), "ELM327 iPhone route should guide read-only scanner export import instead of desktop-only Web Serial");
+check(appSource.includes('const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;') && appSource.includes('DTC status byte: 0x${statusByte} (reported)'), "OBD DTC cards should display a reported status byte without inferring its meaning");
 check(appSource.includes('const readinessIgnitionTypeLabel = readinessIgnitionType === "compression"') && appSource.includes('["レディネス点火方式", readinessIgnitionTypeLabel]'), "OBD session summary should show the reported readiness ignition layout");
 check(appSource.includes('function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA)') && appSource.includes('parts.push(`空 ${empty}`)') && appSource.includes('parts.push(`未読取 ${unreported}`)'), "OBD UI should distinguish empty and unreported DTC status reads");
 check(appSource.includes('const dtcReadoutStatusSummary = dtcSnapshot?.dtcStatusSummary') && appSource.includes('const dtcResponseStatusLabel = formatObdReadoutStatus') && appSource.includes('["DTC応答状態", dtcResponseStatusLabel]') && appSource.includes('["DTC読取状態", dtcReadoutStatusLabel]'), "OBD session summary should expose structured DTC response and status summaries");
@@ -10731,6 +10734,33 @@ const normalizedReadinessPidValuesAliasSnapshot = obd.normalizeReadinessSnapshot
   ]
 });
 check(normalizedReadinessPidValuesAliasSnapshot.monitorCount === 2 && normalizedReadinessPidValuesAliasSnapshot.incompleteCount === 1 && normalizedReadinessPidValuesAliasSnapshot.completeCount === 1, "normalizeReadinessSnapshot did not normalize pid_values alias input");
+const unknownSupportReadinessSnapshot = obd.normalizeReadinessSnapshot({
+  readiness_readout_status: "reported",
+  monitors: [
+    { id: "catalyst", supported: null, complete: false },
+    { id: "evaporative_system", supported: "unknown", readiness_status: "unknown" }
+  ]
+});
+check(unknownSupportReadinessSnapshot.monitors.every((item) => item.supported === null) && unknownSupportReadinessSnapshot.completeCount === 0 && unknownSupportReadinessSnapshot.incompleteCount === 0 && unknownSupportReadinessSnapshot.notSupportedCount === 0 && unknownSupportReadinessSnapshot.supportUnknownCount === 2 && unknownSupportReadinessSnapshot.support_unknown_count === 2, "Unknown readiness support state was misclassified as supported, incomplete, or unsupported");
+const unknownSupportReadinessRoundTrip = obd.buildDiagnosticScanSession({
+  readiness_snapshot: unknownSupportReadinessSnapshot
+});
+const reimportedUnknownSupportReadinessRoundTrip = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(unknownSupportReadinessRoundTrip)
+});
+check(reimportedUnknownSupportReadinessRoundTrip.readinessSnapshot?.supportUnknownCount === 2 && reimportedUnknownSupportReadinessRoundTrip.readinessSnapshot?.monitors?.every((item) => item.supported === null) && reimportedUnknownSupportReadinessRoundTrip.vehicleCommandEnabled === false, "Unknown readiness support state was not retained through read-only export and reimport");
+const unknownCompletionReadinessSnapshot = obd.normalizeReadinessSnapshot({
+  readiness_readout_status: "reported",
+  monitors: [{ id: "catalyst", supported: true, readiness_status: "unknown" }]
+});
+check(unknownCompletionReadinessSnapshot.monitors[0]?.supported === true && unknownCompletionReadinessSnapshot.monitors[0]?.complete === null && unknownCompletionReadinessSnapshot.completeCount === 0 && unknownCompletionReadinessSnapshot.incompleteCount === 0 && unknownCompletionReadinessSnapshot.completionUnknownCount === 1 && unknownCompletionReadinessSnapshot.completion_unknown_count === 1, "Unknown readiness completion state was misclassified as incomplete");
+const unknownCompletionReadinessRoundTrip = obd.buildDiagnosticScanSession({
+  readiness_snapshot: unknownCompletionReadinessSnapshot
+});
+const reimportedUnknownCompletionReadinessRoundTrip = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(unknownCompletionReadinessRoundTrip)
+});
+check(reimportedUnknownCompletionReadinessRoundTrip.readinessSnapshot?.completionUnknownCount === 1 && reimportedUnknownCompletionReadinessRoundTrip.readinessSnapshot?.monitors?.[0]?.complete === null && reimportedUnknownCompletionReadinessRoundTrip.vehicleCommandEnabled === false, "Unknown readiness completion state was not retained through read-only export and reimport");
 const decodedOnboardMonitor = obd.decodeOnboardMonitorResponse({ raw: "46 01 01 00 64 00 32 00 C8 46 02 01 01 2C 00 32 00 C8" });
 check(decodedOnboardMonitor.schemaVersion === "onboard_monitor_snapshot_v1", "Mode 06 snapshot schema is invalid");
 check(decodedOnboardMonitor.testCount === 2, "Mode 06 test count is invalid");
@@ -15065,6 +15095,36 @@ const subcodeBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const subcodeRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: subcodeBridgeSnapshot });
 check(subcodeBridgeSnapshot.dtcCount === 2 && subcodeRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.subcode === "67") && subcodeRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.subcode === "00"), "Bridge DTC subcodes did not survive diagnostic session normalization");
+const failureTypeByteDtcSnapshot = obd.normalizeDtcSnapshot({
+  dtcs: [
+    { dtc_code: "C0051", failure_type_byte: 103 },
+    { dtcCode: "C0051", failureTypeByte: "0x67", status: "pending" },
+    { code: "C0051", ftb: "00", status: "permanent" }
+  ]
+});
+check(failureTypeByteDtcSnapshot.dtcs.some((item) => item.code === "C0051" && item.subcode === "67" && item.status === "pending") && failureTypeByteDtcSnapshot.dtcs.some((item) => item.code === "C0051" && item.subcode === "00" && item.status === "permanent"), "DTC failure type byte aliases were not normalized to retained subcodes");
+const failureTypeByteBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: { dtcs: [{ dtc_code: "U0100", failureTypeByte: 16 }] }
+});
+check(failureTypeByteBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.subcode === "10") && failureTypeByteBridgeSnapshot.wouldTransmit === false, "Bridge DTC failure type byte aliases were not normalized safely");
+const statusByteDtcSnapshot = obd.normalizeDtcSnapshot({
+  dtcs: [
+    { dtc_code: "P0300", dtc_status_byte: 47 },
+    { dtcCode: "P0171", statusByte: "0xA5", status: "pending" }
+  ]
+});
+check(statusByteDtcSnapshot.dtcs.some((item) => item.code === "P0300" && item.statusByte === "2F" && item.status_byte === "2F") && statusByteDtcSnapshot.dtcs.some((item) => item.code === "P0171" && item.statusByte === "A5" && item.status === "pending"), "DTC status byte aliases were not retained without changing textual status");
+const statusByteBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: { dtcs: [{ dtc_code: "U0100", status_byte: 128 }] }
+});
+const statusByteRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: statusByteBridgeSnapshot });
+check(statusByteBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.statusByte === "80") && statusByteRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.status_byte === "80") && statusByteRoundTrip.vehicleCommandEnabled === false, "Bridge DTC status byte was not preserved through read-only session normalization");
 const ecuScopedDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
@@ -15125,6 +15185,24 @@ vm.createContext(fallbackPidContext);
 vm.runInContext(source, fallbackPidContext);
 const fallbackUnknownPidSession = fallbackPidContext.window.ObdReadOnly.normalizeFreezeFrameSnapshot({ values: [{ value: 85, unit: "C" }] });
 check(fallbackUnknownPidSession.monitorValues.length === 0, "Unidentified fallback PID data was misclassified as a known monitor");
+const malformedReadoutSnapshots = [
+  fallbackPidContext.window.ObdReadOnly.normalizeDtcSnapshot(null),
+  fallbackPidContext.window.ObdReadOnly.normalizeDtcSnapshot("unparsed"),
+  fallbackPidContext.window.ObdReadOnly.normalizeFreezeFrameSnapshot(null),
+  fallbackPidContext.window.ObdReadOnly.normalizeFreezeFrameSnapshot("unparsed"),
+  fallbackPidContext.window.ObdReadOnly.normalizeReadinessSnapshot(null),
+  fallbackPidContext.window.ObdReadOnly.normalizeReadinessSnapshot("unparsed"),
+  fallbackPidContext.window.ObdReadOnly.normalizeEcuInfoSnapshot(null),
+  fallbackPidContext.window.ObdReadOnly.normalizeEcuInfoSnapshot("unparsed"),
+  fallbackPidContext.window.ObdReadOnly.normalizeEcuResponseSummary(null),
+  fallbackPidContext.window.ObdReadOnly.normalizeEcuResponseSummary("unparsed"),
+  fallbackPidContext.window.ObdReadOnly.normalizeOnboardMonitorSnapshot(null),
+  fallbackPidContext.window.ObdReadOnly.normalizeOnboardMonitorSnapshot("unparsed"),
+  fallbackPidContext.window.ObdReadOnly.buildSupportedPidMatrix(null),
+  fallbackPidContext.window.ObdReadOnly.buildSupportedPidMatrix("unparsed")
+];
+check(malformedReadoutSnapshots.every((snapshot) => snapshot && snapshot.retainedRawText === false && snapshot.retained_raw_text === false), "Malformed readout input did not normalize to a raw-data-free safe snapshot");
+check(malformedReadoutSnapshots[0].dtcReadoutStatus === "unknown" && malformedReadoutSnapshots[2].freezeFrameReadoutStatus === "unknown" && malformedReadoutSnapshots[4].readinessReadoutStatus === "unknown" && malformedReadoutSnapshots[6].ecuInfoReadoutStatus === "unknown" && malformedReadoutSnapshots[8].ecuCount === 0 && malformedReadoutSnapshots[10].onboardMonitorReadoutStatus === "unknown" && malformedReadoutSnapshots[12].supportedPidReadoutStatus === "unknown", "Malformed core readout input was not marked as safe empty readout data");
 const scannerJsonStatusDtcSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     stored_dtcs: [{ dtc_code: "P0171", ecu_id: "7E8" }],
