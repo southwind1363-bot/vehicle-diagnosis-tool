@@ -13907,6 +13907,9 @@
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const exportPayload = parsed.bridge_export_payload || parsed.bridgeExportPayload || parsed;
+    const isTrustedBridgeSessionExport = [parsed, exportPayload].some((payload) => (
+      payload && typeof payload === "object" && (payload.schema_version === "bridge_session_export_v1" || payload.schemaVersion === "bridge_session_export_v1")
+    ));
     const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
     if (!session || typeof session !== "object" || Array.isArray(session)) return null;
     const input = session.data && typeof session.data === "object" && !Array.isArray(session.data) ? { ...session, ...session.data } : session;
@@ -13968,7 +13971,22 @@
       }
       : null;
     const scannerJsonVehicleApplicability = hasScannerJsonVehicleIdentity
-      ? scannerJsonVehicle
+      ? isTrustedBridgeSessionExport
+        ? scannerJsonVehicle
+        : normalizeVehicleApplicabilitySnapshot({
+          maker: scannerJsonVehicle.maker,
+          model: scannerJsonVehicle.model,
+          modelCode: scannerJsonVehicle.modelCode,
+          year: scannerJsonVehicle.year,
+          engineCode: scannerJsonVehicle.engineCode,
+          grade: scannerJsonVehicle.grade,
+          market: scannerJsonVehicle.market,
+          transmission: scannerJsonVehicle.transmission,
+          drivetrain: scannerJsonVehicle.drivetrain,
+          fuelType: scannerJsonVehicle.fuelType,
+          electrification: scannerJsonVehicle.electrification,
+          status: "unknown"
+        })
       : null;
     const toSnapshotInput = (item, key) => Array.isArray(item) ? { [key]: item, source: scannerJsonSource } : { ...item, source: scannerJsonSource };
     const isSensitiveEcuInfoRow = (row) => /(?:\bvin\b|vehicle\s*identification|\u8eca\u53f0\u756a\u53f7)/i.test(String(row?.id || row?.label || row?.name || row?.key || ""));
