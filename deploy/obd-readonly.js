@@ -14054,6 +14054,7 @@
     const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
+    const ecuNameIndex = findIndex("ecu name", "module name", "control module name", "system name", "ecu label", "module label");
     const mode06TestIdIndex = findIndex("mode 06 test id", "test id", "tid");
     const mode06ComponentIdIndex = findIndex("mode 06 component id", "component id", "cid");
     const minIndex = findIndex("min", "minimum", "min limit");
@@ -14122,6 +14123,7 @@
       const dtc = cellAt(dtcIndex, 48);
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const ecu = cellAt(ecuIndex, 120);
+      const ecuName = cellAt(ecuNameIndex, 120);
       const readoutKind = cellAt(readoutKindIndex, 80);
       const isFreezeFrameRow = Number.isInteger(readoutKindIndex) && /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
       const isReadinessRow = Number.isInteger(readoutKindIndex) && /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
@@ -14146,6 +14148,7 @@
           subcode: /^[0-9A-F]{1,4}$/.test(dtcSubcode) ? dtcSubcode : null,
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
+          ecu_name: ecuName || null,
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
         });
       }
@@ -14158,7 +14161,7 @@
       if (isEcuResponseRow) {
         const responseId = cellAt(ecuResponseIdIndex, 120) || ecu;
         const responseStatus = cellAt(statusIndex, 40).toLowerCase();
-        if (responseId && responseStatus) ecuResponseRows.push({ id: responseId, name: responseId, status: responseStatus });
+        if (responseId && responseStatus) ecuResponseRows.push({ id: responseId, name: ecuName || responseId, status: responseStatus });
         return;
       }
       if (isSupportedPidRow && /^[0-9A-F]{2}$/.test(pid)) {
