@@ -14060,7 +14060,8 @@
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns) return null;
+    const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(pidIndex);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
@@ -14078,6 +14079,7 @@
     const readinessMonitors = [];
     const ecuInfoRows = [];
     const onboardMonitorRows = [];
+    const supportedPids = new Set();
     let freezeFrameTriggerDtc = null;
     let milOn = null;
     lines.slice(1, 5001).forEach((line) => {
@@ -14091,6 +14093,7 @@
       const isReadinessRow = Number.isInteger(readoutKindIndex) && /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
       const isEcuInfoRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*(?:info|information)|mode\s*0?9|ecu情報)/i.test(readoutKind);
       const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
+      const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
       if (isReadinessRow) {
         const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
@@ -14113,6 +14116,10 @@
       const ecuInfoId = cellAt(ecuInfoIdIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
       const mode06TestId = cellAt(mode06TestIdIndex, 8);
       const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
+      if (isSupportedPidRow && /^[0-9A-F]{2}$/.test(pid)) {
+        supportedPids.add(pid);
+        return;
+      }
       if (isOnboardMonitorRow && mode06TestId && mode06ComponentId && Number.isFinite(Number(rawValue))) {
         const minimum = cellAt(minIndex, 40);
         const maximum = cellAt(maxIndex, 40);
@@ -14161,7 +14168,8 @@
       : null;
     const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
     const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot) return null;
+    const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
@@ -14177,7 +14185,8 @@
         freezeFrameRows: freezeFrameValues.length,
         readinessRows: readinessMonitors.length,
         ecuInfoRows: ecuInfoRows.length,
-        onboardMonitorRows: onboardMonitorRows.length
+        onboardMonitorRows: onboardMonitorRows.length,
+        supportedPidRows: supportedPids.size
       },
       bucket_counts: {
         dtc_rows: dtcs.length,
@@ -14185,7 +14194,8 @@
         freeze_frame_rows: freezeFrameValues.length,
         readiness_rows: readinessMonitors.length,
         ecu_info_rows: ecuInfoRows.length,
-        onboard_monitor_rows: onboardMonitorRows.length
+        onboard_monitor_rows: onboardMonitorRows.length,
+        supported_pid_rows: supportedPids.size
       },
       sourceLength: text.length,
       source_length: text.length,
@@ -14208,6 +14218,7 @@
       readinessSnapshot: readinessSnapshot || undefined,
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
       onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
+      supportedPidMatrix: supportedPidMatrix || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
