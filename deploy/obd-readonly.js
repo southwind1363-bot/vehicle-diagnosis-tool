@@ -1806,6 +1806,11 @@
     if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;
     if (valueType === "text" && !parsedValue) return null;
     if (isUndecodedRaw && !parsedValue) return null;
+    const freezeFrameNumber = Number.isInteger(row.freeze_frame_number)
+      ? row.freeze_frame_number
+      : Number.isInteger(row.freezeFrameNumber)
+        ? row.freezeFrameNumber
+        : null;
 
     return {
       id: definition?.id || id,
@@ -1822,7 +1827,8 @@
       sourceEcuName: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
       source_ecu_name: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
       supportNote: definition?.supportNote || "ローカルブリッジ応答を既存データモニター表示へ整形",
-      freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null,
+      freezeFrameNumber,
+      freeze_frame_number: freezeFrameNumber,
       decoded: isUndecodedRaw ? false : true,
       note: isUndecodedRaw ? row.note || "未換算RAW値" : row.note || null,
       sourceLine: index + 1

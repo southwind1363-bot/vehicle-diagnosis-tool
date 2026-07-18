@@ -515,7 +515,7 @@ const bridgePidValueFunctionChecks = () => {
     check(functionBody.includes('if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;'), "normalizeBridgePidValue should reject non-finite numeric values unless they are raw undecoded values");
     check(functionBody.includes('valueType: isUndecodedRaw ? "raw_hex" : valueType') && functionBody.includes('decoded: isUndecodedRaw ? false : true'), "normalizeBridgePidValue should mark undecoded values as raw_hex and decoded=false");
     check(functionBody.includes('row.unit || row.units') && functionBody.includes('row.pid_id || row.pidId || null'), "normalizeBridgePidValue should normalize unit and PID output aliases");
-    check(functionBody.includes('freezeFrameNumber: Number.isInteger(row.freeze_frame_number) ? row.freeze_frame_number : Number.isInteger(row.freezeFrameNumber) ? row.freezeFrameNumber : null'), "normalizeBridgePidValue should normalize freeze-frame number aliases");
+    check(functionBody.includes('const freezeFrameNumber = Number.isInteger(row.freeze_frame_number)') && functionBody.includes('freezeFrameNumber,') && functionBody.includes('freeze_frame_number: freezeFrameNumber,'), "normalizeBridgePidValue should normalize and preserve freeze-frame number aliases");
     check(functionBody.includes('sourceLine: index + 1'), "normalizeBridgePidValue should retain source row position");
   }
 };
@@ -5447,6 +5447,11 @@ const bridgeFreezeFrameRowAliases = obd.normalizeBridgeFreezeFrameSnapshot({
   }
 });
 check(bridgeFreezeFrameRowAliases.triggerDtc === "P0128", "Bridge freezeFrameRows trigger alias was not normalized");
+check(bridgeFreezeFrameRowAliases.monitorValues.every((item) => item.freezeFrameNumber === 2 && item.freeze_frame_number === 2), "Bridge freeze-frame rows did not retain both frame-number aliases");
+const freezeFrameNumberRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freeze_frame_snapshot: bridgeFreezeFrameRowAliases }))
+}));
+check(freezeFrameNumberRoundTrip?.freezeFrameSnapshot?.monitorValues?.every((item) => item.freezeFrameNumber === 2 && item.freeze_frame_number === 2) && freezeFrameNumberRoundTrip.vehicleCommandEnabled === false, "Freeze-frame number aliases were not retained through read-only export and JSON reimport");
 check(bridgeFreezeFrameRowAliases.monitorValues.length === 2, "Bridge freezeFrameRows aliases were not normalized");
 check(bridgeFreezeFrameRowAliases.monitorValues.find((item) => item.id === "coolant_temp")?.value === 72, "Bridge freezeFrameRows rawValue alias was not normalized");
 const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
@@ -10602,6 +10607,7 @@ check(nestedUnparsedLivePidCoverage.itemById?.live_pid_snapshot?.status === "mis
 const reimportedUnparsedLivePidSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedLivePidSession) });
 check(reimportedUnparsedLivePidSession.livePidSnapshot?.live_pid_readout_status === "unparsed" && reimportedUnparsedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.status === "missing" && reimportedUnparsedLivePidSession.vehicleCommandEnabled === false, "保存済み不完全ライブPID応答を再取込できません");
 const decodedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 0E 00 80 42 05 00 7B" });
+check(decodedFreezeFrame.monitorValues.find((item) => item.id === "wide_o2_b1s1_voltage_wide")?.freeze_frame_number === 0, "Decoded freeze-frame value did not retain snake_case frame number");
 check(decodedFreezeFrame.triggerDtc === "P0171", "フリーズフレーム応答から起点DTCをデコードできません");
 check(decodedFreezeFrame.monitorValues.find((item) => item.id === "monitor_status_dtc_count")?.value === 2, "フリーズフレームのモニター状態DTC件数をデコードできません");
 check(decodedFreezeFrame.monitorValues.find((item) => item.id === "fuel_system_status_bank1")?.value === "closed_loop_using_oxygen_sensor", "フリーズフレームの燃料制御状態をバンク別にデコードできません");
