@@ -14049,13 +14049,18 @@
     const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
+    const mode06TestIdIndex = findIndex("mode 06 test id", "test id", "tid");
+    const mode06ComponentIdIndex = findIndex("mode 06 component id", "component id", "cid");
+    const minIndex = findIndex("min", "minimum", "min limit");
+    const maxIndex = findIndex("max", "maximum", "max limit");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
     const unitIndex = findIndex("unit", "units", "単位");
     const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns) return null;
+    const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
@@ -14072,6 +14077,7 @@
     const freezeFrameValues = [];
     const readinessMonitors = [];
     const ecuInfoRows = [];
+    const onboardMonitorRows = [];
     let freezeFrameTriggerDtc = null;
     let milOn = null;
     lines.slice(1, 5001).forEach((line) => {
@@ -14084,6 +14090,7 @@
       const isFreezeFrameRow = Number.isInteger(readoutKindIndex) && /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
       const isReadinessRow = Number.isInteger(readoutKindIndex) && /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
       const isEcuInfoRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*(?:info|information)|mode\s*0?9|ecu情報)/i.test(readoutKind);
+      const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
       if (isReadinessRow) {
         const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
@@ -14104,6 +14111,21 @@
       const label = cellAt(labelIndex, 120);
       const rawValue = cellAt(valueIndex, 160);
       const ecuInfoId = cellAt(ecuInfoIdIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
+      const mode06TestId = cellAt(mode06TestIdIndex, 8);
+      const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
+      if (isOnboardMonitorRow && mode06TestId && mode06ComponentId && Number.isFinite(Number(rawValue))) {
+        const minimum = cellAt(minIndex, 40);
+        const maximum = cellAt(maxIndex, 40);
+        onboardMonitorRows.push({
+          test_id: mode06TestId,
+          component_id: mode06ComponentId,
+          value: Number(rawValue),
+          ...(Number.isFinite(Number(minimum)) && minimum ? { min: Number(minimum) } : {}),
+          ...(Number.isFinite(Number(maximum)) && maximum ? { max: Number(maximum) } : {}),
+          ...(cellAt(statusIndex, 40) ? { status: cellAt(statusIndex, 40).toLowerCase() } : {})
+        });
+        return;
+      }
       if (isEcuInfoRow && ecuInfoId && rawValue) {
         if (!/(?:^vin$|vehicle_?identification|車台番号)/i.test(ecuInfoId)) ecuInfoRows.push({ id: ecuInfoId, value: rawValue });
         return;
@@ -14138,7 +14160,8 @@
       ? normalizeReadinessSnapshot({ source, monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), readinessReadoutStatus: "reported" })
       : null;
     const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot) return null;
+    const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
@@ -14153,14 +14176,16 @@
         livePidRows: monitorValues.length,
         freezeFrameRows: freezeFrameValues.length,
         readinessRows: readinessMonitors.length,
-        ecuInfoRows: ecuInfoRows.length
+        ecuInfoRows: ecuInfoRows.length,
+        onboardMonitorRows: onboardMonitorRows.length
       },
       bucket_counts: {
         dtc_rows: dtcs.length,
         live_pid_rows: monitorValues.length,
         freeze_frame_rows: freezeFrameValues.length,
         readiness_rows: readinessMonitors.length,
-        ecu_info_rows: ecuInfoRows.length
+        ecu_info_rows: ecuInfoRows.length,
+        onboard_monitor_rows: onboardMonitorRows.length
       },
       sourceLength: text.length,
       source_length: text.length,
@@ -14182,6 +14207,7 @@
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
       readinessSnapshot: readinessSnapshot || undefined,
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
+      onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
