@@ -482,7 +482,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
     check(functionBody.includes('["nox_scr", c, 0x02, 0x20]') && functionBody.includes('["evaporative_system", c, 0x08, 0x80]'), "normalizeBridgeReadinessSnapshot should preserve compression and spark monitor layouts");
     check(functionBody.includes('status: supported ? (complete ? "complete" : "not_complete") : "not_supported"'), "normalizeBridgeReadinessSnapshot should derive readiness monitor status from supported and incomplete bits");
-    check(functionBody.includes('readiness_readout_status: bridgeReadoutStatus,') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeReadinessSnapshot should preserve bridge failure status");
+    check(functionBody.includes('source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus,') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeReadinessSnapshot should preserve bridge failure status and source ECU");
   }
   check(Boolean(bridgeEcuInfoSnapshotFunctionSource), "normalizeBridgeEcuInfoSnapshot is missing from obd-readonly.js");
   if (bridgeEcuInfoSnapshotFunctionSource) {
@@ -5478,10 +5478,11 @@ const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
       { id: "readiness_status_byte_c", value: 0x22 },
       { id: "readiness_status_byte_d", value: 0x00 }
     ],
+    source_ecu: "7E8",
     captured_at: "2026-06-28T00:01:48Z"
   }
 });
-check(bridgeReadinessSnapshot.source === "local_bridge", "Bridge readiness source was not normalized");
+check(bridgeReadinessSnapshot.source === "local_bridge" && bridgeReadinessSnapshot.sourceEcu === "7E8" && bridgeReadinessSnapshot.source_ecu === "7E8", "Bridge readiness source was not normalized");
 check(bridgeReadinessSnapshot.intent === "readiness_snapshot" && bridgeReadinessSnapshot.blocked === false && bridgeReadinessSnapshot.wouldTransmit === false, "Bridge readiness safety metadata was not normalized");
 check(bridgeReadinessSnapshot.milOn === true, "Bridge readiness did not carry MIL status");
 check(bridgeReadinessSnapshot.incompleteCount === 1, "Bridge readiness did not count incomplete monitors");
@@ -5489,6 +5490,8 @@ check(bridgeReadinessSnapshot.mil_on === true && bridgeReadinessSnapshot.monitor
 check(bridgeReadinessSnapshot.incomplete_count === 1 && bridgeReadinessSnapshot.complete_count === bridgeReadinessSnapshot.completeCount && bridgeReadinessSnapshot.not_supported_count === bridgeReadinessSnapshot.notSupportedCount, "Bridge readiness did not expose snake_case completion count aliases");
 check(bridgeReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeReadinessSnapshot.readiness_readout_status === "reported", "Bridge readiness did not mark a complete B/C/D response as reported");
 check(bridgeReadinessSnapshot.readinessIgnitionType === "spark" && bridgeReadinessSnapshot.readiness_ignition_type === "spark", "Bridge readiness did not retain observed spark ignition layout");
+const bridgeReadinessSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeReadinessSnapshot })) }));
+check(bridgeReadinessSourceRoundTrip?.readinessSnapshot?.sourceEcu === "7E8" && bridgeReadinessSourceRoundTrip?.readinessSnapshot?.source_ecu === "7E8" && bridgeReadinessSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge readiness source ECU was not retained through read-only JSON export and import");
 const bridgeEmptyReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({});
 check(bridgeEmptyReadinessSnapshot.monitorCount === 0 && bridgeEmptyReadinessSnapshot.blocked === true, "Empty Bridge readiness response was not fail-closed");
 check(bridgeEmptyReadinessSnapshot.readinessReadoutStatus === "blocked", "Empty Bridge readiness response was incorrectly treated as an empty reported readout");

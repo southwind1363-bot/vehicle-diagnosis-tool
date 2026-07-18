@@ -1673,6 +1673,7 @@
     if (![b, c, d].every(Number.isFinite)) {
       return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
+        source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
         protocol: readBridgeProtocol(data),
         readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus,
@@ -1709,6 +1710,7 @@
         ];
     return withBridgeMetadata(normalizeReadinessSnapshot({
       source: "local_bridge",
+      source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       protocol: readBridgeProtocol(data),
       readiness_readout_status: bridgeReadoutStatus,
