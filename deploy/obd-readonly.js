@@ -1422,15 +1422,17 @@
     const capturedAtDiffers = Boolean(previousSample && latestSample && previousSample.capturedAt !== latestSample.capturedAt);
     const protocolMatches = Boolean(previousSample && latestSample && (!previousSample.protocol || !latestSample.protocol || previousSample.protocol === latestSample.protocol));
     const comparisonAvailable = observationConditionMatches && capturedAtDiffers && protocolMatches;
-    const previousValuesById = new Map(
+    const monitorComparisonKey = (item) => `${item?.id || ""}::${item?.sourceEcu || item?.source_ecu || ""}`;
+    const previousValuesByKey = new Map(
       (previousSample?.monitorValues || [])
         .filter((item) => item?.id && Number.isFinite(item?.value))
-        .map((item) => [item.id, item])
+        .map((item) => [monitorComparisonKey(item), item])
     );
-    const changes = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
-      .filter((item) => item?.id && Number.isFinite(item?.value) && previousValuesById.has(item.id))
+    const comparableValues = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
+      .filter((item) => item?.id && Number.isFinite(item?.value) && previousValuesByKey.has(monitorComparisonKey(item)));
+    const changes = comparableValues
       .map((item) => {
-        const previous = previousValuesById.get(item.id);
+        const previous = previousValuesByKey.get(monitorComparisonKey(item));
         const delta = item.value - previous.value;
         return {
           id: item.id,
@@ -1470,6 +1472,8 @@
       previous_captured_at: previousSample?.capturedAt || null,
       latestCapturedAt: latestSample?.capturedAt || null,
       latest_captured_at: latestSample?.capturedAt || null,
+      comparedValueCount: comparableValues.length,
+      compared_value_count: comparableValues.length,
       changedValueCount: changes.length,
       changed_value_count: changes.length,
       changes,
