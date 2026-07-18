@@ -2293,6 +2293,20 @@ const resetHeadingDtcImport = obd.analyzeScannerText("Permanent DTC\nP0440\nLive
 check(resetHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0440" && item.status === "permanent") && resetHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0420" && item.status === "unknown"), "Scanner DTC heading status leaked across a non-DTC section");
 const japaneseHeadingDtcImport = obd.analyzeScannerText("保存DTC\nP0171\n保留DTC\nP0300\n永久DTC\nP0420");
 check(japaneseHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0171" && item.status === "stored") && japaneseHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0300" && item.status === "pending") && japaneseHeadingDtcImport.dtcSnapshot?.dtcs.some((item) => item.code === "P0420" && item.status === "permanent"), "Scanner text import did not preserve explicit Japanese DTC headings");
+const scannerFreezeFrameImport = obd.analyzeScannerText("Freeze Frame DTC: P0171\nEngine RPM: 1500 rpm\nCoolant Temp: 76 C\nLive Data\nEngine RPM: 800 rpm\nVehicle Speed: 0 km/h");
+check(scannerFreezeFrameImport.freezeFrameSnapshot?.triggerDtc === "P0171" && scannerFreezeFrameImport.freeze_frame_snapshot?.freezeFrameReadoutStatus === "reported", "Scanner text import did not create a typed freeze-frame snapshot");
+check(scannerFreezeFrameImport.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1500) && scannerFreezeFrameImport.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 76), "Scanner text import did not retain freeze-frame monitor values");
+check(scannerFreezeFrameImport.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && !scannerFreezeFrameImport.monitorValues?.some((item) => item.id === "coolant_temp"), "Scanner text import mixed freeze-frame values into live data");
+const unmarkedFreezeFrameImport = obd.analyzeScannerText("Engine RPM: 900 rpm\nCoolant Temp: 82 C");
+check(unmarkedFreezeFrameImport.freezeFrameSnapshot === null && unmarkedFreezeFrameImport.monitorValues?.length === 2, "Scanner text import inferred a freeze frame without an explicit heading");
+const scannerFreezeFrameSession = obd.buildDiagnosticScanSession({
+  source: "scanner_text",
+  dtcSnapshot: scannerFreezeFrameImport.dtcSnapshot,
+  livePidSnapshot: { source: "scanner_text", monitorValues: scannerFreezeFrameImport.monitorValues },
+  freezeFrameSnapshot: scannerFreezeFrameImport.freezeFrameSnapshot
+});
+check(scannerFreezeFrameSession.freezeFrameSnapshot?.triggerDtc === "P0171" && scannerFreezeFrameSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1500), "Scanner text session did not preserve the freeze-frame snapshot");
+check(scannerFreezeFrameSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerFreezeFrameSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured", "Scanner text session did not keep live and freeze-frame readouts separate");
 check(analysis.codes.join(",") === "P0171,P0300", "DTC抽出または重複除外が不正です");
 check(analysis.hadSensitiveIdentifier === true, "車台番号候補を検出できません");
 check(analysis.retainedRawText === false, "入力原文を保持する設定になっています");
@@ -2495,8 +2509,8 @@ check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity
 check(appSource.includes('recentMilestone: "PID 01レディネス点火方式を読取・保存・表示へ追加"'), "OBD core progress should describe the latest completed readiness milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
-check(appSource.includes('const APP_VERSION = "2.893.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for typed scanner DTC status import");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.893.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.893.0", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "2.894.0";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-18";'), "OBD app version should advance for scanner freeze-frame import");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "2.894.0";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "2.894.0", "OBD offline cache version should match the active app version");
 check(appSource.includes('if (!bridgeImport && hasScannerText && hasBridgeDiagnosticScanSessionSupport())') && appSource.includes('session_id: "scanner-text-import-session"') && appSource.includes('source: "scanner_text"') && appSource.includes('readoutInterface: buildSelectedObdReadoutInterface()'), "Scanner text import should create a safe diagnostic session with interface provenance");
 check(appSource.includes('const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;'), "Scanner text import should use the persisted session for result summaries");
 check(appSource.includes('const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;') && appSource.includes('PID 01 観測点火方式:'), "OBD session details should show the reported readiness ignition layout separately from the selected vehicle");
@@ -14922,6 +14936,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2552");
+  console.log("OBD read-only safety checks: 2558");
   console.log("Errors: 0");
 }

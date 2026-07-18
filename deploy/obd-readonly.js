@@ -15049,16 +15049,56 @@
     return [...values.values()];
   }
 
+  function collectTextFreezeFrameSection(value) {
+    const freezeLines = [];
+    const nonFreezeLines = [];
+    let inFreezeFrame = false;
+    let triggerDtc = null;
+    const isFreezeFrameHeading = (text) => /(?:freeze[\s_-]*frame|フリーズ\s*フレーム)/i.test(text);
+    const isSectionBoundary = (text) => /(?:live\s*data|data\s*stream|readiness|mode\s*0?6|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|対応\s*pid|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
+    String(value || "").split(/\r?\n/).forEach((line) => {
+      const text = String(line || "").trim();
+      if (isFreezeFrameHeading(text)) {
+        inFreezeFrame = true;
+        triggerDtc = triggerDtc || extractDtcCodes(text)[0] || null;
+        return;
+      }
+      if (inFreezeFrame && isSectionBoundary(text)) inFreezeFrame = false;
+      if (inFreezeFrame) {
+        freezeLines.push(line);
+        triggerDtc = triggerDtc || extractDtcCodes(text)[0] || null;
+      } else {
+        nonFreezeLines.push(line);
+      }
+    });
+    return { freezeLines, nonFreezeLines, triggerDtc };
+  }
+
+  function extractTextFreezeFrameSnapshot(section = {}) {
+    const monitorValues = extractMonitorValues((section.freezeLines || []).join("\n"));
+    if (!monitorValues.length && !section.triggerDtc) return null;
+    return normalizeFreezeFrameSnapshot({
+      source: "scanner_text_freeze_frame",
+      triggerDtc: section.triggerDtc || null,
+      monitorValues,
+      freezeFrameReadoutStatus: monitorValues.length ? "reported" : "unknown"
+    });
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
-    const monitorValues = extractMonitorValues(redacted);
+    const freezeFrameSection = collectTextFreezeFrameSection(redacted);
+    const monitorValues = extractMonitorValues(freezeFrameSection.nonFreezeLines.join("\n"));
+    const freezeFrameSnapshot = extractTextFreezeFrameSnapshot(freezeFrameSection);
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
       codes: dtcSnapshot.codes,
       dtcSnapshot,
       dtc_snapshot: dtcSnapshot,
+      freezeFrameSnapshot,
+      freeze_frame_snapshot: freezeFrameSnapshot,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
