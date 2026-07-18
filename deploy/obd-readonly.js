@@ -14053,6 +14053,7 @@
     const mode06ComponentIdIndex = findIndex("mode 06 component id", "component id", "cid");
     const minIndex = findIndex("min", "minimum", "min limit");
     const maxIndex = findIndex("max", "maximum", "max limit");
+    const ecuResponseIdIndex = findIndex("ecu response id", "ecu id", "module id", "response id");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
@@ -14061,7 +14062,8 @@
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(pidIndex);
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns) return null;
+    const hasExplicitEcuResponseColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
@@ -14080,6 +14082,7 @@
     const ecuInfoRows = [];
     const onboardMonitorRows = [];
     const supportedPids = new Set();
+    const ecuResponseRows = [];
     let freezeFrameTriggerDtc = null;
     let milOn = null;
     lines.slice(1, 5001).forEach((line) => {
@@ -14094,6 +14097,7 @@
       const isEcuInfoRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*(?:info|information)|mode\s*0?9|ecu情報)/i.test(readoutKind);
       const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
       const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
+      const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
       if (isReadinessRow) {
         const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
@@ -14116,6 +14120,12 @@
       const ecuInfoId = cellAt(ecuInfoIdIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
       const mode06TestId = cellAt(mode06TestIdIndex, 8);
       const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
+      if (isEcuResponseRow) {
+        const responseId = cellAt(ecuResponseIdIndex, 120) || ecu;
+        const responseStatus = cellAt(statusIndex, 40).toLowerCase();
+        if (responseId && responseStatus) ecuResponseRows.push({ id: responseId, name: responseId, status: responseStatus });
+        return;
+      }
       if (isSupportedPidRow && /^[0-9A-F]{2}$/.test(pid)) {
         supportedPids.add(pid);
         return;
@@ -14169,7 +14179,8 @@
     const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
     const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
     const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix) return null;
+    const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ecus: ecuResponseRows }) : null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
@@ -14186,7 +14197,8 @@
         readinessRows: readinessMonitors.length,
         ecuInfoRows: ecuInfoRows.length,
         onboardMonitorRows: onboardMonitorRows.length,
-        supportedPidRows: supportedPids.size
+        supportedPidRows: supportedPids.size,
+        ecuResponseRows: ecuResponseRows.length
       },
       bucket_counts: {
         dtc_rows: dtcs.length,
@@ -14195,7 +14207,8 @@
         readiness_rows: readinessMonitors.length,
         ecu_info_rows: ecuInfoRows.length,
         onboard_monitor_rows: onboardMonitorRows.length,
-        supported_pid_rows: supportedPids.size
+        supported_pid_rows: supportedPids.size,
+        ecu_response_rows: ecuResponseRows.length
       },
       sourceLength: text.length,
       source_length: text.length,
@@ -14219,6 +14232,7 @@
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
       onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
       supportedPidMatrix: supportedPidMatrix || undefined,
+      ecuResponseSummary: ecuResponseSummary || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
