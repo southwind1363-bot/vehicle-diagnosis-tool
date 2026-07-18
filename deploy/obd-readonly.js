@@ -14085,6 +14085,34 @@
       const sourceEcu = getBucketSourceEcu(bucketName);
       return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     };
+    const readLivePidResponseOption = () => {
+      const explicitResponse = sessionInput.livePidResponse || sessionInput.live_pid_response;
+      if (explicitResponse) return explicitResponse;
+      const rows = classified.responseBuckets.livePidResponses || [];
+      if (rows.length > 1) {
+        const snapshots = rows.map((row) => decodeLivePidResponse({
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        }));
+        const monitorValues = snapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
+        const readoutStatus = snapshots.some((snapshot) => (snapshot.livePidReadoutStatus || snapshot.live_pid_readout_status) === "reported")
+          ? "reported"
+          : snapshots.some((snapshot) => (snapshot.livePidReadoutStatus || snapshot.live_pid_readout_status) === "unparsed")
+            ? "unparsed"
+            : "unknown";
+        return {
+          source: "obd_response_decoder",
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          monitor_values: monitorValues,
+          live_pid_readout_status: readoutStatus,
+          retained_raw_text: false,
+          would_transmit: false,
+          vehicle_command_enabled: false
+        };
+      }
+      return readResponseOption("livePidResponse", "live_pid_response", "livePidResponses");
+    };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -14115,7 +14143,7 @@
       pendingDtcResponse: readDtcResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
       permanentDtcResponse: readDtcResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
       supportedPidResponse: readResponseOption("supportedPidResponse", "supported_pid_response", "supportedPidResponses"),
-      livePidResponse: readResponseOption("livePidResponse", "live_pid_response", "livePidResponses"),
+      livePidResponse: readLivePidResponseOption(),
       freezeFrameResponse: readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses"),
       readinessResponse: readResponseOption("readinessResponse", "readiness_response", "readinessResponses"),
       onboardMonitorResponse: readResponseOption("onboardMonitorResponse", "onboard_monitor_response", "onboardMonitorResponses"),
