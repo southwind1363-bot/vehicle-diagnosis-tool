@@ -13939,9 +13939,16 @@
     const scannerJsonSource = "scanner_json_import";
     const scannerJsonProtocol = String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null;
     const scannerJsonReadoutInterfaceInput = pick("readoutInterface", "readout_interface");
-    const scannerJsonReadoutInterface = scannerJsonReadoutInterfaceInput && typeof scannerJsonReadoutInterfaceInput === "object" && !Array.isArray(scannerJsonReadoutInterfaceInput)
+    const normalizedScannerJsonReadoutInterface = scannerJsonReadoutInterfaceInput && typeof scannerJsonReadoutInterfaceInput === "object" && !Array.isArray(scannerJsonReadoutInterfaceInput)
       ? normalizeReadoutInterfaceSnapshot(scannerJsonReadoutInterfaceInput)
       : null;
+    const scannerJsonReadoutInterface = normalizedScannerJsonReadoutInterface && !isTrustedBridgeSessionExport
+      ? {
+        ...normalizedScannerJsonReadoutInterface,
+        hardwareCompatibilityConfirmed: false,
+        hardware_compatibility_confirmed: false
+      }
+      : normalizedScannerJsonReadoutInterface;
     const scannerJsonVehicleProfileInput = getVehicleProfileInput(input);
     const scannerJsonVehicleApplicabilityInput = getVehicleApplicabilityInput(input);
     const scannerJsonVehicleBasis = scannerJsonVehicleApplicabilityInput || scannerJsonVehicleProfileInput;
