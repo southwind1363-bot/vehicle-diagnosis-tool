@@ -12916,6 +12916,8 @@
       infoType: catalogItem?.infoType || infoType || null,
       value,
       valueType: catalogItem?.valueType || row.value_type || row.valueType || row.typeOfValue || "text",
+      sourceEcu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
+      source_ecu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
       privacyClass,
       detected: row.detected === true || row.present === true || (rawValue !== null && rawValue !== undefined && String(rawValue).length > 0),
       retainedRawValue: false,
@@ -14175,7 +14177,7 @@
         return;
       }
       if (isEcuInfoRow && ecuInfoId && rawValue) {
-        if (!/(?:^vin$|vehicle_?identification|車台番号)/i.test(ecuInfoId)) ecuInfoRows.push({ id: ecuInfoId, value: rawValue });
+        if (!/(?:^vin$|vehicle_?identification|車台番号)/i.test(ecuInfoId)) ecuInfoRows.push({ id: ecuInfoId, value: rawValue, source_ecu: ecu || null });
         return;
       }
       if (!rawValue || sensitiveLabel(label)) return;
