@@ -14249,9 +14249,14 @@
       ? normalizeDtcSnapshot({ source, dtcs, ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
       : null;
     const livePidSnapshot = monitorValues.length ? { ...normalizeBridgeLivePidSnapshot({ source, values: monitorValues }), source } : null;
+    const livePidTimelineSamples = [...livePidSamplesByCapturedAt.values()].sort((left, right) => {
+      const leftTime = /^\d{4}-\d{2}-\d{2}T/.test(left.capturedAt) ? Date.parse(left.capturedAt) : Number.NaN;
+      const rightTime = /^\d{4}-\d{2}-\d{2}T/.test(right.capturedAt) ? Date.parse(right.capturedAt) : Number.NaN;
+      return Number.isFinite(leftTime) && Number.isFinite(rightTime) ? leftTime - rightTime : 0;
+    });
     const livePidTimeline = livePidSamplesByCapturedAt.size
       ? normalizeLivePidTimeline({
-        samples: [...livePidSamplesByCapturedAt.values()].map((sample) => ({
+        samples: livePidTimelineSamples.map((sample) => ({
           captured_at: sample.capturedAt,
           protocol: sample.protocol,
           observation_condition: sample.observationCondition,
