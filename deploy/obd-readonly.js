@@ -13898,16 +13898,25 @@
 
   function buildDiagnosticScanSessionFromJson(value, options = {}) {
     const text = String(value || "").trim();
-    if (!text || text.length > 500000 || !/^[{]/.test(text)) return null;
+    if (!text || text.length > 500000 || !/^[{[]/.test(text)) return null;
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
       return null;
     }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const exportPayload = parsed.bridge_export_payload || parsed.bridgeExportPayload || parsed;
-    const isTrustedBridgeSessionExport = [parsed, exportPayload].some((payload) => (
+    const topLevelDtcRows = Array.isArray(parsed) ? parsed : null;
+    const hasTopLevelDtcRows = topLevelDtcRows?.some((row) => {
+      const rowValue = row?.value && typeof row.value === "object" ? row.value : row;
+      const candidate = typeof rowValue === "string"
+        ? rowValue
+        : rowValue?.code || rowValue?.dtc || rowValue?.id || rowValue?.value || rowValue?.dtc_code || rowValue?.dtcCode || "";
+      return extractDtcReferences(candidate).length > 0;
+    }) === true;
+    if (!parsed || typeof parsed !== "object" || (Array.isArray(parsed) && !hasTopLevelDtcRows)) return null;
+    const parsedPayload = hasTopLevelDtcRows ? { dtcs: topLevelDtcRows } : parsed;
+    const exportPayload = parsedPayload.bridge_export_payload || parsedPayload.bridgeExportPayload || parsedPayload;
+    const isTrustedBridgeSessionExport = [parsedPayload, exportPayload].some((payload) => (
       payload && typeof payload === "object" && (payload.schema_version === "bridge_session_export_v1" || payload.schemaVersion === "bridge_session_export_v1")
     ));
     const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
