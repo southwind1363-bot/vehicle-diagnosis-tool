@@ -17667,6 +17667,31 @@
       ...(/(?:iphone|ipad|ipod)/i.test(redacted) ? { platform: "iOS", route: "app_export_import" } : {})
     });
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
+    const monitorValueSummary = buildMonitorValueSummary(monitorValues);
+    const monitorInsights = analyzeMonitorValues(monitorValues);
+    const livePidSnapshot = {
+      schemaVersion: "live_pid_snapshot_v1",
+      schema_version: "live_pid_snapshot_v1",
+      source: "scanner_text",
+      intent: "read_live_pid_snapshot",
+      protocol: null,
+      capturedAt: null,
+      captured_at: null,
+      monitorValues,
+      monitor_values: monitorValues,
+      monitorValueSummary,
+      monitor_value_summary: monitorValueSummary,
+      monitorInsights,
+      monitor_insights: monitorInsights,
+      livePidReadoutStatus: monitorValues.length ? "reported" : "unknown",
+      live_pid_readout_status: monitorValues.length ? "reported" : "unknown",
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
 
     return {
       codes: dtcSnapshot.codes,
@@ -17692,7 +17717,12 @@
       readoutInterface: readoutInterface.label || readoutInterface.deviceModel || readoutInterface.platform ? readoutInterface : null,
       readout_interface: readoutInterface.label || readoutInterface.deviceModel || readoutInterface.platform ? readoutInterface : null,
       monitorValues,
-      monitorInsights: analyzeMonitorValues(monitorValues),
+      monitorValueSummary,
+      monitor_value_summary: monitorValueSummary,
+      monitorInsights,
+      monitor_insights: monitorInsights,
+      livePidSnapshot,
+      live_pid_snapshot: livePidSnapshot,
       hadSensitiveIdentifier: raw !== redacted,
       sourceLength: raw.length,
       retainedRawText: false

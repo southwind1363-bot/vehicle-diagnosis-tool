@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.79";
+const APP_VERSION = "3.2.80";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7533,7 +7533,7 @@ function analyzeObdScannerImport() {
       session_id: "scanner-text-import-session",
       source: "scanner_text",
       dtcSnapshot: analysis.dtcSnapshot || analysis.dtc_snapshot || { source: "scanner_text", codes: analysis.codes },
-      livePidSnapshot: {
+      livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {
         source: "scanner_text",
         monitorValues: analysis.monitorValues,
         monitorInsights: analysis.monitorInsights
