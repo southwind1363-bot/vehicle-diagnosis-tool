@@ -11170,6 +11170,13 @@
       nextReadoutCandidates: metadataFields.next_readout_candidates
     });
     const diagnosticFlowSummary = summary.diagnosticFlowSummary || summary.diagnostic_flow_summary || buildDiagnosticFlowSummary(coreSessionStatus);
+    const observedEcuSummary = summary.observedEcuSummary
+      || summary.observed_ecu_summary
+      || coreSessionStatus.observedEcuSummary
+      || coreSessionStatus.observed_ecu_summary
+      || diagnosticFlowSummary.observedEcuSummary
+      || diagnosticFlowSummary.observed_ecu_summary
+      || null;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary
       || summary.next_readout_candidate_safety_summary
       || coreSessionStatus.nextReadoutCandidateSafetySummary
@@ -11319,6 +11326,7 @@
         next_readout_candidates: metadataFields.next_readout_candidates,
         core_session_status: coreSessionStatus,
         diagnostic_flow_summary: diagnosticFlowSummary,
+        observed_ecu_summary: observedEcuSummary,
         next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
         readout_completion_summary: readoutCompletionSummary,
         analysis_readiness_summary: analysisReadinessSummary,
