@@ -14776,12 +14776,7 @@
     if (!text || text.length > 500000) return null;
     const lines = text.split(/\r?\n/).filter((line) => String(line || "").trim());
     if (lines.length < 2) return null;
-    const headerLine = lines[0].replace(/^\uFEFF/, "");
-    const delimiter = [",", ";", "\t"].reduce((best, candidate) => (
-      headerLine.split(candidate).length > headerLine.split(best).length ? candidate : best
-    ), ",");
-    if (!headerLine.includes(delimiter)) return null;
-    const parseRow = (line) => {
+    const parseRow = (line, delimiter) => {
       const cells = [];
       let cell = "";
       let quoted = false;
@@ -14809,8 +14804,25 @@
       .trim()
       .toLowerCase()
       .replace(/[\s_\-./()]+/g, "");
-    const headers = parseRow(headerLine);
-    if (!headers?.length) return null;
+    const recognizedHeaderNames = new Set([
+      "dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode",
+      "pid", "obdpid", "parameterid", "readout", "readouttype", "section", "snapshot",
+      "readinessmonitorid", "ecuinfoid", "mode09id", "testid", "tid", "ecuresponseid"
+    ]);
+    const headerCandidate = lines.slice(0, 24)
+      .map((line, index) => {
+        const headerLine = line.replace(/^\uFEFF/, "");
+        const delimiter = [",", ";", "\t"].reduce((best, candidate) => (
+          headerLine.split(candidate).length > headerLine.split(best).length ? candidate : best
+        ), ",");
+        if (!headerLine.includes(delimiter)) return null;
+        const headers = parseRow(headerLine, delimiter);
+        if (!headers?.length || !headers.some((header) => recognizedHeaderNames.has(normalizeHeader(header)))) return null;
+        return { index, delimiter, headers };
+      })
+      .find(Boolean);
+    if (!headerCandidate) return null;
+    const { index: headerLineIndex, delimiter, headers } = headerCandidate;
     const headerIndex = new Map(headers.map((header, index) => [normalizeHeader(header), index]).filter(([header]) => header));
     const findIndex = (...aliases) => aliases.map((alias) => headerIndex.get(normalizeHeader(alias))).find((index) => Number.isInteger(index));
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
@@ -14928,8 +14940,8 @@
     let endedAtMilliseconds = null;
     let protocol = null;
     let dtcStatusAvailabilityMask = null;
-    lines.slice(1, 5001).forEach((line) => {
-      const cells = parseRow(line);
+    lines.slice(headerLineIndex + 1, headerLineIndex + 5001).forEach((line) => {
+      const cells = parseRow(line, delimiter);
       if (!cells) return;
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
       const rowCapturedAt = cellAt(capturedAtIndex, 80) || null;
