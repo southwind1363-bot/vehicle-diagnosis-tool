@@ -17648,6 +17648,14 @@
       : null;
   }
 
+  function extractTextProtocol(value) {
+    const protocolLine = String(value || "").split(/\r?\n/)
+      .map((line) => String(line || "").trim())
+      .map((line) => line.match(/^(?:(?:(?:obd|communication|connection)\s*)?protocol|通信(?:プロトコル|方式)|プロトコル)\s*[:：]\s*(.{1,80})\s*$/i))
+      .find(Boolean);
+    return protocolLine ? protocolLine[1].trim() : null;
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
@@ -17660,6 +17668,7 @@
     const onboardMonitorSnapshot = extractTextOnboardMonitorSnapshot(redacted);
     const ecuResponseSummary = extractTextEcuResponseSummary(redacted);
     const vehicleProfile = extractTextVehicleProfile(redacted);
+    const protocol = extractTextProtocol(redacted);
     const toolHints = detectScannerToolHints(redacted);
     const readoutInterface = normalizeReadoutInterfaceSnapshot({
       label: toolHints[0] || null,
@@ -17674,7 +17683,7 @@
       schema_version: "live_pid_snapshot_v1",
       source: "scanner_text",
       intent: "read_live_pid_snapshot",
-      protocol: null,
+      protocol,
       capturedAt: null,
       captured_at: null,
       monitorValues,
@@ -17711,6 +17720,8 @@
       mode06_snapshot: onboardMonitorSnapshot,
       ecuResponseSummary,
       ecu_response_summary: ecuResponseSummary,
+      protocol,
+      obd_protocol: protocol,
       vehicleProfile,
       vehicle_profile: vehicleProfile,
       toolHints,
