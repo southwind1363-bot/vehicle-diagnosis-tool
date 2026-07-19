@@ -14829,6 +14829,7 @@
       .find(Boolean);
     if (!headerCandidate) return null;
     const { index: headerLineIndex, delimiter, headers } = headerCandidate;
+    const sectionHint = lines.slice(0, headerLineIndex).at(-1) || "";
     const headerIndex = new Map(headers.map((header, index) => [normalizeHeader(header), index]).filter(([header]) => header));
     const findIndex = (...aliases) => aliases.map((alias) => headerIndex.get(normalizeHeader(alias))).find((index) => Number.isInteger(index));
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
@@ -14984,8 +14985,8 @@
       const dtcOccurrenceCount = cellAt(dtcOccurrenceCountIndex, 12);
       const ecu = cellAt(ecuIndex, 120);
       const ecuName = cellAt(ecuNameIndex, 120);
-      const readoutKind = cellAt(readoutKindIndex, 80);
-      const isFreezeFrameRow = Number.isInteger(readoutKindIndex) && /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
+      const readoutKind = cellAt(readoutKindIndex, 80) || sectionHint;
+      const isFreezeFrameRow = /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
       const isReadinessRow = Number.isInteger(readoutKindIndex) && /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
       const isEcuInfoRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*(?:info|information)|mode\s*0?9|ecu情報)/i.test(readoutKind);
       const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
