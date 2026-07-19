@@ -4928,7 +4928,11 @@
   }
 
   function normalizeReadoutInterfaceSnapshot(input = null) {
-    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const source = input && typeof input === "object" && !Array.isArray(input)
+      ? input.data && typeof input.data === "object" && !Array.isArray(input.data)
+        ? { ...input, ...input.data }
+        : input
+      : {};
     const text = (...values) => {
       const value = values.find((item) => typeof item === "string" && item.trim());
       return value ? value.trim().slice(0, 160) : null;
