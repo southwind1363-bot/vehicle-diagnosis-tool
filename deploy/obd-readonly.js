@@ -17475,8 +17475,8 @@
     };
     collectTextOnboardMonitorSection(value).forEach((line) => {
       const text = String(line || "").trim();
-      const testId = text.match(/\b(?:tid|test\s*id)\s*[:=]?\s*(?:0x)?([0-9a-f]{1,2})\b/i)?.[1];
-      const componentId = text.match(/\b(?:cid|component\s*id)\s*[:=]?\s*(?:0x)?([0-9a-f]{1,2})\b/i)?.[1];
+      const testId = text.match(/(?:\b(?:tid|test\s*id)\b|テストid)\s*[:=：]?\s*(?:0x)?([0-9a-f]{1,2})\b/i)?.[1];
+      const componentId = text.match(/(?:\b(?:cid|component\s*id)\b|コンポーネントid)\s*[:=：]?\s*(?:0x)?([0-9a-f]{1,2})\b/i)?.[1];
       const measured = findNumber(text, /(?:\b(?:value|measured|result)\b|測定値|測定結果)\s*[:=：]?\s*(-?\d+(?:\.\d+)?)/i);
       const min = findNumber(text, /(?:\b(?:min|minimum)\b|下限|最小)\s*[:=：]?\s*(-?\d+(?:\.\d+)?)/i);
       const max = findNumber(text, /(?:\b(?:max|maximum)\b|上限|最大)\s*[:=：]?\s*(-?\d+(?:\.\d+)?)/i);
