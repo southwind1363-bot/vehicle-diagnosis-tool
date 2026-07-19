@@ -15172,11 +15172,11 @@
     const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time", "取得時刻", "読取時刻", "測定時刻");
     const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol", "プロトコル", "通信プロトコル");
     const observationConditionIndex = findIndex("observation condition", "observation_condition", "measurement condition", "condition", "観察条件", "測定条件");
-    const vehicleMakerIndex = findIndex("maker", "make", "manufacturer", "brand", "vehicle maker", "vehicle make");
-    const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model");
-    const vehicleModelCodeIndex = findIndex("model code", "chassis code", "frame code", "vehicle model code", "body code");
-    const vehicleYearIndex = findIndex("year", "model year", "registration year", "vehicle year");
-    const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code");
+    const vehicleMakerIndex = findIndex("maker", "make", "manufacturer", "brand", "vehicle maker", "vehicle make", "メーカー", "製造者");
+    const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model", "車種", "車名");
+    const vehicleModelCodeIndex = findIndex("model code", "chassis code", "frame code", "vehicle model code", "body code", "型式", "型式コード");
+    const vehicleYearIndex = findIndex("year", "model year", "registration year", "vehicle year", "年式", "登録年");
+    const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code", "エンジン型式", "原動機型式");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -15304,7 +15304,7 @@
       const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support|対応pid)/i.test(readoutKind);
       const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?|ecu応答)/i.test(readoutKind);
       const isEcuInfoSection = /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint);
-      const isVehicleInformationSection = /(?:vehicle\s*(?:info(?:rmation)?|profile)|car\s*(?:info(?:rmation)?|profile))/i.test(sectionHint);
+      const isVehicleInformationSection = /(?:vehicle\s*(?:info(?:rmation)?|profile)|car\s*(?:info(?:rmation)?|profile)|車両\s*情報)/i.test(sectionHint);
       const isReadoutInterfaceSection = /(?:(?:device|interface|scanner)\s*(?:info(?:rmation)?|profile)|scan\s*tool\s*(?:info(?:rmation)?|profile))/i.test(sectionHint);
       const isOnboardMonitorSection = /(?:mode\s*0?6|onboard\s*monitor|モード0?6)/i.test(sectionHint);
       const isSupportedPidSection = /(?:supported\s*pids?|pid\s*support|対応pid)/i.test(sectionHint);
@@ -15364,17 +15364,27 @@
           maker: "maker",
           manufacturer: "maker",
           brand: "maker",
+          "メーカー": "maker",
+          "製造者": "maker",
           model: "model",
           modelname: "model",
+          "車種": "model",
+          "車名": "model",
           modelcode: "modelCode",
           chassiscode: "modelCode",
           framecode: "modelCode",
+          "型式": "modelCode",
+          "型式コード": "modelCode",
           year: "year",
           modelyear: "year",
           registrationyear: "year",
+          "年式": "year",
+          "登録年": "year",
           enginecode: "engineCode",
           enginemodel: "engineCode",
-          enginetype: "engineCode"
+          enginetype: "engineCode",
+          "エンジン型式": "engineCode",
+          "原動機型式": "engineCode"
         }[label.toLowerCase().replace(/[\s_\-./()]+/g, "")];
         if (vehicleField && !sensitiveLabel(label) && !vehicleProfileValues[vehicleField]) vehicleProfileValues[vehicleField] = rawValue;
         return;
