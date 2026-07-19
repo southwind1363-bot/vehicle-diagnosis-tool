@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.47";
+const APP_VERSION = "3.2.48";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6900,7 +6900,23 @@ function renderObdDeveloperSessionSummary(session = null) {
     ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
     supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu || null
   ].map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 8);
-  const observedEcuLabel = observedEcuIds.length ? observedEcuIds.join(" / ") : NO_DATA;
+  const observedEcuReadoutLabels = {
+    dtc_snapshot: "DTC",
+    live_pid_snapshot: "ライブ",
+    freeze_frame_snapshot: "FF",
+    readiness_snapshot: "RDY",
+    ecu_info_snapshot: "ECU情報",
+    onboard_monitor_snapshot: "M06",
+    supported_pid_matrix: "PID"
+  };
+  const observedEcuEntries = Array.isArray(observedEcuSummary?.ecus) ? observedEcuSummary.ecus.slice(0, 8) : [];
+  const observedEcuLabel = observedEcuEntries.length
+    ? observedEcuEntries.map((entry) => {
+      const readoutIds = entry?.readoutIds || entry?.readout_ids || [];
+      const readoutLabels = Array.isArray(readoutIds) ? readoutIds.map((id) => observedEcuReadoutLabels[id]).filter(Boolean).slice(0, 4) : [];
+      return readoutLabels.length ? `${entry.id} (${readoutLabels.join("/")})` : entry.id;
+    }).join(" / ")
+    : observedEcuIds.length ? observedEcuIds.join(" / ") : NO_DATA;
   const sensitiveLabel = hadSensitiveIdentifier ? "検出" : "なし";
   const startedAtLabel = startedAtValue
     ? formatDateTime(startedAtValue)
