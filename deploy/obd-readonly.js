@@ -14880,7 +14880,8 @@
     const readoutPlatformIndex = findIndex("platform", "host platform");
     const hasExplicitReadinessColumns = Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex)
       && (Number.isInteger(readoutKindIndex) || /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(sectionHint));
-    const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
+    const hasExplicitEcuInfoColumns = Number.isInteger(valueIndex) && (Number.isInteger(ecuInfoIdIndex) || Number.isInteger(labelIndex))
+      && (Number.isInteger(readoutKindIndex) || /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint));
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(pidIndex) || Number.isInteger(valueIndex));
     const hasExplicitEcuResponseColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex);
@@ -14997,6 +14998,7 @@
       const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
       const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
       const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
+      const isEcuInfoSection = /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint);
       const dtcReadoutKind = normalizeDtcReadoutKind(readoutKind);
       if (isReadinessRow) {
         recordReadoutMetadata("readiness", rowCapturedAt, rowProtocol);
@@ -15042,7 +15044,7 @@
       const pid = cellAt(pidIndex, 16).replace(/^0X/i, "").toUpperCase();
       const label = cellAt(labelIndex, 120);
       const rawValue = cellAt(valueIndex, 160);
-      const ecuInfoId = cellAt(ecuInfoIdIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
+      const ecuInfoId = (cellAt(ecuInfoIdIndex, 80) || label).toLowerCase().replace(/[\s\-]+/g, "_");
       const mode06TestId = cellAt(mode06TestIdIndex, 8);
       const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
       if (isEcuResponseRow) {
@@ -15087,7 +15089,7 @@
         });
         return;
       }
-      if (isEcuInfoRow && ecuInfoId && rawValue) {
+      if ((isEcuInfoRow || isEcuInfoSection) && ecuInfoId && rawValue) {
         recordReadoutMetadata("ecu_info", rowCapturedAt, rowProtocol);
         if (!/(?:^vin$|vehicle_?identification|車台番号)/i.test(ecuInfoId)) ecuInfoRows.push({ id: ecuInfoId, value: rawValue, source_ecu: ecu || null });
         return;
