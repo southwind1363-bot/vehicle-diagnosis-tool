@@ -14496,7 +14496,9 @@
       : hasTopLevelLivePidRows
         ? { live_pid_snapshot: { monitor_values: topLevelDtcRows } }
         : parsed;
-    const exportPayload = parsedPayload.bridge_export_payload || parsedPayload.bridgeExportPayload || parsedPayload;
+    const scannerReportPayload = [parsedPayload.report, parsedPayload.scan_report, parsedPayload.scanReport]
+      .find((item) => item && typeof item === "object" && !Array.isArray(item)) || null;
+    const exportPayload = parsedPayload.bridge_export_payload || parsedPayload.bridgeExportPayload || scannerReportPayload || parsedPayload;
     const isTrustedBridgeSessionExport = [parsedPayload, exportPayload].some((payload) => (
       payload && typeof payload === "object" && (payload.schema_version === "bridge_session_export_v1" || payload.schemaVersion === "bridge_session_export_v1")
     ));
