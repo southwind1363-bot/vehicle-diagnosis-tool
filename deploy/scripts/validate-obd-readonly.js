@@ -2445,6 +2445,16 @@ check(diagnosticCoverageRoadmap.every((item) => Number.isInteger(item.progress_p
 check(diagnosticCoverageRoadmap.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断データ網羅ロードマップの目標時期が不足しています");
 check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-body-b" && item.progress_percent === 8 && item.current_state === "個別定義は未整備" && item.current_count_note.includes("0件")), "B系未整備状態がロードマップにありません");
 check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-chassis-c" && item.progress_percent === 14 && item.current_count_note.includes("29件") && item.current_state === "出典確認済み定義を追加開始"), "C系出典確認済み定義の進捗根拠が不足しています");
+const nhtsaEpsChassisDefinitions = [
+  ["C0051", "Steering Wheel Position Sensor (Subfault)"],
+  ["C0052", "Steering Wheel Position Sensor Signal A (Subfault)"],
+  ["C0053", "Steering Wheel Position Sensor Signal B (Subfault)"],
+  ["C0054", "Steering Wheel Position Sensor Signal C (Subfault)"],
+  ["C0055", "Steering Wheel Position Sensor Signal D (Subfault)"],
+  ["C0079", "Variable Effort Steering (Subfault)"],
+  ["C0086", "Vehicle Dynamics Indicator (Subfault)"]
+];
+check(nhtsaEpsChassisDefinitions.every(([code, title]) => importedVerifiedDtc.some((item) => item.code === code && item.title === title && item.source?.includes("NHTSA DOT HS 812 575") && item.source_url === "https://www.nhtsa.gov/sites/nhtsa.gov/files/documents/13501_812575_electricpowersteeringreport.pdf" && item.service_manual_required === true && item.imported_definition_only === true && Array.isArray(item.possible_causes) && item.possible_causes.length === 0)), "NHTSA EPS chassis DTC definitions must retain source-only, service-manual-gated entries");
 check(importedVerifiedDtc.some((item) => item.code === "C0035" && item.safety_notes?.some((note) => note.includes("制動"))) && appSource.includes('text.includes("制動")') && appSource.includes('tags.push("brake")'), "C系制動DTCの日本語安全注記をブレーキ安全表示へ結び付けてください");
 check(appSource.includes('text.includes("restraint")') && appSource.includes('text.includes("拘束")') && appSource.includes('tags.push("airbag")') && appSource.includes('text.includes("steering")') && appSource.includes('text.includes("操舵")') && appSource.includes('tags.push("steering")') && appSource.includes('text.includes("adas")') && appSource.includes('tags.push("adas")') && appSource.includes('text.includes("immobilizer")') && appSource.includes('text.includes("盗難防止")') && appSource.includes('tags.push("security")'), "安全注記の拘束装置・操舵・ADAS・盗難防止を対応する安全表示へ結び付けてください");
 check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-oem-enhanced-dtc" && item.blocked_until.length), "メーカー固有DTCの確認待ち条件が不足しています");
