@@ -3010,6 +3010,19 @@
     }));
     const ecuIds = ecus.map((entry) => entry.id);
     const readoutIds = [...new Set(ecus.flatMap((entry) => entry.readoutIds))];
+    const capturedReadoutIds = [
+      Array.isArray(dtcSnapshot?.dtcs) && dtcSnapshot.dtcs.length > 0 ? "dtc_snapshot" : null,
+      Array.isArray(livePidSnapshot?.monitorValues) && livePidSnapshot.monitorValues.length > 0 ? "live_pid_snapshot" : null,
+      Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0 ? "freeze_frame_snapshot" : null,
+      (Array.isArray(readinessSnapshot?.monitors) && readinessSnapshot.monitors.length > 0) || (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0) ? "readiness_snapshot" : null,
+      Array.isArray(ecuInfoSnapshot?.items) && ecuInfoSnapshot.items.length > 0 ? "ecu_info_snapshot" : null,
+      Array.isArray(onboardMonitorSnapshot?.tests) && onboardMonitorSnapshot.tests.length > 0 ? "onboard_monitor_snapshot" : null,
+      Array.isArray(supportedPidMatrix?.supportedPids) && supportedPidMatrix.supportedPids.length > 0 ? "supported_pid_matrix" : null
+    ].filter(Boolean);
+    const unscopedReadoutIds = capturedReadoutIds.filter((id) => !readoutIds.includes(id));
+    const sourceCoveragePercent = capturedReadoutIds.length
+      ? Math.round(((capturedReadoutIds.length - unscopedReadoutIds.length) / capturedReadoutIds.length) * 100)
+      : 0;
     return {
       schemaVersion: "observed_ecu_summary_v1",
       schema_version: "observed_ecu_summary_v1",
@@ -3019,6 +3032,12 @@
       ecu_ids: ecuIds,
       readoutIds,
       readout_ids: readoutIds,
+      capturedReadoutIds,
+      captured_readout_ids: capturedReadoutIds,
+      unscopedReadoutIds,
+      unscoped_readout_ids: unscopedReadoutIds,
+      sourceCoveragePercent,
+      source_coverage_percent: sourceCoveragePercent,
       ecus,
       readOnly: true,
       read_only: true,
