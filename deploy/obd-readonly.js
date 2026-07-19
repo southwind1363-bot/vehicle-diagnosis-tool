@@ -14765,15 +14765,20 @@
       const value = row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue;
       return /^(?:0x)?[0-9a-f]{2}$/i.test(String(pid ?? "").trim()) && value !== undefined && value !== null && String(value).trim() !== "";
     });
-    const topLevelDtcRows = Array.isArray(parsed) ? parsed : null;
-    const hasTopLevelDtcRows = hasDtcRows(topLevelDtcRows);
-    const hasTopLevelLivePidRows = hasLivePidRows(topLevelDtcRows);
-    if (!parsed || typeof parsed !== "object" || (Array.isArray(parsed) && !hasTopLevelDtcRows && !hasTopLevelLivePidRows)) return null;
-    const parsedPayload = hasTopLevelDtcRows
-      ? { dtcs: topLevelDtcRows }
-      : hasTopLevelLivePidRows
-        ? { live_pid_snapshot: { monitor_values: topLevelDtcRows } }
-        : parsed;
+    const topLevelRows = Array.isArray(parsed) ? parsed : null;
+    const topLevelDtcRows = topLevelRows?.filter((row) => hasDtcRows([row])) || [];
+    const topLevelLivePidRows = topLevelRows?.filter((row) => hasLivePidRows([row])) || [];
+    const hasOnlyRecognizedTopLevelRows = Boolean(topLevelRows?.length)
+      && topLevelRows.every((row) => hasDtcRows([row]) !== hasLivePidRows([row]));
+    const hasTopLevelDtcRows = topLevelDtcRows.length > 0;
+    const hasTopLevelLivePidRows = topLevelLivePidRows.length > 0;
+    if (!parsed || typeof parsed !== "object" || (Array.isArray(parsed) && (!hasOnlyRecognizedTopLevelRows || (!hasTopLevelDtcRows && !hasTopLevelLivePidRows)))) return null;
+    const parsedPayload = hasTopLevelDtcRows || hasTopLevelLivePidRows
+      ? {
+        ...(hasTopLevelDtcRows ? { dtcs: topLevelDtcRows } : {}),
+        ...(hasTopLevelLivePidRows ? { live_pid_snapshot: { monitor_values: topLevelLivePidRows } } : {})
+      }
+      : parsed;
     const scannerReportPayload = [parsedPayload.report, parsedPayload.scan_report, parsedPayload.scanReport]
       .find((item) => item && typeof item === "object" && !Array.isArray(item)) || null;
     const exportPayload = parsedPayload.bridge_export_payload || parsedPayload.bridgeExportPayload || scannerReportPayload || parsedPayload;
