@@ -2653,8 +2653,16 @@ const scannerTextInlineEcuSession = obd.buildScanSessionFromObdText([
   "C1234 Current ECU: ABS/VSC"
 ].join("\n"));
 check(scannerTextInlineEcuSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "Engine Control Module") && scannerTextInlineEcuSession.dtcSnapshot?.dtcs?.some((item) => item.code === "C1234" && item.status === "stored" && item.ecu === "ABS/VSC") && scannerTextInlineEcuSession?.vehicleCommandEnabled === false, "Scanner text import did not retain explicit inline ECU labels safely");
-check(appSource.includes('const APP_VERSION = "3.2.74";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for inline ECU labels");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.74";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.74", "OBD offline cache version should match the active app version");
+const scannerTextFuelTrimBankAnalysis = obd.analyzeScannerText([
+  "STFT Bank 1: 4.5 %",
+  "LTFT Bank 1: -2.0 %",
+  "STFT Bank 2: 1.5 %",
+  "LTFT Bank 2: -1.0 %",
+  "Short Fuel Trim: 9.0 %"
+].join("\n"));
+check(scannerTextFuelTrimBankAnalysis?.monitorValues?.some((item) => item.id === "stft_b1" && item.value === 4.5) && scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.id === "ltft_b1" && item.value === -2) && scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.id === "stft_b2" && item.value === 1.5) && scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.id === "ltft_b2" && item.value === -1) && !scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.value === 9) && scannerTextFuelTrimBankAnalysis?.retainedRawText === false, "Scanner text import did not preserve explicitly banked fuel trims without guessing an unscoped bank");
+check(appSource.includes('const APP_VERSION = "3.2.75";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for banked fuel trim aliases");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.75";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.75", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");

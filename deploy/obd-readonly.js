@@ -16,10 +16,10 @@
     { id: "maf", label: "吸入空気量", unit: "g/s", category: "吸気", aliases: ["mass air flow", "air flow rate", "maf", "吸入空気量", "エアフロー"] },
     { id: "map", label: "インテークマニホールド絶対圧", unit: "kPa", category: "吸気", aliases: ["intake manifold absolute pressure", "manifold absolute pressure", "map", "インマニ絶対圧", "吸気管圧力"] },
     { id: "barometric_pressure", label: "大気圧", unit: "kPa", category: "吸気", aliases: ["barometric pressure", "baro", "大気圧"] },
-    { id: "stft_b1", label: "短期燃料補正 バンク1", unit: "%", category: "燃料補正", aliases: ["short term fuel trim bank 1", "short fuel trim b1", "stft b1", "stft1", "短期燃料補正 b1", "短期燃料補正 バンク1"] },
-    { id: "ltft_b1", label: "長期燃料補正 バンク1", unit: "%", category: "燃料補正", aliases: ["long term fuel trim bank 1", "long fuel trim b1", "ltft b1", "ltft1", "長期燃料補正 b1", "長期燃料補正 バンク1"] },
-    { id: "stft_b2", label: "短期燃料補正 バンク2", unit: "%", category: "燃料補正", aliases: ["short term fuel trim bank 2", "short fuel trim b2", "stft b2", "stft2", "短期燃料補正 b2", "短期燃料補正 バンク2"] },
-    { id: "ltft_b2", label: "長期燃料補正 バンク2", unit: "%", category: "燃料補正", aliases: ["long term fuel trim bank 2", "long fuel trim b2", "ltft b2", "ltft2", "長期燃料補正 b2", "長期燃料補正 バンク2"] },
+    { id: "stft_b1", label: "短期燃料補正 バンク1", unit: "%", category: "燃料補正", aliases: ["short term fuel trim bank 1", "short fuel trim bank 1", "short fuel trim b1", "stft bank 1", "stft b1", "stft1", "短期燃料補正 b1", "短期燃料補正 バンク1"] },
+    { id: "ltft_b1", label: "長期燃料補正 バンク1", unit: "%", category: "燃料補正", aliases: ["long term fuel trim bank 1", "long fuel trim bank 1", "long fuel trim b1", "ltft bank 1", "ltft b1", "ltft1", "長期燃料補正 b1", "長期燃料補正 バンク1"] },
+    { id: "stft_b2", label: "短期燃料補正 バンク2", unit: "%", category: "燃料補正", aliases: ["short term fuel trim bank 2", "short fuel trim bank 2", "short fuel trim b2", "stft bank 2", "stft b2", "stft2", "短期燃料補正 b2", "短期燃料補正 バンク2"] },
+    { id: "ltft_b2", label: "長期燃料補正 バンク2", unit: "%", category: "燃料補正", aliases: ["long term fuel trim bank 2", "long fuel trim bank 2", "long fuel trim b2", "ltft bank 2", "ltft b2", "ltft2", "長期燃料補正 b2", "長期燃料補正 バンク2"] },
     { id: "timing_advance", label: "点火時期進角", unit: "°", category: "点火", aliases: ["timing advance", "ignition timing", "点火時期進角", "点火時期"] },
     { id: "fuel_pressure", label: "燃圧", unit: "kPa", category: "燃料", aliases: ["fuel pressure", "燃圧"] },
     { id: "fuel_rail_pressure", label: "燃料レール圧", unit: "kPa", category: "燃料", aliases: ["fuel rail pressure", "rail pressure", "燃料レール圧", "コモンレール圧"] },
@@ -28,6 +28,12 @@
     { id: "equivalence_ratio", label: "当量比", unit: "", category: "燃料補正", aliases: ["commanded equivalence ratio", "equivalence ratio", "lambda", "当量比", "ラムダ"] },
     { id: "engine_runtime", label: "エンジン始動後時間", unit: "s", category: "状態", aliases: ["time since engine start", "engine runtime", "run time", "エンジン始動後時間", "始動後時間"] }
   ].map((item) => Object.freeze({ ...item, aliases: Object.freeze(item.aliases) })));
+  const monitorAliasAdditions = Object.freeze({
+    stft_b1: Object.freeze(["short fuel trim bank 1", "stft bank 1"]),
+    ltft_b1: Object.freeze(["long fuel trim bank 1", "ltft bank 1"]),
+    stft_b2: Object.freeze(["short fuel trim bank 2", "stft bank 2"]),
+    ltft_b2: Object.freeze(["long fuel trim bank 2", "ltft bank 2"])
+  });
   let monitorDefinitions = fallbackMonitorDefinitions;
 
   const policy = Object.freeze({
@@ -17070,7 +17076,7 @@
         pid: item.pid || null,
         scope: item.scope || "unknown",
         supportNote: item.support_note || "",
-        aliases: Object.freeze([...item.aliases])
+        aliases: Object.freeze([...new Set([...item.aliases, ...(monitorAliasAdditions[item.id] || [])])])
       }));
 
     if (!normalized.length || new Set(normalized.map((item) => item.id)).size !== normalized.length) {
