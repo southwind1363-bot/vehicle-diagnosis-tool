@@ -15667,6 +15667,13 @@
       if (/\b(?:current|stored|confirmed|history|active)\b|(?:保存|現在|確定|履歴)\s*(?:dtc|コード|故障)/.test(normalized)) return "stored";
       return null;
     };
+    const resolveInlineDtcStatus = (text) => {
+      const normalized = String(text || "").toLowerCase();
+      if (/\b(?:pending|tentative)\b|保留/.test(normalized)) return "pending";
+      if (/\bpermanent\b|永久/.test(normalized)) return "permanent";
+      if (/\b(?:current|stored|confirmed|history|active)\b|保存|現在|確定|履歴/.test(normalized)) return "stored";
+      return null;
+    };
     const resolveEcuHeading = (text) => {
       const match = String(text || "").match(/^(?:ECU|MODULE|CONTROL\s+MODULE|SYSTEM|\u30e6\u30cb\u30c3\u30c8)\s*(?:NAME\s*)?[:\uff1a]\s*(.+)$/i);
       if (!match || extractDtcReferences(text).length) return null;
@@ -15689,7 +15696,9 @@
         if (!headingStatus) currentStatus = "unknown";
         return;
       }
-      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: currentStatus, ecu: currentEcu }));
+      // A scanner may put the DTC state beside each code instead of using a section heading.
+      const rowStatus = resolveInlineDtcStatus(text) || currentStatus;
+      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: rowStatus, ecu: currentEcu }));
     });
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
