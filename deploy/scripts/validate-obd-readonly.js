@@ -2597,8 +2597,8 @@ check(appSource.includes('recentMilestone: "UDS/J2534 DTC重大度と明示PID�
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
-check(appSource.includes('const APP_VERSION = "3.2.1";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for ECU-scoped readiness display");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.1";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.1", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "3.2.2";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for multi-ECU readiness safety retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.2";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.2", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
@@ -5505,6 +5505,18 @@ const bridgeMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
 });
 const bridgeMixedEcuReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeMixedEcuReadinessSnapshot })) }));
 check(bridgeMixedEcuReadinessSnapshot.readinessReadoutStatus === "unknown" && bridgeMixedEcuReadinessSnapshot.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessSnapshot.milOn === null && bridgeMixedEcuReadinessSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1) && bridgeMixedEcuReadinessSnapshot.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.readinessIgnitionType === "compression") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9") && bridgeMixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge mixed-ECU readiness snapshots were combined instead of preserved as read-only ECU-specific data");
+const bridgeBlockedMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: false,
+  blocked: true,
+  would_transmit: false,
+  data: {
+    readiness_ecu_snapshots: [
+      { source_ecu: "7E8", readiness_status_byte_a: 0x81, readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 },
+      { source_ecu: "7E9", readiness_status_byte_a: 0x00, readiness_status_byte_b: 0x08, readiness_status_byte_c: 0x00, readiness_status_byte_d: 0x00 }
+    ]
+  }
+});
+check(bridgeBlockedMixedEcuReadinessSnapshot.readinessScope === "multiple_ecus" && bridgeBlockedMixedEcuReadinessSnapshot.readinessReadoutStatus === "blocked" && bridgeBlockedMixedEcuReadinessSnapshot.blocked === true && bridgeBlockedMixedEcuReadinessSnapshot.wouldTransmit === false, "Blocked bridge multi-ECU readiness input lost its explicit safety state");
 const bridgeEmptyReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({});
 check(bridgeEmptyReadinessSnapshot.monitorCount === 0 && bridgeEmptyReadinessSnapshot.blocked === true, "Empty Bridge readiness response was not fail-closed");
 check(bridgeEmptyReadinessSnapshot.readinessReadoutStatus === "blocked", "Empty Bridge readiness response was incorrectly treated as an empty reported readout");

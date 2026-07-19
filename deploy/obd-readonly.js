@@ -12798,10 +12798,13 @@
       sourceInput.readoutStatus,
       sourceInput.readout_status
     );
+    const explicitNormalizedReadoutStatus = String(explicitReadoutStatus || "").trim().toLowerCase();
     const normalizedReadoutStatus = readinessScope === "multiple_ecus"
-      ? "unknown"
-      : ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
-        ? String(explicitReadoutStatus).trim().toLowerCase()
+      ? ["blocked", "unparsed"].includes(explicitNormalizedReadoutStatus)
+        ? explicitNormalizedReadoutStatus
+        : "unknown"
+      : ["reported", "unparsed", "blocked", "unknown"].includes(explicitNormalizedReadoutStatus)
+        ? explicitNormalizedReadoutStatus
         : monitorCount > 0
           ? "reported"
           : "unknown";
