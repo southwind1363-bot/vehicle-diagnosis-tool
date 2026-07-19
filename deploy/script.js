@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.0";
+const APP_VERSION = "3.2.1";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5182,6 +5182,11 @@ function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
 function summarizeObdBridgeReadiness(snapshot = null) {
   const monitors = Array.isArray(snapshot?.monitors) ? snapshot.monitors : [];
   const knownMonitors = Array.isArray(snapshot?.knownMonitors) ? snapshot.knownMonitors : [];
+  const readinessEcuSnapshots = Array.isArray(snapshot?.readinessEcuSnapshots)
+    ? snapshot.readinessEcuSnapshots
+    : Array.isArray(snapshot?.readiness_ecu_snapshots)
+      ? snapshot.readiness_ecu_snapshots
+      : [];
   const supportedCount = monitors.filter((item) => item?.supported === true).length;
   const completeCount = monitors.filter((item) => item?.supported === true && item?.complete === true).length;
   const incompleteCount = monitors.filter((item) => item?.supported === true && item?.complete === false).length;
@@ -5197,13 +5202,15 @@ function summarizeObdBridgeReadiness(snapshot = null) {
     completionUnknownCount,
     unsupportedCount,
     supportUnknownCount,
-    unknownCount
+    unknownCount,
+    readinessEcuSnapshotCount: readinessEcuSnapshots.length
   };
 }
 
 function formatObdBridgeReadinessSummary(snapshot = null, options = {}) {
   const { includeObservedCount = false } = options;
   const summary = summarizeObdBridgeReadiness(snapshot);
+  if (summary.readinessEcuSnapshotCount > 1) return `ECU別 ${summary.readinessEcuSnapshotCount}系統 / 集約判定なし`;
   if (!summary.monitorCount && !summary.unknownCount) return NO_DATA;
   const parts = [];
   if (includeObservedCount && summary.monitorCount > 0) parts.push(`${summary.monitorCount}項目`);
@@ -5995,7 +6002,7 @@ function renderObdBridgeSessionDetails(session = null) {
       .slice(0, 4)
       .map((item) => item.label || item.id);
     const lines = [
-      `MIL: ${readinessSnapshot.milOn ? "ON" : "OFF"} / ${formatObdBridgeReadinessSummary(readinessSnapshot, { includeObservedCount: true })}`,
+      `MIL: ${readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"} / ${formatObdBridgeReadinessSummary(readinessSnapshot, { includeObservedCount: true })}`,
       ...visible.map((item) => `${item.label || item.id}: ${item.complete ? "完了" : "未完了"}${item.diagnosticUse ? ` / ${item.diagnosticUse}` : ""}`)
     ];
     const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;
