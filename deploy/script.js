@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.16";
+const APP_VERSION = "3.2.17";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2821,6 +2821,7 @@ function inferSafetyTagsFromModernItem(item) {
   if (text.includes("srs") || text.includes("airbag") || text.includes("restraint") || text.includes("エアバッグ") || text.includes("拘束")) tags.push("airbag");
   if (text.includes("steering") || text.includes("ステアリング") || text.includes("操舵")) tags.push("steering");
   if (text.includes("adas") || text.includes("先進運転支援")) tags.push("adas");
+  if (text.includes("immobilizer") || text.includes("security") || text.includes("イモビライザー") || text.includes("盗難防止")) tags.push("security");
   if (text.includes("fuel") || text.includes("evap") || text.includes("燃料")) tags.push("fuel");
   if (text.includes("hybrid") || text.includes("highvoltage") || text.includes("高電圧") || text.includes("hv")) tags.push("highVoltage");
 
@@ -3072,6 +3073,7 @@ function buildSafetyMessage(tags) {
     airbag: "エアバッグ、SRS系は誤作動や不作動の危険があります。指定手順なしで分解、測定しないでください。",
     steering: "操舵系は走行安全に直結します。異常を感じる場合は走行を中止し、メーカー指定手順と専門家の確認を優先してください。",
     adas: "ADAS系は安全支援機能の不作動や誤作動につながる可能性があります。校正・調整・分解はメーカー指定手順を優先してください。",
+    security: "イモビライザー、盗難防止系は始動不能や認証機能の不作動につながる可能性があります。指定手順なしで配線・ECU・キー認証系を操作しないでください。",
     fuel: "燃料系作業は火災の危険があります。火気厳禁、換気、燃圧抜き手順、保護具を優先してください。",
     highVoltage: "高電圧システムは感電や重大事故の危険があります。有資格者とメーカー指定手順を優先してください。"
   };
