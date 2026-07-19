@@ -15155,7 +15155,7 @@
     const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id", "monitor", "レディネスモニター", "モニター");
     const readinessIgnitionTypeIndex = findIndex("readiness ignition type", "ignition type", "ignition_type");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
-    const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
+    const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id", "ECU情報ID");
     const ecuNameIndex = findIndex("ecu name", "module name", "control module name", "system name", "ecu label", "module label", "ECU名", "ユニット名");
     const mode06TestIdIndex = findIndex("mode 06 test id", "test id", "tid", "テストID");
     const mode06ComponentIdIndex = findIndex("mode 06 component id", "component id", "cid", "コンポーネントID");
