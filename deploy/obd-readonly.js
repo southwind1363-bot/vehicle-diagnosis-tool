@@ -13022,7 +13022,16 @@
       const catalogItem = readinessMonitorCatalog.find((entry) => entry.id === id);
       const statusAlias = pickDefined(monitor?.status, monitor?.readinessStatus, monitor?.readiness_status, null);
       const statusText = typeof statusAlias === "string" ? statusAlias.trim().toLowerCase() : "";
-      const statusKey = statusText.replace(/[\s-]+/g, "_");
+      const rawStatusKey = statusText.replace(/[\s-]+/g, "_");
+      const statusKey = {
+        "完了": "complete",
+        "未完了": "not_complete",
+        "未実施": "not_complete",
+        "非対応": "not_supported",
+        "未対応": "not_supported",
+        "不明": "unknown",
+        "未判定": "unknown"
+      }[rawStatusKey] || rawStatusKey;
       const supportedAlias = pickDefined(monitor?.supported, monitor?.isSupported, monitor?.is_supported, monitor?.available, monitor?.isAvailable, monitor?.is_available, undefined);
       const supported = supportedAlias === undefined
         ? (statusKey === "not_supported" || statusKey === "unsupported"
@@ -13045,7 +13054,7 @@
         category: catalogItem?.category || monitor?.category || "状態",
         supported,
         complete,
-        status: statusAlias || (supported ? (complete ? "complete" : "not_complete") : "not_supported"),
+        status: statusKey !== rawStatusKey ? statusKey : (statusAlias || (supported ? (complete ? "complete" : "not_complete") : "not_supported")),
         diagnosticUse: catalogItem?.diagnosticUse || "",
         notCompleteNote: catalogItem?.notCompleteNote || ""
       };
@@ -15143,7 +15152,7 @@
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
     const freezeFrameNumberIndex = findIndex("freeze frame number", "frame number", "freeze_frame_number", "フリーズフレーム番号");
     const triggerDtcIndex = findIndex("trigger dtc", "freeze frame dtc", "trigger code", "trigger_dtc", "トリガーdtc");
-    const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id", "monitor");
+    const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id", "monitor", "レディネスモニター", "モニター");
     const readinessIgnitionTypeIndex = findIndex("readiness ignition type", "ignition type", "ignition_type");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
