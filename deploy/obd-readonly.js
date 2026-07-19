@@ -14827,7 +14827,11 @@
           && normalizedHeaders.some((header) => measurementValueHeaderNames.has(header));
         const hasReadinessColumns = normalizedHeaders.some((header) => readinessMonitorHeaderNames.has(header))
           && normalizedHeaders.some((header) => readinessStatusHeaderNames.has(header));
-        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns && !hasReadinessColumns)) return null;
+        const sectionHint = lines.slice(0, index).at(-1) || "";
+        const hasEcuResponseColumns = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint)
+          && normalizedHeaders.some((header) => ["ecu", "module", "controlmodule", "system", "address", "ecuresponseid", "ecuid", "moduleid", "responseid"].includes(header))
+          && normalizedHeaders.some((header) => readinessStatusHeaderNames.has(header));
+        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns && !hasReadinessColumns && !hasEcuResponseColumns)) return null;
         return { index, delimiter, headers };
       })
       .find(Boolean);
@@ -14886,7 +14890,8 @@
       && (Number.isInteger(readoutKindIndex) || /(?:mode\s*0?6|onboard\s*monitor)/i.test(sectionHint));
     const hasExplicitSupportedPidColumns = (Number.isInteger(pidIndex) || Number.isInteger(valueIndex))
       && (Number.isInteger(readoutKindIndex) || /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint));
-    const hasExplicitEcuResponseColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex);
+    const hasExplicitEcuResponseColumns = (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex)
+      && (Number.isInteger(readoutKindIndex) || /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint));
     const hasExplicitDtcReadoutStatusColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(statusIndex);
     if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns) return null;
     const source = "scanner_csv_import";
@@ -15003,6 +15008,7 @@
       const isEcuInfoSection = /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint);
       const isOnboardMonitorSection = /(?:mode\s*0?6|onboard\s*monitor)/i.test(sectionHint);
       const isSupportedPidSection = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint);
+      const isEcuResponseSection = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint);
       const dtcReadoutKind = normalizeDtcReadoutKind(readoutKind);
       if (isReadinessRow) {
         recordReadoutMetadata("readiness", rowCapturedAt, rowProtocol);
@@ -15051,7 +15057,7 @@
       const ecuInfoId = (cellAt(ecuInfoIdIndex, 80) || label).toLowerCase().replace(/[\s\-]+/g, "_");
       const mode06TestId = cellAt(mode06TestIdIndex, 8);
       const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
-      if (isEcuResponseRow) {
+      if (isEcuResponseRow || isEcuResponseSection) {
         recordReadoutMetadata("ecu_response", rowCapturedAt, rowProtocol);
         const responseId = cellAt(ecuResponseIdIndex, 120) || ecu;
         const responseStatus = cellAt(statusIndex, 40).toLowerCase();
