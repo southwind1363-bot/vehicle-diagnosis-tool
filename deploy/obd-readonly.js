@@ -15007,6 +15007,7 @@
       const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
       const isEcuInfoSection = /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint);
       const isVehicleInformationSection = /(?:vehicle\s*(?:info(?:rmation)?|profile)|car\s*(?:info(?:rmation)?|profile))/i.test(sectionHint);
+      const isReadoutInterfaceSection = /(?:(?:device|interface|scanner)\s*(?:info(?:rmation)?|profile)|scan\s*tool\s*(?:info(?:rmation)?|profile))/i.test(sectionHint);
       const isOnboardMonitorSection = /(?:mode\s*0?6|onboard\s*monitor)/i.test(sectionHint);
       const isSupportedPidSection = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint);
       const isEcuResponseSection = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint);
@@ -15077,6 +15078,23 @@
           enginetype: "engineCode"
         }[label.toLowerCase().replace(/[\s_\-./()]+/g, "")];
         if (vehicleField && !sensitiveLabel(label) && !vehicleProfileValues[vehicleField]) vehicleProfileValues[vehicleField] = rawValue;
+        return;
+      }
+      if (isReadoutInterfaceSection && label && rawValue) {
+        const interfaceField = {
+          scannerlabel: "label",
+          interfacelabel: "label",
+          vcilabel: "label",
+          device: "label",
+          devicemodel: "deviceModel",
+          interfacemodel: "deviceModel",
+          vcimodel: "deviceModel",
+          readoutroute: "route",
+          interfaceroute: "route",
+          platform: "platform",
+          hostplatform: "platform"
+        }[label.toLowerCase().replace(/[\s_\-./()]+/g, "")];
+        if (interfaceField && !readoutInterfaceValues[interfaceField]) readoutInterfaceValues[interfaceField] = rawValue;
         return;
       }
       if (isEcuResponseRow || isEcuResponseSection) {
@@ -15199,7 +15217,7 @@
     const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, ...readoutMetadata("onboard_monitor"), tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
     const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, ...readoutMetadata("supported_pid"), supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean)) return null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean) && !Object.values(readoutInterfaceValues).some(Boolean)) return null;
     const normalizedVehicleProfile = normalizeVehicleApplicabilitySnapshot(vehicleProfileValues);
     const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.engineCode
       ? {
@@ -16046,6 +16064,15 @@
         engineCode: profile.engineCode || profile.engine_code || candidate.engineCode || candidate.engine_code || null
       }), {});
     const vehicleProfile = Object.values(mergedVehicleProfile).some(Boolean) ? mergedVehicleProfile : undefined;
+    const mergedReadoutInterface = tableSessions
+      .map((session) => session.readoutInterface || session.readout_interface || {})
+      .reduce((readoutInterface, candidate) => ({
+        label: readoutInterface.label || candidate.label || candidate.interfaceLabel || candidate.interface_label || null,
+        deviceModel: readoutInterface.deviceModel || readoutInterface.device_model || candidate.deviceModel || candidate.device_model || null,
+        route: readoutInterface.route || candidate.route || candidate.readoutRoute || candidate.readout_route || null,
+        platform: readoutInterface.platform || candidate.platform || null
+      }), {});
+    const readoutInterface = Object.values(mergedReadoutInterface).some(Boolean) ? normalizeReadoutInterfaceSnapshot(mergedReadoutInterface) : undefined;
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
@@ -16057,6 +16084,7 @@
       supportedPidMatrix,
       ecuResponseSummary,
       vehicleProfile,
+      readoutInterface,
       importClassification: {
         schemaVersion: "scanner_csv_import_v1",
         schema_version: "scanner_csv_import_v1",
