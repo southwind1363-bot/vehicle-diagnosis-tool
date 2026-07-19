@@ -2612,7 +2612,11 @@
   }
 
   function normalizeVehicleApplicabilitySnapshot(input = {}) {
-    const source = input && typeof input === "object" ? input : {};
+    const source = input && typeof input === "object"
+      ? input.data && typeof input.data === "object" && !Array.isArray(input.data)
+        ? { ...input, ...input.data }
+        : input
+      : {};
     const candidateRanges = Array.isArray(source.candidateRanges) ? source.candidateRanges : Array.isArray(source.candidate_ranges) ? source.candidate_ranges : Array.isArray(source.candidates) ? source.candidates : [];
     const applicableRanges = Array.isArray(source.applicableRanges) ? source.applicableRanges : Array.isArray(source.applicable_ranges) ? source.applicable_ranges : Array.isArray(source.matchedRanges) ? source.matchedRanges : Array.isArray(source.matched_ranges) ? source.matched_ranges : [];
     const supportedEngineCodes = Array.isArray(source.supportedEngineCodes) ? source.supportedEngineCodes : Array.isArray(source.supported_engine_codes) ? source.supported_engine_codes : Array.isArray(source.engineCodes) ? source.engineCodes : Array.isArray(source.engine_codes) ? source.engine_codes : [];
