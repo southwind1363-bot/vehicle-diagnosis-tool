@@ -15985,6 +15985,16 @@
         readiness_readout_status: "reported"
       })
       : readinessSnapshots[0];
+    const onboardMonitorSnapshots = tableSessions
+      .map((session) => session.onboardMonitorSnapshot)
+      .filter((snapshot) => snapshot && (snapshot.onboardMonitorReadoutStatus === "reported" || Number(snapshot.testCount) > 0));
+    const onboardMonitorSnapshot = onboardMonitorSnapshots.length > 1
+      ? normalizeOnboardMonitorSnapshot({
+        source: "scanner_csv_import",
+        tests: onboardMonitorSnapshots.flatMap((snapshot) => snapshot.tests || []),
+        onboard_monitor_readout_status: "reported"
+      })
+      : onboardMonitorSnapshots[0];
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
@@ -15992,7 +16002,7 @@
       freezeFrameSnapshot: firstReported("freezeFrameSnapshot", "freezeFrameReadoutStatus", "valueCount"),
       readinessSnapshot,
       ecuInfoSnapshot,
-      onboardMonitorSnapshot: firstReported("onboardMonitorSnapshot", "onboardMonitorReadoutStatus", "testCount"),
+      onboardMonitorSnapshot,
       supportedPidMatrix,
       ecuResponseSummary,
       importClassification: {
