@@ -14814,7 +14814,7 @@
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
     const statusIndex = findIndex("status", "dtc status", "state", "状態");
-    const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask");
+    const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask", "status of dtc", "uds status byte");
     const dtcStatusAvailabilityMaskIndex = findIndex("dtc status availability mask", "status availability mask", "dtc status mask availability");
     const dtcSeverityIndex = findIndex("severity", "dtc severity", "severity byte", "dtc severity byte");
     const dtcOccurrenceCountIndex = findIndex("occurrence count", "occurrence counter", "dtc occurrence count", "dtc occurrence counter", "fault occurrence counter");
