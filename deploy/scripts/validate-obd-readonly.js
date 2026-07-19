@@ -2448,6 +2448,8 @@ check(diagnosticCoverageRoadmap.every((item) => Number.isInteger(item.progress_p
 check(diagnosticCoverageRoadmap.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断データ網羅ロードマップの目標時期が不足しています");
 check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-body-b" && item.progress_percent === 8 && item.current_state === "個別定義は未整備" && item.current_count_note.includes("0件")), "B系未整備状態がロードマップにありません");
 check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-chassis-c" && item.progress_percent === 14 && item.current_count_note.includes("29件") && item.current_state === "出典確認済み定義を追加開始"), "C系出典確認済み定義の進捗根拠が不足しています");
+const importedChassisDtcDefinitions = importedVerifiedDtc.filter((item) => /^C/.test(item.code || ""));
+check(importedChassisDtcDefinitions.length === 29 && importedChassisDtcDefinitions.every((item) => item.service_manual_required === true && item.imported_definition_only === true && Array.isArray(item.possible_causes) && item.possible_causes.length === 0 && Array.isArray(item.safety_notes) && item.safety_notes.length > 0 && ["https://www.nhtsa.gov/sites/nhtsa.gov/files/documents/13502_812576_steerbywire.pdf", "https://www.nhtsa.gov/sites/nhtsa.gov/files/documents/13501_812575_electricpowersteeringreport.pdf"].includes(item.source_url)), "Verified chassis DTC definitions must remain source-only and service-manual-gated");
 const nhtsaEpsChassisDefinitions = [
   ["C0051", "Steering Wheel Position Sensor (Subfault)"],
   ["C0052", "Steering Wheel Position Sensor Signal A (Subfault)"],
