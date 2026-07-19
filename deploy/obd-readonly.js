@@ -15006,6 +15006,7 @@
       const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
       const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
       const isEcuInfoSection = /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint);
+      const isVehicleInformationSection = /(?:vehicle\s*(?:info(?:rmation)?|profile)|car\s*(?:info(?:rmation)?|profile))/i.test(sectionHint);
       const isOnboardMonitorSection = /(?:mode\s*0?6|onboard\s*monitor)/i.test(sectionHint);
       const isSupportedPidSection = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint);
       const isEcuResponseSection = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint);
@@ -15057,6 +15058,27 @@
       const ecuInfoId = (cellAt(ecuInfoIdIndex, 80) || label).toLowerCase().replace(/[\s\-]+/g, "_");
       const mode06TestId = cellAt(mode06TestIdIndex, 8);
       const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
+      if (isVehicleInformationSection && label && rawValue) {
+        const vehicleField = {
+          make: "maker",
+          maker: "maker",
+          manufacturer: "maker",
+          brand: "maker",
+          model: "model",
+          modelname: "model",
+          modelcode: "modelCode",
+          chassiscode: "modelCode",
+          framecode: "modelCode",
+          year: "year",
+          modelyear: "year",
+          registrationyear: "year",
+          enginecode: "engineCode",
+          enginemodel: "engineCode",
+          enginetype: "engineCode"
+        }[label.toLowerCase().replace(/[\s_\-./()]+/g, "")];
+        if (vehicleField && !sensitiveLabel(label) && !vehicleProfileValues[vehicleField]) vehicleProfileValues[vehicleField] = rawValue;
+        return;
+      }
       if (isEcuResponseRow || isEcuResponseSection) {
         recordReadoutMetadata("ecu_response", rowCapturedAt, rowProtocol);
         const responseId = cellAt(ecuResponseIdIndex, 120) || ecu;
@@ -15177,7 +15199,7 @@
     const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, ...readoutMetadata("onboard_monitor"), tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
     const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, ...readoutMetadata("supported_pid"), supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary) return null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean)) return null;
     const normalizedVehicleProfile = normalizeVehicleApplicabilitySnapshot(vehicleProfileValues);
     const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.engineCode
       ? {
