@@ -15157,11 +15157,11 @@
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
     const ecuNameIndex = findIndex("ecu name", "module name", "control module name", "system name", "ecu label", "module label", "ECU名", "ユニット名");
-    const mode06TestIdIndex = findIndex("mode 06 test id", "test id", "tid");
-    const mode06ComponentIdIndex = findIndex("mode 06 component id", "component id", "cid");
+    const mode06TestIdIndex = findIndex("mode 06 test id", "test id", "tid", "テストID");
+    const mode06ComponentIdIndex = findIndex("mode 06 component id", "component id", "cid", "コンポーネントID");
     const minIndex = findIndex("min", "minimum", "min limit");
     const maxIndex = findIndex("max", "maximum", "max limit");
-    const ecuResponseIdIndex = findIndex("ecu response id", "ecu id", "module id", "response id");
+    const ecuResponseIdIndex = findIndex("ecu response id", "ecu id", "module id", "response id", "ECU応答ID");
     const responseTimeIndex = findIndex("response time ms", "response_time_ms", "response time", "latency ms", "latency");
     const negativeResponseCountIndex = findIndex("negative response count", "negative_response_count", "negative count");
     const negativeResponseLabelIndex = findIndex("negative response label", "negative_response_label", "negative label");
@@ -15301,15 +15301,15 @@
       const isFreezeFrameRow = /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
       const isReadinessRow = /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
       const isEcuInfoRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*(?:info|information)|mode\s*0?9|ecu情報)/i.test(readoutKind);
-      const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
-      const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
-      const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
+      const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor|モード0?6)/i.test(readoutKind);
+      const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support|対応pid)/i.test(readoutKind);
+      const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?|ecu応答)/i.test(readoutKind);
       const isEcuInfoSection = /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint);
       const isVehicleInformationSection = /(?:vehicle\s*(?:info(?:rmation)?|profile)|car\s*(?:info(?:rmation)?|profile))/i.test(sectionHint);
       const isReadoutInterfaceSection = /(?:(?:device|interface|scanner)\s*(?:info(?:rmation)?|profile)|scan\s*tool\s*(?:info(?:rmation)?|profile))/i.test(sectionHint);
-      const isOnboardMonitorSection = /(?:mode\s*0?6|onboard\s*monitor)/i.test(sectionHint);
-      const isSupportedPidSection = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint);
-      const isEcuResponseSection = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint);
+      const isOnboardMonitorSection = /(?:mode\s*0?6|onboard\s*monitor|モード0?6)/i.test(sectionHint);
+      const isSupportedPidSection = /(?:supported\s*pids?|pid\s*support|対応pid)/i.test(sectionHint);
+      const isEcuResponseSection = /(?:ecu\s*responses?|module\s*responses?|ecu応答)/i.test(sectionHint);
       const dtcReadoutKind = normalizeDtcReadoutKind(readoutKind);
       if (isReadinessRow) {
         recordReadoutMetadata("readiness", rowCapturedAt, rowProtocol);
