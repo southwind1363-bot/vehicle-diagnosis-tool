@@ -15966,13 +15966,22 @@
         ecus: ecuResponseSummaries.flatMap((summary) => summary.ecus)
       })
       : ecuResponseSummaries[0];
+    const ecuInfoSnapshots = tableSessions
+      .map((session) => session.ecuInfoSnapshot)
+      .filter((snapshot) => snapshot && (snapshot.ecuInfoReadoutStatus === "reported" || Number(snapshot.itemCount) > 0));
+    const ecuInfoSnapshot = ecuInfoSnapshots.length > 1
+      ? normalizeEcuInfoSnapshot({
+        source: "scanner_csv_import",
+        items: ecuInfoSnapshots.flatMap((snapshot) => snapshot.items || [])
+      })
+      : ecuInfoSnapshots[0];
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
       livePidSnapshot,
       freezeFrameSnapshot: firstReported("freezeFrameSnapshot", "freezeFrameReadoutStatus", "valueCount"),
       readinessSnapshot: firstReported("readinessSnapshot", "readinessReadoutStatus", "monitorCount"),
-      ecuInfoSnapshot: firstReported("ecuInfoSnapshot", "ecuInfoReadoutStatus", "itemCount"),
+      ecuInfoSnapshot,
       onboardMonitorSnapshot: firstReported("onboardMonitorSnapshot", "onboardMonitorReadoutStatus", "testCount"),
       supportedPidMatrix,
       ecuResponseSummary,
