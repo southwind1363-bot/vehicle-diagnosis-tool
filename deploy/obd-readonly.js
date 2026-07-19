@@ -12182,12 +12182,16 @@
         : "local_bridge"
       : "scanner_text";
     const mergedBridgeMetadata = buildMergedBridgeMetadata({ bridgeImport, bridgeSession });
+    const scannerVehicleApplicability = scannerAnalysis.vehicleProfile ? normalizeVehicleApplicabilitySnapshot(scannerAnalysis.vehicleProfile) : null;
+    const bridgeVehicleApplicability = mergedBridgeMetadata.vehicleApplicability;
+    const hasBridgeVehicleProfile = Boolean(bridgeVehicleApplicability?.maker || bridgeVehicleApplicability?.model || bridgeVehicleApplicability?.modelCode || bridgeVehicleApplicability?.model_code || bridgeVehicleApplicability?.year || bridgeVehicleApplicability?.engineCode || bridgeVehicleApplicability?.engine_code);
+    const effectiveVehicleApplicability = hasBridgeVehicleProfile ? bridgeVehicleApplicability : scannerVehicleApplicability || bridgeVehicleApplicability;
     const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
       Array.isArray(mergedBridgeMetadata.nextReadoutCandidatesInput) && mergedBridgeMetadata.nextReadoutCandidatesInput.length
         ? mergedBridgeMetadata.nextReadoutCandidatesInput
         : buildNextReadoutCandidates(
           mergedBridgeMetadata.readoutCoverageInput,
-          mergedBridgeMetadata.vehicleApplicability,
+          effectiveVehicleApplicability,
           bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null,
           dtcSnapshot,
           bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null
@@ -12200,7 +12204,7 @@
     const supportedPidMatrix = bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null;
     const coreSessionStatus = buildCoreSessionStatus({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
-      vehicleApplicability: mergedBridgeMetadata.vehicleApplicability,
+      vehicleApplicability: effectiveVehicleApplicability,
       dtcSnapshot,
       freezeFrameSnapshot,
       readinessSnapshot,
@@ -12440,8 +12444,8 @@
       freeze_frame_snapshot: freezeFrameSnapshot,
       vehicleProfile,
       vehicle_profile: vehicleProfile,
-      vehicleApplicability: mergedBridgeMetadata.vehicleApplicability,
-      vehicle_applicability: mergedBridgeMetadata.vehicleApplicability,
+      vehicleApplicability: effectiveVehicleApplicability,
+      vehicle_applicability: effectiveVehicleApplicability,
       importClassification: mergedBridgeMetadata.importClassification,
       import_classification: mergedBridgeMetadata.importClassification,
       connectionStatus,
