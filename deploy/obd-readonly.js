@@ -15198,12 +15198,12 @@
     };
     const normalizeDtcReadoutKind = (cell) => {
       const normalized = sanitizeCell(cell, 80).toLowerCase();
-      if (/(?:stored|current|confirmed|active|mode\s*0?3)/.test(normalized)) return "stored";
-      if (/(?:pending|mode\s*0?7)/.test(normalized)) return "pending";
-      if (/(?:permanent|mode\s*0?A)/i.test(normalized)) return "permanent";
+      if (/(?:stored|current|confirmed|active|mode\s*0?3|保存|現在|確定)/.test(normalized)) return "stored";
+      if (/(?:pending|mode\s*0?7|保留)/.test(normalized)) return "pending";
+      if (/(?:permanent|mode\s*0?A|恒久)/i.test(normalized)) return "permanent";
       return null;
     };
-    const isExplicitEmptyDtcReadout = (cell) => /^(?:no[_\s-]*codes?|no[_\s-]*faults?|empty|complete|reported)$/i.test(sanitizeCell(cell, 80));
+    const isExplicitEmptyDtcReadout = (cell) => /^(?:no[_\s-]*codes?|no[_\s-]*faults?|empty|complete|reported|なし|故障なし|故障コードなし|dtcなし|該当なし)$/i.test(sanitizeCell(cell, 80));
     const hasFreezeFrame = (cell) => /^(?:1|true|yes|available|あり|有)$/i.test(sanitizeCell(cell, 40));
     const sensitiveLabel = (label) => /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(label);
     const dtcs = [];
