@@ -17388,8 +17388,8 @@
 
   function extractTextEcuInfoSnapshot(value) {
     const rowMatchers = [
-      ["calibration_verification_number", "06", /(?:\bcvn\b|calibration\s*verification\s*number)/i],
-      ["calibration_id", "04", /(?:\bcal(?:ibration)?\s*(?:id|identification)\b|\bcalid\b)/i],
+      ["calibration_verification_number", "06", /(?:\bcvn\b|calibration\s*verification\s*number|キャリブレーション検証番号)/i],
+      ["calibration_id", "04", /(?:\bcal(?:ibration)?\s*(?:id|identification)\b|\bcalid\b|キャリブレーションid|較正id)/i],
       ["ecu_name", "0A", /(?:\becu\s*name\b|\bmodule\s*name\b|\bmodule\s*label\b|ecu名|モジュール名)/i]
     ];
     const rows = [];
