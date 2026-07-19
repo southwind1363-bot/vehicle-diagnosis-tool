@@ -2918,6 +2918,78 @@
     }
   }
 
+  function normalizeComparableCanEcuAddress(value) {
+    const text = String(value || "").toUpperCase();
+    const match = text.match(/(?:^|[^0-9A-F])((?:7E[89A-F])|(?:18DA[0-9A-F]{4}))(?![0-9A-F])/);
+    return match ? match[1] : null;
+  }
+
+  function buildVehicleApplicabilityEcuMatchSummary({
+    vehicleApplicability = {},
+    dtcSnapshot = {},
+    freezeFrameSnapshot = {},
+    readinessSnapshot = {},
+    ecuInfoSnapshot = {},
+    onboardMonitorSnapshot = {},
+    livePidSnapshot = {},
+    supportedPidMatrix = {}
+  } = {}) {
+    const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
+    const observedAddressInputs = [
+      dtcSnapshot?.sourceEcu,
+      dtcSnapshot?.source_ecu,
+      ...(dtcSnapshot?.dtcs || []).map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || null),
+      livePidSnapshot?.sourceEcu,
+      livePidSnapshot?.source_ecu,
+      ...(livePidSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      freezeFrameSnapshot?.sourceEcu,
+      freezeFrameSnapshot?.source_ecu,
+      ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      readinessSnapshot?.sourceEcu,
+      readinessSnapshot?.source_ecu,
+      ...(readinessSnapshot?.readinessEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      ecuInfoSnapshot?.sourceEcu,
+      ecuInfoSnapshot?.source_ecu,
+      ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      supportedPidMatrix?.sourceEcu,
+      supportedPidMatrix?.source_ecu,
+      ...(supportedPidMatrix?.supportedPidEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+    ];
+    const observedAddresses = [...new Set(observedAddressInputs.map(normalizeComparableCanEcuAddress).filter(Boolean))].sort();
+    const comparableObservedAddresses = expectedAddress
+      ? observedAddresses.filter((address) => address.length === expectedAddress.length)
+      : [];
+    const status = !expectedAddress
+      ? "not_configured"
+      : !observedAddresses.length
+        ? "not_observed"
+        : !comparableObservedAddresses.length
+          ? "not_comparable"
+          : comparableObservedAddresses.includes(expectedAddress)
+            ? "matched"
+            : "mismatch";
+    const reviewRequired = status === "mismatch";
+    return {
+      schemaVersion: "vehicle_applicability_ecu_match_summary_v1",
+      schema_version: "vehicle_applicability_ecu_match_summary_v1",
+      status,
+      expectedAddress,
+      expected_address: expectedAddress,
+      observedAddresses,
+      observed_addresses: observedAddresses,
+      comparableObservedAddresses,
+      comparable_observed_addresses: comparableObservedAddresses,
+      reviewRequired,
+      review_required: reviewRequired,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function hasObjectContent(value) {
     return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
   }
@@ -4998,6 +5070,16 @@
     nextReadoutCandidates = []
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const vehicleApplicabilityEcuMatchSummary = buildVehicleApplicabilityEcuMatchSummary({
+      vehicleApplicability: applicability,
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix
+    });
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const dtcStatusSummary = dtcSnapshot?.dtcStatusSummary
       || dtcSnapshot?.dtc_status_summary
@@ -5503,7 +5585,8 @@
     const vehicleApplicabilityBlocking = blockingWarningIds.some((warning) => vehicleApplicabilityBlockingWarningIds.includes(warning));
     const vehicleApplicabilityNeedsReview = applicability.status === "partial"
       || applicability.status === "manual"
-      || applicability.status === "unlisted";
+      || applicability.status === "unlisted"
+      || vehicleApplicabilityEcuMatchSummary.reviewRequired;
     const vehicleApplicabilityHasIdentity = Boolean(applicability.maker || applicability.model || applicability.modelCode || applicability.year || applicability.engineCode || applicability.targetSystem || applicability.targetEcu);
     const vehicleApplicabilityEvidencePresent = Boolean(applicability.sourceName || applicability.sourceUrl || applicability.sourceDate || applicability.evidenceId);
     const vehicleApplicabilitySourceVerified = applicability.sourceVerified === true || applicability.source_verified === true || applicability.verified === true;
@@ -5621,7 +5704,11 @@
         sourceVerified: vehicleApplicabilityEvidenceSummary.sourceVerified,
         source_verified: vehicleApplicabilityEvidenceSummary.sourceVerified,
         evidenceReviewRequired: vehicleApplicabilityEvidenceSummary.reviewRequired,
-        evidence_review_required: vehicleApplicabilityEvidenceSummary.reviewRequired
+        evidence_review_required: vehicleApplicabilityEvidenceSummary.reviewRequired,
+        ecuMatchSummary: vehicleApplicabilityEcuMatchSummary,
+        ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
+        ecuMatchReviewRequired: vehicleApplicabilityEcuMatchSummary.reviewRequired,
+        ecu_match_review_required: vehicleApplicabilityEcuMatchSummary.reviewRequired
       }
     ];
     const analysisChecklistById = Object.fromEntries(analysisChecklist.map((item) => [item.id, { ...item }]));
@@ -5707,6 +5794,8 @@
       readout_quality_summary: readoutQualitySummary,
       vehicleApplicabilityEvidenceSummary,
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
+      vehicleApplicabilityEcuMatchSummary,
+      vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       missing_readout_count: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
@@ -5757,6 +5846,8 @@
       applicability_status: applicability.status || "unknown",
       vehicleApplicabilityEvidenceSummary,
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
+      vehicleApplicabilityEcuMatchSummary,
+      vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
       include_infrastructure: normalizedCoverage.includeInfrastructure === true,
       requiredReadoutIds,
@@ -5904,6 +5995,13 @@
       || vehicleApplicabilityChecklist?.evidenceSummary
       || vehicleApplicabilityChecklist?.evidence_summary
       || null;
+    const vehicleApplicabilityEcuMatchSummary = coreSessionStatus?.vehicleApplicabilityEcuMatchSummary
+      || coreSessionStatus?.vehicle_applicability_ecu_match_summary
+      || readiness.vehicleApplicabilityEcuMatchSummary
+      || readiness.vehicle_applicability_ecu_match_summary
+      || vehicleApplicabilityChecklist?.ecuMatchSummary
+      || vehicleApplicabilityChecklist?.ecu_match_summary
+      || null;
     const vehicleApplicabilityEvidenceReviewRequired = pickDefined(vehicleApplicabilityEvidenceSummary?.reviewRequired, vehicleApplicabilityEvidenceSummary?.review_required, false) === true;
     const vehicleApplicabilityEvidencePresent = pickDefined(vehicleApplicabilityEvidenceSummary?.evidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, false) === true;
     const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
@@ -5914,7 +6012,8 @@
     const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
       || applicabilityStatus === "partial"
       || applicabilityStatus === "manual"
-      || applicabilityStatus === "unlisted";
+      || applicabilityStatus === "unlisted"
+      || pickDefined(vehicleApplicabilityEcuMatchSummary?.reviewRequired, vehicleApplicabilityEcuMatchSummary?.review_required, false) === true;
     const toSnakeField = (field) => String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
     const readAliasValue = (source, field) => source && typeof source === "object" ? pickDefined(source[field], source[toSnakeField(field)]) : undefined;
     const readAliasList = (source, field) => {
@@ -6321,6 +6420,8 @@
       vehicle_applicability_checklist: diagnosticChecklistById.vehicle_applicability || null,
       vehicleApplicabilityEvidenceSummary,
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
+      vehicleApplicabilityEcuMatchSummary,
+      vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       pendingQueueNextReadoutId: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pending_queue_next_readout_id: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pendingQueueNextReadoutStatus: readAliasValue(queueSummary, "nextReadoutStatus") || coreSessionStatus?.nextPendingReadoutState?.status || coreSessionStatus?.next_pending_readout_state?.status || null,

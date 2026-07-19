@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.43";
+const APP_VERSION = "3.2.44";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6849,6 +6849,14 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(sessionVehicleApplicability, NO_DATA) || NO_DATA;
   const vehicleApplicabilityEvidenceSummary = coreSessionStatus?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.evidenceSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.evidence_summary || null;
   const vehicleApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(vehicleApplicabilityEvidenceSummary, NO_DATA) || NO_DATA;
+  const vehicleApplicabilityEcuMatchSummary = coreSessionStatus?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.ecuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.ecu_match_summary || null;
+  const expectedApplicabilityEcu = vehicleApplicabilityEcuMatchSummary?.expectedAddress || vehicleApplicabilityEcuMatchSummary?.expected_address || null;
+  const observedApplicabilityEcus = vehicleApplicabilityEcuMatchSummary?.observedAddresses || vehicleApplicabilityEcuMatchSummary?.observed_addresses || [];
+  const vehicleApplicabilityEcuMatchLabel = vehicleApplicabilityEcuMatchSummary?.status === "matched"
+    ? `一致: ${expectedApplicabilityEcu}`
+    : vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
+      ? `要確認: 適合 ${expectedApplicabilityEcu || NO_DATA} / 応答 ${Array.isArray(observedApplicabilityEcus) ? observedApplicabilityEcus.join(" / ") || NO_DATA : NO_DATA}`
+      : NO_DATA;
   const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, getSessionNextReadoutCandidates(session, 2), NO_DATA);
   const nextReadoutReasonLabel = formatNextReadoutReasonSummary(session?.nextReadoutReasonSummary || session?.next_readout_reason_summary || coreSessionStatus?.nextReadoutReasonSummary || coreSessionStatus?.next_readout_reason_summary || session?.diagnosticFlowSummary?.nextReadoutReasonSummary || session?.diagnosticFlowSummary?.next_readout_reason_summary || session?.diagnostic_flow_summary?.nextReadoutReasonSummary || session?.diagnostic_flow_summary?.next_readout_reason_summary, NO_DATA);
   const nextReadoutGuardLabel = formatNextReadoutGuardSummary(session?.nextReadoutGuardSummary || session?.next_readout_guard_summary || coreSessionStatus?.nextReadoutGuardSummary || coreSessionStatus?.next_readout_guard_summary || session?.diagnosticFlowSummary?.nextReadoutGuardSummary || session?.diagnosticFlowSummary?.next_readout_guard_summary || session?.diagnostic_flow_summary?.nextReadoutGuardSummary || session?.diagnostic_flow_summary?.next_readout_guard_summary, NO_DATA);
@@ -6971,6 +6979,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(4, 0, ["読取実行", webSerialReadoutLabel]);
   values.splice(5, 0, ["ECU報告プロファイル", obdReportedProfileLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
+  values.splice(6, 0, ["ECU適合", vehicleApplicabilityEcuMatchLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
   values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel], ["読取理由", nextReadoutReasonLabel], ["計画安全", nextReadoutGuardLabel], ["計画差分", importedNextReadoutGuardComparisonLabel], ["要求安全", nextReadoutRequestSafetyLabel], ["候補安全", nextReadoutCandidateSafetyLabel]);
