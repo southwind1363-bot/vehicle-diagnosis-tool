@@ -14763,7 +14763,12 @@
       if (!row || typeof row !== "object" || Array.isArray(row)) return false;
       const pid = row.pid ?? row.pid_code ?? row.pidCode ?? row.pid_id ?? row.pidId;
       const value = row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue;
-      return /^(?:0x)?[0-9a-f]{2}$/i.test(String(pid ?? "").trim()) && value !== undefined && value !== null && String(value).trim() !== "";
+      if (value === undefined || value === null || String(value).trim() === "") return false;
+      if (/^(?:0x)?[0-9a-f]{2}$/i.test(String(pid ?? "").trim())) return true;
+      const readoutType = String(row.readout ?? row.readout_type ?? row.readoutType ?? row.type ?? row.kind ?? "")
+        .toLowerCase()
+        .replace(/[\s_-]+/g, "");
+      return ["livedata", "livepid", "pidvalue"].includes(readoutType) && Boolean(normalizeBridgePidValue(row, 0));
     });
     const topLevelRows = Array.isArray(parsed) ? parsed : null;
     const topLevelDtcRows = topLevelRows?.filter((row) => hasDtcRows([row])) || [];
