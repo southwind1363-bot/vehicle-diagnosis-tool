@@ -15096,7 +15096,7 @@
       "dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode",
       "pid", "obdpid", "parameterid", "readout", "readouttype", "section", "snapshot",
       "readinessmonitorid", "ecuinfoid", "mode09id", "testid", "tid", "ecuresponseid",
-      "故障コード", "読取区分", "セクション", "スナップショット", "レディネスモニター", "ecu情報id", "テストid", "ecu応答id"
+      "故障コード", "dtcコード", "診断トラブルコード", "読取区分", "セクション", "スナップショット", "レディネスモニター", "ecu情報id", "テストid", "ecu応答id"
     ]);
     const measurementLabelHeaderNames = new Set(["parameter", "parametername", "item", "itemname", "label", "dataitem", "項目", "項目名", "パラメーター", "パラメータ", "データ項目"]);
     const measurementValueHeaderNames = new Set(["value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値"]);
@@ -15129,9 +15129,9 @@
     const sectionHint = lines.slice(0, headerLineIndex).at(-1) || "";
     const headerIndex = new Map(headers.map((header, index) => [normalizeHeader(header), index]).filter(([header]) => header));
     const findIndex = (...aliases) => aliases.map((alias) => headerIndex.get(normalizeHeader(alias))).find((index) => Number.isInteger(index));
-    const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード");
+    const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード", "DTCコード", "診断トラブルコード");
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
-    const statusIndex = findIndex("status", "dtc status", "state", "状態");
+    const statusIndex = findIndex("status", "dtc status", "state", "状態", "ステータス", "DTC状態");
     const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask", "status of dtc", "uds status byte");
     const dtcStatusAvailabilityMaskIndex = findIndex("dtc status availability mask", "status availability mask", "dtc status mask availability");
     const dtcSeverityIndex = findIndex("severity", "dtc severity", "severity byte", "dtc severity byte");
@@ -15145,7 +15145,7 @@
     const readinessIgnitionTypeIndex = findIndex("readiness ignition type", "ignition type", "ignition_type");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
-    const ecuNameIndex = findIndex("ecu name", "module name", "control module name", "system name", "ecu label", "module label");
+    const ecuNameIndex = findIndex("ecu name", "module name", "control module name", "system name", "ecu label", "module label", "ECU名", "ユニット名");
     const mode06TestIdIndex = findIndex("mode 06 test id", "test id", "tid");
     const mode06ComponentIdIndex = findIndex("mode 06 component id", "component id", "cid");
     const minIndex = findIndex("min", "minimum", "min limit");
@@ -16235,7 +16235,7 @@
       if (!line.includes(delimiter)) return false;
       const headers = line.split(delimiter).map(normalizeHeader);
       const has = (...names) => names.some((name) => headers.includes(name));
-      const hasDtcOrPid = has("dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode", "故障コード", "pid", "obdpid", "parameterid");
+      const hasDtcOrPid = has("dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode", "故障コード", "dtcコード", "診断トラブルコード", "pid", "obdpid", "parameterid");
       const hasMeasurement = has("parameter", "parametername", "item", "itemname", "label", "dataitem", "項目", "項目名", "パラメーター", "パラメータ", "データ項目") && has("value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値");
       const hasReadiness = has("readinessmonitorid", "readinessid", "monitorid", "monitor", "レディネスモニター", "モニター") && has("status", "dtcstatus", "state", "状態", "ステータス");
       const hasMode06 = has("testid", "tid") && has("componentid", "cid") && has("value", "reading", "result", "measuredvalue", "measurement");
