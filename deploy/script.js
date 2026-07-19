@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.9";
+const APP_VERSION = "3.2.10";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2151,6 +2151,14 @@ function prepareSelectedObdInterface() {
   const selectedVehicle = obdVehicleInput.value.trim() || "車両未選択";
   const catalog = window.ObdReadOnly?.getVehicleInterfaceCatalog?.() || [];
   const item = catalog.find((entry) => entry.id === interfaceId);
+  const readoutRoute = getObdInterfaceReadoutRoute(interfaceId);
+  if (readoutRoute?.route === "app_export_import") {
+    obdDevSession.previewMode = null;
+    clearRequestedInterfaceSelection();
+    obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle}: iPhone対応アプリでread-only読取後、DTC/PID/FF/ECU情報を共有・貼付して取り込みます。`;
+    renderObdDeveloperGate();
+    return;
+  }
   if (item && isBridgeBackedInterfaceCandidate(interfaceId)) {
     obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle}: 読取準備を開始。次はローカルブリッジ確認です。`;
     startInterfaceCandidateCheck(item);
