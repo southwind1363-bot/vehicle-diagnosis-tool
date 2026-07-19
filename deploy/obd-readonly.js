@@ -17440,7 +17440,8 @@
         return;
       }
       const itemMatch = text.match(/\bpid\s*(?:0x)?([0-9a-f]{2})\b/i);
-      if (itemMatch && /(?:\bsupported\b|\bavailable\b|\byes\b|対応|利用可)/i.test(text)) addPid(itemMatch[1]);
+      const explicitlyUnsupported = /(?:\bnot\s*supported\b|\bunsupported\b|\bunavailable\b|\bno\b|非対応|未対応|利用不可)/i.test(text);
+      if (itemMatch && !explicitlyUnsupported && /(?:\bsupported\b|\bavailable\b|\byes\b|対応|利用可)/i.test(text)) addPid(itemMatch[1]);
     });
     if (!supported.size) return null;
     return buildSupportedPidMatrix({
