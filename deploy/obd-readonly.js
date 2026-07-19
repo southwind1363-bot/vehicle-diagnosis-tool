@@ -2945,6 +2945,88 @@
     }
   }
 
+  function buildObservedEcuSummary({
+    dtcSnapshot = {},
+    freezeFrameSnapshot = {},
+    readinessSnapshot = {},
+    ecuInfoSnapshot = {},
+    onboardMonitorSnapshot = {},
+    livePidSnapshot = {},
+    supportedPidMatrix = {}
+  } = {}) {
+    const rows = [];
+    const add = (readoutId, values = []) => {
+      values.forEach((value) => {
+        const ecuId = redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+        if (ecuId) rows.push({ ecuId, readoutId });
+      });
+    };
+    add("dtc_snapshot", [
+      dtcSnapshot?.sourceEcu,
+      dtcSnapshot?.source_ecu,
+      ...(dtcSnapshot?.dtcs || []).map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || null)
+    ]);
+    add("live_pid_snapshot", [
+      livePidSnapshot?.sourceEcu,
+      livePidSnapshot?.source_ecu,
+      ...(livePidSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+    ]);
+    add("freeze_frame_snapshot", [
+      freezeFrameSnapshot?.sourceEcu,
+      freezeFrameSnapshot?.source_ecu,
+      ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+    ]);
+    add("readiness_snapshot", [
+      readinessSnapshot?.sourceEcu,
+      readinessSnapshot?.source_ecu,
+      ...(readinessSnapshot?.readinessEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+    ]);
+    add("ecu_info_snapshot", [
+      ecuInfoSnapshot?.sourceEcu,
+      ecuInfoSnapshot?.source_ecu,
+      ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+    ]);
+    add("onboard_monitor_snapshot", [
+      onboardMonitorSnapshot?.sourceEcu,
+      onboardMonitorSnapshot?.source_ecu,
+      ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+    ]);
+    add("supported_pid_matrix", [
+      supportedPidMatrix?.sourceEcu,
+      supportedPidMatrix?.source_ecu,
+      ...(supportedPidMatrix?.supportedPidEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+    ]);
+    const byId = new Map();
+    rows.forEach(({ ecuId, readoutId }) => {
+      if (!byId.has(ecuId) && byId.size >= 32) return;
+      const entry = byId.get(ecuId) || { id: ecuId, readoutIds: [] };
+      if (!entry.readoutIds.includes(readoutId)) entry.readoutIds.push(readoutId);
+      byId.set(ecuId, entry);
+    });
+    const ecus = [...byId.values()].map((entry) => ({
+      id: entry.id,
+      readoutIds: [...entry.readoutIds],
+      readout_ids: [...entry.readoutIds]
+    }));
+    const ecuIds = ecus.map((entry) => entry.id);
+    const readoutIds = [...new Set(ecus.flatMap((entry) => entry.readoutIds))];
+    return {
+      schemaVersion: "observed_ecu_summary_v1",
+      schema_version: "observed_ecu_summary_v1",
+      ecuCount: ecus.length,
+      ecu_count: ecus.length,
+      ecuIds,
+      ecu_ids: ecuIds,
+      readoutIds,
+      readout_ids: readoutIds,
+      ecus,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function normalizeComparableCanEcuAddress(value) {
     const text = String(value || "").toUpperCase();
     const match = text.match(/(?:^|[^0-9A-F])((?:7E[89A-F])|(?:18DA[0-9A-F]{4}))(?![0-9A-F])/);
@@ -5097,6 +5179,15 @@
     nextReadoutCandidates = []
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const observedEcuSummary = buildObservedEcuSummary({
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix
+    });
     const vehicleApplicabilityEcuMatchSummary = buildVehicleApplicabilityEcuMatchSummary({
       vehicleApplicability: applicability,
       dtcSnapshot,
@@ -5823,6 +5914,8 @@
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       vehicleApplicabilityEcuMatchSummary,
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
+      observedEcuSummary,
+      observed_ecu_summary: observedEcuSummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       missing_readout_count: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
@@ -5875,6 +5968,8 @@
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       vehicleApplicabilityEcuMatchSummary,
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
+      observedEcuSummary,
+      observed_ecu_summary: observedEcuSummary,
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
       include_infrastructure: normalizedCoverage.includeInfrastructure === true,
       requiredReadoutIds,
@@ -6028,6 +6123,11 @@
       || readiness.vehicle_applicability_ecu_match_summary
       || vehicleApplicabilityChecklist?.ecuMatchSummary
       || vehicleApplicabilityChecklist?.ecu_match_summary
+      || null;
+    const observedEcuSummary = coreSessionStatus?.observedEcuSummary
+      || coreSessionStatus?.observed_ecu_summary
+      || readiness.observedEcuSummary
+      || readiness.observed_ecu_summary
       || null;
     const vehicleApplicabilityEvidenceReviewRequired = pickDefined(vehicleApplicabilityEvidenceSummary?.reviewRequired, vehicleApplicabilityEvidenceSummary?.review_required, false) === true;
     const vehicleApplicabilityEvidencePresent = pickDefined(vehicleApplicabilityEvidenceSummary?.evidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, false) === true;
@@ -6449,6 +6549,8 @@
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       vehicleApplicabilityEcuMatchSummary,
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
+      observedEcuSummary,
+      observed_ecu_summary: observedEcuSummary,
       pendingQueueNextReadoutId: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pending_queue_next_readout_id: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pendingQueueNextReadoutStatus: readAliasValue(queueSummary, "nextReadoutStatus") || coreSessionStatus?.nextPendingReadoutState?.status || coreSessionStatus?.next_pending_readout_state?.status || null,
