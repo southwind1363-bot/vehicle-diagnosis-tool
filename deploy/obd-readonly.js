@@ -14882,8 +14882,10 @@
       && (Number.isInteger(readoutKindIndex) || /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(sectionHint));
     const hasExplicitEcuInfoColumns = Number.isInteger(valueIndex) && (Number.isInteger(ecuInfoIdIndex) || Number.isInteger(labelIndex))
       && (Number.isInteger(readoutKindIndex) || /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint));
-    const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
-    const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(pidIndex) || Number.isInteger(valueIndex));
+    const hasExplicitMode06Columns = Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex)
+      && (Number.isInteger(readoutKindIndex) || /(?:mode\s*0?6|onboard\s*monitor)/i.test(sectionHint));
+    const hasExplicitSupportedPidColumns = (Number.isInteger(pidIndex) || Number.isInteger(valueIndex))
+      && (Number.isInteger(readoutKindIndex) || /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint));
     const hasExplicitEcuResponseColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex);
     const hasExplicitDtcReadoutStatusColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(statusIndex);
     if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns) return null;
@@ -14999,6 +15001,8 @@
       const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
       const isEcuResponseRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*responses?|module\s*responses?)/i.test(readoutKind);
       const isEcuInfoSection = /(?:ecu\s*(?:info|information)|mode\s*0?9)/i.test(sectionHint);
+      const isOnboardMonitorSection = /(?:mode\s*0?6|onboard\s*monitor)/i.test(sectionHint);
+      const isSupportedPidSection = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint);
       const dtcReadoutKind = normalizeDtcReadoutKind(readoutKind);
       if (isReadinessRow) {
         recordReadoutMetadata("readiness", rowCapturedAt, rowProtocol);
@@ -15066,7 +15070,7 @@
         });
         return;
       }
-      if (isSupportedPidRow) {
+      if (isSupportedPidRow || isSupportedPidSection) {
         recordReadoutMetadata("supported_pid", rowCapturedAt, rowProtocol);
         const pidTokens = [pid, ...(rawValue.match(/\b(?:0X)?[0-9A-F]{2}\b/gi) || [])]
           .map((item) => String(item).replace(/^0X/i, "").toUpperCase())
@@ -15074,7 +15078,7 @@
         pidTokens.forEach((item) => supportedPids.add(item));
         return;
       }
-      if (isOnboardMonitorRow && mode06TestId && mode06ComponentId && Number.isFinite(Number(rawValue))) {
+      if ((isOnboardMonitorRow || isOnboardMonitorSection) && mode06TestId && mode06ComponentId && Number.isFinite(Number(rawValue))) {
         recordReadoutMetadata("onboard_monitor", rowCapturedAt, rowProtocol);
         const minimum = cellAt(minIndex, 40);
         const maximum = cellAt(maxIndex, 40);
