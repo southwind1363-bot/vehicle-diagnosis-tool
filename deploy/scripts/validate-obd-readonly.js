@@ -2639,8 +2639,17 @@ const scannerTextInlineJapaneseDtcSession = obd.buildScanSessionFromObdText([
   "P0420 \u6c38\u4e45"
 ].join("\n"));
 check(scannerTextInlineJapaneseDtcSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored") && scannerTextInlineJapaneseDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "pending") && scannerTextInlineJapaneseDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0420" && item.status === "permanent") && scannerTextInlineJapaneseDtcSession?.vehicleCommandEnabled === false, "Scanner text import did not normalize inline Japanese DTC states safely");
-check(appSource.includes('const APP_VERSION = "3.2.72";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for inline Japanese DTC states");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.72";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.72", "OBD offline cache version should match the active app version");
+const scannerTextJapaneseEcuHeadingSession = obd.buildScanSessionFromObdText([
+  "ECU\u540d: Engine Control Module",
+  "P0300 \u4fdd\u5b58",
+  "\u30e2\u30b8\u30e5\u30fc\u30eb\u540d: ABS/VSC",
+  "C1234 \u4fdd\u5b58",
+  "\u30b7\u30b9\u30c6\u30e0\u540d: Hybrid Control",
+  "P0A80 \u4fdd\u5b58"
+].join("\n"));
+check(scannerTextJapaneseEcuHeadingSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.ecu === "Engine Control Module") && scannerTextJapaneseEcuHeadingSession.dtcSnapshot?.dtcs?.some((item) => item.code === "C1234" && item.ecu === "ABS/VSC") && scannerTextJapaneseEcuHeadingSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0A80" && item.ecu === "Hybrid Control") && scannerTextJapaneseEcuHeadingSession?.vehicleCommandEnabled === false, "Scanner text import did not retain explicit Japanese ECU labels safely");
+check(appSource.includes('const APP_VERSION = "3.2.73";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for Japanese ECU headings");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.73";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.73", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");

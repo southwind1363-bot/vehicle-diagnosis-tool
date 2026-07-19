@@ -15675,7 +15675,7 @@
       return null;
     };
     const resolveEcuHeading = (text) => {
-      const match = String(text || "").match(/^(?:ECU|MODULE|CONTROL\s+MODULE|SYSTEM|\u30e6\u30cb\u30c3\u30c8)\s*(?:NAME\s*)?[:\uff1a]\s*(.+)$/i);
+      const match = String(text || "").match(/^(?:ECU|MODULE|CONTROL\s+MODULE|SYSTEM|\u30e6\u30cb\u30c3\u30c8|ECU\u540d|\u30e2\u30b8\u30e5\u30fc\u30eb\u540d|\u30b7\u30b9\u30c6\u30e0\u540d)\s*(?:NAME\s*)?[:\uff1a]\s*(.+)$/i);
       if (!match || extractDtcReferences(text).length) return null;
       const label = redactSensitiveText(match[1]).replace(/\s+/g, " ").trim().slice(0, 120);
       return label || null;
