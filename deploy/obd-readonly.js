@@ -4936,7 +4936,15 @@
       : {};
     const text = (...values) => {
       const value = values.find((item) => typeof item === "string" && item.trim());
-      return value ? value.trim().slice(0, 160) : null;
+      if (!value) return null;
+      const sanitized = redactSensitiveText(value)
+        .replace(/\b(?:serial(?:\s*(?:number|no\.?))?|activation(?:\s*code)?|licen[cs]e(?:\s*key)?|password|secret|token|(?:api\s*)?key)\b\s*(?:[:=#-]\s*)?\S*/gi, " ")
+        .replace(/\b\d{8,}\b/g, " ")
+        .replace(/\s*(?:[|/,;:]\s*){2,}/g, " ")
+        .replace(/(?:\s*[|/,;:]\s*)+$/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      return sanitized ? sanitized.slice(0, 160) : null;
     };
     const interfaceIdInput = text(source.interfaceId, source.interface_id, source.id);
     const interfaceId = interfaceIdInput && !/(?:activation|license|password|secret|serial|token|\bkey\b)/i.test(interfaceIdInput) && !/^\d{8,}$/.test(interfaceIdInput.replace(/[\s-]/g, ""))
