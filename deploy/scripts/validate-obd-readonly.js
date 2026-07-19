@@ -15716,6 +15716,17 @@ const scannerCsvReadoutInterfaceSession = obd.buildDiagnosticScanSessionFromCsv(
   "DTC", "DTC\tStatus", "P0300\tStored"
 ].join("\n"));
 check(scannerCsvReadoutInterfaceSession?.readoutInterface?.label === "THINKCAR TCMa" && scannerCsvReadoutInterfaceSession.readoutInterface?.deviceModel === "TCMa" && scannerCsvReadoutInterfaceSession.readoutInterface?.platform === "iOS" && scannerCsvReadoutInterfaceSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored") && scannerCsvReadoutInterfaceSession?.vehicleCommandEnabled === false && scannerCsvReadoutInterfaceSession?.retainedRawText === false, "Structured CSV import did not retain shared readout-interface information with DTC data in one read-only session");
+const scannerCsvCompleteReportSession = obd.buildDiagnosticScanSessionFromCsv([
+  "Vehicle Information", "Item\tValue", "Make\tToyota", "Model\tPrius", "Model Year\t2023",
+  "Device Information", "Item\tValue", "Scanner Label\tTHINKCAR TCMa", "Device Model\tTCMa", "Platform\tiOS",
+  "Stored DTC", "DTC\tStatus\tECU", "P0300\tStored\t7E8",
+  "Pending DTC", "DTC\tStatus\tECU", "P0171\tPending\t7E8",
+  "I/M Readiness", "Monitor\tStatus", "Misfire\tComplete", "Catalyst\tNot Complete",
+  "ECU Information", "Item\tValue", "Calibration ID\tECU-CAL-01", "CVN\tABCD1234",
+  "Supported PIDs", "PID\tStatus", "05\tSupported", "0C\tSupported",
+  "Live Data", "Parameter\tValue\tUnit", "Engine Speed\t800\trpm", "Coolant Temperature\t85\tC"
+].join("\n"));
+check(scannerCsvCompleteReportSession?.vehicleProfile?.maker === "Toyota" && scannerCsvCompleteReportSession.vehicleProfile?.model === "Prius" && scannerCsvCompleteReportSession?.readoutInterface?.label === "THINKCAR TCMa" && scannerCsvCompleteReportSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored") && scannerCsvCompleteReportSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "pending") && scannerCsvCompleteReportSession?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.complete === true) && scannerCsvCompleteReportSession.readinessSnapshot?.monitors?.some((item) => item.id === "catalyst" && item.complete === false) && scannerCsvCompleteReportSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01") && scannerCsvCompleteReportSession?.supportedPidMatrix?.supportedPids?.join(",") === "05,0C" && scannerCsvCompleteReportSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerCsvCompleteReportSession?.vehicleCommandEnabled === false && scannerCsvCompleteReportSession?.retainedRawText === false, "Structured CSV import did not preserve a complete shared scanner report in one read-only diagnostic session");
 const scannerCsvSeveritySession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status,DTC Status Availability Mask,DTC Status Byte,DTC Severity,DTC Occurrence Counter",
   "P0300,Stored,0xA5,0x2F,0x03,4",
