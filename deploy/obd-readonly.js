@@ -17656,6 +17656,17 @@
     return protocolLine ? protocolLine[1].trim() : null;
   }
 
+  function extractTextCapturedAt(value) {
+    const timestampLine = String(value || "").split(/\r?\n/)
+      .map((line) => String(line || "").trim())
+      .map((line) => line.match(/^(?:(?:scan|readout|captured)\s*(?:at|time)|取得時刻|読取時刻|測定時刻)\s*[:：]\s*(.{1,80})\s*$/i))
+      .find(Boolean);
+    const capturedAt = timestampLine ? timestampLine[1].trim() : "";
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})$/.test(capturedAt)
+      ? capturedAt
+      : null;
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
@@ -17669,6 +17680,7 @@
     const ecuResponseSummary = extractTextEcuResponseSummary(redacted);
     const vehicleProfile = extractTextVehicleProfile(redacted);
     const protocol = extractTextProtocol(redacted);
+    const capturedAt = extractTextCapturedAt(redacted);
     const toolHints = detectScannerToolHints(redacted);
     const readoutInterface = normalizeReadoutInterfaceSnapshot({
       label: toolHints[0] || null,
@@ -17684,8 +17696,8 @@
       source: "scanner_text",
       intent: "read_live_pid_snapshot",
       protocol,
-      capturedAt: null,
-      captured_at: null,
+      capturedAt,
+      captured_at: capturedAt,
       monitorValues,
       monitor_values: monitorValues,
       monitorValueSummary,
@@ -17722,6 +17734,8 @@
       ecu_response_summary: ecuResponseSummary,
       protocol,
       obd_protocol: protocol,
+      capturedAt,
+      captured_at: capturedAt,
       vehicleProfile,
       vehicle_profile: vehicleProfile,
       toolHints,
