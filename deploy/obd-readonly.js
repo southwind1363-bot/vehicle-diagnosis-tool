@@ -15930,9 +15930,12 @@
     const firstReported = (snapshotKey, statusKey, countKey) => tableSessions
       .map((session) => session[snapshotKey])
       .find((snapshot) => snapshot && (snapshot[statusKey] === "reported" || Number(snapshot[countKey]) > 0));
+    const dtcSnapshots = tableSessions
+      .map((session) => session.dtcSnapshot)
+      .filter((snapshot) => snapshot && (snapshot.dtcReadoutStatus === "reported" || Number(snapshot.dtcCount) > 0));
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
-      dtcSnapshot: firstReported("dtcSnapshot", "dtcReadoutStatus", "dtcCount"),
+      dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
       livePidSnapshot: firstReported("livePidSnapshot", "livePidReadoutStatus", "valueCount"),
       freezeFrameSnapshot: firstReported("freezeFrameSnapshot", "freezeFrameReadoutStatus", "valueCount"),
       readinessSnapshot: firstReported("readinessSnapshot", "readinessReadoutStatus", "monitorCount"),
