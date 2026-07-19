@@ -13567,7 +13567,20 @@
   function readObdResponseSourceEcu(input = {}) {
     const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const value = source.source_ecu || source.sourceEcu || source.ecu || source.address || null;
-    return redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+    const explicitSourceEcu = redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+    if (explicitSourceEcu) return explicitSourceEcu;
+    const rawResponse = typeof input === "string" ? input : source.bytes || source.raw || source.response || null;
+    return inferSingleCanResponseSourceEcu(rawResponse);
+  }
+
+  function inferSingleCanResponseSourceEcu(value) {
+    if (typeof value !== "string") return null;
+    const text = normalizeCanLogLineFormat(value).toUpperCase().replace(/[>:]/g, " ");
+    const responseIds = new Set(
+      [...text.matchAll(/(?:^|\s)((?:7E[89A-F])|(?:18DA[0-9A-F]{4}))(?=\s+(?:[0-9A-F]{2}\s+){1,}[0-9A-F]{2}(?:\s|$))/g)]
+        .map((match) => match[1])
+    );
+    return responseIds.size === 1 ? [...responseIds][0] : null;
   }
 
   function decodeLivePidResponse(input = {}) {
