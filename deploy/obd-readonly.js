@@ -1776,7 +1776,8 @@
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const tests = Array.isArray(data.tests)
+    const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const tests = (Array.isArray(data.tests)
       ? data.tests
       : Array.isArray(data.values)
         ? data.values
@@ -1800,7 +1801,12 @@
                           ? data.onboard_monitor_tests
                           : Array.isArray(data.onboardMonitorTests)
                             ? data.onboardMonitorTests
-                            : [];
+                            : [])
+      .map((row) => {
+        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
+        return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+      });
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.tests, data.values, data.mode06_tests, data.mode06Tests, data.mode06_rows, data.mode06Rows, data.monitor_tests, data.monitorTests, data.test_rows, data.testRows, data.onboard_monitor_tests, data.onboardMonitorTests].some(Array.isArray));
     return {
       ...normalizeOnboardMonitorSnapshot({
