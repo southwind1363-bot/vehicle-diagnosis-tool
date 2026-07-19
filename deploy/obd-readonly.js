@@ -17494,7 +17494,7 @@
   function collectTextSupportedPidSection(value) {
     const supportedPidLines = [];
     let inSupportedPidSection = false;
-    const isSupportedPidHeading = (text) => /(?:\bsupported\s*pids?\b|対応\s*pid)/i.test(text);
+    const isSupportedPidHeading = (text) => /(?:\bsupported\s*pids?\b|対応\s*pid|(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?(?:00|20|40|60|80|A0|C0|E0)\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|mode\s*0?6|onboard\s*monitor|\becu\s*(?:info|information)\b|\bmode\s*0?9\b|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
@@ -17511,6 +17511,7 @@
 
   function extractTextSupportedPidMatrix(value) {
     const supported = new Set();
+    const supportedPidPageBases = new Set();
     const addPid = (pid) => {
       const normalized = String(pid || "").trim().toUpperCase().replace(/^0X/, "");
       if (/^[0-9A-F]{2}$/.test(normalized)) supported.add(normalized);
@@ -17522,6 +17523,14 @@
         listMatch[1].split(/[\s,;|/]+/).forEach(addPid);
         return;
       }
+      const bitmaskMatch = text.match(/(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?(00|20|40|60|80|A0|C0|E0)\s*[:=]\s*((?:[0-9a-f]{2}\s*){4})$/i);
+      if (bitmaskMatch) {
+        const pageBase = bitmaskMatch[1].toUpperCase();
+        const decoded = decodeSupportedPidResponse({ raw: "41 " + pageBase + " " + bitmaskMatch[2], source: "scanner_text_supported_pids" });
+        decoded.supportedPids.forEach(addPid);
+        decoded.supportedPidPageBases.forEach((base) => supportedPidPageBases.add(base));
+        return;
+      }
       const itemMatch = text.match(/\bpid\s*(?:0x)?([0-9a-f]{2})\b/i);
       const explicitlyUnsupported = /(?:\bnot\s*supported\b|\bunsupported\b|\bunavailable\b|\bno\b|非対応|未対応|利用不可)/i.test(text);
       if (itemMatch && !explicitlyUnsupported && /(?:\bsupported\b|\bavailable\b|\byes\b|対応|利用可)/i.test(text)) addPid(itemMatch[1]);
@@ -17530,6 +17539,7 @@
     return buildSupportedPidMatrix({
       source: "scanner_text_supported_pids",
       supportedPids: [...supported],
+      supportedPidPageBases: [...supportedPidPageBases],
       supportedPidReadoutStatus: "reported"
     });
   }
