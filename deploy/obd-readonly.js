@@ -2416,6 +2416,7 @@
 
   function normalizeReadoutCoverageSnapshot(input = {}) {
     if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();
+    if (input.data && typeof input.data === "object" && !Array.isArray(input.data)) input = { ...input, ...input.data };
     const totalCategoriesInput = pickDefined(input.totalCategories, input.total_categories, input.requiredCount, input.required_count, input.totalCount, input.total_count, input.totalReadoutCount, input.total_readout_count);
     const availableCategoriesInput = pickDefined(input.availableCategories, input.available_categories, input.availableCount, input.available_count, input.attemptedCount, input.attempted_count, input.attemptedReadoutCount, input.attempted_readout_count);
     const capturedCategoriesInput = pickDefined(input.capturedCategories, input.captured_categories, input.capturedCount, input.captured_count, input.capturedReadoutCount, input.captured_readout_count);
