@@ -10504,6 +10504,11 @@ check(canHeaderFreezeFrame.sourceEcu === "7E8" && canHeaderFreezeFrame.monitorVa
 check(extendedCanHeaderLivePid.monitorValues.some((item) => item.id === "engine_speed" && item.sourceEcu === "18DAF110"), "Single extended CAN header did not tag live PID provenance");
 check(multipleCanHeaderLivePid.monitorValues.every((item) => !item.sourceEcu), "Multiple CAN headers must not infer one ECU provenance");
 check(explicitCanHeaderLivePid.monitorValues.some((item) => item.id === "engine_speed" && item.sourceEcu === "ECM"), "Explicit ECU provenance must override a CAN header");
+const canHeaderTextImportSession = obd.buildScanSessionFromObdText([
+  "7E8 04 41 0C 1A F8",
+  "7E8 06 43 01 71 00 00"
+].join("\n"));
+check(canHeaderTextImportSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && canHeaderTextImportSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.sourceEcu === "7E8"), "CAN-header text import did not preserve ECU provenance through the diagnostic session");
 const decodedSupportedPids = obd.decodeSupportedPidResponse({ raw: "41 00 18 18 00 01 41 20 80 00 00 01" });
 check(decodedSupportedPids.supportedPids.includes("04") && decodedSupportedPids.supportedPids.includes("0C"), "対応PIDビットマップをデコードできません");
 check(decodedSupportedPids.supportedPids.includes("20") && decodedSupportedPids.supportedPids.includes("21") && decodedSupportedPids.supportedPids.includes("40"), "複数レンジの対応PIDビットマップをデコードできません");
