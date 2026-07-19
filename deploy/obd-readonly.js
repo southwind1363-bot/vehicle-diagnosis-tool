@@ -14804,11 +14804,13 @@
       .trim()
       .toLowerCase()
       .replace(/[\s_\-./()]+/g, "");
-    const recognizedHeaderNames = new Set([
+    const structuralHeaderNames = new Set([
       "dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode",
       "pid", "obdpid", "parameterid", "readout", "readouttype", "section", "snapshot",
       "readinessmonitorid", "ecuinfoid", "mode09id", "testid", "tid", "ecuresponseid"
     ]);
+    const measurementLabelHeaderNames = new Set(["parameter", "parametername", "item", "itemname", "label", "dataitem"]);
+    const measurementValueHeaderNames = new Set(["value", "reading", "result", "measuredvalue", "measurement"]);
     const headerCandidate = lines.slice(0, 24)
       .map((line, index) => {
         const headerLine = line.replace(/^\uFEFF/, "");
@@ -14817,7 +14819,11 @@
         ), ",");
         if (!headerLine.includes(delimiter)) return null;
         const headers = parseRow(headerLine, delimiter);
-        if (!headers?.length || !headers.some((header) => recognizedHeaderNames.has(normalizeHeader(header)))) return null;
+        const normalizedHeaders = headers?.map(normalizeHeader) || [];
+        const hasStructuralHeader = normalizedHeaders.some((header) => structuralHeaderNames.has(header));
+        const hasMeasurementColumns = normalizedHeaders.some((header) => measurementLabelHeaderNames.has(header))
+          && normalizedHeaders.some((header) => measurementValueHeaderNames.has(header));
+        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns)) return null;
         return { index, delimiter, headers };
       })
       .find(Boolean);

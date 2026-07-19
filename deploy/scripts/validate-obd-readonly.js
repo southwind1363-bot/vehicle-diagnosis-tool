@@ -2606,8 +2606,8 @@ check(appSource.includes('const registration = await navigator.serviceWorker.reg
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
 check(indexHtml.includes('accept="application/json,text/csv,text/plain,text/html,.json,.csv,.txt,.html,.htm"') && appSource.includes('function normalizeObdScannerImportFileText(value, file = {})') && appSource.includes('.replace(/<\\/(?:td|th)\\s*>/gi, "\\t")') && appSource.includes('new DOMParser().parseFromString(lineBreakHtml, "text/html")') && appSource.includes('document.querySelectorAll("script,style,iframe,object").forEach((node) => node.remove())') && appSource.includes('new Set(["application/json", "text/csv", "text/plain", "text/html"])'), "iPhone共有HTMLレポートを安全に表セル区切り付きでテキスト取込できるようにしてください");
-check(appSource.includes('const APP_VERSION = "3.2.18";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for shared report header detection");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.18";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.18", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "3.2.19";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for shared live-data report detection");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.19";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.19", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
@@ -15597,6 +15597,13 @@ const scannerCsvPreambleSession = obd.buildDiagnosticScanSessionFromCsv([
   "P0300\tStored\t7E8\t0C\tEngine Speed\t800\trpm"
 ].join("\n"));
 check(scannerCsvPreambleSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "7E8") && scannerCsvPreambleSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerCsvPreambleSession?.vehicleCommandEnabled === false && scannerCsvPreambleSession?.retainedRawText === false, "Structured CSV import did not detect a recognised table header after shared-report preamble text");
+const scannerCsvLivePreambleSession = obd.buildDiagnosticScanSessionFromCsv([
+  "THINKCAR Live Data Report",
+  "Parameter\tValue\tUnit",
+  "Engine Speed\t800\trpm",
+  "Coolant Temperature\t85\tC"
+].join("\n"));
+check(scannerCsvLivePreambleSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerCsvLivePreambleSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 85) && scannerCsvLivePreambleSession?.dtcSnapshot?.dtcCount === 0 && scannerCsvLivePreambleSession?.vehicleCommandEnabled === false && scannerCsvLivePreambleSession?.retainedRawText === false, "Structured CSV import did not detect a labelled live-data table after shared-report preamble text");
 const scannerCsvSeveritySession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status,DTC Status Availability Mask,DTC Status Byte,DTC Severity,DTC Occurrence Counter",
   "P0300,Stored,0xA5,0x2F,0x03,4",
