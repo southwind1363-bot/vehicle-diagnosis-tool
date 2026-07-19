@@ -41,6 +41,9 @@ const importedVerifiedDtc = JSON.parse(
 const dtcStandardsReference = JSON.parse(
   fs.readFileSync(new URL("../data/dtc-standards-reference-2026.json", import.meta.url), "utf8")
 );
+const dtcFamilyWorkflows = JSON.parse(
+  fs.readFileSync(new URL("../data/dtc-family-workflows-2026.json", import.meta.url), "utf8")
+);
 const officialReferenceNotes = JSON.parse(
   fs.readFileSync(new URL("../data/official-reference-notes-2026.json", import.meta.url), "utf8")
 );
@@ -2471,6 +2474,7 @@ check(diagnosticCapabilityStatus.some((item) => item.id === "capability-guided-d
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-guided-diagnostics" && item.done.includes("selected vehicle label retained across analysis summaries")), "診断支援ワークフローの車両ラベル保持進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.current_basis.includes("ブリッジDTC統合あり")), "汎用OBD2 DTCのブリッジ統合根拠が不足しています");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012-current-2025-09" && item.source_url.includes("j2012_202509") && item.last_verified_date === "2026-07-18"), "最新SAE J2012出典が不足しています");
+check(dtcFamilyWorkflows.length === 16 && dtcFamilyWorkflows.every((item) => item.source_url === "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions" && item.source_date === "2025-09-01" && item.last_verified_date === "2026-07-19"), "DTCファミリーフローの現行SAE J2012出典が不足しています");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "現行J1979デジタル付属資料の利用制約が不足しています");
 check(officialReferenceNotes.some((item) => item.id === "official-mlit-current-vehicle-obd-information-2026-07" && item.note_type === "compatibility_scope" && item.service_manual_required === true), "現行車OBD情報の公式適用範囲が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-oem-enhanced" && item.current_basis.includes("貼り付け解析入口")), "メーカー固有DTCの貼り付け解析入口が不足しています");
@@ -2616,8 +2620,8 @@ check(appSource.includes('const registration = await navigator.serviceWorker.reg
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
 check(indexHtml.includes('accept="application/json,text/csv,text/plain,text/html,.json,.csv,.txt,.html,.htm"') && appSource.includes('function normalizeObdScannerImportFileText(value, file = {})') && appSource.includes('.replace(/<\\/(?:td|th)\\s*>/gi, "\\t")') && appSource.includes('new DOMParser().parseFromString(lineBreakHtml, "text/html")') && appSource.includes('document.querySelectorAll("script,style,iframe,object").forEach((node) => node.remove())') && appSource.includes('new Set(["application/json", "text/csv", "text/plain", "text/html"])'), "iPhone共有HTMLレポートを安全に表セル区切り付きでテキスト取込できるようにしてください");
-check(appSource.includes('const APP_VERSION = "3.2.38";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for readout interface credential redaction");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.38";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.38", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "3.2.39";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for current DTC workflow references");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.39";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.39", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
