@@ -2680,6 +2680,23 @@ const scannerTextJapaneseReadinessWithoutMil = obd.analyzeScannerText([
   "\u89e6\u5a92: \u975e\u5bfe\u5fdc"
 ].join("\n"));
 check(scannerTextJapaneseReadinessWithoutMil?.readinessSnapshot?.milOn === null && scannerTextJapaneseReadinessWithoutMil.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.status === "complete") && scannerTextJapaneseReadinessWithoutMil.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && scannerTextJapaneseReadinessWithoutMil.readinessSnapshot?.monitors?.some((item) => item.id === "catalyst" && item.status === "not_supported") && scannerTextJapaneseReadinessWithoutMil?.retainedRawText === false, "Japanese scanner text readiness import did not retain monitor states while leaving an unreported MIL unknown");
+const mergedScannerSnapshotSession = obd.mergeDiagnosticInputs({
+  scannerText: [
+    "Stored DTC",
+    "P0300",
+    "I/M Readiness",
+    "Misfire: Complete",
+    "Fuel System: Not Ready",
+    "Live Data",
+    "Engine RPM: 800 rpm",
+    "Coolant Temp: 85 C"
+  ].join("\n")
+});
+const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
+  scannerText: "I/M Readiness\nMisfire: Complete\nFuel System: Not Ready",
+  bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
+});
+check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not fill unavailable bridge readouts or preserve reported bridge emptiness");
 check(appSource.includes('const APP_VERSION = "3.2.78";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for merged scanner snapshots");
 check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.78";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.78", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
