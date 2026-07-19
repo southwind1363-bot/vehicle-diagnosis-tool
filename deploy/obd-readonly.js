@@ -15957,6 +15957,15 @@
         source: "scanner_csv_import"
       }
       : supportedPidSnapshots[0];
+    const ecuResponseSummaries = tableSessions
+      .map((session) => session.ecuResponseSummary)
+      .filter((summary) => Array.isArray(summary?.ecus) && summary.ecus.length);
+    const ecuResponseSummary = ecuResponseSummaries.length > 1
+      ? normalizeEcuResponseSummary({
+        source: "scanner_csv_import",
+        ecus: ecuResponseSummaries.flatMap((summary) => summary.ecus)
+      })
+      : ecuResponseSummaries[0];
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
@@ -15966,7 +15975,7 @@
       ecuInfoSnapshot: firstReported("ecuInfoSnapshot", "ecuInfoReadoutStatus", "itemCount"),
       onboardMonitorSnapshot: firstReported("onboardMonitorSnapshot", "onboardMonitorReadoutStatus", "testCount"),
       supportedPidMatrix,
-      ecuResponseSummary: tableSessions.map((session) => session.ecuResponseSummary).find((summary) => Array.isArray(summary?.ecus) && summary.ecus.length),
+      ecuResponseSummary,
       importClassification: {
         schemaVersion: "scanner_csv_import_v1",
         schema_version: "scanner_csv_import_v1",
