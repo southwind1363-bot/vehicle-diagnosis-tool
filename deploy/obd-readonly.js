@@ -16248,13 +16248,16 @@
       const hasDtcOrPid = has("dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode", "故障コード", "dtcコード", "診断トラブルコード", "pid", "obdpid", "parameterid");
       const hasMeasurement = has("parameter", "parametername", "item", "itemname", "label", "dataitem", "項目", "項目名", "パラメーター", "パラメータ", "データ項目") && has("value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値");
       const hasReadiness = has("readinessmonitorid", "readinessid", "monitorid", "monitor", "レディネスモニター", "モニター") && has("status", "dtcstatus", "state", "状態", "ステータス");
-      const hasMode06 = has("testid", "tid") && has("componentid", "cid") && has("value", "reading", "result", "measuredvalue", "measurement");
+      const hasReadout = has("readout", "readouttype", "section", "snapshot", "読取区分", "セクション");
+      const hasValue = has("value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値");
+      const hasMode06 = has("testid", "tid", "テストid") && has("componentid", "cid", "コンポーネントid") && hasValue;
+      const hasEcuInfo = hasReadout && has("ecuinfoid", "mode09id", "ecu情報id") && hasValue;
       const sectionHint = lines.slice(0, index).at(-1) || "";
-      const hasSupportedPid = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint) && has("pid", "obdpid", "parameterid") && has("status", "dtcstatus", "state");
-      const hasEcuResponses = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint)
-        && has("ecu", "module", "controlmodule", "system", "address", "ecuresponseid", "ecuid", "moduleid", "responseid")
-        && has("status", "dtcstatus", "state");
-      return hasDtcOrPid || hasMeasurement || hasReadiness || hasMode06 || hasSupportedPid || hasEcuResponses;
+      const hasSupportedPid = /(?:supported\s*pids?|pid\s*support|対応pid)/i.test(sectionHint) && has("pid", "obdpid", "parameterid") && has("status", "dtcstatus", "state", "状態", "ステータス");
+      const hasEcuResponses = /(?:ecu\s*responses?|module\s*responses?|ecu応答)/i.test(sectionHint)
+        && has("ecu", "module", "controlmodule", "system", "address", "ecuresponseid", "ecuid", "moduleid", "responseid", "ecu応答id")
+        && has("status", "dtcstatus", "state", "状態", "ステータス");
+      return hasDtcOrPid || hasMeasurement || hasReadiness || hasMode06 || hasEcuInfo || hasSupportedPid || hasEcuResponses;
     };
     const headerIndexes = lines.map((line, index) => isTableHeader(line, index) ? index : -1).filter((index) => index >= 0);
     if (headerIndexes.length < 2) return buildDiagnosticScanSessionFromCsvTable(text, options);
