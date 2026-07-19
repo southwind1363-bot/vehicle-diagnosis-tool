@@ -67,10 +67,10 @@
     "label": "C系 シャシDTC",
     "coverage_area": "chassis-dtc",
     "current_state": "出典確認済み定義を追加開始",
-    "progress_percent": 11,
+    "progress_percent": 14,
     "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
     "priority": 4,
-    "current_count_note": "C系個別定義 22件 (NHTSA公開資料のSAE J2012表)",
+    "current_count_note": "C系個別定義 29件 (NHTSA公開資料のSAE J2012表)",
     "next_actions": [
       "C系コードを制動、操舵、姿勢制御、車輪速、ヨーレート、電源系に分類する",
       "ライブデータ候補と点検条件を車種別確認前提で持たせる",
