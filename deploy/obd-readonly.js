@@ -14771,7 +14771,7 @@
     };
   }
 
-  function buildDiagnosticScanSessionFromCsv(value, options = {}) {
+  function buildDiagnosticScanSessionFromCsvTable(value, options = {}) {
     const text = String(value || "").trim();
     if (!text || text.length > 500000) return null;
     const lines = text.split(/\r?\n/).filter((line) => String(line || "").trim());
@@ -15890,6 +15890,80 @@
       items,
       retainedRawText: false,
       retained_raw_text: false
+    };
+  }
+
+  function buildDiagnosticScanSessionFromCsv(value, options = {}) {
+    const text = String(value || "").trim();
+    if (!text || text.length > 500000) return null;
+    const lines = text.split(/\r?\n/).filter((line) => String(line || "").trim());
+    if (lines.length < 2) return null;
+    const normalizeHeader = (cell) => String(cell || "").replace(/^\uFEFF/, "").trim().toLowerCase().replace(/[\s_\-./()]+/g, "");
+    const isTableHeader = (line, index) => {
+      const delimiter = [",", ";", "\t"].reduce((best, candidate) => (
+        line.split(candidate).length > line.split(best).length ? candidate : best
+      ), ",");
+      if (!line.includes(delimiter)) return false;
+      const headers = line.split(delimiter).map(normalizeHeader);
+      const has = (...names) => names.some((name) => headers.includes(name));
+      const hasDtcOrPid = has("dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode", "pid", "obdpid", "parameterid");
+      const hasMeasurement = has("parameter", "parametername", "item", "itemname", "label", "dataitem") && has("value", "reading", "result", "measuredvalue", "measurement");
+      const hasReadiness = has("readinessmonitorid", "readinessid", "monitorid", "monitor") && has("status", "dtcstatus", "state");
+      const hasMode06 = has("testid", "tid") && has("componentid", "cid") && has("value", "reading", "result", "measuredvalue", "measurement");
+      const sectionHint = lines.slice(0, index).at(-1) || "";
+      const hasSupportedPid = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint) && has("pid", "obdpid", "parameterid") && has("status", "dtcstatus", "state");
+      const hasEcuResponses = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint)
+        && has("ecu", "module", "controlmodule", "system", "address", "ecuresponseid", "ecuid", "moduleid", "responseid")
+        && has("status", "dtcstatus", "state");
+      return hasDtcOrPid || hasMeasurement || hasReadiness || hasMode06 || hasSupportedPid || hasEcuResponses;
+    };
+    const headerIndexes = lines.map((line, index) => isTableHeader(line, index) ? index : -1).filter((index) => index >= 0);
+    if (headerIndexes.length < 2) return buildDiagnosticScanSessionFromCsvTable(text, options);
+    const tableSessions = headerIndexes
+      .map((headerIndex, index) => {
+        const end = headerIndexes[index + 1] ?? lines.length;
+        const sectionHint = headerIndex > 0 ? lines[headerIndex - 1] : null;
+        return buildDiagnosticScanSessionFromCsvTable([sectionHint, ...lines.slice(headerIndex, end)].filter(Boolean).join("\n"), options);
+      })
+      .filter(Boolean);
+    if (tableSessions.length < 2) return tableSessions[0] || buildDiagnosticScanSessionFromCsvTable(text, options);
+    const firstReported = (snapshotKey, statusKey, countKey) => tableSessions
+      .map((session) => session[snapshotKey])
+      .find((snapshot) => snapshot && (snapshot[statusKey] === "reported" || Number(snapshot[countKey]) > 0));
+    const mergedSession = buildDiagnosticScanSession({
+      source: "scanner_csv_import",
+      dtcSnapshot: firstReported("dtcSnapshot", "dtcReadoutStatus", "dtcCount"),
+      livePidSnapshot: firstReported("livePidSnapshot", "livePidReadoutStatus", "valueCount"),
+      freezeFrameSnapshot: firstReported("freezeFrameSnapshot", "freezeFrameReadoutStatus", "valueCount"),
+      readinessSnapshot: firstReported("readinessSnapshot", "readinessReadoutStatus", "monitorCount"),
+      ecuInfoSnapshot: firstReported("ecuInfoSnapshot", "ecuInfoReadoutStatus", "itemCount"),
+      onboardMonitorSnapshot: firstReported("onboardMonitorSnapshot", "onboardMonitorReadoutStatus", "testCount"),
+      supportedPidMatrix: firstReported("supportedPidMatrix", "supportedPidReadoutStatus", "supportedCount"),
+      ecuResponseSummary: tableSessions.map((session) => session.ecuResponseSummary).find((summary) => Array.isArray(summary?.ecus) && summary.ecus.length),
+      importClassification: {
+        schemaVersion: "scanner_csv_import_v1",
+        schema_version: "scanner_csv_import_v1",
+        format: "csv",
+        lineCount: lines.length,
+        line_count: lines.length,
+        tableCount: tableSessions.length,
+        table_count: tableSessions.length,
+        sourceLength: text.length,
+        source_length: text.length
+      },
+      retainedRawText: false,
+      retained_raw_text: false
+    });
+    return {
+      ...mergedSession,
+      source: "scanner_csv_import",
+      source_type: "scanner_csv_import",
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
   }
 
