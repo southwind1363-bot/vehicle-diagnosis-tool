@@ -15995,11 +15995,30 @@
         onboard_monitor_readout_status: "reported"
       })
       : onboardMonitorSnapshots[0];
+    const freezeFrameSnapshots = tableSessions
+      .map((session) => session.freezeFrameSnapshot)
+      .filter((snapshot) => snapshot && (snapshot.freezeFrameReadoutStatus === "reported" || Number(snapshot.valueCount) > 0));
+    const freezeFrameScopes = new Set(freezeFrameSnapshots.map((snapshot) => [
+      snapshot.triggerDtc || snapshot.trigger_dtc || "",
+      snapshot.triggerFrameNumber ?? snapshot.trigger_frame_number ?? "",
+      snapshot.sourceEcu || snapshot.source_ecu || ""
+    ].join("::")));
+    const canMergeFreezeFrameSnapshots = freezeFrameSnapshots.length > 1 && freezeFrameScopes.size === 1 && [...freezeFrameScopes][0] !== "::::";
+    const freezeFrameSnapshot = canMergeFreezeFrameSnapshots
+      ? normalizeFreezeFrameSnapshot({
+        source: "scanner_csv_import",
+        trigger_dtc: freezeFrameSnapshots[0].triggerDtc || freezeFrameSnapshots[0].trigger_dtc || null,
+        trigger_frame_number: freezeFrameSnapshots[0].triggerFrameNumber ?? freezeFrameSnapshots[0].trigger_frame_number ?? null,
+        source_ecu: freezeFrameSnapshots[0].sourceEcu || freezeFrameSnapshots[0].source_ecu || null,
+        values: freezeFrameSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []),
+        freeze_frame_readout_status: "reported"
+      })
+      : freezeFrameSnapshots[0];
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
       livePidSnapshot,
-      freezeFrameSnapshot: firstReported("freezeFrameSnapshot", "freezeFrameReadoutStatus", "valueCount"),
+      freezeFrameSnapshot,
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
