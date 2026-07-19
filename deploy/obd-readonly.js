@@ -15680,6 +15680,10 @@
       if (/\b(?:current|stored|confirmed|history|active)\b|保存|現在|確定|履歴/.test(normalized)) return "stored";
       return null;
     };
+    const resolveDtcStatusField = (text) => {
+      const match = String(text || "").match(/^(?:status|dtc\s*status|state|\u72b6\u614b|\u30b9\u30c6\u30fc\u30bf\u30b9|dtc\u72b6\u614b)\s*[:\uff1a]\s*(.+)$/i);
+      return match ? resolveInlineDtcStatus(match[1]) : null;
+    };
     const resolveEcuHeading = (text) => {
       const match = String(text || "").match(/^(?:ECU|MODULE|CONTROL\s+MODULE|SYSTEM|\u30e6\u30cb\u30c3\u30c8|ECU\u540d|\u30e2\u30b8\u30e5\u30fc\u30eb\u540d|\u30b7\u30b9\u30c6\u30e0\u540d)\s*(?:NAME\s*)?[:\uff1a]\s*(.+)$/i);
       if (!match || extractDtcReferences(text).length) return null;
@@ -15695,26 +15699,44 @@
       const label = redactSensitiveText(labelBeforeCode).replace(/\s+/g, " ").trim().slice(0, 120);
       return label || null;
     };
+    let lastDtcRows = [];
     lines.forEach((line) => {
       const text = String(line || "").trim();
       if (!text) return;
       const ecuHeading = resolveEcuHeading(text);
       if (ecuHeading) {
-        currentEcu = ecuHeading;
+        const appliedToLastRow = lastDtcRows.some((row) => {
+          if (row.ecu) return false;
+          row.ecu = ecuHeading;
+          return true;
+        });
+        currentEcu = appliedToLastRow ? null : ecuHeading;
         currentStatus = "unknown";
         return;
       }
       const codes = extractDtcReferences(text);
       const headingStatus = resolveHeadingStatus(text);
       if (headingStatus) currentStatus = headingStatus;
+      const fieldStatus = resolveDtcStatusField(text);
+      if (fieldStatus) {
+        const appliedToLastRow = lastDtcRows.some((row) => {
+          if (row.status !== "unknown") return false;
+          row.status = fieldStatus;
+          return true;
+        });
+        currentStatus = appliedToLastRow ? "unknown" : fieldStatus;
+        return;
+      }
       if (!codes.length) {
         if (!headingStatus) currentStatus = "unknown";
+        lastDtcRows = [];
         return;
       }
       // A scanner may put the DTC state beside each code instead of using a section heading.
       const rowStatus = resolveInlineDtcStatus(text) || currentStatus;
       const rowEcu = resolveInlineEcu(text) || currentEcu;
-      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: rowStatus, ecu: rowEcu }));
+      lastDtcRows = codes.map(({ code, subcode }) => ({ code, subcode, status: rowStatus, ecu: rowEcu }));
+      rows.push(...lastDtcRows);
     });
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",

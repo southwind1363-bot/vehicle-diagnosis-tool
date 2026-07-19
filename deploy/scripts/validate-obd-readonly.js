@@ -1710,7 +1710,7 @@ const textDtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('const resolveHeadingStatus = (text) => {') && functionBody.includes('保留') && functionBody.includes('永久'), "extractTextDtcSnapshot should recognize explicit English and Japanese DTC headings");
     check(functionBody.includes('if (headingStatus) currentStatus = headingStatus;'), "extractTextDtcSnapshot should apply only explicit heading statuses");
     check(functionBody.includes('if (!headingStatus) currentStatus = "unknown";'), "extractTextDtcSnapshot should prevent a DTC heading status from leaking into another section");
-    check(functionBody.includes('const resolveEcuHeading = (text) => {') && functionBody.includes('if (!match || extractDtcReferences(text).length) return null;') && functionBody.includes('const resolveInlineDtcStatus = (text) => {') && functionBody.includes('const resolveInlineEcu = (text) => {') && functionBody.includes('const codes = extractDtcReferences(text);') && functionBody.includes('const rowStatus = resolveInlineDtcStatus(text) || currentStatus;') && functionBody.includes('const rowEcu = resolveInlineEcu(text) || currentEcu;') && functionBody.includes('codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: rowStatus, ecu: rowEcu }));'), "extractTextDtcSnapshot should attach explicit heading or inline ECU labels and DTC states");
+    check(functionBody.includes('const resolveEcuHeading = (text) => {') && functionBody.includes('if (!match || extractDtcReferences(text).length) return null;') && functionBody.includes('const resolveInlineDtcStatus = (text) => {') && functionBody.includes('const resolveDtcStatusField = (text) => {') && functionBody.includes('const resolveInlineEcu = (text) => {') && functionBody.includes('let lastDtcRows = [];') && functionBody.includes('const codes = extractDtcReferences(text);') && functionBody.includes('const rowStatus = resolveInlineDtcStatus(text) || currentStatus;') && functionBody.includes('const rowEcu = resolveInlineEcu(text) || currentEcu;') && functionBody.includes('lastDtcRows = codes.map(({ code, subcode }) => ({ code, subcode, status: rowStatus, ecu: rowEcu }));') && functionBody.includes('rows.push(...lastDtcRows);'), "extractTextDtcSnapshot should attach explicit heading, inline, and vertical DTC fields");
     check(functionBody.includes('source: "obd_text_status_headings"') && functionBody.includes('dtcs: rows'), "extractTextDtcSnapshot should normalize text-only DTC rows with an explicit source");
   }
 };
@@ -2661,8 +2661,20 @@ const scannerTextFuelTrimBankAnalysis = obd.analyzeScannerText([
   "Short Fuel Trim: 9.0 %"
 ].join("\n"));
 check(scannerTextFuelTrimBankAnalysis?.monitorValues?.some((item) => item.id === "stft_b1" && item.value === 4.5) && scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.id === "ltft_b1" && item.value === -2) && scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.id === "stft_b2" && item.value === 1.5) && scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.id === "ltft_b2" && item.value === -1) && !scannerTextFuelTrimBankAnalysis.monitorValues?.some((item) => item.value === 9) && scannerTextFuelTrimBankAnalysis?.retainedRawText === false, "Scanner text import did not preserve explicitly banked fuel trims without guessing an unscoped bank");
-check(appSource.includes('const APP_VERSION = "3.2.75";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for banked fuel trim aliases");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.75";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.75", "OBD offline cache version should match the active app version");
+const scannerTextVerticalDtcSession = obd.buildScanSessionFromObdText([
+  "DTC: P0300",
+  "Status: Stored",
+  "ECU: Engine Control Module",
+  "DTC: C1234",
+  "Status: Current",
+  "ECU: ABS/VSC",
+  "DTC: P0A80",
+  "\u72b6\u614b: \u4fdd\u5b58",
+  "ECU\u540d: Hybrid Control"
+].join("\n"));
+check(scannerTextVerticalDtcSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "Engine Control Module") && scannerTextVerticalDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "C1234" && item.status === "stored" && item.ecu === "ABS/VSC") && scannerTextVerticalDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0A80" && item.status === "stored" && item.ecu === "Hybrid Control") && scannerTextVerticalDtcSession?.vehicleCommandEnabled === false, "Scanner text import did not retain vertical DTC status and ECU fields safely");
+check(appSource.includes('const APP_VERSION = "3.2.76";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for vertical DTC fields");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.76";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.76", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
