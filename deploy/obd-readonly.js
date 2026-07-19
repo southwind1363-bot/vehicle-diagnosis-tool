@@ -15945,6 +15945,18 @@
         source: "scanner_csv_import"
       }
       : livePidSnapshots[0];
+    const supportedPidSnapshots = tableSessions
+      .map((session) => session.supportedPidMatrix)
+      .filter((snapshot) => snapshot && (snapshot.supportedPidReadoutStatus === "reported" || Number(snapshot.supportedCount) > 0));
+    const supportedPidMatrix = supportedPidSnapshots.length > 1
+      ? {
+        ...normalizeBridgeSupportedPidSnapshot({
+          supported_pids: supportedPidSnapshots.flatMap((snapshot) => snapshot.supportedPids || snapshot.supported_pids || []),
+          supported_pid_readout_status: "reported"
+        }),
+        source: "scanner_csv_import"
+      }
+      : supportedPidSnapshots[0];
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
@@ -15953,7 +15965,7 @@
       readinessSnapshot: firstReported("readinessSnapshot", "readinessReadoutStatus", "monitorCount"),
       ecuInfoSnapshot: firstReported("ecuInfoSnapshot", "ecuInfoReadoutStatus", "itemCount"),
       onboardMonitorSnapshot: firstReported("onboardMonitorSnapshot", "onboardMonitorReadoutStatus", "testCount"),
-      supportedPidMatrix: firstReported("supportedPidMatrix", "supportedPidReadoutStatus", "supportedCount"),
+      supportedPidMatrix,
       ecuResponseSummary: tableSessions.map((session) => session.ecuResponseSummary).find((summary) => Array.isArray(summary?.ecus) && summary.ecus.length),
       importClassification: {
         schemaVersion: "scanner_csv_import_v1",
