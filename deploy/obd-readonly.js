@@ -12192,22 +12192,33 @@
     const bridgeVehicleApplicability = mergedBridgeMetadata.vehicleApplicability;
     const hasBridgeVehicleProfile = Boolean(bridgeVehicleApplicability?.maker || bridgeVehicleApplicability?.model || bridgeVehicleApplicability?.modelCode || bridgeVehicleApplicability?.model_code || bridgeVehicleApplicability?.year || bridgeVehicleApplicability?.engineCode || bridgeVehicleApplicability?.engine_code);
     const effectiveVehicleApplicability = hasBridgeVehicleProfile ? bridgeVehicleApplicability : scannerVehicleApplicability || bridgeVehicleApplicability;
+    const preferCapturedBridgeSnapshot = (bridgeSnapshot, scannerSnapshot, contentKeys = [], statusKeys = []) => {
+      if (!bridgeSnapshot) return scannerSnapshot || null;
+      const bridgeStatus = statusKeys.map((key) => bridgeSnapshot?.[key]).find(Boolean);
+      const hasBridgeContent = contentKeys.some((key) => Array.isArray(bridgeSnapshot?.[key]) && bridgeSnapshot[key].length > 0);
+      return hasBridgeContent || bridgeStatus === "reported" ? bridgeSnapshot : scannerSnapshot || bridgeSnapshot;
+    };
+    const bridgeFreezeFrameSnapshot = bridgeImport?.freezeFrameSnapshot || bridgeImport?.freeze_frame_snapshot || bridgeSession?.freezeFrameSnapshot || bridgeSession?.freeze_frame_snapshot || null;
+    const bridgeReadinessSnapshot = bridgeImport?.readinessSnapshot || bridgeImport?.readiness_snapshot || bridgeSession?.readinessSnapshot || bridgeSession?.readiness_snapshot || null;
+    const bridgeEcuInfoSnapshot = bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null;
+    const bridgeOnboardMonitorSnapshot = bridgeImport?.onboardMonitorSnapshot || bridgeImport?.onboard_monitor_snapshot || bridgeSession?.onboardMonitorSnapshot || bridgeSession?.onboard_monitor_snapshot || null;
+    const bridgeSupportedPidMatrix = bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null;
+    const freezeFrameSnapshot = preferCapturedBridgeSnapshot(bridgeFreezeFrameSnapshot, scannerAnalysis.freezeFrameSnapshot || scannerAnalysis.freeze_frame_snapshot, ["monitorValues", "monitor_values"], ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
+    const readinessSnapshot = preferCapturedBridgeSnapshot(bridgeReadinessSnapshot, scannerAnalysis.readinessSnapshot || scannerAnalysis.readiness_snapshot, ["monitors"], ["readinessReadoutStatus", "readiness_readout_status"]);
+    const ecuInfoSnapshot = preferCapturedBridgeSnapshot(bridgeEcuInfoSnapshot, scannerAnalysis.ecuInfoSnapshot || scannerAnalysis.ecu_info_snapshot, ["items"], ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
+    const onboardMonitorSnapshot = preferCapturedBridgeSnapshot(bridgeOnboardMonitorSnapshot, scannerAnalysis.onboardMonitorSnapshot || scannerAnalysis.onboard_monitor_snapshot, ["tests"], ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
+    const supportedPidMatrix = preferCapturedBridgeSnapshot(bridgeSupportedPidMatrix, scannerAnalysis.supportedPidMatrix || scannerAnalysis.supported_pid_matrix, ["supportedPids", "supported_pids"], ["supportedPidReadoutStatus", "supported_pid_readout_status"]);
     const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
       Array.isArray(mergedBridgeMetadata.nextReadoutCandidatesInput) && mergedBridgeMetadata.nextReadoutCandidatesInput.length
         ? mergedBridgeMetadata.nextReadoutCandidatesInput
         : buildNextReadoutCandidates(
           mergedBridgeMetadata.readoutCoverageInput,
           effectiveVehicleApplicability,
-          bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null,
+          ecuInfoSnapshot,
           dtcSnapshot,
-          bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null
+          supportedPidMatrix
         )
-    );
-    const freezeFrameSnapshot = bridgeImport?.freezeFrameSnapshot || bridgeImport?.freeze_frame_snapshot || bridgeSession?.freezeFrameSnapshot || bridgeSession?.freeze_frame_snapshot || null;
-    const readinessSnapshot = bridgeImport?.readinessSnapshot || bridgeImport?.readiness_snapshot || bridgeSession?.readinessSnapshot || bridgeSession?.readiness_snapshot || null;
-    const ecuInfoSnapshot = bridgeImport?.ecuInfoSnapshot || bridgeImport?.ecu_info_snapshot || bridgeSession?.ecuInfoSnapshot || bridgeSession?.ecu_info_snapshot || null;
-    const onboardMonitorSnapshot = bridgeImport?.onboardMonitorSnapshot || bridgeImport?.onboard_monitor_snapshot || bridgeSession?.onboardMonitorSnapshot || bridgeSession?.onboard_monitor_snapshot || null;
-    const supportedPidMatrix = bridgeImport?.supportedPidMatrix || bridgeImport?.supported_pid_matrix || bridgeSession?.supportedPidMatrix || bridgeSession?.supported_pid_matrix || null;
+      );
     const coreSessionStatus = buildCoreSessionStatus({
       readoutCoverage: mergedBridgeMetadata.readoutCoverage,
       vehicleApplicability: effectiveVehicleApplicability,
