@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.15";
+const APP_VERSION = "3.2.16";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8009,7 +8009,9 @@ function normalizeObdScannerImportFileText(value, file = {}) {
   const text = String(value || "");
   const isHtml = file?.type === "text/html" || /\.html?$/i.test(file?.name || "");
   if (!isHtml || typeof DOMParser !== "function") return text;
-  const lineBreakHtml = text.replace(/<br\s*\/?\s*>|<\/(?:p|div|li|tr|h[1-6]|section|article|table|ul|ol)\s*>/gi, "\n");
+  const lineBreakHtml = text
+    .replace(/<br\s*\/?\s*>|<\/(?:p|div|li|tr|h[1-6]|section|article|table|ul|ol)\s*>/gi, "\n")
+    .replace(/<\/(?:td|th)\s*>/gi, "\t");
   const document = new DOMParser().parseFromString(lineBreakHtml, "text/html");
   document.querySelectorAll("script,style,iframe,object").forEach((node) => node.remove());
   return String(document.body?.textContent || "").replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trim();
