@@ -2685,6 +2685,16 @@ check(scannerTextTypedLivePidSnapshot?.livePidSnapshot?.schema_version === "live
 const scannerTextTypedLivePidSession = obd.buildDiagnosticScanSession({ scan_session: scannerTextTypedLivePidSnapshot });
 const scannerTextTypedLivePidExport = obd.buildBridgeSessionExportPayload({ bridgeSession: scannerTextTypedLivePidSession });
 check(scannerTextTypedLivePidSession?.livePidSnapshot?.schema_version === "live_pid_snapshot_v1" && scannerTextTypedLivePidSession?.livePidSnapshot?.live_pid_readout_status === "reported" && scannerTextTypedLivePidSession?.livePidSnapshot?.monitorValues?.length === 2 && scannerTextTypedLivePidSession?.vehicleCommandEnabled === false && scannerTextTypedLivePidExport?.session?.live_pid_snapshot?.schema_version === "live_pid_snapshot_v1" && scannerTextTypedLivePidExport?.session?.live_pid_snapshot?.monitor_values?.length === 2 && scannerTextTypedLivePidExport?.session?.live_pid_snapshot?.vehicle_command_enabled === false, "Typed scanner text live PID snapshots did not survive session export");
+const mergedBridgeLivePidSession = obd.buildDiagnosticScanSession({ scan_session: obd.mergeDiagnosticInputs({
+  scannerText: "Engine RPM: 650 rpm",
+  bridgeImport: {
+    monitorValues: [{ id: "engine_speed", label: "Engine RPM", value: 805, unit: "rpm", valueType: "number", pid: "0C" }],
+    protocol: "CAN_11_500",
+    capturedAt: "2026-07-20T12:00:00Z"
+  }
+}) });
+const mergedBridgeLivePidExport = obd.buildBridgeSessionExportPayload({ bridgeSession: mergedBridgeLivePidSession });
+check(mergedBridgeLivePidSession?.livePidSnapshot?.source === "scanner_text_and_local_bridge" && mergedBridgeLivePidSession?.livePidSnapshot?.protocol === "CAN_11_500" && mergedBridgeLivePidSession?.livePidSnapshot?.capturedAt === "2026-07-20T12:00:00Z" && mergedBridgeLivePidSession?.livePidSnapshot?.monitorValues?.[0]?.value === 805 && mergedBridgeLivePidSession?.livePidSnapshot?.monitorValues?.[0]?.source === "local_bridge" && mergedBridgeLivePidSession?.vehicleCommandEnabled === false && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.protocol === "CAN_11_500" && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.captured_at === "2026-07-20T12:00:00Z" && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.monitor_values?.[0]?.value === 805 && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.vehicle_command_enabled === false, "Merged bridge live PID provenance did not survive session export");
 const mergedScannerSnapshotSession = obd.mergeDiagnosticInputs({
   scannerText: [
     "Stored DTC",
