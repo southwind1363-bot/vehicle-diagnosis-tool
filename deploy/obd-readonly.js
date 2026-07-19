@@ -16036,6 +16036,16 @@
         freeze_frame_readout_status: "reported"
       })
       : freezeFrameSnapshots[0];
+    const mergedVehicleProfile = tableSessions
+      .map((session) => session.vehicleProfile || session.vehicle_profile || {})
+      .reduce((profile, candidate) => ({
+        maker: profile.maker || candidate.maker || null,
+        model: profile.model || candidate.model || null,
+        modelCode: profile.modelCode || profile.model_code || candidate.modelCode || candidate.model_code || null,
+        year: profile.year || candidate.year || null,
+        engineCode: profile.engineCode || profile.engine_code || candidate.engineCode || candidate.engine_code || null
+      }), {});
+    const vehicleProfile = Object.values(mergedVehicleProfile).some(Boolean) ? mergedVehicleProfile : undefined;
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
@@ -16046,6 +16056,7 @@
       onboardMonitorSnapshot,
       supportedPidMatrix,
       ecuResponseSummary,
+      vehicleProfile,
       importClassification: {
         schemaVersion: "scanner_csv_import_v1",
         schema_version: "scanner_csv_import_v1",
