@@ -16524,7 +16524,11 @@
       row?.status_byte,
       row?.statusByte,
       row?.dtc_status_byte,
-      row?.dtcStatusByte
+      row?.dtcStatusByte,
+      row?.status_of_dtc,
+      row?.statusOfDtc,
+      row?.uds_status_byte,
+      row?.udsStatusByte
     ].find((item) => item !== undefined && item !== null && item !== "");
     return normalizeDtcStatusByte(value);
   }

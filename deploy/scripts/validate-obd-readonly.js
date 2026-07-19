@@ -2600,8 +2600,8 @@ check(appSource.includes('recentMilestone: "UDS/J2534 DTC重大度と明示PID�
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 63 && item.current_basis.includes("C系22件") && item.done.includes("NHTSA公開資料で確認したC系22件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
-check(appSource.includes('const APP_VERSION = "3.2.5";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for nested coverage normalization");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.5";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.5", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "3.2.6";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for UDS DTC status alias retention");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.6";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.6", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
@@ -15292,6 +15292,14 @@ const statusByteBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const statusByteRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: statusByteBridgeSnapshot });
 check(statusByteBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.statusByte === "80") && statusByteRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.status_byte === "80") && statusByteRoundTrip.vehicleCommandEnabled === false, "Bridge DTC status byte was not preserved through read-only session normalization");
+const udsStatusAliasBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: { dtcs: [{ dtc_code: "U0100", statusOfDtc: "0x8A" }, { dtc_code: "P0300", uds_status_byte: 47 }] }
+});
+const udsStatusAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: udsStatusAliasBridgeSnapshot }))));
+check(udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.statusByte === "8A") && udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "P0300" && item.status_byte === "2F") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "U0100" && item.status_byte === "8A") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.statusByte === "2F") && udsStatusAliasRoundTrip?.vehicleCommandEnabled === false, "UDS DTC status aliases were not retained through read-only bridge export and JSON reimport");
 const statusAvailabilityMaskDtcSnapshot = obd.normalizeDtcSnapshot({
   dtc_status_availability_mask: 165,
   dtcs: [{ dtc_code: "P0300", status: "stored" }]
