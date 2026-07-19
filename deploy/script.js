@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.39";
+const APP_VERSION = "3.2.40";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7991,7 +7991,8 @@ function loadObdMonitorSample() {
 
 async function pasteObdScannerImport() {
   if (!navigator.clipboard?.readText) {
-    obdImportStatus.textContent = "クリップボードの読取に対応していません。";
+    obdScannerText.focus();
+    obdImportStatus.textContent = "このブラウザではクリップボードを読めません。読取結果を長押しして貼り付けてから「診断機データを解析」を押してください。";
     return;
   }
   try {
@@ -8003,7 +8004,8 @@ async function pasteObdScannerImport() {
     obdScannerText.value = text;
     analyzeObdScannerImport();
   } catch (error) {
-    obdImportStatus.textContent = "クリップボードを読めませんでした。";
+    obdScannerText.focus();
+    obdImportStatus.textContent = "クリップボードを読めませんでした。読取結果を長押しして貼り付けてから「診断機データを解析」を押してください。";
   }
 }
 
