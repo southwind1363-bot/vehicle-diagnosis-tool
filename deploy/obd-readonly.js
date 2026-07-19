@@ -17407,10 +17407,10 @@
             : null;
       if (status && !monitors.some((item) => item.id === match[0])) monitors.push({ id: match[0], status });
     });
-    if (!monitors.length || milOn === null) return null;
+    if (!monitors.length) return null;
     return normalizeReadinessSnapshot({
       source: "scanner_text_readiness",
-      milOn: milOn === true,
+      ...(milOn === null ? {} : { milOn }),
       monitors,
       readinessReadoutStatus: "reported"
     });

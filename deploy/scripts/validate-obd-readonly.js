@@ -2353,7 +2353,7 @@ check(scannerReadinessImport.monitorValues?.some((item) => item.id === "engine_s
 const unmarkedReadinessImport = obd.analyzeScannerText("Misfire: Complete\nFuel System: Not Ready");
 check(unmarkedReadinessImport.readinessSnapshot === null, "Scanner text import inferred readiness without an explicit heading");
 const incompleteReadinessImport = obd.analyzeScannerText("I/M Readiness\nMisfire: Complete\nFuel System: Not Ready");
-check(incompleteReadinessImport.readinessSnapshot === null, "Scanner text import inferred a MIL state when the readiness section did not report one");
+check(incompleteReadinessImport.readinessSnapshot?.milOn === null && incompleteReadinessImport.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.status === "complete") && incompleteReadinessImport.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && incompleteReadinessImport.readinessSnapshot?.readinessReadoutStatus === "reported", "Scanner text import did not retain explicit readiness monitors while leaving an unreported MIL unknown");
 const scannerReadinessSession = obd.buildDiagnosticScanSession({
   source: "scanner_text",
   readinessSnapshot: scannerReadinessImport.readinessSnapshot
@@ -2673,8 +2673,15 @@ const scannerTextVerticalDtcSession = obd.buildScanSessionFromObdText([
   "ECU\u540d: Hybrid Control"
 ].join("\n"));
 check(scannerTextVerticalDtcSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "Engine Control Module") && scannerTextVerticalDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "C1234" && item.status === "stored" && item.ecu === "ABS/VSC") && scannerTextVerticalDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0A80" && item.status === "stored" && item.ecu === "Hybrid Control") && scannerTextVerticalDtcSession?.vehicleCommandEnabled === false, "Scanner text import did not retain vertical DTC status and ECU fields safely");
-check(appSource.includes('const APP_VERSION = "3.2.76";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for vertical DTC fields");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.76";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.76", "OBD offline cache version should match the active app version");
+const scannerTextJapaneseReadinessWithoutMil = obd.analyzeScannerText([
+  "\u30ec\u30c7\u30a3\u30cd\u30b9",
+  "\u5931\u706b\u76e3\u8996: \u5b8c\u4e86",
+  "\u71c3\u6599\u30b7\u30b9\u30c6\u30e0: \u672a\u5b8c\u4e86",
+  "\u89e6\u5a92: \u975e\u5bfe\u5fdc"
+].join("\n"));
+check(scannerTextJapaneseReadinessWithoutMil?.readinessSnapshot?.milOn === null && scannerTextJapaneseReadinessWithoutMil.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.status === "complete") && scannerTextJapaneseReadinessWithoutMil.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && scannerTextJapaneseReadinessWithoutMil.readinessSnapshot?.monitors?.some((item) => item.id === "catalyst" && item.status === "not_supported") && scannerTextJapaneseReadinessWithoutMil?.retainedRawText === false, "Japanese scanner text readiness import did not retain monitor states while leaving an unreported MIL unknown");
+check(appSource.includes('const APP_VERSION = "3.2.77";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for readiness without MIL");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.77";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.77", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
