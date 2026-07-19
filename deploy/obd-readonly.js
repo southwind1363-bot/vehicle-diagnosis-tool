@@ -15680,6 +15680,15 @@
       const label = redactSensitiveText(match[1]).replace(/\s+/g, " ").trim().slice(0, 120);
       return label || null;
     };
+    const resolveInlineEcu = (text) => {
+      const match = String(text || "").match(/(?:^|\s)(?:ECU|MODULE|CONTROL\s+MODULE|SYSTEM|\u30e6\u30cb\u30c3\u30c8|ECU\u540d|\u30e2\u30b8\u30e5\u30fc\u30eb\u540d|\u30b7\u30b9\u30c6\u30e0\u540d)\s*(?:NAME\s*)?[:\uff1a]\s*(.+)$/i);
+      if (!match) return null;
+      const candidate = match[1];
+      const embeddedCode = extractDtcReferences(candidate)[0]?.code || null;
+      const labelBeforeCode = embeddedCode ? candidate.slice(0, candidate.toUpperCase().indexOf(embeddedCode)) : candidate;
+      const label = redactSensitiveText(labelBeforeCode).replace(/\s+/g, " ").trim().slice(0, 120);
+      return label || null;
+    };
     lines.forEach((line) => {
       const text = String(line || "").trim();
       if (!text) return;
@@ -15698,7 +15707,8 @@
       }
       // A scanner may put the DTC state beside each code instead of using a section heading.
       const rowStatus = resolveInlineDtcStatus(text) || currentStatus;
-      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: rowStatus, ecu: currentEcu }));
+      const rowEcu = resolveInlineEcu(text) || currentEcu;
+      codes.forEach(({ code, subcode }) => rows.push({ code, subcode, status: rowStatus, ecu: rowEcu }));
     });
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
