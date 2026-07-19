@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.52";
+const APP_VERSION = "3.2.53";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3379,7 +3379,7 @@ function buildLocalBridgeImplementationSnapshot() {
     .map((item) => ({
       id: item.id,
       label: item.label,
-      available: Number.isFinite(item.progressPercent) ? item.progressPercent > 0 : Boolean(item.currentBasis || item.nextBuild)
+      available: item.hardwareCompatibilityConfirmed === true
     }));
   const modelDone = modelChecks.filter((item) => item.available).length;
   const driverDone = driverChecks.filter((item) => item.available).length;
@@ -3387,11 +3387,11 @@ function buildLocalBridgeImplementationSnapshot() {
   const progressPercent = totalCount ? Math.round(((modelDone + driverDone) / totalCount) * 100) : 0;
   const doneLabels = [
     ...modelChecks.filter((item) => item.available).map((item) => item.label),
-    ...driverChecks.filter((item) => item.available).map((item) => `${item.label} 実機読取`)
+    ...driverChecks.filter((item) => item.available).map((item) => `${item.label} 実機適合`)
   ];
   const missingLabels = [
     ...modelChecks.filter((item) => !item.available).map((item) => item.label),
-    ...driverChecks.filter((item) => !item.available).map((item) => `${item.label} 実機読取`)
+    ...driverChecks.filter((item) => !item.available).map((item) => `${item.label} 実機適合`)
   ];
 
   return {
@@ -3402,7 +3402,7 @@ function buildLocalBridgeImplementationSnapshot() {
     driverTotal: driverChecks.length,
     doneLabels,
     missingLabels,
-    currentBasis: `読取モデル ${modelDone}/${modelChecks.length}項目、実VCI連携 ${driverDone}/${driverChecks.length}系統を実装済み。`,
+    currentBasis: `読取モデル ${modelDone}/${modelChecks.length}項目、実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。`,
     nextBuild: "J2534 / CANable / THINKCAR の実機読取差分を同じread-onlyブリッジ契約へ揃える。",
     etaTarget: "2026-Q3 見込み"
   };
