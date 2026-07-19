@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2625件",
   bridgeValidationCheckLabel: "bridge検証 142件",
-  recentMilestone: "iPhoneアプリ読取結果と安全系DTCの警告表示を読取フローへ接続",
+  recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.14";
+const APP_VERSION = "3.2.15";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8005,15 +8005,25 @@ async function pasteObdScannerImport() {
   }
 }
 
+function normalizeObdScannerImportFileText(value, file = {}) {
+  const text = String(value || "");
+  const isHtml = file?.type === "text/html" || /\.html?$/i.test(file?.name || "");
+  if (!isHtml || typeof DOMParser !== "function") return text;
+  const lineBreakHtml = text.replace(/<br\s*\/?\s*>|<\/(?:p|div|li|tr|h[1-6]|section|article|table|ul|ol)\s*>/gi, "\n");
+  const document = new DOMParser().parseFromString(lineBreakHtml, "text/html");
+  document.querySelectorAll("script,style,iframe,object").forEach((node) => node.remove());
+  return String(document.body?.textContent || "").replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function importObdScannerFile(event) {
   const input = event.currentTarget;
   const file = input?.files?.[0];
   if (!file) return;
 
-  const acceptedTypes = new Set(["application/json", "text/csv", "text/plain"]);
-  const hasAcceptedExtension = /\.(json|csv|txt)$/i.test(file.name || "");
+  const acceptedTypes = new Set(["application/json", "text/csv", "text/plain", "text/html"]);
+  const hasAcceptedExtension = /\.(json|csv|txt|html?|htm)$/i.test(file.name || "");
   if (!hasAcceptedExtension && !acceptedTypes.has(file.type)) {
-    obdImportStatus.textContent = "JSON、CSV、またはテキスト形式の診断結果を選択してください。";
+    obdImportStatus.textContent = "JSON、CSV、テキスト、またはHTML形式の診断結果を選択してください。";
     input.value = "";
     return;
   }
@@ -8025,7 +8035,7 @@ function importObdScannerFile(event) {
 
   const reader = new FileReader();
   reader.onload = () => {
-    const text = typeof reader.result === "string" ? reader.result : "";
+    const text = normalizeObdScannerImportFileText(typeof reader.result === "string" ? reader.result : "", file);
     if (!text.trim()) {
       obdImportStatus.textContent = "選択したファイルに診断結果がありません。";
       input.value = "";
