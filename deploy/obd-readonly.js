@@ -12401,7 +12401,7 @@
       || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
       || null;
     const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
-    const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || null;
+    const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || scannerAnalysis.vehicleProfile || scannerAnalysis.vehicle_profile || null;
     const connectionStatus = bridgeImport?.connectionStatus || bridgeImport?.connection_status || bridgeSession?.connectionStatus || bridgeSession?.connection_status || null;
     const vciDevices = bridgeImport?.vciDevices || bridgeImport?.vci_devices || bridgeSession?.vciDevices || bridgeSession?.vci_devices || [];
     const adapterIdentity = bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity || bridgeSession?.adapterIdentity || bridgeSession?.adapter_identity || null;
@@ -17523,6 +17523,40 @@
     return normalizeEcuResponseSummary({ source: "scanner_text_ecu_responses", ecus });
   }
 
+  function extractTextVehicleProfile(value) {
+    const profile = {};
+    let inVehicleInformation = false;
+    const isHeading = (text) => /(?:\bvehicle\s*(?:info(?:rmation)?|profile)\b|\bcar\s*(?:info(?:rmation)?|profile)\b|車両\s*情報)/i.test(text);
+    const isBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|readiness|mode\s*0?[69]|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?[69]|ecu\s*情報|対応\s*pid|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
+    const fields = [
+      ["maker", /(?:\bmake(?:r)?\b|\bmanufacturer\b|\bbrand\b|メーカー|製造者)/i],
+      ["model", /(?:\bmodel(?:\s*name)?\b|\bcar\s*model\b|車種|車名)/i],
+      ["modelCode", /(?:\bmodel\s*code\b|\bchassis\s*code\b|\bframe\s*code\b|^型式(?:コード)?$)/i],
+      ["year", /(?:\bmodel\s*year\b|\bregistration\s*year\b|\byear\b|年式|登録年)/i],
+      ["engineCode", /(?:\bengine\s*(?:code|model|type)\b|\bpowertrain\s*code\b|エンジン型式|原動機型式)/i]
+    ];
+    String(value || "").split(/\r?\n/).forEach((line) => {
+      const text = String(line || "").trim();
+      if (isHeading(text)) {
+        inVehicleInformation = true;
+        return;
+      }
+      if (!inVehicleInformation || !text) return;
+      if (isBoundary(text)) {
+        inVehicleInformation = false;
+        return;
+      }
+      const match = text.match(/^(.{1,100}?)\s*[:：]\s*(.{1,160})$/);
+      if (!match) return;
+      const field = fields.find(([, pattern]) => pattern.test(match[1]))?.[0];
+      if (field && !profile[field]) profile[field] = match[2].trim();
+    });
+    const normalized = normalizeVehicleApplicabilitySnapshot(profile);
+    return normalized.maker || normalized.model || normalized.modelCode || normalized.year || normalized.engineCode
+      ? { maker: normalized.maker, model: normalized.model, modelCode: normalized.modelCode, model_code: normalized.modelCode, year: normalized.year, engineCode: normalized.engineCode, engine_code: normalized.engineCode }
+      : null;
+  }
+
   function analyzeScannerText(value) {
     const raw = String(value || "");
     const redacted = redactSensitiveText(raw);
@@ -17534,6 +17568,7 @@
     const supportedPidMatrix = extractTextSupportedPidMatrix(redacted);
     const onboardMonitorSnapshot = extractTextOnboardMonitorSnapshot(redacted);
     const ecuResponseSummary = extractTextEcuResponseSummary(redacted);
+    const vehicleProfile = extractTextVehicleProfile(redacted);
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
@@ -17554,6 +17589,8 @@
       mode06_snapshot: onboardMonitorSnapshot,
       ecuResponseSummary,
       ecu_response_summary: ecuResponseSummary,
+      vehicleProfile,
+      vehicle_profile: vehicleProfile,
       toolHints: detectScannerToolHints(redacted),
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
