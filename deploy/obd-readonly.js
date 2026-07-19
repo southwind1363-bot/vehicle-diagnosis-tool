@@ -1252,10 +1252,17 @@
     };
   }
 
+  function normalizeLivePidObservationCondition(value) {
+    const normalized = String(value ?? "").trim().slice(0, 80).toLowerCase().replace(/[\s-]+/g, "_");
+    if (["cold", "冷間", "冷間時"].includes(normalized)) return "cold";
+    if (["warm", "暖機", "暖機後", "暖機時"].includes(normalized)) return "warm";
+    if (["symptom_reproduced", "症状再現", "症状再現時", "再現時"].includes(normalized)) return "symptom_reproduced";
+    return "unspecified";
+  }
+
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
-    const observationConditions = new Set(["unspecified", "cold", "warm", "symptom_reproduced"]);
     const hasBridgeValueList = Array.isArray(data.values)
       || Array.isArray(data.monitor_values)
       || Array.isArray(data.monitorValues)
@@ -1306,9 +1313,7 @@
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
     const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";
-    const observationCondition = observationConditions.has(String(observationConditionInput))
-      ? String(observationConditionInput)
-      : "unspecified";
+    const observationCondition = normalizeLivePidObservationCondition(observationConditionInput);
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
     const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);
     const monitorInsights = [...new Map([
@@ -1344,7 +1349,6 @@
   }
 
   function normalizeLivePidTimeline(input = {}) {
-    const observationConditions = new Set(["unspecified", "cold", "warm", "symptom_reproduced"]);
     const source = input && typeof input === "object" ? input : {};
     const sampleInput = Array.isArray(input)
       ? input
@@ -1401,9 +1405,7 @@
           : normalizeBridgeLivePidSnapshot(snapshotInput);
         const capturedAt = item.capturedAt || item.captured_at || snapshot.capturedAt || snapshot.captured_at || null;
         const protocol = snapshot.protocol || snapshot.obd_protocol || item.protocol || item.obd_protocol || null;
-        const observationCondition = observationConditions.has(String(item.observationCondition || item.observation_condition || "unspecified"))
-          ? String(item.observationCondition || item.observation_condition || "unspecified")
-          : "unspecified";
+        const observationCondition = normalizeLivePidObservationCondition(item.observationCondition || item.observation_condition || snapshot.observationCondition || snapshot.observation_condition);
         if (snapshot.livePidReadoutStatus !== "reported" || snapshot.blocked || snapshot.wouldTransmit || !capturedAt || !snapshot.monitorValues.length) return null;
         return {
           capturedAt,
@@ -15159,9 +15161,9 @@
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目", "項目名", "パラメーター", "パラメータ", "データ項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値", "測定値", "結果", "読取値");
     const unitIndex = findIndex("unit", "units", "単位");
-    const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time");
+    const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time", "取得時刻", "読取時刻", "測定時刻");
     const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol");
-    const observationConditionIndex = findIndex("observation condition", "observation_condition", "measurement condition", "condition");
+    const observationConditionIndex = findIndex("observation condition", "observation_condition", "measurement condition", "condition", "観察条件", "測定条件");
     const vehicleMakerIndex = findIndex("maker", "make", "manufacturer", "brand", "vehicle maker", "vehicle make");
     const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model");
     const vehicleModelCodeIndex = findIndex("model code", "chassis code", "frame code", "vehicle model code", "body code");
@@ -15193,8 +15195,7 @@
       return "unknown";
     };
     const normalizeObservationCondition = (cell) => {
-      const normalized = sanitizeCell(cell, 40).toLowerCase().replace(/[\s\-]+/g, "_");
-      return ["cold", "warm", "symptom_reproduced"].includes(normalized) ? normalized : "unspecified";
+      return normalizeLivePidObservationCondition(sanitizeCell(cell, 40));
     };
     const normalizeDtcReadoutKind = (cell) => {
       const normalized = sanitizeCell(cell, 80).toLowerCase();
