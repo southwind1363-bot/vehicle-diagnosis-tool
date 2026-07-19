@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.11";
+const APP_VERSION = "3.2.12";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2817,7 +2817,7 @@ function inferSafetyTagsFromModernItem(item) {
   ].join(" "));
   const tags = [];
 
-  if (text.includes("brake") || text.includes("abs") || text.includes("ブレーキ")) tags.push("brake");
+  if (text.includes("brake") || text.includes("abs") || text.includes("ブレーキ") || text.includes("制動")) tags.push("brake");
   if (text.includes("srs") || text.includes("airbag") || text.includes("エアバッグ")) tags.push("airbag");
   if (text.includes("fuel") || text.includes("evap") || text.includes("燃料")) tags.push("fuel");
   if (text.includes("hybrid") || text.includes("highvoltage") || text.includes("高電圧") || text.includes("hv")) tags.push("highVoltage");
