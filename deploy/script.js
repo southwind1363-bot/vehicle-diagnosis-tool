@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.50";
+const APP_VERSION = "3.2.51";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6917,6 +6917,13 @@ function renderObdDeveloperSessionSummary(session = null) {
       return readoutLabels.length ? `${entry.id} (${readoutLabels.join("/")})` : entry.id;
     }).join(" / ")
     : observedEcuIds.length ? observedEcuIds.join(" / ") : NO_DATA;
+  const observedEcuSourceCoveragePercent = Number(observedEcuSummary?.sourceCoveragePercent ?? observedEcuSummary?.source_coverage_percent);
+  const observedEcuUnscopedReadoutIds = observedEcuSummary?.unscopedReadoutIds || observedEcuSummary?.unscoped_readout_ids || [];
+  const observedEcuSourceCoverageLabel = Number.isFinite(observedEcuSourceCoveragePercent)
+    ? observedEcuUnscopedReadoutIds.length
+      ? `確認済み ${observedEcuSourceCoveragePercent}% / 未確認 ${observedEcuUnscopedReadoutIds.map((id) => observedEcuReadoutLabels[id] || id).join("/")}`
+      : `確認済み ${observedEcuSourceCoveragePercent}%`
+    : NO_DATA;
   const sensitiveLabel = hadSensitiveIdentifier ? "検出" : "なし";
   const startedAtLabel = startedAtValue
     ? formatDateTime(startedAtValue)
@@ -6954,6 +6961,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC詳細報告値", dtcMetadataLabel],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["応答ECU", observedEcuLabel],
+    ["ECU由来", observedEcuSourceCoverageLabel],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],
     ["ECU情報状態", ecuInfoReadoutStatusLabel],
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
