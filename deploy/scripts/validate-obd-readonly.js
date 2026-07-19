@@ -2623,8 +2623,8 @@ check(appSource.includes('const registration = await navigator.serviceWorker.reg
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
 check(indexHtml.includes('accept="application/json,text/csv,text/tab-separated-values,text/plain,text/html,.json,.csv,.tsv,.txt,.html,.htm"') && appSource.includes('function normalizeObdScannerImportFileText(value, file = {})') && appSource.includes('.replace(/<\\/(?:td|th)\\s*>/gi, "\\t")') && appSource.includes('new DOMParser().parseFromString(lineBreakHtml, "text/html")') && appSource.includes('document.querySelectorAll("script,style,iframe,object").forEach((node) => node.remove())') && appSource.includes('new Set(["application/json", "text/csv", "text/tab-separated-values", "text/plain", "text/html"])') && appSource.includes('/\\.(json|csv|tsv|txt|html?|htm)$/i'), "iPhone共有HTML/TSVレポートを安全にテキスト取込できるようにしてください");
-check(appSource.includes('const APP_VERSION = "3.2.55";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for TSV report import");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.55";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.55", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "3.2.56";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app version should advance for Japanese TSV report import");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.56";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.56", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -15772,6 +15772,16 @@ const scannerCsvPreambleSession = obd.buildDiagnosticScanSessionFromCsv([
   "P0300\tStored\t7E8\t0C\tEngine Speed\t800\trpm"
 ].join("\n"));
 check(scannerCsvPreambleSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "7E8") && scannerCsvPreambleSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerCsvPreambleSession?.vehicleCommandEnabled === false && scannerCsvPreambleSession?.retainedRawText === false, "Structured CSV import did not detect a recognised table header after shared-report preamble text");
+const scannerJapaneseTsvSession = obd.buildDiagnosticScanSessionFromCsv([
+  "故障コード\t状態\tECU\t項目\t値\t単位",
+  "P0300\t保存\t7E8\tEngine Speed\t800\trpm"
+].join("\n"));
+check(scannerJapaneseTsvSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "7E8") && scannerJapaneseTsvSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerJapaneseTsvSession?.vehicleCommandEnabled === false && scannerJapaneseTsvSession?.retainedRawText === false, "Japanese TSV headers did not retain DTC and known live PID rows through the read-only import");
+const scannerJapaneseMultiTableTsvSession = obd.buildDiagnosticScanSessionFromCsv([
+  "保存DTC", "故障コード\t状態\tECU", "P0300\t保存\t7E8",
+  "ライブデータ", "項目\t値\t単位", "Engine Speed\t800\trpm"
+].join("\n"));
+check(scannerJapaneseMultiTableTsvSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "7E8") && scannerJapaneseMultiTableTsvSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerJapaneseMultiTableTsvSession?.importClassification?.tableCount === 2 && scannerJapaneseMultiTableTsvSession?.vehicleCommandEnabled === false, "Japanese multi-table TSV import did not separate DTC and live PID readouts safely");
 const scannerCsvLivePreambleSession = obd.buildDiagnosticScanSessionFromCsv([
   "THINKCAR Live Data Report",
   "Parameter\tValue\tUnit",

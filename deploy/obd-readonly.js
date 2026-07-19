@@ -15095,12 +15095,13 @@
     const structuralHeaderNames = new Set([
       "dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode",
       "pid", "obdpid", "parameterid", "readout", "readouttype", "section", "snapshot",
-      "readinessmonitorid", "ecuinfoid", "mode09id", "testid", "tid", "ecuresponseid"
+      "readinessmonitorid", "ecuinfoid", "mode09id", "testid", "tid", "ecuresponseid",
+      "故障コード", "読取区分", "セクション", "スナップショット", "レディネスモニター", "ecu情報id", "テストid", "ecu応答id"
     ]);
-    const measurementLabelHeaderNames = new Set(["parameter", "parametername", "item", "itemname", "label", "dataitem"]);
-    const measurementValueHeaderNames = new Set(["value", "reading", "result", "measuredvalue", "measurement"]);
-    const readinessMonitorHeaderNames = new Set(["readinessmonitorid", "readinessid", "monitorid", "monitor"]);
-    const readinessStatusHeaderNames = new Set(["status", "dtcstatus", "state"]);
+    const measurementLabelHeaderNames = new Set(["parameter", "parametername", "item", "itemname", "label", "dataitem", "項目", "項目名", "パラメーター", "パラメータ", "データ項目"]);
+    const measurementValueHeaderNames = new Set(["value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値"]);
+    const readinessMonitorHeaderNames = new Set(["readinessmonitorid", "readinessid", "monitorid", "monitor", "レディネスモニター", "モニター"]);
+    const readinessStatusHeaderNames = new Set(["status", "dtcstatus", "state", "状態", "ステータス"]);
     const headerCandidate = lines.slice(0, 24)
       .map((line, index) => {
         const headerLine = line.replace(/^\uFEFF/, "");
@@ -15155,8 +15156,8 @@
     const negativeResponseLabelIndex = findIndex("negative response label", "negative_response_label", "negative label");
     const negativeRequestedServiceIndex = findIndex("negative requested service", "negative_requested_service", "requested service");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
-    const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目");
-    const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値");
+    const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目", "項目名", "パラメーター", "パラメータ", "データ項目");
+    const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値", "測定値", "結果", "読取値");
     const unitIndex = findIndex("unit", "units", "単位");
     const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time");
     const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol");
@@ -16234,9 +16235,9 @@
       if (!line.includes(delimiter)) return false;
       const headers = line.split(delimiter).map(normalizeHeader);
       const has = (...names) => names.some((name) => headers.includes(name));
-      const hasDtcOrPid = has("dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode", "pid", "obdpid", "parameterid");
-      const hasMeasurement = has("parameter", "parametername", "item", "itemname", "label", "dataitem") && has("value", "reading", "result", "measuredvalue", "measurement");
-      const hasReadiness = has("readinessmonitorid", "readinessid", "monitorid", "monitor") && has("status", "dtcstatus", "state");
+      const hasDtcOrPid = has("dtc", "dtccode", "faultcode", "troublecode", "diagnostictroublecode", "故障コード", "pid", "obdpid", "parameterid");
+      const hasMeasurement = has("parameter", "parametername", "item", "itemname", "label", "dataitem", "項目", "項目名", "パラメーター", "パラメータ", "データ項目") && has("value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値");
+      const hasReadiness = has("readinessmonitorid", "readinessid", "monitorid", "monitor", "レディネスモニター", "モニター") && has("status", "dtcstatus", "state", "状態", "ステータス");
       const hasMode06 = has("testid", "tid") && has("componentid", "cid") && has("value", "reading", "result", "measuredvalue", "measurement");
       const sectionHint = lines.slice(0, index).at(-1) || "";
       const hasSupportedPid = /(?:supported\s*pids?|pid\s*support)/i.test(sectionHint) && has("pid", "obdpid", "parameterid") && has("status", "dtcstatus", "state");
