@@ -14811,6 +14811,8 @@
     ]);
     const measurementLabelHeaderNames = new Set(["parameter", "parametername", "item", "itemname", "label", "dataitem"]);
     const measurementValueHeaderNames = new Set(["value", "reading", "result", "measuredvalue", "measurement"]);
+    const readinessMonitorHeaderNames = new Set(["readinessmonitorid", "readinessid", "monitorid", "monitor"]);
+    const readinessStatusHeaderNames = new Set(["status", "dtcstatus", "state"]);
     const headerCandidate = lines.slice(0, 24)
       .map((line, index) => {
         const headerLine = line.replace(/^\uFEFF/, "");
@@ -14823,7 +14825,9 @@
         const hasStructuralHeader = normalizedHeaders.some((header) => structuralHeaderNames.has(header));
         const hasMeasurementColumns = normalizedHeaders.some((header) => measurementLabelHeaderNames.has(header))
           && normalizedHeaders.some((header) => measurementValueHeaderNames.has(header));
-        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns)) return null;
+        const hasReadinessColumns = normalizedHeaders.some((header) => readinessMonitorHeaderNames.has(header))
+          && normalizedHeaders.some((header) => readinessStatusHeaderNames.has(header));
+        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns && !hasReadinessColumns)) return null;
         return { index, delimiter, headers };
       })
       .find(Boolean);
@@ -14844,7 +14848,7 @@
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
     const freezeFrameNumberIndex = findIndex("freeze frame number", "frame number", "freeze_frame_number", "フリーズフレーム番号");
     const triggerDtcIndex = findIndex("trigger dtc", "freeze frame dtc", "trigger code", "trigger_dtc", "トリガーdtc");
-    const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id");
+    const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id", "monitor");
     const readinessIgnitionTypeIndex = findIndex("readiness ignition type", "ignition type", "ignition_type");
     const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id");
@@ -14874,7 +14878,8 @@
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
     const readoutPlatformIndex = findIndex("platform", "host platform");
-    const hasExplicitReadinessColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex);
+    const hasExplicitReadinessColumns = Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex)
+      && (Number.isInteger(readoutKindIndex) || /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(sectionHint));
     const hasExplicitEcuInfoColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(ecuInfoIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitMode06Columns = Number.isInteger(readoutKindIndex) && Number.isInteger(mode06TestIdIndex) && Number.isInteger(mode06ComponentIdIndex) && Number.isInteger(valueIndex);
     const hasExplicitSupportedPidColumns = Number.isInteger(readoutKindIndex) && (Number.isInteger(pidIndex) || Number.isInteger(valueIndex));
@@ -14987,7 +14992,7 @@
       const ecuName = cellAt(ecuNameIndex, 120);
       const readoutKind = cellAt(readoutKindIndex, 80) || sectionHint;
       const isFreezeFrameRow = /(?:freeze\s*frame|mode\s*0?2|フリーズフレーム)/i.test(readoutKind);
-      const isReadinessRow = Number.isInteger(readoutKindIndex) && /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
+      const isReadinessRow = /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(readoutKind);
       const isEcuInfoRow = Number.isInteger(readoutKindIndex) && /(?:ecu\s*(?:info|information)|mode\s*0?9|ecu情報)/i.test(readoutKind);
       const isOnboardMonitorRow = Number.isInteger(readoutKindIndex) && /(?:mode\s*0?6|onboard\s*monitor)/i.test(readoutKind);
       const isSupportedPidRow = Number.isInteger(readoutKindIndex) && /(?:supported\s*pids?|pid\s*support)/i.test(readoutKind);
