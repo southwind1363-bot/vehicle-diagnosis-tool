@@ -15933,10 +15933,22 @@
     const dtcSnapshots = tableSessions
       .map((session) => session.dtcSnapshot)
       .filter((snapshot) => snapshot && (snapshot.dtcReadoutStatus === "reported" || Number(snapshot.dtcCount) > 0));
+    const livePidSnapshots = tableSessions
+      .map((session) => session.livePidSnapshot)
+      .filter((snapshot) => snapshot && (snapshot.livePidReadoutStatus === "reported" || Number(snapshot.valueCount) > 0));
+    const livePidSnapshot = livePidSnapshots.length > 1
+      ? {
+        ...normalizeBridgeLivePidSnapshot({
+          monitor_values: livePidSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []),
+          live_pid_readout_status: "reported"
+        }),
+        source: "scanner_csv_import"
+      }
+      : livePidSnapshots[0];
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
-      livePidSnapshot: firstReported("livePidSnapshot", "livePidReadoutStatus", "valueCount"),
+      livePidSnapshot,
       freezeFrameSnapshot: firstReported("freezeFrameSnapshot", "freezeFrameReadoutStatus", "valueCount"),
       readinessSnapshot: firstReported("readinessSnapshot", "readinessReadoutStatus", "monitorCount"),
       ecuInfoSnapshot: firstReported("ecuInfoSnapshot", "ecuInfoReadoutStatus", "itemCount"),
