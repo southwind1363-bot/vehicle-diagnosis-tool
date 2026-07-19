@@ -499,7 +499,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('...normalizeEcuInfoSnapshot({') && functionBody.includes('...data,'), "normalizeBridgeEcuInfoSnapshot should delegate bridge ECU info data to the core normalizer");
     check(functionBody.includes('source: "local_bridge"') && functionBody.includes('protocol: readBridgeProtocol(data)'), "normalizeBridgeEcuInfoSnapshot should preserve local bridge source and protocol");
     check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('ecu_info_readout_status: getBridgeReadoutStatus(bridgeSafety)') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge failure status");
-    check(functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, collectEcuInfoRows(data).length > 0);'), "normalizeBridgeEcuInfoSnapshot should preserve saved ECU info snapshots without weakening blocked bridge responses");
+    check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };') && functionBody.includes('items,') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, collectEcuInfoRows(data).length > 0);'), "normalizeBridgeEcuInfoSnapshot should retain a parent ECU source without replacing explicit ECU info row sources");
   }
   check(Boolean(bridgeOnboardMonitorSnapshotFunctionSource), "normalizeBridgeOnboardMonitorSnapshot is missing from obd-readonly.js");
   if (bridgeOnboardMonitorSnapshotFunctionSource) {
@@ -2622,8 +2622,8 @@ check(appSource.includes('const registration = await navigator.serviceWorker.reg
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
 check(indexHtml.includes('accept="application/json,text/csv,text/plain,text/html,.json,.csv,.txt,.html,.htm"') && appSource.includes('function normalizeObdScannerImportFileText(value, file = {})') && appSource.includes('.replace(/<\\/(?:td|th)\\s*>/gi, "\\t")') && appSource.includes('new DOMParser().parseFromString(lineBreakHtml, "text/html")') && appSource.includes('document.querySelectorAll("script,style,iframe,object").forEach((node) => node.remove())') && appSource.includes('new Set(["application/json", "text/csv", "text/plain", "text/html"])'), "iPhone共有HTMLレポートを安全に表セル区切り付きでテキスト取込できるようにしてください");
-check(appSource.includes('const APP_VERSION = "3.2.45";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for Mode 06 ECU provenance");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.45";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.45", "OBD offline cache version should match the active app version");
+check(appSource.includes('const APP_VERSION = "3.2.46";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-19";'), "OBD app version should advance for bridge ECU provenance");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.46";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.46", "OBD offline cache version should match the active app version");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
 check(monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).length === 157 && monitorDefinitions.filter((item) => ["01", "02"].includes(item.service)).every((item) => item.source_ref === "SAE-J1979DA-202510"), "Standard PID definitions must retain their last reconciled J1979DA source version until the licensed annex is reviewed");
@@ -5644,6 +5644,21 @@ check(bridgeEcuInfoSnapshot.ecuInfoReadoutStatus === "reported" && bridgeEcuInfo
 check(bridgeEcuInfoSnapshot.support_info_types_captured === true, "Bridge ECU info did not expose snake_case supported info type capture state");
 check(bridgeEcuInfoSnapshot.supportInfoTypesSummary.count >= 6 && bridgeEcuInfoSnapshot.supportInfoTypesSummary.labels.includes("ECU名"), "Bridge ECU info supported info type summary was not built");
 check(bridgeEcuInfoSnapshot.support_info_types_summary?.count >= 6 && bridgeEcuInfoSnapshot.support_info_types_summary?.labels.includes("ECU名"), "Bridge ECU info snake_case supported info type summary was not built");
+const bridgeEcuInfoParentSourceSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    source_ecu: "7E8",
+    items: [
+      { id: "calibration_id", value: "CAL-PARENT" },
+      { id: "ecu_name", value: "Transmission ECU", source_ecu: "7E9" }
+    ]
+  }
+});
+check(bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "calibration_id")?.sourceEcu === "7E8" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E9", "Bridge Mode 09 should inherit a parent ECU source only for rows without an explicit source");
+const bridgeEcuInfoParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeEcuInfoParentSourceSnapshot })) }));
+check(bridgeEcuInfoParentSourceRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_id")?.source_ecu === "7E8" && bridgeEcuInfoParentSourceRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "ecu_name")?.sourceEcu === "7E9" && bridgeEcuInfoParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge Mode 09 parent ECU provenance was not retained through read-only export and JSON import");
 const bridgeEmptyEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({});
 check(bridgeEmptyEcuInfoSnapshot.itemCount === 0 && bridgeEmptyEcuInfoSnapshot.blocked === true, "Empty Bridge ECU info response was not fail-closed");
 check(bridgeEmptyEcuInfoSnapshot.ecuInfoReadoutStatus === "blocked", "Empty Bridge ECU info response was incorrectly treated as an empty reported readout");
@@ -5893,6 +5908,51 @@ const bridgeMode06ParentSourceSnapshot = obd.normalizeBridgeOnboardMonitorSnapsh
 check(bridgeMode06ParentSourceSnapshot.tests[0]?.sourceEcu === "7E8" && bridgeMode06ParentSourceSnapshot.tests[0]?.source_ecu === "7E8" && bridgeMode06ParentSourceSnapshot.tests[1]?.sourceEcu === "7E9", "Bridge Mode 06 should inherit a parent ECU source only for rows without an explicit source");
 const bridgeMode06ParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ onboard_monitor_snapshot: bridgeMode06ParentSourceSnapshot })) }));
 check(bridgeMode06ParentSourceRoundTrip?.onboardMonitorSnapshot?.tests?.[0]?.source_ecu === "7E8" && bridgeMode06ParentSourceRoundTrip?.onboardMonitorSnapshot?.tests?.[1]?.sourceEcu === "7E9" && bridgeMode06ParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge Mode 06 parent ECU provenance was not retained through read-only export and JSON import");
+const bridgeDtcParentSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    source_ecu: "7E8",
+    source_ecu_name: "Engine ECU",
+    dtcs: [
+      { code: "P0171" },
+      { code: "P0300", ecu: "7E9" }
+    ]
+  }
+});
+check(bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0171")?.ecu === "7E8" && bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0171")?.ecuName === "Engine ECU" && bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0300")?.ecu === "7E9", "Bridge DTC rows should inherit a parent ECU source only when their own source is absent");
+const bridgeDtcParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcParentSourceSnapshot })) }));
+check(bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0171")?.ecu === "7E8" && bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0300")?.ecu === "7E9" && bridgeDtcParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge DTC parent ECU provenance was not retained through read-only export and JSON import");
+const bridgeLivePidParentSourceSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    source_ecu: "7E8",
+    values: [
+      { pid: "0C", value: 850, unit: "rpm" },
+      { pid: "05", value: 82, unit: "degC", source_ecu: "7E9" }
+    ]
+  }
+});
+check(bridgeLivePidParentSourceSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.sourceEcu === "7E8" && bridgeLivePidParentSourceSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.source_ecu === "7E9", "Bridge live PID rows should inherit a parent ECU source only when their own source is absent");
+const bridgeFreezeFrameParentSourceSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    source_ecu: "7E8",
+    values: [
+      { pid: "0C", value: 900, unit: "rpm" },
+      { pid: "05", value: 86, unit: "degC", source_ecu: "7E9" }
+    ]
+  }
+});
+check(bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.source_ecu === "7E8" && bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.sourceEcu === "7E9", "Bridge freeze-frame rows should inherit a parent ECU source only when their own source is absent");
+const bridgeParentSourceReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ live_pid_snapshot: bridgeLivePidParentSourceSnapshot, freeze_frame_snapshot: bridgeFreezeFrameParentSourceSnapshot })) }));
+check(bridgeParentSourceReadoutRoundTrip?.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.source_ecu === "7E8" && bridgeParentSourceReadoutRoundTrip?.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "coolant_temp")?.sourceEcu === "7E9" && bridgeParentSourceReadoutRoundTrip?.vehicleCommandEnabled === false, "Bridge live PID and freeze-frame parent ECU provenance was not retained through read-only export and JSON import");
 const bridgeEmptyOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({});
 check(bridgeEmptyOnboardMonitorSnapshot.testCount === 0 && bridgeEmptyOnboardMonitorSnapshot.blocked === true, "Empty Bridge Mode 06 response was not fail-closed");
 check(bridgeEmptyOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "blocked", "Empty Bridge Mode 06 response was incorrectly treated as an empty reported readout");

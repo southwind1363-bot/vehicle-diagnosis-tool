@@ -1021,6 +1021,8 @@
 
   function normalizeBridgeDtcSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
     const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes));
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
@@ -1056,7 +1058,7 @@
       const status = ecuRow?.dtc_status || ecuRow?.dtcStatus || ecuRow?.dtc_kind || ecuRow?.dtcKind || defaultStatus;
       return normalizeDtcRows(rows, status, ecu, ecuName);
     });
-    const entries = [...normalizeDtcRows(dtcRows, defaultStatus), ...ecuDtcRows];
+    const entries = [...normalizeDtcRows(dtcRows, defaultStatus, sourceEcu, sourceEcuName), ...ecuDtcRows];
     const scopedEntriesByKey = new Map();
     entries.filter((entry) => entry.ecu).forEach((entry) => {
       const key = `${entry.code}::${entry.subcode || ""}::${entry.status}`;
@@ -1252,6 +1254,7 @@
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const observationConditions = new Set(["unspecified", "cold", "warm", "symptom_reproduced"]);
     const hasBridgeValueList = Array.isArray(data.values)
       || Array.isArray(data.monitor_values)
@@ -1265,7 +1268,7 @@
       || Array.isArray(data.items);
     const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);
     const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);
-    const values = Array.isArray(data.values)
+    const values = (Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.monitor_values)
         ? data.monitor_values
@@ -1285,7 +1288,12 @@
                       ? data.liveData
                       : Array.isArray(data.items)
                         ? data.items
-                        : [];
+                        : [])
+      .map((row) => {
+        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
+        return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+      });
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
@@ -1552,7 +1560,8 @@
 
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const freezeFrameValues = Array.isArray(data.values)
+    const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const freezeFrameValues = (Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.freeze_frame_values)
         ? data.freeze_frame_values
@@ -1570,7 +1579,12 @@
                     ? data.pid_values
                     : Array.isArray(data.pidValues)
                       ? data.pidValues
-                      : [];
+                      : [])
+      .map((row) => {
+        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
+        return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+      });
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray));
     return {
       ...normalizeFreezeFrameSnapshot({
@@ -1757,10 +1771,17 @@
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const items = collectEcuInfoRows(data).map((row) => {
+      if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+      const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
+      return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+    });
     const bridgeSafety = readBridgeSnapshotSafety(response, collectEcuInfoRows(data).length > 0);
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
+        items,
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
         protocol: readBridgeProtocol(data),
