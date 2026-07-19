@@ -15975,12 +15975,22 @@
         items: ecuInfoSnapshots.flatMap((snapshot) => snapshot.items || [])
       })
       : ecuInfoSnapshots[0];
+    const readinessSnapshots = tableSessions
+      .map((session) => session.readinessSnapshot)
+      .filter((snapshot) => snapshot && (snapshot.readinessReadoutStatus === "reported" || Number(snapshot.monitorCount) > 0));
+    const readinessSnapshot = readinessSnapshots.length > 1
+      ? normalizeReadinessSnapshot({
+        source: "scanner_csv_import",
+        monitors: readinessSnapshots.flatMap((snapshot) => snapshot.monitors || []),
+        readiness_readout_status: "reported"
+      })
+      : readinessSnapshots[0];
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
       livePidSnapshot,
       freezeFrameSnapshot: firstReported("freezeFrameSnapshot", "freezeFrameReadoutStatus", "valueCount"),
-      readinessSnapshot: firstReported("readinessSnapshot", "readinessReadoutStatus", "monitorCount"),
+      readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot: firstReported("onboardMonitorSnapshot", "onboardMonitorReadoutStatus", "testCount"),
       supportedPidMatrix,
