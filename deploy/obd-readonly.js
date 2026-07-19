@@ -13067,9 +13067,8 @@
       observed: normalized.some((monitor) => monitor.id === item.id)
     }));
 
-    const milOn = readinessScope === "multiple_ecus"
-      ? null
-      : readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, false), false);
+    const milInput = pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, undefined);
+    const milOn = readinessScope === "multiple_ecus" ? null : readOptionalBooleanAlias(milInput);
     const monitorCount = normalized.length;
     const completeCount = normalized.filter((item) => item.supported === true && item.complete === true).length;
     const incompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length;
@@ -15153,8 +15152,8 @@
     const freezeFrameNumberIndex = findIndex("freeze frame number", "frame number", "freeze_frame_number", "フリーズフレーム番号");
     const triggerDtcIndex = findIndex("trigger dtc", "freeze frame dtc", "trigger code", "trigger_dtc", "トリガーdtc");
     const readinessMonitorIndex = findIndex("readiness monitor id", "readiness id", "monitor id", "monitor", "レディネスモニター", "モニター");
-    const readinessIgnitionTypeIndex = findIndex("readiness ignition type", "ignition type", "ignition_type");
-    const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp");
+    const readinessIgnitionTypeIndex = findIndex("readiness ignition type", "ignition type", "ignition_type", "レディネス点火方式", "点火方式");
+    const milIndex = findIndex("mil", "mil status", "malfunction indicator lamp", "MIL状態");
     const ecuInfoIdIndex = findIndex("ecu info id", "ecu information id", "mode 09 id", "info id", "ECU情報ID");
     const ecuNameIndex = findIndex("ecu name", "module name", "control module name", "system name", "ecu label", "module label", "ECU名", "ユニット名");
     const mode06TestIdIndex = findIndex("mode 06 test id", "test id", "tid", "テストID");
@@ -15171,7 +15170,7 @@
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値", "測定値", "結果", "読取値");
     const unitIndex = findIndex("unit", "units", "単位");
     const capturedAtIndex = findIndex("captured at", "captured_at", "timestamp", "scan time", "readout time", "取得時刻", "読取時刻", "測定時刻");
-    const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol");
+    const protocolIndex = findIndex("protocol", "obd protocol", "communication protocol", "プロトコル", "通信プロトコル");
     const observationConditionIndex = findIndex("observation condition", "observation_condition", "measurement condition", "condition", "観察条件", "測定条件");
     const vehicleMakerIndex = findIndex("maker", "make", "manufacturer", "brand", "vehicle maker", "vehicle make");
     const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model");
@@ -15317,10 +15316,11 @@
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
         if (monitorId && readinessStatus) readinessMonitors.push({ id: monitorId, status: readinessStatus });
         const milText = cellAt(milIndex, 40).toLowerCase();
-        if (milOn === null && ["on", "true", "1", "yes", "mil_on"].includes(milText)) milOn = true;
-        if (milOn === null && ["off", "false", "0", "no", "mil_off"].includes(milText)) milOn = false;
+        if (milOn === null && ["on", "true", "1", "yes", "mil_on", "点灯"].includes(milText)) milOn = true;
+        if (milOn === null && ["off", "false", "0", "no", "mil_off", "消灯"].includes(milText)) milOn = false;
         const ignitionType = cellAt(readinessIgnitionTypeIndex, 24).toLowerCase();
-        if (readinessIgnitionType === null && ["spark", "compression"].includes(ignitionType)) readinessIgnitionType = ignitionType;
+        const normalizedIgnitionType = { "火花点火": "spark", "圧縮点火": "compression" }[ignitionType] || ignitionType;
+        if (readinessIgnitionType === null && ["spark", "compression"].includes(normalizedIgnitionType)) readinessIgnitionType = normalizedIgnitionType;
       }
       const hasDtcCode = Boolean(dtc && extractDtcReferences(dtc).length);
       const readFreezeFrameNumber = () => {
