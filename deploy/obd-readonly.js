@@ -12406,6 +12406,7 @@
       || null;
     const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
     const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || scannerAnalysis.vehicleProfile || scannerAnalysis.vehicle_profile || null;
+    const readoutInterface = mergedBridgeMetadata.readoutInterface || bridgeImport?.readoutInterface || bridgeImport?.readout_interface || bridgeSession?.readoutInterface || bridgeSession?.readout_interface || scannerAnalysis.readoutInterface || scannerAnalysis.readout_interface || null;
     const connectionStatus = bridgeImport?.connectionStatus || bridgeImport?.connection_status || bridgeSession?.connectionStatus || bridgeSession?.connection_status || null;
     const vciDevices = bridgeImport?.vciDevices || bridgeImport?.vci_devices || bridgeSession?.vciDevices || bridgeSession?.vci_devices || [];
     const adapterIdentity = bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity || bridgeSession?.adapterIdentity || bridgeSession?.adapter_identity || null;
@@ -12444,6 +12445,8 @@
       freeze_frame_snapshot: freezeFrameSnapshot,
       vehicleProfile,
       vehicle_profile: vehicleProfile,
+      readoutInterface,
+      readout_interface: readoutInterface,
       vehicleApplicability: effectiveVehicleApplicability,
       vehicle_applicability: effectiveVehicleApplicability,
       importClassification: mergedBridgeMetadata.importClassification,
@@ -17573,6 +17576,12 @@
     const onboardMonitorSnapshot = extractTextOnboardMonitorSnapshot(redacted);
     const ecuResponseSummary = extractTextEcuResponseSummary(redacted);
     const vehicleProfile = extractTextVehicleProfile(redacted);
+    const toolHints = detectScannerToolHints(redacted);
+    const readoutInterface = normalizeReadoutInterfaceSnapshot({
+      label: toolHints[0] || null,
+      device_model: toolHints[0] || null,
+      ...(/(?:iphone|ipad|ipod)/i.test(redacted) ? { platform: "iOS", route: "app_export_import" } : {})
+    });
     const dtcSnapshot = extractTextDtcSnapshot(redacted);
 
     return {
@@ -17595,7 +17604,9 @@
       ecu_response_summary: ecuResponseSummary,
       vehicleProfile,
       vehicle_profile: vehicleProfile,
-      toolHints: detectScannerToolHints(redacted),
+      toolHints,
+      readoutInterface: readoutInterface.label || readoutInterface.deviceModel || readoutInterface.platform ? readoutInterface : null,
+      readout_interface: readoutInterface.label || readoutInterface.deviceModel || readoutInterface.platform ? readoutInterface : null,
       monitorValues,
       monitorInsights: analyzeMonitorValues(monitorValues),
       hadSensitiveIdentifier: raw !== redacted,
