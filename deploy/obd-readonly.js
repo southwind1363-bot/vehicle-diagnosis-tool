@@ -17523,7 +17523,7 @@
         listMatch[1].split(/[\s,;|/]+/).forEach(addPid);
         return;
       }
-      const bitmaskMatch = text.match(/(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?(00|20|40|60|80|A0|C0|E0)\s*[:=]\s*((?:[0-9a-f]{2}\s*){4})$/i);
+      const bitmaskMatch = text.match(/(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?(00|20|40|60|80|A0|C0|E0)\s*[:=]\s*(?:41\s+(?:0x)?\1\s+)?((?:[0-9a-f]{2}\s*){4})$/i);
       if (bitmaskMatch) {
         const pageBase = bitmaskMatch[1].toUpperCase();
         const decoded = decodeSupportedPidResponse({ raw: "41 " + pageBase + " " + bitmaskMatch[2], source: "scanner_text_supported_pids" });
