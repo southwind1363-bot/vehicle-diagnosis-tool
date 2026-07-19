@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.42";
+const APP_VERSION = "3.2.43";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6880,6 +6880,16 @@ function renderObdDeveloperSessionSummary(session = null) {
   const capturedAtValue = session?.capturedAt || session?.captured_at;
   const sourceLengthLabel = sourceLengthValue ? `${sourceLengthValue}文字` : NO_DATA;
   const webSerialReadoutLabel = formatWebSerialReadoutSummary(webSerialReadoutSummary, NO_DATA);
+  const observedEcuIds = [...new Set([
+    ...(dtcSnapshot?.dtcs || []).map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || null),
+    ...(livePidSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+    ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+    readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu || null,
+    ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+    ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+    supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu || null
+  ].map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 8);
+  const observedEcuLabel = observedEcuIds.length ? observedEcuIds.join(" / ") : NO_DATA;
   const sensitiveLabel = hadSensitiveIdentifier ? "検出" : "なし";
   const startedAtLabel = startedAtValue
     ? formatDateTime(startedAtValue)
@@ -6916,6 +6926,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC状態ビット可用マスク", dtcStatusAvailabilityMask ? `0x${dtcStatusAvailabilityMask} (reported)` : NO_DATA],
     ["DTC詳細報告値", dtcMetadataLabel],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
+    ["応答ECU", observedEcuLabel],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],
     ["ECU情報状態", ecuInfoReadoutStatusLabel],
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
