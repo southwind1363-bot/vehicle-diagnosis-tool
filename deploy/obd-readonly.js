@@ -12647,6 +12647,33 @@
       : input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
+    const readinessEcuSnapshotInputs = Array.isArray(sourceInput.readinessEcuSnapshots)
+      ? sourceInput.readinessEcuSnapshots
+      : Array.isArray(sourceInput.readiness_ecu_snapshots)
+        ? sourceInput.readiness_ecu_snapshots
+        : [];
+    const readinessEcuSnapshots = readinessEcuSnapshotInputs.map((snapshotInput) => {
+      if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
+      const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
+      if (!snapshotSourceEcu) return null;
+      const normalizedSnapshot = normalizeReadinessSnapshot({
+        ...snapshotInput,
+        readinessEcuSnapshots: [],
+        readiness_ecu_snapshots: []
+      });
+      return {
+        ...normalizedSnapshot,
+        sourceEcu: snapshotSourceEcu,
+        source_ecu: snapshotSourceEcu,
+        readinessScope: "single_ecu",
+        readiness_scope: "single_ecu"
+      };
+    }).filter(Boolean);
+    const readinessScope = readinessEcuSnapshots.length > 1
+      ? "multiple_ecus"
+      : readinessEcuSnapshots.length === 1 || sourceEcu
+        ? "single_ecu"
+        : "unspecified";
     const readinessStatusBytes = normalizeReadinessStatusBytes(sourceInput);
     const monitors = Array.isArray(input)
       ? input
@@ -12728,7 +12755,9 @@
       observed: normalized.some((monitor) => monitor.id === item.id)
     }));
 
-    const milOn = readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, false), false);
+    const milOn = readinessScope === "multiple_ecus"
+      ? null
+      : readBooleanAlias(pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, false), false);
     const monitorCount = normalized.length;
     const completeCount = normalized.filter((item) => item.supported === true && item.complete === true).length;
     const incompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length;
@@ -12742,11 +12771,13 @@
       sourceInput.readoutStatus,
       sourceInput.readout_status
     );
-    const normalizedReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
-      ? String(explicitReadoutStatus).trim().toLowerCase()
-      : monitorCount > 0
-        ? "reported"
-        : "unknown";
+    const normalizedReadoutStatus = readinessScope === "multiple_ecus"
+      ? "unknown"
+      : ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
+        ? String(explicitReadoutStatus).trim().toLowerCase()
+        : monitorCount > 0
+          ? "reported"
+          : "unknown";
     const ignitionTypeInput = pickDefined(
       sourceInput.readinessIgnitionType,
       sourceInput.readiness_ignition_type,
@@ -12765,6 +12796,10 @@
       source,
       sourceEcu,
       source_ecu: sourceEcu,
+      readinessScope,
+      readiness_scope: readinessScope,
+      readinessEcuSnapshots,
+      readiness_ecu_snapshots: readinessEcuSnapshots,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -14272,6 +14307,26 @@
       }
       return readResponseOption("freezeFrameResponse", "freeze_frame_response", "freezeFrameResponses");
     };
+    const readReadinessResponseOption = () => {
+      const explicitResponse = sessionInput.readinessResponse || sessionInput.readiness_response;
+      if (explicitResponse) return explicitResponse;
+      const rows = classified.responseBuckets.readinessResponses || [];
+      if (rows.length > 1) {
+        const snapshots = rows.map((row) => decodeReadinessResponse({
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        }));
+        return normalizeReadinessSnapshot({
+          source: "obd_response_decoder",
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          readiness_readout_status: "unknown",
+          readiness_scope: "multiple_ecus",
+          readiness_ecu_snapshots: snapshots
+        });
+      }
+      return readResponseOption("readinessResponse", "readiness_response", "readinessResponses");
+    };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
@@ -14304,7 +14359,7 @@
       supportedPidResponse: readSupportedPidResponseOption(),
       livePidResponse: readLivePidResponseOption(),
       freezeFrameResponse: readFreezeFrameResponseOption(),
-      readinessResponse: readResponseOption("readinessResponse", "readiness_response", "readinessResponses"),
+      readinessResponse: readReadinessResponseOption(),
       onboardMonitorResponse: readOnboardMonitorResponseOption(),
       ecuInfoResponse: readEcuInfoResponseOption(),
       ecus: ecuResponses
