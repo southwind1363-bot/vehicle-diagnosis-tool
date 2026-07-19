@@ -1594,6 +1594,11 @@
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
+    const readinessEcuSnapshotRows = Array.isArray(data.readinessEcuSnapshots)
+      ? data.readinessEcuSnapshots
+      : Array.isArray(data.readiness_ecu_snapshots)
+        ? data.readiness_ecu_snapshots
+        : [];
     const readinessRowIdAliases = {
       milstatus: "mil_status",
       mil: "mil_status",
@@ -1648,7 +1653,7 @@
             data.statusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.statusByteC } : null,
             data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
           ].filter(Boolean);
-    const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
+    const bridgeSafety = readBridgeSnapshotSafety(response, readinessEcuSnapshotRows.length > 0 || [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
       || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
     const bridgeReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
     const withBridgeMetadata = (snapshot) => ({
@@ -1659,6 +1664,28 @@
       wouldTransmit: bridgeSafety.wouldTransmit,
       would_transmit: bridgeSafety.wouldTransmit
     });
+    if (readinessEcuSnapshotRows.length > 0) {
+      const readinessEcuSnapshots = readinessEcuSnapshotRows.map((row) => {
+        if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+        return normalizeBridgeReadinessSnapshot({
+          ...response,
+          data: {
+            ...row,
+            readinessEcuSnapshots: [],
+            readiness_ecu_snapshots: []
+          }
+        });
+      }).filter((snapshot) => snapshot?.sourceEcu || snapshot?.source_ecu);
+      if (readinessEcuSnapshots.length === 1) return withBridgeMetadata(readinessEcuSnapshots[0]);
+      return withBridgeMetadata(normalizeReadinessSnapshot({
+        source: "local_bridge",
+        captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
+        protocol: readBridgeProtocol(data),
+        readiness_readout_status: bridgeReadoutStatus,
+        readiness_scope: "multiple_ecus",
+        readiness_ecu_snapshots: readinessEcuSnapshots
+      }));
+    }
     const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {
       const rowKey = String(
         row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || ""
