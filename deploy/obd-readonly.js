@@ -12187,6 +12187,29 @@
         ? "scanner_text_and_local_bridge"
         : "local_bridge"
       : "scanner_text";
+    const livePidSnapshot = {
+      schemaVersion: "live_pid_snapshot_v1",
+      schema_version: "live_pid_snapshot_v1",
+      source,
+      intent: "read_live_pid_snapshot",
+      protocol: bridgeImport?.protocol || bridgeImport?.obd_protocol || bridgeSession?.protocol || bridgeSession?.obd_protocol || null,
+      capturedAt: bridgeImport?.capturedAt || bridgeImport?.captured_at || bridgeSession?.capturedAt || bridgeSession?.captured_at || null,
+      captured_at: bridgeImport?.captured_at || bridgeImport?.capturedAt || bridgeSession?.captured_at || bridgeSession?.capturedAt || null,
+      monitorValues,
+      monitor_values: monitorValues,
+      monitorValueSummary,
+      monitor_value_summary: monitorValueSummary,
+      monitorInsights,
+      monitor_insights: monitorInsights,
+      livePidReadoutStatus: monitorValues.length ? "reported" : "unknown",
+      live_pid_readout_status: monitorValues.length ? "reported" : "unknown",
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
     const mergedBridgeMetadata = buildMergedBridgeMetadata({ bridgeImport, bridgeSession });
     const scannerVehicleApplicability = scannerAnalysis.vehicleProfile ? normalizeVehicleApplicabilitySnapshot(scannerAnalysis.vehicleProfile) : null;
     const bridgeVehicleApplicability = mergedBridgeMetadata.vehicleApplicability;
@@ -12446,6 +12469,8 @@
       monitor_value_summary: monitorValueSummary,
       monitorInsights,
       monitor_insights: monitorInsights,
+      livePidSnapshot,
+      live_pid_snapshot: livePidSnapshot,
       ecuResponseSummary,
       ecu_response_summary: ecuResponseSummary,
       supportedPidMatrix,
