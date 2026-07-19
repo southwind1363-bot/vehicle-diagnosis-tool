@@ -17391,12 +17391,13 @@
   function collectTextReadinessSection(value) {
     const readinessLines = [];
     let inReadiness = false;
-    const isReadinessHeading = (text) => /(?:\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|レディネス(?:\s*状態)?)/i.test(text);
+    const isReadinessHeading = (text) => /(?:\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|レディネス(?:\s*状態)?|(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?01\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|mode\s*0?6|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|モード\s*0?6|対応\s*pid|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
       if (isReadinessHeading(text)) {
         inReadiness = true;
+        readinessLines.push(line);
         return;
       }
       if (inReadiness && isSectionBoundary(text)) inReadiness = false;
@@ -17408,6 +17409,15 @@
   function extractTextReadinessSnapshot(value) {
     const readinessLines = collectTextReadinessSection(value);
     if (!readinessLines.length) return null;
+    const readinessResponseMatch = readinessLines
+      .map((line) => String(line || "").trim().match(/(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?01\s*[:=]\s*(?:41\s+(?:0x)?01\s+)?((?:[0-9a-f]{2}\s*){4})$/i))
+      .find(Boolean);
+    if (readinessResponseMatch) {
+      return decodeReadinessResponse({
+        raw: "41 01 " + readinessResponseMatch[1],
+        source: "scanner_text_readiness"
+      });
+    }
     const monitorMatchers = [
       ["oxygen_sensor_heater", /(?:oxygen\s*sensor\s*heater|o2\s*(?:sensor\s*)?heater|o2ヒーター)/i],
       ["oxygen_sensor", /(?:oxygen\s*sensor|o2\s*sensor|o2センサー)/i],
