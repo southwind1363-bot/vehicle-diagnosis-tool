@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "UDS/J2534 DTC重大度と明示PID配列(JSON/CSV)のread-only取込を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.2.10";
+const APP_VERSION = "3.2.11";
 const APP_LAST_UPDATED = "2026-07-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1848,6 +1848,8 @@ function getObdAvailableReadoutNote(interfaceId) {
 
 function getObdPrimaryActionLabel(interfaceId, state = {}) {
   if (state.connected) return "読取中";
+  const appImportRoute = state.appImportRoute === true || getObdInterfaceReadoutRoute(interfaceId)?.route === "app_export_import";
+  if (appImportRoute) return state.unlocked ? "アプリ結果取込を準備" : "アプリ取込を有効化";
   if (!state.unlocked) {
     if (interfaceId === "user-vci-elm327") return "ELM327読取を有効化";
     if (interfaceId === "user-vci-techstream-j2534") return "有線OBD2適合確認を有効化";
@@ -4160,7 +4162,9 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   const selectedVehicle = obdVehicleInput.value.trim();
   const selectedInterface = getSelectedObdInterfaceLabel();
   const selectedInterfaceId = resolveObdInterfaceId(capability);
-  const primaryActionNeedsSerial = selectedInterfaceId === "user-vci-elm327";
+  const selectedReadoutRoute = getObdInterfaceReadoutRoute(selectedInterfaceId);
+  const appImportRoute = selectedReadoutRoute?.route === "app_export_import";
+  const primaryActionNeedsSerial = selectedInterfaceId === "user-vci-elm327" && !appImportRoute;
   const readBusy = obdDevSession.readInProgress === true;
   const serialBusy = readBusy || obdDevSession.initializing === true || obdDevSession.coreScanInProgress === true;
 
@@ -4168,7 +4172,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevControls.hidden = !unlocked;
   obdDevLockButton.disabled = !unlocked;
   obdDevConnectButton.disabled = !unlocked || connected || (primaryActionNeedsSerial && !serialReady);
-  obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady });
+  obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady, appImportRoute });
   obdDevIdentifyButton.disabled = !unlocked || !connected || serialBusy;
   obdDevCoreScanButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadDtcButton.disabled = !unlocked || !connected || serialBusy;
@@ -4214,14 +4218,18 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
     const requestedStatus = obdDevSession.bridgeEndpoint
       ? getRequestedInterfaceReadyStatus()
       : getRequestedInterfaceIdleStatus();
-    const defaultReadyMessage = selectedInterfaceId === "user-vci-elm327"
+    const defaultReadyMessage = appImportRoute
+      ? "iPhone対応アプリでread-only読取後、DTC/PID/FF/ECU情報を共有・貼付して取り込みます。"
+      : selectedInterfaceId === "user-vci-elm327"
       ? "ELM327/STN の読取を開始できます。"
       : selectedInterfaceId === "user-vci-techstream-j2534"
         ? "J2534 の VCI一覧、アダプター識別、read-only ECU情報/DTC確認を続けられます。"
         : selectedInterfaceId === "user-vci-thinkcar-bluetooth"
           ? "Bluetooth の DTC、フリーズフレーム、ライブデータ、ECU情報確認を続けられます。"
       : `${selectedInterface} の read-only 確認を続けられます。`;
-    const defaultIdleMessage = selectedInterfaceId === "user-vci-elm327"
+    const defaultIdleMessage = appImportRoute
+      ? `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。iPhone対応アプリのread-only結果を共有・貼付して取り込みます。`
+      : selectedInterfaceId === "user-vci-elm327"
       ? `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。Web SerialのELM327/STN読取を試せます。`
       : `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。ローカルブリッジ経由のread-only確認を試せます。`;
     obdDevStatus.textContent = obdDevSession.bridgeEndpoint
@@ -4296,7 +4304,7 @@ function lockObdDeveloperMode() {
 
 function handleObdPrimaryAction() {
   const interfaceId = resolveObdInterfaceId();
-  if (interfaceId === "user-vci-elm327") {
+  if (interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.route !== "app_export_import") {
     void connectObdDeveloperVci();
     return;
   }
