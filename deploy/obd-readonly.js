@@ -16569,13 +16569,14 @@
         supported_pid_readout_status: readoutStatus
       });
     }
+    const resolvedSourceEcu = sourceEcu || (supportedPidEcuSnapshots.length === 1 ? supportedPidEcuSnapshots[0].sourceEcu : null);
 
     return {
       schemaVersion: "supported_pid_matrix_v1",
       schema_version: "supported_pid_matrix_v1",
       source,
-      sourceEcu,
-      source_ecu: sourceEcu,
+      sourceEcu: resolvedSourceEcu,
+      source_ecu: resolvedSourceEcu,
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
