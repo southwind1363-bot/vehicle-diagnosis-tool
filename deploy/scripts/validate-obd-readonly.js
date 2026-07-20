@@ -14814,6 +14814,10 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutRequest?.re
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutSummary?.readoutRequest?.wouldTransmit === false, "Diagnostic scan session did not attach read-only request metadata to next readout summary");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutRequestQueue?.length === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutRequestQueue[0]?.wouldTransmit === false, "Diagnostic scan session did not expose read-only request metadata for pending readout queue");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutRequestQueueById?.readiness_snapshot?.bridgeIntent === "read_live_pid_snapshot", "Diagnostic scan session did not index pending readout request queue by readout id");
+const scanSessionPlainCoverageRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionPlainCoverageOverride)
+}));
+check(scanSessionPlainCoverageRoundTrip?.coreSessionStatus?.pendingReadoutRequestQueueById?.readiness_snapshot?.bridgeIntent === "read_live_pid_snapshot" && scanSessionPlainCoverageRoundTrip.coreSessionStatus.pendingReadoutRequestQueueById?.readiness_snapshot?.serviceMode === "01" && scanSessionPlainCoverageRoundTrip.coreSessionStatus.pendingReadoutRequestQueueById?.readiness_snapshot?.pid === "01" && scanSessionPlainCoverageRoundTrip.coreSessionStatus.pendingReadoutRequestQueueById?.readiness_snapshot?.readOnly === true && scanSessionPlainCoverageRoundTrip.coreSessionStatus.pendingReadoutRequestQueueById?.readiness_snapshot?.wouldTransmit === false && scanSessionPlainCoverageRoundTrip?.vehicleCommandEnabled === false, "Readiness PID 01 request did not remain read-only through bridge export and JSON reimport");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutRequestPlan?.totalCount === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutRequestPlan?.vehicleCommandEnabled === false, "Diagnostic scan session did not expose read-only pending readout request plan");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutRequestPlan?.total_count === 5 && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutRequestPlan?.vehicle_command_enabled === false, "Diagnostic scan session did not expose snake_case read-only pending readout request plan");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.pendingReadoutRequestPlan?.read_only === true && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutRequestPlan?.would_transmit === false && scanSessionPlainCoverageOverride.coreSessionStatus.pendingReadoutRequestPlan?.retained_raw_text === false, "Diagnostic scan session did not expose snake_case pending request plan safety aliases");
@@ -16746,6 +16750,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2673");
+  console.log("OBD read-only safety checks: 2674");
   console.log("Errors: 0");
 }
