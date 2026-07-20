@@ -1586,7 +1586,14 @@
   }
 
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object"
+      ? response.data && typeof response.data === "object"
+        ? {
+          ...response.data,
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+        }
+        : response
+      : {};
     const supportedPids = collectBridgeSupportedPids(data);
     const supportedPidPageBases = data.supported_pid_page_bases
       || data.supportedPidPageBases
