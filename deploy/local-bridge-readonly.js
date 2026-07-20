@@ -223,8 +223,11 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   if ((request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc" || request.intent === "read_permanent_dtc") && replaySnapshot) {
     const status = request.intent === "read_pending_dtc" ? "pending" : request.intent === "read_permanent_dtc" ? "permanent" : "stored";
     const dtcs = replaySnapshot.dtcs.filter((item) => item.status === status);
+    const replayError = replaySnapshot.dtcReadoutErrors?.[status]
+      || (replaySnapshot.dtcReadoutObserved?.[status] ? null : "replay_dtc_status_not_observed");
     return {
       ...base,
+      ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         captured_at: new Date().toISOString(),
@@ -402,6 +405,8 @@ export function decodeReplayLog(text) {
   const onboardMonitorTests = [];
   const supportedPids = new Set();
   const ecus = new Set();
+  const dtcReadoutObserved = { stored: false, pending: false, permanent: false };
+  const dtcReadoutErrors = { stored: null, pending: null, permanent: null };
   let triggerDtc = null;
 
   packets.forEach(({ ecu, bytes }) => {
@@ -412,7 +417,16 @@ export function decodeReplayLog(text) {
 
     if (service === 0x43 || service === 0x47 || service === 0x4A) {
       const status = service === 0x47 ? "pending" : service === 0x4A ? "permanent" : "stored";
-      for (let index = serviceIndex + 1; index + 1 < bytes.length; index += 2) {
+      const payloadStart = serviceIndex + 1;
+      const payloadLength = bytes.length - payloadStart;
+      const trailingPaddingByte = payloadLength % 2 === 1 ? bytes[bytes.length - 1] : null;
+      if (payloadLength < 2 || (payloadLength % 2 === 1 && trailingPaddingByte !== 0)) {
+        dtcReadoutErrors[status] = "replay_dtc_payload_incomplete";
+        return;
+      }
+      dtcReadoutObserved[status] = true;
+      const completePayloadEnd = payloadLength % 2 === 0 ? bytes.length : bytes.length - 1;
+      for (let index = payloadStart; index + 1 < completePayloadEnd; index += 2) {
         const high = bytes[index];
         const low = bytes[index + 1];
         if (high === 0 && low === 0) continue;
@@ -469,6 +483,10 @@ export function decodeReplayLog(text) {
 
   return {
     protocol: "ISO15765-4-log-replay",
+    dtcReadoutObserved,
+    dtc_readout_observed: { ...dtcReadoutObserved },
+    dtcReadoutErrors,
+    dtc_readout_errors: { ...dtcReadoutErrors },
     ecuResponses: [...ecus].map((ecu) => ({ ecu, status: "replay", dtcs: dtcs.filter((item) => item.ecu === ecu).map((item) => item.code) })),
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
     liveValues: uniqueBy(liveValues, (item) => item.id),

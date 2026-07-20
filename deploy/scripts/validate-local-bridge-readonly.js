@@ -250,10 +250,21 @@ try {
   check(hasUniqueDtcCodes(replayDtc.data.dtcs), "replay stored DTC response included duplicate codes");
   check(!replayDtc.data.dtcs.some((item) => item.code === "P0440"), "replay stored DTC response promoted a permanent DTC");
   const replayPendingDtc = await post(replayPort, "read_pending_dtc");
-  check(replayPendingDtc.data.dtcs.length === 0 && replayPendingDtc.data.ecu_responses.every((item) => item.dtcs.length === 0), "replay pending DTC response fabricated codes from another DTC status");
+  check(replayPendingDtc.ok === false && replayPendingDtc.errors.includes("replay_dtc_status_not_observed") && replayPendingDtc.data.dtcs.length === 0 && replayPendingDtc.data.ecu_responses.every((item) => item.dtcs.length === 0), "replay pending DTC response fabricated an empty result when its service was not observed");
   const replayPermanentDtc = await post(replayPort, "read_permanent_dtc");
   check(replayPermanentDtc.data.dtcs.some((item) => item.code === "P0440" && item.status === "permanent"), "replay permanent DTC response did not include P0440");
   check(replayPermanentDtc.data.dtcs.every((item) => item.status === "permanent" && ecuResponseCodes(replayPermanentDtc).includes(item.code)), "replay permanent DTC response did not match ECU response DTC list");
+
+  const incompleteReplayServer = createLocalBridgeApp({ pairingToken: token, replayLogText: "can0 7E8#024301" });
+  const incompleteReplayPort = await new Promise((resolve) => {
+    incompleteReplayServer.listen(0, "127.0.0.1", () => resolve(incompleteReplayServer.address().port));
+  });
+  try {
+    const incompleteReplayDtc = await post(incompleteReplayPort, "read_stored_dtc");
+    check(incompleteReplayDtc.ok === false && incompleteReplayDtc.errors.includes("replay_dtc_payload_incomplete") && incompleteReplayDtc.data.dtcs.length === 0, "incomplete replay DTC payload was treated as an empty valid readout");
+  } finally {
+    await new Promise((resolve) => incompleteReplayServer.close(resolve));
+  }
 
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
@@ -342,6 +353,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 143");
+  console.log("Local bridge read-only checks: 144");
   console.log("Errors: 0");
 }
