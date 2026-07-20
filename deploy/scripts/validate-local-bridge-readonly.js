@@ -223,6 +223,7 @@ const replayLog = [
   "can0 7E8#03416A80",
   "can0 7E8#03416C80",
   "can0 7E8#03418E78",
+  "can0 7E8#0749000155600000",
   "can0 7E8#0C49040143414C2D31323334",
   "can0 7E8#0C490A01456E67696E6520454355",
   "can0 7E8#094601010064003200C8",
@@ -344,8 +345,12 @@ try {
   }
 
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
+  check(replayEcuInfo.data.values.some((item) => item.id === "supported_info_types_00" && item.value === "55 60 00 00"), "replay ECU info did not decode Mode 09 supported information types");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
   check(replayEcuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "replay ECU info did not decode ECU name");
+
+  const replayMode09LeadingZero = decodeReplayLog("can0 7E8#0749000100008000");
+  check(replayMode09LeadingZero.ecuInfoValues.some((item) => item.id === "supported_info_types_00" && item.value === "00 00 80 00"), "replay Mode 09 supported information types dropped leading zero bytes");
 
   const replayOnboardMonitor = await post(replayPort, "read_onboard_monitor");
   check(replayOnboardMonitor.data.tests.some((item) => item.test_id === "01" && item.value === 100), "replay Mode 06 did not decode passing test");
@@ -430,6 +435,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 163");
+  console.log("Local bridge read-only checks: 165");
   console.log("Errors: 0");
 }

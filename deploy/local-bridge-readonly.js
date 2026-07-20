@@ -918,6 +918,7 @@ function decodeLivePid(pid, payload) {
 function decodeEcuInfoValue(infoTypeByte, payload = []) {
   const infoType = toHexByte(infoTypeByte);
   const itemMap = {
+    "00": "supported_info_types_00",
     "02": "vin",
     "04": "calibration_id",
     "06": "calibration_verification_number",
@@ -925,7 +926,11 @@ function decodeEcuInfoValue(infoTypeByte, payload = []) {
   };
   const id = itemMap[infoType];
   if (!id) return null;
-  const bytes = trimEcuInfoPayload(payload);
+  const bytes = trimEcuInfoPayload(payload, infoType === "00");
+  if (infoType === "00") {
+    if (!bytes.length) return null;
+    return { id, info_type: infoType, value: bytes.map((byte) => toHexByte(byte)).join(" ") };
+  }
   const value = bytesToAscii(bytes);
   if (!value) return null;
   return { id, info_type: infoType, value };
@@ -942,8 +947,9 @@ function decodeOnboardMonitorTest(payload = []) {
   };
 }
 
-function trimEcuInfoPayload(payload = []) {
+function trimEcuInfoPayload(payload = [], preserveLeadingZeros = false) {
   const bytes = payload.filter(Number.isInteger);
+  if (preserveLeadingZeros) return bytes.length ? bytes.slice(1) : [];
   if (bytes.length > 1 && bytes[0] <= 0x10) return bytes.slice(1);
   return bytes;
 }
