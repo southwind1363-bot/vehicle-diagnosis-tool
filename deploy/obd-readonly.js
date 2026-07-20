@@ -2803,7 +2803,7 @@
     const electrification = source.electrification || source.hybridSystem || source.hybrid_system || source.evSystem || source.ev_system || null;
     const targetSystem = source.targetSystem || source.target_system || source.system || source.systemName || source.system_name || source.diagnosticSystem || source.diagnostic_system || null;
     const targetEcu = source.targetEcu || source.target_ecu || source.ecu || source.ecuName || source.ecu_name || source.module || source.moduleName || source.module_name || null;
-    const ecuAddress = source.ecuAddress || source.ecu_address || source.address || source.canId || source.can_id || source.responseId || source.response_id || null;
+    const ecuAddress = source.ecuAddress || source.ecu_address || source.diagnosticAddress || source.diagnostic_address || source.physicalAddress || source.physical_address || source.address || source.canId || source.can_id || source.responseCanId || source.response_can_id || source.rxId || source.rx_id || source.responseId || source.response_id || null;
     const sourceName = source.sourceName || source.source_name || source.source || source.dataSource || source.data_source || source.catalogSource || source.catalog_source || source.referenceSource || source.reference_source || null;
     const sourceUrl = source.sourceUrl || source.source_url || source.referenceUrl || source.reference_url || source.catalogUrl || source.catalog_url || null;
     const sourceDate = source.sourceDate || source.source_date || source.referenceDate || source.reference_date || source.catalogDate || source.catalog_date || null;
