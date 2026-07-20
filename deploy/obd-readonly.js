@@ -16025,9 +16025,21 @@
         continue;
       }
       if (current) {
-        if (/^permanent$/i.test(line)) {
+        if (/^(?:permanent|永久|恒久)$/i.test(line)) {
           current.status = "permanent";
           current.reportedStatus = "permanent";
+          flush();
+          continue;
+        }
+        if (/^(?:pending|tentative|保留)$/i.test(line)) {
+          current.status = "pending";
+          current.reportedStatus = "pending";
+          flush();
+          continue;
+        }
+        if (/^(?:stored|confirmed|保存|確定)$/i.test(line)) {
+          current.status = "stored";
+          current.reportedStatus = "stored";
           flush();
           continue;
         }
