@@ -427,8 +427,13 @@ export function decodeReplayLog(text) {
   const readoutErrors = { freeze_frame: null, supported_pids: null, ecu_info: null, onboard_monitor: null, live_pid_snapshot: null };
   let triggerDtc = null;
 
-  packets.forEach(({ ecu, bytes }) => {
+  packets.forEach((packet) => {
+    const { ecu, bytes } = packet;
     if (ecu) ecus.add(ecu);
+    if (packet.isoTpIncomplete) {
+      applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors);
+      return;
+    }
     const serviceIndex = findReplayPositiveResponseIndex(bytes);
     if (serviceIndex < 0) return;
     const service = bytes[serviceIndex];
@@ -568,7 +573,7 @@ function reassembleReplayIsoTpPackets(packets = []) {
     const pending = pendingByEcu.get(ecu);
     if (!pending) return;
     pendingByEcu.delete(ecu);
-    output.push({ ecu: pending.ecu, bytes: [] });
+    output.push(buildReplayIsoTpIncompletePacket(pending.ecu, pending.payload));
   };
 
   packets.forEach((packet) => {
@@ -580,7 +585,7 @@ function reassembleReplayIsoTpPackets(packets = []) {
     if (isFirstFrame) {
       const expectedLength = ((pci & 0x0F) * 0x100) + bytes[1];
       if (expectedLength <= 7) {
-        output.push({ ...packet, bytes: [] });
+        output.push(buildReplayIsoTpIncompletePacket(packet.ecu, bytes.slice(2)));
         return;
       }
       discardPending(packet.ecu);
@@ -602,7 +607,7 @@ function reassembleReplayIsoTpPackets(packets = []) {
     if (isConsecutiveFrame) {
       const pending = pendingByEcu.get(packet.ecu);
       if (!pending) {
-        output.push({ ...packet, bytes: [] });
+        output.push(buildReplayIsoTpIncompletePacket(packet.ecu));
         return;
       }
       const sequenceNumber = pci & 0x0F;
@@ -611,7 +616,9 @@ function reassembleReplayIsoTpPackets(packets = []) {
       pending.payload.push(...bytes.slice(1));
       if (pending.payload.length >= pending.expectedLength) {
         pendingByEcu.delete(packet.ecu);
-        output.push({ ecu: pending.ecu, bytes: pending.sequenceError ? [] : pending.payload.slice(0, pending.expectedLength) });
+        output.push(pending.sequenceError
+          ? buildReplayIsoTpIncompletePacket(pending.ecu, pending.payload)
+          : { ecu: pending.ecu, bytes: pending.payload.slice(0, pending.expectedLength) });
       }
       return;
     }
@@ -621,6 +628,45 @@ function reassembleReplayIsoTpPackets(packets = []) {
 
   pendingByEcu.forEach((_pending, ecu) => discardPending(ecu));
   return output;
+}
+
+function buildReplayIsoTpIncompletePacket(ecu, payload = []) {
+  return {
+    ecu: ecu || null,
+    bytes: [],
+    isoTpIncomplete: true,
+    responseService: payload[0],
+    responsePid: payload[1]
+  };
+}
+
+function applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors) {
+  const service = packet?.responseService;
+  if (service === 0x43 || service === 0x47 || service === 0x4A) {
+    const status = service === 0x47 ? "pending" : service === 0x4A ? "permanent" : "stored";
+    dtcReadoutErrors[status] = "replay_dtc_transport_incomplete";
+    return;
+  }
+  if (service === 0x42) {
+    readoutErrors.freeze_frame = "replay_freeze_frame_transport_incomplete";
+    return;
+  }
+  if (service === 0x49) {
+    readoutErrors.ecu_info = "replay_ecu_info_transport_incomplete";
+    return;
+  }
+  if (service === 0x46) {
+    readoutErrors.onboard_monitor = "replay_onboard_monitor_transport_incomplete";
+    return;
+  }
+  if (service === 0x41) {
+    const pid = packet?.responsePid;
+    if (isSupportedPidBase(pid)) {
+      readoutErrors.supported_pids = "replay_supported_pids_transport_incomplete";
+    } else {
+      readoutErrors.live_pid_snapshot = "replay_live_pid_transport_incomplete";
+    }
+  }
 }
 
 function getReplayIsoTpTransportBytes(bytes = []) {

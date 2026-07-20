@@ -328,7 +328,19 @@ try {
   for (const [name, replayText, expectedEcuInfo] of replayIsoTpCases) {
     const snapshot = decodeReplayLog(replayText);
     const calibrationId = snapshot.ecuInfoValues.find((item) => item.id === "calibration_id")?.value || null;
-    check((calibrationId === "CAL-1234") === expectedEcuInfo, `replay ISO-TP ${name} did not preserve complete-only ECU information`);
+    const expectedError = expectedEcuInfo ? null : name === "orphan" || name === "dlc_length_mismatch" ? null : "replay_ecu_info_transport_incomplete";
+    check((calibrationId === "CAL-1234") === expectedEcuInfo && snapshot.readoutErrors.ecu_info === expectedError, `replay ISO-TP ${name} did not preserve complete-only ECU information`);
+  }
+
+  const incompleteIsoTpReplayServer = createLocalBridgeApp({ pairingToken: token, replayLogText: "can0 7E8#100B49040143414C" });
+  const incompleteIsoTpReplayPort = await new Promise((resolve) => {
+    incompleteIsoTpReplayServer.listen(0, "127.0.0.1", () => resolve(incompleteIsoTpReplayServer.address().port));
+  });
+  try {
+    const incompleteIsoTpReplay = await post(incompleteIsoTpReplayPort, "read_ecu_info");
+    check(incompleteIsoTpReplay.ok === false && incompleteIsoTpReplay.errors.includes("replay_ecu_info_transport_incomplete") && incompleteIsoTpReplay.data.values.length === 0, "incomplete replay ISO-TP ECU information was not reported as a transport failure");
+  } finally {
+    await new Promise((resolve) => incompleteIsoTpReplayServer.close(resolve));
   }
 
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
@@ -418,6 +430,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 162");
+  console.log("Local bridge read-only checks: 163");
   console.log("Errors: 0");
 }
