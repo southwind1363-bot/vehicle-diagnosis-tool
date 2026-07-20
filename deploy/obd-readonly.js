@@ -1153,10 +1153,19 @@
     const paired = data.paired === true || data.is_paired === true || data.isPaired === true;
     const vciConnected = data.vci_connected === true || data.vciConnected === true || data.vci_ready === true || data.vciReady === true;
     const vehicleConnected = data.vehicle_connected === true || data.vehicleConnected === true || data.car_connected === true || data.carConnected === true;
+    const replayMode = data.replay_mode === true || data.replayMode === true;
+    const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
+    const readoutSourceMode = replayMode ? "replay" : sampleMode ? "sample" : "unspecified";
     let displayStatus = "準備中";
     let nextAction = "ローカルブリッジを起動しても、この画面からはまだ車両へ送信しません。";
 
-    if (status === "not_connected") {
+    if (replayMode) {
+      displayStatus = "再生読取";
+      nextAction = "外部ログの再生です。実VCI・実車接続の読取結果とは混同しません。";
+    } else if (sampleMode) {
+      displayStatus = "サンプル";
+      nextAction = "サンプル応答です。実VCI・実車接続の読取結果とは混同しません。";
+    } else if (status === "not_connected") {
       displayStatus = "未接続";
       nextAction = "PC側ブリッジの起動とペアリング準備を確認します。";
     } else if (!paired) {
@@ -1186,6 +1195,12 @@
       paired,
       vciConnected,
       vehicleConnected,
+      sampleMode,
+      sample_mode: sampleMode,
+      replayMode,
+      replay_mode: replayMode,
+      readoutSourceMode,
+      readout_source_mode: readoutSourceMode,
       connectionEnabled: localBridgeContract.connectionEnabled,
       vehicleCommandEnabled: false,
       errors: Array.isArray(response.errors) ? [...response.errors] : [],
@@ -1209,14 +1224,22 @@
           : [];
     const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(response) || Array.isArray(data) || [data.devices, data.vci_devices, data.items].some(Array.isArray));
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
+    const replayMode = data.replay_mode === true || data.replayMode === true;
+    const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
     const normalizedDevices = devices.map((device, index) => {
       const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
+      const deviceReplayMode = device?.replay_mode === true || device?.replayMode === true || replayMode;
+      const deviceSampleMode = !deviceReplayMode && (device?.sample_mode === true || device?.sampleMode === true || sampleMode);
       return {
         id,
         label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
         vendor: device?.vendor ? String(device.vendor).slice(0, 80) : null,
         driverStatus: device?.driver_status || device?.driverStatus || data.driver_status || data.driverStatus || "unknown",
         connected: device?.connected === true || device?.is_connected === true || device?.isConnected === true,
+        sampleMode: deviceSampleMode,
+        sample_mode: deviceSampleMode,
+        replayMode: deviceReplayMode,
+        replay_mode: deviceReplayMode,
         selected: selectedDeviceId ? id === selectedDeviceId : index === 0 && devices.length === 1,
         supportNote: "VCI識別情報は表示用に最小化し、シリアル番号などの生識別子は保持しません。"
       };
@@ -1229,6 +1252,10 @@
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
       driverStatus: data.driver_status || data.driverStatus || "not_checked",
+      sampleMode,
+      sample_mode: sampleMode,
+      replayMode,
+      replay_mode: replayMode,
       selectedDeviceId,
       devices: normalizedDevices,
       deviceCount: normalizedDevices.length,
@@ -1242,6 +1269,8 @@
     const data = response && typeof response === "object" ? response.data || response : {};
     const hasAdapterIdentityData = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint"].some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
+    const replayMode = data.replay_mode === true || data.replayMode === true;
+    const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
     return {
       source: "local_bridge",
       intent: "adapter_identity",
@@ -1253,6 +1282,10 @@
       firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : data.version ? String(data.version).slice(0, 80) : null,
       adapterProtocolHint: data.adapter_protocol_hint ? String(data.adapter_protocol_hint).slice(0, 80) : data.adapterProtocolHint ? String(data.adapterProtocolHint).slice(0, 80) : data.protocol_hint ? String(data.protocol_hint).slice(0, 80) : data.protocolHint ? String(data.protocolHint).slice(0, 80) : null,
       adapter_protocol_hint: data.adapter_protocol_hint ? String(data.adapter_protocol_hint).slice(0, 80) : data.adapterProtocolHint ? String(data.adapterProtocolHint).slice(0, 80) : data.protocol_hint ? String(data.protocol_hint).slice(0, 80) : data.protocolHint ? String(data.protocolHint).slice(0, 80) : null,
+      sampleMode,
+      sample_mode: sampleMode,
+      replayMode,
+      replay_mode: replayMode,
       vehicleCommandEnabled: false,
       retainedRawText: false
     };
