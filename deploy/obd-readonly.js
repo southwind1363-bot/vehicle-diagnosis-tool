@@ -15295,6 +15295,7 @@
     const findIndex = (...aliases) => aliases.map((alias) => headerIndex.get(normalizeHeader(alias))).find((index) => Number.isInteger(index));
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード", "DTCコード", "診断トラブルコード");
     const dtcFormatIndex = findIndex("code format", "dtc format", "code type", "dtc type", "manufacturer specific");
+    const dtcDescriptionIndex = findIndex("description", "dtc description", "fault description", "failure description", "explanation of dtc");
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
     const statusIndex = findIndex("status", "dtc status", "state", "状態", "ステータス", "DTC状態");
     const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask", "status of dtc", "uds status byte");
@@ -15445,6 +15446,7 @@
       if (!protocol) protocol = rowProtocol;
       const dtc = cellAt(dtcIndex, 48);
       const dtcFormat = cellAt(dtcFormatIndex, 48).toLowerCase();
+      const reportedDtcDescription = normalizeDtcReportedDescription(cellAt(dtcDescriptionIndex, 240));
       const reportedDtcStatus = normalizeDtcReportedStatus(cellAt(statusIndex, 80));
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const dtcStatusByte = cellAt(dtcStatusByteIndex, 12);
@@ -15505,6 +15507,7 @@
           ...(dtcStatusByte ? { status_byte: dtcStatusByte } : {}),
           ...(dtcSeverity ? { severity: dtcSeverity } : {}),
           ...(dtcOccurrenceCount ? { occurrence_count: dtcOccurrenceCount } : {}),
+          ...(reportedDtcDescription ? { reported_description: reportedDtcDescription } : {}),
           ...(reportedDtcStatus ? { reported_status: reportedDtcStatus } : {}),
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
