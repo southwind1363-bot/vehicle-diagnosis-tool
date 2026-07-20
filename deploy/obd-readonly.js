@@ -17385,7 +17385,7 @@
     const nonFreezeLines = [];
     let inFreezeFrame = false;
     let triggerDtc = null;
-    const isFreezeFrameHeading = (text) => /(?:freeze[\s_-]*frame|フリーズ\s*フレーム|\bmode\s*0?2\s+pid\s*(?:0x)?[0-9a-f]{2}\s*[:=])/i.test(text);
+    const isFreezeFrameHeading = (text) => /(?:freeze[\s_-]*frame|フリーズ\s*フレーム|(?:\bmode\s*0?2\s+pid\s*|(?:^|\s)0?2\s*(?:pid\s*)?)(?:0x)?[0-9a-f]{2}\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:live\s*data|data\s*stream|readiness|mode\s*0?6|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|対応\s*pid|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
@@ -17407,12 +17407,22 @@
   }
 
   function extractTextFreezeFrameSnapshot(section = {}) {
-    const responseMatch = (section.freezeLines || [])
-      .map((line) => String(line || "").trim().match(/(?:\bmode\s*0?2\s*)?\bpid\s*(?:0x)?([0-9a-f]{2})\s*[:=]\s*(?:42\s+(?:0x)?\1\s+)?((?:[0-9a-f]{2}\s*){2,9})$/i))
+    const response = (section.freezeLines || [])
+      .map((line) => String(line || "").trim().match(/^(?:mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,9})$/i))
+      .map((match) => {
+        if (!match) return null;
+        const pid = match[1].toUpperCase();
+        const responseBytes = parseObdHexBytes(match[2]);
+        const framePayload = responseBytes[0] === 0x42
+          ? responseBytes[1] === parseInt(pid, 16) ? responseBytes.slice(2) : []
+          : responseBytes;
+        const payloadLength = getStandardPidPayloadLength(pid);
+        return payloadLength && framePayload.length === payloadLength + 1 ? { pid, framePayload } : null;
+      })
       .find(Boolean);
-    if (responseMatch) {
+    if (response) {
       return decodeFreezeFrameResponse({
-        raw: "42 " + responseMatch[1] + " " + responseMatch[2],
+        raw: "42 " + response.pid + " " + formatRawPidBytes(response.framePayload),
         source: "scanner_text_freeze_frame"
       });
     }
