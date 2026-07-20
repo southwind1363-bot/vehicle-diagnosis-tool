@@ -267,6 +267,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       data: {
         protocol: replaySnapshot.protocol,
         trigger_dtc: replaySnapshot.triggerDtc,
+        trigger_dtc_entries: replaySnapshot.triggerDtcEntries,
         values: replaySnapshot.freezeFrameValues
       }
     };
@@ -425,6 +426,7 @@ export function decodeReplayLog(text) {
   const readoutObserved = { freeze_frame: false, supported_pids: false, ecu_info: false, onboard_monitor: false, live_pid_snapshot: false };
   const readoutErrors = { freeze_frame: null, supported_pids: null, ecu_info: null, onboard_monitor: null, live_pid_snapshot: null };
   let triggerDtc = null;
+  const triggerDtcEntries = [];
 
   const recordSupportedPid = (ecu, pid) => {
     if (!pid) return;
@@ -486,7 +488,14 @@ export function decodeReplayLog(text) {
           return;
         }
         const decodedDtc = decodeDtcPair(bytes[serviceIndex + 3], bytes[serviceIndex + 4]);
-        triggerDtc = decodedDtc === "P0000" ? null : decodedDtc;
+        if (decodedDtc !== "P0000") {
+          triggerDtc = triggerDtc || decodedDtc;
+          triggerDtcEntries.push({
+            code: decodedDtc,
+            frame_number: frameNumber,
+            ...(ecu ? { source_ecu: ecu } : {})
+          });
+        }
         readoutObserved.freeze_frame = true;
         return;
       }
@@ -570,6 +579,7 @@ export function decodeReplayLog(text) {
     ecuInfoValues: uniqueBy(ecuInfoValues, (item) => `${item.id}:${item.source_ecu || ""}`),
     onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}:${item.source_ecu || ""}`),
     triggerDtc,
+    triggerDtcEntries: uniqueBy(triggerDtcEntries, (item) => `${item.code}:${item.frame_number}:${item.source_ecu || ""}`),
     supportedPids: [...supportedPids].sort(),
     supportedPidEcuSnapshots: [...new Set([...supportedPidsByEcu.keys(), ...supportedPidPageBasesByEcu.keys()])]
       .sort()
