@@ -14361,6 +14361,14 @@
       const isConsecutiveFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x20;
 
       if (isFirstFrame) {
+        if (pendingIsoTp.has(metadata.ecu)) {
+          const interrupted = pendingIsoTp.get(metadata.ecu);
+          pendingIsoTp.delete(metadata.ecu);
+          packets.push({
+            bytes: interrupted.payload.slice(0, interrupted.expectedLength),
+            metadata: finalizeIsoTpMetadata({ ...interrupted.metadata, incomplete: true, sequenceError: true, interrupted: true })
+          });
+        }
         const expectedLength = ((pci & 0x0F) * 0x100) + bytes[1];
         const payload = bytes.slice(2);
         pendingIsoTp.set(metadata.ecu, {
@@ -14376,7 +14384,15 @@
         return;
       }
 
-      if (isConsecutiveFrame && pendingIsoTp.has(metadata.ecu)) {
+      if (isConsecutiveFrame && !pendingIsoTp.has(metadata.ecu)) {
+        packets.push({
+          bytes: bytes.slice(1),
+          metadata: finalizeIsoTpMetadata({ ...metadata, isoTp: true, incomplete: true, sequenceError: true, orphanConsecutiveFrame: true, frameCount: 1 })
+        });
+        return;
+      }
+
+      if (isConsecutiveFrame) {
         const current = pendingIsoTp.get(metadata.ecu);
         const sequenceNumber = pci & 0x0F;
         if (sequenceNumber !== current.metadata.nextSequenceNumber) current.metadata.sequenceError = true;
