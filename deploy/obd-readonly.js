@@ -1883,7 +1883,14 @@
   }
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object"
+      ? response.data && typeof response.data === "object"
+        ? {
+          ...response.data,
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+        }
+        : response
+      : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const items = collectEcuInfoRows(data).map((row) => {
       if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
