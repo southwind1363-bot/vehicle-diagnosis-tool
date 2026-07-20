@@ -13521,6 +13521,7 @@
       ? {
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
@@ -13529,6 +13530,10 @@
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const rows = collectEcuInfoRows(sourceInput);
     const items = rows
+      .map((row) => {
+        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        return readObdResponseSourceEcu(row) ? row : { ...row, source_ecu: sourceEcu };
+      })
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);
     const observedSourceEcus = [...new Set(items.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
