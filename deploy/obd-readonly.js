@@ -13978,13 +13978,18 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const sourceEcu = readObdResponseSourceEcu(input);
-    const hasMode09Frame = bytes.some((byte, index) => byte === 0x49 && index + 2 < bytes.length);
+    const isKnownMode09FrameStart = (index) => {
+      if (bytes[index] !== 0x49 || !Number.isInteger(bytes[index + 1])) return false;
+      const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
+      return ecuInfoItemCatalog.some((item) => item.infoType === infoType);
+    };
+    const hasMode09Frame = bytes.some((byte, index) => isKnownMode09FrameStart(index));
     const readoutStatus = hasMode09Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
     for (let index = 0; index < bytes.length - 2; index++) {
-      if (bytes[index] !== 0x49) continue;
+      if (!isKnownMode09FrameStart(index)) continue;
       const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
-      const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && byte === 0x49);
+      const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && isKnownMode09FrameStart(nextIndex));
       const end = nextSegment > index ? nextSegment : bytes.length;
       const payload = trimEcuInfoPayload(bytes.slice(index + 2, end));
       const catalogItem = ecuInfoItemCatalog.find((item) => item.infoType === infoType);
