@@ -13615,13 +13615,14 @@
       ? {
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
-    const rows = Array.isArray(sourceInput.tests)
+    const rows = (Array.isArray(sourceInput.tests)
       ? sourceInput.tests
       : Array.isArray(sourceInput.values)
         ? sourceInput.values
@@ -13651,7 +13652,11 @@
                                 ? sourceInput.testRows
                                 : Array.isArray(sourceInput.items)
                                   ? sourceInput.items
-                                  : [];
+                                  : [])
+      .map((row) => {
+        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        return readObdResponseSourceEcu(row) ? row : { ...row, source_ecu: sourceEcu };
+      });
     const tests = rows
       .map((row, index) => {
         if (!row || typeof row !== "object") return null;
