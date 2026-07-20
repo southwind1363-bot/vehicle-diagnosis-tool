@@ -12923,13 +12923,14 @@
       ? {
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
+        source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
-    const rows = Array.isArray(sourceInput.values)
+    const rows = (Array.isArray(sourceInput.values)
       ? sourceInput.values
       : Array.isArray(sourceInput.freeze_frame)
         ? sourceInput.freeze_frame
@@ -12953,7 +12954,12 @@
                       ? sourceInput.monitor_values
                       : Array.isArray(sourceInput.items)
                         ? sourceInput.items
-                        : [];
+                        : [])
+      .map((row) => {
+        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        const rowSourceEcu = readObdResponseSourceEcu(row);
+        return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+      });
     const monitorValues = rows
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean)
@@ -13004,7 +13010,7 @@
       const frameInput = pickDefined(row.frame_number, row.frameNumber, row.trigger_frame_number, row.triggerFrameNumber, null);
       const frame = Number(frameInput);
       const frameNumber = frameInput !== null && frameInput !== "" && Number.isInteger(frame) && frame >= 0 && frame <= 255 ? frame : null;
-      const ecu = readObdResponseSourceEcu(row);
+      const ecu = readObdResponseSourceEcu(row) || sourceEcu;
       return {
         code,
         frameNumber,
