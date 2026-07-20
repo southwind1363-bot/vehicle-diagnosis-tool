@@ -3214,6 +3214,8 @@
       ecuInfoSnapshot?.sourceEcu,
       ecuInfoSnapshot?.source_ecu,
       ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      onboardMonitorSnapshot?.sourceEcu,
+      onboardMonitorSnapshot?.source_ecu,
       ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       supportedPidMatrix?.sourceEcu,
       supportedPidMatrix?.source_ecu,
