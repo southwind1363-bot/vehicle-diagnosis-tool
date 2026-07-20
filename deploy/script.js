@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.18";
+const APP_VERSION = "3.3.19";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7468,6 +7468,7 @@ function analyzeObdScannerImport() {
   const currentConnectionStatus = currentSession?.connectionStatus || currentSession?.connection_status || null;
   const currentVciDevices = currentSession?.vciDevices || currentSession?.vci_devices || currentSession?.vciList?.devices || currentSession?.vci_list?.devices || [];
   const currentAdapterIdentity = currentSession?.adapterIdentity || currentSession?.adapter_identity || null;
+  const currentWebSerialReadoutSummary = currentSession?.webSerialReadoutSummary || currentSession?.web_serial_readout_summary || null;
   const currentSourceLength = currentSession?.sourceLength ?? currentSession?.source_length;
   const currentHadSensitiveIdentifier = currentSession?.hadSensitiveIdentifier === true || currentSession?.had_sensitive_identifier === true;
   const currentProtocol = currentSession?.protocol || currentSession?.obd_protocol || null;
@@ -7520,7 +7521,8 @@ function analyzeObdScannerImport() {
     obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
       session_id: obdDevSession.lastSession?.sessionId || "scanner-bridge-merge-session",
       scan_session: analysis,
-      readoutInterface: currentReadoutInterface
+      readoutInterface: currentReadoutInterface,
+      webSerialReadoutSummary: currentWebSerialReadoutSummary || undefined
     });
   }
   if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport()) {
@@ -7530,7 +7532,8 @@ function analyzeObdScannerImport() {
       scan_session: structuredImportSession,
       vehicleProfile: structuredImportVehicleProfile || undefined,
       vehicleApplicability: buildSelectedObdVehicleApplicability(structuredImportVehicleProfile) || undefined,
-      readoutInterface: importedReadoutInterface || buildSelectedObdReadoutInterface()
+      readoutInterface: importedReadoutInterface || buildSelectedObdReadoutInterface(),
+      webSerialReadoutSummary: currentWebSerialReadoutSummary || undefined
     });
   }
   if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport()) {
@@ -7555,7 +7558,8 @@ function analyzeObdScannerImport() {
       hadSensitiveIdentifier: analysis.hadSensitiveIdentifier === true,
       vehicleProfile: textImportVehicleProfile || undefined,
       vehicleApplicability: buildSelectedObdVehicleApplicability(textImportVehicleProfile) || undefined,
-      readoutInterface: buildSelectedObdReadoutInterface()
+      readoutInterface: buildSelectedObdReadoutInterface(),
+      webSerialReadoutSummary: currentWebSerialReadoutSummary || undefined
     });
   }
   const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;
