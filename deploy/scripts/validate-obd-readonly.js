@@ -6892,6 +6892,22 @@ const bridgeSummaryLivePidResponseAliases = obd.buildBridgeSessionSummary({
 });
 check(bridgeSummaryLivePidResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode live_pid_response alias input");
 check(bridgeSummaryLivePidResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge session summary did not accept ecu_response_summary_response alias input");
+const bridgeSummaryLivePidReadinessIsolation = obd.buildBridgeSessionSummary({
+  livePidResponse: { raw: "41 01 00 07 65 00" }
+});
+check(bridgeSummaryLivePidReadinessIsolation.readinessSnapshot?.readinessReadoutStatus === "blocked" && bridgeSummaryLivePidReadinessIsolation.readoutCoverage?.itemById?.readiness_snapshot?.status === "missing" && bridgeSummaryLivePidReadinessIsolation.wouldTransmit === false, "Bridge session summary treated a live PID response as an explicit readiness readout");
+const bridgeSummaryExplicitReadinessResponse = obd.buildBridgeSessionSummary({
+  readinessResponse: { raw: "41 01 00 07 65 00" }
+});
+check(bridgeSummaryExplicitReadinessResponse.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeSummaryExplicitReadinessResponse.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && bridgeSummaryExplicitReadinessResponse.wouldTransmit === false, "Bridge session summary did not retain an explicit readiness response as a read-only readiness readout");
+const bridgeImportLivePidReadinessIsolation = obd.buildBridgeDiagnosticImport({
+  livePidResponse: { raw: "41 01 00 07 65 00" }
+});
+check(bridgeImportLivePidReadinessIsolation.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "blocked" && bridgeImportLivePidReadinessIsolation.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "missing" && bridgeImportLivePidReadinessIsolation.vehicleCommandEnabled === false && bridgeImportLivePidReadinessIsolation.wouldTransmit === false, "Bridge diagnostic import treated a live PID response as an explicit readiness readout");
+const bridgeImportExplicitReadinessResponse = obd.buildBridgeDiagnosticImport({
+  readinessResponse: { raw: "41 01 00 07 65 00" }
+});
+check(bridgeImportExplicitReadinessResponse.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeImportExplicitReadinessResponse.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && bridgeImportExplicitReadinessResponse.vehicleCommandEnabled === false && bridgeImportExplicitReadinessResponse.wouldTransmit === false, "Bridge diagnostic import did not retain an explicit readiness response as a read-only readiness readout");
 const bridgeSummaryCamelResponseAliases = obd.buildBridgeSessionSummary({
   dtcSnapshot: bridgeDtcSnapshot,
   livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
@@ -16697,6 +16713,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2662");
+  console.log("OBD read-only safety checks: 2666");
   console.log("Errors: 0");
 }
