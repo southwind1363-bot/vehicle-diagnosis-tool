@@ -326,6 +326,8 @@ try {
 
   const multiEcuReplay = decodeReplayLog(["can0 7E8#04410C1AF8", "can0 7E9#04410C1B58"].join("\n"));
   check(multiEcuReplay.liveValues.length === 2 && multiEcuReplay.liveValues.every((item) => item.id === "engine_speed" && ["7E8", "7E9"].includes(item.source_ecu)), "replay live values lost ECU identity or collapsed values from separate ECUs");
+  const multiEcuSupportedPidReplay = decodeReplayLog(["can0 7E8#06410080000000", "can0 7E9#06410040000000"].join("\n"));
+  check(multiEcuSupportedPidReplay.supportedPidEcuSnapshots?.some((item) => item.source_ecu === "7E8" && item.supported_pid_page_bases.includes("00") && item.supported_pids.includes("01")) && multiEcuSupportedPidReplay.supportedPidEcuSnapshots?.some((item) => item.source_ecu === "7E9" && item.supported_pid_page_bases.includes("00") && item.supported_pids.includes("02")), "replay supported PID pages lost ECU-specific capability boundaries");
 
   const replayIsoTpCases = [
     ["complete", ["can0 7E8#100B49040143414C", "can0 7E8#212D31323334"].join("\n"), true],

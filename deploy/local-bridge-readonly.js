@@ -294,7 +294,8 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        supported_pids: replaySnapshot.supportedPids
+        supported_pids: replaySnapshot.supportedPids,
+        supported_pid_ecu_snapshots: replaySnapshot.supportedPidEcuSnapshots
       }
     };
   }
@@ -416,12 +417,30 @@ export function decodeReplayLog(text) {
   const ecuInfoValues = [];
   const onboardMonitorTests = [];
   const supportedPids = new Set();
+  const supportedPidsByEcu = new Map();
+  const supportedPidPageBasesByEcu = new Map();
   const ecus = new Set();
   const dtcReadoutObserved = { stored: false, pending: false, permanent: false };
   const dtcReadoutErrors = { stored: null, pending: null, permanent: null };
   const readoutObserved = { freeze_frame: false, supported_pids: false, ecu_info: false, onboard_monitor: false, live_pid_snapshot: false };
   const readoutErrors = { freeze_frame: null, supported_pids: null, ecu_info: null, onboard_monitor: null, live_pid_snapshot: null };
   let triggerDtc = null;
+
+  const recordSupportedPid = (ecu, pid) => {
+    if (!pid) return;
+    supportedPids.add(pid);
+    if (!ecu) return;
+    const ecuPids = supportedPidsByEcu.get(ecu) || new Set();
+    ecuPids.add(pid);
+    supportedPidsByEcu.set(ecu, ecuPids);
+  };
+
+  const recordSupportedPidPageBase = (ecu, pid) => {
+    if (!ecu || !pid) return;
+    const pageBases = supportedPidPageBasesByEcu.get(ecu) || new Set();
+    pageBases.add(pid);
+    supportedPidPageBasesByEcu.set(ecu, pageBases);
+  };
 
   packets.forEach((packet) => {
     const { ecu, bytes } = packet;
@@ -482,7 +501,7 @@ export function decodeReplayLog(text) {
         freeze_frame_number: frameNumber,
         ...(ecu ? { source_ecu: ecu } : {})
       }));
-      supportedPids.add(pid);
+      recordSupportedPid(ecu, pid);
       return;
     }
 
@@ -518,7 +537,9 @@ export function decodeReplayLog(text) {
           return;
         }
         readoutObserved.supported_pids = true;
-        decodeSupportedPids(bitmap, bytes[serviceIndex + 1]).forEach((item) => supportedPids.add(item));
+        const decodedPids = decodeSupportedPids(bitmap, bytes[serviceIndex + 1]);
+        decodedPids.forEach((item) => recordSupportedPid(ecu, item));
+        recordSupportedPidPageBase(ecu, pid);
         return;
       }
       const decodedValues = decodeLivePidValues(pid, bytes.slice(serviceIndex + 2));
@@ -528,7 +549,7 @@ export function decodeReplayLog(text) {
       }
       readoutObserved.live_pid_snapshot = true;
       decodedValues.forEach((decoded) => liveValues.push(ecu ? { ...decoded, source_ecu: ecu } : decoded));
-      supportedPids.add(pid);
+      recordSupportedPid(ecu, pid);
     }
   });
 
@@ -549,7 +570,14 @@ export function decodeReplayLog(text) {
     ecuInfoValues: uniqueBy(ecuInfoValues, (item) => `${item.id}:${item.source_ecu || ""}`),
     onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}:${item.source_ecu || ""}`),
     triggerDtc,
-    supportedPids: [...supportedPids].sort()
+    supportedPids: [...supportedPids].sort(),
+    supportedPidEcuSnapshots: [...new Set([...supportedPidsByEcu.keys(), ...supportedPidPageBasesByEcu.keys()])]
+      .sort()
+      .map((ecu) => ({
+        source_ecu: ecu,
+        supported_pids: [...(supportedPidsByEcu.get(ecu) || new Set())].sort(),
+        supported_pid_page_bases: [...(supportedPidPageBasesByEcu.get(ecu) || new Set())].sort()
+      }))
   };
 }
 
