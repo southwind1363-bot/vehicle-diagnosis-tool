@@ -277,6 +277,33 @@ try {
     await new Promise((resolve) => incompleteReplayServer.close(resolve));
   }
 
+  const malformedReplayLog = [
+    "can0 7E8#04420C001A",
+    "can0 7E8#0441001818",
+    "can0 7E8#024904",
+    "can0 7E8#0446010100",
+    "can0 7E8#03410C1A"
+  ].join("\n");
+  const malformedReplayServer = createLocalBridgeApp({ pairingToken: token, replayLogText: malformedReplayLog });
+  const malformedReplayPort = await new Promise((resolve) => {
+    malformedReplayServer.listen(0, "127.0.0.1", () => resolve(malformedReplayServer.address().port));
+  });
+  try {
+    const malformedReplayReadouts = [
+      ["read_freeze_frame", "replay_freeze_frame_payload_unparsed"],
+      ["read_supported_pids", "replay_supported_pids_payload_incomplete"],
+      ["read_ecu_info", "replay_ecu_info_payload_unparsed"],
+      ["read_onboard_monitor", "replay_onboard_monitor_payload_incomplete"],
+      ["read_live_pid_snapshot", "replay_live_pid_payload_unparsed"]
+    ];
+    for (const [intent, error] of malformedReplayReadouts) {
+      const response = await post(malformedReplayPort, intent);
+      check(response.ok === false && response.errors.includes(error), `replay ${intent} treated a malformed payload as an empty valid readout`);
+    }
+  } finally {
+    await new Promise((resolve) => malformedReplayServer.close(resolve));
+  }
+
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
   check(replayEcuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "replay ECU info did not decode ECU name");
@@ -364,6 +391,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 145");
+  console.log("Local bridge read-only checks: 150");
   console.log("Errors: 0");
 }
