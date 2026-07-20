@@ -2462,6 +2462,21 @@ check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.devi
 check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.observedUse.includes("スマホアプリ") && item.observedUse.includes("Bluetooth読取")), "ELM327 miniのスマホBluetooth使用実績を保持できません");
 check(vehicleInterfaceCatalog.every((item) => !Object.keys(item).some((key) => /serial|activation/i.test(key))), "VCIカタログに個体識別子または認証情報を保存しています");
 check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.readScopeCandidates.includes("Mode 03 保存DTC")), "ELM327候補の読取範囲が不足しています");
+const elm327PromptedCoreSession = obd.buildScanSessionFromObdText([
+  ">03",
+  "43 01 71 03 00",
+  ">0100",
+  "41 00 18 18 00 01",
+  ">0101",
+  "41 01 00 07 65 00",
+  ">010C",
+  "41 0C 1A F8",
+  ">0202",
+  "42 02 00 01 71",
+  ">020C",
+  "42 0C 00 1A F8"
+].join("\r\n"));
+check(elm327PromptedCoreSession?.dtcSnapshot?.codes?.join(",") === "P0171,P0300" && elm327PromptedCoreSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726) && elm327PromptedCoreSession.freezeFrameSnapshot?.triggerDtc === "P0171" && elm327PromptedCoreSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726) && elm327PromptedCoreSession.readinessSnapshot?.readinessReadoutStatus === "reported" && elm327PromptedCoreSession.supportedPidMatrix?.supportedPids?.includes("0C") && elm327PromptedCoreSession.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && elm327PromptedCoreSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && elm327PromptedCoreSession.vehicleCommandEnabled === false && elm327PromptedCoreSession.wouldTransmit === false, "ELM327 command-prompted core readouts were not separated into read-only DTC, PID, freeze-frame, readiness, and supported-PID snapshots");
 check(interfaceCatalog.some((item) => item.id === "user-vci-rcmall-mks-canable-v2-pro" && item.tooling.includes("SavvyCAN")), "CANable/SavvyCAN候補がありません");
 check(vehicleInterfaceCatalog.some((item) => item.id === "user-vci-thinkcar-bluetooth" && item.progress_percent === 26 && item.current_status === "モバイル読取経路の準備中" && item.platform_sources?.length === 2), "スマホBluetooth VCIの経路整理が不足しています");
 check(interfaceCatalog.every((item) => item.vehicleCommandEnabled === false), "VCI候補で車両コマンドが有効です");
@@ -16731,6 +16746,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2672");
+  console.log("OBD read-only safety checks: 2673");
   console.log("Errors: 0");
 }
