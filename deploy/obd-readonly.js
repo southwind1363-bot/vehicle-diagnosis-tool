@@ -533,10 +533,11 @@
     Object.freeze({
       intent: "read_supported_pids",
       label: "Supported PID snapshot",
-      dataShape: Object.freeze(["protocol", "supported_pids", "captured_at"]),
+      dataShape: Object.freeze(["protocol", "supported_pids", "supported_pid_ecu_snapshots", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,
         supported_pids: Object.freeze([]),
+        supported_pid_ecu_snapshots: Object.freeze([]),
         captured_at: null
       })
     }),
