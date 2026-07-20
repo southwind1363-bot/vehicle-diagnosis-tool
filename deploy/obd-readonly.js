@@ -477,6 +477,7 @@
     vehicleCommandEnabled: false,
     executionEnabled: false,
     maxPayloadBytes: 1000000,
+    maxEnvelopeCount: 64,
     allowedInterfaceIds: Object.freeze(["user-vci-thinkcar-bluetooth", "user-vci-elm327"]),
     allowedReadIntents: Object.freeze([...localBridgeContract.allowedReadIntents]),
     blockedWriteIntents: Object.freeze([...localBridgeContract.blockedWriteIntents]),
@@ -1173,7 +1174,10 @@
     };
     if (!evaluation.accepted) return blockedResult;
 
-    const data = input.data;
+    const data = {
+      ...input.data,
+      captured_at: input.data.captured_at || input.data.capturedAt || evaluation.capturedAt
+    };
     const readoutInterface = normalizeReadoutInterfaceSnapshot({
       interface_id: evaluation.interfaceId,
       interface_label: evaluation.interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR Bluetooth" : "ELM327",
@@ -1219,6 +1223,181 @@
       session,
       readoutInterface,
       readout_interface: readoutInterface
+    };
+  }
+
+  function buildNativeConnectorScanSession(input = {}) {
+    const envelopes = Array.isArray(input)
+      ? input
+      : Array.isArray(input.envelopes)
+        ? input.envelopes
+        : [];
+    const blockedResult = (errors, evaluations = []) => ({
+      schemaVersion: "native_connector_scan_session_v1",
+      schema_version: "native_connector_scan_session_v1",
+      ok: false,
+      accepted: false,
+      partial: false,
+      blocked: true,
+      envelopeCount: envelopes.length,
+      envelope_count: envelopes.length,
+      acceptedEnvelopeCount: 0,
+      accepted_envelope_count: 0,
+      rejectedEnvelopeCount: envelopes.length,
+      rejected_envelope_count: envelopes.length,
+      evaluations,
+      errors,
+      session: null,
+      retainedRawPayload: false,
+      retained_raw_payload: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
+    });
+    if (!envelopes.length) return blockedResult(["empty_batch"]);
+    if (envelopes.length > nativeConnectorContract.maxEnvelopeCount) return blockedResult(["batch_too_large"]);
+
+    const evaluations = envelopes.map((envelope, index) => ({
+      index,
+      evaluation: evaluateNativeConnectorEnvelope(envelope)
+    }));
+    const hardErrorIds = new Set([
+      "unsupported_schema",
+      "unsupported_platform",
+      "unsupported_interface",
+      "blocked_write_intent",
+      "unsupported_intent",
+      "payload_too_large",
+      "unsafe_execution_flags",
+      "missing_schema_version",
+      "missing_interface_id",
+      "missing_platform",
+      "missing_intent",
+      "missing_captured_at",
+      "missing_data"
+    ]);
+    const hardFailures = evaluations.filter(({ evaluation }) => evaluation.errors.some((error) => hardErrorIds.has(error)));
+    const interfaceIds = [...new Set(evaluations.map(({ evaluation }) => evaluation.interfaceId).filter(Boolean))];
+    if (interfaceIds.length > 1) {
+      return blockedResult(["mixed_interface_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+    }
+    if (hardFailures.length) {
+      return blockedResult(
+        [...new Set(hardFailures.flatMap(({ evaluation }) => evaluation.errors.filter((error) => hardErrorIds.has(error))))],
+        evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] }))
+      );
+    }
+
+    const acceptedEntries = evaluations
+      .filter(({ evaluation }) => evaluation.accepted)
+      .map(({ index, evaluation }) => ({ index, evaluation, envelope: envelopes[index] }))
+      .sort((left, right) => Date.parse(left.evaluation.capturedAt) - Date.parse(right.evaluation.capturedAt));
+    const rejectedEntries = evaluations.filter(({ evaluation }) => !evaluation.accepted);
+    if (!acceptedEntries.length) {
+      return blockedResult(
+        [...new Set(rejectedEntries.flatMap(({ evaluation }) => evaluation.errors))],
+        evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] }))
+      );
+    }
+
+    const readoutInput = {};
+    const livePidSamples = [];
+    acceptedEntries.forEach(({ evaluation, envelope }) => {
+      const data = {
+        ...envelope.data,
+        captured_at: envelope.data.captured_at || envelope.data.capturedAt || evaluation.capturedAt
+      };
+      const intentInput = {
+        bridge_status: { connection_status: data },
+        list_vci: { vci_devices: data },
+        adapter_identity: { adapter_identity: data },
+        read_stored_dtc: { stored_dtc_snapshot: data },
+        read_pending_dtc: { pending_dtc_snapshot: data },
+        read_permanent_dtc: { permanent_dtc_snapshot: data },
+        read_freeze_frame: { freeze_frame_snapshot: data },
+        read_supported_pids: { supported_pid_matrix: data },
+        read_ecu_info: { ecu_info_snapshot: data },
+        read_onboard_monitor: { onboard_monitor_snapshot: data },
+        read_live_pid_snapshot: data.readout_id === "readiness_snapshot" || String(data.pid || "").toUpperCase() === "01"
+          ? { readiness_snapshot: data }
+          : { live_pid_snapshot: data }
+      }[evaluation.intent] || {};
+      Object.assign(readoutInput, intentInput);
+      if (intentInput.live_pid_snapshot) livePidSamples.push(intentInput.live_pid_snapshot);
+    });
+    if (livePidSamples.length) readoutInput.live_pid_timeline = livePidSamples;
+
+    const interfaceId = acceptedEntries[0].evaluation.interfaceId;
+    const startedAt = acceptedEntries[0].evaluation.capturedAt;
+    const completedAt = acceptedEntries.at(-1).evaluation.capturedAt;
+    const partial = rejectedEntries.length > 0;
+    const warnings = partial ? ["native_connector_partial_batch"] : [];
+    const readoutInterface = normalizeReadoutInterfaceSnapshot({
+      interface_id: interfaceId,
+      interface_label: interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR Bluetooth" : "ELM327",
+      device_model: interfaceId === "user-vci-thinkcar-bluetooth" ? "TCMa" : "ELM327 mini",
+      readout_route: "native_connector_readout",
+      platform: "ios",
+      observed_use: "native connector read-only scan session",
+      hardware_compatibility_confirmed: false
+    });
+    const session = buildDiagnosticScanSession({
+      ...readoutInput,
+      session_id: "native-connector-scan-session",
+      source: "native_connector",
+      captured_at: completedAt,
+      readout_interface: readoutInterface,
+      warnings,
+      retained_raw_payload: false,
+      vehicle_command_enabled: false,
+      execution_enabled: false,
+      would_transmit: false
+    });
+    const evaluationSummary = evaluations.map(({ index, evaluation }) => ({
+      index,
+      accepted: evaluation.accepted,
+      intent: evaluation.intent,
+      capturedAt: evaluation.capturedAt,
+      captured_at: evaluation.capturedAt,
+      errors: [...evaluation.errors]
+    }));
+
+    return {
+      schemaVersion: "native_connector_scan_session_v1",
+      schema_version: "native_connector_scan_session_v1",
+      ok: true,
+      accepted: true,
+      partial,
+      blocked: false,
+      interfaceId,
+      interface_id: interfaceId,
+      platform: "ios",
+      startedAt,
+      started_at: startedAt,
+      completedAt,
+      completed_at: completedAt,
+      envelopeCount: envelopes.length,
+      envelope_count: envelopes.length,
+      acceptedEnvelopeCount: acceptedEntries.length,
+      accepted_envelope_count: acceptedEntries.length,
+      rejectedEnvelopeCount: rejectedEntries.length,
+      rejected_envelope_count: rejectedEntries.length,
+      evaluations: evaluationSummary,
+      errors: [...new Set(rejectedEntries.flatMap(({ evaluation }) => evaluation.errors))],
+      session,
+      readoutInterface,
+      readout_interface: readoutInterface,
+      retainedRawPayload: false,
+      retained_raw_payload: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
     };
   }
 
@@ -18942,6 +19121,7 @@
     getNativeConnectorContract,
     evaluateNativeConnectorEnvelope,
     buildNativeConnectorDiagnosticImport,
+    buildNativeConnectorScanSession,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
