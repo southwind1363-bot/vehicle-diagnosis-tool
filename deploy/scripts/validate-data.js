@@ -131,6 +131,20 @@ for (const file of jsonFiles) {
       if (row.service_manual_required !== true) reportError(`${label}: generic 2026 DTC must require the service manual`);
     }
 
+    if (file === "imported-verified-dtc.json") {
+      if (!isDtc(row.code)) reportError(`${label}: verified imported DTC code is invalid`);
+      if (!isNonEmptyString(row.title)) reportError(`${label}: verified imported DTC title is missing`);
+      if (!isNonEmptyString(row.system)) reportError(`${label}: verified imported DTC system is missing`);
+      if (!isNonEmptyStringArray(row.check_order)) reportError(`${label}: verified imported DTC check_order is missing`);
+      if (!isSourceUrl(row.source_url) || !sourceUrlList(row.source_url).every((url) => /^https:\/\//.test(url))) {
+        reportError(`${label}: verified imported DTC requires an HTTPS source_url`);
+      }
+      if (!isIsoDate(row.source_date)) reportError(`${label}: verified imported DTC source_date is invalid`);
+      if (!isIsoDate(row.last_verified_date)) reportError(`${label}: verified imported DTC last_verified_date is invalid`);
+      if (row.service_manual_required !== true) reportError(`${label}: verified imported DTC must require the service manual`);
+      if (row.imported_definition_only !== true) reportError(`${label}: verified imported DTC must be definition-only`);
+    }
+
     if (file === "vehicle-model-catalog-domestic-2026.json" || file === "vehicle-model-catalog-domestic-2004-2026.json") {
       if (!row.maker) reportError(`${label}: maker がありません`);
       if (makers.has(row.maker)) reportError(`${label}: maker ${row.maker} が重複しています`);
