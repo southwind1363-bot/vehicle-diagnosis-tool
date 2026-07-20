@@ -15701,13 +15701,13 @@
     const lines = String(value || "").split(/\r?\n/);
     const rows = [];
     const rawDtcRows = lines.flatMap((line) => {
-      const match = String(line || "").trim().match(/^(?:mode\s*)?(03|07|0A)\s*[:=]\s*(?:4([37A])\s+)?((?:[0-9a-f]{2}\s*){2,16})$/i);
+      const match = String(line || "").trim().match(/^(mode\s*)?(03|07|0A)\s*[:=]\s*(?:4([37A])\s+)?((?:[0-9a-f]{2}\s*){2,16})$/i);
       if (!match) return [];
       const responseByService = { "03": "43", "07": "47", "0A": "4A" };
-      const response = responseByService[match[1]];
-      if (match[2] && response[1] !== match[2].toUpperCase()) return [];
+      const response = responseByService[match[2]];
+      if ((!match[1] && !match[3]) || (match[3] && response[1] !== match[3].toUpperCase())) return [];
       return decodeObdDtcResponse({
-        raw: response + " " + match[3],
+        raw: response + " " + match[4],
         source: "scanner_text_dtc"
       }).dtcs;
     });
