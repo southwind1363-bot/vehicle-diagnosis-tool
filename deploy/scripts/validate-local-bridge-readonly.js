@@ -318,6 +318,9 @@ try {
 
   const replayIsoTpCases = [
     ["complete", ["can0 7E8#100B49040143414C", "can0 7E8#212D31323334"].join("\n"), true],
+    ["dlc_complete", ["7E8 [8] 10 0B 49 04 01 43 41 4C", "7E8 [6] 21 2D 31 32 33 34"].join("\n"), true],
+    ["csv_complete", ["2026-07-20,7E8,8,10,0B,49,04,01,43,41,4C", "2026-07-20,7E8,6,21,2D,31,32,33,34"].join("\n"), true],
+    ["dlc_length_mismatch", ["7E8 [8] 10 0B 49 04 01 43 41", "7E8 [6] 21 2D 31 32 33 34"].join("\n"), false],
     ["incomplete", "can0 7E8#100B49040143414C", false],
     ["sequence_error", ["can0 7E8#100B49040143414C", "can0 7E8#222D31323334"].join("\n"), false],
     ["orphan", "can0 7E8#212D31323334", false]
@@ -415,6 +418,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 159");
+  console.log("Local bridge read-only checks: 162");
   console.log("Errors: 0");
 }

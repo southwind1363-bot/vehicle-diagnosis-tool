@@ -224,11 +224,11 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2630件",
-  bridgeValidationCheckLabel: "bridge検証 159件",
+  bridgeValidationCheckLabel: "bridge検証 162件",
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.13";
+const APP_VERSION = "3.3.14";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

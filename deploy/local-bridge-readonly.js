@@ -572,7 +572,7 @@ function reassembleReplayIsoTpPackets(packets = []) {
   };
 
   packets.forEach((packet) => {
-    const bytes = packet?.bytes || [];
+    const bytes = getReplayIsoTpTransportBytes(packet?.bytes || []);
     const pci = bytes[0];
     const isFirstFrame = packet?.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x10 && Number.isInteger(bytes[1]);
     const isConsecutiveFrame = packet?.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x20;
@@ -621,6 +621,15 @@ function reassembleReplayIsoTpPackets(packets = []) {
 
   pendingByEcu.forEach((_pending, ecu) => discardPending(ecu));
   return output;
+}
+
+function getReplayIsoTpTransportBytes(bytes = []) {
+  if (bytes[0] === bytes.length - 1 && isReplayIsoTpPci(bytes[1])) return bytes.slice(1);
+  return bytes;
+}
+
+function isReplayIsoTpPci(value) {
+  return Number.isInteger(value) && ((value & 0xF0) === 0x10 || (value & 0xF0) === 0x20);
 }
 
 function findReplayPositiveResponseIndex(bytes = []) {
