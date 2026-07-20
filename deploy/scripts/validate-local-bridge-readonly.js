@@ -324,6 +324,9 @@ try {
     check(snapshot.readoutObserved.live_pid_snapshot === expectedLiveReadout && snapshot.liveValues.length === (expectedLiveReadout ? 1 : 0), `replay ${name} framing was accepted outside a positive response boundary`);
   }
 
+  const multiEcuReplay = decodeReplayLog(["can0 7E8#04410C1AF8", "can0 7E9#04410C1B58"].join("\n"));
+  check(multiEcuReplay.liveValues.length === 2 && multiEcuReplay.liveValues.every((item) => item.id === "engine_speed" && ["7E8", "7E9"].includes(item.source_ecu)), "replay live values lost ECU identity or collapsed values from separate ECUs");
+
   const replayIsoTpCases = [
     ["complete", ["can0 7E8#100B49040143414C", "can0 7E8#212D31323334"].join("\n"), true],
     ["dlc_complete", ["7E8 [8] 10 0B 49 04 01 43 41 4C", "7E8 [6] 21 2D 31 32 33 34"].join("\n"), true],

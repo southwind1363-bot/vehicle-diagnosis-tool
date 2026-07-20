@@ -479,7 +479,8 @@ export function decodeReplayLog(text) {
       readoutObserved.freeze_frame = true;
       decodedValues.forEach((decoded) => freezeFrameValues.push({
         ...decoded,
-        freeze_frame_number: frameNumber
+        freeze_frame_number: frameNumber,
+        ...(ecu ? { source_ecu: ecu } : {})
       }));
       supportedPids.add(pid);
       return;
@@ -492,7 +493,7 @@ export function decodeReplayLog(text) {
         return;
       }
       readoutObserved.ecu_info = true;
-      ecuInfoValues.push(decoded);
+      ecuInfoValues.push(ecu ? { ...decoded, source_ecu: ecu } : decoded);
       return;
     }
 
@@ -503,7 +504,7 @@ export function decodeReplayLog(text) {
         return;
       }
       readoutObserved.onboard_monitor = true;
-      onboardMonitorTests.push(decoded);
+      onboardMonitorTests.push(ecu ? { ...decoded, source_ecu: ecu } : decoded);
       return;
     }
 
@@ -526,7 +527,7 @@ export function decodeReplayLog(text) {
         return;
       }
       readoutObserved.live_pid_snapshot = true;
-      decodedValues.forEach((decoded) => liveValues.push(decoded));
+      decodedValues.forEach((decoded) => liveValues.push(ecu ? { ...decoded, source_ecu: ecu } : decoded));
       supportedPids.add(pid);
     }
   });
@@ -543,10 +544,10 @@ export function decodeReplayLog(text) {
     readout_errors: { ...readoutErrors },
     ecuResponses: [...ecus].map((ecu) => ({ ecu, status: "replay", dtcs: dtcs.filter((item) => item.ecu === ecu).map((item) => item.code) })),
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
-    liveValues: uniqueBy(liveValues, (item) => item.id),
-    freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}`),
-    ecuInfoValues: uniqueBy(ecuInfoValues, (item) => item.id),
-    onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}`),
+    liveValues: uniqueBy(liveValues, (item) => `${item.id}:${item.source_ecu || ""}`),
+    freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}:${item.source_ecu || ""}`),
+    ecuInfoValues: uniqueBy(ecuInfoValues, (item) => `${item.id}:${item.source_ecu || ""}`),
+    onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}:${item.source_ecu || ""}`),
     triggerDtc,
     supportedPids: [...supportedPids].sort()
   };
