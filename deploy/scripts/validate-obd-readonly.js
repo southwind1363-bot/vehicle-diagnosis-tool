@@ -2536,7 +2536,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2730件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('モバイルVCI読取成否と再試行結果を分離'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2741件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('モバイルVCIのECU別読取結果を保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2663,7 +2663,7 @@ check(appSource.includes('const obdLiveObservationCondition = document.querySele
 check(appSource.includes('function buildLivePidTimelineChartRows(timeline = null)') && appSource.includes('.filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)') && appSource.includes('heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55') && appSource.includes('delta: row.points.at(-1)?.value - row.points[0]?.value') && appSource.includes('変化 ${row.delta') && appSource.includes('obd-timeline-chart-bar'), "Live PID graph should chart only numeric values from the latest observation condition");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
-check(appSource.includes('recentMilestone: "モバイルVCI読取成否と再試行結果を分離"'), "OBD core progress should describe the latest completed session-integrity milestone");
+check(appSource.includes('recentMilestone: "モバイルVCIのECU別読取結果を保持"'), "OBD core progress should describe the latest completed session-integrity milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
@@ -2769,8 +2769,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.83";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.83";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.83", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.84";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.84";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.84", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -2831,7 +2831,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "モバイルVCI読取成否と再試行結果を分離"'), "OBD core progress snapshot should show the latest session-integrity milestone");
+check(appSource.includes('recentMilestone: "モバイルVCIのECU別読取結果を保持"'), "OBD core progress snapshot should show the latest session-integrity milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3225,6 +3225,65 @@ const sameTimestampNativeScanSession = obd.buildNativeConnectorScanSession([
 ]);
 check(sameTimestampNativeScanSession.session?.dtcSnapshot?.codes?.includes("P0171") && !sameTimestampNativeScanSession.session?.dtcSnapshot?.codes?.includes("P0300"), "同時刻のiPhoneコネクタ応答で最大sequenceを最新として採用していません");
 check(appSource.includes('implementationProgressPercent') && appSource.includes('実機適合:') && appSource.includes('有線OBD2適合確認'), "VCI実装進捗と実機適合状態を画面で分離できません");
+check(nativeConnectorContract.readoutScopeFields?.includes("readout_scope_id") && nativeConnectorContract.readoutScopeFields?.includes("readout_attempt") && nativeConnectorContract.completionManifestFields.includes("expected_readout_scopes") && nativeConnectorContract.maxReadoutAttempt === 1000000, "Native connector ECU scope contract fields are missing");
+const scopedNativeEnvelope = (scopeId, sequence, code, options = {}) => ({
+  ...nativeEnvelope("read_stored_dtc", options.capturedAt || `2026-07-20T07:10:${String(sequence % 60).padStart(2, "0")}Z`, { source_ecu: options.dataScopeId || scopeId, dtcs: [{ code, status: "stored" }] }, "user-vci-elm327", { sequence }),
+  readout_scope_id: scopeId,
+  readout_attempt: options.attempt ?? 0,
+  ...(options.outcome || {})
+});
+const normalizedScopeEvaluation = obd.evaluateNativeConnectorEnvelope(scopedNativeEnvelope("0x7e8", 710, "P0300", { dataScopeId: "7E8" }));
+const nestedScopeMismatchEvaluation = obd.evaluateNativeConnectorEnvelope({ ...scopedNativeEnvelope("7E8", 711, "P0300"), data: { source_ecu: "7E8", dtcs: [{ code: "P0300", ecu: "7E9" }] } });
+check(normalizedScopeEvaluation.accepted === true && normalizedScopeEvaluation.readoutScopeId === "7E8" && normalizedScopeEvaluation.readoutAttempt === 0 && obd.evaluateNativeConnectorEnvelope(scopedNativeEnvelope("7E8", 711, "P0300", { dataScopeId: "7E9" })).errors.includes("readout_scope_mismatch") && nestedScopeMismatchEvaluation.errors.includes("nested_readout_scope_mismatch"), "Native connector ECU scope IDs are not normalized or nested mismatches are accepted");
+const nativeExpectedDtcScopes = [
+  { readout_id: "stored_dtc_snapshot", scope_id: "7E8" },
+  { readout_id: "stored_dtc_snapshot", scope_id: "7E9" }
+];
+const multiEcuNativeScan = obd.buildNativeConnectorScanSession({
+  envelopes: [scopedNativeEnvelope("7E8", 712, "P0300"), scopedNativeEnvelope("7E9", 713, "P0171")],
+  scan_state: "completed",
+  expected_readouts: ["stored_dtc_snapshot"],
+  expected_readout_scopes: nativeExpectedDtcScopes
+});
+check(multiEcuNativeScan.scanState === "completed" && multiEcuNativeScan.partial === false && multiEcuNativeScan.session?.dtcSnapshot?.codes?.includes("P0300") && multiEcuNativeScan.session?.dtcSnapshot?.codes?.includes("P0171") && new Set(multiEcuNativeScan.session?.dtcSnapshot?.dtcs?.map((item) => item.ecu)).has("7E8") && new Set(multiEcuNativeScan.session?.dtcSnapshot?.dtcs?.map((item) => item.ecu)).has("7E9"), "Two native ECU DTC responses are not retained in one completed scan");
+check(multiEcuNativeScan.completedReadoutScopes?.length === 2 && multiEcuNativeScan.missingReadoutScopes?.length === 0 && multiEcuNativeScan.nativeConnectorScanLifecycle?.completedReadoutScopes?.length === 2 && multiEcuNativeScan.evaluations.every((item) => item.readoutScopeId && item.readoutAttempt === 0), "Native ECU scope completion state is not retained");
+const unmanifestedMultiEcuScan = obd.buildNativeConnectorScanSession({ envelopes: [scopedNativeEnvelope("7E8", 714, "P0300"), scopedNativeEnvelope("7E9", 715, "P0171")], scan_state: "completed", expected_readouts: ["stored_dtc_snapshot"] });
+check(unmanifestedMultiEcuScan.scanState === "interrupted" && unmanifestedMultiEcuScan.readoutsMissingScopeManifest?.includes("stored_dtc_snapshot") && unmanifestedMultiEcuScan.session?.warnings?.includes("native_connector_scope_manifest_missing") && unmanifestedMultiEcuScan.session?.dtcSnapshot?.codes?.length === 2, "Multi-ECU native scan without a scope manifest was marked complete or lost data");
+const partialMultiEcuScan = obd.buildNativeConnectorScanSession({
+  envelopes: [scopedNativeEnvelope("7E8", 716, "P0300"), scopedNativeEnvelope("7E9", 717, "P0171", { outcome: { ok: false, blocked: false, errors: ["transport:timeout"] } })],
+  scan_state: "completed",
+  expected_readouts: ["stored_dtc_snapshot"],
+  expected_readout_scopes: nativeExpectedDtcScopes
+});
+check(partialMultiEcuScan.scanState === "interrupted" && partialMultiEcuScan.failedReadoutScopes?.some((item) => item.scopeId === "7E9") && partialMultiEcuScan.readoutScopeErrors?.some((item) => item.scopeId === "7E9" && item.errorCodes.includes("transport:timeout")) && partialMultiEcuScan.session?.dtcSnapshot?.codes?.join(",") === "P0300", "One failed native ECU scope erased successful ECU data or completed the scan");
+const scopedRetryScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeEnvelope("7E8", 718, "P0300", { attempt: 1, capturedAt: "2026-07-20T07:11:00Z" }),
+    scopedNativeEnvelope("7E8", 719, "P0171", { attempt: 0, capturedAt: "2026-07-20T07:11:01Z" })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["stored_dtc_snapshot"],
+  expected_readout_scopes: [{ readout_id: "stored_dtc_snapshot", scope_id: "7E8" }]
+});
+check(scopedRetryScan.scanState === "completed" && scopedRetryScan.session?.dtcSnapshot?.codes?.join(",") === "P0300", "A late stale native ECU retry replaced the highest readout attempt");
+const scopedLivePidRetryScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    { ...nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:12:00Z", { source_ecu: "7E8", monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }] }, "user-vci-elm327", { sequence: 726 }), readout_scope_id: "7E8", readout_attempt: 1 },
+    { ...nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:12:01Z", { source_ecu: "7E8", monitor_values: [{ id: "engine_speed", value: 9999, unit: "rpm" }] }, "user-vci-elm327", { sequence: 727 }), readout_scope_id: "7E8", readout_attempt: 0 }
+  ],
+  scan_state: "completed",
+  expected_readouts: ["live_pid_snapshot"],
+  expected_readout_scopes: [{ readout_id: "live_pid_snapshot", scope_id: "7E8" }]
+});
+check(scopedLivePidRetryScan.scanState === "completed" && scopedLivePidRetryScan.session?.livePidSnapshot?.monitorValues?.[0]?.value === 800 && scopedLivePidRetryScan.session?.livePidTimeline?.sampleCount === 1 && scopedLivePidRetryScan.session?.livePidTimeline?.samples?.[0]?.monitorValues?.[0]?.value === 800, "A superseded native live PID retry remained in the diagnostic timeline");
+const missingScopeScan = obd.buildNativeConnectorScanSession({ envelopes: [scopedNativeEnvelope("7E8", 720, "P0300")], scan_state: "completed", expected_readouts: ["stored_dtc_snapshot"], expected_readout_scopes: nativeExpectedDtcScopes });
+const unexpectedScopeScan = obd.buildNativeConnectorScanSession({ envelopes: [scopedNativeEnvelope("7E8", 721, "P0300"), scopedNativeEnvelope("7E9", 722, "P0171")], scan_state: "completed", expected_readouts: ["stored_dtc_snapshot"], expected_readout_scopes: [{ readout_id: "stored_dtc_snapshot", scope_id: "7E8" }] });
+check(missingScopeScan.scanState === "interrupted" && missingScopeScan.missingReadoutScopes?.some((item) => item.scopeId === "7E9") && unexpectedScopeScan.scanState === "interrupted" && unexpectedScopeScan.unexpectedReadoutScopes?.some((item) => item.scopeId === "7E9"), "Missing or unexpected native ECU scopes are not interrupting completion");
+const missingAttemptScan = obd.buildNativeConnectorScanSession({ envelopes: [{ ...scopedNativeEnvelope("7E8", 723, "P0300"), readout_attempt: undefined }], scan_state: "completed", expected_readouts: ["stored_dtc_snapshot"], expected_readout_scopes: [{ readout_id: "stored_dtc_snapshot", scope_id: "7E8" }] });
+const duplicateAttemptScan = obd.buildNativeConnectorScanSession({ envelopes: [scopedNativeEnvelope("7E8", 724, "P0300"), scopedNativeEnvelope("7E8", 725, "P0171")], scan_state: "completed", expected_readouts: ["stored_dtc_snapshot"], expected_readout_scopes: [{ readout_id: "stored_dtc_snapshot", scope_id: "7E8" }] });
+check(missingAttemptScan.blocked === true && missingAttemptScan.errors.includes("missing_readout_attempt") && duplicateAttemptScan.blocked === true && duplicateAttemptScan.errors.includes("duplicate_readout_attempt"), "Ambiguous native ECU retry attempts are not rejected");
+const reimportedMultiEcuNativeScan = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuNativeScan.session)));
+check(reimportedMultiEcuNativeScan?.dtcSnapshot?.codes?.length === 2 && reimportedMultiEcuNativeScan?.nativeConnectorScanLifecycle?.completedReadoutScopes?.length === 2 && reimportedMultiEcuNativeScan?.nativeConnectorScanLifecycle?.readoutScopeOutcomes?.every((item) => item.readoutAttempt === 0 && item.readoutSucceeded === true) && reimportedMultiEcuNativeScan?.vehicleCommandEnabled === false, "Native ECU scope data, attempt outcome, or lifecycle was lost during export/import");
 const connectionProfile = obd.getVehicleConnectionProfile();
 check(connectionProfile.transportEnabled === false, "通信トランスポートが安全ゲート外で有効です");
 check(connectionProfile.failClosed === true, "通信トランスポートが失敗時安全停止になっていません");
@@ -17144,6 +17203,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2730");
+  console.log("OBD read-only safety checks: 2741");
   console.log("Errors: 0");
 }

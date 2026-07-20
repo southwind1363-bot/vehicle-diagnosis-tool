@@ -495,6 +495,7 @@
     maxPayloadBytes: 1000000,
     maxEnvelopeCount: 64,
     maxSequence: 1000000,
+    maxReadoutAttempt: 1000000,
     maxConnectionSequence: 63,
     allowedInterfaceIds: Object.freeze(["user-vci-thinkcar-bluetooth", "user-vci-elm327"]),
     allowedReadIntents: Object.freeze([...localBridgeContract.allowedReadIntents]),
@@ -504,7 +505,8 @@
     requiredReconnectEnvelopeFields: Object.freeze(["connection_sequence"]),
     requiredFailedLivePidEnvelopeFields: Object.freeze(["readout_id"]),
     responseOutcomeFields: Object.freeze(["ok", "blocked", "errors"]),
-    completionManifestFields: Object.freeze(["scan_state", "expected_readouts"]),
+    readoutScopeFields: Object.freeze(["readout_scope_id", "readout_attempt"]),
+    completionManifestFields: Object.freeze(["scan_state", "expected_readouts", "expected_readout_scopes"]),
     allowedReadoutIds: nativeConnectorReadoutIds,
     logPolicy: Object.freeze({
       storeRawPayload: false,
@@ -1072,6 +1074,7 @@
       requiredReconnectEnvelopeFields: [...nativeConnectorContract.requiredReconnectEnvelopeFields],
       requiredFailedLivePidEnvelopeFields: [...nativeConnectorContract.requiredFailedLivePidEnvelopeFields],
       responseOutcomeFields: [...nativeConnectorContract.responseOutcomeFields],
+      readoutScopeFields: [...nativeConnectorContract.readoutScopeFields],
       completionManifestFields: [...nativeConnectorContract.completionManifestFields],
       allowedReadoutIds: [...nativeConnectorContract.allowedReadoutIds],
       logPolicy: { ...nativeConnectorContract.logPolicy }
@@ -1115,6 +1118,97 @@
       .filter((item) => nativeConnectorContract.allowedReadoutIds.includes(item)))];
   }
 
+  function normalizeNativeConnectorReadoutScopeId(value) {
+    if (typeof value === "number") {
+      return Number.isSafeInteger(value) && value >= 0 && value <= 0x1FFFFFFF ? value.toString(16).toUpperCase() : null;
+    }
+    const source = String(value || "").trim();
+    if (!source || redactSensitiveTextForRetention(source) !== source) return null;
+    const compact = source.replace(/^0x/i, "").replace(/\s+/g, "");
+    if (/^[0-9A-F]{1,8}$/i.test(compact)) return compact.replace(/^0+(?=[0-9A-F])/, "").toUpperCase();
+    return /^[A-Za-z0-9_.:-]{1,80}$/.test(compact) ? compact.toUpperCase() : null;
+  }
+
+  function readNativeConnectorDataScopeId(data = {}) {
+    return normalizeNativeConnectorReadoutScopeId(data.source_ecu ?? data.sourceEcu ?? data.ecu ?? data.ecu_id ?? data.ecuId ?? data.address ?? data.module ?? data.module_id ?? data.moduleId);
+  }
+
+  function readNativeConnectorNestedDataScopes(value, depth = 0, seen = new Set()) {
+    if (!value || typeof value !== "object" || depth > 8 || seen.has(value)) return { scopeIds: [], invalid: false };
+    seen.add(value);
+    const scopeKeys = new Set(["source_ecu", "sourceEcu", "ecu", "ecu_id", "ecuId", "address", "module", "module_id", "moduleId"]);
+    const scopeIds = [];
+    let invalid = false;
+    Object.entries(value).forEach(([key, item]) => {
+      if (scopeKeys.has(key) && item !== undefined && item !== null && item !== "") {
+        const scopeId = normalizeNativeConnectorReadoutScopeId(item);
+        if (scopeId) scopeIds.push(scopeId);
+        else invalid = true;
+        return;
+      }
+      if (item && typeof item === "object") {
+        const nested = readNativeConnectorNestedDataScopes(item, depth + 1, seen);
+        scopeIds.push(...nested.scopeIds);
+        invalid = invalid || nested.invalid;
+      }
+    });
+    return { scopeIds: [...new Set(scopeIds)], invalid };
+  }
+
+  function normalizeNativeConnectorReadoutScopes(value) {
+    const byKey = new Map();
+    (Array.isArray(value) ? value : []).forEach((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return;
+      const readoutId = String(item.readoutId || item.readout_id || "").trim();
+      const scopeId = normalizeNativeConnectorReadoutScopeId(item.scopeId || item.scope_id || item.readoutScopeId || item.readout_scope_id);
+      if (!nativeConnectorContract.allowedReadoutIds.includes(readoutId) || !scopeId) return;
+      byKey.set(`${readoutId}\u0000${scopeId}`, {
+        readoutId,
+        readout_id: readoutId,
+        scopeId,
+        scope_id: scopeId
+      });
+    });
+    return [...byKey.values()];
+  }
+
+  function normalizeNativeConnectorReadoutScopeOutcomes(value) {
+    const byKey = new Map();
+    (Array.isArray(value) ? value : []).forEach((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return;
+      const readoutId = String(item.readoutId || item.readout_id || "").trim();
+      const scopeId = normalizeNativeConnectorReadoutScopeId(item.scopeId || item.scope_id || item.readoutScopeId || item.readout_scope_id);
+      const attemptValue = item.readoutAttempt ?? item.readout_attempt;
+      const readoutAttempt = typeof attemptValue === "number" && Number.isSafeInteger(attemptValue) && attemptValue >= 0 && attemptValue <= nativeConnectorContract.maxReadoutAttempt
+        ? attemptValue
+        : null;
+      if (!nativeConnectorContract.allowedReadoutIds.includes(readoutId) || !scopeId) return;
+      const readoutStatusInput = String(item.readoutStatus || item.readout_status || "").trim().toLowerCase();
+      const readoutStatus = ["reported", "blocked", "unparsed"].includes(readoutStatusInput)
+        ? readoutStatusInput
+        : item.readoutSucceeded === true || item.readout_succeeded === true
+          ? "reported"
+          : "unparsed";
+      const readoutSucceeded = readoutStatus === "reported" && item.readoutSucceeded !== false && item.readout_succeeded !== false;
+      const errorCodes = readBridgeResponseErrorCodes({ errors: item.errorCodes || item.error_codes || item.errors || [] });
+      byKey.set(`${readoutId}\u0000${scopeId}`, {
+        readoutId,
+        readout_id: readoutId,
+        scopeId,
+        scope_id: scopeId,
+        readoutAttempt,
+        readout_attempt: readoutAttempt,
+        readoutSucceeded,
+        readout_succeeded: readoutSucceeded,
+        readoutStatus,
+        readout_status: readoutStatus,
+        errorCodes,
+        error_codes: [...errorCodes]
+      });
+    });
+    return [...byKey.values()];
+  }
+
   function getNativeConnectorReadoutId(intent, data = {}, explicitReadoutId = null) {
     if (intent === "read_live_pid_snapshot") {
       const normalizedExplicitReadoutId = String(explicitReadoutId || data.readout_id || data.readoutId || "").trim();
@@ -1154,6 +1248,10 @@
       || Array.isArray(input.expected_readouts)
       || Array.isArray(input.attemptedReadouts)
       || Array.isArray(input.attempted_readouts)
+      || Array.isArray(input.expectedReadoutScopes)
+      || Array.isArray(input.expected_readout_scopes)
+      || Array.isArray(input.readoutScopeOutcomes)
+      || Array.isArray(input.readout_scope_outcomes)
       || input.readoutErrorsById
       || input.readout_errors_by_id
       || Array.isArray(input.connectionSegments)
@@ -1174,6 +1272,14 @@
     const completedReadouts = normalizeNativeConnectorReadoutList(input.completedReadouts || input.completed_readouts);
     const failedReadouts = normalizeNativeConnectorReadoutList(input.failedReadouts || input.failed_readouts);
     const missingReadouts = expectedReadouts.filter((readoutId) => !completedReadouts.includes(readoutId));
+    const expectedReadoutScopes = normalizeNativeConnectorReadoutScopes(input.expectedReadoutScopes || input.expected_readout_scopes);
+    const attemptedReadoutScopes = normalizeNativeConnectorReadoutScopes(input.attemptedReadoutScopes || input.attempted_readout_scopes);
+    const completedReadoutScopes = normalizeNativeConnectorReadoutScopes(input.completedReadoutScopes || input.completed_readout_scopes);
+    const failedReadoutScopes = normalizeNativeConnectorReadoutScopes(input.failedReadoutScopes || input.failed_readout_scopes);
+    const unexpectedReadoutScopes = normalizeNativeConnectorReadoutScopes(input.unexpectedReadoutScopes || input.unexpected_readout_scopes);
+    const readoutScopeOutcomes = normalizeNativeConnectorReadoutScopeOutcomes(input.readoutScopeOutcomes || input.readout_scope_outcomes);
+    const completedReadoutScopeKeys = new Set(completedReadoutScopes.map((item) => `${item.readoutId}\u0000${item.scopeId}`));
+    const missingReadoutScopes = expectedReadoutScopes.filter((item) => !completedReadoutScopeKeys.has(`${item.readoutId}\u0000${item.scopeId}`));
     const readoutErrorsByIdInput = input.readoutErrorsById || input.readout_errors_by_id || {};
     const readoutErrorsById = Object.fromEntries(Object.entries(readoutErrorsByIdInput && typeof readoutErrorsByIdInput === "object" && !Array.isArray(readoutErrorsByIdInput) ? readoutErrorsByIdInput : {})
       .filter(([readoutId]) => nativeConnectorContract.allowedReadoutIds.includes(readoutId))
@@ -1183,7 +1289,8 @@
       errors: [
         ...(Array.isArray(input.errorCodes) ? input.errorCodes : []),
         ...(Array.isArray(input.error_codes) ? input.error_codes : []),
-        ...Object.values(readoutErrorsById).flat()
+        ...Object.values(readoutErrorsById).flat(),
+        ...readoutScopeOutcomes.flatMap((item) => item.errorCodes)
       ]
     });
     const connectionSegments = (Array.isArray(input.connectionSegments) ? input.connectionSegments : Array.isArray(input.connection_segments) ? input.connection_segments : [])
@@ -1249,13 +1356,16 @@
       && missingReadouts.length === 0
       && missingIntents.length === 0
       && failedReadouts.length === 0
+      && missingReadoutScopes.length === 0
+      && failedReadoutScopes.length === 0
+      && unexpectedReadoutScopes.length === 0
       && failedIntents.length === 0
       && acceptedEnvelopeCount > 0
       && rejectedEnvelopeCount === 0
       && sequenceGapCount === 0
       && connectionOrderValid;
     const scanState = requestedScanState === "completed" && !completedLifecycleValid ? "interrupted" : requestedScanState;
-    const partial = scanState !== "completed" || rejectedEnvelopeCount > 0 || missingReadouts.length > 0 || missingIntents.length > 0 || sequenceGapCount > 0;
+    const partial = scanState !== "completed" || rejectedEnvelopeCount > 0 || missingReadouts.length > 0 || missingIntents.length > 0 || missingReadoutScopes.length > 0 || failedReadoutScopes.length > 0 || unexpectedReadoutScopes.length > 0 || sequenceGapCount > 0;
     return {
       schemaVersion: "native_connector_scan_lifecycle_v1",
       schema_version: "native_connector_scan_lifecycle_v1",
@@ -1281,6 +1391,20 @@
       completed_readouts: [...completedReadouts],
       failedReadouts,
       failed_readouts: [...failedReadouts],
+      expectedReadoutScopes,
+      expected_readout_scopes: expectedReadoutScopes.map((item) => ({ ...item })),
+      attemptedReadoutScopes,
+      attempted_readout_scopes: attemptedReadoutScopes.map((item) => ({ ...item })),
+      completedReadoutScopes,
+      completed_readout_scopes: completedReadoutScopes.map((item) => ({ ...item })),
+      failedReadoutScopes,
+      failed_readout_scopes: failedReadoutScopes.map((item) => ({ ...item })),
+      missingReadoutScopes,
+      missing_readout_scopes: missingReadoutScopes.map((item) => ({ ...item })),
+      unexpectedReadoutScopes,
+      unexpected_readout_scopes: unexpectedReadoutScopes.map((item) => ({ ...item })),
+      readoutScopeOutcomes,
+      readout_scope_outcomes: readoutScopeOutcomes.map((item) => ({ ...item, errorCodes: [...item.errorCodes], error_codes: [...item.errorCodes] })),
       errorCodes,
       error_codes: [...errorCodes],
       readoutErrorsById,
@@ -1403,6 +1527,18 @@
       ? ["readiness_snapshot", "live_pid_snapshot"].includes(explicitReadoutId)
       : explicitReadoutId === getNativeConnectorReadoutId(intent, data || {}));
     const failedLivePidReadoutIdMissing = intent === "read_live_pid_snapshot" && !responseSucceeded && !explicitReadoutId;
+    const explicitReadoutScopeInput = source.readoutScopeId ?? source.readout_scope_id;
+    const dataReadoutScopeInput = data?.source_ecu ?? data?.sourceEcu ?? data?.ecu ?? data?.ecu_id ?? data?.ecuId ?? data?.address ?? data?.module ?? data?.module_id ?? data?.moduleId;
+    const explicitReadoutScopeId = normalizeNativeConnectorReadoutScopeId(explicitReadoutScopeInput);
+    const dataReadoutScopeId = normalizeNativeConnectorReadoutScopeId(dataReadoutScopeInput);
+    const nestedDataScopes = readNativeConnectorNestedDataScopes(data || {});
+    const readoutScopeId = explicitReadoutScopeId || dataReadoutScopeId || (nestedDataScopes.scopeIds.length === 1 ? nestedDataScopes.scopeIds[0] : null) || "LEGACY";
+    const readoutScopeMismatch = Boolean(explicitReadoutScopeId && dataReadoutScopeId && explicitReadoutScopeId !== dataReadoutScopeId);
+    const nestedReadoutScopeMismatch = nestedDataScopes.scopeIds.some((scopeId) => scopeId !== readoutScopeId);
+    const readoutAttemptInput = source.readoutAttempt ?? source.readout_attempt;
+    const readoutAttempt = typeof readoutAttemptInput === "number" && Number.isSafeInteger(readoutAttemptInput) && readoutAttemptInput >= 0 && readoutAttemptInput <= nativeConnectorContract.maxReadoutAttempt
+      ? readoutAttemptInput
+      : null;
     const readoutStatus = responseBlocked || responseWouldTransmit
       ? "blocked"
       : responseSucceeded
@@ -1460,6 +1596,12 @@
       connectionSequenceInput !== undefined && connectionSequence === null ? "invalid_connection_sequence" : null,
       !explicitReadoutIdValid || !explicitReadoutIdMatchesIntent ? "invalid_readout_id" : null,
       failedLivePidReadoutIdMissing ? "missing_readout_id" : null,
+      explicitReadoutScopeInput !== undefined && !explicitReadoutScopeId ? "invalid_readout_scope_id" : null,
+      dataReadoutScopeInput !== undefined && !dataReadoutScopeId ? "invalid_data_readout_scope_id" : null,
+      nestedDataScopes.invalid ? "invalid_nested_data_readout_scope_id" : null,
+      readoutScopeMismatch ? "readout_scope_mismatch" : null,
+      nestedReadoutScopeMismatch ? "nested_readout_scope_mismatch" : null,
+      readoutAttemptInput !== undefined && readoutAttempt === null ? "invalid_readout_attempt" : null,
       unsafeExecutionFlags ? "unsafe_execution_flags" : null
     ].filter(Boolean);
     const accepted = errors.length === 0;
@@ -1481,6 +1623,10 @@
       readout_errors: [...readoutErrors],
       readoutId,
       readout_id: readoutId,
+      readoutScopeId,
+      readout_scope_id: readoutScopeId,
+      readoutAttempt,
+      readout_attempt: readoutAttempt,
       interfaceId: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
       interface_id: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
       platform: platform === nativeConnectorContract.platform ? platform : null,
@@ -1528,6 +1674,7 @@
     const data = evaluation.readoutSucceeded === true
       ? {
         ...(input.data && typeof input.data === "object" && !Array.isArray(input.data) ? input.data : {}),
+        ...(evaluation.readoutScopeId && evaluation.readoutScopeId !== "LEGACY" && !readNativeConnectorDataScopeId(input.data || {}) ? { source_ecu: evaluation.readoutScopeId } : {}),
         captured_at: evaluation.capturedAt || null
       }
       : { captured_at: evaluation.capturedAt || null };
@@ -1546,6 +1693,96 @@
       errors,
       data
     };
+  }
+
+  function buildNativeConnectorScopedSnapshotInput(entries = [], readoutId = null) {
+    const successfulEntries = entries.filter(({ evaluation }) => evaluation.accepted && evaluation.readoutSucceeded);
+    if (!successfulEntries.length) {
+      const latestEntry = entries.at(-1);
+      return latestEntry ? buildNativeConnectorSnapshotInput(latestEntry.envelope, latestEntry.evaluation) : {};
+    }
+    if (successfulEntries.length === 1) return buildNativeConnectorSnapshotInput(successfulEntries[0].envelope, successfulEntries[0].evaluation);
+    const rowsWithScope = (data, aliases, scopeId) => {
+      const values = aliases.map((key) => data?.[key]).find(Array.isArray) || [];
+      return values.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
+        ? { ...row, source_ecu: scopeId }
+        : row);
+    };
+    const scopedData = successfulEntries.map(({ envelope, evaluation }) => ({
+      data: envelope?.data && typeof envelope.data === "object" ? envelope.data : {},
+      evaluation,
+      scopeId: evaluation.readoutScopeId
+    }));
+    const capturedAt = successfulEntries.at(-1)?.evaluation.capturedAt || null;
+    const protocol = scopedData.map(({ data }) => readBridgeProtocol(data)).find(Boolean) || null;
+    if (["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot"].includes(readoutId)) {
+      const status = readoutId === "pending_dtc_snapshot" ? "pending" : readoutId === "permanent_dtc_snapshot" ? "permanent" : "stored";
+      return {
+        captured_at: capturedAt,
+        protocol,
+        intent: status === "pending" ? "read_pending_dtc" : status === "permanent" ? "read_permanent_dtc" : "read_stored_dtc",
+        ecu_responses: scopedData.map(({ data, scopeId }) => ({
+          ecu: scopeId === "LEGACY" ? readNativeConnectorDataScopeId(data) : scopeId,
+          ecu_name: data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || null,
+          dtc_status: status,
+          dtcs: rowsWithScope(data, ["dtcs", "dtc_codes", "dtcCodes", "codes"], scopeId)
+        }))
+      };
+    }
+    if (readoutId === "live_pid_snapshot") {
+      return {
+        captured_at: capturedAt,
+        protocol,
+        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
+      };
+    }
+    if (readoutId === "readiness_snapshot") {
+      return {
+        captured_at: capturedAt,
+        protocol,
+        readiness_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
+          const rows = Array.isArray(data.readiness_ecu_snapshots) ? data.readiness_ecu_snapshots : Array.isArray(data.readinessEcuSnapshots) ? data.readinessEcuSnapshots : [data];
+          return rows.map((row) => ({ ...row, ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {}) }));
+        })
+      };
+    }
+    if (readoutId === "supported_pid_matrix") {
+      return {
+        captured_at: capturedAt,
+        protocol,
+        supported_pid_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
+          const rows = Array.isArray(data.supported_pid_ecu_snapshots) ? data.supported_pid_ecu_snapshots : Array.isArray(data.supportedPidEcuSnapshots) ? data.supportedPidEcuSnapshots : [data];
+          return rows.map((row) => ({ ...row, ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {}) }));
+        })
+      };
+    }
+    if (readoutId === "ecu_info_snapshot") {
+      return {
+        captured_at: capturedAt,
+        protocol,
+        items: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["items", "ecu_info_items", "ecuInfoItems"], scopeId))
+      };
+    }
+    if (readoutId === "onboard_monitor_snapshot") {
+      return {
+        captured_at: capturedAt,
+        protocol,
+        tests: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["tests", "items", "mode06_tests", "mode06Tests"], scopeId))
+      };
+    }
+    if (readoutId === "freeze_frame_snapshot") {
+      return {
+        captured_at: capturedAt,
+        protocol,
+        trigger_dtc_entries: scopedData.map(({ data, scopeId }) => ({
+          code: data.trigger_dtc || data.triggerDtc || data.dtc || null,
+          frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? null,
+          ...(scopeId !== "LEGACY" ? { source_ecu: scopeId } : {})
+        })).filter((item) => item.code),
+        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
+      };
+    }
+    return buildNativeConnectorSnapshotInput(successfulEntries.at(-1).envelope, successfulEntries.at(-1).evaluation);
   }
 
   function buildNativeConnectorDiagnosticImport(input = {}) {
@@ -1650,6 +1887,8 @@
     const expectedIntents = normalizeNativeConnectorIntentList(expectedIntentsInput);
     const expectedReadoutsInput = batchInput.expectedReadouts ?? batchInput.expected_readouts;
     const expectedReadouts = normalizeNativeConnectorReadoutList(expectedReadoutsInput);
+    const expectedReadoutScopesInput = batchInput.expectedReadoutScopes ?? batchInput.expected_readout_scopes;
+    const expectedReadoutScopes = normalizeNativeConnectorReadoutScopes(expectedReadoutScopesInput);
     const blockedResult = (errors, evaluations = []) => ({
       schemaVersion: "native_connector_scan_session_v1",
       schema_version: "native_connector_scan_session_v1",
@@ -1680,6 +1919,7 @@
     if (requestedScanStateInput !== undefined && !["open", "completed", "interrupted"].includes(String(requestedScanStateInput))) return blockedResult(["invalid_scan_state"]);
     if (expectedIntentsInput !== undefined && (!Array.isArray(expectedIntentsInput) || expectedIntents.length !== new Set(expectedIntentsInput.map((item) => String(item || "").trim()).filter(Boolean)).size)) return blockedResult(["invalid_expected_intents"]);
     if (expectedReadoutsInput !== undefined && (!Array.isArray(expectedReadoutsInput) || expectedReadouts.length !== new Set(expectedReadoutsInput.map((item) => String(item || "").trim()).filter(Boolean)).size)) return blockedResult(["invalid_expected_readouts"]);
+    if (expectedReadoutScopesInput !== undefined && (!Array.isArray(expectedReadoutScopesInput) || expectedReadoutScopes.length !== expectedReadoutScopesInput.length || expectedReadoutScopes.some((item) => !expectedReadouts.includes(item.readoutId)))) return blockedResult(["invalid_expected_readout_scopes"]);
 
     const evaluations = envelopes.map((envelope, index) => ({
       index,
@@ -1706,7 +1946,13 @@
       "invalid_sequence",
       "invalid_connection_sequence",
       "invalid_readout_id",
-      "missing_readout_id"
+      "missing_readout_id",
+      "invalid_readout_scope_id",
+      "invalid_data_readout_scope_id",
+      "invalid_nested_data_readout_scope_id",
+      "readout_scope_mismatch",
+      "nested_readout_scope_mismatch",
+      "invalid_readout_attempt"
     ]);
     const hardFailures = evaluations.filter(({ evaluation }) => evaluation.errors.some((error) => hardErrorIds.has(error)));
     const interfaceIds = [...new Set(evaluations.map(({ evaluation }) => evaluation.interfaceId).filter(Boolean))];
@@ -1801,18 +2047,80 @@
       );
     }
 
-    const latestReadoutEntries = new Map();
+    const entriesByReadoutAndScope = new Map();
     orderedEntries.forEach((entry) => {
-      const readoutId = entry.evaluation.readoutId;
-      if (readoutId) latestReadoutEntries.set(readoutId, entry);
+      const { readoutId, readoutScopeId } = entry.evaluation;
+      if (!readoutId || !readoutScopeId) return;
+      if (!entriesByReadoutAndScope.has(readoutId)) entriesByReadoutAndScope.set(readoutId, new Map());
+      const entriesByScope = entriesByReadoutAndScope.get(readoutId);
+      if (!entriesByScope.has(readoutScopeId)) entriesByScope.set(readoutScopeId, []);
+      entriesByScope.get(readoutScopeId).push(entry);
     });
-    const latestOutcomeEntries = [...latestReadoutEntries.entries()].map(([readoutId, entry]) => ({ ...entry, readoutId }));
-    const successfulLatestEntries = latestOutcomeEntries.filter(({ evaluation }) => evaluation.accepted && evaluation.readoutSucceeded);
+    const invalidAttemptGroups = [];
+    entriesByReadoutAndScope.forEach((entriesByScope, readoutId) => entriesByScope.forEach((entries, scopeId) => {
+      const attempts = entries.map(({ evaluation }) => evaluation.readoutAttempt);
+      const requiresAttempt = expectedReadoutScopes.length > 0 && scopeId !== "LEGACY";
+      const hasAttempt = attempts.some((attempt) => attempt !== null);
+      if ((requiresAttempt || hasAttempt) && attempts.some((attempt) => attempt === null)) invalidAttemptGroups.push({ readoutId, scopeId, error: "missing_readout_attempt" });
+      const presentAttempts = attempts.filter((attempt) => attempt !== null);
+      if (new Set(presentAttempts).size !== presentAttempts.length) invalidAttemptGroups.push({ readoutId, scopeId, error: "duplicate_readout_attempt" });
+    }));
+    if (invalidAttemptGroups.length) {
+      return blockedResult(
+        [...new Set(invalidAttemptGroups.map(({ error }) => error))],
+        evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] }))
+      );
+    }
+    const latestOutcomeEntries = [];
+    entriesByReadoutAndScope.forEach((entriesByScope, readoutId) => entriesByScope.forEach((entries, scopeId) => {
+      const entriesWithAttempt = entries.filter(({ evaluation }) => evaluation.readoutAttempt !== null);
+      const entry = entriesWithAttempt.length
+        ? entriesWithAttempt.reduce((latest, candidate) => candidate.evaluation.readoutAttempt > latest.evaluation.readoutAttempt ? candidate : latest)
+        : entries.at(-1);
+      latestOutcomeEntries.push({ ...entry, readoutId, scopeId });
+    }));
+    const scopeKey = (readoutId, scopeId) => `${readoutId}\u0000${scopeId}`;
+    const expectedScopeKeys = new Set(expectedReadoutScopes.map((item) => scopeKey(item.readoutId, item.scopeId)));
+    const expectedScopesByReadout = new Map();
+    expectedReadoutScopes.forEach((item) => {
+      if (!expectedScopesByReadout.has(item.readoutId)) expectedScopesByReadout.set(item.readoutId, []);
+      expectedScopesByReadout.get(item.readoutId).push(item);
+    });
+    const attemptedReadoutScopes = normalizeNativeConnectorReadoutScopes(latestOutcomeEntries.map(({ readoutId, scopeId }) => ({ readoutId, scopeId })));
+    const completedReadoutScopes = normalizeNativeConnectorReadoutScopes(latestOutcomeEntries
+      .filter(({ evaluation }) => evaluation.accepted && evaluation.readoutSucceeded)
+      .map(({ readoutId, scopeId }) => ({ readoutId, scopeId })));
+    const failedReadoutScopes = normalizeNativeConnectorReadoutScopes(latestOutcomeEntries
+      .filter(({ evaluation }) => !evaluation.accepted || !evaluation.readoutSucceeded)
+      .map(({ readoutId, scopeId }) => ({ readoutId, scopeId })));
+    const completedScopeKeys = new Set(completedReadoutScopes.map((item) => scopeKey(item.readoutId, item.scopeId)));
+    const missingReadoutScopes = expectedReadoutScopes.filter((item) => !completedScopeKeys.has(scopeKey(item.readoutId, item.scopeId)));
+    const unexpectedReadoutScopes = expectedReadoutScopes.length
+      ? attemptedReadoutScopes.filter((item) => !expectedScopeKeys.has(scopeKey(item.readoutId, item.scopeId)))
+      : [];
+    const readoutsMissingScopeManifest = [...entriesByReadoutAndScope.entries()]
+      .filter(([readoutId, entriesByScope]) => entriesByScope.size > 1 && !expectedScopesByReadout.has(readoutId))
+      .map(([readoutId]) => readoutId);
+    const completedReadouts = [...entriesByReadoutAndScope.keys()].filter((readoutId) => {
+      const latestEntries = latestOutcomeEntries.filter((entry) => entry.readoutId === readoutId);
+      const expectedScopes = expectedScopesByReadout.get(readoutId) || [];
+      if (expectedScopes.length) {
+        const expectedKeys = new Set(expectedScopes.map((item) => scopeKey(item.readoutId, item.scopeId)));
+        return expectedScopes.every((item) => completedScopeKeys.has(scopeKey(item.readoutId, item.scopeId)))
+          && latestEntries.every(({ scopeId, evaluation }) => expectedKeys.has(scopeKey(readoutId, scopeId)) && evaluation.accepted && evaluation.readoutSucceeded);
+      }
+      return latestEntries.length === 1 && latestEntries[0].evaluation.accepted && latestEntries[0].evaluation.readoutSucceeded;
+    });
+    const failedReadouts = [...new Set(failedReadoutScopes.map((item) => item.readoutId))];
+    const successfulLatestEntries = latestOutcomeEntries.filter(({ readoutId }) => completedReadouts.includes(readoutId));
     const failedLatestEntries = latestOutcomeEntries.filter(({ evaluation }) => !evaluation.accepted || !evaluation.readoutSucceeded);
     const readoutInput = {};
     const livePidSamples = [];
-    latestOutcomeEntries.forEach(({ evaluation, envelope }) => {
-      const data = buildNativeConnectorSnapshotInput(envelope, evaluation);
+    entriesByReadoutAndScope.forEach((entriesByScope, readoutId) => {
+      const latestEntries = latestOutcomeEntries.filter((entry) => entry.readoutId === readoutId);
+      const evaluation = latestEntries[0]?.evaluation;
+      if (!evaluation) return;
+      const data = buildNativeConnectorScopedSnapshotInput(latestEntries, readoutId);
       const intentInput = {
         bridge_status: { connection_status: data },
         list_vci: { vci_devices: data },
@@ -1824,14 +2132,27 @@
         read_supported_pids: { supported_pid_matrix: data },
         read_ecu_info: { ecu_info_snapshot: data },
         read_onboard_monitor: { onboard_monitor_snapshot: data },
-        read_live_pid_snapshot: evaluation.readoutId === "readiness_snapshot"
+        read_live_pid_snapshot: readoutId === "readiness_snapshot"
           ? { readiness_snapshot: data }
           : { live_pid_snapshot: data }
       }[evaluation.intent] || {};
       Object.assign(readoutInput, intentInput);
     });
-    acceptedEntries.filter(({ evaluation }) => evaluation.readoutSucceeded && evaluation.readoutId === "live_pid_snapshot")
-      .forEach(({ evaluation, envelope }) => livePidSamples.push({ ...envelope.data, captured_at: evaluation.capturedAt }));
+    const retriedLivePidScopeKeys = new Set();
+    entriesByReadoutAndScope.get("live_pid_snapshot")?.forEach((entries, scopeId) => {
+      if (entries.some(({ evaluation }) => evaluation.readoutAttempt !== null)) retriedLivePidScopeKeys.add(scopeKey("live_pid_snapshot", scopeId));
+    });
+    const selectedLivePidEntryIndexes = new Set(latestOutcomeEntries
+      .filter(({ readoutId }) => readoutId === "live_pid_snapshot")
+      .map(({ index }) => index));
+    acceptedEntries.filter(({ index, evaluation }) => evaluation.readoutSucceeded
+        && evaluation.readoutId === "live_pid_snapshot"
+        && (!retriedLivePidScopeKeys.has(scopeKey(evaluation.readoutId, evaluation.readoutScopeId)) || selectedLivePidEntryIndexes.has(index)))
+      .forEach(({ evaluation, envelope }) => livePidSamples.push({
+        ...envelope.data,
+        ...(evaluation.readoutScopeId !== "LEGACY" && !readNativeConnectorDataScopeId(envelope.data) ? { source_ecu: evaluation.readoutScopeId } : {}),
+        captured_at: evaluation.capturedAt
+      }));
     if (livePidSamples.length) readoutInput.live_pid_timeline = livePidSamples;
 
     const interfaceId = acceptedEntries[0].evaluation.interfaceId;
@@ -1846,15 +2167,34 @@
     const failedIntents = [...new Set(failedLatestEntries.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
     const missingIntents = expectedIntents.filter((intent) => !completedIntents.includes(intent));
     const attemptedReadouts = [...new Set(evaluations.map(({ evaluation }) => evaluation.readoutId).filter(Boolean))];
-    const completedReadouts = successfulLatestEntries.map(({ readoutId }) => readoutId);
-    const failedReadouts = failedLatestEntries.map(({ readoutId }) => readoutId);
-    const readoutErrorsById = Object.fromEntries(failedLatestEntries.map(({ readoutId, evaluation }) => [readoutId, readBridgeResponseErrorCodes({
-      errors: [
+    const readoutScopeOutcomes = normalizeNativeConnectorReadoutScopeOutcomes(latestOutcomeEntries.map(({ readoutId, scopeId, evaluation }) => ({
+      readoutId,
+      scopeId,
+      readoutAttempt: evaluation.readoutAttempt,
+      readoutSucceeded: evaluation.accepted && evaluation.readoutSucceeded,
+      readoutStatus: evaluation.readoutStatus,
+      errorCodes: [
         ...(Array.isArray(evaluation.readoutErrors) ? evaluation.readoutErrors : []),
         ...(Array.isArray(evaluation.errors) ? evaluation.errors : []),
-        ...(!(evaluation.readoutErrors?.length || evaluation.errors?.length) ? ["native_connector_readout_failed"] : [])
+        ...(!evaluation.readoutSucceeded && !(evaluation.readoutErrors?.length || evaluation.errors?.length) ? ["native_connector_readout_failed"] : [])
       ]
-    })]));
+    })));
+    const readoutScopeErrors = failedLatestEntries.map(({ readoutId, scopeId, evaluation }) => ({
+      readoutId,
+      readout_id: readoutId,
+      scopeId,
+      scope_id: scopeId,
+      errorCodes: readBridgeResponseErrorCodes({
+        errors: [
+          ...(Array.isArray(evaluation.readoutErrors) ? evaluation.readoutErrors : []),
+          ...(Array.isArray(evaluation.errors) ? evaluation.errors : []),
+          ...(!(evaluation.readoutErrors?.length || evaluation.errors?.length) ? ["native_connector_readout_failed"] : [])
+        ]
+      })
+    })).map((item) => ({ ...item, error_codes: [...item.errorCodes] }));
+    const readoutErrorsById = Object.fromEntries(failedReadouts.map((readoutId) => [readoutId, [...new Set(readoutScopeErrors
+      .filter((item) => item.readoutId === readoutId)
+      .flatMap((item) => item.errorCodes))]]));
     const readoutErrors = [...new Set(Object.values(readoutErrorsById).flat())];
     const missingReadouts = expectedReadouts.filter((readoutId) => !completedReadouts.includes(readoutId));
     const sequenceGapCount = connectionSegments.reduce((sum, segment) => sum + segment.sequenceGapCount, 0);
@@ -1867,6 +2207,10 @@
       && missingReadouts.length === 0
       && missingIntents.length === 0
       && failedReadouts.length === 0
+      && missingReadoutScopes.length === 0
+      && failedReadoutScopes.length === 0
+      && unexpectedReadoutScopes.length === 0
+      && readoutsMissingScopeManifest.length === 0
       && failedIntents.length === 0
       && rejectedEntries.length === 0
       && sequenceGapCount === 0;
@@ -1882,6 +2226,12 @@
       attempted_readouts: attemptedReadouts,
       completed_readouts: completedReadouts,
       failed_readouts: failedReadouts,
+      expected_readout_scopes: expectedReadoutScopes,
+      attempted_readout_scopes: attemptedReadoutScopes,
+      completed_readout_scopes: completedReadoutScopes,
+      failed_readout_scopes: failedReadoutScopes,
+      unexpected_readout_scopes: unexpectedReadoutScopes,
+      readout_scope_outcomes: readoutScopeOutcomes,
       error_codes: readoutErrors,
       readout_errors_by_id: readoutErrorsById,
       connection_segments: connectionSegments,
@@ -1897,6 +2247,9 @@
       connectionSegments.length > 1 ? ["native_connector_reconnected"] : [],
       sequenceGapCount > 0 ? ["native_connector_sequence_gap"] : [],
       failedReadouts.length > 0 ? ["native_connector_readout_failed"] : [],
+      readoutsMissingScopeManifest.length > 0 ? ["native_connector_scope_manifest_missing"] : [],
+      failedReadoutScopes.length > 0 ? ["native_connector_readout_scope_failed"] : [],
+      unexpectedReadoutScopes.length > 0 ? ["native_connector_unexpected_readout_scope"] : [],
       requestedScanState === "completed" && expectedReadouts.length === 0 ? ["native_connector_completion_manifest_missing"] : [],
       requestedScanState === "completed" && (scanIds.size !== 1 || vehicleContextIds.size !== 1 || connectionSegments.length === 0) ? ["native_connector_completion_boundary_missing"] : []
     );
@@ -1935,6 +2288,12 @@
       sequence: evaluation.sequence,
       connectionSequence: evaluation.connectionSequence,
       connection_sequence: evaluation.connectionSequence,
+      readoutId: evaluation.readoutId,
+      readout_id: evaluation.readoutId,
+      readoutScopeId: evaluation.readoutScopeId,
+      readout_scope_id: evaluation.readoutScopeId,
+      readoutAttempt: evaluation.readoutAttempt,
+      readout_attempt: evaluation.readoutAttempt,
       readoutSucceeded: evaluation.readoutSucceeded,
       readout_succeeded: evaluation.readoutSucceeded,
       readoutStatus: evaluation.readoutStatus,
@@ -1987,8 +2346,26 @@
       readout_errors: [...readoutErrors],
       readoutErrorsById,
       readout_errors_by_id: Object.fromEntries(Object.entries(readoutErrorsById).map(([readoutId, values]) => [readoutId, [...values]])),
+      readoutScopeErrors,
+      readout_scope_errors: readoutScopeErrors.map((item) => ({ ...item, errorCodes: [...item.errorCodes], error_codes: [...item.errorCodes] })),
+      readoutScopeOutcomes,
+      readout_scope_outcomes: readoutScopeOutcomes.map((item) => ({ ...item, errorCodes: [...item.errorCodes], error_codes: [...item.errorCodes] })),
       missingReadouts,
       missing_readouts: [...missingReadouts],
+      expectedReadoutScopes,
+      expected_readout_scopes: expectedReadoutScopes.map((item) => ({ ...item })),
+      attemptedReadoutScopes,
+      attempted_readout_scopes: attemptedReadoutScopes.map((item) => ({ ...item })),
+      completedReadoutScopes,
+      completed_readout_scopes: completedReadoutScopes.map((item) => ({ ...item })),
+      failedReadoutScopes,
+      failed_readout_scopes: failedReadoutScopes.map((item) => ({ ...item })),
+      missingReadoutScopes,
+      missing_readout_scopes: missingReadoutScopes.map((item) => ({ ...item })),
+      unexpectedReadoutScopes,
+      unexpected_readout_scopes: unexpectedReadoutScopes.map((item) => ({ ...item })),
+      readoutsMissingScopeManifest,
+      readouts_missing_scope_manifest: [...readoutsMissingScopeManifest],
       connectionIds: nativeConnectorScanLifecycle.connectionIds,
       connection_ids: [...nativeConnectorScanLifecycle.connectionIds],
       platform: "ios",
