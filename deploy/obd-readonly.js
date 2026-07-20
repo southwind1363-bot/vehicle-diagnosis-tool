@@ -17368,7 +17368,7 @@
     const nonFreezeLines = [];
     let inFreezeFrame = false;
     let triggerDtc = null;
-    const isFreezeFrameHeading = (text) => /(?:freeze[\s_-]*frame|フリーズ\s*フレーム|(?:\bmode\s*0?2\s*)?\bpid\s*(?:0x)?[0-9a-f]{2}\s*[:=])/i.test(text);
+    const isFreezeFrameHeading = (text) => /(?:freeze[\s_-]*frame|フリーズ\s*フレーム|\bmode\s*0?2\s+pid\s*(?:0x)?[0-9a-f]{2}\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:live\s*data|data\s*stream|readiness|mode\s*0?6|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|対応\s*pid|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
