@@ -15816,8 +15816,7 @@
       const reportedDescription = normalizeDtcReportedDescription(current.descriptionParts.join(" "));
       rows.push({
         code: current.code,
-        code_format: "manufacturer_specific",
-        manufacturer_specific: true,
+        ...(current.codeFormat === "manufacturer_specific" ? { code_format: "manufacturer_specific", manufacturer_specific: true } : {}),
         ...(current.ecuName ? { ecu_name: current.ecuName } : {}),
         ...(reportedDescription ? { reported_description: reportedDescription } : {}),
         ...(current.reportedStatus ? { reported_status: current.reportedStatus } : {}),
@@ -15831,11 +15830,14 @@
         flush();
         break;
       }
-      const codeReference = extractManufacturerSpecificDtcReference(line);
+      const genericCodeReference = extractDtcReferences(line)[0] || null;
+      const manufacturerCodeReference = genericCodeReference ? null : extractManufacturerSpecificDtcReference(line);
+      const codeReference = genericCodeReference || manufacturerCodeReference;
       if (codeReference) {
         flush();
         current = {
           code: codeReference.code,
+          codeFormat: codeReference.codeFormat || null,
           ecuName: pendingEcuName,
           descriptionParts: [],
           reportedStatus: null,
@@ -15960,7 +15962,7 @@
     const thinkcarReportRows = extractThinkcarReportDtcRows(value);
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
-      dtcs: [...rows, ...rawDtcRows, ...thinkcarReportRows]
+      dtcs: [...thinkcarReportRows, ...rows, ...rawDtcRows]
     });
   }
 
