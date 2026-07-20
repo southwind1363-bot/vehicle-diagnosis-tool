@@ -410,10 +410,10 @@ function readReplayLogFile(filePath) {
 }
 
 export function decodeReplayLog(text) {
-  const packets = String(text || "")
+  const packets = reassembleReplayIsoTpPackets(String(text || "")
     .split(/\r?\n/)
     .map((line) => parseReplayLineBytes(line))
-    .filter((packet) => packet.bytes.length);
+    .filter((packet) => packet.bytes.length));
   const dtcs = [];
   const liveValues = [];
   const freezeFrameValues = [];
@@ -558,6 +558,69 @@ function parseReplayLineBytes(line) {
   const ecu = hasCanId ? tokens[0] : null;
   const byteTokens = (hasCanId ? tokens.slice(1) : tokens).filter((token) => /^[0-9A-F]{2}$/.test(token));
   return { ecu, bytes: byteTokens.map((token) => parseInt(token, 16)) };
+}
+
+function reassembleReplayIsoTpPackets(packets = []) {
+  const output = [];
+  const pendingByEcu = new Map();
+
+  const discardPending = (ecu) => {
+    const pending = pendingByEcu.get(ecu);
+    if (!pending) return;
+    pendingByEcu.delete(ecu);
+    output.push({ ecu: pending.ecu, bytes: [] });
+  };
+
+  packets.forEach((packet) => {
+    const bytes = packet?.bytes || [];
+    const pci = bytes[0];
+    const isFirstFrame = packet?.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x10 && Number.isInteger(bytes[1]);
+    const isConsecutiveFrame = packet?.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x20;
+
+    if (isFirstFrame) {
+      const expectedLength = ((pci & 0x0F) * 0x100) + bytes[1];
+      if (expectedLength <= 7) {
+        output.push({ ...packet, bytes: [] });
+        return;
+      }
+      discardPending(packet.ecu);
+      const pending = {
+        ecu: packet.ecu,
+        expectedLength,
+        payload: bytes.slice(2),
+        nextSequenceNumber: 1,
+        sequenceError: false
+      };
+      if (pending.payload.length >= pending.expectedLength) {
+        output.push({ ecu: pending.ecu, bytes: pending.payload.slice(0, pending.expectedLength) });
+      } else {
+        pendingByEcu.set(packet.ecu, pending);
+      }
+      return;
+    }
+
+    if (isConsecutiveFrame) {
+      const pending = pendingByEcu.get(packet.ecu);
+      if (!pending) {
+        output.push({ ...packet, bytes: [] });
+        return;
+      }
+      const sequenceNumber = pci & 0x0F;
+      if (sequenceNumber !== pending.nextSequenceNumber) pending.sequenceError = true;
+      pending.nextSequenceNumber = (sequenceNumber + 1) & 0x0F;
+      pending.payload.push(...bytes.slice(1));
+      if (pending.payload.length >= pending.expectedLength) {
+        pendingByEcu.delete(packet.ecu);
+        output.push({ ecu: pending.ecu, bytes: pending.sequenceError ? [] : pending.payload.slice(0, pending.expectedLength) });
+      }
+      return;
+    }
+
+    output.push(packet);
+  });
+
+  pendingByEcu.forEach((_pending, ecu) => discardPending(ecu));
+  return output;
 }
 
 function findReplayPositiveResponseIndex(bytes = []) {

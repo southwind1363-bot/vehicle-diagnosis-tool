@@ -316,6 +316,18 @@ try {
     check(snapshot.readoutObserved.live_pid_snapshot === expectedLiveReadout && snapshot.liveValues.length === (expectedLiveReadout ? 1 : 0), `replay ${name} framing was accepted outside a positive response boundary`);
   }
 
+  const replayIsoTpCases = [
+    ["complete", ["can0 7E8#100B49040143414C", "can0 7E8#212D31323334"].join("\n"), true],
+    ["incomplete", "can0 7E8#100B49040143414C", false],
+    ["sequence_error", ["can0 7E8#100B49040143414C", "can0 7E8#222D31323334"].join("\n"), false],
+    ["orphan", "can0 7E8#212D31323334", false]
+  ];
+  for (const [name, replayText, expectedEcuInfo] of replayIsoTpCases) {
+    const snapshot = decodeReplayLog(replayText);
+    const calibrationId = snapshot.ecuInfoValues.find((item) => item.id === "calibration_id")?.value || null;
+    check((calibrationId === "CAL-1234") === expectedEcuInfo, `replay ISO-TP ${name} did not preserve complete-only ECU information`);
+  }
+
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
   check(replayEcuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "replay ECU info did not decode ECU name");
@@ -403,6 +415,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 155");
+  console.log("Local bridge read-only checks: 159");
   console.log("Errors: 0");
 }
