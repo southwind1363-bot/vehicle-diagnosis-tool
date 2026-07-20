@@ -11183,6 +11183,56 @@
     };
   }
 
+  function reconcileMergedReadoutCoverage(baseCoverage = null, snapshots = {}) {
+    const normalizedBase = normalizeReadoutCoverageSnapshot(baseCoverage || buildReadoutCoverageSnapshot());
+    const derived = buildReadoutCoverageSnapshot({
+      includeInfrastructure: normalizedBase.includeInfrastructure === true,
+      dtcSnapshot: snapshots.dtcSnapshot,
+      livePidSnapshot: snapshots.livePidSnapshot,
+      freezeFrameSnapshot: snapshots.freezeFrameSnapshot,
+      readinessSnapshot: snapshots.readinessSnapshot,
+      ecuInfoSnapshot: snapshots.ecuInfoSnapshot,
+      onboardMonitorSnapshot: snapshots.onboardMonitorSnapshot,
+      supportedPidMatrix: snapshots.supportedPidMatrix
+    });
+    const derivedById = new Map((derived.items || []).map((item) => [item.id, item]));
+    const itemsById = new Map((normalizedBase.items || []).map((item) => [item.id, item]));
+
+    // A merged, typed snapshot is newer evidence than an inherited missing/empty coverage state.
+    derivedById.forEach((derivedItem, id) => {
+      const baseItem = itemsById.get(id);
+      if (!baseItem) {
+        itemsById.set(id, derivedItem);
+        return;
+      }
+      if (derivedItem.status === "captured" || (derivedItem.status === "empty" && baseItem.status === "missing")) {
+        itemsById.set(id, { ...baseItem, ...derivedItem });
+      }
+    });
+
+    const items = [...itemsById.values()];
+    const capturedItems = items.filter((item) => item?.status === "captured");
+    const emptyItems = items.filter((item) => item?.status === "empty");
+    const missingItems = items.filter((item) => item?.status === "missing");
+    return normalizeReadoutCoverageSnapshot({
+      ...normalizedBase,
+      items,
+      totalCategories: items.length,
+      availableCategories: capturedItems.length + emptyItems.length,
+      capturedCategories: capturedItems.length,
+      emptyCategories: emptyItems.length,
+      missingCategories: missingItems.length,
+      capturedIds: capturedItems.map((item) => item.id),
+      capturedLabels: capturedItems.map((item) => item.label),
+      emptyIds: emptyItems.map((item) => item.id),
+      emptyLabels: emptyItems.map((item) => item.label),
+      missingIds: missingItems.map((item) => item.id),
+      missingLabels: missingItems.map((item) => item.label),
+      pendingIds: [...emptyItems, ...missingItems].map((item) => item.id),
+      pendingLabels: [...emptyItems, ...missingItems].map((item) => item.label)
+    });
+  }
+
   function buildTextImportMetadata({
     session = {},
     classified = {},
@@ -12302,10 +12352,8 @@
     });
 
     const monitorValues = [...monitorById.values()];
-    const dtcSnapshot = mergeDtcSnapshots(
-      normalizeDtcSnapshot({ source: "scanner_text", codes: scannerAnalysis.codes }),
-      bridgeDtcSnapshot
-    );
+    const scannerDtcSnapshot = scannerAnalysis.dtcSnapshot || scannerAnalysis.dtc_snapshot || normalizeDtcSnapshot({ source: "scanner_text", codes: scannerAnalysis.codes });
+    const dtcSnapshot = mergeDtcSnapshots(scannerDtcSnapshot, bridgeDtcSnapshot);
     const codes = dtcSnapshot.codes;
     const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeMonitorInsightsInput);
     const bridgeMonitorValueSummary = bridgeImport?.monitorValueSummary
@@ -12345,6 +12393,8 @@
       schema_version: "live_pid_snapshot_v1",
       source,
       intent: "read_live_pid_snapshot",
+      ok: monitorValues.length > 0,
+      blocked: false,
       protocol: bridgeImport?.protocol || bridgeImport?.obd_protocol || bridgeSession?.protocol || bridgeSession?.obd_protocol || null,
       capturedAt: bridgeImport?.capturedAt || bridgeImport?.captured_at || bridgeSession?.capturedAt || bridgeSession?.captured_at || null,
       captured_at: bridgeImport?.captured_at || bridgeImport?.capturedAt || bridgeSession?.captured_at || bridgeSession?.capturedAt || null,
@@ -12384,11 +12434,20 @@
     const ecuInfoSnapshot = preferCapturedBridgeSnapshot(bridgeEcuInfoSnapshot, scannerAnalysis.ecuInfoSnapshot || scannerAnalysis.ecu_info_snapshot, ["items"], ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
     const onboardMonitorSnapshot = preferCapturedBridgeSnapshot(bridgeOnboardMonitorSnapshot, scannerAnalysis.onboardMonitorSnapshot || scannerAnalysis.onboard_monitor_snapshot, ["tests"], ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
     const supportedPidMatrix = preferCapturedBridgeSnapshot(bridgeSupportedPidMatrix, scannerAnalysis.supportedPidMatrix || scannerAnalysis.supported_pid_matrix, ["supportedPids", "supported_pids"], ["supportedPidReadoutStatus", "supported_pid_readout_status"]);
+    const mergedReadoutCoverage = reconcileMergedReadoutCoverage(mergedBridgeMetadata.readoutCoverage, {
+      dtcSnapshot,
+      livePidSnapshot: { monitorValues, monitorValueSummary, livePidReadoutStatus: monitorValues.length ? "reported" : "unknown" },
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
+    });
     const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
       Array.isArray(mergedBridgeMetadata.nextReadoutCandidatesInput) && mergedBridgeMetadata.nextReadoutCandidatesInput.length
         ? mergedBridgeMetadata.nextReadoutCandidatesInput
         : buildNextReadoutCandidates(
-          mergedBridgeMetadata.readoutCoverageInput,
+          mergedReadoutCoverage,
           effectiveVehicleApplicability,
           ecuInfoSnapshot,
           dtcSnapshot,
@@ -12396,7 +12455,7 @@
         )
       );
     const coreSessionStatus = buildCoreSessionStatus({
-      readoutCoverage: mergedBridgeMetadata.readoutCoverage,
+      readoutCoverage: mergedReadoutCoverage,
       vehicleApplicability: effectiveVehicleApplicability,
       dtcSnapshot,
       freezeFrameSnapshot,
@@ -12469,7 +12528,7 @@
       || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const nextReadoutGuardSummary = generatedNextReadoutGuardSummary || importedNextReadoutGuardSummary;
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
-      readoutCoverage: mergedBridgeMetadata.readoutCoverage,
+      readoutCoverage: mergedReadoutCoverage,
       dtcSnapshot,
       livePidSnapshot: { monitorValues, monitorValueSummary },
       freezeFrameSnapshot,
@@ -12634,8 +12693,8 @@
       ecu_info_snapshot: ecuInfoSnapshot,
       onboardMonitorSnapshot,
       onboard_monitor_snapshot: onboardMonitorSnapshot,
-      readoutCoverage: mergedBridgeMetadata.readoutCoverage,
-      readout_coverage: mergedBridgeMetadata.readoutCoverage,
+      readoutCoverage: mergedReadoutCoverage,
+      readout_coverage: mergedReadoutCoverage,
       freezeFrameSnapshot,
       freeze_frame_snapshot: freezeFrameSnapshot,
       vehicleProfile,
