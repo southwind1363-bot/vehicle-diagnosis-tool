@@ -14774,6 +14774,7 @@
     const classified = classifyObdResponseLines(value);
     const toolHints = detectScannerToolHints(value);
     const textDtcSnapshot = extractTextDtcSnapshot(value);
+    const textFreezeFrameSnapshot = extractTextFreezeFrameSnapshot(collectTextFreezeFrameSection(value));
     const explicitImportClassification = sessionInput.importClassification || sessionInput.import_classification || null;
     const normalizeBucketResponse = (row) => {
       const response = String(row?.response || "").trim();
@@ -15027,13 +15028,25 @@
       }
       : textImportMetadata.importClassification;
     const hasTextDtcReadout = textDtcSnapshot?.dtcReadoutStatus === "reported" || textDtcSnapshot?.dtc_readout_status === "reported";
+    const hasTextFreezeFrameReadout = textFreezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" || textFreezeFrameSnapshot?.freeze_frame_readout_status === "reported";
     const outputDtcSnapshot = hasTextDtcReadout ? mergedDtcSnapshot : session.dtcSnapshot;
-    const outputSession = outputDtcSnapshot === session.dtcSnapshot
+    const sessionFreezeFrameValues = Array.isArray(session.freezeFrameSnapshot?.monitorValues)
+      ? session.freezeFrameSnapshot.monitorValues
+      : Array.isArray(session.freezeFrameSnapshot?.monitor_values)
+        ? session.freezeFrameSnapshot.monitor_values
+        : [];
+    // A decoded Mode 02 response with values is stronger evidence than a pasted empty report section.
+    const outputFreezeFrameSnapshot = hasTextFreezeFrameReadout && !sessionFreezeFrameValues.length
+      ? textFreezeFrameSnapshot
+      : session.freezeFrameSnapshot;
+    const outputSession = outputDtcSnapshot === session.dtcSnapshot && outputFreezeFrameSnapshot === session.freezeFrameSnapshot
       ? session
       : buildDiagnosticScanSession({
         ...session,
         dtcSnapshot: outputDtcSnapshot,
         dtc_snapshot: outputDtcSnapshot,
+        freezeFrameSnapshot: outputFreezeFrameSnapshot,
+        freeze_frame_snapshot: outputFreezeFrameSnapshot,
         readoutCoverage: metadataOverrides.readoutCoverage || null,
         readout_coverage: metadataOverrides.readoutCoverage || null,
         coreSessionStatus: null,
@@ -17827,6 +17840,11 @@
     return { freezeLines, nonFreezeLines, triggerDtc };
   }
 
+  function hasTextReportedEmptyFreezeFrame(section = {}) {
+    const isExplicitEmptyResult = (value) => /^(?:no\s+freeze[\s_-]*frame(?:\s+data)?|freeze[\s_-]*frame(?:\s+data)?\s*(?:[:=-]\s*)?(?:none|no\s+data)|\u30d5\u30ea\u30fc\u30ba\u30d5\u30ec\u30fc\u30e0(?:\u30c7\u30fc\u30bf)?\s*(?:[:=-]\s*)?(?:\u306a\u3057|\u8a72\u5f53\u306a\u3057))$/i.test(String(value || "").trim());
+    return Array.isArray(section.freezeLines) && section.freezeLines.some(isExplicitEmptyResult);
+  }
+
   function extractTextFreezeFrameSnapshot(section = {}) {
     const response = (section.freezeLines || [])
       .map((line) => String(line || "").trim().match(/^(mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,9})$/i))
@@ -17850,12 +17868,13 @@
       });
     }
     const monitorValues = extractMonitorValues((section.freezeLines || []).join("\n"));
-    if (!monitorValues.length && !section.triggerDtc) return null;
+    const reportedEmpty = hasTextReportedEmptyFreezeFrame(section);
+    if (!monitorValues.length && !section.triggerDtc && !reportedEmpty) return null;
     return normalizeFreezeFrameSnapshot({
       source: "scanner_text_freeze_frame",
       triggerDtc: section.triggerDtc || null,
       monitorValues,
-      freezeFrameReadoutStatus: monitorValues.length ? "reported" : "unknown"
+      freezeFrameReadoutStatus: monitorValues.length || reportedEmpty ? "reported" : "unknown"
     });
   }
 
