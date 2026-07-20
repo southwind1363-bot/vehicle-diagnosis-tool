@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "THINKCAR共有レポートのメーカー固有DTCを読取セッションへ保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.23";
+const APP_VERSION = "3.3.24";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8110,8 +8110,8 @@ function importObdScannerFile(event) {
     input.value = "";
     return;
   }
-  if (file.size > 500000) {
-    obdImportStatus.textContent = "診断結果ファイルは500 KB以下にしてください。";
+  if (file.size > 2000000) {
+    obdImportStatus.textContent = "診断結果ファイルは2 MB以下にしてください。";
     input.value = "";
     return;
   }

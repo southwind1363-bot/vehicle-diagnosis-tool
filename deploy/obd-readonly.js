@@ -14907,7 +14907,8 @@
 
   function buildDiagnosticScanSessionFromJson(value, options = {}) {
     const text = String(value || "").trim();
-    if (!text || text.length > 500000 || !/^[{[]/.test(text)) return null;
+    const trustedBridgeExportMarker = /"(?:schema_version|schemaVersion)"\s*:\s*"bridge_session_export_v1"/.test(text.slice(0, 4096));
+    if (!text || text.length > 2000000 || (!trustedBridgeExportMarker && text.length > 500000) || !/^[{[]/.test(text)) return null;
     let parsed;
     try {
       parsed = JSON.parse(text);
@@ -14952,6 +14953,7 @@
     const isTrustedBridgeSessionExport = [parsedPayload, exportPayload].some((payload) => (
       payload && typeof payload === "object" && (payload.schema_version === "bridge_session_export_v1" || payload.schemaVersion === "bridge_session_export_v1")
     ));
+    if (text.length > 500000 && !isTrustedBridgeSessionExport) return null;
     const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
     if (!session || typeof session !== "object" || Array.isArray(session)) return null;
     const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => session[key] !== undefined && session[key] !== null);
