@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2629件",
+  validationCheckLabel: "OBD安全検証 2630件",
   bridgeValidationCheckLabel: "bridge検証 142件",
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.6";
+const APP_VERSION = "3.3.7";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4906,10 +4906,12 @@ async function readElmDeveloperLoop() {
 async function readElmDeveloperResponse(timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (obdDevSession.textBuffer.includes(">")) break;
+    if (obdDevSession.textBuffer.includes(">")) {
+      return obdDevSession.textBuffer.replace(/[>\r]/g, "").trim();
+    }
     await new Promise((resolve) => setTimeout(resolve, 40));
   }
-  return obdDevSession.textBuffer.replace(/[>\r]/g, "").trim();
+  return "";
 }
 
 function appendObdDeveloperLog(text) {
