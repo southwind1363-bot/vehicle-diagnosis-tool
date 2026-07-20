@@ -1305,17 +1305,30 @@
       const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
       const deviceReplayMode = device?.replay_mode === true || device?.replayMode === true || replayMode;
       const deviceSampleMode = !deviceReplayMode && (device?.sample_mode === true || device?.sampleMode === true || sampleMode);
+      const driverStatus = String(device?.driver_status || device?.driverStatus || data.driver_status || data.driverStatus || "unknown").slice(0, 80);
+      const adapterFamily = device?.adapter_family || device?.adapterFamily || device?.family || null;
+      const connectionStatus = device?.connection_status || device?.connectionStatus || null;
+      const driverLibraryDetected = device?.driver_library_detected === true || device?.driverLibraryDetected === true;
       return {
         id,
         label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
         vendor: device?.vendor ? String(device.vendor).slice(0, 80) : null,
-        driverStatus: device?.driver_status || device?.driverStatus || data.driver_status || data.driverStatus || "unknown",
+        driverStatus,
+        driver_status: driverStatus,
+        adapterFamily: adapterFamily ? String(adapterFamily).slice(0, 80) : null,
+        adapter_family: adapterFamily ? String(adapterFamily).slice(0, 80) : null,
+        driverLibraryDetected,
+        driver_library_detected: driverLibraryDetected,
+        connectionStatus: connectionStatus ? String(connectionStatus).slice(0, 80) : null,
+        connection_status: connectionStatus ? String(connectionStatus).slice(0, 80) : null,
         connected: device?.connected === true || device?.is_connected === true || device?.isConnected === true,
         sampleMode: deviceSampleMode,
         sample_mode: deviceSampleMode,
         replayMode: deviceReplayMode,
         replay_mode: deviceReplayMode,
         selected: selectedDeviceId ? id === selectedDeviceId : index === 0 && devices.length === 1,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
         supportNote: "VCI識別情報は表示用に最小化し、シリアル番号などの生識別子は保持しません。"
       };
     });
@@ -15336,6 +15349,9 @@
     const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
     const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
+    const connectionStatusInput = pick("connectionStatus", "connection_status", "connectionStatusResponse", "connection_status_response");
+    const vciDevicesInput = pick("vciDevices", "vci_devices", "vciList", "vci_list", "listVciResponse", "list_vci_response");
+    const adapterIdentityInput = pick("adapterIdentity", "adapter_identity", "adapterIdentityResponse", "adapter_identity_response");
     const sessionInput = getDiagnosticSessionInput(options);
     const scannerJsonSource = "scanner_json_import";
     const scannerJsonProtocol = String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null;
@@ -15580,6 +15596,9 @@
       supportedPidMatrix: supportedPidMatrix || undefined,
       onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
       ecuResponseSummary: ecuResponseSummary || undefined,
+      connectionStatus: connectionStatusInput || undefined,
+      vciDevices: vciDevicesInput || undefined,
+      adapterIdentity: adapterIdentityInput || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       readoutInterface: scannerJsonReadoutInterface || undefined,
