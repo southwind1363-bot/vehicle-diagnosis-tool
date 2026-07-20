@@ -17333,10 +17333,12 @@
         item.aliases.some((alias) => isMonitorLabelMatch(labelPart, alias))
       );
       if (!definition) {
-        const rawPidMatch = line.trim().match(/^(?:mode\s*0?1\s+pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){1,7})$/i);
+        const rawPidMatch = line.trim().match(/^(mode\s*0?1\s+pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){1,7})$/i);
         if (!rawPidMatch) return;
-        const pid = rawPidMatch[1].toUpperCase();
-        const responseBytes = parseObdHexBytes(rawPidMatch[2]);
+        const requestLabel = rawPidMatch[1];
+        const pid = rawPidMatch[2].toUpperCase();
+        const responseBytes = parseObdHexBytes(rawPidMatch[3]);
+        if (/^0?1/i.test(requestLabel) && responseBytes[0] !== 0x41) return;
         const payload = responseBytes[0] === 0x41
           ? responseBytes[1] === parseInt(pid, 16) ? responseBytes.slice(2) : []
           : responseBytes;
@@ -17408,11 +17410,13 @@
 
   function extractTextFreezeFrameSnapshot(section = {}) {
     const response = (section.freezeLines || [])
-      .map((line) => String(line || "").trim().match(/^(?:mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,9})$/i))
+      .map((line) => String(line || "").trim().match(/^(mode\s*0?2\s+pid\s*|0?2\s*(?:pid\s*)?)(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){2,9})$/i))
       .map((match) => {
         if (!match) return null;
-        const pid = match[1].toUpperCase();
-        const responseBytes = parseObdHexBytes(match[2]);
+        const requestLabel = match[1];
+        const pid = match[2].toUpperCase();
+        const responseBytes = parseObdHexBytes(match[3]);
+        if (/^0?2/i.test(requestLabel) && responseBytes[0] !== 0x42) return null;
         const framePayload = responseBytes[0] === 0x42
           ? responseBytes[1] === parseInt(pid, 16) ? responseBytes.slice(2) : []
           : responseBytes;
@@ -17458,10 +17462,12 @@
     const readinessLines = collectTextReadinessSection(value);
     if (!readinessLines.length) return null;
     const readinessResponse = readinessLines
-      .map((line) => String(line || "").trim().match(/^(?:mode\s*0?1\s+pid\s*|pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?01\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){4,6})$/i))
+      .map((line) => String(line || "").trim().match(/^(mode\s*0?1\s+pid\s*|pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?01\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){4,6})$/i))
       .map((match) => {
         if (!match) return null;
-        const responseBytes = parseObdHexBytes(match[1]);
+        const requestLabel = match[1];
+        const responseBytes = parseObdHexBytes(match[2]);
+        if (/^0?1/i.test(requestLabel) && responseBytes[0] !== 0x41) return null;
         const payload = responseBytes[0] === 0x41
           ? responseBytes[1] === 0x01 ? responseBytes.slice(2) : []
           : responseBytes;
@@ -17560,7 +17566,7 @@
   function collectTextSupportedPidSection(value) {
     const supportedPidLines = [];
     let inSupportedPidSection = false;
-    const isSupportedPidHeading = (text) => /(?:\bsupported\s*pids?\b|対応\s*pid|(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?(?:00|20|40|60|80|A0|C0|E0)\s*[:=])/i.test(text);
+    const isSupportedPidHeading = (text) => /(?:\bsupported\s*pids?\b|対応\s*pid|(?:\bmode\s*0?1\s+pid\s*|\bpid\s*|(?:^|\s)0?1\s*(?:pid\s*)?)(?:0x)?(?:00|20|40|60|80|A0|C0|E0)\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|mode\s*0?6|onboard\s*monitor|\becu\s*(?:info|information)\b|\bmode\s*0?9\b|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
@@ -17589,10 +17595,17 @@
         listMatch[1].split(/[\s,;|/]+/).forEach(addPid);
         return;
       }
-      const bitmaskMatch = text.match(/(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?(00|20|40|60|80|A0|C0|E0)\s*[:=]\s*(?:41\s+(?:0x)?\1\s+)?((?:[0-9a-f]{2}\s*){4})$/i);
+      const bitmaskMatch = text.match(/^(mode\s*0?1\s+pid\s*|pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?(00|20|40|60|80|A0|C0|E0)\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){4,6})$/i);
       if (bitmaskMatch) {
-        const pageBase = bitmaskMatch[1].toUpperCase();
-        const decoded = decodeSupportedPidResponse({ raw: "41 " + pageBase + " " + bitmaskMatch[2], source: "scanner_text_supported_pids" });
+        const requestLabel = bitmaskMatch[1];
+        const pageBase = bitmaskMatch[2].toUpperCase();
+        const responseBytes = parseObdHexBytes(bitmaskMatch[3]);
+        if (/^0?1/i.test(requestLabel) && responseBytes[0] !== 0x41) return;
+        const maskBytes = responseBytes[0] === 0x41
+          ? responseBytes[1] === parseInt(pageBase, 16) ? responseBytes.slice(2) : []
+          : responseBytes;
+        if (maskBytes.length !== 4) return;
+        const decoded = decodeSupportedPidResponse({ raw: "41 " + pageBase + " " + formatRawPidBytes(maskBytes), source: "scanner_text_supported_pids" });
         decoded.supportedPids.forEach(addPid);
         decoded.supportedPidPageBases.forEach((base) => supportedPidPageBases.add(base));
         return;
