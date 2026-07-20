@@ -17,6 +17,16 @@ const bridgeComputedValueIds = new Set([
   "readiness_status_byte_d",
   "readiness_flag_count"
 ]);
+const j2534UnavailableReadIntents = [
+  "read_stored_dtc",
+  "read_pending_dtc",
+  "read_permanent_dtc",
+  "read_freeze_frame",
+  "read_supported_pids",
+  "read_ecu_info",
+  "read_onboard_monitor",
+  "read_live_pid_snapshot"
+];
 
 function check(condition, message) {
   if (!condition) failures.push(message);
@@ -112,16 +122,6 @@ try {
     const j2534Identity = await post(j2534DiscoveryPort, "adapter_identity");
     check(j2534Status.data.sample_mode === false && j2534Status.data.vci_detected_count === 2 && j2534Vci.data.driver_status === "j2534_registry_detected" && j2534Vci.data.devices.length === 2 && j2534Vci.data.devices.every((item) => item.connected === false), "J2534 registry discovery did not expose detected drivers without opening a VCI");
     check(j2534Identity.data.adapter_family === "j2534_passthru" && j2534Identity.data.driver_status === "j2534_registry_detected" && j2534Identity.data.vehicle_command_enabled === false, "J2534 registry discovery did not preserve adapter identity read-only safety");
-    const j2534UnavailableReadIntents = [
-      "read_stored_dtc",
-      "read_pending_dtc",
-      "read_permanent_dtc",
-      "read_freeze_frame",
-      "read_supported_pids",
-      "read_ecu_info",
-      "read_onboard_monitor",
-      "read_live_pid_snapshot"
-    ];
     for (const intent of j2534UnavailableReadIntents) {
       const unavailableReadout = await post(j2534DiscoveryPort, intent);
       check(unavailableReadout.ok === false && unavailableReadout.blocked === false && unavailableReadout.would_transmit === false && unavailableReadout.errors.includes("vci_not_connected"), `J2534 discovery ${intent} did not stop before an unopened VCI readout`);
@@ -130,6 +130,28 @@ try {
     }
   } finally {
     await new Promise((resolve) => j2534DiscoveryServer.close(resolve));
+  }
+
+  const j2534MissingDriverServer = createLocalBridgeApp({ pairingToken: token, discoverJ2534: true, j2534RegistryText: "" });
+  const j2534MissingDriverPort = await new Promise((resolve) => {
+    j2534MissingDriverServer.listen(0, "127.0.0.1", () => resolve(j2534MissingDriverServer.address().port));
+  });
+  try {
+    const missingDriverHealth = await fetch(`http://127.0.0.1:${j2534MissingDriverPort}/health`).then((response) => response.json());
+    const missingDriverStatus = await post(j2534MissingDriverPort, "bridge_status");
+    const missingDriverVci = await post(j2534MissingDriverPort, "list_vci");
+    const missingDriverIdentity = await post(j2534MissingDriverPort, "adapter_identity");
+    check(missingDriverHealth.sample_mode === false && missingDriverHealth.j2534_discovery_requested === true && missingDriverHealth.vci_detected_count === 0, "Empty J2534 discovery incorrectly fell back to sample health mode");
+    check(missingDriverStatus.data.status === "driver_not_detected" && missingDriverStatus.data.sample_mode === false && missingDriverStatus.data.vci_detected_count === 0, "Empty J2534 discovery did not expose a distinct bridge status");
+    check(missingDriverVci.data.devices.length === 0 && missingDriverVci.data.selected_device_id === null && missingDriverVci.data.driver_status === "j2534_driver_not_detected", "Empty J2534 discovery exposed a sample VCI");
+    check(missingDriverIdentity.data.adapter_name === null && missingDriverIdentity.data.connection_status === "driver_not_detected" && missingDriverIdentity.data.vehicle_command_enabled === false, "Empty J2534 discovery exposed a sample adapter identity");
+    for (const intent of j2534UnavailableReadIntents) {
+      const unavailableReadout = await post(j2534MissingDriverPort, intent);
+      check(unavailableReadout.ok === false && unavailableReadout.blocked === false && unavailableReadout.would_transmit === false && unavailableReadout.errors.includes("vci_not_detected"), `Empty J2534 discovery ${intent} did not stop before sample readout fallback`);
+      check(!Object.hasOwn(unavailableReadout.data, "dtcs") && !Object.hasOwn(unavailableReadout.data, "values") && !Object.hasOwn(unavailableReadout.data, "tests") && !Object.hasOwn(unavailableReadout.data, "supported_pids"), `Empty J2534 discovery ${intent} exposed sample diagnostic data`);
+    }
+  } finally {
+    await new Promise((resolve) => j2534MissingDriverServer.close(resolve));
   }
 
   const dtc = await post(port, "read_stored_dtc");
@@ -530,6 +552,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 185");
+  console.log("Local bridge read-only checks: 191");
   console.log("Errors: 0");
 }
