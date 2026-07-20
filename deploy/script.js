@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2682件",
+  validationCheckLabel: "OBD安全検証 2684件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "J2534 DLLのビット数・必須APIを静的検査",
+  recentMilestone: "ELM327の切断状態を安全に収束",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.75";
+const APP_VERSION = "3.3.76";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -493,6 +493,7 @@ let activeResultView = "flow";
 let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled";
 let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
 let activeObdStage = "setup";
+const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const obdDevSession = {
   port: null,
   reader: null,
@@ -504,6 +505,9 @@ const obdDevSession = {
   readInProgress: false,
   initializing: false,
   coreScanInProgress: false,
+  connectionState: "disconnected",
+  lastDisconnectReason: null,
+  disconnectedAt: null,
   lastRawText: "",
   connectedAt: null,
   scanSessionId: null,
@@ -657,6 +661,7 @@ obdDevBridgeFreezeFrameButton.addEventListener("click", readObdLocalBridgeFreeze
 obdDevBridgeReadinessButton.addEventListener("click", readObdLocalBridgeReadiness);
 obdDevBridgeLiveButton.addEventListener("click", readObdLocalBridgeLiveSnapshot);
 obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
+if (navigator.serial?.addEventListener) navigator.serial.addEventListener("disconnect", handleObdSerialDisconnect);
 obdPreviewElm327Button?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-elm327"));
 obdPreviewThinkcarButton?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-thinkcar-bluetooth"));
 obdPreviewJ2534Button?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-techstream-j2534"));
@@ -2039,7 +2044,7 @@ function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.
   const emptyReadoutSummary = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, "");
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const previewActive = Boolean(obdDevSession.previewMode);
-  const connected = Boolean(obdDevSession.port);
+  const connected = Boolean(obdDevSession.port) && !["disconnected", "disconnecting"].includes(obdDevSession.connectionState);
   const bridgeReady = Boolean(obdDevSession.bridgeEndpoint);
   const detailUnlocked = obdDevModeUnlocked === true;
   const currentState = connected
@@ -4164,7 +4169,7 @@ function renderObdProgressOverview() {
 
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
   const unlocked = obdDevModeUnlocked === true;
-  const connected = Boolean(obdDevSession.port);
+  const connected = Boolean(obdDevSession.port) && !["disconnected", "disconnecting"].includes(obdDevSession.connectionState);
   const previewActive = Boolean(obdDevSession.previewMode);
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
   const selectedVehicle = obdVehicleInput.value.trim();
@@ -4322,17 +4327,20 @@ function handleObdPrimaryAction() {
 
 async function connectObdDeveloperVci() {
   if (!obdDevModeUnlocked) return;
+  if (!["disconnected"].includes(obdDevSession.connectionState)) return;
   if (!("serial" in navigator)) {
     obdDevStatus.textContent = "このブラウザはWeb Serialに対応していません。";
     return;
   }
 
   try {
+    setObdDeveloperConnectionState("selecting");
     obdDevSession.previewMode = null;
     clearRequestedInterfaceSelection();
     const baudRate = Number(obdDevBaudRate.value) || 38400;
     obdDevStatus.textContent = "VCIを選択してください。";
     const port = await navigator.serial.requestPort();
+    setObdDeveloperConnectionState("opening");
     await port.open({ baudRate });
     obdDevSession.port = port;
     obdDevSession.reader = port.readable.getReader();
@@ -4354,21 +4362,39 @@ async function connectObdDeveloperVci() {
     obdDevSession.livePidTimeline = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
+    setObdDeveloperConnectionState("initializing");
     obdDevStatus.textContent = `VCI読取を開始しました。通信速度 ${baudRate}。`;
     readElmDeveloperLoop();
     renderObdDeveloperGate();
     await initializeElmDeveloperAdapter();
     obdDevSession.initializing = false;
     await identifyObdDeveloperVci();
+    if (obdDevSession.port) setObdDeveloperConnectionState("ready");
   } catch (error) {
     obdDevSession.initializing = false;
-    obdDevStatus.textContent = `読取を開始できませんでした: ${error?.message || error}`;
-    await disconnectObdDeveloperVci();
+    const failureMessage = `読取を開始できませんでした: ${error?.message || error}`;
+    await disconnectObdDeveloperVci({ reason: "connection_failed", statusMessage: failureMessage });
   }
 }
 
-async function disconnectObdDeveloperVci() {
+function setObdDeveloperConnectionState(state, reason = null) {
+  obdDevSession.connectionState = ELM327_CONNECTION_STATES.includes(state) ? state : "disconnected";
+  if (reason) obdDevSession.lastDisconnectReason = String(reason).slice(0, 80);
+}
+
+function handleObdSerialDisconnect(event) {
+  if (!obdDevSession.port) return;
+  const disconnectedPort = event?.port || (event?.target && event.target !== navigator.serial ? event.target : null);
+  if (disconnectedPort && disconnectedPort !== obdDevSession.port) return;
+  void disconnectObdDeveloperVci({ reason: "device_disconnected" });
+}
+
+async function disconnectObdDeveloperVci(options = {}) {
+  if (obdDevSession.connectionState === "disconnecting") return;
+  const reason = typeof options?.reason === "string" ? options.reason : "operator_disconnect";
+  const statusMessage = typeof options?.statusMessage === "string" ? options.statusMessage : null;
   const { reader, writer, port } = obdDevSession;
+  setObdDeveloperConnectionState("disconnecting", reason);
   obdDevSession.reader = null;
   obdDevSession.writer = null;
   obdDevSession.port = null;
@@ -4376,6 +4402,9 @@ async function disconnectObdDeveloperVci() {
   obdDevSession.supportedPidDiscoveryComplete = false;
   obdDevSession.supportedPidSet = [];
   obdDevSession.livePidTimeline = [];
+  obdDevSession.readInProgress = false;
+  obdDevSession.initializing = false;
+  obdDevSession.coreScanInProgress = false;
 
   try {
     if (reader) {
@@ -4389,8 +4418,10 @@ async function disconnectObdDeveloperVci() {
       await port.close().catch(() => {});
     }
   } finally {
+    obdDevSession.disconnectedAt = new Date().toISOString();
+    setObdDeveloperConnectionState("disconnected", reason);
     clearRequestedInterfaceSelection();
-    obdDevStatus.textContent = "VCI読取を停止しました。";
+    obdDevStatus.textContent = statusMessage || (reason === "operator_disconnect" ? "VCI読取を停止しました。" : "VCI接続が終了したため、安全に読取を停止しました。");
     renderObdDeveloperGate();
   }
 }
@@ -4768,6 +4799,7 @@ async function runObdDeveloperRead(label, commands) {
   if (obdDevSession.readInProgress) return false;
 
   obdDevSession.readInProgress = true;
+  setObdDeveloperConnectionState("reading");
   renderObdDeveloperGate();
   const startedAt = new Date().toISOString();
   const chunks = [];
@@ -4789,13 +4821,15 @@ async function runObdDeveloperRead(label, commands) {
     const timedOut = message.startsWith("elm_response_timeout:");
     recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status: commandResponses.length ? "partial" : "failed", timedOut });
     const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks));
-    if (timedOut) await disconnectObdDeveloperVci();
+    const transportFailed = timedOut || message.startsWith("elm_transport_");
+    if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
     obdDevStatus.textContent = timedOut
       ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`
       : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`;
     return false;
   } finally {
     obdDevSession.readInProgress = false;
+    if (obdDevSession.port && obdDevSession.connectionState !== "disconnecting") setObdDeveloperConnectionState("ready");
     renderObdDeveloperGate();
   }
 }
@@ -4883,7 +4917,11 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
     throw new Error(`許可していないコマンドです: ${normalized}`);
   }
   obdDevSession.textBuffer = "";
-  await obdDevSession.writer.write(obdDevSession.encoder.encode(`${normalized}\r`));
+  try {
+    await obdDevSession.writer.write(obdDevSession.encoder.encode(`${normalized}\r`));
+  } catch (_error) {
+    throw new Error(`elm_transport_write_failed:${normalized}`);
+  }
   const response = await readElmDeveloperResponse(timeoutMs);
   if (!response) throw new Error(`elm_response_timeout:${normalized}`);
   return response;
@@ -4899,24 +4937,33 @@ function isAllowedObdDeveloperCommand(command) {
 }
 
 async function readElmDeveloperLoop() {
+  let transportLossReason = null;
   while (obdDevSession.readLoopActive && obdDevSession.reader) {
     try {
       const result = await obdDevSession.reader.read();
-      if (result.done) break;
+      if (result.done) {
+        transportLossReason = "serial_stream_closed";
+        break;
+      }
       obdDevSession.textBuffer += obdDevSession.decoder.decode(result.value || new Uint8Array(), { stream: true });
       obdDevSession.textBuffer = obdDevSession.textBuffer.slice(-12000);
     } catch (_error) {
       if (obdDevSession.readLoopActive) {
         obdDevStatus.textContent = "VCI受信が停止しました。読取をやり直してください。";
+        transportLossReason = "serial_read_failed";
       }
       break;
     }
+  }
+  if (transportLossReason && obdDevSession.readLoopActive && obdDevSession.port) {
+    void disconnectObdDeveloperVci({ reason: transportLossReason });
   }
 }
 
 async function readElmDeveloperResponse(timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (!obdDevSession.port || !obdDevSession.readLoopActive) throw new Error("elm_transport_disconnected");
     if (obdDevSession.textBuffer.includes(">")) {
       return obdDevSession.textBuffer.replace(/[>\r]/g, "").trim();
     }
