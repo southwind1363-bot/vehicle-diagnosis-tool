@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.17";
+const APP_VERSION = "3.3.18";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4511,7 +4511,9 @@ async function readObdDeveloperEcuInfo() {
   const supportedCommands = [
     ["04", "0904"],
     ["06", "0906"],
-    ["0A", "090A"]
+    ["08", "0908"],
+    ["0A", "090A"],
+    ["0B", "090B"]
   ]
     .filter(([infoType]) => supportedInfoTypes.has(infoType))
     .map(([, command]) => command);
@@ -4881,7 +4883,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
 function isAllowedObdDeveloperCommand(command) {
   return [
     "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP",
-    "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0202", "06", "0900", "0904", "0906", "090A",
+    "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
     ...obdDevSession.freezeFramePidList,
     ...obdDevSession.selectedPidList
   ].includes(command);

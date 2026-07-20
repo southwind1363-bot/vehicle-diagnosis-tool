@@ -14024,9 +14024,9 @@
       const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && isKnownMode09FrameStart(nextIndex));
       const end = nextSegment > index ? nextSegment : bytes.length;
-      const payload = trimEcuInfoPayload(bytes.slice(index + 2, end), infoType === "00");
       const catalogItem = ecuInfoItemCatalog.find((item) => item.infoType === infoType);
       if (!catalogItem) continue;
+      const payload = trimEcuInfoPayload(bytes.slice(index + 2, end), infoType === "00" || catalogItem.valueType === "counter_set");
       values.push({
         id: catalogItem.id,
         info_type: infoType,
@@ -17602,7 +17602,7 @@
   function collectTextEcuInfoSection(value) {
     const ecuInfoLines = [];
     let inEcuInfo = false;
-    const isEcuInfoRawResponse = (text) => /^(?:mode\s*0?9\s+(?:pid\s*)?|0?9\s*(?:pid\s*)?)(?:0x)?(?:00|02|04|06|0A)\s*[:=]/i.test(text);
+    const isEcuInfoRawResponse = (text) => /^(?:mode\s*0?9\s+(?:pid\s*)?|0?9\s*(?:pid\s*)?)(?:0x)?(?:00|02|04|06|08|0A|0B)\s*[:=]/i.test(text);
     const isEcuInfoHeading = (text) => /(?:\becu\s*(?:info|information)\b|\bmode\s*0?9\b|ecu\s*情報|車両\s*情報)/i.test(text) || isEcuInfoRawResponse(text);
     const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|mode\s*0?6|onboard\s*monitor|supported\s*pid|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|対応\s*pid|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
@@ -17626,7 +17626,7 @@
     ];
     const ecuInfoLines = collectTextEcuInfoSection(value);
     const rawResponses = ecuInfoLines
-      .map((line) => String(line || "").trim().match(/^(?:mode\s*0?9\s+(?:pid\s*)?|0?9\s*(?:pid\s*)?)(?:0x)?(00|02|04|06|0A)\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){3,120})$/i))
+      .map((line) => String(line || "").trim().match(/^(?:mode\s*0?9\s+(?:pid\s*)?|0?9\s*(?:pid\s*)?)(?:0x)?(00|02|04|06|08|0A|0B)\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){3,120})$/i))
       .map((match) => {
         if (!match) return null;
         const infoType = match[1].toUpperCase();
