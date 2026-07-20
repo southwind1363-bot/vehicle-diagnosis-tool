@@ -15700,6 +15700,17 @@
   function extractTextDtcSnapshot(value) {
     const lines = String(value || "").split(/\r?\n/);
     const rows = [];
+    const rawDtcRows = lines.flatMap((line) => {
+      const match = String(line || "").trim().match(/^(?:mode\s*)?(03|07|0A)\s*[:=]\s*(?:4([37A])\s+)?((?:[0-9a-f]{2}\s*){2,16})$/i);
+      if (!match) return [];
+      const responseByService = { "03": "43", "07": "47", "0A": "4A" };
+      const response = responseByService[match[1]];
+      if (match[2] && response[1] !== match[2].toUpperCase()) return [];
+      return decodeObdDtcResponse({
+        raw: response + " " + match[3],
+        source: "scanner_text_dtc"
+      }).dtcs;
+    });
     let currentStatus = "unknown";
     let currentEcu = null;
     const resolveHeadingStatus = (text) => {
@@ -15776,7 +15787,7 @@
     });
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
-      dtcs: rows
+      dtcs: [...rows, ...rawDtcRows]
     });
   }
 
