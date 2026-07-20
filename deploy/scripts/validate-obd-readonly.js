@@ -1630,7 +1630,7 @@ const decodeFreezeFrameResponseFunctionChecks = () => {
     check(functionBody.includes('const frameNumber = bytes[index + 2];'), "decodeFreezeFrameResponse should preserve the freeze-frame number byte");
     check(functionBody.includes('if (pid === "02"') && functionBody.includes('triggerDtc = decoded') && functionBody.includes('triggerFrameNumber = frameNumber') && functionBody.includes('trigger_frame_number: triggerFrameNumber'), "decodeFreezeFrameResponse should decode trigger DTC and frame number from PID 02");
     check(functionBody.includes('freeze_frame_number: frameNumber'), "decodeFreezeFrameResponse should attach frame numbers to decoded PID values");
-    check(functionBody.includes('const readoutStatus = hasMode02Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeFreezeFrameResponse should distinguish absent input from unparsed responses");
+    check(functionBody.includes('let hasCompleteMode02Frame = false;') && functionBody.includes('if (payloadLength > 0 && payload.length !== payloadLength)') && functionBody.includes('const readoutStatus = hasCompleteMode02Frame || values.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeFreezeFrameResponse should reject incomplete payloads and distinguish absent input from complete responses");
     check(functionBody.includes('normalizeFreezeFrameSnapshot({') && functionBody.includes('trigger_dtc: triggerDtc'), "decodeFreezeFrameResponse should return a normalized freeze-frame snapshot with trigger DTC");
   }
 };
@@ -2518,7 +2518,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2627件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2628件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2748,8 +2748,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.4";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.4";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.4", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.5";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.5";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.5", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -10933,6 +10933,8 @@ check(nestedUnparsedLivePidCoverage.itemById?.live_pid_snapshot?.status === "mis
 const reimportedUnparsedLivePidSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedLivePidSession) });
 check(reimportedUnparsedLivePidSession.livePidSnapshot?.live_pid_readout_status === "unparsed" && reimportedUnparsedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.status === "missing" && reimportedUnparsedLivePidSession.vehicleCommandEnabled === false, "保存済み不完全ライブPID応答を再取込できません");
 const decodedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 0E 00 80 42 05 00 7B" });
+const incompleteFreezeFrameResponse = obd.decodeFreezeFrameResponse({ raw: "42 0C 00 1A" });
+check(incompleteFreezeFrameResponse.freezeFrameReadoutStatus === "unparsed" && incompleteFreezeFrameResponse.monitorValues.length === 0, "Incomplete freeze-frame PID responses must not be retained as reported values");
 check(decodedFreezeFrame.triggerDtc === "P0171" && decodedFreezeFrame.triggerFrameNumber === 0 && decodedFreezeFrame.trigger_frame_number === 0, "Decoded freeze-frame trigger frame number was not retained");
 const decodedFreezeFrameTriggerRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freeze_frame_snapshot: decodedFreezeFrame }))
@@ -16271,6 +16273,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2627");
+  console.log("OBD read-only safety checks: 2628");
   console.log("Errors: 0");
 }

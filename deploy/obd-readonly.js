@@ -13945,8 +13945,7 @@
     let triggerDtc = null;
     let triggerFrameNumber = null;
     const triggerDtcEntries = [];
-    const hasMode02Frame = bytes.some((byte, index) => byte === 0x42 && index + 2 < bytes.length);
-    const readoutStatus = hasMode02Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
+    let hasCompleteMode02Frame = false;
 
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x42) continue;
@@ -13954,7 +13953,12 @@
       const frameNumber = bytes[index + 2];
       const payloadLength = getStandardPidPayloadLength(pid);
       const payload = getResponsePayload(bytes, index + 3, payloadLength, 0x42);
+      if (payloadLength > 0 && payload.length !== payloadLength) {
+        index += 2 + payload.length;
+        continue;
+      }
       if (pid === "02" && Number.isInteger(payload[0]) && Number.isInteger(payload[1])) {
+        hasCompleteMode02Frame = true;
         const decoded = decodeDtcPair(payload[0], payload[1]);
         if (decoded !== "P0000") {
           triggerDtc = decoded;
@@ -13965,10 +13969,17 @@
         continue;
       }
       const decoded = decodeStandardPidValue(pid, payload);
-      if (Array.isArray(decoded)) values.push(...decoded.map((item) => ({ ...item, freeze_frame_number: frameNumber, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) })));
-      else if (decoded) values.push({ ...decoded, freeze_frame_number: frameNumber, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) });
+      if (Array.isArray(decoded)) {
+        hasCompleteMode02Frame = hasCompleteMode02Frame || payloadLength > 0;
+        values.push(...decoded.map((item) => ({ ...item, freeze_frame_number: frameNumber, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) })));
+      } else if (decoded) {
+        hasCompleteMode02Frame = hasCompleteMode02Frame || payloadLength > 0;
+        values.push({ ...decoded, freeze_frame_number: frameNumber, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) });
+      }
       index += 2 + payload.length;
     }
+
+    const readoutStatus = hasCompleteMode02Frame || values.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
     return normalizeFreezeFrameSnapshot({
       source: input.source || "obd_response_decoder",
