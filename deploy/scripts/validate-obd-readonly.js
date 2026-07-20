@@ -1397,8 +1397,8 @@ const readinessSnapshotFunctionChecks = () => {
     check(functionBody.includes('readinessMonitorCatalog.find((entry) => entry.id === id)') && functionBody.includes('diagnosticUse: catalogItem?.diagnosticUse || ""'), "normalizeReadinessSnapshot should enrich monitors from readiness catalog");
     check(functionBody.includes('monitor?.monitorId') && functionBody.includes('monitor?.monitor_id') && functionBody.includes('monitor?.display_label'), "normalizeReadinessSnapshot should normalize monitor id and label aliases");
     check(functionBody.includes('monitor?.isSupported') && functionBody.includes('monitor?.is_supported') && functionBody.includes('monitor?.isComplete') && functionBody.includes('monitor?.is_complete'), "normalizeReadinessSnapshot should normalize supported and complete aliases");
-    check(functionBody.includes('const readOptionalBooleanAlias =') && functionBody.includes('statusKey === "unknown" || statusKey === "unparsed"') && functionBody.includes('const supportUnknownCount = normalized.filter((item) => item.supported === null).length') && functionBody.includes('const completionUnknownCount = normalized.filter((item) => item.supported === true && item.complete === null).length'), "normalizeReadinessSnapshot should preserve unknown support and completion state without treating it as incomplete");
-check(functionBody.includes('const milInput = pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, undefined);') && functionBody.includes('const milOn = readinessScope === "multiple_ecus" ? null : readOptionalBooleanAlias(milInput);') && functionBody.includes('const incompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length'), "normalizeReadinessSnapshot should preserve an unreported MIL as unknown and avoid a combined multi-ECU MIL claim");
+    check(functionBody.includes('const readOptionalBooleanAlias =') && functionBody.includes('statusKey === "unknown" || statusKey === "unparsed"') && functionBody.includes('const localSupportUnknownCount = normalized.filter((item) => item.supported === null).length') && functionBody.includes('const localCompletionUnknownCount = normalized.filter((item) => item.supported === true && item.complete === null).length'), "normalizeReadinessSnapshot should preserve unknown support and completion state without treating it as incomplete");
+check(functionBody.includes('const milInput = pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, undefined);') && functionBody.includes('const milOn = readinessScope === "multiple_ecus" ? null : readOptionalBooleanAlias(milInput);') && functionBody.includes('const localIncompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length'), "normalizeReadinessSnapshot should preserve an unreported MIL as unknown and avoid a combined multi-ECU MIL claim");
     check(functionBody.includes('sourceInput.readinessIgnitionType') && functionBody.includes('sourceInput.readiness_ignition_type') && functionBody.includes('sourceInput.ignitionType') && functionBody.includes('sourceInput.ignition_type') && functionBody.includes('readinessIgnitionType,') && functionBody.includes('readiness_ignition_type: readinessIgnitionType'), "normalizeReadinessSnapshot should retain reported readiness ignition type aliases");
     check(functionBody.includes('sourceInput.communicationProtocol') && functionBody.includes('sourceInput.communication_protocol'), "normalizeReadinessSnapshot should normalize protocol aliases");
     check(functionBody.includes('knownMonitors,') && functionBody.includes('retainedRawText: false'), "normalizeReadinessSnapshot should expose known monitors and never retain raw text");
@@ -2536,7 +2536,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2741件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('モバイルVCIのECU別読取結果を保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2752件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('ECU別レディネスと対応PID集約を保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2663,7 +2663,7 @@ check(appSource.includes('const obdLiveObservationCondition = document.querySele
 check(appSource.includes('function buildLivePidTimelineChartRows(timeline = null)') && appSource.includes('.filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)') && appSource.includes('heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55') && appSource.includes('delta: row.points.at(-1)?.value - row.points[0]?.value') && appSource.includes('変化 ${row.delta') && appSource.includes('obd-timeline-chart-bar'), "Live PID graph should chart only numeric values from the latest observation condition");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
-check(appSource.includes('recentMilestone: "モバイルVCIのECU別読取結果を保持"'), "OBD core progress should describe the latest completed session-integrity milestone");
+check(appSource.includes('recentMilestone: "ECU別レディネスと対応PID集約を保持"'), "OBD core progress should describe the latest completed session-integrity milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
@@ -2769,8 +2769,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.84";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.84";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.84", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.85";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.85";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.85", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -2831,7 +2831,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "モバイルVCIのECU別読取結果を保持"'), "OBD core progress snapshot should show the latest session-integrity milestone");
+check(appSource.includes('recentMilestone: "ECU別レディネスと対応PID集約を保持"'), "OBD core progress snapshot should show the latest session-integrity milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -3284,6 +3284,114 @@ const duplicateAttemptScan = obd.buildNativeConnectorScanSession({ envelopes: [s
 check(missingAttemptScan.blocked === true && missingAttemptScan.errors.includes("missing_readout_attempt") && duplicateAttemptScan.blocked === true && duplicateAttemptScan.errors.includes("duplicate_readout_attempt"), "Ambiguous native ECU retry attempts are not rejected");
 const reimportedMultiEcuNativeScan = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuNativeScan.session)));
 check(reimportedMultiEcuNativeScan?.dtcSnapshot?.codes?.length === 2 && reimportedMultiEcuNativeScan?.nativeConnectorScanLifecycle?.completedReadoutScopes?.length === 2 && reimportedMultiEcuNativeScan?.nativeConnectorScanLifecycle?.readoutScopeOutcomes?.every((item) => item.readoutAttempt === 0 && item.readoutSucceeded === true) && reimportedMultiEcuNativeScan?.vehicleCommandEnabled === false, "Native ECU scope data, attempt outcome, or lifecycle was lost during export/import");
+const scopedNativeReadEnvelope = (intent, readoutId, scopeId, sequence, data, outcome = {}) => ({
+  ...nativeEnvelope(intent, `2026-07-20T07:13:${String(sequence % 60).padStart(2, "0")}Z`, { source_ecu: scopeId, ...data }, "user-vci-elm327", { sequence }),
+  readout_id: readoutId,
+  readout_scope_id: scopeId,
+  readout_attempt: 0,
+  ...outcome
+});
+const nativeScopeManifest = (readoutId) => ["7E8", "7E9"].map((scope_id) => ({ readout_id: readoutId, scope_id }));
+const multiEcuNativeReadinessScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E8", 730, { pid: "01", mil_on: false, monitors: [{ id: "misfire", status: "complete" }] }),
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E9", 731, { pid: "01", mil_on: true, monitors: [{ id: "misfire", status: "incomplete" }] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["readiness_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("readiness_snapshot")
+});
+check(multiEcuNativeReadinessScan.scanState === "completed" && multiEcuNativeReadinessScan.session?.readinessSnapshot?.readinessReadoutStatus === "reported" && multiEcuNativeReadinessScan.session?.readinessSnapshot?.monitors?.length === 0 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.monitorCount === 2 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.completeCount === 1 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.incompleteCount === 1 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && multiEcuNativeReadinessScan.session?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && multiEcuNativeReadinessScan.session?.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 2, "Multi-ECU native readiness observations were collapsed or treated as missing");
+const partialNativeReadinessScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E8", 732, { pid: "01", monitors: [{ id: "misfire", status: "complete" }] }),
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E9", 733, { pid: "01", monitors: [] }, { ok: false, blocked: false, errors: ["transport:timeout"] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["readiness_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("readiness_snapshot")
+});
+check(partialNativeReadinessScan.scanState === "interrupted" && partialNativeReadinessScan.failedReadoutScopes?.some((item) => item.scopeId === "7E9") && partialNativeReadinessScan.session?.readinessSnapshot?.sourceEcu === "7E8" && partialNativeReadinessScan.session?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.complete === true), "Failed native readiness scope completed the scan or erased the successful ECU observation");
+const nestedBlockedNativeReadinessScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E8", 743, { pid: "01", readiness_readout_status: "blocked", monitors: [{ id: "misfire", status: "incomplete" }] }),
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E9", 744, { pid: "01", readiness_readout_status: "reported", monitors: [{ id: "misfire", status: "complete" }] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["readiness_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("readiness_snapshot")
+});
+check(nestedBlockedNativeReadinessScan.scanState === "interrupted" && nestedBlockedNativeReadinessScan.failedReadoutScopes?.some((item) => item.scopeId === "7E8") && nestedBlockedNativeReadinessScan.readoutScopeErrors?.some((item) => item.scopeId === "7E8" && item.errorCodes.includes("nested_readout_blocked")) && nestedBlockedNativeReadinessScan.session?.readinessSnapshot?.sourceEcu === "7E9" && nestedBlockedNativeReadinessScan.session?.readinessSnapshot?.monitors?.every((item) => item.complete === true), "Nested blocked native readiness scope completed the scan or leaked observations");
+const multiEcuNativeSupportedPidScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E8", 734, { supported_pids: ["05", "0C"], supported_pid_page_bases: ["00"] }),
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E9", 735, { supported_pids: ["0C", "0D"], supported_pid_page_bases: ["00", "20"] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["supported_pid_matrix"],
+  expected_readout_scopes: nativeScopeManifest("supported_pid_matrix")
+});
+check(multiEcuNativeSupportedPidScan.scanState === "completed" && multiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPids?.join(",") === "05,0C,0D" && multiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPidPageBases?.join(",") === "00,20" && multiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPidAggregationScope === "multiple_ecus_union" && multiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPidEcuSnapshots?.find((item) => item.sourceEcu === "7E8")?.supportedPids?.join(",") === "05,0C" && multiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPidEcuSnapshots?.find((item) => item.sourceEcu === "7E9")?.supportedPids?.join(",") === "0C,0D" && multiEcuNativeSupportedPidScan.session?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured", "Multi-ECU supported PID union lost ECU-specific support semantics");
+const partialNativeSupportedPidScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E8", 736, { supported_pids: ["05"] }),
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E9", 737, { supported_pids: ["0D"] }, { ok: false, blocked: false, errors: ["transport:timeout"] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["supported_pid_matrix"],
+  expected_readout_scopes: nativeScopeManifest("supported_pid_matrix")
+});
+check(partialNativeSupportedPidScan.scanState === "interrupted" && partialNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPids?.join(",") === "05" && !partialNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPids?.includes("0D") && partialNativeSupportedPidScan.failedReadoutScopes?.some((item) => item.scopeId === "7E9"), "Failed native supported PID scope leaked into the union or completed the scan");
+const nestedBlockedNativeSupportedPidScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E8", 745, { supported_pid_readout_status: "blocked", supported_pids: ["0D"] }),
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E9", 746, { supported_pid_readout_status: "reported", supported_pids: ["05"] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["supported_pid_matrix"],
+  expected_readout_scopes: nativeScopeManifest("supported_pid_matrix")
+});
+check(nestedBlockedNativeSupportedPidScan.scanState === "interrupted" && nestedBlockedNativeSupportedPidScan.failedReadoutScopes?.some((item) => item.scopeId === "7E8") && nestedBlockedNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPids?.join(",") === "05" && !nestedBlockedNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPids?.includes("0D"), "Nested blocked native supported PID scope leaked into the union or completed the scan");
+const emptyMultiEcuNativeSupportedPidScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E8", 740, { supported_pids: [], supported_pid_page_bases: ["00"] }),
+    scopedNativeReadEnvelope("read_supported_pids", "supported_pid_matrix", "7E9", 741, { supported_pids: [], supported_pid_page_bases: ["00"] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["supported_pid_matrix"],
+  expected_readout_scopes: nativeScopeManifest("supported_pid_matrix")
+});
+check(emptyMultiEcuNativeSupportedPidScan.scanState === "completed" && emptyMultiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPidReadoutStatus === "reported" && emptyMultiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPids?.length === 0 && emptyMultiEcuNativeSupportedPidScan.session?.supportedPidMatrix?.supportedPidPageBases?.join(",") === "00" && emptyMultiEcuNativeSupportedPidScan.session?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "empty" && emptyMultiEcuNativeSupportedPidScan.session?.coreReadoutInventorySummary?.itemById?.supported_pid_matrix?.status === "empty", "Reported empty multi-ECU supported PID pages were treated as missing or populated");
+const triggerOnlyNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 738, { trigger_dtc: "P0300", monitor_values: [] }),
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E9", 739, { trigger_dtc: "P0171", monitor_values: [] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("freeze_frame_snapshot")
+});
+check(triggerOnlyNativeFreezeFrameScan.scanState === "completed" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.length === 0 && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.length === 2 && triggerOnlyNativeFreezeFrameScan.session?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.countsById?.freeze_frame_snapshot === 0 && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.itemById?.freeze_frame_snapshot?.status === "captured", "Trigger-only native freeze frame evidence was treated as missing or counted as PID values");
+const blockedTriggerNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 742, { trigger_dtc: "P0300", monitor_values: [] }, { ok: false, blocked: true, errors: ["connector:not_ready"] })],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: [{ readout_id: "freeze_frame_snapshot", scope_id: "7E8" }]
+});
+check(blockedTriggerNativeFreezeFrameScan.scanState === "interrupted" && blockedTriggerNativeFreezeFrameScan.session?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "blocked" && blockedTriggerNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.length === 0 && blockedTriggerNativeFreezeFrameScan.session?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "missing" && blockedTriggerNativeFreezeFrameScan.vehicleCommandEnabled === false, "Blocked native freeze frame trigger was promoted to captured evidence");
+const nestedBlockedNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 747, { freeze_frame_readout_status: "blocked", trigger_dtc: "P0300", monitor_values: [] }),
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E9", 748, { freeze_frame_readout_status: "reported", trigger_dtc: "P0171", monitor_values: [] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("freeze_frame_snapshot")
+});
+check(nestedBlockedNativeFreezeFrameScan.scanState === "interrupted" && nestedBlockedNativeFreezeFrameScan.failedReadoutScopes?.some((item) => item.scopeId === "7E8") && nestedBlockedNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtc === "P0171" && !JSON.stringify(nestedBlockedNativeFreezeFrameScan.session?.freezeFrameSnapshot).includes("P0300") && nestedBlockedNativeFreezeFrameScan.session?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured", "Nested blocked native freeze frame scope leaked trigger evidence or completed the scan");
+const multiEcuCoreRoundTrips = [multiEcuNativeReadinessScan, multiEcuNativeSupportedPidScan, triggerOnlyNativeFreezeFrameScan]
+  .map((scan) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scan.session))));
+check(multiEcuCoreRoundTrips[0]?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && multiEcuCoreRoundTrips[0]?.readinessSnapshot?.monitors?.length === 0 && multiEcuCoreRoundTrips[1]?.supportedPidMatrix?.supportedPids?.join(",") === "05,0C,0D" && multiEcuCoreRoundTrips[1]?.supportedPidMatrix?.supportedPidAggregationScope === "multiple_ecus_union" && multiEcuCoreRoundTrips[2]?.freezeFrameSnapshot?.triggerDtcEntries?.length === 2 && multiEcuCoreRoundTrips.every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Multi-ECU core aggregates changed during read-only export/import");
 const connectionProfile = obd.getVehicleConnectionProfile();
 check(connectionProfile.transportEnabled === false, "通信トランスポートが安全ゲート外で有効です");
 check(connectionProfile.failClosed === true, "通信トランスポートが失敗時安全停止になっていません");
@@ -6091,7 +6199,7 @@ const bridgeMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   }
 });
 const bridgeMixedEcuReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeMixedEcuReadinessSnapshot })) }));
-check(bridgeMixedEcuReadinessSnapshot.readinessReadoutStatus === "unknown" && bridgeMixedEcuReadinessSnapshot.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessSnapshot.milOn === null && bridgeMixedEcuReadinessSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1) && bridgeMixedEcuReadinessSnapshot.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.readinessIgnitionType === "compression") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9") && bridgeMixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge mixed-ECU readiness snapshots were combined instead of preserved as read-only ECU-specific data");
+check(bridgeMixedEcuReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeMixedEcuReadinessSnapshot.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessSnapshot.milOn === null && bridgeMixedEcuReadinessSnapshot.monitors?.length === 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessSnapshot.monitorCount > 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1) && bridgeMixedEcuReadinessSnapshot.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.readinessIgnitionType === "compression") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9") && bridgeMixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge mixed-ECU readiness snapshots were combined instead of preserved as read-only ECU-specific data");
 const bridgeMixedEcuReadinessValueRows = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
@@ -6109,7 +6217,7 @@ const bridgeMixedEcuReadinessValueRows = obd.normalizeBridgeReadinessSnapshot({
     ]
   }
 });
-check(bridgeMixedEcuReadinessValueRows.readinessReadoutStatus === "unknown" && bridgeMixedEcuReadinessValueRows.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessValueRows.milOn === null && bridgeMixedEcuReadinessValueRows.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1) && bridgeMixedEcuReadinessValueRows.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.readinessIgnitionType === "compression"), "Bridge mixed-ECU readiness value rows were combined instead of preserved as ECU-specific data");
+check(bridgeMixedEcuReadinessValueRows.readinessReadoutStatus === "reported" && bridgeMixedEcuReadinessValueRows.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessValueRows.milOn === null && bridgeMixedEcuReadinessValueRows.monitors?.length === 0 && bridgeMixedEcuReadinessValueRows.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessValueRows.monitorCount > 0 && bridgeMixedEcuReadinessValueRows.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1) && bridgeMixedEcuReadinessValueRows.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.readinessIgnitionType === "compression"), "Bridge mixed-ECU readiness value rows were combined instead of preserved as ECU-specific data");
 const bridgeBlockedMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: false,
   blocked: true,
@@ -11713,7 +11821,7 @@ const mixedEcuReadinessSession = obd.buildScanSessionFromObdText([
   "can0 7E9#06410100080000"
 ].join("\n"), { session_id: "compact-mixed-readiness", protocol: "ISO15765-4" });
 const mixedEcuReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(mixedEcuReadinessSession) }));
-check(mixedEcuReadinessSession.readinessSnapshot?.readinessReadoutStatus === "unknown" && mixedEcuReadinessSession.readinessSnapshot?.readinessScope === "multiple_ecus" && mixedEcuReadinessSession.readinessSnapshot?.milOn === null && mixedEcuReadinessSession.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1 && item.readinessIgnitionType === "spark") && mixedEcuReadinessSession.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.incomplete_count === 0 && item.readiness_ignition_type === "compression") && mixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && mixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8") && mixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9") && mixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Mixed-ECU readiness responses were incorrectly combined instead of retaining ECU-specific read-only snapshots");
+check(mixedEcuReadinessSession.readinessSnapshot?.readinessReadoutStatus === "reported" && mixedEcuReadinessSession.readinessSnapshot?.readinessScope === "multiple_ecus" && mixedEcuReadinessSession.readinessSnapshot?.milOn === null && mixedEcuReadinessSession.readinessSnapshot?.monitors?.length === 0 && mixedEcuReadinessSession.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && mixedEcuReadinessSession.readinessSnapshot?.monitorCount > 0 && mixedEcuReadinessSession.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1 && item.readinessIgnitionType === "spark") && mixedEcuReadinessSession.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.incomplete_count === 0 && item.readiness_ignition_type === "compression") && mixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && mixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && mixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8") && mixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9") && mixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Mixed-ECU readiness responses were incorrectly combined instead of retaining ECU-specific read-only snapshots");
 const readinessStatusBytesSourceSession = obd.buildDiagnosticScanSession({ readiness_snapshot: { readiness_status_bytes: { a: "0x81", b: 7, c: "22", d: 0 }, monitors: [] } });
 const reimportedReadinessStatusBytesSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(readinessStatusBytesSourceSession) }));
 check(readinessStatusBytesSourceSession.readinessSnapshot?.readinessStatusBytes?.a === "81" && readinessStatusBytesSourceSession.readinessSnapshot?.readiness_status_bytes?.b === "07" && reimportedReadinessStatusBytesSession?.readinessSnapshot?.readinessStatusBytes?.c === "22" && reimportedReadinessStatusBytesSession?.readinessSnapshot?.readiness_status_bytes?.d === "00" && reimportedReadinessStatusBytesSession?.vehicleCommandEnabled === false, "Readiness status bytes were not retained through read-only export and JSON reimport");
@@ -17203,6 +17311,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2741");
+  console.log("OBD read-only safety checks: 2752");
   console.log("Errors: 0");
 }

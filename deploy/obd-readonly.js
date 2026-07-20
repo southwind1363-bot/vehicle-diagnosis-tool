@@ -1155,6 +1155,37 @@
     return { scopeIds: [...new Set(scopeIds)], invalid };
   }
 
+  function readNativeConnectorNestedReadoutFailure(value, depth = 0, seen = new Set()) {
+    if (!value || typeof value !== "object" || depth > 8 || seen.has(value)) return { status: null, errorCodes: [] };
+    seen.add(value);
+    const readoutStatusKeys = new Set([
+      "readoutStatus", "readout_status",
+      "readinessReadoutStatus", "readiness_readout_status",
+      "supportedPidReadoutStatus", "supported_pid_readout_status",
+      "freezeFrameReadoutStatus", "freeze_frame_readout_status",
+      "livePidReadoutStatus", "live_pid_readout_status",
+      "ecuInfoReadoutStatus", "ecu_info_readout_status",
+      "onboardMonitorReadoutStatus", "onboard_monitor_readout_status"
+    ]);
+    const blockedKeys = new Set(["blocked", "isBlocked", "is_blocked"]);
+    const errorKeys = new Set(["errors", "errorCodes", "error_codes", "error", "errorCode", "error_code"]);
+    const statuses = [];
+    const errorCodes = [];
+    Object.entries(value).forEach(([key, item]) => {
+      if (blockedKeys.has(key) && isExplicitTrueFlag(item)) statuses.push("blocked");
+      else if (key === "ok" && isExplicitFalseFlag(item)) statuses.push("unparsed");
+      else if (readoutStatusKeys.has(key) && ["blocked", "unparsed"].includes(String(item || "").trim().toLowerCase())) statuses.push(String(item).trim().toLowerCase());
+      else if (errorKeys.has(key) && item !== undefined && item !== null && item !== "") errorCodes.push(...readBridgeResponseErrorCodes({ [key]: item }));
+      if (item && typeof item === "object") {
+        const nested = readNativeConnectorNestedReadoutFailure(item, depth + 1, seen);
+        if (nested.status) statuses.push(nested.status);
+        errorCodes.push(...nested.errorCodes);
+      }
+    });
+    const status = statuses.includes("blocked") ? "blocked" : statuses.includes("unparsed") || errorCodes.length ? "unparsed" : null;
+    return { status, errorCodes: [...new Set(errorCodes)] };
+  }
+
   function normalizeNativeConnectorReadoutScopes(value) {
     const byKey = new Map();
     (Array.isArray(value) ? value : []).forEach((item) => {
@@ -1511,9 +1542,17 @@
       .some((field) => Object.hasOwn(source, field));
     const responseBlocked = hasExplicitReadoutBlock(source);
     const responseWouldTransmit = hasReadoutTransportViolation(source);
-    const readoutErrors = readBridgeResponseErrorCodes(source);
+    const nestedReadoutFailure = readNativeConnectorNestedReadoutFailure(data || {});
+    const readoutErrors = readBridgeResponseErrorCodes({
+      errors: [
+        ...readBridgeResponseErrorCodes(source),
+        ...nestedReadoutFailure.errorCodes,
+        ...(nestedReadoutFailure.status === "blocked" ? ["nested_readout_blocked"] : nestedReadoutFailure.status === "unparsed" ? ["nested_readout_unparsed"] : [])
+      ]
+    });
     const responseFailed = responseBlocked
       || responseWouldTransmit
+      || Boolean(nestedReadoutFailure.status)
       || isExplicitFalseFlag(source.ok)
       || readoutErrors.length > 0;
     const responseOkProvided = Object.hasOwn(source, "ok") && source.ok !== undefined && source.ok !== null && source.ok !== "";
@@ -1539,7 +1578,7 @@
     const readoutAttempt = typeof readoutAttemptInput === "number" && Number.isSafeInteger(readoutAttemptInput) && readoutAttemptInput >= 0 && readoutAttemptInput <= nativeConnectorContract.maxReadoutAttempt
       ? readoutAttemptInput
       : null;
-    const readoutStatus = responseBlocked || responseWouldTransmit
+    const readoutStatus = responseBlocked || responseWouldTransmit || nestedReadoutFailure.status === "blocked"
       ? "blocked"
       : responseSucceeded
         ? "reported"
@@ -1742,18 +1781,39 @@
         protocol,
         readiness_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
           const rows = Array.isArray(data.readiness_ecu_snapshots) ? data.readiness_ecu_snapshots : Array.isArray(data.readinessEcuSnapshots) ? data.readinessEcuSnapshots : [data];
-          return rows.map((row) => ({ ...row, ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {}) }));
+          return rows.map((row) => ({
+            ...row,
+            readiness_readout_status: row.readiness_readout_status || row.readinessReadoutStatus || "reported",
+            ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {})
+          }));
         })
       };
     }
     if (readoutId === "supported_pid_matrix") {
+      const supportedPidEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
+        const rows = Array.isArray(data.supported_pid_ecu_snapshots) ? data.supported_pid_ecu_snapshots : Array.isArray(data.supportedPidEcuSnapshots) ? data.supportedPidEcuSnapshots : [data];
+        return rows.map((row) => ({
+          ...row,
+          supported_pid_readout_status: row.supported_pid_readout_status || row.supportedPidReadoutStatus || "reported",
+          ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {})
+        }));
+      });
+      const supportedPids = [...new Set(supportedPidEcuSnapshots.flatMap((row) => row.supported_pids || row.supportedPids || row.pids || []))]
+        .map((pid) => String(pid?.pid || pid?.code || pid?.id || pid?.value || pid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0"))
+        .filter(Boolean)
+        .sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
+      const supportedPidPageBases = [...new Set(supportedPidEcuSnapshots.flatMap((row) => row.supported_pid_page_bases || row.supportedPidPageBases || row.queried_pid_bases || row.queriedPidBases || []))]
+        .map((pid) => String(pid?.pid || pid?.base || pid?.value || pid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0"))
+        .filter(Boolean)
+        .sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
       return {
         captured_at: capturedAt,
         protocol,
-        supported_pid_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
-          const rows = Array.isArray(data.supported_pid_ecu_snapshots) ? data.supported_pid_ecu_snapshots : Array.isArray(data.supportedPidEcuSnapshots) ? data.supportedPidEcuSnapshots : [data];
-          return rows.map((row) => ({ ...row, ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {}) }));
-        })
+        supported_pid_readout_status: "reported",
+        supported_pids: supportedPids,
+        supported_pid_page_bases: supportedPidPageBases,
+        supported_pid_aggregation_scope: supportedPidEcuSnapshots.length > 1 ? "multiple_ecus_union" : "single_ecu",
+        supported_pid_ecu_snapshots: supportedPidEcuSnapshots
       };
     }
     if (readoutId === "ecu_info_snapshot") {
@@ -1774,6 +1834,7 @@
       return {
         captured_at: capturedAt,
         protocol,
+        freeze_frame_readout_status: "reported",
         trigger_dtc_entries: scopedData.map(({ data, scopeId }) => ({
           code: data.trigger_dtc || data.triggerDtc || data.dtc || null,
           frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? null,
@@ -3775,6 +3836,7 @@
       {
         id: "freeze_frame_snapshot",
         responseUnavailable: isUnavailableReadout(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, freezeFrameSnapshotSafetyInput),
+        capturedEvidence: Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc) || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0),
         label: "フリーズフレーム",
         available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues)),
         count: Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0
@@ -3813,14 +3875,14 @@
         available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
         count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : 0
       }
-    ].map(({ responseUnavailable, ...item }) => {
+    ].map(({ responseUnavailable, capturedEvidence = false, ...item }) => {
       const available = responseUnavailable ? false : item.available;
       const count = responseUnavailable ? 0 : item.count;
       return Object.freeze({
         ...item,
         available,
         count,
-        status: available ? (count > 0 ? "captured" : "empty") : "missing"
+        status: available ? (count > 0 || capturedEvidence ? "captured" : "empty") : "missing"
       });
     });
     const availableCount = items.filter((item) => item.available).length;
@@ -4715,7 +4777,7 @@
     const capturedReadoutIds = [
       Array.isArray(dtcSnapshot?.dtcs) && dtcSnapshot.dtcs.length > 0 ? "dtc_snapshot" : null,
       Array.isArray(livePidSnapshot?.monitorValues) && livePidSnapshot.monitorValues.length > 0 ? "live_pid_snapshot" : null,
-      Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0 ? "freeze_frame_snapshot" : null,
+      (Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0) || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc) || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0) ? "freeze_frame_snapshot" : null,
       (Array.isArray(readinessSnapshot?.monitors) && readinessSnapshot.monitors.length > 0) || (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0) ? "readiness_snapshot" : null,
       Array.isArray(ecuInfoSnapshot?.items) && ecuInfoSnapshot.items.length > 0 ? "ecu_info_snapshot" : null,
       Array.isArray(onboardMonitorSnapshot?.tests) && onboardMonitorSnapshot.tests.length > 0 ? "onboard_monitor_snapshot" : null,
@@ -14757,7 +14819,7 @@
     const expectedItemCount = expectedItems.length;
     const monitorInsights = analyzeMonitorValues(monitorValues);
     const freezeFrameNumberSummary = buildFreezeFrameNumberSummary(monitorValues);
-    const readoutStatus = sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (monitorValues.length ? "reported" : "unknown");
+    const readoutStatus = sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (monitorValues.length || triggerDtcEntries.length ? "reported" : "unknown");
 
     return {
       schemaVersion: "freeze_frame_snapshot_v1",
@@ -14963,12 +15025,24 @@
 
     const milInput = pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, undefined);
     const milOn = readinessScope === "multiple_ecus" ? null : readOptionalBooleanAlias(milInput);
-    const monitorCount = normalized.length;
-    const completeCount = normalized.filter((item) => item.supported === true && item.complete === true).length;
-    const incompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length;
-    const completionUnknownCount = normalized.filter((item) => item.supported === true && item.complete === null).length;
-    const notSupportedCount = normalized.filter((item) => item.supported === false).length;
-    const supportUnknownCount = normalized.filter((item) => item.supported === null).length;
+    const localMonitorCount = normalized.length;
+    const localCompleteCount = normalized.filter((item) => item.supported === true && item.complete === true).length;
+    const localIncompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length;
+    const localCompletionUnknownCount = normalized.filter((item) => item.supported === true && item.complete === null).length;
+    const localNotSupportedCount = normalized.filter((item) => item.supported === false).length;
+    const localSupportUnknownCount = normalized.filter((item) => item.supported === null).length;
+    const readinessEcuStatuses = readinessEcuSnapshots.map((snapshot) => snapshot.readinessReadoutStatus || snapshot.readiness_readout_status || "unknown");
+    const reportedEcuCount = readinessEcuStatuses.filter((status) => status === "reported").length;
+    const blockedEcuCount = readinessEcuStatuses.filter((status) => status === "blocked").length;
+    const unparsedEcuCount = readinessEcuStatuses.filter((status) => status === "unparsed").length;
+    const unknownEcuCount = readinessEcuStatuses.filter((status) => status === "unknown").length;
+    const sumEcuCount = (key) => readinessEcuSnapshots.reduce((sum, snapshot) => sum + Math.max(0, Number(snapshot?.[key]) || 0), 0);
+    const monitorCount = readinessScope === "multiple_ecus" ? sumEcuCount("monitorCount") : localMonitorCount;
+    const completeCount = readinessScope === "multiple_ecus" ? sumEcuCount("completeCount") : localCompleteCount;
+    const incompleteCount = readinessScope === "multiple_ecus" ? sumEcuCount("incompleteCount") : localIncompleteCount;
+    const completionUnknownCount = readinessScope === "multiple_ecus" ? sumEcuCount("completionUnknownCount") : localCompletionUnknownCount;
+    const notSupportedCount = readinessScope === "multiple_ecus" ? sumEcuCount("notSupportedCount") : localNotSupportedCount;
+    const supportUnknownCount = readinessScope === "multiple_ecus" ? sumEcuCount("supportUnknownCount") : localSupportUnknownCount;
     const knownMonitorCount = knownMonitors.length;
     const explicitReadoutStatus = pickDefined(
       sourceInput.readinessReadoutStatus,
@@ -14980,10 +15054,16 @@
     const normalizedReadoutStatus = readinessScope === "multiple_ecus"
       ? ["blocked", "unparsed"].includes(explicitNormalizedReadoutStatus)
         ? explicitNormalizedReadoutStatus
-        : "unknown"
+        : blockedEcuCount > 0
+          ? "blocked"
+          : unparsedEcuCount > 0
+            ? "unparsed"
+            : reportedEcuCount === readinessEcuSnapshots.length && readinessEcuSnapshots.length > 0
+              ? "reported"
+              : "unknown"
       : ["reported", "unparsed", "blocked", "unknown"].includes(explicitNormalizedReadoutStatus)
         ? explicitNormalizedReadoutStatus
-        : monitorCount > 0
+        : localMonitorCount > 0
           ? "reported"
           : "unknown";
     const ignitionTypeInput = pickDefined(
@@ -14994,9 +15074,33 @@
       sourceInput.ignitionType,
       sourceInput.ignition_type
     );
-    const readinessIgnitionType = normalizedReadoutStatus === "reported" && ["spark", "compression"].includes(String(ignitionTypeInput || "").trim().toLowerCase())
+    const readinessIgnitionType = readinessScope !== "multiple_ecus" && normalizedReadoutStatus === "reported" && ["spark", "compression"].includes(String(ignitionTypeInput || "").trim().toLowerCase())
       ? String(ignitionTypeInput).trim().toLowerCase()
       : null;
+    const readinessEcuAggregateSummary = readinessEcuSnapshots.length ? {
+      schemaVersion: "readiness_ecu_aggregate_summary_v1",
+      schema_version: "readiness_ecu_aggregate_summary_v1",
+      ecuCount: readinessEcuSnapshots.length,
+      ecu_count: readinessEcuSnapshots.length,
+      reportedEcuCount,
+      reported_ecu_count: reportedEcuCount,
+      blockedEcuCount,
+      blocked_ecu_count: blockedEcuCount,
+      unparsedEcuCount,
+      unparsed_ecu_count: unparsedEcuCount,
+      unknownEcuCount,
+      unknown_ecu_count: unknownEcuCount,
+      monitorObservationCount: readinessScope === "multiple_ecus" ? monitorCount : 0,
+      monitor_observation_count: readinessScope === "multiple_ecus" ? monitorCount : 0,
+      completeObservationCount: readinessScope === "multiple_ecus" ? completeCount : 0,
+      complete_observation_count: readinessScope === "multiple_ecus" ? completeCount : 0,
+      incompleteObservationCount: readinessScope === "multiple_ecus" ? incompleteCount : 0,
+      incomplete_observation_count: readinessScope === "multiple_ecus" ? incompleteCount : 0,
+      allReported: readinessEcuSnapshots.length > 0 && reportedEcuCount === readinessEcuSnapshots.length,
+      all_reported: readinessEcuSnapshots.length > 0 && reportedEcuCount === readinessEcuSnapshots.length,
+      combinedMonitorStateAvailable: false,
+      combined_monitor_state_available: false
+    } : null;
 
     return {
       schemaVersion: "readiness_snapshot_v1",
@@ -15008,6 +15112,8 @@
       readiness_scope: readinessScope,
       readinessEcuSnapshots,
       readiness_ecu_snapshots: readinessEcuSnapshots,
+      readinessEcuAggregateSummary,
+      readiness_ecu_aggregate_summary: readinessEcuAggregateSummary,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -15031,8 +15137,8 @@
       readiness_readout_status: normalizedReadoutStatus,
       readinessIgnitionType,
       readiness_ignition_type: readinessIgnitionType,
-      readinessStatusBytes,
-      readiness_status_bytes: readinessStatusBytes,
+      readinessStatusBytes: readinessScope === "multiple_ecus" ? null : readinessStatusBytes,
+      readiness_status_bytes: readinessScope === "multiple_ecus" ? null : readinessStatusBytes,
       monitors: normalized,
       knownMonitors,
       known_monitors: knownMonitors,
@@ -18579,6 +18685,14 @@
       });
     }
     const resolvedSourceEcu = sourceEcu || (supportedPidEcuSnapshots.length === 1 ? supportedPidEcuSnapshots[0].sourceEcu : null);
+    const supportedPidAggregationScopeInput = String(sourceInput.supportedPidAggregationScope || sourceInput.supported_pid_aggregation_scope || "").trim();
+    const supportedPidAggregationScope = ["single_ecu", "multiple_ecus_union", "unspecified"].includes(supportedPidAggregationScopeInput)
+      ? supportedPidAggregationScopeInput
+      : supportedPidEcuSnapshots.length > 1
+        ? "multiple_ecus_union"
+        : supportedPidEcuSnapshots.length === 1 || sourceEcu
+          ? "single_ecu"
+          : "unspecified";
 
     return {
       schemaVersion: "supported_pid_matrix_v1",
@@ -18597,6 +18711,8 @@
       supported_pid_page_summary: supportedPidPageSummary,
       supportedPidEcuSnapshots,
       supported_pid_ecu_snapshots: supportedPidEcuSnapshots,
+      supportedPidAggregationScope,
+      supported_pid_aggregation_scope: supportedPidAggregationScope,
       supportedCount,
       supported_count: supportedCount,
       unsupportedCount,
