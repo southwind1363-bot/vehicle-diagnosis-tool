@@ -854,6 +854,28 @@
     };
   }
 
+  function readBridgeResponseErrorCodes(response = {}) {
+    const data = response?.data && typeof response.data === "object" ? response.data : {};
+    const values = [
+      ...(Array.isArray(response?.errors) ? response.errors : []),
+      ...(Array.isArray(response?.errorCodes) ? response.errorCodes : []),
+      ...(Array.isArray(response?.error_codes) ? response.error_codes : []),
+      response?.errorCode,
+      response?.error_code,
+      response?.error,
+      ...(Array.isArray(data.errors) ? data.errors : []),
+      ...(Array.isArray(data.errorCodes) ? data.errorCodes : []),
+      ...(Array.isArray(data.error_codes) ? data.error_codes : []),
+      data.errorCode,
+      data.error_code,
+      data.error
+    ];
+    return [...new Set(values
+      .map((value) => typeof value === "object" && value ? value.code || value.error_code || value.errorCode || null : value)
+      .map((value) => String(value || "").trim().replace(/[^A-Za-z0-9_.:-]+/g, "_").replace(/^_+|_+$/g, ""))
+      .filter(Boolean))].slice(0, 12);
+  }
+
   function getServiceOperationReadinessRequirements(operationId) {
     return (serviceOperationReadinessRequirements[operationId] || []).map((item) => ({ ...item }));
   }
@@ -1020,10 +1042,14 @@
   }
 
   function preserveExplicitReadoutFailure(snapshot = {}, input = {}, statusKeys = []) {
+    const withErrorCodes = (result) => {
+      const errorCodes = readBridgeResponseErrorCodes(input);
+      return errorCodes.length ? { ...result, errorCodes, error_codes: [...errorCodes] } : result;
+    };
     const failureStatus = getExplicitReadoutFailureStatus(input);
-    if (!failureStatus) return snapshot;
+    if (!failureStatus) return withErrorCodes(snapshot);
     const blocked = failureStatus === "blocked";
-    return statusKeys.reduce((result, key) => ({ ...result, [key]: failureStatus }), {
+    return withErrorCodes(statusKeys.reduce((result, key) => ({ ...result, [key]: failureStatus }), {
       ...(snapshot && typeof snapshot === "object" ? snapshot : {}),
       ok: false,
       blocked,
@@ -1031,17 +1057,21 @@
       is_blocked: blocked,
       wouldTransmit: false,
       would_transmit: false
-    });
+    }));
   }
 
   function preserveExplicitStoredReadoutStatus(snapshot = {}, input = {}, statusKeys = []) {
-    if (getExplicitReadoutFailureStatus(input)) return snapshot;
+    const withErrorCodes = (result) => {
+      const errorCodes = readBridgeResponseErrorCodes(input);
+      return errorCodes.length ? { ...result, errorCodes, error_codes: [...errorCodes] } : result;
+    };
+    if (getExplicitReadoutFailureStatus(input)) return withErrorCodes(snapshot);
     const explicitStatus = statusKeys
       .map((key) => String(input?.[key] || "").trim().toLowerCase())
       .find((status) => ["reported", "unparsed", "blocked", "unknown"].includes(status));
-    if (!explicitStatus) return snapshot;
+    if (!explicitStatus) return withErrorCodes(snapshot);
     const reported = explicitStatus === "reported";
-    return statusKeys.reduce((result, key) => ({ ...result, [key]: explicitStatus }), {
+    return withErrorCodes(statusKeys.reduce((result, key) => ({ ...result, [key]: explicitStatus }), {
       ...(snapshot && typeof snapshot === "object" ? snapshot : {}),
       ...(explicitStatus === "unknown" ? {} : { ok: reported }),
       blocked: false,
@@ -1049,7 +1079,7 @@
       is_blocked: false,
       wouldTransmit: false,
       would_transmit: false
-    });
+    }));
   }
 
   function readBridgeProtocol(data = {}) {
@@ -1069,6 +1099,7 @@
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
     const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes));
+    const errorCodes = readBridgeResponseErrorCodes(response);
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
     const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
       ? response.intent
@@ -1150,6 +1181,8 @@
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
       would_transmit: bridgeSafety.wouldTransmit,
+      errorCodes,
+      error_codes: [...errorCodes],
       codes,
       codeCount,
       code_count: codeCount,
@@ -1363,6 +1396,7 @@
       || Array.isArray(data.items);
     const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);
     const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);
+    const errorCodes = readBridgeResponseErrorCodes(response);
     const values = (Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.monitor_values)
@@ -1418,6 +1452,8 @@
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
       would_transmit: bridgeSafety.wouldTransmit,
+      errorCodes,
+      error_codes: [...errorCodes],
       protocol: readBridgeProtocol(data),
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
@@ -1640,6 +1676,7 @@
       || data.supportedPidPages
       || [];
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.supported_pids, data.supportedPids, data.pids, data.pid_list, data.pidList, data.supportedPidRows].some(Array.isArray));
+    const errorCodes = readBridgeResponseErrorCodes(response);
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
@@ -1655,7 +1692,9 @@
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit
+      would_transmit: bridgeSafety.wouldTransmit,
+      errorCodes,
+      error_codes: [...errorCodes]
     };
   }
 
@@ -1694,6 +1733,7 @@
         return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
       });
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray));
+    const errorCodes = readBridgeResponseErrorCodes(response);
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
@@ -1710,7 +1750,9 @@
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit
+      would_transmit: bridgeSafety.wouldTransmit,
+      errorCodes,
+      error_codes: [...errorCodes]
     };
   }
 
@@ -1784,6 +1826,7 @@
           ].filter(Boolean);
     const bridgeSafety = readBridgeSnapshotSafety(response, readinessEcuSnapshotRows.length > 0 || [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
       || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
+    const errorCodes = readBridgeResponseErrorCodes(response);
     const bridgeReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
@@ -1791,7 +1834,9 @@
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit
+      would_transmit: bridgeSafety.wouldTransmit,
+      errorCodes,
+      error_codes: [...errorCodes]
     });
     const readinessRowsByEcu = new Map();
     const readinessRowIds = new Set(["mil_status", "monitor_status_mil", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d"]);
@@ -1935,6 +1980,7 @@
       return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
     });
     const bridgeSafety = readBridgeSnapshotSafety(response, collectEcuInfoRows(data).length > 0);
+    const errorCodes = readBridgeResponseErrorCodes(response);
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
@@ -1948,7 +1994,9 @@
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit
+      would_transmit: bridgeSafety.wouldTransmit,
+      errorCodes,
+      error_codes: [...errorCodes]
     };
   }
 
@@ -1993,6 +2041,7 @@
         return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
       });
     const bridgeSafety = readBridgeSnapshotSafety(response, [data.tests, data.values, data.mode06_tests, data.mode06Tests, data.mode06_rows, data.mode06Rows, data.monitor_tests, data.monitorTests, data.test_rows, data.testRows, data.onboard_monitor_tests, data.onboardMonitorTests].some(Array.isArray));
+    const errorCodes = readBridgeResponseErrorCodes(response);
     return {
       ...normalizeOnboardMonitorSnapshot({
       source: "local_bridge",
@@ -2005,7 +2054,9 @@
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit
+      would_transmit: bridgeSafety.wouldTransmit,
+      errorCodes,
+      error_codes: [...errorCodes]
     };
   }
 

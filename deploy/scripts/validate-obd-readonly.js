@@ -84,11 +84,11 @@ const bridgeProtocolFunctionSource = source.match(/function readBridgeProtocol[\
 const bridgeSupportedPidsFunctionSource = source.match(/function collectBridgeSupportedPids[\s\S]*?\r?\n      : \[\];\r?\n  \}/);
 const bridgeDtcSnapshotFunctionSource = source.match(/function normalizeBridgeDtcSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const bridgeLivePidSnapshotFunctionSource = source.match(/function normalizeBridgeLivePidSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
-const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?would_transmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
-const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?would_transmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeSupportedPidSnapshotFunctionSource = source.match(/function normalizeBridgeSupportedPidSnapshot[\s\S]*?error_codes: \[\.\.\.errorCodes\]\r?\n    \};\r?\n  \}/);
+const bridgeFreezeFrameSnapshotFunctionSource = source.match(/function normalizeBridgeFreezeFrameSnapshot[\s\S]*?error_codes: \[\.\.\.errorCodes\]\r?\n    \};\r?\n  \}/);
 const bridgeReadinessSnapshotFunctionSource = source.match(/function normalizeBridgeReadinessSnapshot[\s\S]*?monitors: monitorBits\.map[\s\S]*?\r?\n    \}\)\);\r?\n  \}/);
-const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBridgeEcuInfoSnapshot[\s\S]*?would_transmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
-const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?would_transmit: bridgeSafety\.wouldTransmit\r?\n    \};\r?\n  \}/);
+const bridgeEcuInfoSnapshotFunctionSource = source.match(/function normalizeBridgeEcuInfoSnapshot[\s\S]*?error_codes: \[\.\.\.errorCodes\]\r?\n    \};\r?\n  \}/);
+const bridgeOnboardMonitorSnapshotFunctionSource = source.match(/function normalizeBridgeOnboardMonitorSnapshot[\s\S]*?error_codes: \[\.\.\.errorCodes\]\r?\n    \};\r?\n  \}/);
 const bridgePidValueFunctionSource = source.match(/function normalizeBridgePidValue[\s\S]*?sourceLine: index \+ 1\r?\n    \};\r?\n  \}/);
 const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missing_labels: normalizedMissingLabels\r?\n    \};\r?\n  \}/);
@@ -6925,16 +6925,27 @@ const bridgeImportExplicitReadinessResponse = obd.buildBridgeDiagnosticImport({
   readinessResponse: { raw: "41 01 00 07 65 00" }
 });
 check(bridgeImportExplicitReadinessResponse.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeImportExplicitReadinessResponse.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && bridgeImportExplicitReadinessResponse.vehicleCommandEnabled === false && bridgeImportExplicitReadinessResponse.wouldTransmit === false, "Bridge diagnostic import did not retain an explicit readiness response as a read-only readiness readout");
+const bridgeReadoutErrorSnapshots = [
+  obd.normalizeBridgeDtcSnapshot({ ok: false, blocked: false, would_transmit: false, errors: ["replay dtc timeout"], data: { dtcs: [] } }),
+  obd.normalizeBridgeLivePidSnapshot({ ok: false, blocked: false, would_transmit: false, errors: ["replay live timeout"], data: { monitor_values: [] } }),
+  obd.normalizeBridgeFreezeFrameSnapshot({ ok: false, blocked: false, would_transmit: false, errors: ["replay freeze timeout"], data: { monitor_values: [] } }),
+  obd.normalizeBridgeReadinessSnapshot({ ok: false, blocked: false, would_transmit: false, errors: ["replay readiness timeout"], data: { readiness_ecu_snapshots: [] } }),
+  obd.normalizeBridgeEcuInfoSnapshot({ ok: false, blocked: false, would_transmit: false, errors: ["replay mode09 timeout"], data: { items: [] } }),
+  obd.normalizeBridgeOnboardMonitorSnapshot({ ok: false, blocked: false, would_transmit: false, errors: ["replay mode06 timeout"], data: { tests: [] } }),
+  obd.normalizeBridgeSupportedPidSnapshot({ ok: false, blocked: false, would_transmit: false, errors: ["replay supported pid timeout"], data: { supported_pids: [] } })
+];
+check(bridgeReadoutErrorSnapshots.every((snapshot) => snapshot.errorCodes?.length === 1 && snapshot.error_codes?.length === 1 && /^[A-Za-z0-9_.:-]+$/.test(snapshot.errorCodes[0])), "Bridge snapshot errors were not retained as sanitized error codes");
 const bridgeImportUnobservedReadinessResponse = obd.buildBridgeDiagnosticImport({
   readinessResponse: {
     ok: false,
     blocked: false,
     would_transmit: false,
-    errors: ["replay_readiness_not_observed"],
+    errors: ["replay readiness not observed", { code: "transport:timeout" }],
     data: { protocol: "ISO15765-4", readiness_ecu_snapshots: [] }
   }
 });
-check(bridgeImportUnobservedReadinessResponse.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "unparsed" && bridgeImportUnobservedReadinessResponse.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "missing" && !bridgeImportUnobservedReadinessResponse.bridgeSession?.warnings?.includes("readiness_incomplete") && bridgeImportUnobservedReadinessResponse.vehicleCommandEnabled === false && bridgeImportUnobservedReadinessResponse.wouldTransmit === false, "Unobserved readiness bridge responses must remain missing read-only data, not an incomplete-monitor diagnosis");
+const bridgeImportUnobservedReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: bridgeImportUnobservedReadinessResponse.exportPayload }));
+check(bridgeImportUnobservedReadinessResponse.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "unparsed" && bridgeImportUnobservedReadinessResponse.bridgeSession?.readinessSnapshot?.errorCodes?.join(",") === "replay_readiness_not_observed,transport:timeout" && bridgeImportUnobservedReadinessResponse.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "missing" && !bridgeImportUnobservedReadinessResponse.bridgeSession?.warnings?.includes("readiness_incomplete") && bridgeImportUnobservedReadinessRoundTrip?.readinessSnapshot?.error_codes?.join(",") === "replay_readiness_not_observed,transport:timeout" && bridgeImportUnobservedReadinessRoundTrip?.readinessSnapshot?.readinessReadoutStatus === "unparsed" && bridgeImportUnobservedReadinessRoundTrip?.vehicleCommandEnabled === false && bridgeImportUnobservedReadinessResponse.vehicleCommandEnabled === false && bridgeImportUnobservedReadinessResponse.wouldTransmit === false, "Unobserved readiness bridge responses must retain read-only error codes without becoming an incomplete-monitor diagnosis");
 const bridgeSummaryLivePidSupportedPidIsolation = obd.buildBridgeSessionSummary({
   livePidSnapshot: { monitorValues: [{ id: "engine_speed", value: 900, unit: "rpm" }], supportedPids: ["0C"] }
 });
@@ -16760,6 +16771,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2675");
+  console.log("OBD read-only safety checks: 2677");
   console.log("Errors: 0");
 }
