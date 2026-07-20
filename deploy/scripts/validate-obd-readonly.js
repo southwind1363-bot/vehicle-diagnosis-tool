@@ -2751,8 +2751,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.62";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.62";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.62", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.63";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.63";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.63", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -16554,6 +16554,23 @@ const thinkcarJapaneseDtcStatusSession = obd.buildScanSessionFromObdText([
   "P0A80",
   "恒久"
 ].join("\n"));
+const thinkcarEmptyDtcSession = obd.buildScanSessionFromObdText([
+  "THINKCAR",
+  "DTC",
+  "No DTC",
+  "Live Data",
+  "Engine RPM: 780 rpm"
+].join("\n"));
+const thinkcarJapaneseEmptyDtcSession = obd.buildScanSessionFromObdText([
+  "THINKCAR",
+  "故障コード",
+  "該当なし",
+  "ライブデータ",
+  "Engine RPM: 780 rpm"
+].join("\n"));
+const thinkcarEmptyDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(thinkcarEmptyDtcSession)
+));
 const thinkcarJsonSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   dtcs: thinkcarReportSession.dtcSnapshot?.dtcs || []
 }));
@@ -16579,6 +16596,9 @@ check(thinkcarStandardReportSession?.dtcSnapshot?.dtcCount === 2 && thinkcarStan
 check(thinkcarFaultCodesHeadingSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.ecuName === "ECM (Engine Control Module)" && item.reportedDescription === "Reported random misfire" && item.status === "unknown") && thinkcarFaultCodesHeadingSession?.vehicleCommandEnabled === false, "THINKCAR Fault Codes heading import did not retain scoped DTC metadata as read-only");
 check(thinkcarJapaneseFaultCodesHeadingSession?.dtcSnapshot?.dtcCount === 1 && thinkcarJapaneseFaultCodesHeadingSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.ecuName === "エンジンECU" && item.reportedDescription === "診断機表示の失火" && item.status === "unknown") && !thinkcarJapaneseFaultCodesHeadingSession.dtcSnapshot?.codes?.includes("B7F8C3") && thinkcarJapaneseFaultCodesHeadingSession?.vehicleCommandEnabled === false, "THINKCAR Japanese DTC headings must retain scoped reported metadata without reading later sections as DTCs");
 check(thinkcarJapaneseDtcStatusSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.ecuName === "エンジンECU" && item.status === "stored" && item.reportedStatus === "stored") && thinkcarJapaneseDtcStatusSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0700" && item.ecuName === "トランスミッションECU" && item.status === "pending" && item.reported_status === "pending") && thinkcarJapaneseDtcStatusSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0A80" && item.ecuName === "ハイブリッドECU" && item.status === "permanent" && item.reportedStatus === "permanent") && thinkcarJapaneseDtcStatusSession?.vehicleCommandEnabled === false, "THINKCAR Japanese standalone DTC statuses did not normalize into read-only stored, pending, and permanent states");
+check(thinkcarEmptyDtcSession?.dtcSnapshot?.dtcReadoutStatus === "reported" && thinkcarEmptyDtcSession.dtcSnapshot?.codes?.length === 0 && thinkcarEmptyDtcSession.readoutCoverage?.itemById?.dtc_snapshot?.status === "empty" && thinkcarEmptyDtcSession?.vehicleCommandEnabled === false, "THINKCAR explicit empty DTC sections were not retained as read-only reported empty results");
+check(thinkcarJapaneseEmptyDtcSession?.dtcSnapshot?.dtc_readout_status === "reported" && thinkcarJapaneseEmptyDtcSession.dtcSnapshot?.codes?.length === 0 && thinkcarJapaneseEmptyDtcSession.readoutCoverage?.itemById?.dtc_snapshot?.status === "empty" && thinkcarJapaneseEmptyDtcSession?.vehicleCommandEnabled === false, "THINKCAR Japanese explicit empty DTC sections were not retained as read-only reported empty results");
+check(thinkcarEmptyDtcRoundTrip?.dtcSnapshot?.dtcReadoutStatus === "reported" && thinkcarEmptyDtcRoundTrip.readoutCoverage?.itemById?.dtc_snapshot?.status === "empty" && thinkcarEmptyDtcRoundTrip?.vehicleCommandEnabled === false, "THINKCAR explicit empty DTC sections were not retained through read-only export and JSON import");
 check(thinkcarJsonSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "260100" && item.code_format === "manufacturer_specific") && scannerJsonManufacturerSpecificAliasSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "260100" && item.manufacturer_specific === true && item.reportedDescription === "Reported OEM sensor fault") && scannerJsonUnmarkedSixDigitSession === null && scannerJsonExplicitEmptyDtcSession?.dtcSnapshot?.dtcReadoutStatus === "reported" && scannerJsonExplicitEmptyDtcSession?.dtcSnapshot?.dtcCount === 0 && thinkcarExportRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "B7F8C3" && item.reportedDescription === "Reported OEM communication fault") && thinkcarJsonExportRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "260100" && item.manufacturerSpecific === true) && oversizedUntrustedScannerJson === null && thinkcarJsonSession?.vehicleCommandEnabled === false && scannerJsonManufacturerSpecificAliasSession?.vehicleCommandEnabled === false && scannerJsonExplicitEmptyDtcSession?.vehicleCommandEnabled === false && thinkcarExportRoundTrip?.vehicleCommandEnabled === false && thinkcarJsonExportRoundTrip?.vehicleCommandEnabled === false, "Manufacturer-specific DTC report values were not retained through JSON input and read-only export reimport");
 check(appSource.includes('const manufacturerSpecific = dtc.manufacturerSpecific === true') && appSource.includes('診断機報告: ${reportedDescription}') && appSource.includes('メーカー固有コードのため、車種・ECU・整備書で定義を確認してください。'), "Manufacturer-specific DTC cards should show only reported descriptions and require vehicle-specific definition review");
 

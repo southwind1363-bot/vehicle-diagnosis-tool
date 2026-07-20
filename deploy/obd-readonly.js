@@ -15026,8 +15026,8 @@
         source_length: outputSourceLength
       }
       : textImportMetadata.importClassification;
-    const hasTextDtcCodes = Array.isArray(textDtcSnapshot?.codes) && textDtcSnapshot.codes.length > 0;
-    const outputDtcSnapshot = hasTextDtcCodes && mergedDtcSnapshot.codes.length ? mergedDtcSnapshot : session.dtcSnapshot;
+    const hasTextDtcReadout = textDtcSnapshot?.dtcReadoutStatus === "reported" || textDtcSnapshot?.dtc_readout_status === "reported";
+    const outputDtcSnapshot = hasTextDtcReadout ? mergedDtcSnapshot : session.dtcSnapshot;
     const outputSession = outputDtcSnapshot === session.dtcSnapshot
       ? session
       : buildDiagnosticScanSession({
@@ -16061,6 +16061,23 @@
     return rows;
   }
 
+  function hasThinkcarReportedEmptyDtcSection(value) {
+    const lines = String(value || "").split(/\r?\n/).map((line) => String(line || "").trim());
+    if (!lines.some((line) => /\bthinkcar\b/i.test(line))) return false;
+    const headingIndex = lines.findIndex((line) => /^(?:dtc|fault\s*codes?|diagnostic\s+trouble\s+codes?|故障コード|診断トラブルコード)$/i.test(line));
+    if (headingIndex < 0) return false;
+    const isSectionBoundary = (line) => /^(?:live\s*data|data\s*stream|i\/?m\s+readiness|readiness(?:\s+status)?|freeze[\s_-]*frame|mode\s*0?[69]|ecu\s*(?:info|information)|supported\s*pids?|post[\s-]*scan|ライブデータ|データストリーム|レディネス|フリーズフレーム|モード\s*0?[69]|ecu情報|対応pid|ポストスキャン)$/i.test(line);
+    const isExplicitEmpty = (line) => /^(?:no\s*(?:dtc|codes?|fault\s*codes?|trouble\s*codes?)|none|no\s*faults?|故障コードなし|故障なし|dtcなし|該当なし|なし)$/i.test(line);
+    let sawExplicitEmpty = false;
+    for (const line of lines.slice(headingIndex + 1)) {
+      if (!line) continue;
+      if (isSectionBoundary(line)) break;
+      if (extractDtcReferences(line).length || extractManufacturerSpecificDtcReference(line)) return false;
+      if (isExplicitEmpty(line)) sawExplicitEmpty = true;
+    }
+    return sawExplicitEmpty;
+  }
+
   function extractTextDtcSnapshot(value) {
     const lines = String(value || "").split(/\r?\n/);
     const rows = [];
@@ -16150,8 +16167,10 @@
       rows.push(...lastDtcRows);
     });
     const thinkcarReportRows = extractThinkcarReportDtcRows(value);
+    const thinkcarReportedEmpty = !thinkcarReportRows.length && hasThinkcarReportedEmptyDtcSection(value);
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
+      ...(thinkcarReportedEmpty ? { dtc_readout_status: "reported" } : {}),
       dtcs: [...thinkcarReportRows, ...rows, ...rawDtcRows]
     });
   }
