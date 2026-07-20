@@ -1719,6 +1719,21 @@
       wouldTransmit: bridgeSafety.wouldTransmit,
       would_transmit: bridgeSafety.wouldTransmit
     });
+    const readinessRowsByEcu = new Map();
+    const readinessRowIds = new Set(["mil_status", "monitor_status_mil", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d"]);
+    rows.forEach((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return;
+      const rowKey = String(
+        row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || ""
+      ).toLowerCase().replace(/[^a-z0-9]+/g, "");
+      const mappedId = readinessRowIdAliases[rowKey] || row.id || row.name || row.label;
+      const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
+      if (!readinessRowIds.has(mappedId) || !rowSourceEcu) return;
+      const ecu = String(rowSourceEcu);
+      const ecuRows = readinessRowsByEcu.get(ecu) || [];
+      ecuRows.push(row);
+      readinessRowsByEcu.set(ecu, ecuRows);
+    });
     if (readinessEcuSnapshotRows.length > 0) {
       const readinessEcuSnapshots = readinessEcuSnapshotRows.map((row) => {
         if (!row || typeof row !== "object" || Array.isArray(row)) return null;
@@ -1732,6 +1747,26 @@
         });
       }).filter((snapshot) => snapshot?.sourceEcu || snapshot?.source_ecu);
       if (readinessEcuSnapshots.length === 1) return withBridgeMetadata(readinessEcuSnapshots[0]);
+      return withBridgeMetadata(normalizeReadinessSnapshot({
+        source: "local_bridge",
+        captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
+        protocol: readBridgeProtocol(data),
+        readiness_readout_status: bridgeReadoutStatus,
+        readiness_scope: "multiple_ecus",
+        readiness_ecu_snapshots: readinessEcuSnapshots
+      }));
+    }
+    if (readinessRowsByEcu.size > 1) {
+      const readinessEcuSnapshots = [...readinessRowsByEcu.entries()].map(([ecu, ecuRows]) => normalizeBridgeReadinessSnapshot({
+        ...response,
+        data: {
+          ...data,
+          source_ecu: ecu,
+          values: ecuRows,
+          readinessEcuSnapshots: [],
+          readiness_ecu_snapshots: []
+        }
+      }));
       return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
