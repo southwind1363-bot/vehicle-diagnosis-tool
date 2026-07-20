@@ -466,6 +466,21 @@
     })
   });
 
+  const nativeConnectorReadoutIds = Object.freeze([
+    "connection_status",
+    "vci_devices",
+    "adapter_identity",
+    "stored_dtc_snapshot",
+    "pending_dtc_snapshot",
+    "permanent_dtc_snapshot",
+    "freeze_frame_snapshot",
+    "supported_pid_matrix",
+    "ecu_info_snapshot",
+    "onboard_monitor_snapshot",
+    "readiness_snapshot",
+    "live_pid_snapshot"
+  ]);
+
   const nativeConnectorContract = Object.freeze({
     id: "native_connector_contract_v1",
     status: "import-contract-ready",
@@ -480,11 +495,15 @@
     maxPayloadBytes: 1000000,
     maxEnvelopeCount: 64,
     maxSequence: 1000000,
+    maxConnectionSequence: 63,
     allowedInterfaceIds: Object.freeze(["user-vci-thinkcar-bluetooth", "user-vci-elm327"]),
     allowedReadIntents: Object.freeze([...localBridgeContract.allowedReadIntents]),
     blockedWriteIntents: Object.freeze([...localBridgeContract.blockedWriteIntents]),
     requiredEnvelopeFields: Object.freeze(["schema_version", "interface_id", "platform", "intent", "captured_at", "data"]),
     requiredBatchEnvelopeFields: Object.freeze(["scan_id", "connection_id", "vehicle_context_id", "sequence"]),
+    requiredReconnectEnvelopeFields: Object.freeze(["connection_sequence"]),
+    completionManifestFields: Object.freeze(["scan_state", "expected_readouts"]),
+    allowedReadoutIds: nativeConnectorReadoutIds,
     logPolicy: Object.freeze({
       storeRawPayload: false,
       storeRawFrames: false,
@@ -1048,6 +1067,9 @@
       blockedWriteIntents: [...nativeConnectorContract.blockedWriteIntents],
       requiredEnvelopeFields: [...nativeConnectorContract.requiredEnvelopeFields],
       requiredBatchEnvelopeFields: [...nativeConnectorContract.requiredBatchEnvelopeFields],
+      requiredReconnectEnvelopeFields: [...nativeConnectorContract.requiredReconnectEnvelopeFields],
+      completionManifestFields: [...nativeConnectorContract.completionManifestFields],
+      allowedReadoutIds: [...nativeConnectorContract.allowedReadoutIds],
       logPolicy: { ...nativeConnectorContract.logPolicy }
     };
   }
@@ -1074,6 +1096,198 @@
       connection_id: connectionId,
       vehicleContextId,
       vehicle_context_id: vehicleContextId
+    };
+  }
+
+  function normalizeNativeConnectorIntentList(value) {
+    return [...new Set((Array.isArray(value) ? value : [])
+      .map((item) => String(item || "").trim())
+      .filter((item) => nativeConnectorContract.allowedReadIntents.includes(item)))];
+  }
+
+  function normalizeNativeConnectorReadoutList(value) {
+    return [...new Set((Array.isArray(value) ? value : [])
+      .map((item) => String(item || "").trim())
+      .filter((item) => nativeConnectorContract.allowedReadoutIds.includes(item)))];
+  }
+
+  function getNativeConnectorReadoutId(intent, data = {}) {
+    if (intent === "read_live_pid_snapshot") {
+      return data.readout_id === "readiness_snapshot" || String(data.pid || "").toUpperCase() === "01"
+        ? "readiness_snapshot"
+        : "live_pid_snapshot";
+    }
+    return {
+      bridge_status: "connection_status",
+      list_vci: "vci_devices",
+      adapter_identity: "adapter_identity",
+      read_stored_dtc: "stored_dtc_snapshot",
+      read_pending_dtc: "pending_dtc_snapshot",
+      read_permanent_dtc: "permanent_dtc_snapshot",
+      read_freeze_frame: "freeze_frame_snapshot",
+      read_supported_pids: "supported_pid_matrix",
+      read_ecu_info: "ecu_info_snapshot",
+      read_onboard_monitor: "onboard_monitor_snapshot"
+    }[intent] || null;
+  }
+
+  function normalizeNativeConnectorScanLifecycle(input = {}) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const hasLifecycleContent = Boolean(
+      input.schemaVersion
+      || input.schema_version
+      || input.scanState
+      || input.scan_state
+      || input.completionExplicit === true
+      || input.completion_explicit === true
+      || Array.isArray(input.expectedIntents)
+      || Array.isArray(input.expected_intents)
+      || Array.isArray(input.attemptedIntents)
+      || Array.isArray(input.attempted_intents)
+      || Array.isArray(input.expectedReadouts)
+      || Array.isArray(input.expected_readouts)
+      || Array.isArray(input.attemptedReadouts)
+      || Array.isArray(input.attempted_readouts)
+      || Array.isArray(input.connectionSegments)
+      || Array.isArray(input.connection_segments)
+    );
+    if (!hasLifecycleContent) return null;
+    const requestedScanState = ["open", "completed", "interrupted"].includes(String(input.scanState || input.scan_state || ""))
+      ? String(input.scanState || input.scan_state)
+      : "open";
+    const normalizeCount = (camelKey, snakeKey) => Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(input[camelKey] ?? input[snakeKey] ?? 0) || 0)));
+    const expectedIntents = normalizeNativeConnectorIntentList(input.expectedIntents || input.expected_intents);
+    const attemptedIntents = normalizeNativeConnectorIntentList(input.attemptedIntents || input.attempted_intents);
+    const completedIntents = normalizeNativeConnectorIntentList(input.completedIntents || input.completed_intents);
+    const failedIntents = normalizeNativeConnectorIntentList(input.failedIntents || input.failed_intents);
+    const missingIntents = expectedIntents.filter((intent) => !completedIntents.includes(intent));
+    const expectedReadouts = normalizeNativeConnectorReadoutList(input.expectedReadouts || input.expected_readouts);
+    const attemptedReadouts = normalizeNativeConnectorReadoutList(input.attemptedReadouts || input.attempted_readouts);
+    const completedReadouts = normalizeNativeConnectorReadoutList(input.completedReadouts || input.completed_readouts);
+    const failedReadouts = normalizeNativeConnectorReadoutList(input.failedReadouts || input.failed_readouts);
+    const missingReadouts = expectedReadouts.filter((readoutId) => !completedReadouts.includes(readoutId));
+    const connectionSegments = (Array.isArray(input.connectionSegments) ? input.connectionSegments : Array.isArray(input.connection_segments) ? input.connection_segments : [])
+      .map((segment, index) => {
+        if (!segment || typeof segment !== "object" || Array.isArray(segment)) return null;
+        const connectionId = normalizeNativeConnectorUuid(segment.connectionId || segment.connection_id);
+        if (!connectionId) return null;
+        const connectionSequenceValue = Number(segment.connectionSequence ?? segment.connection_sequence);
+        const firstSequenceValue = Number(segment.firstSequence ?? segment.first_sequence);
+        const lastSequenceValue = Number(segment.lastSequence ?? segment.last_sequence);
+        const missingSequenceSample = [...new Set((Array.isArray(segment.missingSequenceSample) ? segment.missingSequenceSample : Array.isArray(segment.missing_sequence_sample) ? segment.missing_sequence_sample : [])
+          .map(Number)
+          .filter((item) => Number.isSafeInteger(item) && item >= 0 && item <= nativeConnectorContract.maxSequence))].slice(0, 32);
+        const sequenceGapCount = Math.max(missingSequenceSample.length, Math.max(0, Math.round(Number(segment.sequenceGapCount ?? segment.sequence_gap_count ?? 0) || 0)));
+        const startedAt = normalizeNativeConnectorCapturedAt(segment.startedAt || segment.started_at);
+        const endedAt = normalizeNativeConnectorCapturedAt(segment.endedAt || segment.ended_at);
+        return {
+          index: Math.max(0, Math.round(Number(segment.index ?? index) || 0)),
+          connectionSequence: Number.isSafeInteger(connectionSequenceValue) && connectionSequenceValue >= 0 && connectionSequenceValue <= nativeConnectorContract.maxConnectionSequence ? connectionSequenceValue : null,
+          connection_sequence: Number.isSafeInteger(connectionSequenceValue) && connectionSequenceValue >= 0 && connectionSequenceValue <= nativeConnectorContract.maxConnectionSequence ? connectionSequenceValue : null,
+          connectionId,
+          connection_id: connectionId,
+          startedAt,
+          started_at: startedAt,
+          endedAt,
+          ended_at: endedAt,
+          envelopeCount: Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(segment.envelopeCount ?? segment.envelope_count ?? 0) || 0))),
+          envelope_count: Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(segment.envelopeCount ?? segment.envelope_count ?? 0) || 0))),
+          acceptedEnvelopeCount: Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(segment.acceptedEnvelopeCount ?? segment.accepted_envelope_count ?? 0) || 0))),
+          accepted_envelope_count: Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(segment.acceptedEnvelopeCount ?? segment.accepted_envelope_count ?? 0) || 0))),
+          rejectedEnvelopeCount: Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(segment.rejectedEnvelopeCount ?? segment.rejected_envelope_count ?? 0) || 0))),
+          rejected_envelope_count: Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(segment.rejectedEnvelopeCount ?? segment.rejected_envelope_count ?? 0) || 0))),
+          firstSequence: Number.isSafeInteger(firstSequenceValue) ? firstSequenceValue : null,
+          first_sequence: Number.isSafeInteger(firstSequenceValue) ? firstSequenceValue : null,
+          lastSequence: Number.isSafeInteger(lastSequenceValue) ? lastSequenceValue : null,
+          last_sequence: Number.isSafeInteger(lastSequenceValue) ? lastSequenceValue : null,
+          sequenceGapCount,
+          sequence_gap_count: sequenceGapCount,
+          missingSequenceSample,
+          missing_sequence_sample: [...missingSequenceSample],
+          contiguous: sequenceGapCount === 0
+        };
+      })
+      .filter(Boolean)
+      .slice(0, nativeConnectorContract.maxEnvelopeCount)
+      .sort((left, right) => (left.connectionSequence ?? Number.MAX_SAFE_INTEGER) - (right.connectionSequence ?? Number.MAX_SAFE_INTEGER)
+        || Date.parse(left.startedAt || 0) - Date.parse(right.startedAt || 0)
+        || left.connectionId.localeCompare(right.connectionId))
+      .map((segment, index) => ({ ...segment, index }));
+    const connectionIds = [...new Set(connectionSegments.map((segment) => segment.connectionId))];
+    const envelopeCount = normalizeCount("envelopeCount", "envelope_count") || connectionSegments.reduce((sum, segment) => sum + segment.envelopeCount, 0);
+    const acceptedEnvelopeCount = normalizeCount("acceptedEnvelopeCount", "accepted_envelope_count") || connectionSegments.reduce((sum, segment) => sum + segment.acceptedEnvelopeCount, 0);
+    const rejectedEnvelopeCount = normalizeCount("rejectedEnvelopeCount", "rejected_envelope_count") || connectionSegments.reduce((sum, segment) => sum + segment.rejectedEnvelopeCount, 0);
+    const sequenceGapCount = connectionSegments.reduce((sum, segment) => sum + segment.sequenceGapCount, 0);
+    const completionExplicit = input.completionExplicit === true || input.completion_explicit === true;
+    const connectionSequences = connectionSegments.map((segment) => segment.connectionSequence);
+    const connectionOrderValid = connectionSegments.length > 0
+      && connectionSequences.every((value) => Number.isSafeInteger(value))
+      && new Set(connectionSequences).size === connectionSequences.length;
+    const completedLifecycleValid = requestedScanState === "completed"
+      && completionExplicit
+      && expectedReadouts.length > 0
+      && missingReadouts.length === 0
+      && missingIntents.length === 0
+      && failedReadouts.length === 0
+      && failedIntents.length === 0
+      && acceptedEnvelopeCount > 0
+      && rejectedEnvelopeCount === 0
+      && sequenceGapCount === 0
+      && connectionOrderValid;
+    const scanState = requestedScanState === "completed" && !completedLifecycleValid ? "interrupted" : requestedScanState;
+    const partial = scanState !== "completed" || rejectedEnvelopeCount > 0 || missingReadouts.length > 0 || missingIntents.length > 0 || sequenceGapCount > 0;
+    return {
+      schemaVersion: "native_connector_scan_lifecycle_v1",
+      schema_version: "native_connector_scan_lifecycle_v1",
+      scanState,
+      scan_state: scanState,
+      completionExplicit,
+      completion_explicit: completionExplicit,
+      expectedIntents,
+      expected_intents: [...expectedIntents],
+      attemptedIntents,
+      attempted_intents: [...attemptedIntents],
+      completedIntents,
+      completed_intents: [...completedIntents],
+      failedIntents,
+      failed_intents: [...failedIntents],
+      missingIntents,
+      missing_intents: [...missingIntents],
+      expectedReadouts,
+      expected_readouts: [...expectedReadouts],
+      attemptedReadouts,
+      attempted_readouts: [...attemptedReadouts],
+      completedReadouts,
+      completed_readouts: [...completedReadouts],
+      failedReadouts,
+      failed_readouts: [...failedReadouts],
+      missingReadouts,
+      missing_readouts: [...missingReadouts],
+      connectionSegments,
+      connection_segments: connectionSegments,
+      connectionIds,
+      connection_ids: [...connectionIds],
+      connectionCount: connectionIds.length,
+      connection_count: connectionIds.length,
+      reconnectCount: Math.max(0, connectionIds.length - 1),
+      reconnect_count: Math.max(0, connectionIds.length - 1),
+      envelopeCount,
+      envelope_count: envelopeCount,
+      acceptedEnvelopeCount,
+      accepted_envelope_count: acceptedEnvelopeCount,
+      rejectedEnvelopeCount,
+      rejected_envelope_count: rejectedEnvelopeCount,
+      sequenceGapCount,
+      sequence_gap_count: sequenceGapCount,
+      partial,
+      readOnly: true,
+      read_only: true,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
     };
   }
 
@@ -1140,6 +1354,10 @@
     const sequence = typeof sequenceInput === "number" && Number.isSafeInteger(sequenceInput) && sequenceInput >= 0 && sequenceInput <= nativeConnectorContract.maxSequence
       ? sequenceInput
       : null;
+    const connectionSequenceInput = source.connectionSequence ?? source.connection_sequence;
+    const connectionSequence = typeof connectionSequenceInput === "number" && Number.isSafeInteger(connectionSequenceInput) && connectionSequenceInput >= 0 && connectionSequenceInput <= nativeConnectorContract.maxConnectionSequence
+      ? connectionSequenceInput
+      : null;
     const data = source.data && typeof source.data === "object" && !Array.isArray(source.data) ? source.data : null;
     const fieldPresent = {
       schema_version: Boolean(schemaVersion),
@@ -1188,6 +1406,7 @@
       connectionIdInput !== undefined && !connectionId ? "invalid_connection_id" : null,
       vehicleContextIdInput !== undefined && !vehicleContextId ? "invalid_vehicle_context_id" : null,
       sequenceInput !== undefined && sequence === null ? "invalid_sequence" : null,
+      connectionSequenceInput !== undefined && connectionSequence === null ? "invalid_connection_sequence" : null,
       unsafeExecutionFlags ? "unsafe_execution_flags" : null
     ].filter(Boolean);
     const accepted = errors.length === 0;
@@ -1211,6 +1430,8 @@
       vehicleContextId,
       vehicle_context_id: vehicleContextId,
       sequence,
+      connectionSequence,
+      connection_sequence: connectionSequence,
       missingFields,
       missing_fields: [...missingFields],
       errors,
@@ -1324,11 +1545,20 @@
   }
 
   function buildNativeConnectorScanSession(input = {}) {
+    const batchInput = input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const envelopes = Array.isArray(input)
       ? input
       : Array.isArray(input.envelopes)
         ? input.envelopes
         : [];
+    const requestedScanStateInput = batchInput.scanState ?? batchInput.scan_state;
+    const requestedScanState = ["open", "completed", "interrupted"].includes(String(requestedScanStateInput || ""))
+      ? String(requestedScanStateInput)
+      : "open";
+    const expectedIntentsInput = batchInput.expectedIntents ?? batchInput.expected_intents;
+    const expectedIntents = normalizeNativeConnectorIntentList(expectedIntentsInput);
+    const expectedReadoutsInput = batchInput.expectedReadouts ?? batchInput.expected_readouts;
+    const expectedReadouts = normalizeNativeConnectorReadoutList(expectedReadoutsInput);
     const blockedResult = (errors, evaluations = []) => ({
       schemaVersion: "native_connector_scan_session_v1",
       schema_version: "native_connector_scan_session_v1",
@@ -1356,6 +1586,9 @@
     });
     if (!envelopes.length) return blockedResult(["empty_batch"]);
     if (envelopes.length > nativeConnectorContract.maxEnvelopeCount) return blockedResult(["batch_too_large"]);
+    if (requestedScanStateInput !== undefined && !["open", "completed", "interrupted"].includes(String(requestedScanStateInput))) return blockedResult(["invalid_scan_state"]);
+    if (expectedIntentsInput !== undefined && (!Array.isArray(expectedIntentsInput) || expectedIntents.length !== new Set(expectedIntentsInput.map((item) => String(item || "").trim()).filter(Boolean)).size)) return blockedResult(["invalid_expected_intents"]);
+    if (expectedReadoutsInput !== undefined && (!Array.isArray(expectedReadoutsInput) || expectedReadouts.length !== new Set(expectedReadoutsInput.map((item) => String(item || "").trim()).filter(Boolean)).size)) return blockedResult(["invalid_expected_readouts"]);
 
     const evaluations = envelopes.map((envelope, index) => ({
       index,
@@ -1379,7 +1612,8 @@
       "invalid_scan_id",
       "invalid_connection_id",
       "invalid_vehicle_context_id",
-      "invalid_sequence"
+      "invalid_sequence",
+      "invalid_connection_sequence"
     ]);
     const hardFailures = evaluations.filter(({ evaluation }) => evaluation.errors.some((error) => hardErrorIds.has(error)));
     const interfaceIds = [...new Set(evaluations.map(({ evaluation }) => evaluation.interfaceId).filter(Boolean))];
@@ -1392,25 +1626,80 @@
         evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] }))
       );
     }
+    const scanIds = new Set(evaluations.map(({ evaluation }) => evaluation.scanId).filter(Boolean));
+    const connectionIds = new Set(evaluations.map(({ evaluation }) => evaluation.connectionId).filter(Boolean));
+    const vehicleContextIds = new Set(evaluations.map(({ evaluation }) => evaluation.vehicleContextId).filter(Boolean));
     if (envelopes.length > 1) {
       const missingBoundary = evaluations.some(({ evaluation }) => !evaluation.scanId || !evaluation.connectionId || !evaluation.vehicleContextId || evaluation.sequence === null);
       if (missingBoundary) {
         return blockedResult(["missing_session_boundary"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
       }
-      const scanIds = new Set(evaluations.map(({ evaluation }) => evaluation.scanId));
-      const connectionIds = new Set(evaluations.map(({ evaluation }) => evaluation.connectionId));
-      const vehicleContextIds = new Set(evaluations.map(({ evaluation }) => evaluation.vehicleContextId));
-      const sequences = evaluations.map(({ evaluation }) => evaluation.sequence);
       if (scanIds.size > 1) return blockedResult(["mixed_scan_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
-      if (connectionIds.size > 1) return blockedResult(["mixed_connection_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
       if (vehicleContextIds.size > 1) return blockedResult(["mixed_vehicle_context_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
-      if (new Set(sequences).size !== sequences.length) return blockedResult(["duplicate_sequence"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+      const sequenceKeys = evaluations.map(({ evaluation }) => `${evaluation.connectionId}:${evaluation.sequence}`);
+      if (new Set(sequenceKeys).size !== sequenceKeys.length) return blockedResult(["duplicate_sequence"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
     }
+    const connectionSequenceById = new Map();
+    if (connectionIds.size > 1) {
+      if (evaluations.some(({ evaluation }) => evaluation.connectionSequence === null)) return blockedResult(["missing_connection_sequence"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+      for (const connectionId of connectionIds) {
+        const segmentSequences = new Set(evaluations.filter(({ evaluation }) => evaluation.connectionId === connectionId).map(({ evaluation }) => evaluation.connectionSequence));
+        if (segmentSequences.size !== 1) return blockedResult(["inconsistent_connection_sequence"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+        connectionSequenceById.set(connectionId, [...segmentSequences][0]);
+      }
+      if (new Set(connectionSequenceById.values()).size !== connectionSequenceById.size) return blockedResult(["duplicate_connection_sequence"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+    } else if (connectionIds.size === 1) {
+      connectionSequenceById.set([...connectionIds][0], 0);
+    }
+
+    const connectionSegments = [...connectionIds].map((connectionId) => {
+      const segmentEntries = evaluations.filter(({ evaluation }) => evaluation.connectionId === connectionId);
+      const captureTimes = segmentEntries.map(({ evaluation }) => evaluation.capturedAt).filter(Boolean).sort((left, right) => Date.parse(left) - Date.parse(right));
+      const sequences = [...new Set(segmentEntries.map(({ evaluation }) => evaluation.sequence).filter((item) => item !== null))].sort((left, right) => left - right);
+      let sequenceGapCount = 0;
+      const missingSequenceSample = [];
+      for (let index = 1; index < sequences.length; index += 1) {
+        const gap = Math.max(0, sequences[index] - sequences[index - 1] - 1);
+        sequenceGapCount += gap;
+        for (let offset = 1; offset <= gap && missingSequenceSample.length < 32; offset += 1) missingSequenceSample.push(sequences[index - 1] + offset);
+      }
+      return {
+        connectionSequence: connectionSequenceById.get(connectionId) ?? null,
+        connection_sequence: connectionSequenceById.get(connectionId) ?? null,
+        connectionId,
+        connection_id: connectionId,
+        startedAt: captureTimes[0] || null,
+        started_at: captureTimes[0] || null,
+        endedAt: captureTimes.at(-1) || null,
+        ended_at: captureTimes.at(-1) || null,
+        envelopeCount: segmentEntries.length,
+        envelope_count: segmentEntries.length,
+        acceptedEnvelopeCount: segmentEntries.filter(({ evaluation }) => evaluation.accepted).length,
+        accepted_envelope_count: segmentEntries.filter(({ evaluation }) => evaluation.accepted).length,
+        rejectedEnvelopeCount: segmentEntries.filter(({ evaluation }) => !evaluation.accepted).length,
+        rejected_envelope_count: segmentEntries.filter(({ evaluation }) => !evaluation.accepted).length,
+        firstSequence: sequences[0] ?? null,
+        first_sequence: sequences[0] ?? null,
+        lastSequence: sequences.at(-1) ?? null,
+        last_sequence: sequences.at(-1) ?? null,
+        sequenceGapCount,
+        sequence_gap_count: sequenceGapCount,
+        missingSequenceSample,
+        missing_sequence_sample: [...missingSequenceSample],
+        contiguous: sequenceGapCount === 0
+      };
+    }).sort((left, right) => (left.connectionSequence ?? Number.MAX_SAFE_INTEGER) - (right.connectionSequence ?? Number.MAX_SAFE_INTEGER)
+      || Date.parse(left.startedAt || 0) - Date.parse(right.startedAt || 0)
+      || left.connectionId.localeCompare(right.connectionId))
+      .map((segment, index) => ({ ...segment, index }));
+    const connectionOrder = new Map(connectionSegments.map((segment) => [segment.connectionId, segment.index]));
 
     const acceptedEntries = evaluations
       .filter(({ evaluation }) => evaluation.accepted)
       .map(({ index, evaluation }) => ({ index, evaluation, envelope: envelopes[index] }))
-      .sort((left, right) => (left.evaluation.sequence ?? 0) - (right.evaluation.sequence ?? 0) || Date.parse(left.evaluation.capturedAt) - Date.parse(right.evaluation.capturedAt));
+      .sort((left, right) => (connectionOrder.get(left.evaluation.connectionId) ?? 0) - (connectionOrder.get(right.evaluation.connectionId) ?? 0)
+        || (left.evaluation.sequence ?? 0) - (right.evaluation.sequence ?? 0)
+        || Date.parse(left.evaluation.capturedAt) - Date.parse(right.evaluation.capturedAt));
     const rejectedEntries = evaluations.filter(({ evaluation }) => !evaluation.accepted);
     if (!acceptedEntries.length) {
       return blockedResult(
@@ -1453,8 +1742,54 @@
     const captureTimes = acceptedEntries.map(({ evaluation }) => evaluation.capturedAt).sort((left, right) => Date.parse(left) - Date.parse(right));
     const startedAt = captureTimes[0];
     const completedAt = captureTimes.at(-1);
-    const partial = rejectedEntries.length > 0;
-    const warnings = partial ? ["native_connector_partial_batch"] : [];
+    const attemptedIntents = [...new Set(evaluations.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
+    const completedIntents = [...new Set(acceptedEntries.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
+    const failedIntents = [...new Set(rejectedEntries.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
+    const missingIntents = expectedIntents.filter((intent) => !completedIntents.includes(intent));
+    const attemptedReadouts = [...new Set(evaluations.map(({ evaluation, index }) => getNativeConnectorReadoutId(evaluation.intent, envelopes[index]?.data || {})).filter(Boolean))];
+    const completedReadouts = [...new Set(acceptedEntries.map(({ evaluation, envelope }) => getNativeConnectorReadoutId(evaluation.intent, envelope?.data || {})).filter(Boolean))];
+    const failedReadouts = [...new Set(rejectedEntries.map(({ evaluation, index }) => getNativeConnectorReadoutId(evaluation.intent, envelopes[index]?.data || {})).filter(Boolean))];
+    const missingReadouts = expectedReadouts.filter((readoutId) => !completedReadouts.includes(readoutId));
+    const sequenceGapCount = connectionSegments.reduce((sum, segment) => sum + segment.sequenceGapCount, 0);
+    const completionExplicit = requestedScanState === "completed" || requestedScanState === "interrupted";
+    const completedManifestValid = requestedScanState === "completed"
+      && scanIds.size === 1
+      && vehicleContextIds.size === 1
+      && connectionSegments.length > 0
+      && expectedReadouts.length > 0
+      && missingReadouts.length === 0
+      && missingIntents.length === 0
+      && failedReadouts.length === 0
+      && failedIntents.length === 0
+      && rejectedEntries.length === 0
+      && sequenceGapCount === 0;
+    const scanState = completedManifestValid ? "completed" : requestedScanState === "interrupted" || requestedScanState === "completed" ? "interrupted" : "open";
+    const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle({
+      scan_state: scanState,
+      completion_explicit: completionExplicit,
+      expected_intents: expectedIntents,
+      attempted_intents: attemptedIntents,
+      completed_intents: completedIntents,
+      failed_intents: failedIntents,
+      expected_readouts: expectedReadouts,
+      attempted_readouts: attemptedReadouts,
+      completed_readouts: completedReadouts,
+      failed_readouts: failedReadouts,
+      connection_segments: connectionSegments,
+      envelope_count: envelopes.length,
+      accepted_envelope_count: acceptedEntries.length,
+      rejected_envelope_count: rejectedEntries.length
+    });
+    const partial = nativeConnectorScanLifecycle.partial;
+    const warnings = mergeUniqueStrings(
+      partial ? ["native_connector_partial_batch"] : [],
+      scanState === "open" ? ["native_connector_scan_open"] : [],
+      scanState === "interrupted" ? ["native_connector_scan_interrupted"] : [],
+      connectionSegments.length > 1 ? ["native_connector_reconnected"] : [],
+      sequenceGapCount > 0 ? ["native_connector_sequence_gap"] : [],
+      requestedScanState === "completed" && expectedReadouts.length === 0 ? ["native_connector_completion_manifest_missing"] : [],
+      requestedScanState === "completed" && (scanIds.size !== 1 || vehicleContextIds.size !== 1 || connectionSegments.length === 0) ? ["native_connector_completion_boundary_missing"] : []
+    );
     const readoutInterface = normalizeReadoutInterfaceSnapshot({
       interface_id: interfaceId,
       interface_label: interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR Bluetooth" : "ELM327",
@@ -1473,6 +1808,7 @@
       source: "native_connector",
       captured_at: completedAt,
       native_connector_boundary: nativeConnectorBoundary,
+      native_connector_scan_lifecycle: nativeConnectorScanLifecycle,
       readout_interface: readoutInterface,
       warnings,
       retained_raw_payload: false,
@@ -1487,6 +1823,8 @@
       capturedAt: evaluation.capturedAt,
       captured_at: evaluation.capturedAt,
       sequence: evaluation.sequence,
+      connectionSequence: evaluation.connectionSequence,
+      connection_sequence: evaluation.connectionSequence,
       errors: [...evaluation.errors]
     }));
 
@@ -1507,6 +1845,32 @@
       vehicle_context_id: vehicleContextId,
       nativeConnectorBoundary,
       native_connector_boundary: nativeConnectorBoundary,
+      nativeConnectorScanLifecycle,
+      native_connector_scan_lifecycle: nativeConnectorScanLifecycle,
+      scanState,
+      scan_state: scanState,
+      expectedIntents,
+      expected_intents: [...expectedIntents],
+      attemptedIntents,
+      attempted_intents: [...attemptedIntents],
+      completedIntents,
+      completed_intents: [...completedIntents],
+      failedIntents,
+      failed_intents: [...failedIntents],
+      missingIntents,
+      missing_intents: [...missingIntents],
+      expectedReadouts,
+      expected_readouts: [...expectedReadouts],
+      attemptedReadouts,
+      attempted_readouts: [...attemptedReadouts],
+      completedReadouts,
+      completed_readouts: [...completedReadouts],
+      failedReadouts,
+      failed_readouts: [...failedReadouts],
+      missingReadouts,
+      missing_readouts: [...missingReadouts],
+      connectionIds: nativeConnectorScanLifecycle.connectionIds,
+      connection_ids: [...nativeConnectorScanLifecycle.connectionIds],
       platform: "ios",
       startedAt,
       started_at: startedAt,
@@ -5192,6 +5556,8 @@
 
   function normalizeBridgeSummaryAliases(parts = {}) {
     const metadataOverrides = getSessionMetadataOverrides(parts);
+    const nativeConnectorBoundary = normalizeNativeConnectorBoundary(parts.nativeConnectorBoundary || parts.native_connector_boundary || {});
+    const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle(parts.nativeConnectorScanLifecycle || parts.native_connector_scan_lifecycle || {});
     const connectionStatusInput = parts.connectionStatus || parts.connection_status || parts.connectionStatusResponse || parts.connection_status_response || {};
     const vciDevicesInput = parts.vciDevices || parts.vci_devices || parts.vciList || parts.vci_list || parts.listVciResponse || parts.list_vci_response || [];
     const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || parts.adapterIdentityResponse || parts.adapter_identity_response || {};
@@ -5501,6 +5867,10 @@
     return {
       source: parts.source || parts.source_type || "local_bridge",
       source_type: parts.source_type || parts.source || "local_bridge",
+      nativeConnectorBoundary,
+      native_connector_boundary: nativeConnectorBoundary,
+      nativeConnectorScanLifecycle,
+      native_connector_scan_lifecycle: nativeConnectorScanLifecycle,
       startedAt: parts.startedAt || parts.started_at || null,
       endedAt: parts.endedAt || parts.ended_at || null,
       capturedAt: parts.capturedAt || parts.captured_at || null,
@@ -12087,6 +12457,7 @@
 
   function buildBridgeSessionExportPayload(parts = {}) {
     const summary = resolveBridgeSummary(parts);
+    const exportSource = summary.source || summary.source_type || parts.source || parts.source_type || "local_bridge";
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const livePidSnapshot = summary.livePidSnapshot || summary.live_pid_snapshot || normalizeBridgeLivePidSnapshot({
       monitor_values: summary.monitorValues || summary.monitor_values || [],
@@ -12229,7 +12600,9 @@
     return sanitizeSensitiveIdentifiersForRetention({
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
-      source: "local_bridge",
+      source: exportSource,
+      source_type: exportSource,
+      exported_by: "local_bridge_export",
       connection_enabled: false,
       vehicle_command_enabled: false,
       retained_raw_frames: false,
@@ -12237,7 +12610,10 @@
       export_required: true,
       session: {
         session_id: summary.sessionId || summary.session_id || parts.sessionId || parts.session_id || null,
+        source: exportSource,
+        source_type: exportSource,
         native_connector_boundary: normalizeNativeConnectorBoundary(summary.nativeConnectorBoundary || summary.native_connector_boundary || parts.nativeConnectorBoundary || parts.native_connector_boundary || {}),
+        native_connector_scan_lifecycle: normalizeNativeConnectorScanLifecycle(summary.nativeConnectorScanLifecycle || summary.native_connector_scan_lifecycle || parts.nativeConnectorScanLifecycle || parts.native_connector_scan_lifecycle || {}),
         started_at: summary.startedAt || null,
         ended_at: summary.endedAt || null,
         captured_at: summary.capturedAt || null,
@@ -16090,7 +16466,8 @@
     const vciDevicesInput = pick("vciDevices", "vci_devices", "vciList", "vci_list", "listVciResponse", "list_vci_response");
     const adapterIdentityInput = pick("adapterIdentity", "adapter_identity", "adapterIdentityResponse", "adapter_identity_response");
     const sessionInput = getDiagnosticSessionInput(options);
-    const scannerJsonSource = "scanner_json_import";
+    const scannerJsonOriginalSource = String(pick("source", "source_type") || "").trim().slice(0, 80);
+    const scannerJsonSource = isTrustedBridgeSessionExport && scannerJsonOriginalSource ? scannerJsonOriginalSource : "scanner_json_import";
     const scannerJsonProtocol = String(pick("protocol", "obd_protocol", "communicationProtocol", "communication_protocol") || sessionInput.protocol || sessionInput.obd_protocol || "").slice(0, 80) || null;
     const scannerJsonReadoutInterfaceInput = pick("readoutInterface", "readout_interface");
     const normalizedScannerJsonReadoutInterface = scannerJsonReadoutInterfaceInput && typeof scannerJsonReadoutInterfaceInput === "object" && !Array.isArray(scannerJsonReadoutInterfaceInput)
@@ -16330,6 +16707,8 @@
     const output = buildDiagnosticScanSession({
       session_id: String(pick("session_id", "sessionId") || sessionInput.session_id || sessionInput.sessionId || "scanner-json-import").slice(0, 120),
       source: scannerJsonSource,
+      nativeConnectorBoundary: pick("nativeConnectorBoundary", "native_connector_boundary") || undefined,
+      nativeConnectorScanLifecycle: pick("nativeConnectorScanLifecycle", "native_connector_scan_lifecycle") || undefined,
       protocol: scannerJsonProtocol,
       captured_at: scannerJsonCapturedAt,
       started_at: scannerJsonStartedAt,
@@ -17908,6 +18287,7 @@
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
     const nativeConnectorBoundary = normalizeNativeConnectorBoundary(sessionInput.nativeConnectorBoundary || sessionInput.native_connector_boundary || {});
+    const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle(sessionInput.nativeConnectorScanLifecycle || sessionInput.native_connector_scan_lifecycle || {});
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const importClassification = metadataOverrides.importClassification;
     const webSerialReadoutSummary = metadataOverrides.webSerialReadoutSummary;
@@ -18074,6 +18454,8 @@
       readoutCoverageInput,
       honorCoverageOverride: true
     });
+    const hasNativeConnectorContext = Boolean(nativeConnectorScanLifecycle || nativeConnectorBoundary || String(sessionInput.source || sessionInput.source_type || "") === "native_connector");
+    const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext;
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
@@ -18110,7 +18492,7 @@
       supportedPidMatrix
     });
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
-      includeInfrastructure: hasBridgeInfrastructureContext,
+      includeInfrastructure: effectiveBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
@@ -18142,7 +18524,7 @@
       onboardMonitorSnapshot,
       supportedPidMatrix
     });
-    appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
+    appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext: effectiveBridgeInfrastructureContext, readoutCoverage });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const explicitWarnings = resolveWarningList(metadataOverrides.warnings);
     const resolvedWarnings = resolveWarningList(warnings, explicitWarnings);
@@ -18284,6 +18666,8 @@
       session_id: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80),
       nativeConnectorBoundary,
       native_connector_boundary: nativeConnectorBoundary,
+      nativeConnectorScanLifecycle,
+      native_connector_scan_lifecycle: nativeConnectorScanLifecycle,
       startedAt: sessionInput.started_at || sessionInput.startedAt || null,
       started_at: sessionInput.started_at || sessionInput.startedAt || null,
       endedAt: sessionInput.ended_at || sessionInput.endedAt || null,
