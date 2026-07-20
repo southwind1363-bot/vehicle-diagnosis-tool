@@ -3,6 +3,7 @@
 
   const DTC_REFERENCE_PATTERN = /\b([PCBU][0-9A-F]{4})(?:\s*[:\-]\s*([0-9A-F]{2,4}))?\b/gi;
   const VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
+  const PARTIALLY_MASKED_VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{3,10}(?:\.{2,}|…+)[A-HJ-NPR-Z0-9]{3,10}\b/gi;
   const NUMBER_PATTERN = /[-+]?\d+(?:\.\d+)?/;
 
   const fallbackMonitorDefinitions = Object.freeze([
@@ -2845,7 +2846,9 @@
       ? (readinessSnapshotInput?.schemaVersion ? readinessSnapshotInput : normalizeBridgeReadinessSnapshot(readinessSnapshotInput))
       : null;
     const ecuInfoSnapshot = hasEcuInfoSnapshotInput
-      ? (ecuInfoSnapshotInput?.schemaVersion ? ecuInfoSnapshotInput : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput))
+      ? (ecuInfoSnapshotInput?.schemaVersion || ecuInfoSnapshotInput?.schema_version
+          ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
+          : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput))
       : null;
     const onboardMonitorSnapshot = hasOnboardMonitorSnapshotInput
       ? (onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput))
@@ -3606,10 +3609,21 @@
 
   function normalizeVehicleProfileInput(input = null) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
-    const normalized = normalizeVehicleApplicabilitySnapshot(input);
-    if (!normalized.maker && !normalized.model && !normalized.modelCode && !normalized.year && !normalized.engineCode) return { ...input };
+    const hadSensitiveIdentifier = hasSensitiveIdentifierValue(input)
+      || Object.keys(input).some((key) => isSensitiveIdentifierKey(key, { vehicleProfile: true }));
+    const sanitizedInput = Object.fromEntries(Object.entries(input)
+      .filter(([key]) => !isSensitiveIdentifierKey(key, { vehicleProfile: true }))
+      .map(([key, value]) => [key, sanitizeEcuInfoValue(value)]));
+    const normalized = normalizeVehicleApplicabilitySnapshot(sanitizedInput);
+    if (!normalized.maker && !normalized.model && !normalized.modelCode && !normalized.year && !normalized.engineCode) {
+      return {
+        ...sanitizedInput,
+        hadSensitiveIdentifier,
+        had_sensitive_identifier: hadSensitiveIdentifier
+      };
+    }
     return {
-      ...input,
+      ...sanitizedInput,
       maker: normalized.maker,
       model: normalized.model,
       modelCode: normalized.modelCode,
@@ -3628,7 +3642,9 @@
       fuelType: normalized.fuelType,
       fuel_type: normalized.fuel_type,
       electrification: normalized.electrification,
-      hybrid_system: normalized.hybrid_system
+      hybrid_system: normalized.hybrid_system,
+      hadSensitiveIdentifier,
+      had_sensitive_identifier: hadSensitiveIdentifier
     };
   }
 
@@ -4587,7 +4603,7 @@
           ? normalizeReadinessSnapshot(readinessSnapshotInput)
         : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {}));
     const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
-      ? ecuInfoSnapshotInput
+      ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
         : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}));
@@ -5214,7 +5230,7 @@
       ? readinessSnapshotInput
       : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {}));
     const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
-      ? ecuInfoSnapshotInput
+      ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}));
     const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
@@ -5941,7 +5957,9 @@
       readoutInterface: normalizeReadoutInterfaceSnapshot(metadataOverrides.readoutInterface),
       toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
-        || metadataOverrides.hadSensitiveIdentifier === true,
+        || metadataOverrides.hadSensitiveIdentifier === true
+        || metadataOverrides.vehicleProfile?.hadSensitiveIdentifier === true
+        || metadataOverrides.vehicleProfile?.had_sensitive_identifier === true,
       sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))
         ? Math.max(0, Math.round(Number(metadataOverrides.sourceLength)))
         : 0
@@ -11694,15 +11712,19 @@
 
   function getSessionMetadataOverrides(sessionInput = {}) {
     const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);
+    const vehicleProfile = getVehicleProfileInput(sessionInput);
     const hadSensitiveIdentifier = sessionInput.hadSensitiveIdentifier === true
       || sessionInput.had_sensitive_identifier === true
       || importClassification?.hadSensitiveIdentifier === true
       || importClassification?.had_sensitive_identifier === true
+      || vehicleProfile?.hadSensitiveIdentifier === true
+      || vehicleProfile?.had_sensitive_identifier === true
+      || hasSensitiveIdentifierForRetention(sessionInput)
       ? true
       : pickDefined(sessionInput.had_sensitive_identifier, sessionInput.hadSensitiveIdentifier, importClassification?.hadSensitiveIdentifier, importClassification?.had_sensitive_identifier, null);
     const sourceLength = pickDefined(sessionInput.source_length, sessionInput.sourceLength, importClassification?.sourceLength, importClassification?.source_length, null);
     return {
-      vehicleProfile: getVehicleProfileInput(sessionInput),
+      vehicleProfile,
       vehicleApplicability: getVehicleApplicabilityInput(sessionInput),
       readoutInterface: normalizeReadoutInterfaceSnapshot(sessionInput.readoutInterface || sessionInput.readout_interface || null),
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
@@ -11726,6 +11748,7 @@
 
   function buildSummaryMetadataFields(summary = {}, { snakeCase = false } = {}) {
     const vehicleProfile = getVehicleProfileInput(summary);
+    const normalizedEcuInfoSnapshot = normalizeEcuInfoSnapshot(summary.ecuInfoSnapshot || summary.ecu_info_snapshot || {});
     const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(
       getVehicleApplicabilityInput(summary) || {}
     );
@@ -11748,6 +11771,9 @@
       || summary.ecuInfoSnapshot?.had_sensitive_identifier === true
       || summary.ecu_info_snapshot?.hadSensitiveIdentifier === true
       || summary.ecu_info_snapshot?.had_sensitive_identifier === true
+      || normalizedEcuInfoSnapshot.hadSensitiveIdentifier === true
+      || vehicleProfile?.hadSensitiveIdentifier === true
+      || vehicleProfile?.had_sensitive_identifier === true
       || importClassification?.hadSensitiveIdentifier === true
       || importClassification?.had_sensitive_identifier === true;
     const sourceLengthValue = pickDefined(summary.sourceLength, summary.source_length, importClassification?.sourceLength, importClassification?.source_length, 0);
@@ -12200,7 +12226,7 @@
     const importedReadoutRequestPlanGateComparisonSummary = summary.importedReadoutRequestPlanGateComparisonSummary || summary.imported_readout_request_plan_gate_comparison_summary || importedSessionComparisonSummary?.readoutRequestPlanGateComparison || importedSessionComparisonSummary?.readout_request_plan_gate_comparison || null;
     const importedNextReadoutGuardComparisonSummary = summary.importedNextReadoutGuardComparisonSummary || summary.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
     const importedCoreReadoutInventoryComparisonSummary = summary.importedCoreReadoutInventoryComparisonSummary || summary.imported_core_readout_inventory_comparison_summary || importedSessionComparisonSummary?.coreReadoutInventoryComparison || importedSessionComparisonSummary?.core_readout_inventory_comparison || null;
-    return {
+    return sanitizeSensitiveIdentifiersForRetention({
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
       source: "local_bridge",
@@ -12228,7 +12254,7 @@
         ecu_response_summary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
         supported_pid_matrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         readiness_snapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
-        ecu_info_snapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
+        ecu_info_snapshot: normalizeEcuInfoSnapshot(summary.ecuInfoSnapshot || summary.ecu_info_snapshot || normalizeBridgeEcuInfoSnapshot()),
         onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
         live_pid_snapshot: livePidSnapshot,
         live_pid_timeline: livePidTimeline,
@@ -12284,7 +12310,7 @@
         blocked_write_intents: [...localBridgeContract.blockedWriteIntents],
         store_raw_frames: false
       }
-    };
+    });
   }
 
   function buildBridgeDiagnosticImport(parts = {}) {
@@ -12565,7 +12591,7 @@
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
       supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
       readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
-      ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
+      ecuInfoSnapshot: normalizeEcuInfoSnapshot(summary.ecuInfoSnapshot || summary.ecu_info_snapshot || normalizeBridgeEcuInfoSnapshot()),
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
       readoutCoverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
       freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
@@ -12654,7 +12680,7 @@
         ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
         supportedPidMatrix: summary.supportedPidMatrix || buildSupportedPidMatrix({ source: "local_bridge", supported_pids: [] }),
         readinessSnapshot: summary.readinessSnapshot || normalizeBridgeReadinessSnapshot(),
-        ecuInfoSnapshot: summary.ecuInfoSnapshot || normalizeBridgeEcuInfoSnapshot(),
+        ecuInfoSnapshot: normalizeEcuInfoSnapshot(summary.ecuInfoSnapshot || summary.ecu_info_snapshot || normalizeBridgeEcuInfoSnapshot()),
         onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
         readoutCoverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
@@ -14346,6 +14372,11 @@
       })
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);
+    const redactedItems = items.filter((item) => item.sensitiveIdentifierRedacted === true || item.sensitive_identifier_redacted === true);
+    const redactedItemIds = [...new Set(redactedItems.map((item) => item.id).filter(Boolean))];
+    const hadSensitiveIdentifier = sourceInput.hadSensitiveIdentifier === true
+      || sourceInput.had_sensitive_identifier === true
+      || redactedItems.length > 0;
     const observedSourceEcus = [...new Set(items.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const expectedItems = ecuInfoItemCatalog.map((item) => ({
@@ -14388,11 +14419,13 @@
       missingLabels: missingKeyItems.map((item) => item.label),
       missing_labels: missingKeyItems.map((item) => item.label)
     };
+    const errorCodes = mergeUniqueStrings(sourceInput.errorCodes, sourceInput.error_codes);
 
     return {
-      schemaVersion: "ecu_info_snapshot_v1",
-      schema_version: "ecu_info_snapshot_v1",
+      schemaVersion: "ecu_info_snapshot_v2",
+      schema_version: "ecu_info_snapshot_v2",
       source,
+      intent: sourceInput.intent || null,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -14402,8 +14435,12 @@
       item_count: items.length,
       expectedItemCount: expectedItems.length,
       expected_item_count: expectedItems.length,
-      hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
-      had_sensitive_identifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),
+      hadSensitiveIdentifier,
+      had_sensitive_identifier: hadSensitiveIdentifier,
+      sensitiveIdentifierValuesRetained: false,
+      sensitive_identifier_values_retained: false,
+      redactedItemIds,
+      redacted_item_ids: redactedItemIds,
       items,
       expectedItems,
       expected_items: expectedItems,
@@ -14415,6 +14452,14 @@
       support_info_types_summary: supportedInfoTypesSummary,
       ecuInfoReadoutStatus: normalizedReadoutStatus,
       ecu_info_readout_status: normalizedReadoutStatus,
+      ...(typeof sourceInput.ok === "boolean" ? { ok: sourceInput.ok } : {}),
+      blocked: sourceInput.blocked === true || sourceInput.isBlocked === true || sourceInput.is_blocked === true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      errorCodes,
+      error_codes: errorCodes,
       retainedRawText: false,
       retained_raw_text: false
     };
@@ -14548,13 +14593,20 @@
     const rowId = row.id || row.item_id || row.itemId || row.mode09_id || row.mode09Id;
     const catalogItem = ecuInfoItemCatalog.find((item) => item.id === rowId || item.infoType === infoType);
     const id = catalogItem?.id || String(rowId || `ecu_info_${index + 1}`).slice(0, 80);
-    const privacyClass = catalogItem?.privacyClass || row.privacy_class || row.privacyClass || row.privacy || "unknown";
+    const reportedPrivacyClass = catalogItem?.privacyClass || row.privacy_class || row.privacyClass || row.privacy || "unknown";
     const rawValue = row.value ?? row.info_value ?? row.infoValue ?? row.text ?? row.display_value ?? row.displayValue ?? row.data ?? row.raw_value ?? row.rawValue ?? row.decoded_value ?? row.decodedValue ?? row.decodedText ?? row.ascii ?? "";
-    const value = privacyClass === "sensitive_identifier"
-      ? maskSensitiveIdentifier(rawValue)
-      : sanitizeEcuInfoValue(rawValue);
+    const identityText = [id, rowId, row.label, row.displayLabel, row.display_label, row.name, row.key].filter(Boolean).join(" ");
+    const sensitiveByIdentity = reportedPrivacyClass === "sensitive_identifier"
+      || infoType === "02"
+      || /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(identityText);
+    const sensitiveValueDetected = hasSensitiveIdentifierValue(rawValue);
+    const detected = row.detected === true || row.present === true || (rawValue !== null && rawValue !== undefined && String(rawValue).length > 0);
+    const sensitiveIdentifierRedacted = sensitiveByIdentity && detected || sensitiveValueDetected;
+    const privacyClass = sensitiveByIdentity ? "sensitive_identifier" : reportedPrivacyClass;
+    const value = sensitiveByIdentity ? null : sanitizeEcuInfoValue(rawValue);
 
-    if (value === null || value === "") return null;
+    if (!sensitiveByIdentity && (value === null || value === "")) return null;
+    if (sensitiveByIdentity && !detected) return null;
     return {
       id,
       label: catalogItem?.label || row.label || row.displayLabel || row.display_label || id,
@@ -14565,8 +14617,12 @@
       sourceEcu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
       source_ecu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
       privacyClass,
-      detected: row.detected === true || row.present === true || (rawValue !== null && rawValue !== undefined && String(rawValue).length > 0),
+      detected,
+      redacted: sensitiveIdentifierRedacted,
+      sensitiveIdentifierRedacted,
+      sensitive_identifier_redacted: sensitiveIdentifierRedacted,
       retainedRawValue: false,
+      retained_raw_value: false,
       diagnosticUse: catalogItem?.diagnosticUse || "",
       storagePolicy: catalogItem?.storagePolicy || ""
     };
@@ -14580,7 +14636,127 @@
       return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeEcuInfoValue(item)]));
     }
     const text = String(value ?? "").trim();
-    return text ? text.slice(0, 240) : "";
+    return text ? redactSensitiveText(text).slice(0, 240) : "";
+  }
+
+  function hasSensitiveIdentifierValue(value) {
+    if (Array.isArray(value)) return value.some((item) => hasSensitiveIdentifierValue(item));
+    if (value && typeof value === "object") return Object.values(value).some((item) => hasSensitiveIdentifierValue(item));
+    const text = String(value ?? "").trim();
+    return Boolean(text) && redactSensitiveText(text) !== text;
+  }
+
+  function isIdentifierMetadataKey(key) {
+    return /^(?:sessionId|session_id|protocol|obdProtocol|obd_protocol|communicationProtocol|communication_protocol|observedProtocols|observed_protocols)$/i.test(String(key || ""));
+  }
+
+  function isSensitiveIdentifierKey(key, { vehicleProfile = false } = {}) {
+    const normalized = String(key || "");
+    if (/(?:^vin$|^vin_|_vin$|vinNumber|vehicle_?identification|vehicleIdentification|車台番号)/i.test(normalized)) return true;
+    return vehicleProfile && /(?:^chassis$|^chassis_|_chassis$|chassisNumber|vehicle_?serial|vehicleSerial)/i.test(normalized);
+  }
+
+  function hasSensitiveIdentifierLabel(value) {
+    return /(?:^|[\r\n])\s*(?:vin|vehicle\s*identification(?:\s*number)?|車台番号)\s*[:=]/im.test(String(value || ""));
+  }
+
+  function hasSensitiveIdentifierForRetention(value, context = "") {
+    if (Array.isArray(value)) return value.some((item) => hasSensitiveIdentifierForRetention(item, context));
+    if (!value || typeof value !== "object") {
+      const text = String(value ?? "").trim();
+      return context === "identifier_metadata"
+        ? Boolean(text) && redactSensitiveTextForRetention(text) !== text
+        : hasSensitiveIdentifierValue(value);
+    }
+    const entries = Object.entries(value);
+    const schemaVersion = String(value.schemaVersion || value.schema_version || "");
+    const ecuInfoContext = context === "ecu_info" || schemaVersion.startsWith("ecu_info_snapshot_") || value.intent === "read_ecu_info";
+    if (entries.some(([key, item]) => isSensitiveIdentifierKey(key, { vehicleProfile: context === "vehicle_profile" })
+      && item !== null && item !== undefined && item !== "")) return true;
+    const identityText = [value.id, value.item_id, value.itemId, value.info_type, value.infoType, value.mode09_type, value.mode09Type, value.label, value.name, value.key].filter(Boolean).join(" ");
+    if ((value.privacyClass === "sensitive_identifier"
+      || value.privacy_class === "sensitive_identifier"
+      || ecuInfoContext && String(value.info_type || value.infoType || value.mode09_type || value.mode09Type || "").toUpperCase() === "02"
+      || /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(identityText))
+      && entries.some(([key, item]) => /^(?:value|info_value|infoValue|text|display_value|displayValue|data|raw_value|rawValue|decoded_value|decodedValue|decodedText|ascii)$/i.test(key)
+        && item !== null && item !== undefined && item !== "")) return true;
+    return entries.some(([key, item]) => hasSensitiveIdentifierForRetention(item,
+      /^(?:ecuInfoSnapshot|ecu_info_snapshot|ecuInfo|ecu_info)$/i.test(key)
+        ? "ecu_info"
+        : /^(?:vehicleProfile|vehicle_profile)$/i.test(key)
+          ? "vehicle_profile"
+          : isIdentifierMetadataKey(key)
+            ? "identifier_metadata"
+            : context));
+  }
+
+  function sanitizeSensitiveIdentifiersForRetention(value, context = "", seen = new WeakMap()) {
+    if (Array.isArray(value)) {
+      if (seen.has(value)) return seen.get(value);
+      const sanitizedArray = [];
+      seen.set(value, sanitizedArray);
+      value.forEach((item) => sanitizedArray.push(sanitizeSensitiveIdentifiersForRetention(item, context, seen)));
+      return sanitizedArray;
+    }
+    if (!value || typeof value !== "object") {
+      if (typeof value !== "string") return value;
+      return context === "identifier_metadata" ? redactSensitiveTextForRetention(value) : redactSensitiveText(value);
+    }
+    if (seen.has(value)) return seen.get(value);
+    const schemaVersion = String(value.schemaVersion || value.schema_version || "");
+    const ecuInfoContext = context === "ecu_info" || schemaVersion.startsWith("ecu_info_snapshot_") || value.intent === "read_ecu_info";
+    const identityText = [
+      value.id,
+      value.item_id,
+      value.itemId,
+      value.info_type,
+      value.infoType,
+      value.mode09_type,
+      value.mode09Type,
+      value.label,
+      value.name,
+      value.key
+    ].filter(Boolean).join(" ");
+    const sensitiveRow = value.privacyClass === "sensitive_identifier"
+      || value.privacy_class === "sensitive_identifier"
+      || ecuInfoContext && String(value.info_type || value.infoType || value.mode09_type || value.mode09Type || "").toUpperCase() === "02"
+      || /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(identityText);
+    let detected = sensitiveRow;
+    const sanitized = {};
+    seen.set(value, sanitized);
+    Object.entries(value).forEach(([key, item]) => {
+      const childContext = /^(?:ecuInfoSnapshot|ecu_info_snapshot|ecuInfo|ecu_info)$/i.test(key)
+        ? "ecu_info"
+        : /^(?:vehicleProfile|vehicle_profile)$/i.test(key)
+          ? "vehicle_profile"
+          : isIdentifierMetadataKey(key)
+            ? "identifier_metadata"
+            : context;
+      const sensitiveKey = isSensitiveIdentifierKey(key, { vehicleProfile: childContext === "vehicle_profile" });
+      const sensitiveValueKey = /^(?:value|info_value|infoValue|text|display_value|displayValue|data|raw_value|rawValue|decoded_value|decodedValue|decodedText|ascii)$/i.test(key);
+      if (sensitiveKey || (sensitiveRow && sensitiveValueKey)) {
+        sanitized[key] = null;
+        detected = detected || item !== null && item !== undefined && item !== "";
+        return;
+      }
+      const sanitizedItem = sanitizeSensitiveIdentifiersForRetention(item, childContext, seen);
+      sanitized[key] = sanitizedItem;
+      if ((typeof item === "string" && sanitizedItem !== item)
+        || sanitizedItem?.hadSensitiveIdentifier === true
+        || sanitizedItem?.had_sensitive_identifier === true) detected = true;
+    });
+    if (detected) {
+      sanitized.hadSensitiveIdentifier = true;
+      sanitized.had_sensitive_identifier = true;
+    }
+    if (sensitiveRow) {
+      sanitized.redacted = true;
+      sanitized.sensitiveIdentifierRedacted = true;
+      sanitized.sensitive_identifier_redacted = true;
+      sanitized.retainedRawValue = false;
+      sanitized.retained_raw_value = false;
+    }
+    return sanitized;
   }
 
   function decodeMode09SupportedInfoTypes(value) {
@@ -14609,24 +14785,6 @@
       ids: hexIds,
       labels
     };
-  }
-
-  function maskSensitiveIdentifier(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => maskSensitiveIdentifier(item)).filter((item) => item !== null && item !== "");
-    }
-    if (value && typeof value === "object") {
-      return Object.fromEntries(
-        Object.entries(value)
-          .map(([key, item]) => [key, maskSensitiveIdentifier(item)])
-          .filter(([, item]) => item !== null && item !== "")
-      );
-    }
-    const text = String(value ?? "").trim().toUpperCase();
-    if (!text) return "";
-    const redacted = redactSensitiveText(text);
-    if (redacted !== text) return "[識別情報検出: 非保存]";
-    return text.length > 6 ? `${text.slice(0, 3)}...${text.slice(-3)}` : "[識別情報検出: マスク済み]";
   }
 
   function parseObdHexBytes(value) {
@@ -15160,13 +15318,13 @@
             ? normalizeOnboardMonitorSnapshot(onboardMonitorResponseInput)
         : decodeOnboardMonitorResponse(onboardMonitorResponseInput));
     const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
-      ? ecuInfoSnapshotInput
+      ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput?.schema_version
         ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (Array.isArray(ecuInfoSnapshotInput) || hasObjectContent(ecuInfoSnapshotInput))
         ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
         : ecuInfoResponseInput?.schemaVersion
-          ? ecuInfoResponseInput
+          ? normalizeEcuInfoSnapshot(ecuInfoResponseInput)
           : ecuInfoResponseInput?.schema_version
             ? normalizeEcuInfoSnapshot(ecuInfoResponseInput)
           : decodeEcuInfoResponse(ecuInfoResponseInput));
@@ -15531,6 +15689,8 @@
     const sessionInput = getDiagnosticSessionInput(options);
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const classified = classifyObdResponseLines(value);
+    classified.hadSensitiveIdentifier = classified.hadSensitiveIdentifier === true || hasSensitiveIdentifierLabel(value);
+    classified.had_sensitive_identifier = classified.hadSensitiveIdentifier;
     const toolHints = detectScannerToolHints(value);
     const textDtcSnapshot = extractTextDtcSnapshot(value);
     const textFreezeFrameSnapshot = extractTextFreezeFrameSnapshot(collectTextFreezeFrameSection(value));
@@ -15990,15 +16150,11 @@
         })
       : null;
     const toSnapshotInput = (item, key) => Array.isArray(item) ? { [key]: item, source: scannerJsonSource } : { ...item, source: scannerJsonSource };
-    const isSensitiveEcuInfoRow = (row) => /(?:\bvin\b|vehicle\s*identification|\u8eca\u53f0\u756a\u53f7)/i.test(String(row?.id || row?.label || row?.name || row?.key || ""));
     const sanitizeEcuInfoInput = (item) => {
-      if (Array.isArray(item)) return item.filter((row) => !isSensitiveEcuInfoRow(row));
       if (!item || typeof item !== "object") return item;
-      const sanitized = { ...item };
-      ["items", "values", "ecu_info", "ecu_info_items", "ecu_info_rows", "ecuInfo", "ecuInfoItems", "ecuInfoRows", "mode09_items", "mode09Items", "mode09_values"].forEach((key) => {
-        if (Array.isArray(sanitized[key])) sanitized[key] = sanitized[key].filter((row) => !isSensitiveEcuInfoRow(row));
-      });
-      return sanitized;
+      return normalizeEcuInfoSnapshot(Array.isArray(item)
+        ? { items: item, source: scannerJsonSource }
+        : { ...item, source: item.source || scannerJsonSource });
     };
     const safeEcuInfoInput = sanitizeEcuInfoInput(ecuInfoInput);
     const dtcSnapshot = hasValue(resolvedDtcInput)
@@ -16101,7 +16257,21 @@
       || ["reported", "blocked"].includes(String(dtcSnapshot.dtcReadoutStatus || dtcSnapshot.dtc_readout_status || "").toLowerCase())
     ));
     if (![hasDtcSnapshotContent, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
-    const hadSensitiveIdentifier = text !== redactSensitiveText(text);
+    const explicitHadSensitiveIdentifier = input.hadSensitiveIdentifier === true
+      || input.had_sensitive_identifier === true
+      || input.importClassification?.hadSensitiveIdentifier === true
+      || input.importClassification?.had_sensitive_identifier === true
+      || input.import_classification?.hadSensitiveIdentifier === true
+      || input.import_classification?.had_sensitive_identifier === true;
+    const metadataHadSensitiveIdentifier = [
+      pick("session_id", "sessionId"),
+      scannerJsonProtocol,
+      ...(Array.isArray(input.observedProtocols) ? input.observedProtocols : Array.isArray(input.observed_protocols) ? input.observed_protocols : [])
+    ].some((item) => typeof item === "string" && redactSensitiveTextForRetention(item) !== item);
+    const hadSensitiveIdentifier = text !== redactSensitiveText(text)
+      || explicitHadSensitiveIdentifier
+      || metadataHadSensitiveIdentifier
+      || ecuInfoSnapshot?.hadSensitiveIdentifier === true;
     const observedProtocols = [...new Set([
       scannerJsonProtocol,
       ...(Array.isArray(input.observedProtocols) ? input.observedProtocols : Array.isArray(input.observed_protocols) ? input.observed_protocols : []),
@@ -16114,7 +16284,7 @@
       supportedPidMatrix?.protocol || supportedPidMatrix?.obd_protocol || null,
       onboardMonitorSnapshot?.protocol || onboardMonitorSnapshot?.obd_protocol || null,
       ecuResponseSummary?.protocol || ecuResponseSummary?.obd_protocol || null
-    ].map((item) => String(item || "").trim().slice(0, 80)).filter(Boolean))];
+    ].map((item) => redactSensitiveTextForRetention(String(item || "")).trim().slice(0, 80)).filter(Boolean))];
     const multipleProtocols = observedProtocols.length > 1;
     const importClassification = {
       schemaVersion: "scanner_json_import_v1",
@@ -16594,7 +16764,7 @@
       }
       if ((isEcuInfoRow || isEcuInfoSection) && ecuInfoId && rawValue) {
         recordReadoutMetadata("ecu_info", rowCapturedAt, rowProtocol);
-        if (!/(?:^vin$|vehicle_?identification|車台番号)/i.test(ecuInfoId)) ecuInfoRows.push({ id: ecuInfoId, value: rawValue, source_ecu: ecu || null });
+        ecuInfoRows.push({ id: ecuInfoId, value: rawValue, source_ecu: ecu || null });
         return;
       }
       if (!rawValue || sensitiveLabel(label)) return;
@@ -16687,7 +16857,8 @@
     const csvReadoutInterface = normalizedReadoutInterface.label || normalizedReadoutInterface.deviceModel || normalizedReadoutInterface.route || normalizedReadoutInterface.platform
       ? normalizedReadoutInterface
       : null;
-    const hadSensitiveIdentifier = text !== redactSensitiveText(text);
+    const hadSensitiveIdentifier = text !== redactSensitiveText(text)
+      || ecuInfoSnapshot?.hadSensitiveIdentifier === true;
     const observedProtocolList = [...observedProtocols];
     const multipleProtocols = observedProtocolList.length > 1;
     const importClassification = {
@@ -17748,8 +17919,8 @@
     const importedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(sessionInput.importedReadoutRequestPlanGateSummary || sessionInput.imported_readout_request_plan_gate_summary || sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null);
     const importedNextReadoutGuardSummary = normalizeNextReadoutGuardSummaryAliases(sessionInput.importedNextReadoutGuardSummary || sessionInput.imported_next_readout_guard_summary || sessionInput.nextReadoutGuardSummary || sessionInput.next_readout_guard_summary || null);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.importedCoreReadoutInventorySummary || sessionInput.imported_core_readout_inventory_summary || sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
-    const bridgeSession = sessionInput.bridgeSession || sessionInput.bridge_session || null;
-    const bridgeExportPayload = sessionInput.exportPayload || sessionInput.export_payload || sessionInput.bridgeExportPayload || sessionInput.bridge_export_payload || null;
+    const bridgeSession = sanitizeSensitiveIdentifiersForRetention(sessionInput.bridgeSession || sessionInput.bridge_session || null);
+    const bridgeExportPayload = sanitizeSensitiveIdentifiersForRetention(sessionInput.exportPayload || sessionInput.export_payload || sessionInput.bridgeExportPayload || sessionInput.bridge_export_payload || null);
     const storedDtcSnapshotInput = sessionInput.storedDtcSnapshot || sessionInput.stored_dtc_snapshot || sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || null;
     const pendingDtcSnapshotInput = sessionInput.pendingDtcSnapshot || sessionInput.pending_dtc_snapshot || sessionInput.pendingDtcResponse || sessionInput.pending_dtc_response || null;
     const permanentDtcSnapshotInput = sessionInput.permanentDtcSnapshot || sessionInput.permanent_dtc_snapshot || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || null;
@@ -17876,7 +18047,7 @@
         : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSnapshotInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
     const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput));
     const ecuInfoSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
-      ? ecuInfoSnapshotInput
+      ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
         : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSnapshotInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
@@ -18104,7 +18275,7 @@
     ], mergedMonitorValueSummary);
     const resolvedImportClassification = resolveImportClassification(importClassification);
 
-    return {
+    return sanitizeSensitiveIdentifiersForRetention({
       schemaVersion: "scan_session_v1",
       schema_version: "scan_session_v1",
       source: sessionInput.source || sessionInput.source_type || "diagnostic_core",
@@ -18248,7 +18419,7 @@
         wouldTransmit: false,
         vehicleCommandEnabled: false
       })
-    };
+    });
   }
 
   function evaluateLocalBridgeRequest(request = {}) {
@@ -18523,6 +18694,10 @@
 
   function redactSensitiveText(value) {
     return String(value || "").replace(VIN_PATTERN, "[車台番号候補を非表示]");
+  }
+
+  function redactSensitiveTextForRetention(value) {
+    return redactSensitiveText(value).replace(PARTIALLY_MASKED_VIN_PATTERN, "[車台番号候補を非表示]");
   }
 
   function normalizeMonitorLabel(value) {
@@ -19107,7 +19282,7 @@
       monitor_insights: monitorInsights,
       livePidSnapshot,
       live_pid_snapshot: livePidSnapshot,
-      hadSensitiveIdentifier: raw !== redacted,
+      hadSensitiveIdentifier: raw !== redacted || hasSensitiveIdentifierLabel(raw),
       sourceLength: raw.length,
       retainedRawText: false
     };

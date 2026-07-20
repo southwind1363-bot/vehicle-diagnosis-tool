@@ -123,7 +123,7 @@ const ecuInfoRowsFunctionSource = source.match(/function collectEcuInfoRows[\s\S
 const ecuInfoSnapshotFunctionSource = source.match(/function normalizeEcuInfoSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const onboardMonitorSnapshotFunctionSource = source.match(/function normalizeOnboardMonitorSnapshot[\s\S]*?retained_raw_text: false\r?\n    \};\r?\n  \}/);
 const ecuInfoValueFunctionSource = source.match(/function normalizeEcuInfoValue[\s\S]*?storagePolicy: catalogItem\?\.storagePolicy \|\| ""\r?\n    \};\r?\n  \}/);
-const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? text\.slice\(0, 240\) : "";\r?\n  \}/);
+const sanitizeEcuInfoValueFunctionSource = source.match(/function sanitizeEcuInfoValue[\s\S]*?return text \? redactSensitiveText\(text\)\.slice\(0, 240\) : "";\r?\n  \}/);
 const mode09SupportedInfoTypesFunctionSource = source.match(/function decodeMode09SupportedInfoTypes[\s\S]*?labels\r?\n    \};\r?\n  \}/);
 const trimEcuInfoPayloadFunctionSource = source.match(/function trimEcuInfoPayload[\s\S]*?return cleaned;\r?\n  \}/);
 const ecuInfoPayloadFunctionSource = source.match(/function decodeEcuInfoPayload[\s\S]*?return payload\.map\(\(byte\) => String\.fromCharCode\(byte\)\)\.join\(""\)\.trim\(\);\r?\n  \}/);
@@ -645,7 +645,7 @@ const sessionMetadataOverridesFunctionChecks = () => {
   check(Boolean(sessionMetadataOverridesFunctionSource), "getSessionMetadataOverrides is missing from obd-readonly.js");
   if (sessionMetadataOverridesFunctionSource) {
     const functionBody = sessionMetadataOverridesFunctionSource[0];
-    check(functionBody.includes('vehicleProfile: getVehicleProfileInput(sessionInput),'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
+    check(functionBody.includes('const vehicleProfile = getVehicleProfileInput(sessionInput);') && functionBody.includes('vehicleProfile,'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
     check(functionBody.includes('readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,'), "getSessionMetadataOverrides should normalize readout coverage aliases");
     check(functionBody.includes('const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);'), "getSessionMetadataOverrides should normalize import classification input");
     check(functionBody.includes('toolHints: mergeUniqueStrings(sessionInput.tool_hints, sessionInput.toolHints, importClassification?.toolHints, importClassification?.tool_hints),'), "getSessionMetadataOverrides should merge tool hint aliases");
@@ -716,7 +716,7 @@ const diagnosticSessionInputFunctionChecks = () => {
     check(functionBody.includes('importedReadoutQualityReviewRequestPlanSummary: pickPresent(input.importedReadoutQualityReviewRequestPlanSummary, input.imported_readout_quality_review_request_plan_summary') && functionBody.includes('nested.importedReadoutQualityReviewRequestPlanSummary, nested.imported_readout_quality_review_request_plan_summary'), "getDiagnosticSessionInput should preserve imported readout quality review request plan aliases when outer aliases are null");
     check(functionBody.includes('importedVehicleApplicabilityChangedRowSummary: pickPresent(input.importedVehicleApplicabilityChangedRowSummary, input.imported_vehicle_applicability_changed_row_summary') && functionBody.includes('nested.importedVehicleApplicabilityChangedRowSummary, nested.imported_vehicle_applicability_changed_row_summary'), "getDiagnosticSessionInput should preserve imported applicability changed row aliases");
     check(functionBody.includes('imported_vehicle_applicability_changed_row_summary: pickPresent(input.imported_vehicle_applicability_changed_row_summary, input.importedVehicleApplicabilityChangedRowSummary'), "getDiagnosticSessionInput should preserve imported applicability changed row snake_case aliases");
-    check(source.includes('const bridgeSession = sessionInput.bridgeSession || sessionInput.bridge_session || null;') && source.includes('bridge_export_payload: bridgeExportPayload,'), "buildDiagnosticScanSession should preserve bridge session and export payload aliases");
+    check(source.includes('const bridgeSession = sanitizeSensitiveIdentifiersForRetention(sessionInput.bridgeSession || sessionInput.bridge_session || null);') && source.includes('bridge_export_payload: bridgeExportPayload,'), "buildDiagnosticScanSession should preserve sanitized bridge session and export payload aliases");
   }
 };
 const resolvedSessionMetadataFunctionChecks = () => {
@@ -727,7 +727,7 @@ const resolvedSessionMetadataFunctionChecks = () => {
     check(functionBody.includes('vehicleProfile: metadataOverrides.vehicleProfile || deriveVehicleProfileFromApplicability(vehicleApplicability),'), "buildResolvedSessionMetadata should preserve explicit vehicle profile metadata or derive it from applicability");
     check(functionBody.includes('vehicleApplicability,'), "buildResolvedSessionMetadata should expose normalized vehicle applicability metadata");
     check(functionBody.includes('toolHints: mergeUniqueStrings(metadataOverrides.toolHints),'), "buildResolvedSessionMetadata should merge metadata tool hints");
-    check(functionBody.includes('hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true') && functionBody.includes('|| metadataOverrides.hadSensitiveIdentifier === true,'), "buildResolvedSessionMetadata should preserve sensitive-identifier metadata from ECU info or overrides");
+    check(functionBody.includes('hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true') && functionBody.includes('|| metadataOverrides.hadSensitiveIdentifier === true') && functionBody.includes('metadataOverrides.vehicleProfile?.hadSensitiveIdentifier'), "buildResolvedSessionMetadata should preserve sensitive-identifier metadata from ECU info, vehicle profile, or overrides");
     check(functionBody.includes('sourceLength: Number.isFinite(Number(metadataOverrides.sourceLength))'), "buildResolvedSessionMetadata should sanitize metadata source length");
   }
 };
@@ -1450,9 +1450,9 @@ const ecuInfoSnapshotFunctionChecks = () => {
     check(functionBody.includes('const rows = collectEcuInfoRows(sourceInput);') && functionBody.includes('normalizeEcuInfoValue(row, index)'), "normalizeEcuInfoSnapshot should collect ECU info rows and normalize each value");
     check(functionBody.includes('const expectedItems = ecuInfoItemCatalog.map((item) => ({') && functionBody.includes('captured: items.some((value) => value.id === item.id || value.infoType === item.infoType)'), "normalizeEcuInfoSnapshot should build expected ECU info catalog coverage");
     check(functionBody.includes('const keyItemIds = new Set(["vin", "calibration_id", "calibration_verification_number", "ecu_name"]);'), "normalizeEcuInfoSnapshot should define key Mode 09 item ids");
-    check(functionBody.includes('hadSensitiveIdentifier: items.some((item) => item.privacyClass === "sensitive_identifier" && item.detected === true),'), "normalizeEcuInfoSnapshot should surface detected sensitive identifiers");
+    check(functionBody.includes('const hadSensitiveIdentifier = sourceInput.hadSensitiveIdentifier === true') && functionBody.includes('|| redactedItems.length > 0;'), "normalizeEcuInfoSnapshot should surface detected sensitive identifiers");
     check(functionBody.includes('supportInfoTypesSummary: supportedInfoTypesSummary,') && functionBody.includes('retainedRawText: false') && functionBody.includes('retained_raw_text: false'), "normalizeEcuInfoSnapshot should summarize supported info types and never retain raw text");
-    check(functionBody.includes('schema_version: "ecu_info_snapshot_v1"'), "normalizeEcuInfoSnapshot should expose snake_case schema version");
+    check(functionBody.includes('schema_version: "ecu_info_snapshot_v2"'), "normalizeEcuInfoSnapshot should expose the non-retaining snake_case schema version");
     check(functionBody.includes('const keyItemSummary = {') && functionBody.includes('missing_count: missingKeyItems.length,') && functionBody.includes('missing_labels: missingKeyItems.map((item) => item.label)'), "normalizeEcuInfoSnapshot should expose snake_case key item summary fields");
     check(functionBody.includes('captured_at: sourceInput.captured_at') && functionBody.includes('item_count: items.length,') && functionBody.includes('expected_item_count: expectedItems.length,'), "normalizeEcuInfoSnapshot should expose snake_case top-level count aliases");
     check(functionBody.includes('key_item_summary: keyItemSummary,') && functionBody.includes('support_info_types_captured: supportedInfoTypesCaptured,') && functionBody.includes('support_info_types_summary: supportedInfoTypesSummary,'), "normalizeEcuInfoSnapshot should expose snake_case ECU info summary aliases");
@@ -1485,7 +1485,7 @@ const ecuInfoValueFunctionChecks = () => {
     check(functionBody.includes('row.info_type || row.infoType || row.mode09_type || row.mode09Type || row.type'), "normalizeEcuInfoValue should normalize Mode 09 info type aliases");
     check(functionBody.includes('row.id || row.item_id || row.itemId || row.mode09_id || row.mode09Id'), "normalizeEcuInfoValue should normalize ECU info row id aliases");
     check(functionBody.includes('ecuInfoItemCatalog.find((item) => item.id === rowId || item.infoType === infoType)'), "normalizeEcuInfoValue should match rows against the ECU info catalog");
-    check(functionBody.includes('privacyClass === "sensitive_identifier"') && functionBody.includes('maskSensitiveIdentifier(rawValue)'), "normalizeEcuInfoValue should mask sensitive identifier values");
+    check(functionBody.includes('const sensitiveByIdentity = reportedPrivacyClass === "sensitive_identifier"') && functionBody.includes('const value = sensitiveByIdentity ? null : sanitizeEcuInfoValue(rawValue);'), "normalizeEcuInfoValue should discard sensitive identifier values");
     check(functionBody.includes('row.privacyClass') && functionBody.includes('row.info_value ?? row.infoValue') && functionBody.includes('row.decodedText'), "normalizeEcuInfoValue should normalize privacy and value aliases");
     check(functionBody.includes('row.displayLabel') && functionBody.includes('row.display_label') && functionBody.includes('row.service_mode || row.serviceMode'), "normalizeEcuInfoValue should normalize display label and service aliases");
     check(functionBody.includes('retainedRawValue: false') && functionBody.includes('row.detected === true || row.present === true'), "normalizeEcuInfoValue should expose detection state without retaining raw values");
@@ -1499,7 +1499,7 @@ const sanitizeEcuInfoValueFunctionChecks = () => {
     check(functionBody.includes('value.map((item) => sanitizeEcuInfoValue(item)).filter((item) => item !== null && item !== "")'), "sanitizeEcuInfoValue should drop empty sanitized array values");
     check(functionBody.includes('if (value && typeof value === "object") {'), "sanitizeEcuInfoValue should handle object values recursively");
     check(functionBody.includes('Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeEcuInfoValue(item)]))'), "sanitizeEcuInfoValue should preserve object keys while sanitizing values");
-    check(functionBody.includes('const text = String(value ?? "").trim();') && functionBody.includes('return text ? text.slice(0, 240) : "";'), "sanitizeEcuInfoValue should trim scalar values and cap them to 240 characters");
+    check(functionBody.includes('const text = String(value ?? "").trim();') && functionBody.includes('return text ? redactSensitiveText(text).slice(0, 240) : "";'), "sanitizeEcuInfoValue should redact identifiers, trim scalar values, and cap them to 240 characters");
   }
 };
 const mode09SupportedInfoTypesFunctionChecks = () => {
@@ -2536,7 +2536,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2716件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('iPhone VCI連続読取を単一セッションへ統合'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2716件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('ECU情報のVIN完全非保持を実装'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2663,7 +2663,7 @@ check(appSource.includes('const obdLiveObservationCondition = document.querySele
 check(appSource.includes('function buildLivePidTimelineChartRows(timeline = null)') && appSource.includes('.filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)') && appSource.includes('heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55') && appSource.includes('delta: row.points.at(-1)?.value - row.points[0]?.value') && appSource.includes('変化 ${row.delta') && appSource.includes('obd-timeline-chart-bar'), "Live PID graph should chart only numeric values from the latest observation condition");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
-check(appSource.includes('recentMilestone: "iPhone VCI連続読取を単一セッションへ統合"'), "OBD core progress should describe the latest completed interface milestone");
+check(appSource.includes('recentMilestone: "ECU情報のVIN完全非保持を実装"'), "OBD core progress should describe the latest completed data-safety milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
@@ -2769,8 +2769,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.80";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.80";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.80", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.81";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.81";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.81", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -2831,7 +2831,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "iPhone VCI連続読取を単一セッションへ統合"'), "OBD core progress snapshot should show the latest interface milestone");
+check(appSource.includes('recentMilestone: "ECU情報のVIN完全非保持を実装"'), "OBD core progress snapshot should show the latest data-safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -6069,6 +6069,97 @@ check(bridgeEcuInfoSnapshot.ecuInfoReadoutStatus === "reported" && bridgeEcuInfo
 check(bridgeEcuInfoSnapshot.support_info_types_captured === true, "Bridge ECU info did not expose snake_case supported info type capture state");
 check(bridgeEcuInfoSnapshot.supportInfoTypesSummary.count >= 6 && bridgeEcuInfoSnapshot.supportInfoTypesSummary.labels.includes("ECU名"), "Bridge ECU info supported info type summary was not built");
 check(bridgeEcuInfoSnapshot.support_info_types_summary?.count >= 6 && bridgeEcuInfoSnapshot.support_info_types_summary?.labels.includes("ECU名"), "Bridge ECU info snake_case supported info type summary was not built");
+const vinRetentionProbe = "JTDKN3DU0A0123456";
+const vinRetentionFragments = ["JTDKN3", "123456", "JTD...456"];
+const hasVinRetention = (value) => {
+  const serialized = JSON.stringify(value);
+  return serialized.includes(vinRetentionProbe) || vinRetentionFragments.some((fragment) => serialized.includes(fragment));
+};
+const directVinNonRetentionSnapshot = obd.normalizeEcuInfoSnapshot({
+  items: [
+    { id: "vin", info_type: "02", value: vinRetentionProbe },
+    { id: "calibration_id", info_type: "04", value: "CAL-VIN-SAFETY" },
+    { id: "unknown_mode09_value", value: { nested: vinRetentionProbe } }
+  ]
+});
+check(directVinNonRetentionSnapshot.schemaVersion === "ecu_info_snapshot_v2" && directVinNonRetentionSnapshot.items.find((item) => item.id === "vin")?.value === null && directVinNonRetentionSnapshot.items.find((item) => item.id === "vin")?.redacted === true && directVinNonRetentionSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-VIN-SAFETY" && directVinNonRetentionSnapshot.hadSensitiveIdentifier === true && directVinNonRetentionSnapshot.sensitiveIdentifierValuesRetained === false && directVinNonRetentionSnapshot.redactedItemIds?.includes("vin") && !hasVinRetention(directVinNonRetentionSnapshot), "ECU info v2 did not discard VIN values and fragments while retaining non-sensitive Mode 09 data");
+const partialVinLegacySession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: {
+    schemaVersion: "ecu_info_snapshot_v1",
+    items: [
+      { id: "vin", infoType: "02", value: "JTD...456" },
+      { id: "calibration_id", infoType: "04", value: "CAL-LEGACY-V1" }
+    ]
+  }
+});
+check(partialVinLegacySession.ecuInfoSnapshot?.schemaVersion === "ecu_info_snapshot_v2" && partialVinLegacySession.ecuInfoSnapshot?.items?.find((item) => item.id === "vin")?.value === null && partialVinLegacySession.ecuInfoSnapshot?.keyItemSummary?.capturedLabels?.includes("車台番号 VIN") && partialVinLegacySession.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_id")?.value === "CAL-LEGACY-V1" && partialVinLegacySession.hadSensitiveIdentifier === true && !hasVinRetention(partialVinLegacySession), "Legacy ECU info snapshot bypassed VIN non-retention normalization");
+const rawMode09VinSnapshot = obd.decodeEcuInfoResponse({ raw: "49 02 01 4A 54 44 4B 4E 33 44 55 30 41 30 31 32 33 34 35 36" });
+check(rawMode09VinSnapshot.items?.find((item) => item.id === "vin")?.value === null && rawMode09VinSnapshot.hadSensitiveIdentifier === true && !hasVinRetention(rawMode09VinSnapshot), "Raw Mode 09 VIN response retained VIN values or fragments");
+const legacyVinBridgeExport = obd.buildBridgeSessionExportPayload({
+  ecuInfoSnapshot: {
+    schemaVersion: "ecu_info_snapshot_v1",
+    items: [{ id: "vin", infoType: "02", value: vinRetentionProbe }]
+  }
+});
+const legacyVinBridgeReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(legacyVinBridgeExport));
+check(legacyVinBridgeExport.session?.ecu_info_snapshot?.schema_version === "ecu_info_snapshot_v2" && legacyVinBridgeExport.session?.ecu_info_snapshot?.items?.find((item) => item.id === "vin")?.value === null && legacyVinBridgeExport.session?.had_sensitive_identifier === true && legacyVinBridgeReimport?.ecuInfoSnapshot?.items?.find((item) => item.id === "vin")?.value === null && legacyVinBridgeReimport?.hadSensitiveIdentifier === true && legacyVinBridgeReimport?.vehicleCommandEnabled === false && !hasVinRetention(legacyVinBridgeExport) && !hasVinRetention(legacyVinBridgeReimport), "Bridge export/import did not preserve VIN detection without retaining VIN values or fragments");
+const vehicleProfileVinSession = obd.buildDiagnosticScanSession({
+  vehicle_profile: { maker: "Toyota", model: "Prius", vin: vinRetentionProbe },
+  ecu_info_snapshot: { items: [{ id: "calibration_id", value: "CAL-PROFILE" }] }
+});
+check(vehicleProfileVinSession.vehicleProfile?.vin === undefined && vehicleProfileVinSession.vehicleProfile?.hadSensitiveIdentifier === true && vehicleProfileVinSession.hadSensitiveIdentifier === true && !hasVinRetention(vehicleProfileVinSession), "Vehicle profile retained a VIN value or fragment instead of detection metadata");
+const metadataVinJsonSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session_id: vinRetentionProbe,
+  protocol: vinRetentionProbe,
+  dtc_snapshot: { dtcs: [{ code: "P0300", status: "stored" }] }
+}));
+check(metadataVinJsonSession?.hadSensitiveIdentifier === true && !hasVinRetention(metadataVinJsonSession), "JSON session metadata retained VIN values or fragments");
+const vehicleProfileAliasVinSession = obd.buildDiagnosticScanSession({
+  vehicle_profile: {
+    maker: "Toyota",
+    model: "Prius",
+    vin_number: "JTD...456",
+    chassis_number: vinRetentionProbe
+  },
+  ecu_info_snapshot: { items: [{ id: "calibration_id", value: "CAL-PROFILE-ALIASES" }] }
+});
+check(vehicleProfileAliasVinSession.vehicleProfile?.vin_number === undefined && vehicleProfileAliasVinSession.vehicleProfile?.chassis_number === undefined && vehicleProfileAliasVinSession.hadSensitiveIdentifier === true && !hasVinRetention(vehicleProfileAliasVinSession), "Vehicle profile VIN or chassis aliases retained identifier fragments");
+const livePidInfoTypeCollisionSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    monitor_values: [{ id: "engine_speed", pid: "0C", infoType: "02", value: 800, unit: "rpm" }],
+    live_pid_readout_status: "reported"
+  }
+});
+const livePidInfoTypeCollisionExport = obd.buildBridgeSessionExportPayload(livePidInfoTypeCollisionSession);
+check(livePidInfoTypeCollisionExport.session?.live_pid_snapshot?.monitor_values?.[0]?.value === 800, "VIN export sanitizer erased a non-ECU-info diagnostic value with infoType 02");
+const blockedEcuInfoErrorSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: false,
+  blocked: true,
+  error_codes: ["bridge_timeout"],
+  data: { ecu_info_readout_status: "blocked", items: [] }
+});
+const blockedEcuInfoErrorExport = obd.buildBridgeSessionExportPayload({ ecuInfoSnapshot: blockedEcuInfoErrorSnapshot });
+const blockedEcuInfoErrorReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(blockedEcuInfoErrorExport));
+check(blockedEcuInfoErrorExport.session?.ecu_info_snapshot?.error_codes?.includes("bridge_timeout") && blockedEcuInfoErrorReimport?.ecuInfoSnapshot?.errorCodes?.includes("bridge_timeout") && blockedEcuInfoErrorReimport?.ecuInfoSnapshot?.blocked === true && blockedEcuInfoErrorReimport?.vehicleCommandEnabled === false, "ECU information communication error details were lost through read-only bridge export/import");
+const partialScannerVinAnalysis = obd.analyzeScannerText("ECU Information\nVIN: JTD...456\nCALID: CAL-PARTIAL-VIN");
+const partialScannerVinSession = obd.buildDiagnosticScanSession({ scan_session: partialScannerVinAnalysis });
+check(partialScannerVinAnalysis.hadSensitiveIdentifier === true && partialScannerVinSession.hadSensitiveIdentifier === true && partialScannerVinSession.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "CAL-PARTIAL-VIN") && !hasVinRetention(partialScannerVinSession), "Partially masked scanner VIN did not preserve detection metadata safely");
+const partialVinMetadataSession = obd.buildDiagnosticScanSession({
+  session_id: "scan-JTD...456",
+  protocol: "ISO15765-4 JTD...456",
+  import_classification: { observed_protocols: ["CAN_11BIT_500K", "JTD...456"] }
+});
+const partialVinMetadataExport = obd.buildBridgeSessionExportPayload(partialVinMetadataSession);
+const partialVinMetadataReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(partialVinMetadataExport));
+check(partialVinMetadataSession.hadSensitiveIdentifier === true && partialVinMetadataSession.protocol === "ISO15765-4 [車台番号候補を非表示]" && partialVinMetadataSession.importClassification?.observed_protocols?.includes("CAN_11BIT_500K") && !hasVinRetention(partialVinMetadataSession), "Partially masked VIN remained in scan-session metadata");
+check(partialVinMetadataReimport?.hadSensitiveIdentifier === true && partialVinMetadataReimport?.vehicleCommandEnabled === false && !hasVinRetention(partialVinMetadataExport) && !hasVinRetention(partialVinMetadataReimport), "Partially masked VIN survived bridge export or JSON reimport");
+const partialMaskNonVinControlSession = obd.buildDiagnosticScanSession({
+  session_id: "partial-mask-non-vin-control",
+  protocol: "ISO15765-4",
+  dtc_snapshot: { dtcs: [{ code: "P0300", description: "P0300...P0301 comparison" }] },
+  ecu_info_snapshot: { items: [{ id: "calibration_id", info_type: "04", value: "CAL...123" }] }
+});
+check(partialMaskNonVinControlSession.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "CAL...123") && partialMaskNonVinControlSession.dtcSnapshot?.dtcs?.some((item) => item.reportedDescription === "P0300...P0301 comparison") && partialMaskNonVinControlSession.hadSensitiveIdentifier !== true, "Partial VIN sanitizer damaged non-sensitive calibration or DTC data");
 const bridgeEcuInfoParentSourceSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
@@ -6293,7 +6384,7 @@ const ecuInfoSnapshotPluralAliases = obd.normalizeEcuInfoSnapshot({
   moduleNames: ["ABS ECU", "HV ECU"]
 });
 check(ecuInfoSnapshotPluralAliases.itemCount === 4, "Plural ECU info aliases were not normalized into snapshot items");
-check(Array.isArray(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "vin")?.value), "Plural VIN alias did not retain array values");
+check(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "vin")?.value === null && ecuInfoSnapshotPluralAliases.redactedItemIds?.includes("vin"), "Plural VIN aliases retained identifier values instead of redaction metadata");
 check(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "calibration_id")?.value?.[1] === "CAL-B", "Plural CALID alias did not retain all array values");
 check(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "calibration_verification_number")?.value?.[0] === "CVN-A", "Plural CVN alias did not retain array values");
 check(ecuInfoSnapshotPluralAliases.items.find((item) => item.id === "ecu_name")?.value?.[1] === "HV ECU", "Plural ECU name alias did not retain array values");
@@ -14178,7 +14269,7 @@ check(scanSessionBridgeCamelResponseAliases.supportedPidMatrix?.schema_version =
 check(scanSessionBridgeCamelResponseAliases.freezeFrameSnapshot?.schema_version === "freeze_frame_snapshot_v1", "Diagnostic scan session did not expose freeze-frame snapshot snake_case schema version");
 check(scanSessionBridgeCamelResponseAliases.readinessSnapshot?.schema_version === "readiness_snapshot_v1", "Diagnostic scan session did not expose readiness snapshot snake_case schema version");
 check(scanSessionBridgeCamelResponseAliases.onboardMonitorSnapshot?.schema_version === "onboard_monitor_snapshot_v1", "Diagnostic scan session did not expose onboard monitor snapshot snake_case schema version");
-check(scanSessionBridgeCamelResponseAliases.ecuInfoSnapshot?.schema_version === "ecu_info_snapshot_v1", "Diagnostic scan session did not expose ECU info snapshot snake_case schema version");
+check(scanSessionBridgeCamelResponseAliases.ecuInfoSnapshot?.schema_version === "ecu_info_snapshot_v2", "Diagnostic scan session did not expose the non-retaining ECU info snapshot snake_case schema version");
 check(scanSessionBridgeCamelResponseAliases.ecuResponseSummary?.schema_version === "ecu_response_summary_v1", "Diagnostic scan session did not expose ECU response summary snake_case schema version");
 check(scanSessionBridgeCamelResponseAliases.connectionStatus?.vehicleConnected === true, "Diagnostic scan session did not accept connectionStatusResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.vciDevices[0]?.id === "camel-response-vci", "Diagnostic scan session did not accept listVciResponse from bridgeSession camelCase alias input");
@@ -16443,7 +16534,7 @@ const scannerCsvEcuInfoPreambleSession = obd.buildDiagnosticScanSessionFromCsv([
   "Calibration ID\tECU-CAL-01",
   "VIN\t1HGCM82633A004352"
 ].join("\n"));
-check(scannerCsvEcuInfoPreambleSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01") && scannerCsvEcuInfoPreambleSession.ecuInfoSnapshot?.itemCount === 1 && !(scannerCsvEcuInfoPreambleSession?.livePidSnapshot?.monitorValues || []).length && scannerCsvEcuInfoPreambleSession?.vehicleCommandEnabled === false && scannerCsvEcuInfoPreambleSession?.retainedRawText === false && !JSON.stringify(scannerCsvEcuInfoPreambleSession).includes("1HGCM82633A004352"), "Structured CSV import did not keep a labelled ECU-information table while excluding vehicle identifiers after shared-report preamble text");
+check(scannerCsvEcuInfoPreambleSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01") && scannerCsvEcuInfoPreambleSession.ecuInfoSnapshot?.items?.some((item) => item.id === "vin" && item.value === null) && scannerCsvEcuInfoPreambleSession.ecuInfoSnapshot?.itemCount === 2 && !(scannerCsvEcuInfoPreambleSession?.livePidSnapshot?.monitorValues || []).length && scannerCsvEcuInfoPreambleSession?.vehicleCommandEnabled === false && scannerCsvEcuInfoPreambleSession?.retainedRawText === false && !JSON.stringify(scannerCsvEcuInfoPreambleSession).includes("1HGCM82633A004352"), "Structured CSV import did not keep a labelled ECU-information table with non-retaining identifier metadata after shared-report preamble text");
 const scannerCsvMode06PreambleSession = obd.buildDiagnosticScanSessionFromCsv([
   "Mode 06",
   "Test ID\tComponent ID\tValue\tMin\tMax",
@@ -16504,7 +16595,7 @@ const scannerCsvEcuInfoTablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "ECU Information", "Item\tValue", "CVN\tABCD1234",
   "ECU Information", "Item\tValue", "VIN\t1HGCM82633A004352"
 ].join("\n"));
-check(scannerCsvEcuInfoTablesSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01") && scannerCsvEcuInfoTablesSession.ecuInfoSnapshot?.items?.some((item) => item.id === "cvn" && item.value === "ABCD1234") && scannerCsvEcuInfoTablesSession.ecuInfoSnapshot?.itemCount === 2 && scannerCsvEcuInfoTablesSession?.vehicleCommandEnabled === false && scannerCsvEcuInfoTablesSession?.retainedRawText === false && !JSON.stringify(scannerCsvEcuInfoTablesSession).includes("1HGCM82633A004352"), "Structured CSV import did not merge ECU-information tables while excluding vehicle identifiers from the read-only session");
+check(scannerCsvEcuInfoTablesSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01") && scannerCsvEcuInfoTablesSession.ecuInfoSnapshot?.items?.some((item) => item.id === "cvn" && item.value === "ABCD1234") && scannerCsvEcuInfoTablesSession.ecuInfoSnapshot?.items?.some((item) => item.id === "vin" && item.value === null) && scannerCsvEcuInfoTablesSession.ecuInfoSnapshot?.itemCount === 3 && scannerCsvEcuInfoTablesSession?.vehicleCommandEnabled === false && scannerCsvEcuInfoTablesSession?.retainedRawText === false && !JSON.stringify(scannerCsvEcuInfoTablesSession).includes("1HGCM82633A004352"), "Structured CSV import did not merge ECU-information tables with non-retaining vehicle identifier metadata");
 const scannerCsvReadinessTablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "I/M Readiness", "Monitor\tStatus", "Misfire\tComplete",
   "I/M Readiness", "Monitor\tStatus", "Catalyst\tNot Complete"
@@ -16587,7 +16678,7 @@ const scannerCsvEcuInfoSession = obd.buildDiagnosticScanSessionFromCsv([
   "ECU Info,calibration_id,ECU-CAL-01,7E8",
   "ECU Info,vin,1HGCM82633A004352,7E8"
 ].join("\n"));
-check(scannerCsvEcuInfoSession?.ecuInfoSnapshot?.itemCount === 1 && scannerCsvEcuInfoSession.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01" && item.sourceEcu === "7E8") && scannerCsvEcuInfoSession.importClassification?.bucketCounts?.ecuInfoRows === 1 && !JSON.stringify(scannerCsvEcuInfoSession).includes("1HGCM82633A004352"), "Structured CSV import did not preserve safe ECU information rows and provenance");
+check(scannerCsvEcuInfoSession?.ecuInfoSnapshot?.itemCount === 2 && scannerCsvEcuInfoSession.ecuInfoSnapshot?.items?.some((item) => item.id === "vin" && item.value === null) && scannerCsvEcuInfoSession.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ECU-CAL-01" && item.sourceEcu === "7E8") && scannerCsvEcuInfoSession.importClassification?.bucketCounts?.ecuInfoRows === 2 && scannerCsvEcuInfoSession.hadSensitiveIdentifier === true && !JSON.stringify(scannerCsvEcuInfoSession).includes("1HGCM82633A004352"), "Structured CSV import did not preserve safe ECU information rows, redaction metadata, and provenance");
 const scannerCsvMode06Session = obd.buildDiagnosticScanSessionFromCsv([
   "Readout,Test ID,Component ID,Value,Min,Max,ECU",
   "Mode 06,01,02,15,10,20,7E8"
@@ -16687,7 +16778,7 @@ const scannerJapaneseEcuInfoSession = obd.buildDiagnosticScanSessionFromCsv([
   "ECU情報\tcalibration_id\tABC123",
   "ECU情報\tVIN\tJTD00000000000000"
 ].join("\n"));
-check(scannerJapaneseEcuInfoSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ABC123") && !scannerJapaneseEcuInfoSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "vin") && scannerJapaneseEcuInfoSession.importClassification?.bucketCounts?.ecuInfoRows === 1 && scannerJapaneseEcuInfoSession.vehicleCommandEnabled === false, "Japanese ECU information ID import did not retain non-sensitive Mode 09 values safely");
+check(scannerJapaneseEcuInfoSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ABC123") && scannerJapaneseEcuInfoSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "vin" && item.value === null) && scannerJapaneseEcuInfoSession.importClassification?.bucketCounts?.ecuInfoRows === 2 && scannerJapaneseEcuInfoSession.hadSensitiveIdentifier === true && scannerJapaneseEcuInfoSession.vehicleCommandEnabled === false, "Japanese ECU information ID import did not retain non-sensitive Mode 09 values and non-retaining identifier metadata safely");
 const japaneseBridgeObservationConditionSnapshot = obd.normalizeBridgeLivePidSnapshot({ observation_condition: "症状再現時", monitor_values: [{ pid: "0C", value: 1200, unit: "rpm" }] });
 check(japaneseBridgeObservationConditionSnapshot?.observationCondition === "symptom_reproduced" && japaneseBridgeObservationConditionSnapshot?.blocked === false && japaneseBridgeObservationConditionSnapshot?.wouldTransmit === false, "Bridge live PID observation condition did not normalize a known Japanese condition safely");
 const scannerCsvSameTimeConditionSession = obd.buildDiagnosticScanSessionFromCsv([
