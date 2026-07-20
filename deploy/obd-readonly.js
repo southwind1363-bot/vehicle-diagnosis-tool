@@ -478,10 +478,12 @@
     executionEnabled: false,
     maxPayloadBytes: 1000000,
     maxEnvelopeCount: 64,
+    maxSequence: 1000000,
     allowedInterfaceIds: Object.freeze(["user-vci-thinkcar-bluetooth", "user-vci-elm327"]),
     allowedReadIntents: Object.freeze([...localBridgeContract.allowedReadIntents]),
     blockedWriteIntents: Object.freeze([...localBridgeContract.blockedWriteIntents]),
     requiredEnvelopeFields: Object.freeze(["schema_version", "interface_id", "platform", "intent", "captured_at", "data"]),
+    requiredBatchEnvelopeFields: Object.freeze(["scan_id", "connection_id", "vehicle_context_id", "sequence"]),
     logPolicy: Object.freeze({
       storeRawPayload: false,
       storeRawFrames: false,
@@ -1044,8 +1046,79 @@
       allowedReadIntents: [...nativeConnectorContract.allowedReadIntents],
       blockedWriteIntents: [...nativeConnectorContract.blockedWriteIntents],
       requiredEnvelopeFields: [...nativeConnectorContract.requiredEnvelopeFields],
+      requiredBatchEnvelopeFields: [...nativeConnectorContract.requiredBatchEnvelopeFields],
       logPolicy: { ...nativeConnectorContract.logPolicy }
     };
+  }
+
+  function normalizeNativeConnectorUuid(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(normalized)
+      ? normalized
+      : null;
+  }
+
+  function normalizeNativeConnectorBoundary(input = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const scanId = normalizeNativeConnectorUuid(source.scanId || source.scan_id);
+    const connectionId = normalizeNativeConnectorUuid(source.connectionId || source.connection_id);
+    const vehicleContextId = normalizeNativeConnectorUuid(source.vehicleContextId || source.vehicle_context_id);
+    if (!scanId || !connectionId || !vehicleContextId) return null;
+    return {
+      schemaVersion: "native_connector_boundary_v1",
+      schema_version: "native_connector_boundary_v1",
+      scanId,
+      scan_id: scanId,
+      connectionId,
+      connection_id: connectionId,
+      vehicleContextId,
+      vehicle_context_id: vehicleContextId
+    };
+  }
+
+  function normalizeNativeConnectorCapturedAt(value) {
+    const source = String(value || "").trim();
+    const match = source.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/i);
+    if (!match) return null;
+    const [, yearText, monthText, dayText, hourText, minuteText, secondText, zoneText] = match;
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    const second = Number(secondText);
+    const zoneHour = zoneText.toUpperCase() === "Z" ? 0 : Number(zoneText.slice(1, 3));
+    const zoneMinute = zoneText.toUpperCase() === "Z" ? 0 : Number(zoneText.slice(4, 6));
+    const daysInMonth = month >= 1 && month <= 12 ? new Date(Date.UTC(year, month, 0)).getUTCDate() : 0;
+    if (!daysInMonth || day < 1 || day > daysInMonth || hour > 23 || minute > 59 || second > 59 || zoneHour > 23 || zoneMinute > 59) return null;
+    const timestamp = Date.parse(source);
+    return Number.isNaN(timestamp) ? null : new Date(timestamp).toISOString();
+  }
+
+  function getUtf8ByteLength(value) {
+    let bytes = 0;
+    for (const character of String(value || "")) {
+      const codePoint = character.codePointAt(0);
+      bytes += codePoint <= 0x7F ? 1 : codePoint <= 0x7FF ? 2 : codePoint <= 0xFFFF ? 3 : 4;
+    }
+    return bytes;
+  }
+
+  function hasUnsafeNativeConnectorFlags(value, depth = 0, seen = new Set()) {
+    if (!value || typeof value !== "object" || seen.has(value)) return false;
+    if (depth > 8) return true;
+    seen.add(value);
+    if (!Array.isArray(value) && (
+      value.vehicleCommandEnabled === true
+      || value.vehicle_command_enabled === true
+      || value.wouldTransmit === true
+      || value.would_transmit === true
+      || value.executionEnabled === true
+      || value.execution_enabled === true
+      || value.readOnly === false
+      || value.read_only === false
+    )) return true;
+    return Object.values(value).some((item) => hasUnsafeNativeConnectorFlags(item, depth + 1, seen));
   }
 
   function evaluateNativeConnectorEnvelope(input = {}) {
@@ -1054,14 +1127,25 @@
     const interfaceId = String(source.interfaceId || source.interface_id || "").trim();
     const platform = String(source.platform || "").trim().toLowerCase();
     const intent = String(source.intent || "").trim();
-    const capturedAt = String(source.capturedAt || source.captured_at || "").trim();
+    const capturedAtInput = String(source.capturedAt || source.captured_at || "").trim();
+    const capturedAt = normalizeNativeConnectorCapturedAt(capturedAtInput);
+    const scanIdInput = source.scanId ?? source.scan_id;
+    const connectionIdInput = source.connectionId ?? source.connection_id;
+    const vehicleContextIdInput = source.vehicleContextId ?? source.vehicle_context_id;
+    const scanId = normalizeNativeConnectorUuid(scanIdInput);
+    const connectionId = normalizeNativeConnectorUuid(connectionIdInput);
+    const vehicleContextId = normalizeNativeConnectorUuid(vehicleContextIdInput);
+    const sequenceInput = source.sequence;
+    const sequence = typeof sequenceInput === "number" && Number.isSafeInteger(sequenceInput) && sequenceInput >= 0 && sequenceInput <= nativeConnectorContract.maxSequence
+      ? sequenceInput
+      : null;
     const data = source.data && typeof source.data === "object" && !Array.isArray(source.data) ? source.data : null;
     const fieldPresent = {
       schema_version: Boolean(schemaVersion),
       interface_id: Boolean(interfaceId),
       platform: Boolean(platform),
       intent: Boolean(intent),
-      captured_at: Boolean(capturedAt),
+      captured_at: Boolean(capturedAtInput),
       data: Boolean(data)
     };
     const missingFields = nativeConnectorContract.requiredEnvelopeFields.filter((field) => !fieldPresent[field]);
@@ -1084,20 +1168,11 @@
     const dataShapeValid = !knownReadIntent || Boolean(data && requiredDataKeys.some((key) => Object.hasOwn(data, key)));
     let payloadSize = 0;
     try {
-      payloadSize = data ? JSON.stringify(data).length : 0;
+      payloadSize = data ? getUtf8ByteLength(JSON.stringify(data)) : 0;
     } catch {
       payloadSize = nativeConnectorContract.maxPayloadBytes + 1;
     }
-    const unsafeExecutionFlags = [source, data].some((item) => item && (
-      item.vehicleCommandEnabled === true
-      || item.vehicle_command_enabled === true
-      || item.wouldTransmit === true
-      || item.would_transmit === true
-      || item.executionEnabled === true
-      || item.execution_enabled === true
-      || item.readOnly === false
-      || item.read_only === false
-    ));
+    const unsafeExecutionFlags = hasUnsafeNativeConnectorFlags(source);
     const errors = [
       ...missingFields.map((field) => `missing_${field}`),
       schemaVersion && schemaVersion !== nativeConnectorContract.id ? "unsupported_schema" : null,
@@ -1107,7 +1182,11 @@
       intent && !knownReadIntent && !blockedWriteIntent ? "unsupported_intent" : null,
       knownReadIntent && !dataShapeValid ? "invalid_data_shape" : null,
       payloadSize > nativeConnectorContract.maxPayloadBytes ? "payload_too_large" : null,
-      capturedAt && Number.isNaN(Date.parse(capturedAt)) ? "invalid_captured_at" : null,
+      capturedAtInput && !capturedAt ? "invalid_captured_at" : null,
+      scanIdInput !== undefined && !scanId ? "invalid_scan_id" : null,
+      connectionIdInput !== undefined && !connectionId ? "invalid_connection_id" : null,
+      vehicleContextIdInput !== undefined && !vehicleContextId ? "invalid_vehicle_context_id" : null,
+      sequenceInput !== undefined && sequence === null ? "invalid_sequence" : null,
       unsafeExecutionFlags ? "unsafe_execution_flags" : null
     ].filter(Boolean);
     const accepted = errors.length === 0;
@@ -1124,6 +1203,13 @@
       intent: knownReadIntent ? intent : null,
       capturedAt: capturedAt && !Number.isNaN(Date.parse(capturedAt)) ? capturedAt : null,
       captured_at: capturedAt && !Number.isNaN(Date.parse(capturedAt)) ? capturedAt : null,
+      scanId,
+      scan_id: scanId,
+      connectionId,
+      connection_id: connectionId,
+      vehicleContextId,
+      vehicle_context_id: vehicleContextId,
+      sequence,
       missingFields,
       missing_fields: [...missingFields],
       errors,
@@ -1176,7 +1262,7 @@
 
     const data = {
       ...input.data,
-      captured_at: input.data.captured_at || input.data.capturedAt || evaluation.capturedAt
+      captured_at: evaluation.capturedAt
     };
     const readoutInterface = normalizeReadoutInterfaceSnapshot({
       interface_id: evaluation.interfaceId,
@@ -1202,11 +1288,15 @@
         ? { readiness_snapshot: data }
         : { live_pid_snapshot: data }
     };
+    const singleSessionId = evaluation.scanId || `native-single-${Date.parse(evaluation.capturedAt)}-${evaluation.intent}`;
     const session = buildDiagnosticScanSession({
       ...(readoutInputByIntent[evaluation.intent] || {}),
-      session_id: "native-connector-session",
+      session_id: singleSessionId,
+      started_at: evaluation.capturedAt,
+      ended_at: evaluation.capturedAt,
       source: "native_connector",
       captured_at: evaluation.capturedAt,
+      native_connector_boundary: normalizeNativeConnectorBoundary(evaluation),
       readout_interface: readoutInterface,
       retained_raw_payload: false,
       vehicle_command_enabled: false,
@@ -1221,6 +1311,12 @@
       blocked: false,
       errors: [],
       session,
+      scanId: evaluation.scanId,
+      scan_id: evaluation.scanId,
+      connectionId: evaluation.connectionId,
+      connection_id: evaluation.connectionId,
+      vehicleContextId: evaluation.vehicleContextId,
+      vehicle_context_id: evaluation.vehicleContextId,
       readoutInterface,
       readout_interface: readoutInterface
     };
@@ -1277,7 +1373,12 @@
       "missing_platform",
       "missing_intent",
       "missing_captured_at",
-      "missing_data"
+      "missing_data",
+      "invalid_captured_at",
+      "invalid_scan_id",
+      "invalid_connection_id",
+      "invalid_vehicle_context_id",
+      "invalid_sequence"
     ]);
     const hardFailures = evaluations.filter(({ evaluation }) => evaluation.errors.some((error) => hardErrorIds.has(error)));
     const interfaceIds = [...new Set(evaluations.map(({ evaluation }) => evaluation.interfaceId).filter(Boolean))];
@@ -1290,11 +1391,25 @@
         evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] }))
       );
     }
+    if (envelopes.length > 1) {
+      const missingBoundary = evaluations.some(({ evaluation }) => !evaluation.scanId || !evaluation.connectionId || !evaluation.vehicleContextId || evaluation.sequence === null);
+      if (missingBoundary) {
+        return blockedResult(["missing_session_boundary"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+      }
+      const scanIds = new Set(evaluations.map(({ evaluation }) => evaluation.scanId));
+      const connectionIds = new Set(evaluations.map(({ evaluation }) => evaluation.connectionId));
+      const vehicleContextIds = new Set(evaluations.map(({ evaluation }) => evaluation.vehicleContextId));
+      const sequences = evaluations.map(({ evaluation }) => evaluation.sequence);
+      if (scanIds.size > 1) return blockedResult(["mixed_scan_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+      if (connectionIds.size > 1) return blockedResult(["mixed_connection_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+      if (vehicleContextIds.size > 1) return blockedResult(["mixed_vehicle_context_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+      if (new Set(sequences).size !== sequences.length) return blockedResult(["duplicate_sequence"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+    }
 
     const acceptedEntries = evaluations
       .filter(({ evaluation }) => evaluation.accepted)
       .map(({ index, evaluation }) => ({ index, evaluation, envelope: envelopes[index] }))
-      .sort((left, right) => Date.parse(left.evaluation.capturedAt) - Date.parse(right.evaluation.capturedAt));
+      .sort((left, right) => (left.evaluation.sequence ?? 0) - (right.evaluation.sequence ?? 0) || Date.parse(left.evaluation.capturedAt) - Date.parse(right.evaluation.capturedAt));
     const rejectedEntries = evaluations.filter(({ evaluation }) => !evaluation.accepted);
     if (!acceptedEntries.length) {
       return blockedResult(
@@ -1308,7 +1423,7 @@
     acceptedEntries.forEach(({ evaluation, envelope }) => {
       const data = {
         ...envelope.data,
-        captured_at: envelope.data.captured_at || envelope.data.capturedAt || evaluation.capturedAt
+        captured_at: evaluation.capturedAt
       };
       const intentInput = {
         bridge_status: { connection_status: data },
@@ -1331,8 +1446,12 @@
     if (livePidSamples.length) readoutInput.live_pid_timeline = livePidSamples;
 
     const interfaceId = acceptedEntries[0].evaluation.interfaceId;
-    const startedAt = acceptedEntries[0].evaluation.capturedAt;
-    const completedAt = acceptedEntries.at(-1).evaluation.capturedAt;
+    const scanId = acceptedEntries[0].evaluation.scanId;
+    const connectionId = acceptedEntries[0].evaluation.connectionId;
+    const vehicleContextId = acceptedEntries[0].evaluation.vehicleContextId;
+    const captureTimes = acceptedEntries.map(({ evaluation }) => evaluation.capturedAt).sort((left, right) => Date.parse(left) - Date.parse(right));
+    const startedAt = captureTimes[0];
+    const completedAt = captureTimes.at(-1);
     const partial = rejectedEntries.length > 0;
     const warnings = partial ? ["native_connector_partial_batch"] : [];
     const readoutInterface = normalizeReadoutInterfaceSnapshot({
@@ -1344,11 +1463,15 @@
       observed_use: "native connector read-only scan session",
       hardware_compatibility_confirmed: false
     });
+    const nativeConnectorBoundary = normalizeNativeConnectorBoundary({ scanId, connectionId, vehicleContextId });
     const session = buildDiagnosticScanSession({
       ...readoutInput,
-      session_id: "native-connector-scan-session",
+      session_id: scanId || "native-connector-scan-session",
+      started_at: startedAt,
+      ended_at: completedAt,
       source: "native_connector",
       captured_at: completedAt,
+      native_connector_boundary: nativeConnectorBoundary,
       readout_interface: readoutInterface,
       warnings,
       retained_raw_payload: false,
@@ -1362,6 +1485,7 @@
       intent: evaluation.intent,
       capturedAt: evaluation.capturedAt,
       captured_at: evaluation.capturedAt,
+      sequence: evaluation.sequence,
       errors: [...evaluation.errors]
     }));
 
@@ -1374,6 +1498,14 @@
       blocked: false,
       interfaceId,
       interface_id: interfaceId,
+      scanId,
+      scan_id: scanId,
+      connectionId,
+      connection_id: connectionId,
+      vehicleContextId,
+      vehicle_context_id: vehicleContextId,
+      nativeConnectorBoundary,
+      native_connector_boundary: nativeConnectorBoundary,
       platform: "ios",
       startedAt,
       started_at: startedAt,
@@ -12078,6 +12210,8 @@
       retained_raw_text: false,
       export_required: true,
       session: {
+        session_id: summary.sessionId || summary.session_id || parts.sessionId || parts.session_id || null,
+        native_connector_boundary: normalizeNativeConnectorBoundary(summary.nativeConnectorBoundary || summary.native_connector_boundary || parts.nativeConnectorBoundary || parts.native_connector_boundary || {}),
         started_at: summary.startedAt || null,
         ended_at: summary.endedAt || null,
         captured_at: summary.capturedAt || null,
@@ -17602,6 +17736,7 @@
 
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
+    const nativeConnectorBoundary = normalizeNativeConnectorBoundary(sessionInput.nativeConnectorBoundary || sessionInput.native_connector_boundary || {});
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
     const importClassification = metadataOverrides.importClassification;
     const webSerialReadoutSummary = metadataOverrides.webSerialReadoutSummary;
@@ -17976,6 +18111,8 @@
       source_type: sessionInput.source_type || sessionInput.source || "diagnostic_core",
       sessionId: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80),
       session_id: String(sessionInput.session_id || sessionInput.sessionId || "local_scan_session").slice(0, 80),
+      nativeConnectorBoundary,
+      native_connector_boundary: nativeConnectorBoundary,
       startedAt: sessionInput.started_at || sessionInput.startedAt || null,
       started_at: sessionInput.started_at || sessionInput.startedAt || null,
       endedAt: sessionInput.ended_at || sessionInput.endedAt || null,

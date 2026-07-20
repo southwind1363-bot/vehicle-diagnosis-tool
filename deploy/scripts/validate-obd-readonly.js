@@ -2478,7 +2478,8 @@ const elm327PromptedCoreSession = obd.buildScanSessionFromObdText([
 ].join("\r\n"));
 check(elm327PromptedCoreSession?.dtcSnapshot?.codes?.join(",") === "P0171,P0300" && elm327PromptedCoreSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726) && elm327PromptedCoreSession.freezeFrameSnapshot?.triggerDtc === "P0171" && elm327PromptedCoreSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726) && elm327PromptedCoreSession.readinessSnapshot?.readinessReadoutStatus === "reported" && elm327PromptedCoreSession.supportedPidMatrix?.supportedPids?.includes("0C") && elm327PromptedCoreSession.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && elm327PromptedCoreSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && elm327PromptedCoreSession.vehicleCommandEnabled === false && elm327PromptedCoreSession.wouldTransmit === false, "ELM327 command-prompted core readouts were not separated into read-only DTC, PID, freeze-frame, readiness, and supported-PID snapshots");
 check(interfaceCatalog.some((item) => item.id === "user-vci-rcmall-mks-canable-v2-pro" && item.tooling.includes("SavvyCAN")), "CANable/SavvyCAN候補がありません");
-check(vehicleInterfaceCatalog.some((item) => item.id === "user-vci-thinkcar-bluetooth" && item.progress_percent === 33 && item.current_status === "自前iPhone連続スキャン契約実装 / 通信仕様確認待ち" && item.platform_sources?.length === 2), "スマホBluetooth VCIの自前接続経路整理が不足しています");
+check(vehicleInterfaceCatalog.some((item) => item.id === "user-vci-thinkcar-bluetooth" && item.progress_percent === 34 && item.current_status === "自前iPhoneセッション境界実装 / 通信仕様確認待ち" && item.current_basis.includes("vehicle context UUID") && item.platform_sources?.length === 2), "スマホBluetooth VCIの自前接続経路整理が不足しています");
+check(vehicleInterfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.progress_percent === 64 && item.current_status === "Web Serial復旧・自前iPhoneセッション境界実装 / 実機適合確認待ち" && item.current_basis.includes("別スキャン・別接続・別車両の混在を拒否")), "ELM327の自前iPhoneセッション境界進捗が不足しています");
 check(interfaceCatalog.every((item) => item.vehicleCommandEnabled === false), "VCI候補で車両コマンドが有効です");
 check(interfaceCatalog.every((item) => Number.isInteger(item.progressPercent) && item.progressPercent >= 0 && item.progressPercent <= 100), "VCI候補の進捗率が不正です");
 check(interfaceCatalog.every((item) => typeof item.currentBasis === "string" && item.currentBasis.length > 0), "VCI候補の現在地説明が不足しています");
@@ -2768,8 +2769,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.79";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.79";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.79", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.80";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.80";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.80", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -2995,6 +2996,7 @@ check(indexSource.includes('THINKCAR / ELM327') && indexSource.includes('外部�
 const nativeConnectorContract = obd.getNativeConnectorContract();
 check(nativeConnectorContract.id === "native_connector_contract_v1" && nativeConnectorContract.dataSchemaFamily === "local_bridge_response_data_v1" && nativeConnectorContract.dataShapeSource === "getLocalBridgeResponseSchemas" && nativeConnectorContract.maxEnvelopeCount === 64 && nativeConnectorContract.importEnabled === true && nativeConnectorContract.connectionEnabled === false && nativeConnectorContract.vehicleCommandEnabled === false, "自前iPhoneコネクタ契約の安全既定値が不足しています");
 check(nativeConnectorContract.allowedInterfaceIds.includes("user-vci-thinkcar-bluetooth") && nativeConnectorContract.allowedInterfaceIds.includes("user-vci-elm327") && nativeConnectorContract.allowedReadIntents.includes("read_stored_dtc") && nativeConnectorContract.blockedWriteIntents.includes("clear_dtc"), "自前iPhoneコネクタ契約の許可・拒否リストが不足しています");
+check(nativeConnectorContract.requiredBatchEnvelopeFields.includes("scan_id") && nativeConnectorContract.requiredBatchEnvelopeFields.includes("connection_id") && nativeConnectorContract.requiredBatchEnvelopeFields.includes("vehicle_context_id") && nativeConnectorContract.requiredBatchEnvelopeFields.includes("sequence") && nativeConnectorContract.maxSequence === 1000000, "自前iPhoneコネクタの複数応答境界契約が不足しています");
 const nativeElmEnvelope = {
   schema_version: "native_connector_contract_v1",
   interface_id: "user-vci-elm327",
@@ -3010,10 +3012,13 @@ const nativeElmEnvelope = {
 };
 const nativeElmEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmEnvelope);
 check(nativeElmEvaluation.accepted === true && nativeElmEvaluation.knownReadIntent === true && nativeElmEvaluation.connectionEnabled === false && nativeElmEvaluation.wouldTransmit === false && nativeElmEvaluation.retainedRawPayload === false, "正規のiPhone read-only envelopeを安全に受理できません");
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, captured_at: "2026-07-20T15:00:00+09:00" }).capturedAt === "2026-07-20T06:00:00.000Z" && obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, captured_at: "2026-07-20T06:00:00" }).errors.includes("invalid_captured_at") && obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, captured_at: "2026-02-30T06:00:00Z" }).errors.includes("invalid_captured_at"), "iPhoneコネクタ時刻をタイムゾーン付きRFC 3339として検証・UTC正規化できません");
 const nativeElmImport = obd.buildNativeConnectorDiagnosticImport(nativeElmEnvelope);
-check(nativeElmImport.ok === true && nativeElmImport.accepted === true && nativeElmImport.blocked === false && nativeElmImport.session?.source === "native_connector", "iPhoneコネクタ結果を診断セッションへ取り込めません");
+check(nativeElmImport.ok === true && nativeElmImport.accepted === true && nativeElmImport.blocked === false && nativeElmImport.session?.source === "native_connector" && nativeElmImport.session?.sessionId === "native-single-1784527200000-read_stored_dtc", "iPhoneコネクタ結果を独立した診断セッションへ取り込めません");
 check(nativeElmImport.session?.dtcSnapshot?.codes?.includes("P0300") && nativeElmImport.session?.dtcSnapshot?.dtcs?.some((item) => item.status === "stored"), "iPhoneコネクタDTCが診断セッションへ正規化されていません");
 check(nativeElmImport.session?.readoutInterface?.route === "native_connector_readout" && nativeElmImport.session?.vehicleCommandEnabled === false && nativeElmImport.session?.wouldTransmit === false && !JSON.stringify(nativeElmImport).includes("do-not-retain") && !Object.hasOwn(nativeElmImport, "data"), "iPhoneコネクタ取込が識別情報または生payloadを保持しています");
+const nativeTrustedTimestampImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmEnvelope, data: { dtcs: [], captured_at: "2040-01-01T00:00:00Z" } });
+check(nativeTrustedTimestampImport.session?.dtcSnapshot?.capturedAt === "2026-07-20T06:00:00.000Z" && nativeTrustedTimestampImport.session?.startedAt === "2026-07-20T06:00:00.000Z" && nativeTrustedTimestampImport.session?.endedAt === "2026-07-20T06:00:00.000Z", "iPhoneコネクタdata内の未検証時刻がenvelope時刻を上書きしています");
 const nativeReadinessImport = obd.buildNativeConnectorDiagnosticImport({
   schema_version: "native_connector_contract_v1",
   interface_id: "user-vci-thinkcar-bluetooth",
@@ -3022,13 +3027,15 @@ const nativeReadinessImport = obd.buildNativeConnectorDiagnosticImport({
   captured_at: "2026-07-20T06:01:00Z",
   data: { readout_id: "readiness_snapshot", pid: "01", mil_on: false, monitors: [{ id: "misfire", status: "complete" }] }
 });
-check(nativeReadinessImport.session?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire") && nativeReadinessImport.session?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && nativeReadinessImport.vehicleCommandEnabled === false, "iPhoneコネクタreadinessが診断セッションへ正規化されていません");
+check(nativeReadinessImport.session?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire") && nativeReadinessImport.session?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && nativeReadinessImport.session?.sessionId !== nativeElmImport.session?.sessionId && nativeReadinessImport.vehicleCommandEnabled === false, "iPhoneコネクタreadinessが独立した診断セッションへ正規化されていません");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, schema_version: "unknown_connector_v9" }).errors.includes("unsupported_schema"), "未知のiPhoneコネクタschemaを拒否できません");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, platform: "android" }).errors.includes("unsupported_platform"), "iPhone専用コネクタ契約で別platformを拒否できません");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, interface_id: "unknown-vci" }).errors.includes("unsupported_interface"), "未登録VCIをiPhoneコネクタ契約で拒否できません");
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, scan_id: "1HGCM82633A004352" }).errors.includes("invalid_scan_id") && obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, sequence: "1" }).errors.includes("invalid_sequence"), "iPhoneコネクタ境界に識別情報または非整数sequenceを受理しています");
 const nativeWriteEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, intent: "clear_dtc" });
 check(nativeWriteEvaluation.accepted === false && nativeWriteEvaluation.blockedWriteIntent === true && nativeWriteEvaluation.errors.includes("blocked_write_intent") && nativeWriteEvaluation.wouldTransmit === false, "iPhoneコネクタ契約が変更系intentを拒否していません");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: { dtcs: [], vehicle_command_enabled: true } }).errors.includes("unsafe_execution_flags"), "iPhoneコネクタ契約が危険な実行フラグを拒否していません");
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: { dtcs: [], nested: { transport: { would_transmit: true } } } }).errors.includes("unsafe_execution_flags"), "iPhoneコネクタ契約がネストした危険な実行フラグを拒否していません");
 const blockedNativeImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmEnvelope, intent: "clear_dtc" });
 check(blockedNativeImport.ok === false && blockedNativeImport.blocked === true && blockedNativeImport.session === null && blockedNativeImport.vehicleCommandEnabled === false && blockedNativeImport.wouldTransmit === false, "拒否したiPhoneコネクタ要求から診断セッションが生成されています");
 const malformedNativeEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: {} });
@@ -3038,43 +3045,81 @@ check(malformedNativeImport.blocked === true && malformedNativeImport.session ==
 const oversizedNativeEnvelope = { ...nativeElmEnvelope, data: { dtcs: [], padding: "x".repeat(1000001) } };
 check(obd.evaluateNativeConnectorEnvelope(oversizedNativeEnvelope).errors.includes("payload_too_large"), "巨大なiPhoneコネクタpayloadを拒否していません");
 check(obd.buildNativeConnectorDiagnosticImport(oversizedNativeEnvelope).session === null, "上限超過iPhoneコネクタpayloadから診断セッションが生成されています");
-const nativeEnvelope = (intent, capturedAt, data, interfaceId = "user-vci-elm327") => ({
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: { dtcs: [], note: "あ".repeat(400000) } }).errors.includes("payload_too_large"), "マルチバイトiPhoneコネクタpayloadをUTF-8容量で拒否していません");
+const nativeBoundary = Object.freeze({
+  scanId: "11111111-1111-4111-8111-111111111111",
+  connectionId: "22222222-2222-4222-8222-222222222222",
+  vehicleContextId: "33333333-3333-4333-8333-333333333333"
+});
+let nativeEnvelopeSequence = 1000;
+const nativeEnvelope = (intent, capturedAt, data, interfaceId = "user-vci-elm327", options = {}) => ({
   schema_version: "native_connector_contract_v1",
   interface_id: interfaceId,
   platform: "ios",
   intent,
   captured_at: capturedAt,
-  data
+  data,
+  ...(options.omitBoundary ? {} : {
+    scan_id: options.scanId || nativeBoundary.scanId,
+    connection_id: options.connectionId || nativeBoundary.connectionId,
+    vehicle_context_id: options.vehicleContextId || nativeBoundary.vehicleContextId,
+    sequence: options.sequence ?? nativeEnvelopeSequence++
+  })
 });
 const nativeScanBatch = [
-  nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:00:07Z", { monitor_values: [{ id: "engine_speed", label: "Engine speed", value: 800, unit: "rpm" }] }),
-  nativeEnvelope("read_stored_dtc", "2026-07-20T07:00:00Z", { dtcs: [{ code: "P0300", status: "stored" }] }),
-  nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:01Z", { dtcs: [{ code: "P0420", status: "pending" }] }),
-  nativeEnvelope("read_freeze_frame", "2026-07-20T07:00:02Z", { trigger_dtc: "P0300", monitor_values: [{ id: "coolant_temp", label: "Coolant temperature", value: 82, unit: "C" }] }),
-  nativeEnvelope("read_supported_pids", "2026-07-20T07:00:03Z", { supported_pids: ["01", "05", "0C"] }),
-  nativeEnvelope("read_ecu_info", "2026-07-20T07:00:04Z", { items: [{ id: "calibration_id", info_type: "04", value: "CAL-NATIVE-01" }] }),
-  nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:00:05Z", { readout_id: "readiness_snapshot", pid: "01", mil_on: false, monitors: [{ id: "misfire", status: "complete" }] }),
-  nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:00:06Z", { monitor_values: [{ id: "engine_speed", label: "Engine speed", value: 700, unit: "rpm" }] }),
-  nativeEnvelope("read_permanent_dtc", "2026-07-20T07:00:08Z", { dtcs: [{ code: "P0606", status: "permanent" }] }),
-  nativeEnvelope("read_onboard_monitor", "2026-07-20T07:00:09Z", { tests: [{ test_id: "01", component_id: "02", value: 6, min: 1, max: 5, status: "fail", source_ecu: "7E8" }] })
+  nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:00:07Z", { monitor_values: [{ id: "engine_speed", label: "Engine speed", value: 800, unit: "rpm" }] }, "user-vci-elm327", { sequence: 7 }),
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:00:00Z", { dtcs: [{ code: "P0300", status: "stored" }] }, "user-vci-elm327", { sequence: 0 }),
+  nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:01Z", { dtcs: [{ code: "P0420", status: "pending" }] }, "user-vci-elm327", { sequence: 1 }),
+  nativeEnvelope("read_freeze_frame", "2026-07-20T07:00:02Z", { trigger_dtc: "P0300", monitor_values: [{ id: "coolant_temp", label: "Coolant temperature", value: 82, unit: "C" }] }, "user-vci-elm327", { sequence: 2 }),
+  nativeEnvelope("read_supported_pids", "2026-07-20T07:00:03Z", { supported_pids: ["01", "05", "0C"] }, "user-vci-elm327", { sequence: 3 }),
+  nativeEnvelope("read_ecu_info", "2026-07-20T07:00:04Z", { items: [{ id: "calibration_id", info_type: "04", value: "CAL-NATIVE-01" }] }, "user-vci-elm327", { sequence: 4 }),
+  nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:00:05Z", { readout_id: "readiness_snapshot", pid: "01", mil_on: false, monitors: [{ id: "misfire", status: "complete" }] }, "user-vci-elm327", { sequence: 5 }),
+  nativeEnvelope("read_live_pid_snapshot", "2026-07-20T07:00:06Z", { monitor_values: [{ id: "engine_speed", label: "Engine speed", value: 700, unit: "rpm" }] }, "user-vci-elm327", { sequence: 6 }),
+  nativeEnvelope("read_permanent_dtc", "2026-07-20T07:00:08Z", { dtcs: [{ code: "P0606", status: "permanent" }] }, "user-vci-elm327", { sequence: 8 }),
+  nativeEnvelope("read_onboard_monitor", "2026-07-20T07:00:09Z", { tests: [{ test_id: "01", component_id: "02", value: 6, min: 1, max: 5, status: "fail", source_ecu: "7E8" }] }, "user-vci-elm327", { sequence: 9 })
 ];
 const nativeScanSession = obd.buildNativeConnectorScanSession(nativeScanBatch);
 check(nativeScanSession.ok === true && nativeScanSession.accepted === true && nativeScanSession.partial === false && nativeScanSession.envelopeCount === 10 && nativeScanSession.acceptedEnvelopeCount === 10 && nativeScanSession.rejectedEnvelopeCount === 0, "iPhoneコネクタ連続読取を完全な診断セッションとして受理できません");
-check(nativeScanSession.startedAt === "2026-07-20T07:00:00Z" && nativeScanSession.completedAt === "2026-07-20T07:00:09Z" && nativeScanSession.evaluations[0]?.capturedAt === "2026-07-20T07:00:07Z", "iPhoneコネクタ連続読取の時刻範囲または元応答順を保持できません");
+check(nativeScanSession.startedAt === "2026-07-20T07:00:00.000Z" && nativeScanSession.completedAt === "2026-07-20T07:00:09.000Z" && nativeScanSession.evaluations[0]?.capturedAt === "2026-07-20T07:00:07.000Z" && nativeScanSession.scanId === nativeBoundary.scanId && nativeScanSession.session?.sessionId === nativeBoundary.scanId && nativeScanSession.session?.nativeConnectorBoundary?.connectionId === nativeBoundary.connectionId && nativeScanSession.session?.nativeConnectorBoundary?.vehicleContextId === nativeBoundary.vehicleContextId && nativeScanSession.session?.startedAt === nativeScanSession.startedAt && nativeScanSession.session?.endedAt === nativeScanSession.completedAt, "iPhoneコネクタ連続読取の境界、時刻範囲または元応答順を保持できません");
 check(nativeScanSession.session?.dtcSnapshot?.codes?.includes("P0300") && nativeScanSession.session?.dtcSnapshot?.codes?.includes("P0420") && nativeScanSession.session?.dtcSnapshot?.codes?.includes("P0606") && nativeScanSession.session?.dtcSnapshot?.dtcs?.some((item) => item.status === "pending") && nativeScanSession.session?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0606" && item.status === "permanent"), "iPhoneコネクタ連続読取の保存・保留・永久DTCが統合されていません");
 check(nativeScanSession.session?.freezeFrameSnapshot?.triggerDtc === "P0300" && nativeScanSession.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 82), "iPhoneコネクタ連続読取のフリーズフレームが統合されていません");
 check(nativeScanSession.session?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire") && nativeScanSession.session?.readinessSnapshot?.milOn === false, "iPhoneコネクタ連続読取のreadinessが統合されていません");
 check(nativeScanSession.session?.supportedPidMatrix?.supportedPids?.includes("0C") && nativeScanSession.session?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "CAL-NATIVE-01"), "iPhoneコネクタ連続読取の対応PIDまたはECU情報が統合されていません");
 check(nativeScanSession.session?.onboardMonitorSnapshot?.failedCount === 1 && nativeScanSession.session?.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.componentId === "02" && item.sourceEcu === "7E8") && nativeScanSession.session?.warnings?.includes("onboard_monitor_test_failed"), "iPhoneコネクタ連続読取のMode 06が統合されていません");
 check(nativeScanSession.session?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800), "iPhoneコネクタ連続読取が最新ライブPIDを採用していません");
-check(nativeScanSession.session?.livePidTimeline?.sampleCount === 2 && nativeScanSession.session?.livePidTimeline?.samples?.[0]?.capturedAt === "2026-07-20T07:00:06Z" && nativeScanSession.session?.livePidTimeline?.samples?.[1]?.capturedAt === "2026-07-20T07:00:07Z", "iPhoneコネクタ連続読取のライブPID時系列が時刻順に保持されていません");
+check(nativeScanSession.session?.livePidTimeline?.sampleCount === 2 && nativeScanSession.session?.livePidTimeline?.samples?.[0]?.capturedAt === "2026-07-20T07:00:06.000Z" && nativeScanSession.session?.livePidTimeline?.samples?.[1]?.capturedAt === "2026-07-20T07:00:07.000Z", "iPhoneコネクタ連続読取のライブPID時系列が時刻順に保持されていません");
 const reimportedNativeScanSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(nativeScanSession.session) });
-check(nativeScanSession.vehicleCommandEnabled === false && nativeScanSession.wouldTransmit === false && nativeScanSession.retainedRawPayload === false && !Object.hasOwn(nativeScanSession, "envelopes") && reimportedNativeScanSession.dtcSnapshot?.codes?.includes("P0300") && reimportedNativeScanSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0606" && item.status === "permanent") && reimportedNativeScanSession.onboardMonitorSnapshot?.failedCount === 1 && reimportedNativeScanSession.livePidTimeline?.sampleCount === 2, "iPhoneコネクタ連続読取の安全属性または保存再取込が壊れています");
+check(nativeScanSession.vehicleCommandEnabled === false && nativeScanSession.wouldTransmit === false && nativeScanSession.retainedRawPayload === false && !Object.hasOwn(nativeScanSession, "envelopes") && reimportedNativeScanSession.sessionId === nativeBoundary.scanId && reimportedNativeScanSession.nativeConnectorBoundary?.scanId === nativeBoundary.scanId && reimportedNativeScanSession.nativeConnectorBoundary?.connectionId === nativeBoundary.connectionId && reimportedNativeScanSession.nativeConnectorBoundary?.vehicleContextId === nativeBoundary.vehicleContextId && reimportedNativeScanSession.startedAt === nativeScanSession.startedAt && reimportedNativeScanSession.endedAt === nativeScanSession.completedAt && reimportedNativeScanSession.dtcSnapshot?.codes?.includes("P0300") && reimportedNativeScanSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0606" && item.status === "permanent") && reimportedNativeScanSession.onboardMonitorSnapshot?.failedCount === 1 && reimportedNativeScanSession.livePidTimeline?.sampleCount === 2, "iPhoneコネクタ連続読取の安全属性、セッション境界または保存再取込が壊れています");
 const partialNativeScanSession = obd.buildNativeConnectorScanSession([...nativeScanBatch.slice(0, 2), nativeEnvelope("read_ecu_info", "2026-07-20T07:00:08Z", {})]);
 check(partialNativeScanSession.ok === true && partialNativeScanSession.partial === true && partialNativeScanSession.acceptedEnvelopeCount === 2 && partialNativeScanSession.rejectedEnvelopeCount === 1 && partialNativeScanSession.session?.warnings?.includes("native_connector_partial_batch"), "iPhoneコネクタ連続読取の部分失敗を警告付きセッションへ変換できません");
 check(partialNativeScanSession.evaluations?.find((item) => item.index === 2)?.errors?.includes("invalid_data_shape") && partialNativeScanSession.errors.includes("invalid_data_shape"), "iPhoneコネクタ連続読取の部分失敗位置を保持できません");
 const mixedNativeScanSession = obd.buildNativeConnectorScanSession([nativeScanBatch[1], nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:09Z", { dtcs: [] }, "user-vci-thinkcar-bluetooth")]);
 check(mixedNativeScanSession.blocked === true && mixedNativeScanSession.errors.includes("mixed_interface_batch") && mixedNativeScanSession.session === null, "異なるVCIのiPhoneコネクタ応答を同じセッションへ混在させています");
+const legacyNativeBatch = obd.buildNativeConnectorScanSession([
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:00:10Z", { dtcs: [] }, "user-vci-elm327", { omitBoundary: true }),
+  nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:11Z", { dtcs: [] }, "user-vci-elm327", { omitBoundary: true })
+]);
+check(legacyNativeBatch.blocked === true && legacyNativeBatch.errors.includes("missing_session_boundary") && legacyNativeBatch.session === null && nativeElmImport.accepted === true, "複数応答の境界なし取込を拒否しながら旧単体取込を維持できません");
+const mixedScanBoundarySession = obd.buildNativeConnectorScanSession([
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:00:12Z", { dtcs: [] }),
+  nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:13Z", { dtcs: [] }, "user-vci-elm327", { scanId: "44444444-4444-4444-8444-444444444444" })
+]);
+check(mixedScanBoundarySession.blocked === true && mixedScanBoundarySession.errors.includes("mixed_scan_batch") && mixedScanBoundarySession.session === null, "異なるscan_idのiPhoneコネクタ応答を混在させています");
+const mixedConnectionBoundarySession = obd.buildNativeConnectorScanSession([
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:00:14Z", { dtcs: [] }),
+  nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:15Z", { dtcs: [] }, "user-vci-elm327", { connectionId: "55555555-5555-4555-8555-555555555555" })
+]);
+check(mixedConnectionBoundarySession.blocked === true && mixedConnectionBoundarySession.errors.includes("mixed_connection_batch") && mixedConnectionBoundarySession.session === null, "異なるconnection_idのiPhoneコネクタ応答を混在させています");
+const mixedVehicleBoundarySession = obd.buildNativeConnectorScanSession([
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:00:16Z", { dtcs: [] }),
+  nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:17Z", { dtcs: [] }, "user-vci-elm327", { vehicleContextId: "66666666-6666-4666-8666-666666666666" })
+]);
+check(mixedVehicleBoundarySession.blocked === true && mixedVehicleBoundarySession.errors.includes("mixed_vehicle_context_batch") && mixedVehicleBoundarySession.session === null, "異なるvehicle_context_idのiPhoneコネクタ応答を混在させています");
+const duplicateSequenceSession = obd.buildNativeConnectorScanSession([
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:00:18Z", { dtcs: [] }, "user-vci-elm327", { sequence: 500 }),
+  nativeEnvelope("read_pending_dtc", "2026-07-20T07:00:19Z", { dtcs: [] }, "user-vci-elm327", { sequence: 500 })
+]);
+check(duplicateSequenceSession.blocked === true && duplicateSequenceSession.errors.includes("duplicate_sequence") && duplicateSequenceSession.session === null, "iPhoneコネクタ連続読取の重複sequenceを拒否していません");
 const writeMixedNativeScanSession = obd.buildNativeConnectorScanSession([nativeScanBatch[1], nativeEnvelope("clear_dtc", "2026-07-20T07:00:09Z", { dtcs: [] })]);
 check(writeMixedNativeScanSession.blocked === true && writeMixedNativeScanSession.errors.includes("blocked_write_intent") && writeMixedNativeScanSession.session === null && writeMixedNativeScanSession.wouldTransmit === false, "変更系intentを含むiPhoneコネクタ連続読取を拒否していません");
 const oversizedNativeScanSession = obd.buildNativeConnectorScanSession(Array.from({ length: 65 }, (_, index) => nativeEnvelope("read_stored_dtc", `2026-07-20T07:01:${String(index % 60).padStart(2, "0")}Z`, { dtcs: [] })));
@@ -3084,6 +3129,11 @@ const duplicateNativeScanSession = obd.buildNativeConnectorScanSession([
   nativeEnvelope("read_stored_dtc", "2026-07-20T07:02:02Z", { dtcs: [{ code: "P0171" }] })
 ]);
 check(duplicateNativeScanSession.session?.dtcSnapshot?.codes?.includes("P0171") && !duplicateNativeScanSession.session?.dtcSnapshot?.codes?.includes("P0300"), "iPhoneコネクタ同一読取の再取得で最新応答を採用していません");
+const sameTimestampNativeScanSession = obd.buildNativeConnectorScanSession([
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:03:00Z", { dtcs: [{ code: "P0300" }] }, "user-vci-elm327", { sequence: 700 }),
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:03:00Z", { dtcs: [{ code: "P0171" }] }, "user-vci-elm327", { sequence: 701 })
+]);
+check(sameTimestampNativeScanSession.session?.dtcSnapshot?.codes?.includes("P0171") && !sameTimestampNativeScanSession.session?.dtcSnapshot?.codes?.includes("P0300"), "同時刻のiPhoneコネクタ応答で最大sequenceを最新として採用していません");
 check(appSource.includes('implementationProgressPercent') && appSource.includes('実機適合:') && appSource.includes('有線OBD2適合確認'), "VCI実装進捗と実機適合状態を画面で分離できません");
 const connectionProfile = obd.getVehicleConnectionProfile();
 check(connectionProfile.transportEnabled === false, "通信トランスポートが安全ゲート外で有効です");
