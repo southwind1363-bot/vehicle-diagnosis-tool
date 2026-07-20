@@ -10,9 +10,9 @@ for (const name of requiredArgs) {
   if (!args[name]) fail(`--${name} が必要です`);
 }
 
-if (!/^\d{4}-\d{2}-\d{2}$/.test(args["source-date"])) {
-  fail("--source-date は YYYY-MM-DD 形式で指定してください");
-}
+const source = requireNonEmptyString(args.source, "--source");
+const sourceUrl = normalizeSourceUrl(args["source-url"]);
+const sourceDate = normalizeSourceDate(args["source-date"]);
 
 const inputPath = path.resolve(process.cwd(), args.input);
 const outputPath = path.resolve(projectRoot, args.output || "data/imported-verified-dtc.json");
@@ -71,9 +71,9 @@ for (const [offset, row] of rows.slice(1).entries()) {
     required_tools: ["対応スキャンツール", "メーカー整備書"],
     safety_notes: ["安全に関わる系統は作業を中止し、メーカー指定手順を優先する"],
     confidence: "定義確認済み・診断手順未登録",
-    source: args.source,
-    source_url: args["source-url"],
-    source_date: args["source-date"],
+    source,
+    source_url: sourceUrl,
+    source_date: sourceDate,
     last_verified_date: new Date().toISOString().slice(0, 10),
     service_manual_required: true,
     imported_definition_only: true
@@ -156,6 +156,41 @@ function normalizeHeader(value) {
 
 function findHeader(headers, candidates) {
   return headers.findIndex((header) => candidates.map(normalizeHeader).includes(header));
+}
+
+function requireNonEmptyString(value, label) {
+  const normalized = String(value || "").trim();
+  if (!normalized) fail(`${label} は空にできません`);
+  return normalized;
+}
+
+function normalizeSourceUrl(value) {
+  const sourceUrl = requireNonEmptyString(value, "--source-url");
+  let parsed;
+  try {
+    parsed = new URL(sourceUrl);
+  } catch {
+    fail("--source-url は有効な HTTPS URL にしてください");
+  }
+  if (parsed.protocol !== "https:" || !parsed.hostname || parsed.username || parsed.password) {
+    fail("--source-url は認証情報を含まない HTTPS URL にしてください");
+  }
+  return parsed.toString();
+}
+
+function normalizeSourceDate(value) {
+  const sourceDate = requireNonEmptyString(value, "--source-date");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate)) {
+    fail("--source-date は YYYY-MM-DD 形式で指定してください");
+  }
+  const date = new Date(`${sourceDate}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== sourceDate) {
+    fail("--source-date は実在する日付にしてください");
+  }
+  if (date.getTime() > Date.now()) {
+    fail("--source-date は将来日にできません");
+  }
+  return sourceDate;
 }
 
 function fail(message) {

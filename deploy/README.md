@@ -383,9 +383,11 @@ data/symptom-flows.json
 
 ```powershell
 npm.cmd run validate:data
+npm.cmd run validate:dtc-import
 ```
 
 JSON構文、文字崩れ、DTC形式、ID重複、整備書確認フラグ、出典URLの型、車両候補の文字列配列、年式範囲の重複を検査します。
+`validate:dtc-import` は、検証済みDTC CSV取込でHTTPS出典、実在日付、将来日拒否を確認します。
 
 登録済み個別DTCと系統別フローの状況は次で確認できます。
 
