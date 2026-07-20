@@ -2478,7 +2478,7 @@ const elm327PromptedCoreSession = obd.buildScanSessionFromObdText([
 ].join("\r\n"));
 check(elm327PromptedCoreSession?.dtcSnapshot?.codes?.join(",") === "P0171,P0300" && elm327PromptedCoreSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726) && elm327PromptedCoreSession.freezeFrameSnapshot?.triggerDtc === "P0171" && elm327PromptedCoreSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726) && elm327PromptedCoreSession.readinessSnapshot?.readinessReadoutStatus === "reported" && elm327PromptedCoreSession.supportedPidMatrix?.supportedPids?.includes("0C") && elm327PromptedCoreSession.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && elm327PromptedCoreSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && elm327PromptedCoreSession.vehicleCommandEnabled === false && elm327PromptedCoreSession.wouldTransmit === false, "ELM327 command-prompted core readouts were not separated into read-only DTC, PID, freeze-frame, readiness, and supported-PID snapshots");
 check(interfaceCatalog.some((item) => item.id === "user-vci-rcmall-mks-canable-v2-pro" && item.tooling.includes("SavvyCAN")), "CANable/SavvyCAN候補がありません");
-check(vehicleInterfaceCatalog.some((item) => item.id === "user-vci-thinkcar-bluetooth" && item.progress_percent === 26 && item.current_status === "モバイル読取経路の準備中" && item.platform_sources?.length === 2), "スマホBluetooth VCIの経路整理が不足しています");
+check(vehicleInterfaceCatalog.some((item) => item.id === "user-vci-thinkcar-bluetooth" && item.progress_percent === 32 && item.current_status === "自前iPhoneコネクタ契約実装 / 通信仕様確認待ち" && item.platform_sources?.length === 2), "スマホBluetooth VCIの自前接続経路整理が不足しています");
 check(interfaceCatalog.every((item) => item.vehicleCommandEnabled === false), "VCI候補で車両コマンドが有効です");
 check(interfaceCatalog.every((item) => Number.isInteger(item.progressPercent) && item.progressPercent >= 0 && item.progressPercent <= 100), "VCI候補の進捗率が不正です");
 check(interfaceCatalog.every((item) => typeof item.currentBasis === "string" && item.currentBasis.length > 0), "VCI候補の現在地説明が不足しています");
@@ -2535,7 +2535,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2684件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('PCとiPhoneのVCI読取経路を分離'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2701件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('iPhone VCI読取契約を診断セッションへ接続'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2662,7 +2662,7 @@ check(appSource.includes('const obdLiveObservationCondition = document.querySele
 check(appSource.includes('function buildLivePidTimelineChartRows(timeline = null)') && appSource.includes('.filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)') && appSource.includes('heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55') && appSource.includes('delta: row.points.at(-1)?.value - row.points[0]?.value') && appSource.includes('変化 ${row.delta') && appSource.includes('obd-timeline-chart-bar'), "Live PID graph should chart only numeric values from the latest observation condition");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
-check(appSource.includes('recentMilestone: "PCとiPhoneのVCI読取経路を分離"'), "OBD core progress should describe the latest completed interface milestone");
+check(appSource.includes('recentMilestone: "iPhone VCI読取契約を診断セッションへ接続"'), "OBD core progress should describe the latest completed interface milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
@@ -2768,8 +2768,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.77";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.77";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.77", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.78";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.78";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.78", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -2830,7 +2830,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "PCとiPhoneのVCI読取経路を分離"'), "OBD core progress snapshot should show the latest interface milestone");
+check(appSource.includes('recentMilestone: "iPhone VCI読取契約を診断セッションへ接続"'), "OBD core progress snapshot should show the latest interface milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -2992,6 +2992,52 @@ check(desktopJ2534Route.route === "desktop_local_bridge" && desktopJ2534Route.re
 check([iphoneThinkcarRoute, iphoneElmRoute, desktopThinkcarRoute, desktopElmRoute, desktopJ2534Route].every((item) => item.directBrowserReadoutEnabled === false && item.vehicleCommandEnabled === false && item.executionEnabled === false && item.wouldTransmit === false), "複数インターフェース経路が接続または車両送信を有効にしています");
 check(appSource.includes('function getObdInterfaceReadoutRoute(interfaceId)') && appSource.includes('自前iPhoneコネクタ') && appSource.includes('native_connector_required'), "iPhone VCIの自前接続方針が診断機画面へ反映されていません");
 check(indexSource.includes('THINKCAR / ELM327') && indexSource.includes('外部診断機から共有またはコピーできる文字の取込は補助経路'), "外部診断機ログの補助取込案内が画面にありません");
+const nativeConnectorContract = obd.getNativeConnectorContract();
+check(nativeConnectorContract.id === "native_connector_contract_v1" && nativeConnectorContract.dataSchemaFamily === "local_bridge_response_data_v1" && nativeConnectorContract.dataShapeSource === "getLocalBridgeResponseSchemas" && nativeConnectorContract.importEnabled === true && nativeConnectorContract.connectionEnabled === false && nativeConnectorContract.vehicleCommandEnabled === false, "自前iPhoneコネクタ契約の安全既定値が不足しています");
+check(nativeConnectorContract.allowedInterfaceIds.includes("user-vci-thinkcar-bluetooth") && nativeConnectorContract.allowedInterfaceIds.includes("user-vci-elm327") && nativeConnectorContract.allowedReadIntents.includes("read_stored_dtc") && nativeConnectorContract.blockedWriteIntents.includes("clear_dtc"), "自前iPhoneコネクタ契約の許可・拒否リストが不足しています");
+const nativeElmEnvelope = {
+  schema_version: "native_connector_contract_v1",
+  interface_id: "user-vci-elm327",
+  platform: "ios",
+  intent: "read_stored_dtc",
+  captured_at: "2026-07-20T06:00:00Z",
+  data: {
+    protocol: "ISO15765-4",
+    dtcs: [{ code: "P0300", status: "stored" }],
+    serial_number: "do-not-retain",
+    activation_code: "do-not-retain"
+  }
+};
+const nativeElmEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmEnvelope);
+check(nativeElmEvaluation.accepted === true && nativeElmEvaluation.knownReadIntent === true && nativeElmEvaluation.connectionEnabled === false && nativeElmEvaluation.wouldTransmit === false && nativeElmEvaluation.retainedRawPayload === false, "正規のiPhone read-only envelopeを安全に受理できません");
+const nativeElmImport = obd.buildNativeConnectorDiagnosticImport(nativeElmEnvelope);
+check(nativeElmImport.ok === true && nativeElmImport.accepted === true && nativeElmImport.blocked === false && nativeElmImport.session?.source === "native_connector", "iPhoneコネクタ結果を診断セッションへ取り込めません");
+check(nativeElmImport.session?.dtcSnapshot?.codes?.includes("P0300") && nativeElmImport.session?.dtcSnapshot?.dtcs?.some((item) => item.status === "stored"), "iPhoneコネクタDTCが診断セッションへ正規化されていません");
+check(nativeElmImport.session?.readoutInterface?.route === "native_connector_readout" && nativeElmImport.session?.vehicleCommandEnabled === false && nativeElmImport.session?.wouldTransmit === false && !JSON.stringify(nativeElmImport).includes("do-not-retain") && !Object.hasOwn(nativeElmImport, "data"), "iPhoneコネクタ取込が識別情報または生payloadを保持しています");
+const nativeReadinessImport = obd.buildNativeConnectorDiagnosticImport({
+  schema_version: "native_connector_contract_v1",
+  interface_id: "user-vci-thinkcar-bluetooth",
+  platform: "ios",
+  intent: "read_live_pid_snapshot",
+  captured_at: "2026-07-20T06:01:00Z",
+  data: { readout_id: "readiness_snapshot", pid: "01", mil_on: false, monitors: [{ id: "misfire", status: "complete" }] }
+});
+check(nativeReadinessImport.session?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire") && nativeReadinessImport.session?.readoutInterface?.interfaceId === "user-vci-thinkcar-bluetooth" && nativeReadinessImport.vehicleCommandEnabled === false, "iPhoneコネクタreadinessが診断セッションへ正規化されていません");
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, schema_version: "unknown_connector_v9" }).errors.includes("unsupported_schema"), "未知のiPhoneコネクタschemaを拒否できません");
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, platform: "android" }).errors.includes("unsupported_platform"), "iPhone専用コネクタ契約で別platformを拒否できません");
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, interface_id: "unknown-vci" }).errors.includes("unsupported_interface"), "未登録VCIをiPhoneコネクタ契約で拒否できません");
+const nativeWriteEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, intent: "clear_dtc" });
+check(nativeWriteEvaluation.accepted === false && nativeWriteEvaluation.blockedWriteIntent === true && nativeWriteEvaluation.errors.includes("blocked_write_intent") && nativeWriteEvaluation.wouldTransmit === false, "iPhoneコネクタ契約が変更系intentを拒否していません");
+check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: { dtcs: [], vehicle_command_enabled: true } }).errors.includes("unsafe_execution_flags"), "iPhoneコネクタ契約が危険な実行フラグを拒否していません");
+const blockedNativeImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmEnvelope, intent: "clear_dtc" });
+check(blockedNativeImport.ok === false && blockedNativeImport.blocked === true && blockedNativeImport.session === null && blockedNativeImport.vehicleCommandEnabled === false && blockedNativeImport.wouldTransmit === false, "拒否したiPhoneコネクタ要求から診断セッションが生成されています");
+const malformedNativeEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: {} });
+check(malformedNativeEvaluation.accepted === false && malformedNativeEvaluation.dataShapeValid === false && malformedNativeEvaluation.errors.includes("invalid_data_shape"), "iPhoneコネクタ契約がintentに合わないdata形状を拒否していません");
+const malformedNativeImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmEnvelope, data: {} });
+check(malformedNativeImport.blocked === true && malformedNativeImport.session === null, "不正なiPhoneコネクタdataから診断セッションが生成されています");
+const oversizedNativeEnvelope = { ...nativeElmEnvelope, data: { dtcs: [], padding: "x".repeat(1000001) } };
+check(obd.evaluateNativeConnectorEnvelope(oversizedNativeEnvelope).errors.includes("payload_too_large"), "巨大なiPhoneコネクタpayloadを拒否していません");
+check(obd.buildNativeConnectorDiagnosticImport(oversizedNativeEnvelope).session === null, "上限超過iPhoneコネクタpayloadから診断セッションが生成されています");
 check(appSource.includes('implementationProgressPercent') && appSource.includes('実機適合:') && appSource.includes('有線OBD2適合確認'), "VCI実装進捗と実機適合状態を画面で分離できません");
 const connectionProfile = obd.getVehicleConnectionProfile();
 check(connectionProfile.transportEnabled === false, "通信トランスポートが安全ゲート外で有効です");
@@ -16821,6 +16867,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2684");
+  console.log("OBD read-only safety checks: 2701");
   console.log("Errors: 0");
 }

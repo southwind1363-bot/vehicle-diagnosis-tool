@@ -465,6 +465,30 @@
     })
   });
 
+  const nativeConnectorContract = Object.freeze({
+    id: "native_connector_contract_v1",
+    status: "import-contract-ready",
+    platform: "ios",
+    transport: "native-connector-to-diagnostic-session",
+    dataSchemaFamily: "local_bridge_response_data_v1",
+    dataShapeSource: "getLocalBridgeResponseSchemas",
+    importEnabled: true,
+    connectionEnabled: false,
+    vehicleCommandEnabled: false,
+    executionEnabled: false,
+    maxPayloadBytes: 1000000,
+    allowedInterfaceIds: Object.freeze(["user-vci-thinkcar-bluetooth", "user-vci-elm327"]),
+    allowedReadIntents: Object.freeze([...localBridgeContract.allowedReadIntents]),
+    blockedWriteIntents: Object.freeze([...localBridgeContract.blockedWriteIntents]),
+    requiredEnvelopeFields: Object.freeze(["schema_version", "interface_id", "platform", "intent", "captured_at", "data"]),
+    logPolicy: Object.freeze({
+      storeRawPayload: false,
+      storeRawFrames: false,
+      redactIdentifiers: true,
+      keepDiagnosticSession: true
+    })
+  });
+
   const localBridgeResponseSchemas = Object.freeze([
     Object.freeze({
       intent: "bridge_status",
@@ -1009,6 +1033,192 @@
       wouldTransmit: false,
       would_transmit: false,
       reason: "複数VCIの読取経路を端末別に分離し、実機確認前の接続・車両送信を有効化しません。"
+    };
+  }
+
+  function getNativeConnectorContract() {
+    return {
+      ...nativeConnectorContract,
+      allowedInterfaceIds: [...nativeConnectorContract.allowedInterfaceIds],
+      allowedReadIntents: [...nativeConnectorContract.allowedReadIntents],
+      blockedWriteIntents: [...nativeConnectorContract.blockedWriteIntents],
+      requiredEnvelopeFields: [...nativeConnectorContract.requiredEnvelopeFields],
+      logPolicy: { ...nativeConnectorContract.logPolicy }
+    };
+  }
+
+  function evaluateNativeConnectorEnvelope(input = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const schemaVersion = String(source.schemaVersion || source.schema_version || "").trim();
+    const interfaceId = String(source.interfaceId || source.interface_id || "").trim();
+    const platform = String(source.platform || "").trim().toLowerCase();
+    const intent = String(source.intent || "").trim();
+    const capturedAt = String(source.capturedAt || source.captured_at || "").trim();
+    const data = source.data && typeof source.data === "object" && !Array.isArray(source.data) ? source.data : null;
+    const fieldPresent = {
+      schema_version: Boolean(schemaVersion),
+      interface_id: Boolean(interfaceId),
+      platform: Boolean(platform),
+      intent: Boolean(intent),
+      captured_at: Boolean(capturedAt),
+      data: Boolean(data)
+    };
+    const missingFields = nativeConnectorContract.requiredEnvelopeFields.filter((field) => !fieldPresent[field]);
+    const blockedWriteIntent = nativeConnectorContract.blockedWriteIntents.includes(intent);
+    const knownReadIntent = nativeConnectorContract.allowedReadIntents.includes(intent);
+    const requiredDataKeysByIntent = {
+      bridge_status: ["status"],
+      list_vci: ["devices"],
+      adapter_identity: ["adapter_name", "adapterName", "adapter_family", "adapterFamily"],
+      read_stored_dtc: ["dtcs", "codes"],
+      read_pending_dtc: ["dtcs", "codes"],
+      read_permanent_dtc: ["dtcs", "codes"],
+      read_freeze_frame: ["monitor_values", "monitorValues", "items"],
+      read_supported_pids: ["supported_pids", "supportedPids", "pids"],
+      read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
+      read_onboard_monitor: ["tests", "items"],
+      read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
+    };
+    const requiredDataKeys = requiredDataKeysByIntent[intent] || [];
+    const dataShapeValid = !knownReadIntent || Boolean(data && requiredDataKeys.some((key) => Object.hasOwn(data, key)));
+    let payloadSize = 0;
+    try {
+      payloadSize = data ? JSON.stringify(data).length : 0;
+    } catch {
+      payloadSize = nativeConnectorContract.maxPayloadBytes + 1;
+    }
+    const unsafeExecutionFlags = [source, data].some((item) => item && (
+      item.vehicleCommandEnabled === true
+      || item.vehicle_command_enabled === true
+      || item.wouldTransmit === true
+      || item.would_transmit === true
+      || item.executionEnabled === true
+      || item.execution_enabled === true
+      || item.readOnly === false
+      || item.read_only === false
+    ));
+    const errors = [
+      ...missingFields.map((field) => `missing_${field}`),
+      schemaVersion && schemaVersion !== nativeConnectorContract.id ? "unsupported_schema" : null,
+      platform && platform !== nativeConnectorContract.platform ? "unsupported_platform" : null,
+      interfaceId && !nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? "unsupported_interface" : null,
+      blockedWriteIntent ? "blocked_write_intent" : null,
+      intent && !knownReadIntent && !blockedWriteIntent ? "unsupported_intent" : null,
+      knownReadIntent && !dataShapeValid ? "invalid_data_shape" : null,
+      payloadSize > nativeConnectorContract.maxPayloadBytes ? "payload_too_large" : null,
+      capturedAt && Number.isNaN(Date.parse(capturedAt)) ? "invalid_captured_at" : null,
+      unsafeExecutionFlags ? "unsafe_execution_flags" : null
+    ].filter(Boolean);
+    const accepted = errors.length === 0;
+
+    return {
+      schemaVersion: "native_connector_envelope_evaluation_v1",
+      schema_version: "native_connector_envelope_evaluation_v1",
+      accepted,
+      ok: accepted,
+      blocked: !accepted,
+      interfaceId: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
+      interface_id: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
+      platform: platform === nativeConnectorContract.platform ? platform : null,
+      intent: knownReadIntent ? intent : null,
+      capturedAt: capturedAt && !Number.isNaN(Date.parse(capturedAt)) ? capturedAt : null,
+      captured_at: capturedAt && !Number.isNaN(Date.parse(capturedAt)) ? capturedAt : null,
+      missingFields,
+      missing_fields: [...missingFields],
+      errors,
+      knownReadIntent,
+      known_read_intent: knownReadIntent,
+      blockedWriteIntent,
+      blocked_write_intent: blockedWriteIntent,
+      dataShapeValid,
+      data_shape_valid: dataShapeValid,
+      payloadSize,
+      payload_size: payloadSize,
+      maxPayloadBytes: nativeConnectorContract.maxPayloadBytes,
+      max_payload_bytes: nativeConnectorContract.maxPayloadBytes,
+      importEnabled: nativeConnectorContract.importEnabled,
+      import_enabled: nativeConnectorContract.importEnabled,
+      connectionEnabled: false,
+      connection_enabled: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      retainedRawPayload: false,
+      retained_raw_payload: false
+    };
+  }
+
+  function buildNativeConnectorDiagnosticImport(input = {}) {
+    const evaluation = evaluateNativeConnectorEnvelope(input);
+    const blockedResult = {
+      schemaVersion: "native_connector_diagnostic_import_v1",
+      schema_version: "native_connector_diagnostic_import_v1",
+      ok: false,
+      accepted: false,
+      blocked: true,
+      evaluation,
+      errors: [...evaluation.errors],
+      session: null,
+      retainedRawPayload: false,
+      retained_raw_payload: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+    if (!evaluation.accepted) return blockedResult;
+
+    const data = input.data;
+    const readoutInterface = normalizeReadoutInterfaceSnapshot({
+      interface_id: evaluation.interfaceId,
+      interface_label: evaluation.interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR Bluetooth" : "ELM327",
+      device_model: evaluation.interfaceId === "user-vci-thinkcar-bluetooth" ? "TCMa" : "ELM327 mini",
+      readout_route: "native_connector_readout",
+      platform: evaluation.platform,
+      observed_use: "native connector read-only diagnostic import",
+      hardware_compatibility_confirmed: false
+    });
+    const readoutInputByIntent = {
+      bridge_status: { connection_status: data },
+      list_vci: { vci_devices: data },
+      adapter_identity: { adapter_identity: data },
+      read_stored_dtc: { stored_dtc_snapshot: data },
+      read_pending_dtc: { pending_dtc_snapshot: data },
+      read_permanent_dtc: { permanent_dtc_snapshot: data },
+      read_freeze_frame: { freeze_frame_snapshot: data },
+      read_supported_pids: { supported_pid_matrix: data },
+      read_ecu_info: { ecu_info_snapshot: data },
+      read_onboard_monitor: { onboard_monitor_snapshot: data },
+      read_live_pid_snapshot: data.readout_id === "readiness_snapshot" || String(data.pid || "").toUpperCase() === "01"
+        ? { readiness_snapshot: data }
+        : { live_pid_snapshot: data }
+    };
+    const session = buildDiagnosticScanSession({
+      ...(readoutInputByIntent[evaluation.intent] || {}),
+      session_id: "native-connector-session",
+      source: "native_connector",
+      captured_at: evaluation.capturedAt,
+      readout_interface: readoutInterface,
+      retained_raw_payload: false,
+      vehicle_command_enabled: false,
+      execution_enabled: false,
+      would_transmit: false
+    });
+
+    return {
+      ...blockedResult,
+      ok: true,
+      accepted: true,
+      blocked: false,
+      errors: [],
+      session,
+      readoutInterface,
+      readout_interface: readoutInterface
     };
   }
 
@@ -18729,6 +18939,9 @@
     evaluateMobileReadoutTransport,
     getInterfaceReadoutRoutePlan,
     evaluateInterfaceReadoutRoute,
+    getNativeConnectorContract,
+    evaluateNativeConnectorEnvelope,
+    buildNativeConnectorDiagnosticImport,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,
