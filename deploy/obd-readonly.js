@@ -13511,10 +13511,13 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const rows = collectEcuInfoRows(sourceInput);
     const items = rows
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);
+    const observedSourceEcus = [...new Set(items.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
+    const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const expectedItems = ecuInfoItemCatalog.map((item) => ({
       id: item.id,
       label: item.label,
@@ -13563,6 +13566,8 @@
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      sourceEcu: resolvedSourceEcu,
+      source_ecu: resolvedSourceEcu,
       itemCount: items.length,
       item_count: items.length,
       expectedItemCount: expectedItems.length,
