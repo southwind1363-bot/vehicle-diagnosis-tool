@@ -1022,6 +1022,24 @@
     });
   }
 
+  function preserveExplicitStoredReadoutStatus(snapshot = {}, input = {}, statusKeys = []) {
+    if (getExplicitReadoutFailureStatus(input)) return snapshot;
+    const explicitStatus = statusKeys
+      .map((key) => String(input?.[key] || "").trim().toLowerCase())
+      .find((status) => ["reported", "unparsed", "blocked", "unknown"].includes(status));
+    if (!explicitStatus) return snapshot;
+    const reported = explicitStatus === "reported";
+    return statusKeys.reduce((result, key) => ({ ...result, [key]: explicitStatus }), {
+      ...(snapshot && typeof snapshot === "object" ? snapshot : {}),
+      ...(explicitStatus === "unknown" ? {} : { ok: reported }),
+      blocked: false,
+      isBlocked: false,
+      is_blocked: false,
+      wouldTransmit: false,
+      would_transmit: false
+    });
+  }
+
   function readBridgeProtocol(data = {}) {
     return data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || data.protocol_name || data.protocolName || data.bus_protocol || data.busProtocol || null;
   }
@@ -15300,10 +15318,21 @@
     };
     const safeEcuInfoInput = sanitizeEcuInfoInput(ecuInfoInput);
     const dtcSnapshot = hasValue(resolvedDtcInput)
-      ? normalizeDtcSnapshot(Array.isArray(resolvedDtcInput) ? { dtcs: resolvedDtcInput, source: scannerJsonSource } : toSnapshotInput(resolvedDtcInput, "dtcs"))
+      ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+          normalizeDtcSnapshot(Array.isArray(resolvedDtcInput) ? { dtcs: resolvedDtcInput, source: scannerJsonSource } : toSnapshotInput(resolvedDtcInput, "dtcs")),
+          resolvedDtcInput,
+          ["dtcReadoutStatus", "dtc_readout_status"]
+        ), resolvedDtcInput, ["dtcReadoutStatus", "dtc_readout_status"])
       : null;
     const livePidSnapshot = hasValue(livePidInput)
-      ? { ...normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values")), source: scannerJsonSource }
+      ? {
+        ...preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+          normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values")),
+          livePidInput,
+          ["livePidReadoutStatus", "live_pid_readout_status"]
+        ), livePidInput, ["livePidReadoutStatus", "live_pid_readout_status"]),
+        source: scannerJsonSource
+      }
       : null;
     const livePidTimeline = hasValue(livePidTimelineInput)
       ? normalizeLivePidTimeline(livePidTimelineInput)
@@ -15338,31 +15367,47 @@
       ? { ...freezeFrameSnapshotInput, trigger_dtc: freezeFrameTriggerDtc }
       : freezeFrameSnapshotInput;
     const freezeFrameSnapshot = normalizedFreezeFrameInput
-      ? normalizeFreezeFrameSnapshot(normalizedFreezeFrameInput)
+      ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+        normalizeFreezeFrameSnapshot(normalizedFreezeFrameInput),
+        normalizedFreezeFrameInput,
+        ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]
+      ), normalizedFreezeFrameInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])
       : null;
     const readinessSnapshot = hasValue(readinessInput)
-      ? normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors"))
+      ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+        normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors")),
+        readinessInput,
+        ["readinessReadoutStatus", "readiness_readout_status"]
+      ), readinessInput, ["readinessReadoutStatus", "readiness_readout_status"])
       : null;
     const ecuInfoSnapshot = hasValue(safeEcuInfoInput)
-      ? normalizeEcuInfoSnapshot(Array.isArray(safeEcuInfoInput) ? { items: safeEcuInfoInput, source: scannerJsonSource } : toSnapshotInput(safeEcuInfoInput, "items"))
+      ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+        normalizeEcuInfoSnapshot(Array.isArray(safeEcuInfoInput) ? { items: safeEcuInfoInput, source: scannerJsonSource } : toSnapshotInput(safeEcuInfoInput, "items")),
+        safeEcuInfoInput,
+        ["ecuInfoReadoutStatus", "ecu_info_readout_status"]
+      ), safeEcuInfoInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"])
       : null;
     const hasSupportedPidInput = hasValue(supportedPidInput) || (typeof supportedPidInput === "string" && supportedPidInput.trim());
     const isTypedSupportedPidSnapshot = supportedPidInput && typeof supportedPidInput === "object" && !Array.isArray(supportedPidInput)
       && ["supported_pid_matrix_v1"].includes(supportedPidInput.schemaVersion || supportedPidInput.schema_version || "");
     const supportedPidMatrix = hasSupportedPidInput
       ? {
-        ...(isTypedSupportedPidSnapshot
+        ...preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(isTypedSupportedPidSnapshot
           ? buildSupportedPidMatrix(toSnapshotInput(supportedPidInput, "supported_pids"))
           : normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput)
             ? { supported_pids: supportedPidInput, source: scannerJsonSource }
             : typeof supportedPidInput === "string"
               ? { supported_pid_list: supportedPidInput, source: scannerJsonSource }
-              : toSnapshotInput(supportedPidInput, "supported_pids"))),
+              : toSnapshotInput(supportedPidInput, "supported_pids")), supportedPidInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]), supportedPidInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]),
         source: scannerJsonSource
       }
       : null;
     const onboardMonitorSnapshot = hasValue(onboardMonitorInput)
-      ? normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests"))
+      ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+        normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests")),
+        onboardMonitorInput,
+        ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]
+      ), onboardMonitorInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"])
       : null;
     const ecuResponseSummary = hasValue(ecuResponseInput)
       ? normalizeEcuResponseSummary(Array.isArray(ecuResponseInput) ? { ecus: ecuResponseInput, source: scannerJsonSource } : toSnapshotInput(ecuResponseInput, "ecus"))
@@ -17147,13 +17192,13 @@
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
         : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSnapshotInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
-    const supportedPidMatrix = preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
+    const supportedPidMatrix = preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
       : (supportedPidMatrixInput?.data || Array.isArray(supportedPidMatrixInput?.supported_pids) || Array.isArray(supportedPidMatrixInput?.supportedPids))
         ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
-        : buildSupportedPidMatrix(supportedPidMatrixInput)), supportedPidMatrixInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]);
+        : buildSupportedPidMatrix(supportedPidMatrixInput)), supportedPidMatrixInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]), supportedPidMatrixInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]);
     const connectionStatusInput = sessionInput.connectionStatus || sessionInput.connection_status || sessionInput.connectionStatusResponse || sessionInput.connection_status_response || {};
     const vciListInput = sessionInput.vciList || sessionInput.vci_list || sessionInput.vciDevices || sessionInput.vci_devices || sessionInput.listVciResponse || sessionInput.list_vci_response || {};
     const adapterIdentityInput = sessionInput.adapterIdentity || sessionInput.adapter_identity || sessionInput.adapterIdentityResponse || sessionInput.adapter_identity_response || {};

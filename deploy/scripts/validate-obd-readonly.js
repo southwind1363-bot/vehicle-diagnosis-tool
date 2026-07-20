@@ -16621,6 +16621,39 @@ const thinkcarBridgeMergedNoLiveRoundTrip = obd.buildDiagnosticScanSessionFromJs
 const thinkcarEmptyDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
   obd.buildBridgeSessionExportPayload(thinkcarEmptyDtcSession)
 ));
+const typedReadoutRoundTripSpecs = [
+  { key: "dtcSnapshot", statusKey: "dtcReadoutStatus", valuesKey: "dtcs", coverageId: "dtc_snapshot" },
+  { key: "livePidSnapshot", statusKey: "livePidReadoutStatus", valuesKey: "monitorValues", coverageId: "live_pid_snapshot" },
+  { key: "readinessSnapshot", statusKey: "readinessReadoutStatus", valuesKey: "monitors", coverageId: "readiness_snapshot" },
+  { key: "ecuInfoSnapshot", statusKey: "ecuInfoReadoutStatus", valuesKey: "items", coverageId: "ecu_info_snapshot" },
+  { key: "onboardMonitorSnapshot", statusKey: "onboardMonitorReadoutStatus", valuesKey: "tests", coverageId: "onboard_monitor_snapshot" },
+  { key: "freezeFrameSnapshot", statusKey: "freezeFrameReadoutStatus", valuesKey: "monitorValues", coverageId: "freeze_frame_snapshot" },
+  { key: "supportedPidMatrix", statusKey: "supportedPidReadoutStatus", valuesKey: "supportedPids", coverageId: "supported_pid_matrix" }
+];
+for (const spec of typedReadoutRoundTripSpecs) {
+  for (const status of ["reported", "unknown", "unparsed", "blocked"]) {
+    const snapshot = {
+      [spec.statusKey]: status,
+      [spec.valuesKey]: [],
+      ...(status === "reported" ? { ok: true } : {}),
+      ...(status === "unparsed" ? { ok: false } : {}),
+      ...(status === "blocked" ? { blocked: true } : {})
+    };
+    const session = obd.buildDiagnosticScanSession({ [spec.key]: snapshot });
+    const reimported = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+      obd.buildBridgeSessionExportPayload(session)
+    ));
+    const expectedCoverageStatus = status === "reported" ? "empty" : "missing";
+    check(
+      reimported?.[spec.key]?.[spec.statusKey] === status
+        && (status === "blocked" ? reimported?.[spec.key]?.blocked === true : reimported?.[spec.key]?.blocked !== true)
+        && reimported?.readoutCoverage?.itemById?.[spec.coverageId]?.status === expectedCoverageStatus
+        && reimported?.vehicleCommandEnabled === false
+        && reimported?.wouldTransmit === false,
+      `${spec.coverageId} ${status} state was not preserved through read-only export and JSON import`
+    );
+  }
+}
 const thinkcarJsonSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   dtcs: thinkcarReportSession.dtcSnapshot?.dtcs || []
 }));
@@ -16664,6 +16697,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2634");
+  console.log("OBD read-only safety checks: 2662");
   console.log("Errors: 0");
 }
