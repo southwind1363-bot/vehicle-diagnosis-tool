@@ -10,6 +10,24 @@ const J2534_REGISTRY_ROOTS = [
   "HKLM\\SOFTWARE\\PassThruSupport.04.04",
   "HKLM\\SOFTWARE\\WOW6432Node\\PassThruSupport.04.04"
 ];
+const MAX_J2534_LIBRARY_SIZE = 64 * 1024 * 1024;
+const MAX_PE_EXPORT_NAMES = 4096;
+const J2534_REQUIRED_API_NAMES = Object.freeze([
+  "PassThruOpen",
+  "PassThruClose",
+  "PassThruConnect",
+  "PassThruDisconnect",
+  "PassThruReadMsgs",
+  "PassThruWriteMsgs",
+  "PassThruStartPeriodicMsg",
+  "PassThruStopPeriodicMsg",
+  "PassThruStartMsgFilter",
+  "PassThruStopMsgFilter",
+  "PassThruSetProgrammingVoltage",
+  "PassThruReadVersion",
+  "PassThruGetLastError",
+  "PassThruIoctl"
+]);
 const REPLAY_RESPONSE_SERVICES = new Set([0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F]);
 const READ_INTENTS = new Set([
   "bridge_status",
@@ -129,7 +147,8 @@ export function createLocalBridgeApp(options = {}) {
     || process.env.LOCAL_BRIDGE_DISCOVER_J2534 === "1";
   const discoveredVciDevices = discoverJ2534RegistryDrivers({
     registryText: options.j2534RegistryText,
-    enabled: j2534DiscoveryRequested
+    enabled: j2534DiscoveryRequested,
+    inspectLibraries: j2534DiscoveryRequested
   });
 
   return http.createServer(async (request, response) => {
@@ -470,15 +489,16 @@ export function discoverJ2534RegistryDrivers(options = {}) {
   const registryText = typeof options.registryText === "string"
     ? options.registryText
     : options.enabled === true ? readJ2534RegistryText() : "";
-  return parseJ2534RegistryDrivers(registryText);
+  return parseJ2534RegistryDrivers(registryText, { inspectLibraries: options.inspectLibraries === true });
 }
 
-export function parseJ2534RegistryDrivers(text = "") {
+export function parseJ2534RegistryDrivers(text = "", options = {}) {
   const rows = [];
   let current = null;
   const appendCurrent = () => {
     if (!current?.functionLibrary) return;
     const label = current.name || current.vendor || "J2534 Pass-Thru";
+    const libraryInspection = options.inspectLibraries === true ? inspectJ2534LibraryFile(current.functionLibrary) : null;
     rows.push({
       id: `j2534-registry-${rows.length + 1}`,
       label,
@@ -486,6 +506,14 @@ export function parseJ2534RegistryDrivers(text = "") {
       adapter_family: "j2534_passthru",
       driver_status: "j2534_registry_detected",
       driver_library_detected: true,
+      driver_library_registered: true,
+      driver_library_inspection_status: libraryInspection?.inspection_status || "not_inspected",
+      driver_library_architecture: libraryInspection?.pe_architecture || null,
+      driver_library_bitness: libraryInspection?.pe_bitness || null,
+      driver_required_api_count: libraryInspection?.required_api_count || J2534_REQUIRED_API_NAMES.length,
+      driver_detected_required_api_count: libraryInspection?.detected_required_api_count || 0,
+      driver_missing_required_apis: libraryInspection?.missing_required_apis || [],
+      driver_required_api_ready: libraryInspection?.required_api_ready === true,
       sample_mode: false,
       replay_mode: false,
       connected: false,
@@ -507,6 +535,109 @@ export function parseJ2534RegistryDrivers(text = "") {
   });
   appendCurrent();
   return rows;
+}
+
+export function inspectJ2534LibraryFile(filePath = "") {
+  const base = {
+    inspection_status: "not_inspected",
+    pe_architecture: null,
+    pe_bitness: null,
+    export_table_status: "not_inspected",
+    required_api_count: J2534_REQUIRED_API_NAMES.length,
+    detected_required_api_count: 0,
+    detected_required_apis: [],
+    missing_required_apis: [...J2534_REQUIRED_API_NAMES],
+    required_api_ready: false,
+    vehicle_command_enabled: false
+  };
+  const resolvedPath = String(filePath || "").trim();
+  if (!resolvedPath) return { ...base, inspection_status: "path_missing" };
+  try {
+    const stat = fs.statSync(resolvedPath);
+    if (!stat.isFile()) return { ...base, inspection_status: "not_a_file" };
+    if (stat.size <= 0 || stat.size > MAX_J2534_LIBRARY_SIZE) {
+      return { ...base, inspection_status: stat.size > MAX_J2534_LIBRARY_SIZE ? "file_too_large" : "file_empty" };
+    }
+    const metadata = readPortableExecutableMetadata(fs.readFileSync(resolvedPath));
+    if (!metadata) return { ...base, inspection_status: "invalid_pe", export_table_status: "invalid_pe" };
+    const normalizedExports = new Set(metadata.exportNames.map(normalizePeExportName));
+    const detectedRequiredApis = J2534_REQUIRED_API_NAMES.filter((name) => normalizedExports.has(name));
+    const missingRequiredApis = J2534_REQUIRED_API_NAMES.filter((name) => !normalizedExports.has(name));
+    return {
+      ...base,
+      inspection_status: "inspected",
+      pe_architecture: metadata.architecture,
+      pe_bitness: metadata.bitness,
+      export_table_status: metadata.exportTableStatus,
+      detected_required_api_count: detectedRequiredApis.length,
+      detected_required_apis: detectedRequiredApis,
+      missing_required_apis: missingRequiredApis,
+      required_api_ready: missingRequiredApis.length === 0
+    };
+  } catch (error) {
+    return {
+      ...base,
+      inspection_status: error?.code === "ENOENT" ? "file_not_found" : "read_failed"
+    };
+  }
+}
+
+function readPortableExecutableMetadata(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 0x40 || buffer.readUInt16LE(0) !== 0x5A4D) return null;
+  const peOffset = buffer.readUInt32LE(0x3C);
+  if (peOffset < 0x40 || peOffset + 24 > buffer.length || buffer.readUInt32LE(peOffset) !== 0x00004550) return null;
+  const machine = buffer.readUInt16LE(peOffset + 4);
+  const sectionCount = buffer.readUInt16LE(peOffset + 6);
+  const optionalHeaderSize = buffer.readUInt16LE(peOffset + 20);
+  const optionalHeaderOffset = peOffset + 24;
+  if (sectionCount > 96 || optionalHeaderSize < 2 || optionalHeaderOffset + optionalHeaderSize > buffer.length) return null;
+  const optionalMagic = buffer.readUInt16LE(optionalHeaderOffset);
+  const bitness = optionalMagic === 0x10B ? 32 : optionalMagic === 0x20B ? 64 : null;
+  if (!bitness) return null;
+  const architecture = machine === 0x014C ? "x86" : machine === 0x8664 ? "x64" : machine === 0xAA64 ? "arm64" : "unknown";
+  const dataDirectoryOffset = optionalHeaderOffset + (bitness === 32 ? 96 : 112);
+  const sectionTableOffset = optionalHeaderOffset + optionalHeaderSize;
+  if (dataDirectoryOffset + 8 > optionalHeaderOffset + optionalHeaderSize || sectionTableOffset + sectionCount * 40 > buffer.length) return null;
+  const sections = [];
+  for (let index = 0; index < sectionCount; index += 1) {
+    const offset = sectionTableOffset + index * 40;
+    sections.push({
+      virtualSize: buffer.readUInt32LE(offset + 8),
+      virtualAddress: buffer.readUInt32LE(offset + 12),
+      rawSize: buffer.readUInt32LE(offset + 16),
+      rawOffset: buffer.readUInt32LE(offset + 20)
+    });
+  }
+  const rvaToOffset = (rva, length = 1) => {
+    const section = sections.find((item) => rva >= item.virtualAddress && rva - item.virtualAddress < Math.max(item.virtualSize, item.rawSize));
+    if (!section) return null;
+    const offset = section.rawOffset + (rva - section.virtualAddress);
+    return offset >= 0 && offset + length <= buffer.length ? offset : null;
+  };
+  const exportRva = buffer.readUInt32LE(dataDirectoryOffset);
+  if (!exportRva) return { architecture, bitness, exportTableStatus: "missing", exportNames: [] };
+  const exportOffset = rvaToOffset(exportRva, 40);
+  if (exportOffset === null) return { architecture, bitness, exportTableStatus: "malformed", exportNames: [] };
+  const nameCount = buffer.readUInt32LE(exportOffset + 24);
+  const namesRva = buffer.readUInt32LE(exportOffset + 32);
+  if (nameCount > MAX_PE_EXPORT_NAMES) return { architecture, bitness, exportTableStatus: "name_limit_exceeded", exportNames: [] };
+  const namesOffset = nameCount ? rvaToOffset(namesRva, nameCount * 4) : null;
+  if (nameCount && namesOffset === null) return { architecture, bitness, exportTableStatus: "malformed", exportNames: [] };
+  const exportNames = [];
+  for (let index = 0; index < nameCount; index += 1) {
+    const nameRva = buffer.readUInt32LE(namesOffset + index * 4);
+    const nameOffset = rvaToOffset(nameRva);
+    if (nameOffset === null) continue;
+    const terminator = buffer.indexOf(0, nameOffset);
+    if (terminator < 0 || terminator - nameOffset > 160) continue;
+    const name = buffer.toString("ascii", nameOffset, terminator);
+    if (/^[A-Za-z_][A-Za-z0-9_@?$]*$/.test(name)) exportNames.push(name);
+  }
+  return { architecture, bitness, exportTableStatus: "parsed", exportNames: [...new Set(exportNames)] };
+}
+
+function normalizePeExportName(name = "") {
+  return String(name || "").replace(/^_/, "").replace(/@\d+$/, "");
 }
 
 function readJ2534RegistryText() {

@@ -1309,6 +1309,28 @@
       const adapterFamily = device?.adapter_family || device?.adapterFamily || device?.family || null;
       const connectionStatus = device?.connection_status || device?.connectionStatus || null;
       const driverLibraryDetected = device?.driver_library_detected === true || device?.driverLibraryDetected === true;
+      const driverLibraryRegistered = device?.driver_library_registered === true || device?.driverLibraryRegistered === true || driverLibraryDetected;
+      const driverLibraryInspectionStatus = String(device?.driver_library_inspection_status || device?.driverLibraryInspectionStatus || "not_inspected").replace(/[^a-z0-9_.:-]+/gi, "").slice(0, 80) || "not_inspected";
+      const driverLibraryArchitectureValue = String(device?.driver_library_architecture || device?.driverLibraryArchitecture || "").trim().toLowerCase();
+      const driverLibraryArchitecture = ["x86", "x64", "arm64", "unknown"].includes(driverLibraryArchitectureValue) ? driverLibraryArchitectureValue : null;
+      const driverLibraryBitnessValue = Number(device?.driver_library_bitness ?? device?.driverLibraryBitness);
+      const driverLibraryBitness = [32, 64].includes(driverLibraryBitnessValue) ? driverLibraryBitnessValue : null;
+      const readDriverCount = (...values) => {
+        const value = values.find((item) => item !== undefined && item !== null && item !== "");
+        const count = Number(value);
+        return Number.isInteger(count) && count >= 0 && count <= 1000 ? count : 0;
+      };
+      const driverRequiredApiCount = readDriverCount(device?.driver_required_api_count, device?.driverRequiredApiCount);
+      const driverDetectedRequiredApiCount = readDriverCount(device?.driver_detected_required_api_count, device?.driverDetectedRequiredApiCount);
+      const driverMissingRequiredApis = [...new Set((Array.isArray(device?.driver_missing_required_apis)
+        ? device.driver_missing_required_apis
+        : Array.isArray(device?.driverMissingRequiredApis)
+          ? device.driverMissingRequiredApis
+          : [])
+        .map((value) => String(value || "").trim())
+        .filter((value) => /^PassThru[A-Za-z0-9_]{1,80}$/.test(value))
+        .slice(0, 32))];
+      const driverRequiredApiReady = device?.driver_required_api_ready === true || device?.driverRequiredApiReady === true;
       return {
         id,
         label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
@@ -1319,6 +1341,22 @@
         adapter_family: adapterFamily ? String(adapterFamily).slice(0, 80) : null,
         driverLibraryDetected,
         driver_library_detected: driverLibraryDetected,
+        driverLibraryRegistered,
+        driver_library_registered: driverLibraryRegistered,
+        driverLibraryInspectionStatus,
+        driver_library_inspection_status: driverLibraryInspectionStatus,
+        driverLibraryArchitecture,
+        driver_library_architecture: driverLibraryArchitecture,
+        driverLibraryBitness,
+        driver_library_bitness: driverLibraryBitness,
+        driverRequiredApiCount,
+        driver_required_api_count: driverRequiredApiCount,
+        driverDetectedRequiredApiCount,
+        driver_detected_required_api_count: driverDetectedRequiredApiCount,
+        driverMissingRequiredApis,
+        driver_missing_required_apis: [...driverMissingRequiredApis],
+        driverRequiredApiReady,
+        driver_required_api_ready: driverRequiredApiReady,
         connectionStatus: connectionStatus ? String(connectionStatus).slice(0, 80) : null,
         connection_status: connectionStatus ? String(connectionStatus).slice(0, 80) : null,
         connected: device?.connected === true || device?.is_connected === true || device?.isConnected === true,

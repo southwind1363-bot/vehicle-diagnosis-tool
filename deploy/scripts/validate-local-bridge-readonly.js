@@ -1,5 +1,6 @@
-import { createLocalBridgeApp, decodeReplayLog, parseJ2534RegistryDrivers } from "../local-bridge-readonly.js";
+import { createLocalBridgeApp, decodeReplayLog, inspectJ2534LibraryFile, parseJ2534RegistryDrivers } from "../local-bridge-readonly.js";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,6 +28,22 @@ const j2534UnavailableReadIntents = [
   "read_onboard_monitor",
   "read_live_pid_snapshot"
 ];
+const j2534RequiredApis = [
+  "PassThruOpen",
+  "PassThruClose",
+  "PassThruConnect",
+  "PassThruDisconnect",
+  "PassThruReadMsgs",
+  "PassThruWriteMsgs",
+  "PassThruStartPeriodicMsg",
+  "PassThruStopPeriodicMsg",
+  "PassThruStartMsgFilter",
+  "PassThruStopMsgFilter",
+  "PassThruSetProgrammingVoltage",
+  "PassThruReadVersion",
+  "PassThruGetLastError",
+  "PassThruIoctl"
+];
 
 function check(condition, message) {
   if (!condition) failures.push(message);
@@ -43,6 +60,44 @@ function ecuResponseCodes(payload) {
 function hasUniqueDtcCodes(items) {
   const codes = (items || []).map((item) => item.code);
   return new Set(codes).size === codes.length;
+}
+
+function buildTestPeLibrary(machine, bitness, exportNames) {
+  const buffer = Buffer.alloc(4096);
+  const peOffset = 0x80;
+  const optionalHeaderSize = bitness === 64 ? 0xF0 : 0xE0;
+  const optionalHeaderOffset = peOffset + 24;
+  const dataDirectoryOffset = optionalHeaderOffset + (bitness === 64 ? 112 : 96);
+  const sectionOffset = optionalHeaderOffset + optionalHeaderSize;
+  buffer.writeUInt16LE(0x5A4D, 0);
+  buffer.writeUInt32LE(peOffset, 0x3C);
+  buffer.writeUInt32LE(0x00004550, peOffset);
+  buffer.writeUInt16LE(machine, peOffset + 4);
+  buffer.writeUInt16LE(1, peOffset + 6);
+  buffer.writeUInt16LE(optionalHeaderSize, peOffset + 20);
+  buffer.writeUInt16LE(bitness === 64 ? 0x20B : 0x10B, optionalHeaderOffset);
+  buffer.writeUInt32LE(0x1000, dataDirectoryOffset);
+  buffer.writeUInt32LE(0x500, dataDirectoryOffset + 4);
+  buffer.write(".rdata", sectionOffset, "ascii");
+  buffer.writeUInt32LE(0x600, sectionOffset + 8);
+  buffer.writeUInt32LE(0x1000, sectionOffset + 12);
+  buffer.writeUInt32LE(0x600, sectionOffset + 16);
+  buffer.writeUInt32LE(0x200, sectionOffset + 20);
+  const exportOffset = 0x200;
+  buffer.writeUInt32LE(exportNames.length, exportOffset + 20);
+  buffer.writeUInt32LE(exportNames.length, exportOffset + 24);
+  buffer.writeUInt32LE(0x1060, exportOffset + 28);
+  buffer.writeUInt32LE(0x10A0, exportOffset + 32);
+  buffer.writeUInt32LE(0x10E0, exportOffset + 36);
+  let nameRva = 0x1200;
+  exportNames.forEach((name, index) => {
+    buffer.writeUInt32LE(0x1400 + index * 4, 0x260 + index * 4);
+    buffer.writeUInt32LE(nameRva, 0x2A0 + index * 4);
+    buffer.writeUInt16LE(index, 0x2E0 + index * 2);
+    buffer.write(`${name}\0`, 0x200 + (nameRva - 0x1000), "ascii");
+    nameRva += Buffer.byteLength(name, "ascii") + 1;
+  });
+  return buffer;
 }
 
 function post(port, intent, pairingToken = token, data = {}) {
@@ -112,6 +167,36 @@ try {
   check(parsedJ2534Drivers.length === 2 && parsedJ2534Drivers[0]?.label === "Example J2534 VCI" && parsedJ2534Drivers[1]?.label === "Other Vendor", "J2534 registry parser did not retain safe driver labels");
   check(parsedJ2534Drivers.every((item) => item.driver_status === "j2534_registry_detected" && item.connected === false && item.vehicle_command_enabled === false), "J2534 registry parser did not preserve read-only driver detection state");
   check(!JSON.stringify(parsedJ2534Drivers).includes("C:\\Program Files"), "J2534 registry parser exposed a local driver path");
+  const j2534PeFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle-diagnosis-j2534-"));
+  try {
+    const x86LibraryPath = path.join(j2534PeFixtureDir, "j2534-x86.dll");
+    const x64LibraryPath = path.join(j2534PeFixtureDir, "j2534-x64-partial.dll");
+    const arm64LibraryPath = path.join(j2534PeFixtureDir, "j2534-arm64.dll");
+    const invalidLibraryPath = path.join(j2534PeFixtureDir, "invalid.dll");
+    fs.writeFileSync(x86LibraryPath, buildTestPeLibrary(0x014C, 32, j2534RequiredApis.map((name, index) => index === 0 ? `_${name}@4` : name)));
+    fs.writeFileSync(x64LibraryPath, buildTestPeLibrary(0x8664, 64, ["PassThruOpen", "PassThruClose", "PassThruReadVersion"]));
+    fs.writeFileSync(arm64LibraryPath, buildTestPeLibrary(0xAA64, 64, j2534RequiredApis));
+    fs.writeFileSync(invalidLibraryPath, "not a PE library");
+    const x86Inspection = inspectJ2534LibraryFile(x86LibraryPath);
+    const x64Inspection = inspectJ2534LibraryFile(x64LibraryPath);
+    const arm64Inspection = inspectJ2534LibraryFile(arm64LibraryPath);
+    const invalidInspection = inspectJ2534LibraryFile(invalidLibraryPath);
+    const missingInspection = inspectJ2534LibraryFile(path.join(j2534PeFixtureDir, "missing.dll"));
+    check(x86Inspection.inspection_status === "inspected" && x86Inspection.pe_architecture === "x86" && x86Inspection.pe_bitness === 32 && x86Inspection.required_api_ready === true && x86Inspection.detected_required_api_count === 14, "J2534 PE inspection did not recognize a complete decorated 32-bit API export set");
+    check(x64Inspection.inspection_status === "inspected" && x64Inspection.pe_architecture === "x64" && x64Inspection.pe_bitness === 64 && x64Inspection.required_api_ready === false && x64Inspection.missing_required_apis.includes("PassThruConnect"), "J2534 PE inspection did not report missing 64-bit API exports");
+    check(arm64Inspection.pe_architecture === "arm64" && arm64Inspection.pe_bitness === 64 && arm64Inspection.required_api_ready === true, "J2534 PE inspection did not recognize an ARM64 library");
+    check(invalidInspection.inspection_status === "invalid_pe" && missingInspection.inspection_status === "file_not_found" && x86Inspection.vehicle_command_enabled === false && !JSON.stringify(x86Inspection).includes(j2534PeFixtureDir), "J2534 PE inspection did not safely reject invalid input or exposed its local path");
+    const inspectedRegistryDrivers = parseJ2534RegistryDrivers([
+      "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Fixture VCI",
+      "    Name    REG_SZ    Fixture J2534 VCI",
+      "    Vendor    REG_SZ    Fixture Vendor",
+      `    FunctionLibrary    REG_SZ    ${x86LibraryPath}`
+    ].join("\n"), { inspectLibraries: true });
+    check(inspectedRegistryDrivers[0]?.driver_library_architecture === "x86" && inspectedRegistryDrivers[0]?.driver_library_bitness === 32 && inspectedRegistryDrivers[0]?.driver_required_api_ready === true && inspectedRegistryDrivers[0]?.driver_detected_required_api_count === 14, "J2534 registry discovery did not attach safe DLL compatibility metadata");
+    check(!JSON.stringify(inspectedRegistryDrivers).includes(x86LibraryPath) && inspectedRegistryDrivers[0]?.vehicle_command_enabled === false, "J2534 registry discovery exposed a DLL path or enabled vehicle commands");
+  } finally {
+    fs.rmSync(j2534PeFixtureDir, { recursive: true, force: true });
+  }
   const j2534DiscoveryServer = createLocalBridgeApp({ pairingToken: token, j2534RegistryText });
   const j2534DiscoveryPort = await new Promise((resolve) => {
     j2534DiscoveryServer.listen(0, "127.0.0.1", () => resolve(j2534DiscoveryServer.address().port));
@@ -552,6 +637,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 191");
+  console.log("Local bridge read-only checks: 197");
   console.log("Errors: 0");
 }
