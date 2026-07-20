@@ -16539,7 +16539,7 @@
         .map((value) => value.padStart(2, "0"))
         .filter((value) => isSupportedPidBase(parseInt(value, 16)))
       )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
-      const status = row.supportedPidReadoutStatus || row.supported_pid_readout_status || (pids.length ? "reported" : "unknown");
+      const status = row.supportedPidReadoutStatus || row.supported_pid_readout_status || (pids.length || pageBases.length ? "reported" : "unknown");
       return {
         sourceEcu: ecu,
         source_ecu: ecu,
