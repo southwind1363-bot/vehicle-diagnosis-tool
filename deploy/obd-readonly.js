@@ -563,12 +563,21 @@
     }),
     Object.freeze({
       intent: "read_live_pid_snapshot",
-      label: "Live PID snapshot",
-      dataShape: Object.freeze(["protocol", "supported_pids", "values", "captured_at"]),
+      label: "Live PID or readiness snapshot",
+      requestVariants: Object.freeze([
+        Object.freeze({ readoutId: "live_pid_snapshot", requestData: Object.freeze({}) }),
+        Object.freeze({ readoutId: "readiness_snapshot", requestData: Object.freeze({ readout_id: "readiness_snapshot", pid: "01" }) })
+      ]),
+      dataShape: Object.freeze(["protocol", "supported_pids", "values", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d", "readiness_ecu_snapshots", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,
         supported_pids: Object.freeze([]),
         values: Object.freeze([]),
+        readiness_status_byte_a: null,
+        readiness_status_byte_b: null,
+        readiness_status_byte_c: null,
+        readiness_status_byte_d: null,
+        readiness_ecu_snapshots: Object.freeze([]),
         captured_at: null
       })
     }),
@@ -677,6 +686,9 @@
     return localBridgeResponseSchemas.map((item) => ({
       ...item,
       dataShape: [...item.dataShape],
+      requestVariants: Array.isArray(item.requestVariants)
+        ? item.requestVariants.map((variant) => ({ ...variant, requestData: cloneBridgeValue(variant.requestData || {}) }))
+        : [],
       safeDefault: cloneBridgeValue(item.safeDefault)
     }));
   }

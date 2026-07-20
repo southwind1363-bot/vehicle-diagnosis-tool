@@ -3028,6 +3028,7 @@ check(bridgeSchemas.some((item) => item.intent === "read_supported_pids" && Arra
 check(bridgeSchemas.some((item) => item.intent === "read_ecu_info" && Array.isArray(item.safeDefault.values)), "ECU info bridge response schema is missing");
 check(bridgeSchemas.some((item) => item.intent === "read_onboard_monitor" && Array.isArray(item.safeDefault.tests)), "On-board monitor bridge response schema is missing");
 check(bridgeSchemas.some((item) => item.intent === "read_live_pid_snapshot" && Array.isArray(item.safeDefault.values)), "ライブPID応答型がありません");
+check(bridgeSchemas.some((item) => item.intent === "read_live_pid_snapshot" && item.requestVariants?.some((variant) => variant.readoutId === "readiness_snapshot" && variant.requestData?.pid === "01") && item.dataShape.includes("readiness_ecu_snapshots") && Array.isArray(item.safeDefault.readiness_ecu_snapshots)), "Bridge response schema did not expose the dedicated read-only readiness PID 01 variant");
 check(bridgeSchemas.some((item) => item.intent === "read_supported_pids" && Array.isArray(item.safeDefault.supported_pid_ecu_snapshots) && item.dataShape.includes("supported_pid_ecu_snapshots")), "Supported PID bridge schema did not retain ECU-scoped safe defaults");
 const blockedSupportedPidBridgeResponse = obd.createLocalBridgeBlockedResponse("read_supported_pids");
 check(Array.isArray(blockedSupportedPidBridgeResponse.data.supported_pid_ecu_snapshots) && blockedSupportedPidBridgeResponse.data.supported_pid_ecu_snapshots.length === 0 && blockedSupportedPidBridgeResponse.would_transmit === false, "Blocked supported PID bridge response did not retain an empty ECU-scoped safe default");
@@ -16730,6 +16731,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2671");
+  console.log("OBD read-only safety checks: 2672");
   console.log("Errors: 0");
 }
