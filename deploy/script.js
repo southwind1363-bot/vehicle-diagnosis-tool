@@ -6407,18 +6407,22 @@ function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
   const attemptedReadoutCountValue = summary.attemptedReadoutCount ?? summary.attempted_readout_count;
   const pendingReadoutCountValue = summary.pendingReadoutCount ?? summary.pending_readout_count;
   const errorReadoutCountValue = summary.errorReadoutCount ?? summary.error_readout_count;
+  const errorCodesSource = summary.errorCodes ?? summary.error_codes ?? [];
   const totalReadoutCountValue = summary.totalReadoutCount ?? summary.total_readout_count;
   const totalValueCount = Number.isFinite(Number(totalValueCountValue)) ? Number(totalValueCountValue) : 0;
   const captured = Number.isFinite(Number(capturedReadoutCountValue)) ? Number(capturedReadoutCountValue) : 0;
   const attempted = Number.isFinite(Number(attemptedReadoutCountValue)) ? Number(attemptedReadoutCountValue) : captured;
   const pending = Number.isFinite(Number(pendingReadoutCountValue)) ? Number(pendingReadoutCountValue) : 0;
   const errorReadoutCount = Number.isFinite(Number(errorReadoutCountValue)) ? Number(errorReadoutCountValue) : 0;
+  const errorCodes = Array.isArray(errorCodesSource) ? errorCodesSource : [];
   const total = Number.isFinite(Number(totalReadoutCountValue)) ? Number(totalReadoutCountValue) : 0;
   const parts = [];
   if (total) parts.push(`${captured}/${total}読取`);
   if (total && attempted !== captured) parts.push(`試行${attempted}/${total}`);
   if (pending > 0) parts.push(`保留${pending}`);
   if (errorReadoutCount > 0) parts.push(`読取失敗${errorReadoutCount}`);
+  const errorReasonLabel = formatReadoutErrorCodes(errorCodes);
+  if (errorReasonLabel) parts.push(errorReasonLabel);
   parts.push(`${totalValueCount}値`);
   [
     ["DTC", "dtc_snapshot"],
@@ -6433,6 +6437,21 @@ function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
     if (count > 0) parts.push(`${label}${count}`);
   });
   return parts.length ? parts.join(" / ") : fallback;
+}
+
+function formatReadoutErrorCodes(errorCodes = []) {
+  const labels = [...new Set((Array.isArray(errorCodes) ? errorCodes : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .map((code) => {
+      if (code === "transport:timeout") return "通信タイムアウト";
+      if (/_not_observed$/.test(code)) return "応答未観測";
+      if (/_transport_incomplete$/.test(code)) return "通信途中";
+      if (/_payload_incomplete$/.test(code)) return "応答不足";
+      if (/_payload_unparsed$/.test(code)) return "応答形式未対応";
+      return code;
+    }))];
+  return labels.length ? `理由:${labels.slice(0, 3).join(",")}` : "";
 }
 
 function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA) {
