@@ -264,6 +264,21 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     };
   }
 
+  if (discoveryMode) {
+    return {
+      ...base,
+      ok: false,
+      errors: ["vci_not_connected"],
+      data: {
+        selected_device_id: discoveredVciDevices[0].id,
+        adapter_family: "j2534_passthru",
+        driver_status: "j2534_registry_detected",
+        connection_status: "driver_detected_not_opened",
+        vehicle_command_enabled: false
+      }
+    };
+  }
+
   if ((request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc" || request.intent === "read_permanent_dtc") && replaySnapshot) {
     const status = request.intent === "read_pending_dtc" ? "pending" : request.intent === "read_permanent_dtc" ? "permanent" : "stored";
     const dtcs = replaySnapshot.dtcs.filter((item) => item.status === status);

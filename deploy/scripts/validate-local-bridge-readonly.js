@@ -112,6 +112,22 @@ try {
     const j2534Identity = await post(j2534DiscoveryPort, "adapter_identity");
     check(j2534Status.data.sample_mode === false && j2534Status.data.vci_detected_count === 2 && j2534Vci.data.driver_status === "j2534_registry_detected" && j2534Vci.data.devices.length === 2 && j2534Vci.data.devices.every((item) => item.connected === false), "J2534 registry discovery did not expose detected drivers without opening a VCI");
     check(j2534Identity.data.adapter_family === "j2534_passthru" && j2534Identity.data.driver_status === "j2534_registry_detected" && j2534Identity.data.vehicle_command_enabled === false, "J2534 registry discovery did not preserve adapter identity read-only safety");
+    const j2534UnavailableReadIntents = [
+      "read_stored_dtc",
+      "read_pending_dtc",
+      "read_permanent_dtc",
+      "read_freeze_frame",
+      "read_supported_pids",
+      "read_ecu_info",
+      "read_onboard_monitor",
+      "read_live_pid_snapshot"
+    ];
+    for (const intent of j2534UnavailableReadIntents) {
+      const unavailableReadout = await post(j2534DiscoveryPort, intent);
+      check(unavailableReadout.ok === false && unavailableReadout.blocked === false && unavailableReadout.would_transmit === false && unavailableReadout.errors.includes("vci_not_connected"), `J2534 discovery ${intent} did not stop before an unopened VCI readout`);
+      check(unavailableReadout.data.connection_status === "driver_detected_not_opened" && unavailableReadout.data.vehicle_command_enabled === false, `J2534 discovery ${intent} did not retain the unopened read-only state`);
+      check(!Object.hasOwn(unavailableReadout.data, "dtcs") && !Object.hasOwn(unavailableReadout.data, "values") && !Object.hasOwn(unavailableReadout.data, "tests") && !Object.hasOwn(unavailableReadout.data, "supported_pids"), `J2534 discovery ${intent} exposed sample diagnostic data`);
+    }
   } finally {
     await new Promise((resolve) => j2534DiscoveryServer.close(resolve));
   }
@@ -514,6 +530,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 182");
+  console.log("Local bridge read-only checks: 185");
   console.log("Errors: 0");
 }

@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2681件",
-  bridgeValidationCheckLabel: "bridge検証 182件",
-  recentMilestone: "J2534検出情報を読取セッションへ保持",
+  validationCheckLabel: "OBD安全検証 2682件",
+  bridgeValidationCheckLabel: "bridge検証 185件",
+  recentMilestone: "未接続J2534のサンプル誤表示を遮断",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.72";
+const APP_VERSION = "3.3.73";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6444,6 +6444,7 @@ function formatReadoutErrorCodes(errorCodes = []) {
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .map((code) => {
+      if (code === "vci_not_connected") return "VCI未接続";
       if (code === "transport:timeout") return "通信タイムアウト";
       if (/_not_observed$/.test(code)) return "応答未観測";
       if (/_transport_incomplete$/.test(code)) return "通信途中";
