@@ -15347,12 +15347,19 @@
       ? normalizeEcuInfoSnapshot(Array.isArray(safeEcuInfoInput) ? { items: safeEcuInfoInput, source: scannerJsonSource } : toSnapshotInput(safeEcuInfoInput, "items"))
       : null;
     const hasSupportedPidInput = hasValue(supportedPidInput) || (typeof supportedPidInput === "string" && supportedPidInput.trim());
+    const isTypedSupportedPidSnapshot = supportedPidInput && typeof supportedPidInput === "object" && !Array.isArray(supportedPidInput)
+      && ["supported_pid_matrix_v1"].includes(supportedPidInput.schemaVersion || supportedPidInput.schema_version || "");
     const supportedPidMatrix = hasSupportedPidInput
-      ? { ...normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput)
-        ? { supported_pids: supportedPidInput, source: scannerJsonSource }
-        : typeof supportedPidInput === "string"
-          ? { supported_pid_list: supportedPidInput, source: scannerJsonSource }
-          : toSnapshotInput(supportedPidInput, "supported_pids")), source: scannerJsonSource }
+      ? {
+        ...(isTypedSupportedPidSnapshot
+          ? buildSupportedPidMatrix(toSnapshotInput(supportedPidInput, "supported_pids"))
+          : normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput)
+            ? { supported_pids: supportedPidInput, source: scannerJsonSource }
+            : typeof supportedPidInput === "string"
+              ? { supported_pid_list: supportedPidInput, source: scannerJsonSource }
+              : toSnapshotInput(supportedPidInput, "supported_pids"))),
+        source: scannerJsonSource
+      }
       : null;
     const onboardMonitorSnapshot = hasValue(onboardMonitorInput)
       ? normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests"))
