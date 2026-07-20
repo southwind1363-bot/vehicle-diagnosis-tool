@@ -123,7 +123,7 @@
               診断機の読取結果
               <textarea id="obdScannerText" rows="8" placeholder="例:&#10;THINKCAR / ELM327&#10;Stored DTCs&#10;P0171 P0300&#10;Pending Codes&#10;P0420&#10;Engine RPM: 780 rpm&#10;Coolant Temp: 88 C&#10;STFT B1: 3.1 %&#10;Control Module Voltage: 14.2 V"></textarea>
             </label>
-            <p class="case-note">DTCと「項目名: 数値 単位」のログを解析します。Current/Pending/Permanent の見出しや、THINKCAR、ELM327、Techstream/J2534、CONSULT、HDS、IDS などの読取元ヒントも表示します。iPhone対応アプリのread-only結果は、共有またはコピーできる文字だけを貼り付けます。入力原文は保存・外部送信しません。</p>
+            <p class="case-note">DTCと「項目名: 数値 単位」のログを解析します。Current/Pending/Permanent の見出しや、THINKCAR、ELM327、Techstream/J2534、CONSULT、HDS、IDS などの読取元ヒントも表示します。外部診断機から共有またはコピーできる文字の取込は補助経路です。入力原文は保存・外部送信しません。</p>
 
             <div class="button-row">
               <button id="obdImportPasteButton" class="secondary-button" type="button">クリップボードを貼付</button>
@@ -513,7 +513,7 @@
                 読取方式
                 <select id="obdInterfaceSelect">
                   <option value="auto">自動判定</option>
-                  <option value="user-vci-elm327">ELM327 / iPhoneアプリ取込・Web Serial</option>
+                  <option value="user-vci-elm327">ELM327 / Web Serial・iPhone接続準備</option>
                   <option value="user-vci-thinkcar-bluetooth">THINKCAR Bluetooth</option>
                   <option value="user-vci-techstream-j2534">J2534 Pass-Thru（必須）</option>
                   <option value="user-vci-rcmall-mks-canable-v2-pro">CANable候補</option>

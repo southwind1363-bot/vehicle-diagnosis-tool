@@ -155,10 +155,10 @@
       platform: "ios",
       browser: "webkit",
       adapterTransport: "ble-gatt-or-classic",
-      route: "companion_import_required",
-      currentAvailability: "Web Bluetooth非対応のためコンパニオン取込のみ準備中",
+      route: "native_connector_required",
+      currentAvailability: "Web Bluetooth非対応のため自前iPhoneコネクタを準備中",
       requiresCompanionBridge: true,
-      requiredBeforeReadout: Object.freeze(["対応アプリのread-only読取", "共有/貼付データの正規化", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク"])
+      requiredBeforeReadout: Object.freeze(["自前iPhoneコネクタのread-only実装", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
     })
   ]);
 
@@ -166,18 +166,34 @@
     Object.freeze({
       interfaceId: "user-vci-thinkcar-bluetooth",
       platform: "ios",
-      route: "app_export_import",
+      route: "native_connector_required",
       requiresDesktop: false,
-      currentAvailability: "対応iPhoneアプリと読取結果形式の実機確認待ち",
-      requiredBeforeReadout: Object.freeze(["正確なTHINKCAR機種と対応iPhoneアプリの確認", "アプリ側でDTC/フリーズフレーム/PID/ECU情報をread-only取得", "共有・貼付できる結果形式の確認", "識別情報を保存前にマスク", "取込結果を診断セッションへ正規化"])
+      currentAvailability: "自前iPhoneコネクタとTHINKCAR通信仕様の確認待ち",
+      requiredBeforeReadout: Object.freeze(["正確なTHINKCAR機種とBLE/SDK仕様の確認", "自前コネクタでDTC/フリーズフレーム/PID/ECU情報をread-only取得", "切断・タイムアウト時の安全停止", "識別情報を保存前にマスク", "読取結果を診断セッションへ正規化"])
     }),
     Object.freeze({
       interfaceId: "user-vci-elm327",
       platform: "ios",
-      route: "app_export_import",
+      route: "native_connector_required",
       requiresDesktop: false,
-      currentAvailability: "Bluetooth方式と対応iPhoneアプリの実機確認待ち",
-      requiredBeforeReadout: Object.freeze(["ELM327のBluetooth方式とiPhone対応アプリの確認", "アプリ側でMode 03/07/02/01のread-only結果を取得", "共有・貼付できる結果形式の確認", "AT初期化差分とタイムアウト停止をアプリ側で確認", "取込結果を診断セッションへ正規化"])
+      currentAvailability: "Bluetooth方式と自前iPhoneコネクタの実機確認待ち",
+      requiredBeforeReadout: Object.freeze(["ELM327のBluetooth Classic/BLE方式確認", "自前コネクタでMode 03/07/02/01をread-only取得", "AT初期化差分とタイムアウト停止の確認", "識別情報を保存前にマスク", "読取結果を診断セッションへ正規化"])
+    }),
+    Object.freeze({
+      interfaceId: "user-vci-elm327",
+      platform: "desktop",
+      route: "desktop_web_serial",
+      requiresDesktop: true,
+      currentAvailability: "Web Serial read-only実装済み・実機適合確認待ち",
+      requiredBeforeReadout: Object.freeze(["HTTPSとWeb Serial対応Chrome系ブラウザ", "ELM327/STNのUSBシリアル認識", "読取専用AT/OBD初期化", "切断・タイムアウト時の安全停止", "実機応答の診断セッション正規化"])
+    }),
+    Object.freeze({
+      interfaceId: "user-vci-thinkcar-bluetooth",
+      platform: "desktop",
+      route: "desktop_local_bridge",
+      requiresDesktop: true,
+      currentAvailability: "PC側ローカルブリッジ実装済み・実機通信仕様確認待ち",
+      requiredBeforeReadout: Object.freeze(["THINKCARのPC接続方式または公式SDK確認", "VCI列挙とアダプター識別", "read-only DTC/FF/PID/ECU情報の応答確認", "切断・タイムアウト時の安全停止", "変更系APIの遮断確認"])
     }),
     Object.freeze({
       interfaceId: "user-vci-techstream-j2534",
