@@ -6329,7 +6329,7 @@ check(onboardMonitorSnapshotDataAliases.tests[1]?.status === "pass" && onboardMo
 check(onboardMonitorSnapshotDataAliases.tests[2]?.status === "fail" && onboardMonitorSnapshotDataAliases.tests[2]?.passed === false, "Mode 06 snapshot did not preserve explicit failed status without limits");
 check(onboardMonitorSnapshotDataAliases.test_count === 3 && onboardMonitorSnapshotDataAliases.passed_count === 2 && onboardMonitorSnapshotDataAliases.failed_count === 1 && onboardMonitorSnapshotDataAliases.unknown_count === 0, "Mode 06 snapshot did not expose snake_case data payload count aliases");
 check(onboardMonitorSnapshotDataAliases.captured_at === "2026-07-07T00:50:00Z" && onboardMonitorSnapshotDataAliases.retained_raw_text === false, "Mode 06 snapshot did not expose snake_case capture and retention aliases");
-const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, adapterIdentity: bridgeAdapterIdentity });
+const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, supportedPidMatrix: bridgeSupportedPidSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 const bridgeSummaryTypedDtcAliases = obd.buildBridgeSessionSummary({
   stored_dtc_snapshot: { dtcs: [{ code: "P0171" }] },
@@ -6908,6 +6908,22 @@ const bridgeImportExplicitReadinessResponse = obd.buildBridgeDiagnosticImport({
   readinessResponse: { raw: "41 01 00 07 65 00" }
 });
 check(bridgeImportExplicitReadinessResponse.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeImportExplicitReadinessResponse.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && bridgeImportExplicitReadinessResponse.vehicleCommandEnabled === false && bridgeImportExplicitReadinessResponse.wouldTransmit === false, "Bridge diagnostic import did not retain an explicit readiness response as a read-only readiness readout");
+const bridgeSummaryLivePidSupportedPidIsolation = obd.buildBridgeSessionSummary({
+  livePidSnapshot: { monitorValues: [{ id: "engine_speed", value: 900, unit: "rpm" }], supportedPids: ["0C"] }
+});
+check(bridgeSummaryLivePidSupportedPidIsolation.monitorValues?.[0]?.value === 900 && bridgeSummaryLivePidSupportedPidIsolation.supportedPidMatrix?.supportedPidReadoutStatus === "blocked" && bridgeSummaryLivePidSupportedPidIsolation.readoutCoverage?.itemById?.supported_pid_matrix?.status === "missing" && bridgeSummaryLivePidSupportedPidIsolation.wouldTransmit === false, "Bridge session summary treated live PID metadata as an explicit supported-PID readout");
+const bridgeSummaryExplicitSupportedPidResponse = obd.buildBridgeSessionSummary({
+  supportedPidSnapshot: { supportedPids: ["0C"] }
+});
+check(bridgeSummaryExplicitSupportedPidResponse.supportedPidMatrix?.supportedPidReadoutStatus === "reported" && bridgeSummaryExplicitSupportedPidResponse.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && bridgeSummaryExplicitSupportedPidResponse.wouldTransmit === false, "Bridge session summary did not retain an explicit supported-PID readout");
+const bridgeImportLivePidSupportedPidIsolation = obd.buildBridgeDiagnosticImport({
+  livePidSnapshot: { monitorValues: [{ id: "engine_speed", value: 900, unit: "rpm" }], supportedPids: ["0C"] }
+});
+check(bridgeImportLivePidSupportedPidIsolation.bridgeSession?.monitorValues?.[0]?.value === 900 && bridgeImportLivePidSupportedPidIsolation.bridgeSession?.supportedPidMatrix?.supportedPidReadoutStatus === "blocked" && bridgeImportLivePidSupportedPidIsolation.bridgeSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "missing" && bridgeImportLivePidSupportedPidIsolation.vehicleCommandEnabled === false && bridgeImportLivePidSupportedPidIsolation.wouldTransmit === false, "Bridge diagnostic import treated live PID metadata as an explicit supported-PID readout");
+const bridgeImportExplicitSupportedPidResponse = obd.buildBridgeDiagnosticImport({
+  supportedPidSnapshot: { supportedPids: ["0C"] }
+});
+check(bridgeImportExplicitSupportedPidResponse.bridgeSession?.supportedPidMatrix?.supportedPidReadoutStatus === "reported" && bridgeImportExplicitSupportedPidResponse.bridgeSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && bridgeImportExplicitSupportedPidResponse.vehicleCommandEnabled === false && bridgeImportExplicitSupportedPidResponse.wouldTransmit === false, "Bridge diagnostic import did not retain an explicit supported-PID readout");
 const bridgeSummaryCamelResponseAliases = obd.buildBridgeSessionSummary({
   dtcSnapshot: bridgeDtcSnapshot,
   livePidResponse: { raw: "41 0C 1A F8 41 05 7B" },
@@ -16713,6 +16729,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2666");
+  console.log("OBD read-only safety checks: 2670");
   console.log("Errors: 0");
 }

@@ -3910,7 +3910,7 @@
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
-        : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: livePidSnapshot.supportedPids || [] } }));
+        : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || {}));
     const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
