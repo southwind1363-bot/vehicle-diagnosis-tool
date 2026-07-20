@@ -15294,6 +15294,7 @@
     const headerIndex = new Map(headers.map((header, index) => [normalizeHeader(header), index]).filter(([header]) => header));
     const findIndex = (...aliases) => aliases.map((alias) => headerIndex.get(normalizeHeader(alias))).find((index) => Number.isInteger(index));
     const dtcIndex = findIndex("dtc", "dtc code", "fault code", "trouble code", "diagnostic trouble code", "故障コード", "DTCコード", "診断トラブルコード");
+    const dtcFormatIndex = findIndex("code format", "dtc format", "code type", "dtc type", "manufacturer specific");
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
     const statusIndex = findIndex("status", "dtc status", "state", "状態", "ステータス", "DTC状態");
     const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask", "status of dtc", "uds status byte");
@@ -15443,6 +15444,7 @@
       }
       if (!protocol) protocol = rowProtocol;
       const dtc = cellAt(dtcIndex, 48);
+      const dtcFormat = cellAt(dtcFormatIndex, 48).toLowerCase();
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const dtcStatusByte = cellAt(dtcStatusByteIndex, 12);
       if (dtcStatusAvailabilityMask === null) dtcStatusAvailabilityMask = cellAt(dtcStatusAvailabilityMaskIndex, 12) || null;
@@ -15476,7 +15478,8 @@
         const normalizedIgnitionType = { "火花点火": "spark", "圧縮点火": "compression" }[ignitionType] || ignitionType;
         if (readinessIgnitionType === null && ["spark", "compression"].includes(normalizedIgnitionType)) readinessIgnitionType = normalizedIgnitionType;
       }
-      const hasDtcCode = Boolean(dtc && extractDtcReferences(dtc).length);
+      const manufacturerSpecificDtc = /^(?:manufacturer[\s_-]*specific|oem|proprietary)$/.test(dtcFormat);
+      const hasDtcCode = Boolean(dtc && (extractDtcReferences(dtc).length || (manufacturerSpecificDtc && extractManufacturerSpecificDtcReference(dtc))));
       const readFreezeFrameNumber = () => {
         const frameNumberText = cellAt(freezeFrameNumberIndex, 12);
         const frameNumber = frameNumberText ? Number(frameNumberText) : null;
@@ -15496,6 +15499,7 @@
       if (hasDtcCode) {
         dtcs.push({
           code: dtc,
+          ...(manufacturerSpecificDtc ? { code_format: "manufacturer_specific", manufacturer_specific: true } : {}),
           subcode: /^[0-9A-F]{1,4}$/.test(dtcSubcode) ? dtcSubcode : null,
           ...(dtcStatusByte ? { status_byte: dtcStatusByte } : {}),
           ...(dtcSeverity ? { severity: dtcSeverity } : {}),
