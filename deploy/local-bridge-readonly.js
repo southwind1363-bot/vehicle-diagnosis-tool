@@ -239,7 +239,6 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        captured_at: new Date().toISOString(),
         ecu_responses: buildEcuResponsesForDtcs(replaySnapshot.ecuResponses, dtcs),
         dtcs
       }
@@ -253,7 +252,6 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        captured_at: new Date().toISOString(),
         ecu_responses: [{ ecu: "7E8", status: "sample", dtcs: sampleCodes }],
         dtcs: sampleCodes.map((code) => ({ code, status, ecu: "7E8" }))
       }
@@ -268,7 +266,6 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        captured_at: new Date().toISOString(),
         trigger_dtc: replaySnapshot.triggerDtc,
         values: replaySnapshot.freezeFrameValues
       }
@@ -280,7 +277,6 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        captured_at: new Date().toISOString(),
         trigger_dtc: "P0171",
         values: [
           { id: "engine_speed", value: 1726, unit: "rpm" },
@@ -298,8 +294,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        supported_pids: replaySnapshot.supportedPids,
-        captured_at: new Date().toISOString()
+        supported_pids: replaySnapshot.supportedPids
       }
     };
   }
@@ -309,8 +304,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        supported_pids: SAMPLE_SUPPORTED_PIDS,
-        captured_at: new Date().toISOString()
+        supported_pids: SAMPLE_SUPPORTED_PIDS
       }
     };
   }
@@ -323,8 +317,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        values: replaySnapshot.ecuInfoValues,
-        captured_at: new Date().toISOString()
+        values: replaySnapshot.ecuInfoValues
       }
     };
   }
@@ -334,8 +327,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        values: SAMPLE_ECU_INFO_VALUES,
-        captured_at: new Date().toISOString()
+        values: SAMPLE_ECU_INFO_VALUES
       }
     };
   }
@@ -348,8 +340,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        tests: replaySnapshot.onboardMonitorTests,
-        captured_at: new Date().toISOString()
+        tests: replaySnapshot.onboardMonitorTests
       }
     };
   }
@@ -359,8 +350,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        tests: SAMPLE_ONBOARD_MONITOR_TESTS,
-        captured_at: new Date().toISOString()
+        tests: SAMPLE_ONBOARD_MONITOR_TESTS
       }
     };
   }
@@ -374,7 +364,6 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       data: {
         protocol: replaySnapshot.protocol,
         supported_pids: replaySnapshot.supportedPids,
-        captured_at: new Date().toISOString(),
         values: replaySnapshot.liveValues
       }
     };
@@ -386,7 +375,6 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       data: {
         protocol: "ISO15765-4",
         supported_pids: SAMPLE_SUPPORTED_PIDS,
-        captured_at: new Date().toISOString(),
         values: SAMPLE_LIVE_VALUES
       }
     };

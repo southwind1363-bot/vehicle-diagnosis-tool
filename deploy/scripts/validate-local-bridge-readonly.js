@@ -250,6 +250,7 @@ try {
   check(replayVci.data.devices[0]?.id === "replay-readonly-input" && replayVci.data.devices[0]?.replay_mode === true && replayVci.data.devices[0]?.connected === false, "replay mode did not identify its disconnected input source");
 
   const replayDtc = await post(replayPort, "read_stored_dtc");
+  check(!Object.hasOwn(replayDtc.data, "captured_at"), "replay DTC response fabricated a capture timestamp");
   check(replayDtc.data.dtcs.some((item) => item.code === "P0171"), "replay DTC response did not include P0171");
   check(replayDtc.data.ecu_responses[0].ecu === "7E8", "replay DTC response did not keep ECU address");
   check(replayDtc.data.dtcs.every((item) => isDtcCode(item.code) && item.status === "stored"), "replay stored DTC response included an invalid code or status");
@@ -351,6 +352,7 @@ try {
   }
 
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
+  check(!Object.hasOwn(replayEcuInfo.data, "captured_at"), "replay ECU information response fabricated a capture timestamp");
   check(replayEcuInfo.data.values.some((item) => item.id === "supported_info_types_00" && item.value === "55 60 00 00"), "replay ECU info did not decode Mode 09 supported information types");
   check(replayEcuInfo.data.values.some((item) => item.id === "in_use_performance_tracking_spark" && item.value === "00 00 00 01"), "replay ECU info did not decode Mode 09 spark performance counters");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
@@ -367,6 +369,7 @@ try {
   check(replayOnboardMonitor.data.tests.some((item) => item.test_id === "02" && item.value === 300), "replay Mode 06 did not decode failing test");
 
   const replayLive = await post(replayPort, "read_live_pid_snapshot");
+  check(!Object.hasOwn(replayLive.data, "captured_at"), "replay live PID response fabricated a capture timestamp");
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
   check(replayLive.data.values.some((item) => item.id === "coolant_temp" && item.value === 83), "replay live response did not decode coolant temperature");
   check(replayLive.data.values.some((item) => item.id === "control_module_voltage" && item.value === 14.2), "replay live response did not decode module voltage");
