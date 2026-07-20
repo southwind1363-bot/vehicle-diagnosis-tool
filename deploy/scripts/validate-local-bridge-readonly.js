@@ -262,6 +262,17 @@ try {
   try {
     const incompleteReplayDtc = await post(incompleteReplayPort, "read_stored_dtc");
     check(incompleteReplayDtc.ok === false && incompleteReplayDtc.errors.includes("replay_dtc_payload_incomplete") && incompleteReplayDtc.data.dtcs.length === 0, "incomplete replay DTC payload was treated as an empty valid readout");
+    const missingReplayReadouts = [
+      ["read_freeze_frame", "replay_freeze_frame_not_observed"],
+      ["read_supported_pids", "replay_supported_pids_not_observed"],
+      ["read_ecu_info", "replay_ecu_info_not_observed"],
+      ["read_onboard_monitor", "replay_onboard_monitor_not_observed"],
+      ["read_live_pid_snapshot", "replay_live_pid_not_observed"]
+    ];
+    for (const [intent, error] of missingReplayReadouts) {
+      const response = await post(incompleteReplayPort, intent);
+      check(response.ok === false && response.errors.includes(error), `replay ${intent} was treated as an empty valid readout when not observed`);
+    }
   } finally {
     await new Promise((resolve) => incompleteReplayServer.close(resolve));
   }
@@ -353,6 +364,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 144");
+  console.log("Local bridge read-only checks: 145");
   console.log("Errors: 0");
 }

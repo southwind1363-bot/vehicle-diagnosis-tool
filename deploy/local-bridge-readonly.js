@@ -252,8 +252,10 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   }
 
   if (request.intent === "read_freeze_frame" && replaySnapshot) {
+    const replayError = replaySnapshot.readoutObserved?.freeze_frame ? null : "replay_freeze_frame_not_observed";
     return {
       ...base,
+      ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         captured_at: new Date().toISOString(),
@@ -279,8 +281,10 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   }
 
   if (request.intent === "read_supported_pids" && replaySnapshot) {
+    const replayError = replaySnapshot.readoutObserved?.supported_pids ? null : "replay_supported_pids_not_observed";
     return {
       ...base,
+      ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         supported_pids: replaySnapshot.supportedPids,
@@ -301,8 +305,10 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   }
 
   if (request.intent === "read_ecu_info" && replaySnapshot) {
+    const replayError = replaySnapshot.readoutObserved?.ecu_info ? null : "replay_ecu_info_not_observed";
     return {
       ...base,
+      ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         values: replaySnapshot.ecuInfoValues,
@@ -323,8 +329,10 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   }
 
   if (request.intent === "read_onboard_monitor" && replaySnapshot) {
+    const replayError = replaySnapshot.readoutObserved?.onboard_monitor ? null : "replay_onboard_monitor_not_observed";
     return {
       ...base,
+      ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         tests: replaySnapshot.onboardMonitorTests,
@@ -345,8 +353,10 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   }
 
   if (request.intent === "read_live_pid_snapshot" && replaySnapshot) {
+    const replayError = replaySnapshot.readoutObserved?.live_pid_snapshot ? null : "replay_live_pid_not_observed";
     return {
       ...base,
+      ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         supported_pids: replaySnapshot.supportedPids,
@@ -407,6 +417,7 @@ export function decodeReplayLog(text) {
   const ecus = new Set();
   const dtcReadoutObserved = { stored: false, pending: false, permanent: false };
   const dtcReadoutErrors = { stored: null, pending: null, permanent: null };
+  const readoutObserved = { freeze_frame: false, supported_pids: false, ecu_info: false, onboard_monitor: false, live_pid_snapshot: false };
   let triggerDtc = null;
 
   packets.forEach(({ ecu, bytes }) => {
@@ -436,6 +447,7 @@ export function decodeReplayLog(text) {
     }
 
     if (service === 0x42) {
+      readoutObserved.freeze_frame = true;
       const pid = toHexByte(bytes[serviceIndex + 1]);
       const frameNumber = bytes[serviceIndex + 2];
       if (!pid || !Number.isInteger(frameNumber)) return;
@@ -455,12 +467,14 @@ export function decodeReplayLog(text) {
     }
 
     if (service === 0x49) {
+      readoutObserved.ecu_info = true;
       const decoded = decodeEcuInfoValue(bytes[serviceIndex + 1], bytes.slice(serviceIndex + 2));
       if (decoded) ecuInfoValues.push(decoded);
       return;
     }
 
     if (service === 0x46) {
+      readoutObserved.onboard_monitor = true;
       const decoded = decodeOnboardMonitorTest(bytes.slice(serviceIndex + 1));
       if (decoded) onboardMonitorTests.push(decoded);
       return;
@@ -470,9 +484,11 @@ export function decodeReplayLog(text) {
       const pid = toHexByte(bytes[serviceIndex + 1]);
       if (!pid) return;
       if (isSupportedPidBase(bytes[serviceIndex + 1])) {
+        readoutObserved.supported_pids = true;
         decodeSupportedPids(bytes.slice(serviceIndex + 2, serviceIndex + 6), bytes[serviceIndex + 1]).forEach((item) => supportedPids.add(item));
         return;
       }
+      readoutObserved.live_pid_snapshot = true;
       const decodedValues = decodeLivePidValues(pid, bytes.slice(serviceIndex + 2));
       if (decodedValues.length) {
         decodedValues.forEach((decoded) => liveValues.push(decoded));
@@ -487,6 +503,8 @@ export function decodeReplayLog(text) {
     dtc_readout_observed: { ...dtcReadoutObserved },
     dtcReadoutErrors,
     dtc_readout_errors: { ...dtcReadoutErrors },
+    readoutObserved,
+    readout_observed: { ...readoutObserved },
     ecuResponses: [...ecus].map((ecu) => ({ ecu, status: "replay", dtcs: dtcs.filter((item) => item.ecu === ecu).map((item) => item.code) })),
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
     liveValues: uniqueBy(liveValues, (item) => item.id),
