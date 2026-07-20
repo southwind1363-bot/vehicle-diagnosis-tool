@@ -12766,6 +12766,7 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const rawRows = [
       ...(Array.isArray(sourceInput.dtcs) ? sourceInput.dtcs : []),
       ...(Array.isArray(sourceInput.codes) ? sourceInput.codes : []),
@@ -13594,6 +13595,7 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const rows = Array.isArray(sourceInput.tests)
       ? sourceInput.tests
       : Array.isArray(sourceInput.values)
@@ -13656,6 +13658,8 @@
       })
       .filter(Boolean);
 
+    const observedSourceEcus = [...new Set(tests.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
+    const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const testCount = tests.length;
     const passedCount = tests.filter((test) => test.status === "pass").length;
@@ -13680,6 +13684,8 @@
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      sourceEcu: resolvedSourceEcu,
+      source_ecu: resolvedSourceEcu,
       testCount,
       test_count: testCount,
       passedCount,
