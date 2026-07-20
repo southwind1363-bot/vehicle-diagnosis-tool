@@ -15983,7 +15983,7 @@
   function extractThinkcarReportDtcRows(value) {
     const lines = String(value || "").split(/\r?\n/).map((line) => String(line || "").trim());
     if (!lines.some((line) => /\bthinkcar\b/i.test(line))) return [];
-    const headingIndex = lines.findIndex((line) => /^dtc$/i.test(line));
+    const headingIndex = lines.findIndex((line) => /^(?:dtc|fault\s*codes?|diagnostic\s+trouble\s+codes?)$/i.test(line));
     if (headingIndex < 0) return [];
     const rows = [];
     let pendingEcuName = null;
