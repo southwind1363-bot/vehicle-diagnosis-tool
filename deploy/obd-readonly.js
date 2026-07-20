@@ -13997,7 +13997,7 @@
       const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && isKnownMode09FrameStart(nextIndex));
       const end = nextSegment > index ? nextSegment : bytes.length;
-      const payload = trimEcuInfoPayload(bytes.slice(index + 2, end));
+      const payload = trimEcuInfoPayload(bytes.slice(index + 2, end), infoType === "00");
       const catalogItem = ecuInfoItemCatalog.find((item) => item.infoType === infoType);
       if (!catalogItem) continue;
       values.push({
@@ -15842,8 +15842,9 @@
     return hints;
   }
 
-  function trimEcuInfoPayload(payload) {
+  function trimEcuInfoPayload(payload, preserveLeadingZeros = false) {
     const cleaned = [...payload];
+    if (preserveLeadingZeros) return cleaned.length ? cleaned.slice(1) : [];
     while (cleaned.length && (cleaned[0] === 0x00 || cleaned[0] <= 0x20)) cleaned.shift();
     return cleaned;
   }
