@@ -12393,7 +12393,8 @@
       schema_version: "live_pid_snapshot_v1",
       source,
       intent: "read_live_pid_snapshot",
-      ok: monitorValues.length > 0,
+      // This is a typed merge result, not a failed vehicle readout when no PID rows were pasted.
+      ok: true,
       blocked: false,
       protocol: bridgeImport?.protocol || bridgeImport?.obd_protocol || bridgeSession?.protocol || bridgeSession?.obd_protocol || null,
       capturedAt: bridgeImport?.capturedAt || bridgeImport?.captured_at || bridgeSession?.capturedAt || bridgeSession?.captured_at || null,
