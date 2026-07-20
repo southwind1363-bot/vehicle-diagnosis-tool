@@ -1617,7 +1617,7 @@ const decodeLivePidResponseFunctionChecks = () => {
     check(functionBody.includes('getStandardPidPayloadLength(pid)') && functionBody.includes('getResponsePayload(bytes, index + 2, payloadLength, 0x41)'), "decodeLivePidResponse should bound payload extraction by standard PID length");
     check(functionBody.includes('decodeStandardPidValue(pid, payload)'), "decodeLivePidResponse should decode standard PID payloads into monitor values");
     check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(input);') && functionBody.includes('if (Array.isArray(decoded)) values.push(...decoded.map') && functionBody.includes('else if (decoded) values.push(sourceEcu ? { ...decoded, source_ecu: sourceEcu } : decoded);'), "decodeLivePidResponse should collect scalar and grouped decoded values with an explicit response source when available");
-    check(functionBody.includes('const readoutStatus = hasMode01Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeLivePidResponse should distinguish absent input from unparsed responses");
+    check(functionBody.includes('if (payloadLength > 0 && payload.length !== payloadLength)') && functionBody.includes('const readoutStatus = values.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";'), "decodeLivePidResponse should reject incomplete PID payloads and distinguish absent input from decoded responses");
     check(functionBody.includes('would_transmit: false') && functionBody.includes('normalizeBridgeLivePidSnapshot({'), "decodeLivePidResponse should return a read-only normalized live PID snapshot");
   }
 };
@@ -2518,7 +2518,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2626件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2627件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2748,8 +2748,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.3";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.3";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.3", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.4";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.4";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.4", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -10923,6 +10923,9 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "engine_friction_
 check(decodedLivePids.monitorValues.find((item) => item.id === "odometer")?.value === 12345.6, "ECU odometer PID was not decoded");
 check(decodedLivePids.wouldTransmit === false && decodedLivePids.retainedRawText === false, "ライブPIDデコードが送信または原文保持扱いです");
 check(decodedLivePids.livePidReadoutStatus === "reported" && obd.decodeLivePidResponse({ raw: "41" }).live_pid_readout_status === "unparsed", "ライブPIDデコーダが有効応答と不完全応答を区別できません");
+const incompleteLivePidResponse = obd.decodeLivePidResponse({ raw: "41 0C 1A" });
+const unknownLivePidResponse = obd.decodeLivePidResponse({ raw: "41 AA 01 02" });
+check(incompleteLivePidResponse.livePidReadoutStatus === "unparsed" && incompleteLivePidResponse.monitorValues.length === 0 && unknownLivePidResponse.livePidReadoutStatus === "unparsed" && unknownLivePidResponse.monitorValues.length === 0, "Incomplete or undefined live PID responses must not be retained as reported values");
 const unparsedLivePidSession = obd.buildDiagnosticScanSession({ livePidResponse: { raw: "41", captured_at: "2026-07-17T00:00:00Z" } });
 check(unparsedLivePidSession.readoutCoverage?.itemById?.live_pid_snapshot?.status === "missing" && unparsedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.status === "missing" && unparsedLivePidSession.vehicleCommandEnabled === false, "不完全なライブPID応答を未読取として保持できません");
 const nestedUnparsedLivePidCoverage = obd.buildReadoutCoverageSnapshot({ live_pid_response: { ok: true, data: { raw: "41" } } });
@@ -16268,6 +16271,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2626");
+  console.log("OBD read-only safety checks: 2627");
   console.log("Errors: 0");
 }

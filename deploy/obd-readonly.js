@@ -13909,18 +13909,21 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const sourceEcu = readObdResponseSourceEcu(input);
-    const hasMode01Frame = bytes.some((byte, index) => byte === 0x41 && index + 2 < bytes.length);
-    const readoutStatus = hasMode01Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       const payloadLength = getStandardPidPayloadLength(pid);
       const payload = getResponsePayload(bytes, index + 2, payloadLength, 0x41);
+      if (payloadLength > 0 && payload.length !== payloadLength) {
+        index += 1 + payload.length;
+        continue;
+      }
       const decoded = decodeStandardPidValue(pid, payload);
       if (Array.isArray(decoded)) values.push(...decoded.map((item) => sourceEcu ? { ...item, source_ecu: sourceEcu } : item));
       else if (decoded) values.push(sourceEcu ? { ...decoded, source_ecu: sourceEcu } : decoded);
       index += 1 + payload.length;
     }
+    const readoutStatus = values.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     return normalizeBridgeLivePidSnapshot({
       ok: true,
       blocked: false,
