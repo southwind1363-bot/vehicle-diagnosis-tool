@@ -15983,12 +15983,12 @@
   function extractThinkcarReportDtcRows(value) {
     const lines = String(value || "").split(/\r?\n/).map((line) => String(line || "").trim());
     if (!lines.some((line) => /\bthinkcar\b/i.test(line))) return [];
-    const headingIndex = lines.findIndex((line) => /^(?:dtc|fault\s*codes?|diagnostic\s+trouble\s+codes?)$/i.test(line));
+    const headingIndex = lines.findIndex((line) => /^(?:dtc|fault\s*codes?|diagnostic\s+trouble\s+codes?|故障コード|診断トラブルコード)$/i.test(line));
     if (headingIndex < 0) return [];
     const rows = [];
     let pendingEcuName = null;
     let current = null;
-    const ignoredHeadings = /^(?:system|code|explanation of dtc|failure description|status)$/i;
+    const ignoredHeadings = /^(?:system|code|explanation of dtc|failure description|status|システム|故障コード|説明|故障説明|状態|ステータス)$/i;
     const flush = () => {
       if (!current) return;
       const reportedDescription = normalizeDtcReportedDescription(current.descriptionParts.join(" "));
@@ -16004,7 +16004,7 @@
     };
     for (const line of lines.slice(headingIndex + 1)) {
       if (!line || ignoredHeadings.test(line)) continue;
-      if (/^(?:live\s*data|data\s*stream|i\/?m\s+readiness|readiness(?:\s+status)?|freeze[\s_-]*frame|mode\s*0?[69]|ecu\s*(?:info|information)|supported\s*pids?|post[\s-]*scan)$/i.test(line)) {
+      if (/^(?:live\s*data|data\s*stream|i\/?m\s+readiness|readiness(?:\s+status)?|freeze[\s_-]*frame|mode\s*0?[69]|ecu\s*(?:info|information)|supported\s*pids?|post[\s-]*scan|ライブデータ|データストリーム|レディネス|フリーズフレーム|モード\s*0?[69]|ecu情報|対応pid|ポストスキャン)$/i.test(line)) {
         flush();
         break;
       }
