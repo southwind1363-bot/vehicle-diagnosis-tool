@@ -2751,8 +2751,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.44";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.44";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.44", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.45";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.45";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.45", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -6127,6 +6127,21 @@ const bridgeDtcParentSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
   }
 });
 check(bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0171")?.ecu === "7E8" && bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0171")?.ecuName === "Engine ECU" && bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0300")?.ecu === "7E9", "Bridge DTC rows should inherit a parent ECU source only when their own source is absent");
+const bridgeDtcRowSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { dtcs: [{ code: "P0171", ecu: "7E8" }] }
+});
+const bridgeDtcMixedSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { dtcs: [{ code: "P0171", ecu: "7E8" }, { code: "P0300", ecu: "7E9" }] }
+});
+check(bridgeDtcRowSourceSnapshot.sourceEcu === "7E8" && bridgeDtcRowSourceSnapshot.source_ecu === "7E8" && bridgeDtcMixedSourceSnapshot.sourceEcu === null && bridgeDtcMixedSourceSnapshot.source_ecu === null, "Bridge DTC parent ECU was not derived only for a single observed ECU");
 const bridgeDtcParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcParentSourceSnapshot })) }));
 check(bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0171")?.ecu === "7E8" && bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0300")?.ecu === "7E9" && bridgeDtcParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge DTC parent ECU provenance was not retained through read-only export and JSON import");
 const bridgeLivePidParentSourceSnapshot = obd.normalizeBridgeLivePidSnapshot({

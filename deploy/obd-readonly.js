@@ -1082,6 +1082,8 @@
     const codes = [...new Set(dtcs.map((item) => item.code))];
     const capturedAt = data.captured_at || data.capturedAt || null;
     const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
+    const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
+    const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const codeCount = codes.length;
     const dtcCount = normalizedDtcs.length;
     const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
@@ -1134,6 +1136,8 @@
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
       protocol: readBridgeProtocol(data),
+      sourceEcu: resolvedSourceEcu,
+      source_ecu: resolvedSourceEcu,
       ecuResponses: ecuRows.map((row) => ({
         ecu: row?.ecu || row?.address || null,
         status: row?.status || "unknown",
