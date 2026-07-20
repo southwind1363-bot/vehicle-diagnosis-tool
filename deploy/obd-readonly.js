@@ -17646,7 +17646,7 @@
   function collectTextOnboardMonitorSection(value) {
     const monitorLines = [];
     let inOnboardMonitor = false;
-    const isOnboardMonitorHeading = (text) => /(?:\bmode\s*0?6\b|\bonboard\s*monitor(?:ing)?\b|モード\s*0?6|オンボード\s*モニター)/i.test(text);
+    const isOnboardMonitorHeading = (text) => /(?:\bmode\s*0?6\b|\bonboard\s*monitor(?:ing)?\b|モード\s*0?6|オンボード\s*モニター|(?:^|\s)0?6\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|\becu\s*(?:info|information)\b|\bmode\s*0?9\b|\bsupported\s*pids?\b|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|ecu\s*情報|対応\s*pid|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
@@ -17663,7 +17663,7 @@
 
   function extractTextOnboardMonitorSnapshot(value) {
     const responseMatch = collectTextOnboardMonitorSection(value)
-      .map((line) => String(line || "").trim().match(/^\s*mode\s*0?6\s*[:=]\s*((?:46\s+)(?:[0-9a-f]{2}\s*){8})$/i))
+      .map((line) => String(line || "").trim().match(/^\s*(?:mode\s*0?6|0?6)\s*[:=]\s*((?:46\s+)(?:[0-9a-f]{2}\s*){8})$/i))
       .find(Boolean);
     if (responseMatch) {
       return decodeOnboardMonitorResponse({
