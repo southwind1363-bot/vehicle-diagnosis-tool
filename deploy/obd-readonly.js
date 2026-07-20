@@ -12728,7 +12728,7 @@
       const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || sourceInput.status || "unknown";
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "";
       const genericCodeReferences = extractDtcReferences(codeValue);
-      const manufacturerCodeReference = !genericCodeReferences.length && (rowValue.manufacturer_specific === true || rowValue.manufacturerSpecific === true || rowValue.code_format === "manufacturer_specific" || rowValue.codeFormat === "manufacturer_specific")
+      const manufacturerCodeReference = !genericCodeReferences.length && isExplicitManufacturerSpecificDtcRow(rowValue)
         ? extractManufacturerSpecificDtcReference(codeValue)
         : null;
       const codes = genericCodeReferences.length ? genericCodeReferences : manufacturerCodeReference ? [manufacturerCodeReference] : [];
@@ -14920,7 +14920,7 @@
       const candidate = typeof rowValue === "string"
         ? rowValue
         : rowValue?.code || rowValue?.dtc || rowValue?.id || rowValue?.value || rowValue?.dtc_code || rowValue?.dtcCode || "";
-      return extractDtcReferences(candidate).length > 0 || ((rowValue?.manufacturer_specific === true || rowValue?.manufacturerSpecific === true || rowValue?.code_format === "manufacturer_specific" || rowValue?.codeFormat === "manufacturer_specific") && Boolean(extractManufacturerSpecificDtcReference(candidate)));
+      return extractDtcReferences(candidate).length > 0 || (isExplicitManufacturerSpecificDtcRow(rowValue) && Boolean(extractManufacturerSpecificDtcReference(candidate)));
     });
     const hasLivePidRows = (rows) => Array.isArray(rows) && rows.length > 0 && rows.every((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return false;
@@ -15122,7 +15122,11 @@
     const ecuResponseSummary = hasValue(ecuResponseInput)
       ? normalizeEcuResponseSummary(Array.isArray(ecuResponseInput) ? { ecus: ecuResponseInput, source: scannerJsonSource } : toSnapshotInput(ecuResponseInput, "ecus"))
       : null;
-    if (![dtcSnapshot, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
+    const hasDtcSnapshotContent = Boolean(dtcSnapshot && (
+      Number(dtcSnapshot.dtcCount || dtcSnapshot.dtc_count || 0) > 0
+      || ["reported", "blocked"].includes(String(dtcSnapshot.dtcReadoutStatus || dtcSnapshot.dtc_readout_status || "").toLowerCase())
+    ));
+    if (![hasDtcSnapshotContent, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
     const hadSensitiveIdentifier = text !== redactSensitiveText(text);
     const observedProtocols = [...new Set([
       scannerJsonProtocol,
@@ -17471,6 +17475,13 @@
   function extractManufacturerSpecificDtcReference(value) {
     const match = String(value || "").trim().toUpperCase().match(/^(?:0X)?([0-9A-F]{6})$/);
     return match ? { code: match[1], subcode: null, codeFormat: "manufacturer_specific" } : null;
+  }
+
+  function isExplicitManufacturerSpecificDtcRow(value) {
+    if (!value || typeof value !== "object") return false;
+    if (value.manufacturer_specific === true || value.manufacturerSpecific === true) return true;
+    const codeFormat = String(value.code_format || value.codeFormat || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    return ["manufacturer_specific", "oem", "proprietary"].includes(codeFormat);
   }
 
   function normalizeDtcReportedDescription(value) {
