@@ -222,9 +222,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
 
   if ((request.intent === "read_stored_dtc" || request.intent === "read_pending_dtc" || request.intent === "read_permanent_dtc") && replaySnapshot) {
     const status = request.intent === "read_pending_dtc" ? "pending" : request.intent === "read_permanent_dtc" ? "permanent" : "stored";
-    const dtcs = status === "permanent"
-      ? replaySnapshot.dtcs.filter((item) => item.status === "permanent")
-      : uniqueBy(replaySnapshot.dtcs.map((item) => ({ ...item, status })), (item) => item.code);
+    const dtcs = replaySnapshot.dtcs.filter((item) => item.status === status);
     return {
       ...base,
       data: {
