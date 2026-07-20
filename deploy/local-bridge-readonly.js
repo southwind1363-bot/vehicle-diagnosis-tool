@@ -1,10 +1,15 @@
 import http from "node:http";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
+const J2534_REGISTRY_ROOTS = [
+  "HKLM\\SOFTWARE\\PassThruSupport.04.04",
+  "HKLM\\SOFTWARE\\WOW6432Node\\PassThruSupport.04.04"
+];
 const REPLAY_RESPONSE_SERVICES = new Set([0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F]);
 const READ_INTENTS = new Set([
   "bridge_status",
@@ -119,6 +124,10 @@ export function createLocalBridgeApp(options = {}) {
   const bridgeVersion = options.bridgeVersion || "readonly-dev-0.1.0";
   const replaySnapshot = buildReplaySnapshot(options);
   const replayMode = Boolean(replaySnapshot);
+  const discoveredVciDevices = discoverJ2534RegistryDrivers({
+    registryText: options.j2534RegistryText,
+    enabled: options.discoverJ2534 === true || process.env.LOCAL_BRIDGE_DISCOVER_J2534 === "1"
+  });
 
   return http.createServer(async (request, response) => {
     setCorsHeaders(request, response);
@@ -135,7 +144,7 @@ export function createLocalBridgeApp(options = {}) {
         bridge_version: bridgeVersion,
         api_version: API_VERSION,
         vehicle_command_enabled: false,
-        sample_mode: !replayMode,
+        sample_mode: !replayMode && !discoveredVciDevices.length,
         replay_mode: replayMode
       });
       return;
@@ -153,7 +162,7 @@ export function createLocalBridgeApp(options = {}) {
       return;
     }
 
-    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot));
+    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices));
   });
 }
 
@@ -178,8 +187,9 @@ function isReadinessSnapshotRequest(request = {}) {
   return readoutId === "readiness_snapshot" || requestedPid === "01";
 }
 
-function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
+function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = []) {
   const replayMode = Boolean(replaySnapshot);
+  const discoveryMode = !replayMode && discoveredVciDevices.length > 0;
   const base = {
     request_id: request.request_id,
     ok: true,
@@ -195,14 +205,15 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       data: {
         bridge_version: bridgeVersion,
         api_version: API_VERSION,
-        status: replayMode ? "ready_replay_mode" : "ready_sample_mode",
+        status: replayMode ? "ready_replay_mode" : discoveryMode ? "ready_driver_discovery_mode" : "ready_sample_mode",
         paired: true,
         vci_connected: false,
         vehicle_connected: false,
         vehicle_command_enabled: false,
-        sample_mode: !replayMode,
+        sample_mode: !replayMode && !discoveryMode,
         replay_mode: replayMode,
-        replay_loaded: replayMode
+        replay_loaded: replayMode,
+        vci_detected_count: discoveredVciDevices.length
       }
     };
   }
@@ -211,16 +222,26 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     return {
       ...base,
       data: {
-        selected_device_id: replayMode ? "replay-readonly-input" : "sample-readonly-vci",
-        driver_status: replayMode ? "replay_mode" : "sample_mode",
-        devices: [
+        selected_device_id: replayMode ? "replay-readonly-input" : discoveryMode ? discoveredVciDevices[0].id : "sample-readonly-vci",
+        driver_status: replayMode ? "replay_mode" : discoveryMode ? "j2534_registry_detected" : "sample_mode",
+        devices: replayMode ? [
           {
-            id: replayMode ? "replay-readonly-input" : "sample-readonly-vci",
-            label: replayMode ? "Read-only Local Bridge Replay Input" : "Read-only Local Bridge Sample VCI",
+            id: "replay-readonly-input",
+            label: "Read-only Local Bridge Replay Input",
             vendor: "vehicle-diagnosis-tool",
-            driver_status: replayMode ? "replay_mode" : "sample_mode",
-            sample_mode: !replayMode,
-            replay_mode: replayMode,
+            driver_status: "replay_mode",
+            sample_mode: false,
+            replay_mode: true,
+            connected: false
+          }
+        ] : discoveryMode ? discoveredVciDevices : [
+          {
+            id: "sample-readonly-vci",
+            label: "Read-only Local Bridge Sample VCI",
+            vendor: "vehicle-diagnosis-tool",
+            driver_status: "sample_mode",
+            sample_mode: true,
+            replay_mode: false,
             connected: false
           }
         ]
@@ -232,11 +253,12 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     return {
       ...base,
       data: {
-        adapter_name: replayMode ? "Read-only Local Bridge Replay" : "Read-only Local Bridge Sample",
-        adapter_family: replayMode ? "local_bridge_replay" : "local_bridge_sample",
+        adapter_name: replayMode ? "Read-only Local Bridge Replay" : discoveryMode ? discoveredVciDevices[0].label : "Read-only Local Bridge Sample",
+        adapter_family: replayMode ? "local_bridge_replay" : discoveryMode ? "j2534_passthru" : "local_bridge_sample",
         firmware_version: bridgeVersion,
-        sample_mode: !replayMode,
+        sample_mode: !replayMode && !discoveryMode,
         replay_mode: replayMode,
+        driver_status: replayMode ? "replay_mode" : discoveryMode ? "j2534_registry_detected" : "sample_mode",
         vehicle_command_enabled: false
       }
     };
@@ -419,6 +441,65 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
   }
 
   return buildBlockedResponse(request.request_id, "intent_not_implemented");
+}
+
+export function discoverJ2534RegistryDrivers(options = {}) {
+  const registryText = typeof options.registryText === "string"
+    ? options.registryText
+    : options.enabled === true ? readJ2534RegistryText() : "";
+  return parseJ2534RegistryDrivers(registryText);
+}
+
+export function parseJ2534RegistryDrivers(text = "") {
+  const rows = [];
+  let current = null;
+  const appendCurrent = () => {
+    if (!current?.functionLibrary) return;
+    const label = current.name || current.vendor || "J2534 Pass-Thru";
+    rows.push({
+      id: `j2534-registry-${rows.length + 1}`,
+      label,
+      vendor: current.vendor || "unknown",
+      adapter_family: "j2534_passthru",
+      driver_status: "j2534_registry_detected",
+      driver_library_detected: true,
+      sample_mode: false,
+      replay_mode: false,
+      connected: false,
+      connection_status: "driver_detected_not_opened",
+      vehicle_command_enabled: false
+    });
+  };
+  String(text || "").split(/\r?\n/).forEach((line) => {
+    if (/^HKEY_LOCAL_MACHINE\\/i.test(line.trim())) {
+      appendCurrent();
+      current = { name: "", vendor: "", functionLibrary: "" };
+      return;
+    }
+    if (!current) return;
+    const match = line.match(/^\s*(Name|Vendor|FunctionLibrary)\s+REG_\w+\s+(.+?)\s*$/i);
+    if (!match) return;
+    const key = match[1].toLowerCase();
+    current[key === "functionlibrary" ? "functionLibrary" : key] = match[2];
+  });
+  appendCurrent();
+  return rows;
+}
+
+function readJ2534RegistryText() {
+  if (process.platform !== "win32") return "";
+  return J2534_REGISTRY_ROOTS.map((registryRoot) => {
+    try {
+      return execFileSync("reg.exe", ["query", registryRoot, "/s"], {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: 4000,
+        maxBuffer: 1024 * 1024
+      });
+    } catch (_error) {
+      return "";
+    }
+  }).filter(Boolean).join("\n");
 }
 
 function buildReplaySnapshot(options = {}) {

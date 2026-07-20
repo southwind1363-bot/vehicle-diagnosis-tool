@@ -1,4 +1,4 @@
-import { createLocalBridgeApp, decodeReplayLog } from "../local-bridge-readonly.js";
+import { createLocalBridgeApp, decodeReplayLog, parseJ2534RegistryDrivers } from "../local-bridge-readonly.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88,6 +88,33 @@ try {
   check(publicAdapterIdentity.ok === true && publicAdapterIdentity.blocked === false, "public adapter_identity should work without pairing token");
   const publicVci = await post(port, "list_vci", "");
   check(publicVci.ok === true && publicVci.blocked === false, "public list_vci should work without pairing token");
+
+  const j2534RegistryText = [
+    "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Example Vendor\\Example VCI",
+    "    Name    REG_SZ    Example J2534 VCI",
+    "    Vendor    REG_SZ    Example Vendor",
+    "    FunctionLibrary    REG_SZ    C:\\Program Files\\Example Vendor\\passthru.dll",
+    "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\PassThruSupport.04.04\\Other Vendor\\Other VCI",
+    "    Vendor    REG_SZ    Other Vendor",
+    "    FunctionLibrary    REG_SZ    C:\\Drivers\\otherpassthru.dll"
+  ].join("\n");
+  const parsedJ2534Drivers = parseJ2534RegistryDrivers(j2534RegistryText);
+  check(parsedJ2534Drivers.length === 2 && parsedJ2534Drivers[0]?.label === "Example J2534 VCI" && parsedJ2534Drivers[1]?.label === "Other Vendor", "J2534 registry parser did not retain safe driver labels");
+  check(parsedJ2534Drivers.every((item) => item.driver_status === "j2534_registry_detected" && item.connected === false && item.vehicle_command_enabled === false), "J2534 registry parser did not preserve read-only driver detection state");
+  check(!JSON.stringify(parsedJ2534Drivers).includes("C:\\Program Files"), "J2534 registry parser exposed a local driver path");
+  const j2534DiscoveryServer = createLocalBridgeApp({ pairingToken: token, j2534RegistryText });
+  const j2534DiscoveryPort = await new Promise((resolve) => {
+    j2534DiscoveryServer.listen(0, "127.0.0.1", () => resolve(j2534DiscoveryServer.address().port));
+  });
+  try {
+    const j2534Status = await post(j2534DiscoveryPort, "bridge_status");
+    const j2534Vci = await post(j2534DiscoveryPort, "list_vci");
+    const j2534Identity = await post(j2534DiscoveryPort, "adapter_identity");
+    check(j2534Status.data.sample_mode === false && j2534Status.data.vci_detected_count === 2 && j2534Vci.data.driver_status === "j2534_registry_detected" && j2534Vci.data.devices.length === 2 && j2534Vci.data.devices.every((item) => item.connected === false), "J2534 registry discovery did not expose detected drivers without opening a VCI");
+    check(j2534Identity.data.adapter_family === "j2534_passthru" && j2534Identity.data.driver_status === "j2534_registry_detected" && j2534Identity.data.vehicle_command_enabled === false, "J2534 registry discovery did not preserve adapter identity read-only safety");
+  } finally {
+    await new Promise((resolve) => j2534DiscoveryServer.close(resolve));
+  }
 
   const dtc = await post(port, "read_stored_dtc");
   check(dtc.data.dtcs.some((item) => item.code === "P0171"), "stored DTC response did not include P0171");
@@ -487,6 +514,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 177");
+  console.log("Local bridge read-only checks: 182");
   console.log("Errors: 0");
 }
