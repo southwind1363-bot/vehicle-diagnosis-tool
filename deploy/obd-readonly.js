@@ -14297,7 +14297,9 @@
         ...metadata
       };
 
-      if (serviceByte === 0x7F) {
+      if (packet.isoTp === true && (packet.incomplete === true || packet.sequenceError === true)) {
+        buckets.unknownResponses.push({ ...packet, unusableForDiagnosticReadout: true });
+      } else if (serviceByte === 0x7F) {
         buckets.negativeResponses.push({ ...packet, negativeResponse: decodeNegativeObdResponse(bytes, serviceIndex) });
       } else if (serviceByte === 0x43) {
         buckets.storedDtcResponses.push(packet);

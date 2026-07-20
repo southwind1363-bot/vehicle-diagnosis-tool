@@ -2746,8 +2746,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.2.98";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.98";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.98", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.2.99";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.2.99";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.2.99", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -11784,11 +11784,16 @@ const classifiedSequenceError = obd.classifyObdResponseLines([
   "7E8 10 0B 49 04 01 43 41 4C",
   "7E8 22 2D 31 32 33 34"
 ].join("\n"));
-check(classifiedSequenceError.responseBuckets.ecuInfoResponses[0]?.sequenceError === true, "ISO-TP連続フレーム欠番を検出できません");
+check(classifiedSequenceError.responseBuckets.ecuInfoResponses.length === 0 && classifiedSequenceError.responseBuckets.unknownResponses[0]?.sequenceError === true && classifiedSequenceError.responseBuckets.unknownResponses[0]?.unusableForDiagnosticReadout === true, "ISO-TP連続フレーム欠番を診断用ECU情報として分類しました");
 check(classifiedSequenceError.isoTpSummary.sequenceErrorCount === 1, "ISO-TP順序異常件数を集計できません");
 const incompleteIsoTpSession = obd.buildScanSessionFromObdText("7E8 10 0B 49 04 01 43 41 4C", { session_id: "isotp-incomplete" });
-check(incompleteIsoTpSession.importClassification.isoTpSummary.incompleteCount === 1, "ISO-TP未完了件数をセッションへ保持できません");
+check(incompleteIsoTpSession.importClassification.isoTpSummary.incompleteCount === 1 && incompleteIsoTpSession.ecuInfoSnapshot?.itemCount === 0 && incompleteIsoTpSession.readoutCoverage?.itemById?.ecu_info_snapshot?.status === "missing", "ISO-TP未完了応答を診断用ECU情報として扱いました");
 check(incompleteIsoTpSession.warnings.includes("isotp_reassembly_issue"), "ISO-TP未完了をセッション警告へ反映できません");
+const sequenceErrorIsoTpSession = obd.buildScanSessionFromObdText([
+  "7E8 10 0B 49 04 01 43 41 4C",
+  "7E8 22 2D 31 32 33 34"
+].join("\n"), { session_id: "isotp-sequence-error" });
+check(sequenceErrorIsoTpSession.importClassification.isoTpSummary.sequenceErrorCount === 1 && sequenceErrorIsoTpSession.ecuInfoSnapshot?.itemCount === 0 && sequenceErrorIsoTpSession.readoutCoverage?.itemById?.ecu_info_snapshot?.status === "missing" && sequenceErrorIsoTpSession.warnings.includes("isotp_reassembly_issue") && sequenceErrorIsoTpSession.vehicleCommandEnabled === false, "ISO-TP順序異常応答を診断データとして採用しました");
 check(classifiedObdText.retainedRawText === false && classifiedObdText.wouldTransmit === false, "OBD log classification retained raw text or allowed transmit");
 const textScanSession = obd.buildScanSessionFromObdText(obdTextLog, { session_id: "obd-text-test", protocol: "ISO15765-4" });
 check(textScanSession.schemaVersion === "scan_session_v1", "OBD text log was not converted to scan session");
