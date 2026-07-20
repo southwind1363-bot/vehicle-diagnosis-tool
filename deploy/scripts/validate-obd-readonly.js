@@ -1551,7 +1551,7 @@ const decodeObdDtcResponseFunctionChecks = () => {
     check(functionBody.includes('const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);'), "decodeObdDtcResponse should normalize raw DTC response bytes");
     check(functionBody.includes('byte === 0x43 || byte === 0x47 || byte === 0x4A'), "decodeObdDtcResponse should accept stored, pending, and permanent DTC service responses");
     check(functionBody.includes('const hasResponseInput = hasObdResponseInput(input);') && functionBody.includes('if (serviceByte === undefined)') && functionBody.includes('dtc_readout_status: hasResponseInput ? "unparsed" : "unknown"') && functionBody.includes('dtcs: []'), "decodeObdDtcResponse should distinguish an unparsed DTC response from an absent response");
-    check(functionBody.includes('if (high === 0 && low === 0) continue;') && functionBody.includes('decodeDtcPair(high, low)'), "decodeObdDtcResponse should ignore zero padding and decode byte pairs");
+    check(functionBody.includes('const payloadLength = bytes.length - start;') && functionBody.includes('const trailingPaddingByte = payloadLength % 2 === 1 ? bytes[bytes.length - 1] : null;') && functionBody.includes('if (payloadLength < 2 || (payloadLength % 2 === 1 && trailingPaddingByte !== 0))') && functionBody.includes('const completePayloadEnd = payloadLength % 2 === 0 ? bytes.length : bytes.length - 1;') && functionBody.includes('if (high === 0 && low === 0) continue;') && functionBody.includes('decodeDtcPair(high, low)'), "decodeObdDtcResponse should reject incomplete DTC payloads, ignore trailing zero padding, and decode byte pairs");
     check(functionBody.includes('serviceByte === 0x47 ? "pending" : serviceByte === 0x4A ? "permanent" : "stored"'), "decodeObdDtcResponse should preserve stored, pending, and permanent DTC status");
     check(functionBody.includes('dtc_readout_status: "reported"'), "decodeObdDtcResponse should mark valid DTC service responses as reported");
     check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(input);') && functionBody.includes('dtcs: [...new Set(codes)].map((code) => ({ code, status, ...(sourceEcu ? { ecu: sourceEcu } : {}) }))'), "decodeObdDtcResponse should deduplicate decoded DTC codes while retaining an explicit source ECU");
@@ -2518,7 +2518,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2628件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2629件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2748,8 +2748,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.5";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.5";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.5", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.6";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.6";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.6", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -10700,6 +10700,9 @@ const decodedStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01 71 03 00 00 00",
 check(decodedStoredDtc.codes.join(",") === "P0171,P0300", "OBD保存DTC応答をDTCコードへデコードできません");
 check(decodedStoredDtc.retainedRawText === false, "OBD DTCデコードが原文保持になっています");
 check(decodedStoredDtc.dtcReadoutStatus === "reported" && obd.decodeObdDtcResponse({ raw: "41" }).dtc_readout_status === "unparsed", "OBD DTC decoder did not distinguish reported and incomplete responses");
+const incompleteStoredDtc = obd.decodeObdDtcResponse({ raw: "43 01" });
+const emptyStoredDtc = obd.decodeObdDtcResponse({ raw: "43 00 00" });
+check(incompleteStoredDtc.dtcReadoutStatus === "unparsed" && incompleteStoredDtc.codes.length === 0 && emptyStoredDtc.dtcReadoutStatus === "reported" && emptyStoredDtc.codes.length === 0, "Incomplete DTC payloads must not be retained as valid empty responses");
 const decodedPendingDtc = obd.decodeObdDtcResponse({ raw: "47 01 71 00 00" });
 const decodedPermanentDtc = obd.decodeObdDtcResponse({ raw: "4A 03 00 00 00" });
 check(decodedPendingDtc.dtcs.find((item) => item.code === "P0171")?.status === "pending", "保留DTC種別を保持できません");
@@ -16273,6 +16276,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2628");
+  console.log("OBD read-only safety checks: 2629");
   console.log("Errors: 0");
 }

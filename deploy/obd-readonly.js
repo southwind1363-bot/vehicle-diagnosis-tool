@@ -13709,8 +13709,21 @@
       });
     }
     const start = bytes.indexOf(serviceByte) + 1;
+    const payloadLength = bytes.length - start;
+    const trailingPaddingByte = payloadLength % 2 === 1 ? bytes[bytes.length - 1] : null;
+    if (payloadLength < 2 || (payloadLength % 2 === 1 && trailingPaddingByte !== 0)) {
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+        captured_at: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: "unparsed",
+        dtcs: []
+      });
+    }
+    const completePayloadEnd = payloadLength % 2 === 0 ? bytes.length : bytes.length - 1;
     const codes = [];
-    for (let index = start; index + 1 < bytes.length; index += 2) {
+    for (let index = start; index + 1 < completePayloadEnd; index += 2) {
       const high = bytes[index];
       const low = bytes[index + 1];
       if (high === 0 && low === 0) continue;
