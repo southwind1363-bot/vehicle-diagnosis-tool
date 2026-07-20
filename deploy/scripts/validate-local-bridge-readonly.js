@@ -315,6 +315,33 @@ try {
     await new Promise((resolve) => malformedReplayServer.close(resolve));
   }
 
+  const negativeReplayLog = [
+    "can0 7E8#037F0311",
+    "can0 7E8#037F0212",
+    "can0 7E8#037F0922",
+    "can0 7E8#037F0631"
+  ].join("\n");
+  const negativeReplayServer = createLocalBridgeApp({ pairingToken: token, replayLogText: negativeReplayLog });
+  const negativeReplayPort = await new Promise((resolve) => {
+    negativeReplayServer.listen(0, "127.0.0.1", () => resolve(negativeReplayServer.address().port));
+  });
+  try {
+    const negativeReplayReadouts = [
+      ["read_stored_dtc", "replay_negative_response_03_11"],
+      ["read_freeze_frame", "replay_negative_response_02_12"],
+      ["read_ecu_info", "replay_negative_response_09_22"],
+      ["read_onboard_monitor", "replay_negative_response_06_31"]
+    ];
+    for (const [intent, error] of negativeReplayReadouts) {
+      const response = await post(negativeReplayPort, intent);
+      check(response.ok === false && response.errors.includes(error) && response.would_transmit === false, `replay ${intent} did not retain its negative OBD response as a read-only failure`);
+    }
+    const negativeMode01Replay = decodeReplayLog("can0 7E8#037F0112");
+    check(negativeMode01Replay.readoutErrors.live_pid_snapshot === null && negativeMode01Replay.readoutErrors.readiness_snapshot === null && negativeMode01Replay.readoutErrors.supported_pids === null, "replay Mode 01 negative response was assigned to an unknown PID readout");
+  } finally {
+    await new Promise((resolve) => negativeReplayServer.close(resolve));
+  }
+
   const replayFramingCases = [
     ["raw", "41 0C 1A F8", true],
     ["single_frame", "can0 7E8#04410C1AF8", true],
@@ -460,6 +487,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 171");
+  console.log("Local bridge read-only checks: 177");
   console.log("Errors: 0");
 }

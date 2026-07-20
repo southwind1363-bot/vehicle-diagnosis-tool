@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
-const REPLAY_POSITIVE_RESPONSE_SERVICES = new Set([0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A]);
+const REPLAY_RESPONSE_SERVICES = new Set([0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F]);
 const READ_INTENTS = new Set([
   "bridge_status",
   "list_vci",
@@ -488,9 +488,14 @@ export function decodeReplayLog(text) {
       applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors);
       return;
     }
-    const serviceIndex = findReplayPositiveResponseIndex(bytes);
+    const serviceIndex = findReplayResponseIndex(bytes);
     if (serviceIndex < 0) return;
     const service = bytes[serviceIndex];
+
+    if (service === 0x7F) {
+      applyReplayNegativeResponse(bytes[serviceIndex + 1], bytes[serviceIndex + 2], dtcReadoutErrors, readoutErrors);
+      return;
+    }
 
     if (service === 0x43 || service === 0x47 || service === 0x4A) {
       const status = service === 0x47 ? "pending" : service === 0x4A ? "permanent" : "stored";
@@ -757,6 +762,27 @@ function applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors)
   }
 }
 
+function applyReplayNegativeResponse(requestedService, responseCode, dtcReadoutErrors, readoutErrors) {
+  const requestedServiceHex = toHexByte(requestedService);
+  const responseCodeHex = toHexByte(responseCode);
+  if (!requestedServiceHex || !responseCodeHex) return;
+  const errorCode = `replay_negative_response_${requestedServiceHex}_${responseCodeHex}`;
+  if (requestedService === 0x03 || requestedService === 0x07 || requestedService === 0x0A) {
+    const status = requestedService === 0x07 ? "pending" : requestedService === 0x0A ? "permanent" : "stored";
+    dtcReadoutErrors[status] = errorCode;
+    return;
+  }
+  if (requestedService === 0x02) {
+    readoutErrors.freeze_frame = errorCode;
+    return;
+  }
+  if (requestedService === 0x09) {
+    readoutErrors.ecu_info = errorCode;
+    return;
+  }
+  if (requestedService === 0x06) readoutErrors.onboard_monitor = errorCode;
+}
+
 function getReplayIsoTpTransportBytes(bytes = []) {
   if (bytes[0] === bytes.length - 1 && isReplayIsoTpPci(bytes[1])) return bytes.slice(1);
   return bytes;
@@ -766,10 +792,10 @@ function isReplayIsoTpPci(value) {
   return Number.isInteger(value) && ((value & 0xF0) === 0x10 || (value & 0xF0) === 0x20);
 }
 
-function findReplayPositiveResponseIndex(bytes = []) {
-  if (REPLAY_POSITIVE_RESPONSE_SERVICES.has(bytes[0])) return 0;
-  if (isReplaySingleFramePci(bytes[0]) && REPLAY_POSITIVE_RESPONSE_SERVICES.has(bytes[1])) return 1;
-  if (bytes[0] === bytes.length - 1 && isReplaySingleFramePci(bytes[1]) && REPLAY_POSITIVE_RESPONSE_SERVICES.has(bytes[2])) return 2;
+function findReplayResponseIndex(bytes = []) {
+  if (REPLAY_RESPONSE_SERVICES.has(bytes[0])) return 0;
+  if (isReplaySingleFramePci(bytes[0]) && REPLAY_RESPONSE_SERVICES.has(bytes[1])) return 1;
+  if (bytes[0] === bytes.length - 1 && isReplaySingleFramePci(bytes[1]) && REPLAY_RESPONSE_SERVICES.has(bytes[2])) return 2;
   return -1;
 }
 
