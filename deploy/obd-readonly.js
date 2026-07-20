@@ -17439,7 +17439,7 @@
   function collectTextReadinessSection(value) {
     const readinessLines = [];
     let inReadiness = false;
-    const isReadinessHeading = (text) => /(?:\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|レディネス(?:\s*状態)?|(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?01\s*[:=])/i.test(text);
+    const isReadinessHeading = (text) => /(?:\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|レディネス(?:\s*状態)?|(?:\bmode\s*0?1\s+pid\s*|\bpid\s*|(?:^|\s)0?1\s*(?:pid\s*)?)(?:0x)?01\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|mode\s*0?6|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|モード\s*0?6|対応\s*pid|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
@@ -17457,12 +17457,20 @@
   function extractTextReadinessSnapshot(value) {
     const readinessLines = collectTextReadinessSection(value);
     if (!readinessLines.length) return null;
-    const readinessResponseMatch = readinessLines
-      .map((line) => String(line || "").trim().match(/(?:\bmode\s*0?1\s*)?\bpid\s*(?:0x)?01\s*[:=]\s*(?:41\s+(?:0x)?01\s+)?((?:[0-9a-f]{2}\s*){4})$/i))
+    const readinessResponse = readinessLines
+      .map((line) => String(line || "").trim().match(/^(?:mode\s*0?1\s+pid\s*|pid\s*|0?1\s*(?:pid\s*)?)(?:0x)?01\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){4,6})$/i))
+      .map((match) => {
+        if (!match) return null;
+        const responseBytes = parseObdHexBytes(match[1]);
+        const payload = responseBytes[0] === 0x41
+          ? responseBytes[1] === 0x01 ? responseBytes.slice(2) : []
+          : responseBytes;
+        return payload.length === 4 ? payload : null;
+      })
       .find(Boolean);
-    if (readinessResponseMatch) {
+    if (readinessResponse) {
       return decodeReadinessResponse({
-        raw: "41 01 " + readinessResponseMatch[1],
+        raw: "41 01 " + formatRawPidBytes(readinessResponse),
         source: "scanner_text_readiness"
       });
     }
