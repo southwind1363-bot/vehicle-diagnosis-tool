@@ -15445,6 +15445,7 @@
       if (!protocol) protocol = rowProtocol;
       const dtc = cellAt(dtcIndex, 48);
       const dtcFormat = cellAt(dtcFormatIndex, 48).toLowerCase();
+      const reportedDtcStatus = normalizeDtcReportedStatus(cellAt(statusIndex, 80));
       const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
       const dtcStatusByte = cellAt(dtcStatusByteIndex, 12);
       if (dtcStatusAvailabilityMask === null) dtcStatusAvailabilityMask = cellAt(dtcStatusAvailabilityMaskIndex, 12) || null;
@@ -15504,6 +15505,7 @@
           ...(dtcStatusByte ? { status_byte: dtcStatusByte } : {}),
           ...(dtcSeverity ? { severity: dtcSeverity } : {}),
           ...(dtcOccurrenceCount ? { occurrence_count: dtcOccurrenceCount } : {}),
+          ...(reportedDtcStatus ? { reported_status: reportedDtcStatus } : {}),
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
           ecu_name: ecuName || null,
