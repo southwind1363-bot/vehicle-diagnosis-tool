@@ -17584,6 +17584,7 @@
       const text = String(line || "").trim();
       if (isOnboardMonitorHeading(text)) {
         inOnboardMonitor = true;
+        monitorLines.push(line);
         return;
       }
       if (inOnboardMonitor && isSectionBoundary(text)) inOnboardMonitor = false;
@@ -17593,6 +17594,15 @@
   }
 
   function extractTextOnboardMonitorSnapshot(value) {
+    const responseMatch = collectTextOnboardMonitorSection(value)
+      .map((line) => String(line || "").trim().match(/^\s*mode\s*0?6\s*[:=]\s*((?:46\s+)(?:[0-9a-f]{2}\s*){8})$/i))
+      .find(Boolean);
+    if (responseMatch) {
+      return decodeOnboardMonitorResponse({
+        raw: responseMatch[1],
+        source: "scanner_text_mode06"
+      });
+    }
     const tests = [];
     const findNumber = (text, label) => {
       const match = text.match(label);
