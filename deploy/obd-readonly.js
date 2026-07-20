@@ -1678,7 +1678,14 @@
   }
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object"
+      ? response.data && typeof response.data === "object"
+        ? {
+          ...response.data,
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+        }
+        : response
+      : {};
     const readinessEcuSnapshotRows = Array.isArray(data.readinessEcuSnapshots)
       ? data.readinessEcuSnapshots
       : Array.isArray(data.readiness_ecu_snapshots)
