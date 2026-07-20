@@ -11122,6 +11122,9 @@
       || session.ecuInfoSnapshot?.had_sensitive_identifier === true
       || session.ecu_info_snapshot?.hadSensitiveIdentifier === true
       || session.ecu_info_snapshot?.had_sensitive_identifier === true;
+    const negativeResponsePendingCount = Number(negativeResponseSummary?.pendingCount);
+    const negativeResponseTerminalCount = Number(negativeResponseSummary?.terminalCount);
+    const negativeResponseTotalCount = Number(negativeResponseSummary?.totalCount);
     return {
       toolHints: mergedToolHints,
       importClassification: {
@@ -11159,7 +11162,10 @@
         session.warnings,
         explicitWarnings,
         classified.isoTpSummary?.incompleteCount > 0 || classified.isoTpSummary?.sequenceErrorCount > 0 ? ["isotp_reassembly_issue"] : [],
-        classified.negativeResponseSummary?.totalCount > 0 ? ["negative_obd_response_present"] : []
+        Number.isFinite(negativeResponsePendingCount) && negativeResponsePendingCount > 0 ? ["obd_response_pending_observed"] : [],
+        Number.isFinite(negativeResponseTerminalCount)
+          ? negativeResponseTerminalCount > 0 ? ["negative_obd_response_present"] : []
+          : negativeResponseTotalCount > 0 ? ["negative_obd_response_present"] : []
       ),
       hadSensitiveIdentifier,
       sourceLength
@@ -14429,10 +14435,13 @@
 
   function buildNegativeResponseSummary(negativeResponses = []) {
     const rows = Array.isArray(negativeResponses) ? negativeResponses : [];
+    const pendingCount = rows.filter((packet) => packet?.negativeResponse?.responseCode === "78").length;
     const responseCodes = [...new Set(rows.map((packet) => packet?.negativeResponse?.responseCode).filter(Boolean))];
     const requestedServices = [...new Set(rows.map((packet) => packet?.negativeResponse?.requestedService).filter(Boolean))];
     return {
       totalCount: rows.length,
+      pendingCount,
+      terminalCount: rows.length - pendingCount,
       requestedServices,
       responseCodes,
       responseLabels: [...new Set(rows.map((packet) => packet?.negativeResponse?.responseLabel).filter(Boolean))]
