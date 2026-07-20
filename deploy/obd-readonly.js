@@ -11424,6 +11424,13 @@
       || getNestedBridgePayloadSession(parts.local_bridge_export_payload)
       || {};
     const nestedSessionMetadata = getSessionMetadataOverrides(nestedBridgeSession);
+    const webSerialReadoutSummary = normalizeWebSerialReadoutSummary(
+      directSessionMetadata.webSerialReadoutSummary
+      || nestedSessionMetadata.webSerialReadoutSummary
+      || summary.webSerialReadoutSummary
+      || summary.web_serial_readout_summary
+      || null
+    );
     const obdReportedProfile = buildObdReportedProfile(
       summary.livePidSnapshot || summary.live_pid_snapshot || {
         monitorValues: summary.monitorValues || summary.monitor_values || [],
@@ -11482,7 +11489,7 @@
         )
         : metadataFields.sourceLength
     };
-    const exportPayload = buildBridgeSessionExportPayload(summary);
+    const exportPayload = buildBridgeSessionExportPayload({ ...summary, webSerialReadoutSummary });
     const coreSessionStatus = summary.coreSessionStatus
       || summary.core_session_status
       || exportPayload.session?.core_session_status
@@ -11698,6 +11705,8 @@
       readoutCompletionSummary,
       analysisReadinessSummary,
       readoutQualitySummary,
+      webSerialReadoutSummary,
+      web_serial_readout_summary: webSerialReadoutSummary,
       importedCoreSessionStatus,
       imported_core_session_status: importedCoreSessionStatus,
       importedDiagnosticFlowSummary,
@@ -11789,6 +11798,8 @@
         readoutCompletionSummary,
         analysisReadinessSummary,
         readoutQualitySummary,
+        webSerialReadoutSummary,
+        web_serial_readout_summary: webSerialReadoutSummary,
         importedCoreSessionStatus,
         imported_core_session_status: importedCoreSessionStatus,
         importedDiagnosticFlowSummary,
