@@ -13000,6 +13000,11 @@
       };
     };
     const triggerDtcEntries = [...new Map(triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).map((item) => [`${item.code}::${item.frameNumber ?? ""}::${item.sourceEcu || ""}`, item])).values()];
+    const observedSourceEcus = [...new Set([
+      ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null),
+      ...triggerDtcEntries.map((item) => item.sourceEcu || item.source_ecu || null)
+    ].filter(Boolean))];
+    const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const triggerDtc = triggerDtcEntries.length === 1 ? triggerDtcEntries[0].code : triggerDtcEntries.length > 1 ? null : triggerCodes[0] || null;
     const triggerFrameNumberInput = pickDefined(sourceInput.trigger_frame_number, sourceInput.triggerFrameNumber, sourceInput.frame_number, sourceInput.frameNumber, null);
@@ -13022,8 +13027,8 @@
       schemaVersion: "freeze_frame_snapshot_v1",
       schema_version: "freeze_frame_snapshot_v1",
       source,
-      sourceEcu,
-      source_ecu: sourceEcu,
+      sourceEcu: resolvedSourceEcu,
+      source_ecu: resolvedSourceEcu,
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
