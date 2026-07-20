@@ -922,12 +922,14 @@ function decodeEcuInfoValue(infoTypeByte, payload = []) {
     "02": "vin",
     "04": "calibration_id",
     "06": "calibration_verification_number",
-    "0A": "ecu_name"
+    "08": "in_use_performance_tracking_spark",
+    "0A": "ecu_name",
+    "0B": "in_use_performance_tracking_compression"
   };
   const id = itemMap[infoType];
   if (!id) return null;
   const bytes = trimEcuInfoPayload(payload, infoType === "00");
-  if (infoType === "00") {
+  if (["00", "08", "0B"].includes(infoType)) {
     if (!bytes.length) return null;
     return { id, info_type: infoType, value: bytes.map((byte) => toHexByte(byte)).join(" ") };
   }
