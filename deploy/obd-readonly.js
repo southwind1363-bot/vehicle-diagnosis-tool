@@ -12726,8 +12726,15 @@
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || sourceInput.status || "unknown";
-      const codes = extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "");
-      return codes.map(({ code, subcode }) => ({
+      const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "";
+      const genericCodeReferences = extractDtcReferences(codeValue);
+      const manufacturerCodeReference = !genericCodeReferences.length && (rowValue.manufacturer_specific === true || rowValue.manufacturerSpecific === true || rowValue.code_format === "manufacturer_specific" || rowValue.codeFormat === "manufacturer_specific")
+        ? extractManufacturerSpecificDtcReference(codeValue)
+        : null;
+      const codes = genericCodeReferences.length ? genericCodeReferences : manufacturerCodeReference ? [manufacturerCodeReference] : [];
+      const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
+      const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
+      return codes.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
         statusByte: readDtcStatusByteAlias(rowValue),
@@ -12739,7 +12746,10 @@
         status: rowStatus,
         ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null,
-        freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
+        freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
+        ...(codeFormat ? { codeFormat, code_format: codeFormat, manufacturerSpecific: true, manufacturer_specific: true } : {}),
+        ...(reportedDescription ? { reportedDescription, reported_description: reportedDescription } : {}),
+        ...(reportedStatus ? { reportedStatus, reported_status: reportedStatus } : {})
       }));
     });
     const typedDtcCodes = new Set(rows
@@ -14909,7 +14919,7 @@
       const candidate = typeof rowValue === "string"
         ? rowValue
         : rowValue?.code || rowValue?.dtc || rowValue?.id || rowValue?.value || rowValue?.dtc_code || rowValue?.dtcCode || "";
-      return extractDtcReferences(candidate).length > 0;
+      return extractDtcReferences(candidate).length > 0 || ((rowValue?.manufacturer_specific === true || rowValue?.manufacturerSpecific === true || rowValue?.code_format === "manufacturer_specific" || rowValue?.codeFormat === "manufacturer_specific") && Boolean(extractManufacturerSpecificDtcReference(candidate)));
     });
     const hasLivePidRows = (rows) => Array.isArray(rows) && rows.length > 0 && rows.every((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return false;
@@ -15790,6 +15800,73 @@
     return [...new Set(groups.flatMap((group) => Array.isArray(group) ? group : []).filter(Boolean))];
   }
 
+  function extractThinkcarReportDtcRows(value) {
+    const lines = String(value || "").split(/\r?\n/).map((line) => String(line || "").trim());
+    if (!lines.some((line) => /\bthinkcar\b/i.test(line))) return [];
+    const headingIndex = lines.findIndex((line) => /^dtc$/i.test(line));
+    if (headingIndex < 0) return [];
+    const rows = [];
+    let pendingEcuName = null;
+    let current = null;
+    const ignoredHeadings = /^(?:system|code|explanation of dtc|failure description|status)$/i;
+    const flush = () => {
+      if (!current) return;
+      const reportedDescription = normalizeDtcReportedDescription(current.descriptionParts.join(" "));
+      rows.push({
+        code: current.code,
+        code_format: "manufacturer_specific",
+        manufacturer_specific: true,
+        ...(current.ecuName ? { ecu_name: current.ecuName } : {}),
+        ...(reportedDescription ? { reported_description: reportedDescription } : {}),
+        ...(current.reportedStatus ? { reported_status: current.reportedStatus } : {}),
+        status: current.status
+      });
+      current = null;
+    };
+    for (const line of lines.slice(headingIndex + 1)) {
+      if (!line || ignoredHeadings.test(line)) continue;
+      if (/^(?:live\s*data|data\s*stream|i\/?m\s+readiness|readiness(?:\s+status)?|freeze[\s_-]*frame|mode\s*0?[69]|ecu\s*(?:info|information)|supported\s*pids?|post[\s-]*scan)$/i.test(line)) {
+        flush();
+        break;
+      }
+      const codeReference = extractManufacturerSpecificDtcReference(line);
+      if (codeReference) {
+        flush();
+        current = {
+          code: codeReference.code,
+          ecuName: pendingEcuName,
+          descriptionParts: [],
+          reportedStatus: null,
+          status: "unknown"
+        };
+        pendingEcuName = null;
+        continue;
+      }
+      if (current) {
+        if (/^permanent$/i.test(line)) {
+          current.status = "permanent";
+          current.reportedStatus = "permanent";
+          flush();
+          continue;
+        }
+        if (/^(?:intermittent|failed\s*\/\s*current|current|active|history)$/i.test(line)) {
+          current.reportedStatus = normalizeDtcReportedStatus(line);
+          flush();
+          continue;
+        }
+        if (/^(?:last\s*test|this\s*ignition|since\s*clear)\b/i.test(line)) {
+          flush();
+          continue;
+        }
+        if (current.descriptionParts.length < 4) current.descriptionParts.push(line);
+        continue;
+      }
+      pendingEcuName = normalizeDtcReportedDescription(line);
+    }
+    flush();
+    return rows;
+  }
+
   function extractTextDtcSnapshot(value) {
     const lines = String(value || "").split(/\r?\n/);
     const rows = [];
@@ -15878,9 +15955,10 @@
       lastDtcRows = codes.map(({ code, subcode }) => ({ code, subcode, status: rowStatus, ecu: rowEcu }));
       rows.push(...lastDtcRows);
     });
+    const thinkcarReportRows = extractThinkcarReportDtcRows(value);
     return normalizeDtcSnapshot({
       source: "obd_text_status_headings",
-      dtcs: [...rows, ...rawDtcRows]
+      dtcs: [...rows, ...rawDtcRows, ...thinkcarReportRows]
     });
   }
 
@@ -17375,6 +17453,21 @@
       seen.add(key);
       return [{ code, subcode }];
     });
+  }
+
+  function extractManufacturerSpecificDtcReference(value) {
+    const match = String(value || "").trim().toUpperCase().match(/^(?:0X)?([0-9A-F]{6})$/);
+    return match ? { code: match[1], subcode: null, codeFormat: "manufacturer_specific" } : null;
+  }
+
+  function normalizeDtcReportedDescription(value) {
+    const text = redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim();
+    return text ? text.slice(0, 240) : null;
+  }
+
+  function normalizeDtcReportedStatus(value) {
+    const text = String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    return /^[a-z][a-z0-9 _/-]{0,62}$/.test(text) ? text : null;
   }
 
   function extractDtcCodes(value) {

@@ -141,7 +141,7 @@ const decodeOnboardMonitorResponseFunctionSource = source.match(/function decode
 const decodedObdScanSessionFunctionSource = source.match(/function buildDecodedObdScanSession[\s\S]*?ecus: sessionInput\.ecus \|\| sessionInput\.ecu_responses \|\| \[\]\r?\n    \}\);\r?\n  \}/);
 const scanSessionFromObdTextFunctionSource = source.match(/function buildScanSessionFromObdText[\s\S]*?vehicle_command_enabled: false\r?\n    \};\r?\n  \}/);
 const diagnosticJsonImportFunctionSource = source.match(/function buildDiagnosticScanSessionFromJson[\s\S]*?vehicle_command_enabled: false\r?\n    \};\r?\n  \}/);
-const textDtcSnapshotFunctionSource = source.match(/function extractTextDtcSnapshot[\s\S]*?dtcs: \[\.\.\.rows, \.\.\.rawDtcRows\]\r?\n    \}\);\r?\n  \}/);
+const textDtcSnapshotFunctionSource = source.match(/function extractTextDtcSnapshot[\s\S]*?dtcs: \[\.\.\.rows, \.\.\.rawDtcRows, \.\.\.thinkcarReportRows\]\r?\n    \}\);\r?\n  \}/);
 const classifyObdResponseLinesFunctionSource = source.match(/function classifyObdResponseLines[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const buildObdLogPacketsFunctionSource = source.match(/function buildObdLogPackets[\s\S]*?return packets;\r?\n  \}/);
 const normalizeObdLogLineFunctionSource = source.match(/function normalizeObdLogLine[\s\S]*?\.trim\(\);\r?\n  \}/);
@@ -1711,7 +1711,7 @@ const textDtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('if (headingStatus) currentStatus = headingStatus;'), "extractTextDtcSnapshot should apply only explicit heading statuses");
     check(functionBody.includes('if (!headingStatus) currentStatus = "unknown";'), "extractTextDtcSnapshot should prevent a DTC heading status from leaking into another section");
     check(functionBody.includes('const resolveEcuHeading = (text) => {') && functionBody.includes('if (!match || extractDtcReferences(text).length) return null;') && functionBody.includes('const resolveInlineDtcStatus = (text) => {') && functionBody.includes('const resolveDtcStatusField = (text) => {') && functionBody.includes('const resolveInlineEcu = (text) => {') && functionBody.includes('let lastDtcRows = [];') && functionBody.includes('const codes = extractDtcReferences(text);') && functionBody.includes('const rowStatus = resolveInlineDtcStatus(text) || currentStatus;') && functionBody.includes('const rowEcu = resolveInlineEcu(text) || currentEcu;') && functionBody.includes('lastDtcRows = codes.map(({ code, subcode }) => ({ code, subcode, status: rowStatus, ecu: rowEcu }));') && functionBody.includes('rows.push(...lastDtcRows);'), "extractTextDtcSnapshot should attach explicit heading, inline, and vertical DTC fields");
-    check(functionBody.includes('source: "obd_text_status_headings"') && functionBody.includes('dtcs: [...rows, ...rawDtcRows]'), "extractTextDtcSnapshot should normalize text and explicit raw DTC rows with an explicit source");
+    check(functionBody.includes('const thinkcarReportRows = extractThinkcarReportDtcRows(value);') && functionBody.includes('source: "obd_text_status_headings"') && functionBody.includes('dtcs: [...rows, ...rawDtcRows, ...thinkcarReportRows]'), "extractTextDtcSnapshot should normalize text, raw OBD DTC rows, and scoped THINKCAR report rows with an explicit source");
   }
 };
 const classifyObdResponseLinesFunctionChecks = () => {
@@ -2520,7 +2520,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2630件"'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2634件"') && appSource.includes('THINKCAR共有レポートのメーカー固有DTCを読取セッションへ保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2645,7 +2645,7 @@ check(appSource.includes('const obdLiveObservationCondition = document.querySele
 check(appSource.includes('function buildLivePidTimelineChartRows(timeline = null)') && appSource.includes('.filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)') && appSource.includes('heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55') && appSource.includes('delta: row.points.at(-1)?.value - row.points[0]?.value') && appSource.includes('変化 ${row.delta') && appSource.includes('obd-timeline-chart-bar'), "Live PID graph should chart only numeric values from the latest observation condition");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
-check(appSource.includes('recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続"'), "OBD core progress should describe the latest completed import milestone");
+check(appSource.includes('recentMilestone: "THINKCAR共有レポートのメーカー固有DTCを読取セッションへ保持"'), "OBD core progress should describe the latest completed import milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-generic-obd2-dtc" && item.progress_percent === 64 && item.current_basis.includes("C系29件") && item.done.includes("NHTSA公開資料で確認したC系29件を出典付き定義として追加")), "Verified chassis DTC progress basis is missing");
 check(appSource.includes('readinessEcuSnapshotCount: readinessEcuSnapshots.length') && appSource.includes('summary.readinessEcuSnapshotCount > 1') && appSource.includes('readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"'), "OBD readiness UI should show multiple ECU scope and avoid labeling an unknown MIL as off");
@@ -2751,8 +2751,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.22";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.22";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.22", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.23";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-20";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.23";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.23", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -2813,7 +2813,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続"'), "OBD core progress snapshot should show the latest import milestone");
+check(appSource.includes('recentMilestone: "THINKCAR共有レポートのメーカー固有DTCを読取セッションへ保持"'), "OBD core progress snapshot should show the latest import milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -16282,6 +16282,35 @@ const scannerCsvSubcodeSession = obd.buildDiagnosticScanSessionFromCsv([
 ].join("\n"));
 check(scannerCsvSubcodeSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "C0051" && item.subcode === "67" && item.status === "pending" && item.ecu === "ABS") && !scannerCsvSubcodeSession?.dtcSnapshot?.dtcs?.some((item) => item.subcode === "pending"), "Structured CSV import did not preserve an explicit hexadecimal DTC subcode");
 check(obd.buildDiagnosticScanSessionFromCsv("DTC,Status\nP0300,Stored")?.dtcSnapshot?.codes?.includes("P0300") && obd.buildDiagnosticScanSessionFromCsv("unlabeled,values\nfoo,bar") === null, "Structured CSV import should require recognized headers without blocking explicit DTC columns");
+const thinkcarReportSession = obd.buildScanSessionFromObdText([
+  "THINKCAR",
+  "Diagnostic Report",
+  "DTC",
+  "System",
+  "Explanation of DTC",
+  "Failure description",
+  "Status",
+  "ECM (Engine Control Module)",
+  "260100",
+  "Reported OEM sensor fault",
+  "Permanent",
+  "CIC (Car Information Computer)",
+  "B7F8C3",
+  "Reported OEM communication fault",
+  "Intermittent",
+  "Live Data",
+  "123ABC",
+  "Not a DTC outside the THINKCAR DTC section"
+].join("\n"));
+const thinkcarJsonSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  dtcs: thinkcarReportSession.dtcSnapshot?.dtcs || []
+}));
+const thinkcarExportRoundTrip = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(thinkcarReportSession)
+});
+check(thinkcarReportSession.dtcSnapshot?.dtcCount === 2 && thinkcarReportSession.dtcSnapshot?.dtcs?.some((item) => item.code === "260100" && item.manufacturerSpecific === true && item.codeFormat === "manufacturer_specific" && item.ecuName === "ECM (Engine Control Module)" && item.reportedDescription === "Reported OEM sensor fault" && item.status === "permanent") && thinkcarReportSession.dtcSnapshot?.dtcs?.some((item) => item.code === "B7F8C3" && item.manufacturer_specific === true && item.reported_status === "intermittent" && item.status === "unknown"), "THINKCAR report import did not retain manufacturer-specific DTC codes, ECU labels, or reported status without generic-code inference");
+check(thinkcarJsonSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "260100" && item.code_format === "manufacturer_specific") && thinkcarExportRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "B7F8C3" && item.reportedDescription === "Reported OEM communication fault") && thinkcarJsonSession?.vehicleCommandEnabled === false && thinkcarExportRoundTrip?.vehicleCommandEnabled === false, "Manufacturer-specific DTC report values were not retained through JSON input and read-only export reimport");
+check(appSource.includes('const manufacturerSpecific = dtc.manufacturerSpecific === true') && appSource.includes('診断機報告: ${reportedDescription}') && appSource.includes('メーカー固有コードのため、車種・ECU・整備書で定義を確認してください。'), "Manufacturer-specific DTC cards should show only reported descriptions and require vehicle-specific definition review");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));

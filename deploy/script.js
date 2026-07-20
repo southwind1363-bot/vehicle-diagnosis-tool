@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2630件",
+  validationCheckLabel: "OBD安全検証 2634件",
   bridgeValidationCheckLabel: "bridge検証 168件",
-  recentMilestone: "iPhone共有レポートの取込と安全系DTC警告を読取フローへ接続",
+  recentMilestone: "THINKCAR共有レポートのメーカー固有DTCを読取セッションへ保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.22";
+const APP_VERSION = "3.3.23";
 const APP_LAST_UPDATED = "2026-07-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7865,6 +7865,9 @@ function createObdDtcCard(codeOrDtc) {
   const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;
   const severity = dtc.severity || dtc.dtc_severity || dtc.dtcSeverity || dtc.severityByte || dtc.severity_byte || null;
   const occurrenceCount = dtc.occurrenceCount ?? dtc.occurrence_count ?? dtc.occurrenceCounter ?? dtc.occurrence_counter ?? null;
+  const manufacturerSpecific = dtc.manufacturerSpecific === true || dtc.manufacturer_specific === true || dtc.codeFormat === "manufacturer_specific" || dtc.code_format === "manufacturer_specific";
+  const reportedDescription = dtc.reportedDescription || dtc.reported_description || null;
+  const reportedStatus = dtc.reportedStatus || dtc.reported_status || null;
   const ecu = dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || null;
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
@@ -7887,6 +7890,7 @@ function createObdDtcCard(codeOrDtc) {
   badge.className = "obd-dtc-status";
   badge.textContent = registered || modern ? "登録データあり" : "個別定義未登録";
   head.appendChild(badge);
+  if (manufacturerSpecific) badge.textContent = "メーカー固有・報告値";
   wrapper.appendChild(head);
 
   const description = document.createElement("p");
@@ -7895,6 +7899,22 @@ function createObdDtcCard(codeOrDtc) {
     ? `${system}に関するDTCです。コードだけで故障部品は確定しません。`
     : describeUnregisteredDtc(code);
   wrapper.appendChild(description);
+
+  if (reportedDescription) description.textContent = `診断機報告: ${reportedDescription}`;
+
+  if (manufacturerSpecific) {
+    const note = document.createElement("p");
+    note.className = "obd-dtc-check";
+    note.textContent = "メーカー固有コードのため、車種・ECU・整備書で定義を確認してください。";
+    wrapper.appendChild(note);
+  }
+
+  if (reportedStatus && !["stored", "pending", "permanent"].includes(String(reportedStatus).toLowerCase())) {
+    const reported = document.createElement("p");
+    reported.className = "obd-dtc-check";
+    reported.textContent = `診断機報告ステータス: ${reportedStatus}`;
+    wrapper.appendChild(reported);
+  }
 
   if (statusByte) {
     const reportedStatusByte = document.createElement("p");
