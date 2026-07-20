@@ -1344,6 +1344,8 @@
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
+    const observedSourceEcus = [...new Set(monitorValues.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
+    const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
     const readoutStatus = bridgeSafety.blocked || bridgeSafety.unparsed
       ? getBridgeReadoutStatus(bridgeSafety)
@@ -1369,6 +1371,8 @@
       wouldTransmit: bridgeSafety.wouldTransmit,
       would_transmit: bridgeSafety.wouldTransmit,
       protocol: readBridgeProtocol(data),
+      sourceEcu: resolvedSourceEcu,
+      source_ecu: resolvedSourceEcu,
       supportedPids,
       supported_pids: supportedPids,
       capturedAt,
