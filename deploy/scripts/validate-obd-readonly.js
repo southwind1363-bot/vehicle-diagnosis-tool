@@ -6925,6 +6925,16 @@ const bridgeImportExplicitReadinessResponse = obd.buildBridgeDiagnosticImport({
   readinessResponse: { raw: "41 01 00 07 65 00" }
 });
 check(bridgeImportExplicitReadinessResponse.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeImportExplicitReadinessResponse.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && bridgeImportExplicitReadinessResponse.vehicleCommandEnabled === false && bridgeImportExplicitReadinessResponse.wouldTransmit === false, "Bridge diagnostic import did not retain an explicit readiness response as a read-only readiness readout");
+const bridgeImportUnobservedReadinessResponse = obd.buildBridgeDiagnosticImport({
+  readinessResponse: {
+    ok: false,
+    blocked: false,
+    would_transmit: false,
+    errors: ["replay_readiness_not_observed"],
+    data: { protocol: "ISO15765-4", readiness_ecu_snapshots: [] }
+  }
+});
+check(bridgeImportUnobservedReadinessResponse.bridgeSession?.readinessSnapshot?.readinessReadoutStatus === "unparsed" && bridgeImportUnobservedReadinessResponse.bridgeSession?.readoutCoverage?.itemById?.readiness_snapshot?.status === "missing" && !bridgeImportUnobservedReadinessResponse.bridgeSession?.warnings?.includes("readiness_incomplete") && bridgeImportUnobservedReadinessResponse.vehicleCommandEnabled === false && bridgeImportUnobservedReadinessResponse.wouldTransmit === false, "Unobserved readiness bridge responses must remain missing read-only data, not an incomplete-monitor diagnosis");
 const bridgeSummaryLivePidSupportedPidIsolation = obd.buildBridgeSessionSummary({
   livePidSnapshot: { monitorValues: [{ id: "engine_speed", value: 900, unit: "rpm" }], supportedPids: ["0C"] }
 });
@@ -16750,6 +16760,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2674");
+  console.log("OBD read-only safety checks: 2675");
   console.log("Errors: 0");
 }
