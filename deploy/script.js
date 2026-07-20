@@ -443,6 +443,7 @@ const obdDevBridgeEcuInfoButton = document.querySelector("#obdDevBridgeEcuInfoBu
 const obdDevBridgeMonitorButton = document.querySelector("#obdDevBridgeMonitorButton");
 const obdDevBridgeSupportedPidButton = document.querySelector("#obdDevBridgeSupportedPidButton");
 const obdDevBridgeFreezeFrameButton = document.querySelector("#obdDevBridgeFreezeFrameButton");
+const obdDevBridgeReadinessButton = document.querySelector("#obdDevBridgeReadinessButton");
 const obdDevBridgeLiveButton = document.querySelector("#obdDevBridgeLiveButton");
 const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton");
 const obdDevStatus = document.querySelector("#obdDevStatus");
@@ -474,7 +475,7 @@ const tabButtons = document.querySelectorAll("[data-tab-target]");
 const OBD_NEXT_READOUT_ACTIONS = Object.freeze({
   dtc_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeDtcButton : obdDevReadDtcButton), label: "DTC読取" }),
   freeze_frame_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeFreezeFrameButton : obdDevReadFreezeFrameButton), label: "フリーズフレーム読取" }),
-  readiness_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeLiveButton : obdDevReadReadinessButton), label: "ライブデータ/レディネス読取" }),
+  readiness_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeReadinessButton : obdDevReadReadinessButton), label: "レディネス読取" }),
   ecu_info_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeEcuInfoButton : obdDevReadEcuInfoButton), label: "ECU情報読取" }),
   live_pid_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeLiveButton : obdDevSnapshotButton), label: "ライブデータ読取" }),
   supported_pid_matrix: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeSupportedPidButton : obdDevSnapshotButton), label: "対応PID読取" }),
@@ -653,6 +654,7 @@ obdDevBridgeEcuInfoButton.addEventListener("click", readObdLocalBridgeEcuInfo);
 obdDevBridgeMonitorButton.addEventListener("click", readObdLocalBridgeOnboardMonitor);
 obdDevBridgeSupportedPidButton.addEventListener("click", readObdLocalBridgeSupportedPids);
 obdDevBridgeFreezeFrameButton.addEventListener("click", readObdLocalBridgeFreezeFrame);
+obdDevBridgeReadinessButton.addEventListener("click", readObdLocalBridgeReadiness);
 obdDevBridgeLiveButton.addEventListener("click", readObdLocalBridgeLiveSnapshot);
 obdDevDisconnectButton.addEventListener("click", disconnectObdDeveloperVci);
 obdPreviewElm327Button?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-elm327"));
@@ -4196,6 +4198,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevBridgeMonitorButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeSupportedPidButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeFreezeFrameButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeReadinessButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevBridgeLiveButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
   obdDevDisconnectButton.disabled = !connected;
   obdDevConnectionState.textContent = connected
@@ -4636,6 +4639,12 @@ async function readObdLocalBridgeFreezeFrame() {
   });
 }
 
+async function readObdLocalBridgeReadiness() {
+  await runObdLocalBridgeRead("ブリッジレディネス読取", "read_live_pid_snapshot", { readout_id: "readiness_snapshot", pid: "01" }, (response) => {
+    renderObdBridgeReadout({ readinessResponse: response });
+  });
+}
+
 async function readObdLocalBridgeLiveSnapshot() {
   await runObdLocalBridgeRead("ブリッジライブ読取", "read_live_pid_snapshot", {}, (response) => {
     renderObdBridgeReadout({ livePidResponse: response });
@@ -4947,8 +4956,8 @@ function renderObdBridgeReadout(parts = {}) {
   const livePidSnapshot = parts.livePidResponse
     ? window.ObdReadOnly.normalizeBridgeLivePidSnapshot(parts.livePidResponse)
     : previousSession.livePidSnapshot || null;
-  const readinessSnapshot = parts.livePidResponse
-    ? window.ObdReadOnly.normalizeBridgeReadinessSnapshot(parts.livePidResponse)
+  const readinessSnapshot = parts.readinessResponse
+    ? window.ObdReadOnly.normalizeBridgeReadinessSnapshot(parts.readinessResponse)
     : previousSession.readinessSnapshot || null;
   const freezeFrameSnapshot = parts.freezeFrameResponse
     ? window.ObdReadOnly.normalizeBridgeFreezeFrameSnapshot(parts.freezeFrameResponse)
@@ -5092,12 +5101,13 @@ function renderObdBridgeReadout(parts = {}) {
     obdImportStatus.textContent = supportedPidMatrix.supportedCount
       ? `ブリッジ対応PIDを${supportedPidMatrix.supportedCount || 0}件読取りました。${pidPreview ? ` 先頭 ${pidPreview}` : ""}`.trim()
       : "ブリッジ対応PID応答を受け取りました。対応PIDは0件です。";
-  } else if (parts.livePidResponse && readinessSnapshot?.monitorCount) {
-    const valueSummary = monitorValues.length ? ` ライブ値${monitorValues.length}項目` : "";
-    obdImportStatus.textContent = `ブリッジライブ値とレディネス${readinessSnapshot.monitorCount}項目を読取りました。${valueSummary} / ${formatObdBridgeReadinessSummary(readinessSnapshot, { includeObservedCount: true })}`.trim();
-  } else if (parts.livePidResponse && readinessSnapshot) {
+  } else if (parts.readinessResponse && readinessSnapshot) {
+    obdImportStatus.textContent = readinessSnapshot.monitorCount
+      ? `ブリッジレディネスを${readinessSnapshot.monitorCount}項目読取りました。${formatObdBridgeReadinessSummary(readinessSnapshot, { includeObservedCount: true })}`.trim()
+      : "ブリッジレディネス応答を受け取りました。項目は0件です。";
+  } else if (parts.livePidResponse) {
     obdImportStatus.textContent = monitorValues.length
-      ? `ブリッジライブ値を${monitorValues.length}項目読取りました。レディネス項目は0件です。`
+      ? `ブリッジライブ値を${monitorValues.length}項目読取りました。`
       : "ブリッジライブ値応答を受け取りました。項目は0件です。";
   }
   renderObdDeveloperSessionSummary(session);

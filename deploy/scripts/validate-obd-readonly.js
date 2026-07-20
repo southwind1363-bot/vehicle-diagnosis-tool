@@ -2847,6 +2847,7 @@ check(appSource.includes('const nextReadoutCandidates = getSessionNextReadoutCan
 check(appSource.includes('const currentDtcSnapshot = currentSession?.dtcSnapshot || currentSession?.dtc_snapshot || null;') && appSource.includes('dtcSnapshot: currentDtcSnapshot,'), "OBD bridge diagnostic import should accept snake_case DTC snapshot aliases");
 check(appSource.includes('const currentLivePidSnapshot = currentSession?.livePidSnapshot || currentSession?.live_pid_snapshot || null;') && appSource.includes('const currentFreezeFrameSnapshot = currentSession?.freezeFrameSnapshot || currentSession?.freeze_frame_snapshot || null;'), "OBD bridge diagnostic import should accept snake_case live PID and freeze-frame aliases");
 check(appSource.includes('const currentReadinessSnapshot = currentSession?.readinessSnapshot || currentSession?.readiness_snapshot || null;') && appSource.includes('const currentEcuInfoSnapshot = currentSession?.ecuInfoSnapshot || currentSession?.ecu_info_snapshot || null;'), "OBD bridge diagnostic import should accept snake_case readiness and ECU aliases");
+check(appSource.includes('const obdDevBridgeReadinessButton = document.querySelector("#obdDevBridgeReadinessButton");') && appSource.includes('readinessResponse: response') && appSource.includes('readout_id: "readiness_snapshot", pid: "01"') && !appSource.includes('const readinessSnapshot = parts.livePidResponse'), "OBD bridge UI should request readiness separately from live PID data");
 check(appSource.includes('const currentReadoutCoverage = currentSession?.readoutCoverage || currentSession?.readout_coverage || null;') && appSource.includes('nextReadoutCandidates: currentNextReadoutCandidates,'), "OBD bridge diagnostic import should accept snake_case coverage and next-readout aliases");
 check(appSource.includes('const sessionConnectionStatus = session?.connectionStatus || session?.connection_status || null;') && appSource.includes('const sessionAdapterIdentity = session?.adapterIdentity || session?.adapter_identity || null;'), "OBD session displays should accept snake_case connection and adapter aliases");
 check(appSource.includes('const sessionVciDevices = session?.vciDevices || session?.vci_devices || session?.vciList?.devices || session?.vci_list?.devices || null;') && appSource.includes('const sessionVehicleProfile = session?.vehicleProfile || session?.vehicle_profile || null;'), "OBD session displays should accept snake_case VCI and vehicle aliases");
@@ -16729,6 +16730,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2670");
+  console.log("OBD read-only safety checks: 2671");
   console.log("Errors: 0");
 }

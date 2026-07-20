@@ -35,7 +35,7 @@ function hasUniqueDtcCodes(items) {
   return new Set(codes).size === codes.length;
 }
 
-function post(port, intent, pairingToken = token) {
+function post(port, intent, pairingToken = token, data = {}) {
   return fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Origin": "https://tool.mukiguri.com" },
@@ -45,7 +45,7 @@ function post(port, intent, pairingToken = token) {
       intent,
       timestamp: new Date().toISOString(),
       pairing_token: pairingToken,
-      data: {}
+      data
     })
   }).then((response) => response.json());
 }
@@ -144,6 +144,9 @@ try {
   check(live.data.values.some((item) => item.id === "maf_sensor_status" && item.value === "mask_01"), "live PID response did not include sample MAF sensor status mask");
   check(live.data.values.some((item) => item.id === "commanded_diesel_intake_air_flow" && item.value === 50.2), "live PID response did not include sample diesel intake air flow command");
   check(live.data.values.some((item) => item.id === "commanded_throttle_control" && item.value === 50.2), "live PID response did not include sample diesel throttle control command");
+  const readiness = await post(port, "read_live_pid_snapshot", token, { readout_id: "readiness_snapshot", pid: "01" });
+  check(readiness.ok === true && readiness.blocked === false && readiness.would_transmit === false, "readiness request was not kept read-only");
+  check(readiness.data.readiness_status_byte_a === 0x00 && readiness.data.readiness_status_byte_b === 0x07 && readiness.data.readiness_status_byte_c === 0x65 && readiness.data.readiness_status_byte_d === 0x00, "readiness request did not return a dedicated Mode 01 PID 01 snapshot");
   check(live.data.values.length >= 40, "live PID sample response did not include expanded monitor values");
   check(live.data.values.every((item) => monitorDefinitionIds.has(item.id)), "live PID sample response included an id not registered in monitor definitions");
   check(live.data.values.every((item) => live.data.supported_pids.includes(item.pid)), "live PID sample response included a pid not advertised as supported");
@@ -392,6 +395,8 @@ try {
   check(replayLive.data.values.some((item) => item.id === "auxiliary_input_status" && item.value === "pto_inactive"), "replay live response did not decode auxiliary input status");
   check(replayLive.data.values.some((item) => item.id === "stft_b1" && item.value === 0), "replay live response did not decode STFT B1");
   check(replayLive.data.values.some((item) => item.id === "ltft_b1" && item.value === 19.53), "replay live response did not decode LTFT B1");
+  const replayReadiness = await post(replayPort, "read_live_pid_snapshot", token, { readout_id: "readiness_snapshot", pid: "01" });
+  check(replayReadiness.ok === true && replayReadiness.would_transmit === false && replayReadiness.data.readiness_ecu_snapshots.some((item) => item.readiness_status_byte_a === 0x81 && item.readiness_status_byte_b === 0x07), "replay readiness request did not return an observed Mode 01 PID 01 snapshot");
   check(replayLive.data.values.some((item) => item.id === "fuel_pressure" && item.value === 120), "replay live response did not decode fuel pressure");
   check(replayLive.data.values.some((item) => item.id === "intake_air_temp" && item.value === 40), "replay live response did not decode intake air temperature");
   check(replayLive.data.values.some((item) => item.id === "o2_b1s1_voltage" && item.value === 0.005), "replay live response did not decode O2 B1S1 voltage");
@@ -455,6 +460,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 168");
+  console.log("Local bridge read-only checks: 171");
   console.log("Errors: 0");
 }

@@ -96,6 +96,12 @@ const SAMPLE_LIVE_VALUES = [
   { id: "commanded_throttle_control", pid: "6C", value: 50.2, unit: "%" },
   { id: "engine_friction_torque", pid: "8E", value: -5, unit: "%" }
 ];
+const SAMPLE_READINESS_DATA = {
+  readiness_status_byte_a: 0x00,
+  readiness_status_byte_b: 0x07,
+  readiness_status_byte_c: 0x65,
+  readiness_status_byte_d: 0x00
+};
 const SAMPLE_ECU_INFO_VALUES = [
   { id: "supported_info_types_00", info_type: "00", value: "55 60 00 00" },
   { id: "vin", info_type: "02", value: "JTDKN3DU0A0123456" },
@@ -163,6 +169,13 @@ function validateBridgeRequest(body, pairingToken) {
     if (body.pairing_token !== pairingToken) return { ok: false, error: "pairing_token_mismatch" };
   }
   return { ok: true };
+}
+
+function isReadinessSnapshotRequest(request = {}) {
+  const data = request?.data && typeof request.data === "object" ? request.data : {};
+  const requestedPid = String(data.pid || data.requested_pid || data.requestedPid || "").trim().toUpperCase();
+  const readoutId = String(data.readout_id || data.readoutId || "").trim();
+  return readoutId === "readiness_snapshot" || requestedPid === "01";
 }
 
 function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
@@ -357,6 +370,29 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     };
   }
 
+  if (request.intent === "read_live_pid_snapshot" && isReadinessSnapshotRequest(request) && replaySnapshot) {
+    const replayError = replaySnapshot.readoutErrors?.readiness_snapshot
+      || (replaySnapshot.readoutObserved?.readiness_snapshot ? null : "replay_readiness_not_observed");
+    return {
+      ...base,
+      ...(replayError ? { ok: false, errors: [replayError] } : {}),
+      data: {
+        protocol: replaySnapshot.protocol,
+        readiness_ecu_snapshots: replaySnapshot.readinessEcuSnapshots
+      }
+    };
+  }
+
+  if (request.intent === "read_live_pid_snapshot" && isReadinessSnapshotRequest(request)) {
+    return {
+      ...base,
+      data: {
+        protocol: "ISO15765-4",
+        ...SAMPLE_READINESS_DATA
+      }
+    };
+  }
+
   if (request.intent === "read_live_pid_snapshot" && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.live_pid_snapshot
       || (replaySnapshot.readoutObserved?.live_pid_snapshot ? null : "replay_live_pid_not_observed");
@@ -423,8 +459,9 @@ export function decodeReplayLog(text) {
   const ecus = new Set();
   const dtcReadoutObserved = { stored: false, pending: false, permanent: false };
   const dtcReadoutErrors = { stored: null, pending: null, permanent: null };
-  const readoutObserved = { freeze_frame: false, supported_pids: false, ecu_info: false, onboard_monitor: false, live_pid_snapshot: false };
-  const readoutErrors = { freeze_frame: null, supported_pids: null, ecu_info: null, onboard_monitor: null, live_pid_snapshot: null };
+  const readoutObserved = { freeze_frame: false, supported_pids: false, readiness_snapshot: false, ecu_info: false, onboard_monitor: false, live_pid_snapshot: false };
+  const readoutErrors = { freeze_frame: null, supported_pids: null, readiness_snapshot: null, ecu_info: null, onboard_monitor: null, live_pid_snapshot: null };
+  const readinessEcuSnapshots = [];
   let triggerDtc = null;
   const triggerDtcEntries = [];
 
@@ -551,6 +588,21 @@ export function decodeReplayLog(text) {
         recordSupportedPidPageBase(ecu, pid);
         return;
       }
+      if (pid === "01") {
+        const readinessBytes = bytes.slice(serviceIndex + 2, serviceIndex + 6);
+        if (readinessBytes.length < 4) {
+          readoutErrors.readiness_snapshot = "replay_readiness_payload_incomplete";
+          return;
+        }
+        readoutObserved.readiness_snapshot = true;
+        readinessEcuSnapshots.push({
+          ...(ecu ? { source_ecu: ecu } : {}),
+          readiness_status_byte_a: readinessBytes[0],
+          readiness_status_byte_b: readinessBytes[1],
+          readiness_status_byte_c: readinessBytes[2],
+          readiness_status_byte_d: readinessBytes[3]
+        });
+      }
       const decodedValues = decodeLivePidValues(pid, bytes.slice(serviceIndex + 2));
       if (!decodedValues.length) {
         readoutErrors.live_pid_snapshot = "replay_live_pid_payload_unparsed";
@@ -578,6 +630,7 @@ export function decodeReplayLog(text) {
     freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}:${item.source_ecu || ""}`),
     ecuInfoValues: uniqueBy(ecuInfoValues, (item) => `${item.id}:${item.source_ecu || ""}`),
     onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}:${item.source_ecu || ""}`),
+    readinessEcuSnapshots: uniqueBy(readinessEcuSnapshots, (item) => item.source_ecu || "default"),
     triggerDtc,
     triggerDtcEntries: uniqueBy(triggerDtcEntries, (item) => `${item.code}:${item.frame_number}:${item.source_ecu || ""}`),
     supportedPids: [...supportedPids].sort(),
