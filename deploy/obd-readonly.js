@@ -17332,7 +17332,24 @@
       const definition = monitorDefinitions.find((item) =>
         item.aliases.some((alias) => isMonitorLabelMatch(labelPart, alias))
       );
-      if (!definition) return;
+      if (!definition) {
+        const rawPidMatch = line.trim().match(/^mode\s*0?1\s+pid\s*(?:0x)?([0-9a-f]{2})\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){1,7})$/i);
+        if (!rawPidMatch) return;
+        const pid = rawPidMatch[1].toUpperCase();
+        const responseBytes = parseObdHexBytes(rawPidMatch[2]);
+        const payload = responseBytes[0] === 0x41
+          ? responseBytes[1] === parseInt(pid, 16) ? responseBytes.slice(2) : []
+          : responseBytes;
+        const payloadLength = getStandardPidPayloadLength(pid);
+        if (!payloadLength || payload.length !== payloadLength) return;
+        const decoded = decodeStandardPidValue(pid, payload);
+        const decodedRows = Array.isArray(decoded) ? decoded : decoded ? [decoded] : [];
+        decodedRows.forEach((row) => {
+          const normalized = normalizeBridgePidValue({ ...row, pid }, lineIndex);
+          if (normalized) values.set(normalized.id, { ...normalized, sourceLine: lineIndex + 1 });
+        });
+        return;
+      }
 
       let parsedValue;
       if (definition.valueType === "text") {
