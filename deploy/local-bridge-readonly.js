@@ -181,7 +181,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
         api_version: API_VERSION,
         status: "ready_sample_mode",
         paired: true,
-        vci_connected: true,
+        vci_connected: false,
         vehicle_connected: false,
         vehicle_command_enabled: false,
         sample_mode: true,
@@ -202,7 +202,8 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
             label: "Read-only Local Bridge Sample VCI",
             vendor: "vehicle-diagnosis-tool",
             driver_status: "sample_mode",
-            connected: true
+            sample_mode: true,
+            connected: false
           }
         ]
       }

@@ -71,10 +71,11 @@ try {
   check(status.would_transmit === false, "bridge_status would transmit");
   check(status.data.vehicle_command_enabled === false, "bridge status enabled vehicle commands");
   check(status.data.sample_mode === true, "bridge status did not mark sample mode");
+  check(status.data.vci_connected === false && status.data.vehicle_connected === false, "sample bridge incorrectly reported a physical VCI or vehicle connection");
 
   const vci = await post(port, "list_vci");
   check(vci.data.devices.length === 1, "list_vci did not return sample VCI");
-  check(vci.data.devices[0].connected === true, "sample VCI was not connected");
+  check(vci.data.devices[0].connected === false && vci.data.devices[0].sample_mode === true, "sample VCI was not clearly marked as disconnected sample data");
 
   const adapterIdentity = await post(port, "adapter_identity");
   check(adapterIdentity.data.adapter_name === "Read-only Local Bridge Sample", "adapter_identity did not return sample adapter name");
