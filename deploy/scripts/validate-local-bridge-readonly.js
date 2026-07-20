@@ -58,6 +58,7 @@ try {
   const health = await fetch(`http://127.0.0.1:${port}/health`).then((response) => response.json());
   check(health.ok === true, "health endpoint did not respond ok");
   check(health.vehicle_command_enabled === false, "health endpoint enabled vehicle commands");
+  check(health.sample_mode === true && health.replay_mode === false, "default bridge health did not distinguish sample mode from replay mode");
 
   const preflight = await fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "OPTIONS",
@@ -75,7 +76,7 @@ try {
 
   const vci = await post(port, "list_vci");
   check(vci.data.devices.length === 1, "list_vci did not return sample VCI");
-  check(vci.data.devices[0].connected === false && vci.data.devices[0].sample_mode === true, "sample VCI was not clearly marked as disconnected sample data");
+  check(vci.data.devices[0].connected === false && vci.data.devices[0].sample_mode === true && vci.data.devices[0].replay_mode === false, "sample VCI was not clearly marked as disconnected sample data");
 
   const adapterIdentity = await post(port, "adapter_identity");
   check(adapterIdentity.data.adapter_name === "Read-only Local Bridge Sample", "adapter_identity did not return sample adapter name");
@@ -244,7 +245,9 @@ const replayPort = await new Promise((resolve) => {
 
 try {
   const replayStatus = await post(replayPort, "bridge_status");
-  check(replayStatus.data.replay_loaded === true, "replay mode was not reported in bridge_status");
+  check(replayStatus.data.replay_loaded === true && replayStatus.data.replay_mode === true && replayStatus.data.sample_mode === false && replayStatus.data.vci_connected === false, "replay mode was not safely reported in bridge_status");
+  const replayVci = await post(replayPort, "list_vci");
+  check(replayVci.data.devices[0]?.id === "replay-readonly-input" && replayVci.data.devices[0]?.replay_mode === true && replayVci.data.devices[0]?.connected === false, "replay mode did not identify its disconnected input source");
 
   const replayDtc = await post(replayPort, "read_stored_dtc");
   check(replayDtc.data.dtcs.some((item) => item.code === "P0171"), "replay DTC response did not include P0171");

@@ -112,6 +112,7 @@ export function createLocalBridgeApp(options = {}) {
   const pairingToken = String(options.pairingToken || process.env.LOCAL_BRIDGE_PAIRING_TOKEN || "");
   const bridgeVersion = options.bridgeVersion || "readonly-dev-0.1.0";
   const replaySnapshot = buildReplaySnapshot(options);
+  const replayMode = Boolean(replaySnapshot);
 
   return http.createServer(async (request, response) => {
     setCorsHeaders(request, response);
@@ -128,7 +129,8 @@ export function createLocalBridgeApp(options = {}) {
         bridge_version: bridgeVersion,
         api_version: API_VERSION,
         vehicle_command_enabled: false,
-        sample_mode: true
+        sample_mode: !replayMode,
+        replay_mode: replayMode
       });
       return;
     }
@@ -164,6 +166,7 @@ function validateBridgeRequest(body, pairingToken) {
 }
 
 function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
+  const replayMode = Boolean(replaySnapshot);
   const base = {
     request_id: request.request_id,
     ok: true,
@@ -179,13 +182,14 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
       data: {
         bridge_version: bridgeVersion,
         api_version: API_VERSION,
-        status: "ready_sample_mode",
+        status: replayMode ? "ready_replay_mode" : "ready_sample_mode",
         paired: true,
         vci_connected: false,
         vehicle_connected: false,
         vehicle_command_enabled: false,
-        sample_mode: true,
-        replay_loaded: Boolean(replaySnapshot)
+        sample_mode: !replayMode,
+        replay_mode: replayMode,
+        replay_loaded: replayMode
       }
     };
   }
@@ -194,15 +198,16 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     return {
       ...base,
       data: {
-        selected_device_id: "sample-readonly-vci",
-        driver_status: "sample_mode",
+        selected_device_id: replayMode ? "replay-readonly-input" : "sample-readonly-vci",
+        driver_status: replayMode ? "replay_mode" : "sample_mode",
         devices: [
           {
-            id: "sample-readonly-vci",
-            label: "Read-only Local Bridge Sample VCI",
+            id: replayMode ? "replay-readonly-input" : "sample-readonly-vci",
+            label: replayMode ? "Read-only Local Bridge Replay Input" : "Read-only Local Bridge Sample VCI",
             vendor: "vehicle-diagnosis-tool",
-            driver_status: "sample_mode",
-            sample_mode: true,
+            driver_status: replayMode ? "replay_mode" : "sample_mode",
+            sample_mode: !replayMode,
+            replay_mode: replayMode,
             connected: false
           }
         ]
@@ -214,9 +219,11 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null) {
     return {
       ...base,
       data: {
-        adapter_name: "Read-only Local Bridge Sample",
-        adapter_family: "local_bridge_sample",
+        adapter_name: replayMode ? "Read-only Local Bridge Replay" : "Read-only Local Bridge Sample",
+        adapter_family: replayMode ? "local_bridge_replay" : "local_bridge_sample",
         firmware_version: bridgeVersion,
+        sample_mode: !replayMode,
+        replay_mode: replayMode,
         vehicle_command_enabled: false
       }
     };
