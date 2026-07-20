@@ -2570,8 +2570,16 @@ check(appSource.includes('if (obdDevSession.textBuffer.includes(">")) {\n      r
 check(appSource.includes('const timedOut = message.startsWith("elm_response_timeout:");') && appSource.includes('const transportFailed = timedOut || message.startsWith("elm_transport_");') && appSource.includes('if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });') && appSource.includes('安全に切断しました。'), "Web Serial read timeouts and transport failures must end the connection safely");
 check(appSource.includes('const chunks = [];') && appSource.includes('const commandResponses = [];') && appSource.includes('const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks));') && appSource.includes('先に取得した応答だけを保持しています。'), "Web Serial read failures should retain only completed read-only responses");
 check(appSource.includes('function retainObdDeveloperReadout(commandResponses = [], chunks = [])') && appSource.includes('if (!commandResponses.length) return null;') && appSource.includes('appendObdDeveloperLog(chunks.join("\\n"));') && appSource.includes('const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText,'), "Web Serial partial readout retention should preserve a normalized session without synthesizing values");
-check(appSource.includes('readoutAttempts: []') && appSource.includes('obdDevSession.readoutAttempts = [];') && appSource.includes('function recordWebSerialReadoutAttempt(') && appSource.includes('status: commandResponses.length ? "partial" : "failed"') && appSource.includes('vehicleCommandEnabled: false'), "Web Serial scan sessions should retain read-only execution outcomes without command bodies");
-check(appSource.includes('function buildWebSerialReadoutSummary()') && appSource.includes('schemaVersion: "web_serial_readout_execution_v1"') && appSource.includes('schema_version: "web_serial_readout_execution_v1"') && appSource.includes('attempt_count: attempts.length') && appSource.includes('vehicle_command_enabled: false') && appSource.includes('webSerialReadoutSummary,') && appSource.includes('web_serial_readout_summary: webSerialReadoutSummary'), "Web Serial scan sessions should expose camelCase and snake_case readout execution summaries");
+check(appSource.includes('readoutAttempts: []') && appSource.includes('obdDevSession.readoutAttempts = [];') && appSource.includes('function recordWebSerialReadoutAttempt(') && appSource.includes('["completed", "partial", "incomplete", "failed"]') && appSource.includes('retainedRawText: false') && appSource.includes('retainedCommands: false') && appSource.includes('vehicleCommandEnabled: false'), "Web Serial scan sessions should retain read-only execution outcomes without command bodies or raw responses");
+check(appSource.includes('function classifyWebSerialCommandResponse(command, response)') && appSource.includes('WEB_SERIAL_ADAPTER_ERROR_LINES') && appSource.includes('WEB_SERIAL_VEHICLE_LINK_ERROR_LINES') && appSource.includes('line === "NO DATA"') && appSource.includes('pendingNegativeResponseCount') && appSource.includes('function buildWebSerialReadoutOutcome(commands, commandResponses, options = {})'), "Web Serial should classify positive, negative, empty, adapter, and vehicle-link response quality without changing read commands");
+const webSerialResponseClassifierSource = appSource.match(/const WEB_SERIAL_ADAPTER_ERROR_LINES[\s\S]*?\r?\n}\r?\n\r?\nfunction buildWebSerialReadoutOutcome/)?.[0] || "";
+const webSerialResponseClassifier = webSerialResponseClassifierSource
+  ? new Function(`${webSerialResponseClassifierSource.replace(/\r?\nfunction buildWebSerialReadoutOutcome$/, "")}; return classifyWebSerialCommandResponse;`)()
+  : null;
+check(webSerialResponseClassifier?.("010C", "410C1AF8")?.commandStatus === "completed" && webSerialResponseClassifier?.("0100", "41007F011100")?.commandStatus === "completed" && webSerialResponseClassifier?.("010C", "7E804410C1AF8")?.commandStatus === "completed" && webSerialResponseClassifier?.("06", "7E8100946010200032100010005")?.commandStatus === "completed", "Web Serial should recognize compact ELM327, CAN-header, ISO-TP, and PID payloads containing 7F bytes");
+check(webSerialResponseClassifier?.("010C", "7F0111")?.negativeResponseCount === 1 && webSerialResponseClassifier?.("010C", "NO DATA")?.noDataCount === 1 && webSerialResponseClassifier?.("ATI", "ATI")?.commandStatus === "incomplete" && webSerialResponseClassifier?.("ATI", "ELM327 v1.5")?.commandStatus === "completed", "Web Serial should distinguish compact NRC, NO DATA, and AT echo-only responses");
+check(appSource.includes('if (commandOutcome.stopScope === "attempt" || commandOutcome.stopScope === "scan") break;') && appSource.includes('if (outcome.stopScope === "scan" && obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = outcome.stopReason;') && appSource.includes('if (obdDevSession.coreScanStopReason) break;'), "Web Serial should stop only the current batch for adapter errors and the core scan for vehicle-link failures");
+check(appSource.includes('function buildWebSerialReadoutSummary()') && appSource.includes('schemaVersion: "web_serial_readout_execution_v2"') && appSource.includes('schema_version: "web_serial_readout_execution_v2"') && appSource.includes('incomplete_count: countByStatus("incomplete")') && appSource.includes('transport_error_count: total("transportErrorCount")') && appSource.includes('vehicle_command_enabled: false') && appSource.includes('webSerialReadoutSummary,') && appSource.includes('web_serial_readout_summary: webSerialReadoutSummary'), "Web Serial scan sessions should expose camelCase and snake_case response-quality summaries");
 check(appSource.includes('function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA)') && appSource.includes('["読取実行", webSerialReadoutLabel]'), "OBD session summary should show Web Serial readout execution status separately from diagnostic coverage");
 check(appSource.includes('const primaryBlockingReasonId = flow.primaryBlockingReasonId || flow.primary_blocking_reason_id') && appSource.includes('addObdDiagnosticFlowMetric(grid, "主保留", primaryBlockingLabel'), "OBD diagnostic flow panel should render the primary blocker");
 check(appSource.includes('const primaryBlockingReadoutRequest = flow.primaryBlockingReadoutRequest || flow.primary_blocking_readout_request') && appSource.includes('addObdDiagnosticFlowMetric(grid, "主保留要求", primaryBlockingReadoutRequestLabel'), "OBD diagnostic flow panel should render the primary blocker request");
@@ -2769,8 +2777,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.88";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.88";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.88", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.89";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.89";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.89", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -16365,15 +16373,51 @@ const scanSessionWebSerialExecutionSummary = obd.buildDiagnosticScanSession({
     failed_count: 1,
     vehicle_command_enabled: true,
     attempts: [
-      { label: "DTC", status: "completed", requested_command_count: 3, completed_command_count: 3, commands: ["03", "07", "0A"] },
-      { label: "PID", status: "untrusted", requested_command_count: 2, completed_command_count: 9, vehicle_command_enabled: true }
+      { label: "DTC", status: "completed", requested_command_count: 3, attempted_command_count: 3, prompt_terminated_command_count: 3, completed_command_count: 3, positive_response_count: 3, commands: ["03", "07", "0A"] },
+      { label: "PID", status: "untrusted", requested_command_count: 2, attempted_command_count: 2, completed_command_count: 9, no_data_count: 2, vehicle_command_enabled: true }
     ]
   }
 });
-check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.schemaVersion === "web_serial_readout_execution_v1" && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.attempt_count === 2, "Diagnostic scan session did not normalize Web Serial execution summary schema and attempt count");
+check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.schemaVersion === "web_serial_readout_execution_v2" && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.attempt_count === 2, "Diagnostic scan session did not normalize Web Serial execution summary schema and attempt count");
 check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.completedCount === 1 && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.failed_count === 1, "Diagnostic scan session did not normalize Web Serial execution statuses");
 check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[1]?.completedCommandCount === 2 && scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.vehicleCommandEnabled === false, "Diagnostic scan session did not clamp Web Serial execution counts or preserve read-only mode");
-check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[0]?.commands === undefined && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.attempts?.[0]?.vehicle_command_enabled === false, "Diagnostic scan session retained unsafe Web Serial execution command bodies or write flags");
+check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[0]?.commands === undefined && scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[0]?.retainedRawText === false && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.attempts?.[0]?.vehicle_command_enabled === false, "Diagnostic scan session retained unsafe Web Serial execution command bodies, raw responses, or write flags");
+const scanSessionWebSerialResponseQuality = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempts: [
+      { label: "DTC", status: "incomplete", requested_command_count: 3, attempted_command_count: 3, prompt_terminated_command_count: 3, completed_command_count: 0, no_data_count: 2, negative_response_count: 1, pending_negative_response_count: 1, stop_scope: "none", raw_response: "must-not-retain", command: "03" },
+      { label: "ECU", status: "failed", requested_command_count: 1, attempted_command_count: 1, unable_to_connect_count: 1, stop_reason: "vehicle_link_error", stop_scope: "scan", retained_raw_text: true, retained_commands: true }
+    ]
+  }
+});
+check(scanSessionWebSerialResponseQuality.webSerialReadoutSummary?.incompleteCount === 1 && scanSessionWebSerialResponseQuality.web_serial_readout_summary?.failed_count === 1 && scanSessionWebSerialResponseQuality.webSerialReadoutSummary?.noDataCount === 2 && scanSessionWebSerialResponseQuality.webSerialReadoutSummary?.negativeResponseCount === 1, "Diagnostic scan session did not preserve Web Serial incomplete and negative response quality counts");
+check(scanSessionWebSerialResponseQuality.webSerialReadoutSummary?.attempts?.[1]?.stopReason === "vehicle_link_error" && scanSessionWebSerialResponseQuality.webSerialReadoutSummary?.attempts?.[0]?.raw_response === undefined && scanSessionWebSerialResponseQuality.webSerialReadoutSummary?.attempts?.[1]?.retainedCommands === false, "Diagnostic scan session did not constrain Web Serial stop policy or remove raw command-response content");
+const scanSessionWebSerialFalseCompletion = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempts: [{ label: "PID", status: "completed", requested_command_count: 1, attempted_command_count: 1, completed_command_count: 1, positive_response_count: 0, no_data_count: 1 }]
+  }
+});
+check(scanSessionWebSerialFalseCompletion.webSerialReadoutSummary?.attempts?.[0]?.status === "incomplete" && scanSessionWebSerialFalseCompletion.webSerialReadoutSummary?.attempts?.[0]?.readoutCompleted === false, "Diagnostic scan session accepted a v2 Web Serial NO DATA result as completed");
+const scanSessionWebSerialSummaryFalseCompletion = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempt_count: 1,
+    completed_count: 1,
+    positive_response_count: 0,
+    no_data_count: 1
+  }
+});
+check(scanSessionWebSerialSummaryFalseCompletion.webSerialReadoutSummary?.completedCount === 0 && scanSessionWebSerialSummaryFalseCompletion.webSerialReadoutSummary?.incompleteCount === 1, "Diagnostic scan session accepted an attempt-less v2 Web Serial NO DATA summary as completed");
+const scanSessionLegacyWebSerialExecution = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v1",
+    attempts: [{ label: "DTC", status: "completed", requested_command_count: 1, completed_command_count: 1 }]
+  }
+});
+const reimportedLegacyWebSerialExecution = obd.buildDiagnosticScanSession({ web_serial_readout_summary: scanSessionLegacyWebSerialExecution.webSerialReadoutSummary });
+check(scanSessionLegacyWebSerialExecution.webSerialReadoutSummary?.attempts?.[0]?.positiveResponseCount === 1 && reimportedLegacyWebSerialExecution.webSerialReadoutSummary?.attempts?.[0]?.status === "completed" && reimportedLegacyWebSerialExecution.webSerialReadoutSummary?.attempts?.[0]?.readoutCompleted === true, "Legacy Web Serial execution history changed completion status after normalization and reimport");
 const scanSessionNestedWebSerialExecutionSummary = obd.buildDiagnosticScanSession({
   scan_session: {
     webSerialReadoutSummary: {

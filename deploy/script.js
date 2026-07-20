@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.88";
+const APP_VERSION = "3.3.89";
 const APP_LAST_UPDATED = "2026-07-21";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -505,6 +505,7 @@ const obdDevSession = {
   readInProgress: false,
   initializing: false,
   coreScanInProgress: false,
+  coreScanStopReason: null,
   connectionState: "disconnected",
   lastDisconnectReason: null,
   disconnectedAt: null,
@@ -4370,6 +4371,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.supportedPidDiscoveryComplete = false;
     obdDevSession.supportedPidSet = [];
     obdDevSession.readoutAttempts = [];
+    obdDevSession.coreScanStopReason = null;
     obdDevSession.livePidTimeline = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
@@ -4416,6 +4418,7 @@ async function disconnectObdDeveloperVci(options = {}) {
   obdDevSession.readInProgress = false;
   obdDevSession.initializing = false;
   obdDevSession.coreScanInProgress = false;
+  obdDevSession.coreScanStopReason = null;
 
   try {
     if (reader) {
@@ -4497,6 +4500,7 @@ async function readObdDeveloperDtc() {
 async function readObdDeveloperCoreScan() {
   if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
   obdDevSession.coreScanInProgress = true;
+  obdDevSession.coreScanStopReason = null;
   renderObdDeveloperGate();
   const readSteps = [
     { label: "DTC", read: readObdDeveloperDtc },
@@ -4512,9 +4516,12 @@ async function readObdDeveloperCoreScan() {
       if (!obdDevSession.port) break;
       const readCompleted = await readStep.read();
       if (obdDevSession.port && readCompleted !== true) incompleteLabels.push(readStep.label);
+      if (obdDevSession.coreScanStopReason) break;
     }
     if (!obdDevSession.port) {
       obdDevStatus.textContent = "基本読取を切断により停止しました。";
+    } else if (obdDevSession.coreScanStopReason) {
+      obdDevStatus.textContent = `基本読取を停止しました: ${formatWebSerialStopReason(obdDevSession.coreScanStopReason)}。接続状態を確認してから再試行してください。`;
     } else if (incompleteLabels.length) {
       obdDevStatus.textContent = `基本読取完了: 未完了 ${incompleteLabels.join(" / ")}`;
     } else {
@@ -4522,6 +4529,7 @@ async function readObdDeveloperCoreScan() {
     }
   } finally {
     obdDevSession.coreScanInProgress = false;
+    obdDevSession.coreScanStopReason = null;
     renderObdDeveloperGate();
   }
 }
@@ -4802,6 +4810,103 @@ async function sendObdLocalBridgeStatusIntent(intent, payload = {}, options = {}
   throw lastError || new Error("local_bridge_not_found");
 }
 
+const WEB_SERIAL_ADAPTER_ERROR_LINES = new Set(["ERROR", "?", "STOPPED", "BUFFER FULL", "DATA ERROR", "FB ERROR"]);
+const WEB_SERIAL_VEHICLE_LINK_ERROR_LINES = new Set(["UNABLE TO CONNECT", "BUS ERROR", "CAN ERROR", "BUS INIT: ERROR", "LV RESET"]);
+const WEB_SERIAL_IGNORED_RESPONSE_LINES = new Set(["SEARCHING...", "BUS INIT: OK"]);
+
+function formatWebSerialStopReason(reason) {
+  if (reason === "vehicle_link_error") return "車両通信を確立できません";
+  if (reason === "adapter_error") return "アダプター応答エラー";
+  if (reason === "transport_error") return "シリアル通信エラー";
+  return "読取応答を確認できません";
+}
+
+function classifyWebSerialCommandResponse(command, response) {
+  const normalizedCommand = String(command || "").trim().toUpperCase();
+  const lines = String(response || "")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
+    .filter(Boolean)
+    .filter((line) => !WEB_SERIAL_IGNORED_RESPONSE_LINES.has(line));
+  const requestedService = /^[0-9A-F]{2}/.test(normalizedCommand) ? normalizedCommand.slice(0, 2) : null;
+  const compactResponseLines = lines.map((line) => line.replace(/[^0-9A-F]/g, "")).filter(Boolean);
+  const expectedPositiveService = requestedService ? (Number.parseInt(requestedService, 16) + 0x40).toString(16).padStart(2, "0").toUpperCase() : null;
+  const responseServiceStarts = [0, 2, 4, 3, 5, 7, 8, 10, 12];
+  const parseResponseService = (line) => {
+    for (const start of responseServiceStarts) {
+      const service = line.slice(start, start + 2);
+      if (service === expectedPositiveService) return { type: "positive" };
+      if (service === "7F" && line.slice(start + 2, start + 4) === requestedService) return { type: "negative", nrc: line.slice(start + 4, start + 6) };
+    }
+    return null;
+  };
+  const responseServices = compactResponseLines.map(parseResponseService).filter(Boolean);
+  const negativeResponses = responseServices.filter((item) => item.type === "negative");
+  const pendingNegativeResponseCount = negativeResponses.filter((item) => item.nrc === "78").length;
+  const negativeResponseCount = Math.max(0, negativeResponses.length - pendingNegativeResponseCount);
+  const positiveResponse = normalizedCommand.startsWith("AT")
+    ? lines.some((line) => line !== normalizedCommand)
+    : responseServices.some((item) => item.type === "positive");
+  if (!lines.length) return { commandStatus: "incomplete", emptyResponseCount: 1, stopScope: "none", stopReason: null };
+  if (lines.some((line) => WEB_SERIAL_VEHICLE_LINK_ERROR_LINES.has(line))) {
+    return { commandStatus: "failed", unableToConnectCount: 1, stopScope: "scan", stopReason: "vehicle_link_error" };
+  }
+  if (lines.some((line) => WEB_SERIAL_ADAPTER_ERROR_LINES.has(line))) {
+    return { commandStatus: "failed", adapterErrorCount: 1, stopScope: "attempt", stopReason: "adapter_error" };
+  }
+  if (lines.some((line) => line === "NO DATA")) {
+    return { commandStatus: "incomplete", noDataCount: 1, stopScope: "none", stopReason: null };
+  }
+  if (positiveResponse && (negativeResponseCount || pendingNegativeResponseCount)) {
+    return { commandStatus: "partial", positiveResponseCount: 1, negativeResponseCount, pendingNegativeResponseCount, stopScope: "none", stopReason: null };
+  }
+  if (positiveResponse) return { commandStatus: "completed", positiveResponseCount: 1, stopScope: "none", stopReason: null };
+  if (negativeResponseCount || pendingNegativeResponseCount) {
+    return { commandStatus: "incomplete", negativeResponseCount, pendingNegativeResponseCount, stopScope: "none", stopReason: null };
+  }
+  return { commandStatus: "incomplete", unrecognizedResponseCount: 1, stopScope: "none", stopReason: null };
+}
+
+function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) {
+  const requestedCommandCount = Array.isArray(commands) ? commands.map((command) => String(command || "").trim()).filter(Boolean).length : 0;
+  const outcomes = (Array.isArray(commandResponses) ? commandResponses : []).map((item) => classifyWebSerialCommandResponse(item?.command, item?.response));
+  const total = (key) => outcomes.reduce((sum, outcome) => sum + (Number(outcome?.[key]) || 0), 0);
+  const stopOutcome = outcomes.find((outcome) => outcome?.stopScope === "scan" || outcome?.stopScope === "attempt") || null;
+  const attemptedCommandCount = Math.max(outcomes.length, Math.min(requestedCommandCount, Number(options.attemptedCommandCount) || outcomes.length));
+  const transportErrorCount = options.transportErrorCount === true ? 1 : 0;
+  const completedCommandCount = outcomes.filter((outcome) => outcome.commandStatus === "completed").length;
+  const partialCommandCount = outcomes.filter((outcome) => outcome.commandStatus === "partial").length;
+  const hardFailure = transportErrorCount > 0 || outcomes.some((outcome) => outcome.commandStatus === "failed");
+  const status = hardFailure
+    ? "failed"
+    : completedCommandCount === requestedCommandCount && requestedCommandCount > 0
+      ? "completed"
+      : completedCommandCount > 0 || partialCommandCount > 0
+        ? "partial"
+        : "incomplete";
+  return {
+    status,
+    readoutCompleted: status === "completed",
+    requestedCommandCount,
+    attemptedCommandCount,
+    promptTerminatedCommandCount: outcomes.length,
+    completedCommandCount,
+    positiveResponseCount: total("positiveResponseCount"),
+    negativeResponseCount: total("negativeResponseCount"),
+    pendingNegativeResponseCount: total("pendingNegativeResponseCount"),
+    noDataCount: total("noDataCount"),
+    unableToConnectCount: total("unableToConnectCount"),
+    adapterErrorCount: total("adapterErrorCount"),
+    emptyResponseCount: total("emptyResponseCount"),
+    unrecognizedResponseCount: total("unrecognizedResponseCount"),
+    transportErrorCount,
+    timedOut: options.timedOut === true,
+    stopReason: transportErrorCount ? "transport_error" : (stopOutcome?.stopReason || null),
+    stopScope: transportErrorCount ? "transport" : (stopOutcome?.stopScope || "none")
+  };
+}
+
 async function runObdDeveloperRead(label, commands) {
   if (!obdDevSession.writer || !obdDevSession.reader) {
     obdDevStatus.textContent = "VCI読取が開始されていません。";
@@ -4815,25 +4920,35 @@ async function runObdDeveloperRead(label, commands) {
   const startedAt = new Date().toISOString();
   const chunks = [];
   const commandResponses = [];
+  let attemptedCommandCount = 0;
   try {
     obdDevStatus.textContent = `${label}中です。`;
     for (const command of commands) {
       chunks.push(`>${command}`);
+      attemptedCommandCount += 1;
       const response = await sendElmDeveloperCommand(command, 3500);
       commandResponses.push({ command, response });
       chunks.push(["ATI", "AT@1", "ATDP"].includes(command) ? "[adapter identity response not retained]" : response);
+      const commandOutcome = classifyWebSerialCommandResponse(command, response);
+      if (commandOutcome.stopScope === "attempt" || commandOutcome.stopScope === "scan") break;
     }
-    recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status: "completed" });
+    const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { attemptedCommandCount });
+    recordWebSerialReadoutAttempt({ label, startedAt, outcome });
     retainObdDeveloperReadout(commandResponses, chunks);
-    obdDevStatus.textContent = `${label}が完了しました。取れた値だけ表示します。`;
-    return true;
+    if (outcome.stopScope === "scan" && obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = outcome.stopReason;
+    obdDevStatus.textContent = outcome.readoutCompleted
+      ? `${label}が完了しました。取れた値だけ表示します。`
+      : `${label}は未完了です。応答品質を記録し、取得できた値だけ表示します。`;
+    return outcome.readoutCompleted;
   } catch (error) {
     const message = error?.message || String(error);
     const timedOut = message.startsWith("elm_response_timeout:");
-    recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status: commandResponses.length ? "partial" : "failed", timedOut });
+    const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { timedOut, transportErrorCount: true, attemptedCommandCount });
+    recordWebSerialReadoutAttempt({ label, startedAt, outcome });
     const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks));
     const transportFailed = timedOut || message.startsWith("elm_transport_");
     if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
+    if (obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = "transport_error";
     obdDevStatus.textContent = timedOut
       ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`
       : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`;
@@ -4845,17 +4960,16 @@ async function runObdDeveloperRead(label, commands) {
   }
 }
 
-function recordWebSerialReadoutAttempt({ label, commands, commandResponses, startedAt, status, timedOut = false }) {
-  const requestedCommands = Array.isArray(commands) ? commands.map((command) => String(command || "").trim().toUpperCase()).filter(Boolean) : [];
-  const completedCommands = Array.isArray(commandResponses) ? commandResponses.map((item) => String(item?.command || "").trim().toUpperCase()).filter(Boolean) : [];
+function recordWebSerialReadoutAttempt({ label, startedAt, outcome }) {
+  const safeOutcome = outcome && typeof outcome === "object" ? outcome : buildWebSerialReadoutOutcome([], []);
   const attempt = {
     label: String(label || "Web Serial読取"),
-    status: status === "completed" || status === "partial" ? status : "failed",
+    status: ["completed", "partial", "incomplete", "failed"].includes(safeOutcome.status) ? safeOutcome.status : "failed",
     startedAt: startedAt || new Date().toISOString(),
     endedAt: new Date().toISOString(),
-    requestedCommandCount: requestedCommands.length,
-    completedCommandCount: completedCommands.length,
-    timedOut: timedOut === true,
+    ...safeOutcome,
+    retainedRawText: false,
+    retainedCommands: false,
     readOnly: true,
     vehicleCommandEnabled: false
   };
@@ -4866,10 +4980,11 @@ function recordWebSerialReadoutAttempt({ label, commands, commandResponses, star
 function buildWebSerialReadoutSummary() {
   const attempts = Array.isArray(obdDevSession.readoutAttempts) ? obdDevSession.readoutAttempts : [];
   const countByStatus = (status) => attempts.filter((item) => item?.status === status).length;
+  const total = (key) => attempts.reduce((sum, attempt) => sum + (Number(attempt?.[key]) || 0), 0);
   const latestAttempt = attempts.at(-1) || null;
   return {
-    schemaVersion: "web_serial_readout_execution_v1",
-    schema_version: "web_serial_readout_execution_v1",
+    schemaVersion: "web_serial_readout_execution_v2",
+    schema_version: "web_serial_readout_execution_v2",
     source: "web_serial",
     attemptCount: attempts.length,
     attempt_count: attempts.length,
@@ -4877,11 +4992,29 @@ function buildWebSerialReadoutSummary() {
     completed_count: countByStatus("completed"),
     partialCount: countByStatus("partial"),
     partial_count: countByStatus("partial"),
+    incompleteCount: countByStatus("incomplete"),
+    incomplete_count: countByStatus("incomplete"),
     failedCount: countByStatus("failed"),
     failed_count: countByStatus("failed"),
+    positiveResponseCount: total("positiveResponseCount"),
+    positive_response_count: total("positiveResponseCount"),
+    negativeResponseCount: total("negativeResponseCount"),
+    negative_response_count: total("negativeResponseCount"),
+    noDataCount: total("noDataCount"),
+    no_data_count: total("noDataCount"),
+    unableToConnectCount: total("unableToConnectCount"),
+    unable_to_connect_count: total("unableToConnectCount"),
+    adapterErrorCount: total("adapterErrorCount"),
+    adapter_error_count: total("adapterErrorCount"),
+    transportErrorCount: total("transportErrorCount"),
+    transport_error_count: total("transportErrorCount"),
     latestAttempt,
     latest_attempt: latestAttempt,
     attempts: attempts.map((item) => ({ ...item })),
+    retainedRawText: false,
+    retained_raw_text: false,
+    retainedCommands: false,
+    retained_commands: false,
     vehicleCommandEnabled: false,
     vehicle_command_enabled: false
   };
@@ -5482,10 +5615,11 @@ function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA) {
   if (!Number.isFinite(attemptCount) || attemptCount < 1) return fallback;
   const completedCount = Number(summary.completedCount ?? summary.completed_count ?? 0) || 0;
   const partialCount = Number(summary.partialCount ?? summary.partial_count ?? 0) || 0;
+  const incompleteCount = Number(summary.incompleteCount ?? summary.incomplete_count ?? 0) || 0;
   const failedCount = Number(summary.failedCount ?? summary.failed_count ?? 0) || 0;
   const latestAttempt = summary.latestAttempt || summary.latest_attempt || null;
   const latestLabel = latestAttempt?.label ? ` 最終:${latestAttempt.label}` : "";
-  return `${attemptCount}工程 / 完了${completedCount} / 部分${partialCount} / 失敗${failedCount}${latestLabel}`;
+  return `${attemptCount}工程 / 完了${completedCount} / 部分${partialCount} / 未完了${incompleteCount} / 失敗${failedCount}${latestLabel}`;
 }
 
 function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fallback = NO_DATA) {

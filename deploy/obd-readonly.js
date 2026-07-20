@@ -12592,11 +12592,33 @@
 
   function normalizeWebSerialReadoutSummary(input = null) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const isV2Input = input.schemaVersion === "web_serial_readout_execution_v2" || input.schema_version === "web_serial_readout_execution_v2";
     const normalizeAttempt = (attempt) => {
       if (!attempt || typeof attempt !== "object" || Array.isArray(attempt)) return null;
-      const status = attempt.status === "completed" || attempt.status === "partial" ? attempt.status : "failed";
+      let status = ["completed", "partial", "incomplete", "failed"].includes(attempt.status) ? attempt.status : "failed";
       const requestedCommandCount = Math.max(0, Math.min(30, Number(attempt.requestedCommandCount ?? attempt.requested_command_count ?? 0) || 0));
-      const completedCommandCount = Math.max(0, Math.min(requestedCommandCount, Number(attempt.completedCommandCount ?? attempt.completed_command_count ?? 0) || 0));
+      let completedCommandCount = Math.max(0, Math.min(requestedCommandCount, Number(attempt.completedCommandCount ?? attempt.completed_command_count ?? 0) || 0));
+      const commandCount = (camelKey, snakeKey) => Math.max(0, Math.min(30, Number(attempt[camelKey] ?? attempt[snakeKey] ?? 0) || 0));
+      const attemptedCommandCount = Math.max(completedCommandCount, Math.min(requestedCommandCount, commandCount("attemptedCommandCount", "attempted_command_count")));
+      const stopReason = ["adapter_error", "vehicle_link_error", "transport_error"].includes(attempt.stopReason ?? attempt.stop_reason) ? (attempt.stopReason ?? attempt.stop_reason) : null;
+      const stopScope = ["none", "attempt", "scan", "transport"].includes(attempt.stopScope ?? attempt.stop_scope) ? (attempt.stopScope ?? attempt.stop_scope) : "none";
+      let positiveResponseCount = commandCount("positiveResponseCount", "positive_response_count");
+      const negativeResponseCount = commandCount("negativeResponseCount", "negative_response_count");
+      const pendingNegativeResponseCount = commandCount("pendingNegativeResponseCount", "pending_negative_response_count");
+      const noDataCount = commandCount("noDataCount", "no_data_count");
+      const unableToConnectCount = commandCount("unableToConnectCount", "unable_to_connect_count");
+      const adapterErrorCount = commandCount("adapterErrorCount", "adapter_error_count");
+      const emptyResponseCount = commandCount("emptyResponseCount", "empty_response_count");
+      const unrecognizedResponseCount = commandCount("unrecognizedResponseCount", "unrecognized_response_count");
+      const transportErrorCount = commandCount("transportErrorCount", "transport_error_count");
+      if (!isV2Input && status === "completed" && positiveResponseCount === 0) positiveResponseCount = completedCommandCount;
+      if (isV2Input) completedCommandCount = Math.min(completedCommandCount, positiveResponseCount);
+      const hasIncompleteEvidence = noDataCount > 0 || negativeResponseCount > 0 || pendingNegativeResponseCount > 0 || emptyResponseCount > 0 || unrecognizedResponseCount > 0;
+      const hasFailureEvidence = unableToConnectCount > 0 || adapterErrorCount > 0 || transportErrorCount > 0;
+      const hasCompleteEvidence = requestedCommandCount > 0 && completedCommandCount === requestedCommandCount && positiveResponseCount >= requestedCommandCount;
+      if (isV2Input && status === "completed" && (!hasCompleteEvidence || hasIncompleteEvidence || hasFailureEvidence)) {
+        status = hasFailureEvidence ? "failed" : (positiveResponseCount > 0 ? "partial" : "incomplete");
+      }
       return {
         label: String(attempt.label || "Web Serial読取").slice(0, 80),
         status,
@@ -12606,10 +12628,42 @@
         ended_at: attempt.ended_at || attempt.endedAt || null,
         requestedCommandCount,
         requested_command_count: requestedCommandCount,
+        attemptedCommandCount,
+        attempted_command_count: attemptedCommandCount,
+        promptTerminatedCommandCount: Math.min(attemptedCommandCount, commandCount("promptTerminatedCommandCount", "prompt_terminated_command_count")),
+        prompt_terminated_command_count: Math.min(attemptedCommandCount, commandCount("promptTerminatedCommandCount", "prompt_terminated_command_count")),
         completedCommandCount,
         completed_command_count: completedCommandCount,
+        positiveResponseCount,
+        positive_response_count: positiveResponseCount,
+        negativeResponseCount,
+        negative_response_count: negativeResponseCount,
+        pendingNegativeResponseCount,
+        pending_negative_response_count: pendingNegativeResponseCount,
+        noDataCount,
+        no_data_count: noDataCount,
+        unableToConnectCount,
+        unable_to_connect_count: unableToConnectCount,
+        adapterErrorCount,
+        adapter_error_count: adapterErrorCount,
+        emptyResponseCount,
+        empty_response_count: emptyResponseCount,
+        unrecognizedResponseCount,
+        unrecognized_response_count: unrecognizedResponseCount,
+        transportErrorCount,
+        transport_error_count: transportErrorCount,
         timedOut: attempt.timedOut === true || attempt.timed_out === true,
         timed_out: attempt.timedOut === true || attempt.timed_out === true,
+        readoutCompleted: status === "completed",
+        readout_completed: status === "completed",
+        stopReason,
+        stop_reason: stopReason,
+        stopScope,
+        stop_scope: stopScope,
+        retainedRawText: false,
+        retained_raw_text: false,
+        retainedCommands: false,
+        retained_commands: false,
         readOnly: true,
         read_only: true,
         vehicleCommandEnabled: false,
@@ -12619,14 +12673,39 @@
     const attempts = (Array.isArray(input.attempts) ? input.attempts : []).map(normalizeAttempt).filter(Boolean).slice(-30);
     const countByStatus = (status) => attempts.filter((item) => item.status === status).length;
     const readCount = (camelKey, snakeKey) => Math.max(0, Math.min(30, Number(input[camelKey] ?? input[snakeKey] ?? 0) || 0));
-    const completedCount = attempts.length ? countByStatus("completed") : readCount("completedCount", "completed_count");
-    const partialCount = attempts.length ? countByStatus("partial") : readCount("partialCount", "partial_count");
-    const failedCount = attempts.length ? countByStatus("failed") : readCount("failedCount", "failed_count");
-    const attemptCount = attempts.length || Math.max(readCount("attemptCount", "attempt_count"), completedCount + partialCount + failedCount);
+    let completedCount = attempts.length ? countByStatus("completed") : readCount("completedCount", "completed_count");
+    let partialCount = attempts.length ? countByStatus("partial") : readCount("partialCount", "partial_count");
+    let incompleteCount = attempts.length ? countByStatus("incomplete") : readCount("incompleteCount", "incomplete_count");
+    let failedCount = attempts.length ? countByStatus("failed") : readCount("failedCount", "failed_count");
+    if (isV2Input && !attempts.length && completedCount > 0) {
+      const positiveResponseCount = readCount("positiveResponseCount", "positive_response_count");
+      const hasIncompleteEvidence = readCount("noDataCount", "no_data_count") > 0
+        || readCount("negativeResponseCount", "negative_response_count") > 0
+        || readCount("pendingNegativeResponseCount", "pending_negative_response_count") > 0
+        || readCount("emptyResponseCount", "empty_response_count") > 0
+        || readCount("unrecognizedResponseCount", "unrecognized_response_count") > 0;
+      const hasFailureEvidence = readCount("unableToConnectCount", "unable_to_connect_count") > 0
+        || readCount("adapterErrorCount", "adapter_error_count") > 0
+        || readCount("transportErrorCount", "transport_error_count") > 0;
+      if (positiveResponseCount < completedCount || hasIncompleteEvidence || hasFailureEvidence) {
+        const downgradedCount = completedCount;
+        completedCount = 0;
+        if (hasFailureEvidence) failedCount = Math.max(failedCount, downgradedCount);
+        else if (positiveResponseCount > 0) partialCount = Math.max(partialCount, downgradedCount);
+        else incompleteCount = Math.max(incompleteCount, downgradedCount);
+      }
+    }
+    const attemptCount = attempts.length || Math.max(readCount("attemptCount", "attempt_count"), completedCount + partialCount + incompleteCount + failedCount);
+    const total = (camelKey, snakeKey) => attempts.length
+      ? attempts.reduce((sum, attempt) => sum + (Number(attempt[camelKey] ?? attempt[snakeKey]) || 0), 0)
+      : readCount(camelKey, snakeKey);
+    const positiveResponseCount = !isV2Input && !attempts.length && completedCount > 0
+      ? Math.max(total("positiveResponseCount", "positive_response_count"), completedCount)
+      : total("positiveResponseCount", "positive_response_count");
     const latestAttempt = attempts.at(-1) || normalizeAttempt(input.latestAttempt || input.latest_attempt || null);
     return {
-      schemaVersion: "web_serial_readout_execution_v1",
-      schema_version: "web_serial_readout_execution_v1",
+      schemaVersion: "web_serial_readout_execution_v2",
+      schema_version: "web_serial_readout_execution_v2",
       source: "web_serial",
       attemptCount,
       attempt_count: attemptCount,
@@ -12634,11 +12713,29 @@
       completed_count: completedCount,
       partialCount,
       partial_count: partialCount,
+      incompleteCount,
+      incomplete_count: incompleteCount,
       failedCount,
       failed_count: failedCount,
+      positiveResponseCount,
+      positive_response_count: positiveResponseCount,
+      negativeResponseCount: total("negativeResponseCount", "negative_response_count"),
+      negative_response_count: total("negativeResponseCount", "negative_response_count"),
+      noDataCount: total("noDataCount", "no_data_count"),
+      no_data_count: total("noDataCount", "no_data_count"),
+      unableToConnectCount: total("unableToConnectCount", "unable_to_connect_count"),
+      unable_to_connect_count: total("unableToConnectCount", "unable_to_connect_count"),
+      adapterErrorCount: total("adapterErrorCount", "adapter_error_count"),
+      adapter_error_count: total("adapterErrorCount", "adapter_error_count"),
+      transportErrorCount: total("transportErrorCount", "transport_error_count"),
+      transport_error_count: total("transportErrorCount", "transport_error_count"),
       latestAttempt,
       latest_attempt: latestAttempt,
       attempts,
+      retainedRawText: false,
+      retained_raw_text: false,
+      retainedCommands: false,
+      retained_commands: false,
       readOnly: true,
       read_only: true,
       vehicleCommandEnabled: false,
