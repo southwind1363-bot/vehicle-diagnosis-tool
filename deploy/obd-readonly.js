@@ -1916,7 +1916,14 @@
   }
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object"
+      ? response.data && typeof response.data === "object"
+        ? {
+          ...response.data,
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+        }
+        : response
+      : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const tests = (Array.isArray(data.tests)
       ? data.tests
