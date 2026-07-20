@@ -1027,7 +1027,14 @@
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object"
+      ? response.data && typeof response.data === "object"
+        ? {
+          ...response.data,
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+        }
+        : response
+      : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
