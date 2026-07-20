@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
+const REPLAY_POSITIVE_RESPONSE_SERVICES = new Set([0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A]);
 const READ_INTENTS = new Set([
   "bridge_status",
   "list_vci",
@@ -428,7 +429,7 @@ export function decodeReplayLog(text) {
 
   packets.forEach(({ ecu, bytes }) => {
     if (ecu) ecus.add(ecu);
-    const serviceIndex = bytes.findIndex((byte) => [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A].includes(byte));
+    const serviceIndex = findReplayPositiveResponseIndex(bytes);
     if (serviceIndex < 0) return;
     const service = bytes[serviceIndex];
 
@@ -557,6 +558,17 @@ function parseReplayLineBytes(line) {
   const ecu = hasCanId ? tokens[0] : null;
   const byteTokens = (hasCanId ? tokens.slice(1) : tokens).filter((token) => /^[0-9A-F]{2}$/.test(token));
   return { ecu, bytes: byteTokens.map((token) => parseInt(token, 16)) };
+}
+
+function findReplayPositiveResponseIndex(bytes = []) {
+  if (REPLAY_POSITIVE_RESPONSE_SERVICES.has(bytes[0])) return 0;
+  if (isReplaySingleFramePci(bytes[0]) && REPLAY_POSITIVE_RESPONSE_SERVICES.has(bytes[1])) return 1;
+  if (bytes[0] === bytes.length - 1 && isReplaySingleFramePci(bytes[1]) && REPLAY_POSITIVE_RESPONSE_SERVICES.has(bytes[2])) return 2;
+  return -1;
+}
+
+function isReplaySingleFramePci(value) {
+  return Number.isInteger(value) && (value & 0xF0) === 0;
 }
 
 function normalizeReplayCanLine(line) {

@@ -1,4 +1,4 @@
-import { createLocalBridgeApp } from "../local-bridge-readonly.js";
+import { createLocalBridgeApp, decodeReplayLog } from "../local-bridge-readonly.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -304,6 +304,18 @@ try {
     await new Promise((resolve) => malformedReplayServer.close(resolve));
   }
 
+  const replayFramingCases = [
+    ["raw", "41 0C 1A F8", true],
+    ["single_frame", "can0 7E8#04410C1AF8", true],
+    ["dlc_single_frame", "7E8 [8] 04 41 0C 1A F8 00 00 00", true],
+    ["embedded_service_byte", "can0 7E8#070001410C1AF800", false],
+    ["isotp_first_frame", "can0 7E8#1010490443414C2D", false]
+  ];
+  for (const [name, replayText, expectedLiveReadout] of replayFramingCases) {
+    const snapshot = decodeReplayLog(replayText);
+    check(snapshot.readoutObserved.live_pid_snapshot === expectedLiveReadout && snapshot.liveValues.length === (expectedLiveReadout ? 1 : 0), `replay ${name} framing was accepted outside a positive response boundary`);
+  }
+
   const replayEcuInfo = await post(replayPort, "read_ecu_info");
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
   check(replayEcuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "replay ECU info did not decode ECU name");
@@ -391,6 +403,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 150");
+  console.log("Local bridge read-only checks: 155");
   console.log("Errors: 0");
 }
