@@ -14367,6 +14367,22 @@
       const isConsecutiveFrame = metadata.ecu && Number.isInteger(pci) && (pci & 0xF0) === 0x20;
 
       if (isFirstFrame) {
+        const expectedLength = ((pci & 0x0F) * 0x100) + bytes[1];
+        if (expectedLength <= 7) {
+          packets.push({
+            bytes: bytes.slice(2, 2 + expectedLength),
+            metadata: finalizeIsoTpMetadata({
+              ...metadata,
+              isoTp: true,
+              expectedLength,
+              frameCount: 1,
+              incomplete: true,
+              sequenceError: true,
+              malformedFirstFrame: true
+            })
+          });
+          return;
+        }
         if (pendingIsoTp.has(metadata.ecu)) {
           const interrupted = pendingIsoTp.get(metadata.ecu);
           pendingIsoTp.delete(metadata.ecu);
@@ -14375,7 +14391,6 @@
             metadata: finalizeIsoTpMetadata({ ...interrupted.metadata, incomplete: true, sequenceError: true, interrupted: true })
           });
         }
-        const expectedLength = ((pci & 0x0F) * 0x100) + bytes[1];
         const payload = bytes.slice(2);
         pendingIsoTp.set(metadata.ecu, {
           metadata: { ...metadata, isoTp: true, expectedLength, frameCount: 1, nextSequenceNumber: 1, sequenceError: false },
