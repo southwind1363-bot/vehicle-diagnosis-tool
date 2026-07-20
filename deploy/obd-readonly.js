@@ -17357,13 +17357,14 @@
     const nonFreezeLines = [];
     let inFreezeFrame = false;
     let triggerDtc = null;
-    const isFreezeFrameHeading = (text) => /(?:freeze[\s_-]*frame|フリーズ\s*フレーム)/i.test(text);
+    const isFreezeFrameHeading = (text) => /(?:freeze[\s_-]*frame|フリーズ\s*フレーム|(?:\bmode\s*0?2\s*)?\bpid\s*(?:0x)?[0-9a-f]{2}\s*[:=])/i.test(text);
     const isSectionBoundary = (text) => /(?:live\s*data|data\s*stream|readiness|mode\s*0?6|onboard\s*monitor|ecu\s*(?:info|information)|supported\s*pid|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|対応\s*pid|ecu\s*情報|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
       if (isFreezeFrameHeading(text)) {
         inFreezeFrame = true;
         triggerDtc = triggerDtc || extractDtcCodes(text)[0] || null;
+        freezeLines.push(line);
         return;
       }
       if (inFreezeFrame && isSectionBoundary(text)) inFreezeFrame = false;
@@ -17378,6 +17379,15 @@
   }
 
   function extractTextFreezeFrameSnapshot(section = {}) {
+    const responseMatch = (section.freezeLines || [])
+      .map((line) => String(line || "").trim().match(/(?:\bmode\s*0?2\s*)?\bpid\s*(?:0x)?([0-9a-f]{2})\s*[:=]\s*(?:42\s+(?:0x)?\1\s+)?((?:[0-9a-f]{2}\s*){2,9})$/i))
+      .find(Boolean);
+    if (responseMatch) {
+      return decodeFreezeFrameResponse({
+        raw: "42 " + responseMatch[1] + " " + responseMatch[2],
+        source: "scanner_text_freeze_frame"
+      });
+    }
     const monitorValues = extractMonitorValues((section.freezeLines || []).join("\n"));
     if (!monitorValues.length && !section.triggerDtc) return null;
     return normalizeFreezeFrameSnapshot({
