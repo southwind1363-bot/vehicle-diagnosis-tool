@@ -11192,6 +11192,13 @@
       monitor_value_summary: summary.monitorValueSummary || summary.monitor_value_summary || null
     });
     const livePidTimeline = normalizeLivePidTimeline(summary.livePidTimeline || summary.live_pid_timeline || parts.livePidTimeline || parts.live_pid_timeline || []);
+    const webSerialReadoutSummary = normalizeWebSerialReadoutSummary(
+      summary.webSerialReadoutSummary
+      || summary.web_serial_readout_summary
+      || parts.webSerialReadoutSummary
+      || parts.web_serial_readout_summary
+      || null
+    );
     const obdReportedProfile = buildObdReportedProfile(
       livePidSnapshot,
       getObdReportedProfileInput(summary) || getObdReportedProfileInput(parts)
@@ -11348,6 +11355,7 @@
         onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
         live_pid_snapshot: livePidSnapshot,
         live_pid_timeline: livePidTimeline,
+        web_serial_readout_summary: webSerialReadoutSummary,
         readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
