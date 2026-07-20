@@ -6406,16 +6406,19 @@ function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
   const capturedReadoutCountValue = summary.capturedReadoutCount ?? summary.captured_readout_count;
   const attemptedReadoutCountValue = summary.attemptedReadoutCount ?? summary.attempted_readout_count;
   const pendingReadoutCountValue = summary.pendingReadoutCount ?? summary.pending_readout_count;
+  const errorReadoutCountValue = summary.errorReadoutCount ?? summary.error_readout_count;
   const totalReadoutCountValue = summary.totalReadoutCount ?? summary.total_readout_count;
   const totalValueCount = Number.isFinite(Number(totalValueCountValue)) ? Number(totalValueCountValue) : 0;
   const captured = Number.isFinite(Number(capturedReadoutCountValue)) ? Number(capturedReadoutCountValue) : 0;
   const attempted = Number.isFinite(Number(attemptedReadoutCountValue)) ? Number(attemptedReadoutCountValue) : captured;
   const pending = Number.isFinite(Number(pendingReadoutCountValue)) ? Number(pendingReadoutCountValue) : 0;
+  const errorReadoutCount = Number.isFinite(Number(errorReadoutCountValue)) ? Number(errorReadoutCountValue) : 0;
   const total = Number.isFinite(Number(totalReadoutCountValue)) ? Number(totalReadoutCountValue) : 0;
   const parts = [];
   if (total) parts.push(`${captured}/${total}読取`);
   if (total && attempted !== captured) parts.push(`試行${attempted}/${total}`);
   if (pending > 0) parts.push(`保留${pending}`);
+  if (errorReadoutCount > 0) parts.push(`読取失敗${errorReadoutCount}`);
   parts.push(`${totalValueCount}値`);
   [
     ["DTC", "dtc_snapshot"],

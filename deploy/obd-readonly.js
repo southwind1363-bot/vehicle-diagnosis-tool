@@ -2580,6 +2580,7 @@
         || snapshot?.blocked === true
         || snapshot?.isBlocked === true
         || snapshot?.is_blocked === true;
+      const errorCodes = readBridgeResponseErrorCodes(snapshot);
       const count = responseUnavailable ? 0 : item.count;
       const status = responseUnavailable
         ? "missing"
@@ -2589,6 +2590,8 @@
         count,
         label: coverageItem?.label || item.id,
         status,
+        errorCodes,
+        error_codes: [...errorCodes],
         captured: status === "captured",
         empty: status === "empty",
         missing: status === "missing"
@@ -2607,6 +2610,10 @@
     const missingIds = items.filter((item) => item.missing).map((item) => item.id);
     const pendingIds = [...missingIds, ...emptyIds];
     const attemptedIds = [...capturedIds, ...emptyIds];
+    const errorReadoutItems = items.filter((item) => item.errorCodes.length > 0);
+    const errorReadoutIds = errorReadoutItems.map((item) => item.id);
+    const errorCodesByReadoutId = Object.fromEntries(errorReadoutItems.map((item) => [item.id, [...item.errorCodes]]));
+    const errorCodes = [...new Set(errorReadoutItems.flatMap((item) => item.errorCodes))];
     const nextPendingReadoutId = pendingIds[0] || null;
     const nextPendingReadout = nextPendingReadoutId ? itemById[nextPendingReadoutId] || null : null;
     const totalValueCount = items.reduce((total, item) => total + item.count, 0);
@@ -2637,6 +2644,14 @@
       missingIds,
       pendingIds,
       attemptedIds,
+      errorReadoutCount: errorReadoutIds.length,
+      error_readout_count: errorReadoutIds.length,
+      errorReadoutIds,
+      error_readout_ids: [...errorReadoutIds],
+      errorCodes,
+      error_codes: [...errorCodes],
+      errorCodesByReadoutId,
+      error_codes_by_readout_id: Object.fromEntries(Object.entries(errorCodesByReadoutId).map(([id, codes]) => [id, [...codes]])),
       nextPendingReadoutId,
       nextPendingReadoutStatus: nextPendingReadout?.status || null,
       nextPendingReadoutLabel: nextPendingReadout?.label || null,
@@ -8353,6 +8368,11 @@
     const missingIds = normalizeIds(summary.missingIds || summary.missing_ids);
     const pendingIds = normalizeIds(summary.pendingIds || summary.pending_ids || [...missingIds, ...emptyIds]);
     const attemptedIds = normalizeIds(summary.attemptedIds || summary.attempted_ids || [...capturedIds, ...emptyIds]);
+    const errorReadoutIds = normalizeIds(summary.errorReadoutIds || summary.error_readout_ids);
+    const errorCodes = readBridgeResponseErrorCodes(summary);
+    const errorCodesByReadoutId = (summary.errorCodesByReadoutId || summary.error_codes_by_readout_id) && typeof (summary.errorCodesByReadoutId || summary.error_codes_by_readout_id) === "object"
+      ? Object.fromEntries(Object.entries(summary.errorCodesByReadoutId || summary.error_codes_by_readout_id).map(([id, codes]) => [id, readBridgeResponseErrorCodes({ errorCodes: codes })]))
+      : {};
     const totalValueCount = toCount("totalValueCount", "total_value_count", Object.values(countsById).reduce((total, value) => total + (Number.isFinite(Number(value)) ? Number(value) : 0), 0));
     return {
       ...summary,
@@ -8386,6 +8406,14 @@
       pending_ids: pendingIds,
       attemptedIds,
       attempted_ids: attemptedIds,
+      errorReadoutCount: toCount("errorReadoutCount", "error_readout_count", errorReadoutIds.length),
+      error_readout_count: toCount("errorReadoutCount", "error_readout_count", errorReadoutIds.length),
+      errorReadoutIds,
+      error_readout_ids: errorReadoutIds,
+      errorCodes,
+      error_codes: [...errorCodes],
+      errorCodesByReadoutId,
+      error_codes_by_readout_id: Object.fromEntries(Object.entries(errorCodesByReadoutId).map(([id, codes]) => [id, [...codes]])),
       nextPendingReadoutId: summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0] || null,
       next_pending_readout_id: summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0] || null,
       allReadoutsAttempted: pickDefined(summary.allReadoutsAttempted, summary.all_readouts_attempted, missingIds.length === 0) === true,
