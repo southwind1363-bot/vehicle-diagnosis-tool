@@ -502,6 +502,8 @@
     requiredEnvelopeFields: Object.freeze(["schema_version", "interface_id", "platform", "intent", "captured_at", "data"]),
     requiredBatchEnvelopeFields: Object.freeze(["scan_id", "connection_id", "vehicle_context_id", "sequence"]),
     requiredReconnectEnvelopeFields: Object.freeze(["connection_sequence"]),
+    requiredFailedLivePidEnvelopeFields: Object.freeze(["readout_id"]),
+    responseOutcomeFields: Object.freeze(["ok", "blocked", "errors"]),
     completionManifestFields: Object.freeze(["scan_state", "expected_readouts"]),
     allowedReadoutIds: nativeConnectorReadoutIds,
     logPolicy: Object.freeze({
@@ -1068,6 +1070,8 @@
       requiredEnvelopeFields: [...nativeConnectorContract.requiredEnvelopeFields],
       requiredBatchEnvelopeFields: [...nativeConnectorContract.requiredBatchEnvelopeFields],
       requiredReconnectEnvelopeFields: [...nativeConnectorContract.requiredReconnectEnvelopeFields],
+      requiredFailedLivePidEnvelopeFields: [...nativeConnectorContract.requiredFailedLivePidEnvelopeFields],
+      responseOutcomeFields: [...nativeConnectorContract.responseOutcomeFields],
       completionManifestFields: [...nativeConnectorContract.completionManifestFields],
       allowedReadoutIds: [...nativeConnectorContract.allowedReadoutIds],
       logPolicy: { ...nativeConnectorContract.logPolicy }
@@ -1111,9 +1115,11 @@
       .filter((item) => nativeConnectorContract.allowedReadoutIds.includes(item)))];
   }
 
-  function getNativeConnectorReadoutId(intent, data = {}) {
+  function getNativeConnectorReadoutId(intent, data = {}, explicitReadoutId = null) {
     if (intent === "read_live_pid_snapshot") {
-      return data.readout_id === "readiness_snapshot" || String(data.pid || "").toUpperCase() === "01"
+      const normalizedExplicitReadoutId = String(explicitReadoutId || data.readout_id || data.readoutId || "").trim();
+      if (["readiness_snapshot", "live_pid_snapshot"].includes(normalizedExplicitReadoutId)) return normalizedExplicitReadoutId;
+      return String(data.pid || "").toUpperCase() === "01"
         ? "readiness_snapshot"
         : "live_pid_snapshot";
     }
@@ -1148,6 +1154,8 @@
       || Array.isArray(input.expected_readouts)
       || Array.isArray(input.attemptedReadouts)
       || Array.isArray(input.attempted_readouts)
+      || input.readoutErrorsById
+      || input.readout_errors_by_id
       || Array.isArray(input.connectionSegments)
       || Array.isArray(input.connection_segments)
     );
@@ -1166,6 +1174,18 @@
     const completedReadouts = normalizeNativeConnectorReadoutList(input.completedReadouts || input.completed_readouts);
     const failedReadouts = normalizeNativeConnectorReadoutList(input.failedReadouts || input.failed_readouts);
     const missingReadouts = expectedReadouts.filter((readoutId) => !completedReadouts.includes(readoutId));
+    const readoutErrorsByIdInput = input.readoutErrorsById || input.readout_errors_by_id || {};
+    const readoutErrorsById = Object.fromEntries(Object.entries(readoutErrorsByIdInput && typeof readoutErrorsByIdInput === "object" && !Array.isArray(readoutErrorsByIdInput) ? readoutErrorsByIdInput : {})
+      .filter(([readoutId]) => nativeConnectorContract.allowedReadoutIds.includes(readoutId))
+      .map(([readoutId, values]) => [readoutId, readBridgeResponseErrorCodes({ errors: Array.isArray(values) ? values : [values] })])
+      .filter(([, values]) => values.length));
+    const errorCodes = readBridgeResponseErrorCodes({
+      errors: [
+        ...(Array.isArray(input.errorCodes) ? input.errorCodes : []),
+        ...(Array.isArray(input.error_codes) ? input.error_codes : []),
+        ...Object.values(readoutErrorsById).flat()
+      ]
+    });
     const connectionSegments = (Array.isArray(input.connectionSegments) ? input.connectionSegments : Array.isArray(input.connection_segments) ? input.connection_segments : [])
       .map((segment, index) => {
         if (!segment || typeof segment !== "object" || Array.isArray(segment)) return null;
@@ -1261,6 +1281,10 @@
       completed_readouts: [...completedReadouts],
       failedReadouts,
       failed_readouts: [...failedReadouts],
+      errorCodes,
+      error_codes: [...errorCodes],
+      readoutErrorsById,
+      readout_errors_by_id: Object.fromEntries(Object.entries(readoutErrorsById).map(([readoutId, values]) => [readoutId, [...values]])),
       missingReadouts,
       missing_readouts: [...missingReadouts],
       connectionSegments,
@@ -1359,6 +1383,31 @@
       ? connectionSequenceInput
       : null;
     const data = source.data && typeof source.data === "object" && !Array.isArray(source.data) ? source.data : null;
+    const responseStatusExplicit = ["ok", "blocked", "errors", "errorCodes", "error_codes", "error", "errorCode", "error_code"]
+      .some((field) => Object.hasOwn(source, field));
+    const responseBlocked = hasExplicitReadoutBlock(source);
+    const responseWouldTransmit = hasReadoutTransportViolation(source);
+    const readoutErrors = readBridgeResponseErrorCodes(source);
+    const responseFailed = responseBlocked
+      || responseWouldTransmit
+      || isExplicitFalseFlag(source.ok)
+      || readoutErrors.length > 0;
+    const responseOkProvided = Object.hasOwn(source, "ok") && source.ok !== undefined && source.ok !== null && source.ok !== "";
+    const responseSucceeded = !responseFailed
+      && (!responseOkProvided || isExplicitTrueFlag(source.ok));
+    const explicitReadoutIdInput = source.readoutId ?? source.readout_id;
+    const explicitReadoutId = String(explicitReadoutIdInput || "").trim();
+    const readoutId = getNativeConnectorReadoutId(intent, data || {}, explicitReadoutId);
+    const explicitReadoutIdValid = !explicitReadoutIdInput || nativeConnectorContract.allowedReadoutIds.includes(explicitReadoutId);
+    const explicitReadoutIdMatchesIntent = !explicitReadoutIdInput || (intent === "read_live_pid_snapshot"
+      ? ["readiness_snapshot", "live_pid_snapshot"].includes(explicitReadoutId)
+      : explicitReadoutId === getNativeConnectorReadoutId(intent, data || {}));
+    const failedLivePidReadoutIdMissing = intent === "read_live_pid_snapshot" && !responseSucceeded && !explicitReadoutId;
+    const readoutStatus = responseBlocked || responseWouldTransmit
+      ? "blocked"
+      : responseSucceeded
+        ? "reported"
+        : "unparsed";
     const fieldPresent = {
       schema_version: Boolean(schemaVersion),
       interface_id: Boolean(interfaceId),
@@ -1384,7 +1433,9 @@
       read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
     };
     const requiredDataKeys = requiredDataKeysByIntent[intent] || [];
-    const dataShapeValid = !knownReadIntent || Boolean(data && requiredDataKeys.some((key) => Object.hasOwn(data, key)));
+    const dataShapeValid = !knownReadIntent
+      || Boolean(data && requiredDataKeys.some((key) => Object.hasOwn(data, key)))
+      || (responseStatusExplicit && !responseSucceeded && Boolean(data));
     let payloadSize = 0;
     try {
       payloadSize = data ? getUtf8ByteLength(JSON.stringify(data)) : 0;
@@ -1407,9 +1458,12 @@
       vehicleContextIdInput !== undefined && !vehicleContextId ? "invalid_vehicle_context_id" : null,
       sequenceInput !== undefined && sequence === null ? "invalid_sequence" : null,
       connectionSequenceInput !== undefined && connectionSequence === null ? "invalid_connection_sequence" : null,
+      !explicitReadoutIdValid || !explicitReadoutIdMatchesIntent ? "invalid_readout_id" : null,
+      failedLivePidReadoutIdMissing ? "missing_readout_id" : null,
       unsafeExecutionFlags ? "unsafe_execution_flags" : null
     ].filter(Boolean);
     const accepted = errors.length === 0;
+    const readoutSucceeded = accepted && responseSucceeded;
 
     return {
       schemaVersion: "native_connector_envelope_evaluation_v1",
@@ -1417,6 +1471,16 @@
       accepted,
       ok: accepted,
       blocked: !accepted,
+      responseStatusExplicit,
+      response_status_explicit: responseStatusExplicit,
+      readoutSucceeded,
+      readout_succeeded: readoutSucceeded,
+      readoutStatus,
+      readout_status: readoutStatus,
+      readoutErrors,
+      readout_errors: [...readoutErrors],
+      readoutId,
+      readout_id: readoutId,
       interfaceId: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
       interface_id: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
       platform: platform === nativeConnectorContract.platform ? platform : null,
@@ -1460,6 +1524,30 @@
     };
   }
 
+  function buildNativeConnectorSnapshotInput(input = {}, evaluation = {}) {
+    const data = evaluation.readoutSucceeded === true
+      ? {
+        ...(input.data && typeof input.data === "object" && !Array.isArray(input.data) ? input.data : {}),
+        captured_at: evaluation.capturedAt || null
+      }
+      : { captured_at: evaluation.capturedAt || null };
+    if (evaluation.responseStatusExplicit !== true && evaluation.accepted === true) return data;
+    const errors = readBridgeResponseErrorCodes({
+      errors: [
+        ...(Array.isArray(evaluation.readoutErrors) ? evaluation.readoutErrors : []),
+        ...(Array.isArray(evaluation.errors) ? evaluation.errors : []),
+        ...(!evaluation.readoutSucceeded && !(evaluation.readoutErrors?.length || evaluation.errors?.length) ? ["native_connector_readout_failed"] : [])
+      ]
+    });
+    return {
+      ok: evaluation.readoutSucceeded === true,
+      blocked: evaluation.readoutStatus === "blocked",
+      would_transmit: false,
+      errors,
+      data
+    };
+  }
+
   function buildNativeConnectorDiagnosticImport(input = {}) {
     const evaluation = evaluateNativeConnectorEnvelope(input);
     const blockedResult = {
@@ -1482,10 +1570,7 @@
     };
     if (!evaluation.accepted) return blockedResult;
 
-    const data = {
-      ...input.data,
-      captured_at: evaluation.capturedAt
-    };
+    const data = buildNativeConnectorSnapshotInput(input, evaluation);
     const readoutInterface = normalizeReadoutInterfaceSnapshot({
       interface_id: evaluation.interfaceId,
       interface_label: evaluation.interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR Bluetooth" : "ELM327",
@@ -1506,7 +1591,7 @@
       read_supported_pids: { supported_pid_matrix: data },
       read_ecu_info: { ecu_info_snapshot: data },
       read_onboard_monitor: { onboard_monitor_snapshot: data },
-      read_live_pid_snapshot: data.readout_id === "readiness_snapshot" || String(data.pid || "").toUpperCase() === "01"
+      read_live_pid_snapshot: evaluation.readoutId === "readiness_snapshot"
         ? { readiness_snapshot: data }
         : { live_pid_snapshot: data }
     };
@@ -1532,6 +1617,12 @@
       accepted: true,
       blocked: false,
       errors: [],
+      readoutSucceeded: evaluation.readoutSucceeded,
+      readout_succeeded: evaluation.readoutSucceeded,
+      readoutStatus: evaluation.readoutStatus,
+      readout_status: evaluation.readoutStatus,
+      readoutErrors: [...evaluation.readoutErrors],
+      readout_errors: [...evaluation.readoutErrors],
       session,
       scanId: evaluation.scanId,
       scan_id: evaluation.scanId,
@@ -1613,7 +1704,9 @@
       "invalid_connection_id",
       "invalid_vehicle_context_id",
       "invalid_sequence",
-      "invalid_connection_sequence"
+      "invalid_connection_sequence",
+      "invalid_readout_id",
+      "missing_readout_id"
     ]);
     const hardFailures = evaluations.filter(({ evaluation }) => evaluation.errors.some((error) => hardErrorIds.has(error)));
     const interfaceIds = [...new Set(evaluations.map(({ evaluation }) => evaluation.interfaceId).filter(Boolean))];
@@ -1694,13 +1787,13 @@
       .map((segment, index) => ({ ...segment, index }));
     const connectionOrder = new Map(connectionSegments.map((segment) => [segment.connectionId, segment.index]));
 
-    const acceptedEntries = evaluations
-      .filter(({ evaluation }) => evaluation.accepted)
+    const orderedEntries = evaluations
       .map(({ index, evaluation }) => ({ index, evaluation, envelope: envelopes[index] }))
       .sort((left, right) => (connectionOrder.get(left.evaluation.connectionId) ?? 0) - (connectionOrder.get(right.evaluation.connectionId) ?? 0)
         || (left.evaluation.sequence ?? 0) - (right.evaluation.sequence ?? 0)
         || Date.parse(left.evaluation.capturedAt) - Date.parse(right.evaluation.capturedAt));
-    const rejectedEntries = evaluations.filter(({ evaluation }) => !evaluation.accepted);
+    const acceptedEntries = orderedEntries.filter(({ evaluation }) => evaluation.accepted);
+    const rejectedEntries = orderedEntries.filter(({ evaluation }) => !evaluation.accepted);
     if (!acceptedEntries.length) {
       return blockedResult(
         [...new Set(rejectedEntries.flatMap(({ evaluation }) => evaluation.errors))],
@@ -1708,13 +1801,18 @@
       );
     }
 
+    const latestReadoutEntries = new Map();
+    orderedEntries.forEach((entry) => {
+      const readoutId = entry.evaluation.readoutId;
+      if (readoutId) latestReadoutEntries.set(readoutId, entry);
+    });
+    const latestOutcomeEntries = [...latestReadoutEntries.entries()].map(([readoutId, entry]) => ({ ...entry, readoutId }));
+    const successfulLatestEntries = latestOutcomeEntries.filter(({ evaluation }) => evaluation.accepted && evaluation.readoutSucceeded);
+    const failedLatestEntries = latestOutcomeEntries.filter(({ evaluation }) => !evaluation.accepted || !evaluation.readoutSucceeded);
     const readoutInput = {};
     const livePidSamples = [];
-    acceptedEntries.forEach(({ evaluation, envelope }) => {
-      const data = {
-        ...envelope.data,
-        captured_at: evaluation.capturedAt
-      };
+    latestOutcomeEntries.forEach(({ evaluation, envelope }) => {
+      const data = buildNativeConnectorSnapshotInput(envelope, evaluation);
       const intentInput = {
         bridge_status: { connection_status: data },
         list_vci: { vci_devices: data },
@@ -1726,13 +1824,14 @@
         read_supported_pids: { supported_pid_matrix: data },
         read_ecu_info: { ecu_info_snapshot: data },
         read_onboard_monitor: { onboard_monitor_snapshot: data },
-        read_live_pid_snapshot: data.readout_id === "readiness_snapshot" || String(data.pid || "").toUpperCase() === "01"
+        read_live_pid_snapshot: evaluation.readoutId === "readiness_snapshot"
           ? { readiness_snapshot: data }
           : { live_pid_snapshot: data }
       }[evaluation.intent] || {};
       Object.assign(readoutInput, intentInput);
-      if (intentInput.live_pid_snapshot) livePidSamples.push(intentInput.live_pid_snapshot);
     });
+    acceptedEntries.filter(({ evaluation }) => evaluation.readoutSucceeded && evaluation.readoutId === "live_pid_snapshot")
+      .forEach(({ evaluation, envelope }) => livePidSamples.push({ ...envelope.data, captured_at: evaluation.capturedAt }));
     if (livePidSamples.length) readoutInput.live_pid_timeline = livePidSamples;
 
     const interfaceId = acceptedEntries[0].evaluation.interfaceId;
@@ -1743,12 +1842,20 @@
     const startedAt = captureTimes[0];
     const completedAt = captureTimes.at(-1);
     const attemptedIntents = [...new Set(evaluations.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
-    const completedIntents = [...new Set(acceptedEntries.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
-    const failedIntents = [...new Set(rejectedEntries.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
+    const completedIntents = [...new Set(successfulLatestEntries.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
+    const failedIntents = [...new Set(failedLatestEntries.map(({ evaluation }) => evaluation.intent).filter(Boolean))];
     const missingIntents = expectedIntents.filter((intent) => !completedIntents.includes(intent));
-    const attemptedReadouts = [...new Set(evaluations.map(({ evaluation, index }) => getNativeConnectorReadoutId(evaluation.intent, envelopes[index]?.data || {})).filter(Boolean))];
-    const completedReadouts = [...new Set(acceptedEntries.map(({ evaluation, envelope }) => getNativeConnectorReadoutId(evaluation.intent, envelope?.data || {})).filter(Boolean))];
-    const failedReadouts = [...new Set(rejectedEntries.map(({ evaluation, index }) => getNativeConnectorReadoutId(evaluation.intent, envelopes[index]?.data || {})).filter(Boolean))];
+    const attemptedReadouts = [...new Set(evaluations.map(({ evaluation }) => evaluation.readoutId).filter(Boolean))];
+    const completedReadouts = successfulLatestEntries.map(({ readoutId }) => readoutId);
+    const failedReadouts = failedLatestEntries.map(({ readoutId }) => readoutId);
+    const readoutErrorsById = Object.fromEntries(failedLatestEntries.map(({ readoutId, evaluation }) => [readoutId, readBridgeResponseErrorCodes({
+      errors: [
+        ...(Array.isArray(evaluation.readoutErrors) ? evaluation.readoutErrors : []),
+        ...(Array.isArray(evaluation.errors) ? evaluation.errors : []),
+        ...(!(evaluation.readoutErrors?.length || evaluation.errors?.length) ? ["native_connector_readout_failed"] : [])
+      ]
+    })]));
+    const readoutErrors = [...new Set(Object.values(readoutErrorsById).flat())];
     const missingReadouts = expectedReadouts.filter((readoutId) => !completedReadouts.includes(readoutId));
     const sequenceGapCount = connectionSegments.reduce((sum, segment) => sum + segment.sequenceGapCount, 0);
     const completionExplicit = requestedScanState === "completed" || requestedScanState === "interrupted";
@@ -1775,6 +1882,8 @@
       attempted_readouts: attemptedReadouts,
       completed_readouts: completedReadouts,
       failed_readouts: failedReadouts,
+      error_codes: readoutErrors,
+      readout_errors_by_id: readoutErrorsById,
       connection_segments: connectionSegments,
       envelope_count: envelopes.length,
       accepted_envelope_count: acceptedEntries.length,
@@ -1787,6 +1896,7 @@
       scanState === "interrupted" ? ["native_connector_scan_interrupted"] : [],
       connectionSegments.length > 1 ? ["native_connector_reconnected"] : [],
       sequenceGapCount > 0 ? ["native_connector_sequence_gap"] : [],
+      failedReadouts.length > 0 ? ["native_connector_readout_failed"] : [],
       requestedScanState === "completed" && expectedReadouts.length === 0 ? ["native_connector_completion_manifest_missing"] : [],
       requestedScanState === "completed" && (scanIds.size !== 1 || vehicleContextIds.size !== 1 || connectionSegments.length === 0) ? ["native_connector_completion_boundary_missing"] : []
     );
@@ -1825,6 +1935,12 @@
       sequence: evaluation.sequence,
       connectionSequence: evaluation.connectionSequence,
       connection_sequence: evaluation.connectionSequence,
+      readoutSucceeded: evaluation.readoutSucceeded,
+      readout_succeeded: evaluation.readoutSucceeded,
+      readoutStatus: evaluation.readoutStatus,
+      readout_status: evaluation.readoutStatus,
+      readoutErrors: [...evaluation.readoutErrors],
+      readout_errors: [...evaluation.readoutErrors],
       errors: [...evaluation.errors]
     }));
 
@@ -1867,6 +1983,10 @@
       completed_readouts: [...completedReadouts],
       failedReadouts,
       failed_readouts: [...failedReadouts],
+      readoutErrors,
+      readout_errors: [...readoutErrors],
+      readoutErrorsById,
+      readout_errors_by_id: Object.fromEntries(Object.entries(readoutErrorsById).map(([readoutId, values]) => [readoutId, [...values]])),
       missingReadouts,
       missing_readouts: [...missingReadouts],
       connectionIds: nativeConnectorScanLifecycle.connectionIds,
@@ -1882,8 +2002,15 @@
       accepted_envelope_count: acceptedEntries.length,
       rejectedEnvelopeCount: rejectedEntries.length,
       rejected_envelope_count: rejectedEntries.length,
+      successfulReadoutCount: completedReadouts.length,
+      successful_readout_count: completedReadouts.length,
+      failedReadoutCount: failedReadouts.length,
+      failed_readout_count: failedReadouts.length,
       evaluations: evaluationSummary,
-      errors: [...new Set(rejectedEntries.flatMap(({ evaluation }) => evaluation.errors))],
+      errors: [...new Set([
+        ...rejectedEntries.flatMap(({ evaluation }) => evaluation.errors),
+        ...readoutErrors
+      ])],
       session,
       readoutInterface,
       readout_interface: readoutInterface,
@@ -15275,6 +15402,9 @@
     const dtcStatusAvailabilityMasks = [...new Set(
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
+    const errorCodes = readBridgeResponseErrorCodes({
+      errors: snapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot))
+    });
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
       dtcs: mergedRows,
@@ -15308,6 +15438,8 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      errorCodes,
+      error_codes: [...errorCodes],
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
