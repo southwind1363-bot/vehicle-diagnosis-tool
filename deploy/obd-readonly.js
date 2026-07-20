@@ -12822,7 +12822,7 @@
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: rowStatus,
-        ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null,
+        ecu: rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || sourceEcu,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
         ...(codeFormat ? { codeFormat, code_format: codeFormat, manufacturerSpecific: true, manufacturer_specific: true } : {}),
@@ -12841,6 +12841,8 @@
     });
 
     const normalizedDtcs = [...byCode.values()];
+    const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
+    const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const codes = [...new Set(normalizedDtcs.map((row) => row.code))];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const codeCount = codes.length;
@@ -12884,6 +12886,8 @@
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      sourceEcu: resolvedSourceEcu,
+      source_ecu: resolvedSourceEcu,
       codes,
       codeCount,
       code_count: codeCount,
