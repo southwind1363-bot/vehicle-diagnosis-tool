@@ -17527,12 +17527,14 @@
   function collectTextEcuInfoSection(value) {
     const ecuInfoLines = [];
     let inEcuInfo = false;
-    const isEcuInfoHeading = (text) => /(?:\becu\s*(?:info|information)\b|\bmode\s*0?9\b|ecu\s*情報|車両\s*情報)/i.test(text);
+    const isEcuInfoRawResponse = (text) => /^(?:mode\s*0?9\s+(?:pid\s*)?|0?9\s*(?:pid\s*)?)(?:0x)?(?:00|02|04|06|0A)\s*[:=]/i.test(text);
+    const isEcuInfoHeading = (text) => /(?:\becu\s*(?:info|information)\b|\bmode\s*0?9\b|ecu\s*情報|車両\s*情報)/i.test(text) || isEcuInfoRawResponse(text);
     const isSectionBoundary = (text) => /(?:freeze[\s_-]*frame|live\s*data|data\s*stream|\bi\/?m\s+readiness\b|\breadiness(?:\s+status)?\b|mode\s*0?6|onboard\s*monitor|supported\s*pid|(?:stored|pending|permanent|current|confirmed)\s*(?:dtc|code|fault)|フリーズ\s*フレーム|ライブ\s*データ|データ\s*ストリーム|レディネス|モード\s*0?6|対応\s*pid|(?:保存|保留|永久|現在|確定)\s*(?:dtc|コード|故障))/i.test(text);
     String(value || "").split(/\r?\n/).forEach((line) => {
       const text = String(line || "").trim();
       if (isEcuInfoHeading(text)) {
         inEcuInfo = true;
+        if (isEcuInfoRawResponse(text)) ecuInfoLines.push(line);
         return;
       }
       if (inEcuInfo && isSectionBoundary(text)) inEcuInfo = false;
@@ -17547,8 +17549,26 @@
       ["calibration_id", "04", /(?:\bcal(?:ibration)?\s*(?:id|identification)\b|\bcalid\b|キャリブレーションid|較正id)/i],
       ["ecu_name", "0A", /(?:\becu\s*name\b|\bmodule\s*name\b|\bmodule\s*label\b|ecu名|モジュール名)/i]
     ];
+    const ecuInfoLines = collectTextEcuInfoSection(value);
+    const rawResponses = ecuInfoLines
+      .map((line) => String(line || "").trim().match(/^(?:mode\s*0?9\s+(?:pid\s*)?|0?9\s*(?:pid\s*)?)(?:0x)?(00|02|04|06|0A)\s*[:=]\s*((?:(?:0x)?[0-9a-f]{2}\s*){3,120})$/i))
+      .map((match) => {
+        if (!match) return null;
+        const infoType = match[1].toUpperCase();
+        const responseBytes = parseObdHexBytes(match[2]);
+        return responseBytes[0] === 0x49 && responseBytes[1] === parseInt(infoType, 16) && responseBytes.length >= 3
+          ? formatRawPidBytes(responseBytes)
+          : null;
+      })
+      .filter(Boolean);
+    if (rawResponses.length) {
+      return decodeEcuInfoResponse({
+        raw: rawResponses.join(" "),
+        source: "scanner_text_ecu_info"
+      });
+    }
     const rows = [];
-    collectTextEcuInfoSection(value).forEach((line) => {
+    ecuInfoLines.forEach((line) => {
       const match = String(line || "").trim().match(/^(.{1,100}?)\s*[:：]\s*(.{1,240})$/);
       if (!match) return;
       const row = rowMatchers.find(([, , pattern]) => pattern.test(match[1]));
