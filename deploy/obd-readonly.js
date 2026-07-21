@@ -2565,9 +2565,16 @@
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
-    const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes));
     const errorCodes = readBridgeResponseErrorCodes(response);
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
+    const hasDtcRowEvidence = dtcRows.length > 0 || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
+    const bridgeSafety = readBridgeSnapshotSafety(
+      response,
+      errorCodes.length === 0 && (Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes))
+    );
+    const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+      ? { ...bridgeSafety, ok: false, blocked: hasDtcRowEvidence, unparsed: !hasDtcRowEvidence }
+      : bridgeSafety;
     const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
       ? response.intent
       : ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(data.intent)
@@ -2625,11 +2632,11 @@
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
     const dtcStatusSummary = buildDtcStatusSummary({
-      reportedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false ? [defaultStatus] : [],
+      reportedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false ? [defaultStatus] : [],
       dtcs: normalizedDtcs,
-      includeObservedStatuses: bridgeSafety.ok && bridgeSafety.blocked === false
+      includeObservedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
     });
-    const dtcReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
+    const dtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -2644,10 +2651,10 @@
       schema_version: "dtc_snapshot_v1",
       source: "local_bridge",
       intent,
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      would_transmit: resolvedBridgeSafety.wouldTransmit,
       errorCodes,
       error_codes: [...errorCodes],
       codes,
@@ -19186,6 +19193,9 @@
     const permanentDtcSnapshotInput = sessionInput.permanentDtcSnapshot || sessionInput.permanent_dtc_snapshot || sessionInput.permanentDtcResponse || sessionInput.permanent_dtc_response || null;
     const hasTypedDtcSnapshotInput = hasObjectContent(storedDtcSnapshotInput) || hasObjectContent(pendingDtcSnapshotInput) || hasObjectContent(permanentDtcSnapshotInput);
     const dtcSnapshotInput = sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || (hasTypedDtcSnapshotInput ? {} : sessionInput);
+    const dtcSnapshotSafetyInput = readBridgeResponseErrorCodes(dtcSnapshotInput).length
+      ? { ...dtcSnapshotInput, blocked: true }
+      : dtcSnapshotInput;
     const livePidSnapshotInput = sessionInput.livePidSnapshot
       || sessionInput.live_pid_snapshot
       || sessionInput.livePidResponse
@@ -19222,7 +19232,7 @@
           normalizeTypedDtcSnapshotInput(pendingDtcSnapshotInput, "pending", "read_pending_dtc"),
           normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")
         )
-        : normalizeDtcSnapshot(dtcSnapshotInput)), dtcSnapshotInput, ["dtcReadoutStatus", "dtc_readout_status"]);
+        : normalizeDtcSnapshot(dtcSnapshotInput)), dtcSnapshotSafetyInput, ["dtcReadoutStatus", "dtc_readout_status"]);
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
@@ -19382,7 +19392,7 @@
       vciDevices: vciList.devices,
       adapterIdentity,
       dtcSnapshot,
-      dtcSnapshotSafetyInput: dtcSnapshotInput,
+      dtcSnapshotSafetyInput,
       livePidSnapshot,
       livePidTimeline,
       allowLivePidTimelineFallback,
