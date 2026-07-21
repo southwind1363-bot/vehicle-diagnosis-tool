@@ -81,22 +81,23 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
-    public static func decodeSupportedPIDs(response: String) -> Result<[(scopeID: String?, pids: [String])], OBD2ReadoutDecodeFailure> {
+    public static func decodeSupportedPIDs(command: ELMReadCommand = .supportedPIDs, response: String) -> Result<[(scopeID: String?, pids: [String])], OBD2ReadoutDecodeFailure> {
+        guard let pageBase = command.supportedPIDPageBase, let pageBaseByte = UInt8(pageBase, radix: 16) else { return .failure(.malformedResponse) }
         packets(in: response).flatMap { packets in
             var decoded: [(scopeID: String?, pids: [String])] = []
             for packet in packets {
                 let payload = packet.payload
-                guard payload.count == 6, payload[0] == 0x41, payload[1] == 0x00 else {
+                guard payload.count == 6, payload[0] == 0x41, payload[1] == pageBaseByte else {
                     return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
                 }
-                decoded.append((scopeID: packet.scopeID, pids: supportedPIDs(from: Array(payload.dropFirst(2)))))
+                decoded.append((scopeID: packet.scopeID, pids: supportedPIDs(from: Array(payload.dropFirst(2)), pageBase: Int(pageBaseByte))))
             }
             return .success(decoded)
         }
     }
 
     public static func decodeLivePID(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2MonitorValue)], OBD2ReadoutDecodeFailure> {
-        guard let expectedPID = livePID(command), let expectedPIDByte = UInt8(expectedPID, radix: 16) else { return .failure(.malformedResponse) }
+        guard let expectedPID = command.livePID, let expectedPIDByte = UInt8(expectedPID, radix: 16) else { return .failure(.malformedResponse) }
         return packets(in: response).flatMap { packets in
             var decoded: [(scopeID: String?, value: OBD2MonitorValue)] = []
             for packet in packets {
@@ -272,31 +273,49 @@ public enum OBD2ReadoutDecoder {
         return String(format: "%@%X%X%X%X", system, (high & 0x30) >> 4, high & 0x0F, (low & 0xF0) >> 4, low & 0x0F)
     }
 
-    private static func supportedPIDs(from bitmap: [UInt8]) -> [String] {
+    private static func supportedPIDs(from bitmap: [UInt8], pageBase: Int) -> [String] {
         bitmap.enumerated().flatMap { byteIndex, byte in
             (0..<8).compactMap { bitIndex in
-                byte & UInt8(1 << (7 - bitIndex)) == 0 ? nil : String(format: "%02X", byteIndex * 8 + bitIndex + 1)
+                byte & UInt8(1 << (7 - bitIndex)) == 0 ? nil : String(format: "%02X", pageBase + byteIndex * 8 + bitIndex + 1)
             }
-        }
-    }
-
-    private static func livePID(_ command: ELMReadCommand) -> String? {
-        switch command {
-        case .engineRPM: return "0C"
-        case .coolantTemperature: return "05"
-        case .controlModuleVoltage: return "42"
-        default: return nil
         }
     }
 
     private static func livePIDValue(command: ELMReadCommand, bytes: [UInt8]) -> OBD2MonitorValue? {
         switch command {
+        case .calculatedLoad:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "calculated_load", pid: "04", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .shortTermFuelTrimBank1:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "stft_b1", pid: "06", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
+        case .longTermFuelTrimBank1:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "ltft_b1", pid: "07", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
+        case .manifoldAbsolutePressure:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "map", pid: "0B", value: Double(bytes[0]), unit: "kPa")
         case .engineRPM:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "engine_speed", pid: "0C", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 4, unit: "rpm")
+        case .vehicleSpeed:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "vehicle_speed", pid: "0D", value: Double(bytes[0]), unit: "km/h")
+        case .timingAdvance:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "timing_advance", pid: "0E", value: Double(bytes[0]) / 2 - 64, unit: "deg")
         case .coolantTemperature:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "coolant_temp", pid: "05", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .intakeAirTemperature:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "intake_air_temp", pid: "0F", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .massAirFlow:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "maf", pid: "10", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 100, unit: "g/s")
+        case .throttlePosition:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "throttle_position", pid: "11", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .controlModuleVoltage:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "control_module_voltage", pid: "42", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V")

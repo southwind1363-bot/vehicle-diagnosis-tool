@@ -20,9 +20,20 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case mode09SupportedInfoTypes
     case mode09EcuName
     case supportedPIDs
+    case supportedPIDs20
+    case supportedPIDs40
     case readinessStatus
+    case calculatedLoad
+    case shortTermFuelTrimBank1
+    case longTermFuelTrimBank1
+    case manifoldAbsolutePressure
     case engineRPM
+    case vehicleSpeed
+    case timingAdvance
     case coolantTemperature
+    case intakeAirTemperature
+    case massAirFlow
+    case throttlePosition
     case controlModuleVoltage
 
     public var wireValue: String {
@@ -46,9 +57,20 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .mode09SupportedInfoTypes: return "0900"
         case .mode09EcuName: return "090A"
         case .supportedPIDs: return "0100"
+        case .supportedPIDs20: return "0120"
+        case .supportedPIDs40: return "0140"
         case .readinessStatus: return "0101"
+        case .calculatedLoad: return "0104"
+        case .shortTermFuelTrimBank1: return "0106"
+        case .longTermFuelTrimBank1: return "0107"
+        case .manifoldAbsolutePressure: return "010B"
         case .engineRPM: return "010C"
+        case .vehicleSpeed: return "010D"
+        case .timingAdvance: return "010E"
         case .coolantTemperature: return "0105"
+        case .intakeAirTemperature: return "010F"
+        case .massAirFlow: return "0110"
+        case .throttlePosition: return "0111"
         case .controlModuleVoltage: return "0142"
         }
     }
@@ -62,8 +84,8 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameCapabilities: return "read_freeze_frame"
         case .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .mode09SupportedInfoTypes, .mode09EcuName: return "read_ecu_info"
-        case .supportedPIDs: return "read_supported_pids"
-        case .readinessStatus, .engineRPM, .coolantTemperature, .controlModuleVoltage: return "read_live_pid_snapshot"
+        case .supportedPIDs, .supportedPIDs20, .supportedPIDs40: return "read_supported_pids"
+        case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .controlModuleVoltage: return "read_live_pid_snapshot"
         }
     }
 
@@ -73,11 +95,11 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .storedDTC: return "stored_dtc_snapshot"
         case .pendingDTC: return "pending_dtc_snapshot"
         case .permanentDTC: return "permanent_dtc_snapshot"
-        case .supportedPIDs: return "supported_pid_matrix"
+        case .supportedPIDs, .supportedPIDs20, .supportedPIDs40: return "supported_pid_matrix"
         case .readinessStatus: return "readiness_snapshot"
         case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .mode09SupportedInfoTypes, .mode09EcuName: return "ecu_info_snapshot"
-        case .engineRPM, .coolantTemperature, .controlModuleVoltage: return "live_pid_snapshot"
+        case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .controlModuleVoltage: return "live_pid_snapshot"
         default: return nil
         }
     }
@@ -105,6 +127,41 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameVehicleSpeed: return "0D"
         case .freezeFrameIntakeAirTemperature: return "0F"
         case .freezeFrameControlModuleVoltage: return "42"
+        default: return nil
+        }
+    }
+
+    public var livePID: String? {
+        switch self {
+        case .calculatedLoad: return "04"
+        case .coolantTemperature: return "05"
+        case .shortTermFuelTrimBank1: return "06"
+        case .longTermFuelTrimBank1: return "07"
+        case .manifoldAbsolutePressure: return "0B"
+        case .engineRPM: return "0C"
+        case .vehicleSpeed: return "0D"
+        case .timingAdvance: return "0E"
+        case .intakeAirTemperature: return "0F"
+        case .massAirFlow: return "10"
+        case .throttlePosition: return "11"
+        case .controlModuleVoltage: return "42"
+        default: return nil
+        }
+    }
+
+    public var supportedPIDPageBase: String? {
+        switch self {
+        case .supportedPIDs: return "00"
+        case .supportedPIDs20: return "20"
+        case .supportedPIDs40: return "40"
+        default: return nil
+        }
+    }
+
+    public var nextSupportedPIDPage: ELMReadCommand? {
+        switch self {
+        case .supportedPIDs: return .supportedPIDs20
+        case .supportedPIDs20: return .supportedPIDs40
         default: return nil
         }
     }

@@ -65,6 +65,38 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(supported[1].pids, ["01", "04"])
     }
 
+    func testStandardLivePidEquationsUseTheDiagnosticMonitorDefinitions() throws {
+        let cases: [(ELMReadCommand, String, OBD2MonitorValue)] = [
+            (.calculatedLoad, "41 04 80", OBD2MonitorValue(id: "calculated_load", pid: "04", value: 50.19607843137255, unit: "%")),
+            (.shortTermFuelTrimBank1, "41 06 90", OBD2MonitorValue(id: "stft_b1", pid: "06", value: 12.5, unit: "%")),
+            (.longTermFuelTrimBank1, "41 07 70", OBD2MonitorValue(id: "ltft_b1", pid: "07", value: -12.5, unit: "%")),
+            (.manifoldAbsolutePressure, "41 0B 64", OBD2MonitorValue(id: "map", pid: "0B", value: 100, unit: "kPa")),
+            (.vehicleSpeed, "41 0D 3C", OBD2MonitorValue(id: "vehicle_speed", pid: "0D", value: 60, unit: "km/h")),
+            (.timingAdvance, "41 0E 80", OBD2MonitorValue(id: "timing_advance", pid: "0E", value: 0, unit: "deg")),
+            (.intakeAirTemperature, "41 0F 50", OBD2MonitorValue(id: "intake_air_temp", pid: "0F", value: 40, unit: "C")),
+            (.massAirFlow, "41 10 01 F4", OBD2MonitorValue(id: "maf", pid: "10", value: 5, unit: "g/s")),
+            (.throttlePosition, "41 11 FF", OBD2MonitorValue(id: "throttle_position", pid: "11", value: 100, unit: "%"))
+        ]
+        for (command, response, expected) in cases {
+            let result = try OBD2ReadoutDecoder.decodeLivePID(command: command, response: response).get()
+            XCTAssertEqual(result.map(\.value), [expected])
+        }
+    }
+
+    func testSupportedPidContinuationPagesKeepTheirActualBase() throws {
+        let page20 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
+            command: .supportedPIDs20,
+            response: "41 20 80 00 00 01"
+        ).get()
+        XCTAssertEqual(page20[0].pids, ["21", "40"])
+
+        let page40 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
+            command: .supportedPIDs40,
+            response: "41 40 40 00 00 00"
+        ).get()
+        XCTAssertEqual(page40[0].pids, ["42"])
+    }
+
     func testFreezeFrameTriggerDTCRequiresFrameZeroAndPreservesScope() throws {
         let result = try OBD2ReadoutDecoder.decodeFreezeFrameTriggerDTC(response: "7E8 05 42 02 00 01 71").get()
         XCTAssertEqual(result[0].scopeID, "7E8")

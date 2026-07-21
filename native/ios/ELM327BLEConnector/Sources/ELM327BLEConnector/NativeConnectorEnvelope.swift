@@ -107,10 +107,12 @@ public enum NativeConnectorEnvelopeFactory {
         context: NativeConnectorSessionContext,
         sequence: Int,
         scopeID: String?,
+        pageBase: String,
         pids: [String]
     ) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_supported_pids", data: [
             "supported_pids": .array(pids.map(NativeConnectorJSONValue.string)),
+            "supported_pid_page_bases": .array([.string(pageBase)]),
             "source_ecu": scopeID.map { .string($0) } ?? .null
         ], readoutScopeID: scopeID, readoutAttempt: 0)
     }

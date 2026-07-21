@@ -52,6 +52,8 @@ public final class ELM327BLEConnector: NSObject {
     private var protocolHint: String?
     private var freezeFrameSupportedPIDs = Set<String>()
     private var liveSupportedPIDs = Set<String>()
+    private var scheduledLivePIDCommands = Set<ELMReadCommand>()
+    private var scheduledSupportedPIDPages = Set<ELMReadCommand>()
     private var mode09EcuNameScopes = Set<String>()
     private var plannedIntents = Set<String>()
     private var plannedReadoutIDs = Set<String>()
@@ -115,13 +117,15 @@ public final class ELM327BLEConnector: NSObject {
         protocolHint = nil
         freezeFrameSupportedPIDs.removeAll()
         liveSupportedPIDs.removeAll()
+        scheduledLivePIDCommands.removeAll()
+        scheduledSupportedPIDPages = [.supportedPIDs]
         mode09EcuNameScopes.removeAll()
         plannedIntents.removeAll()
         plannedReadoutIDs.removeAll()
         emittedEnvelopeCount = 0
         firstEnvelopeSequence = nil
         didEmitTerminalManifest = false
-        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .engineRPM, .coolantTemperature, .controlModuleVoltage, .mode09EcuName].contains($0) }
+        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .mode09EcuName].contains($0) && $0.livePID == nil }
         plan(commands: pendingCommands)
         runNextCommand()
     }
@@ -260,30 +264,31 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .supportedPIDs:
-                switch OBD2ReadoutDecoder.decodeSupportedPIDs(response: response) {
+            case .supportedPIDs, .supportedPIDs20, .supportedPIDs40:
+                switch OBD2ReadoutDecoder.decodeSupportedPIDs(command: command, response: response) {
                 case .success(let results):
-                    liveSupportedPIDs = Set(results.flatMap(\.pids))
+                    liveSupportedPIDs.formUnion(results.flatMap(\.pids))
                     results.forEach { result in
                         sequence += 1
-                        emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, scopeID: result.scopeID, pids: result.pids))
+                        emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, scopeID: result.scopeID, pageBase: command.supportedPIDPageBase!, pids: result.pids))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                     runNextCommand()
                     return
                 }
-                let candidates: [ELMReadCommand] = [.engineRPM, .coolantTemperature, .controlModuleVoltage]
-                let supportedCommands = candidates.filter { command in
-                    switch command {
-                    case .engineRPM: return liveSupportedPIDs.contains("0C")
-                    case .coolantTemperature: return liveSupportedPIDs.contains("05")
-                    case .controlModuleVoltage: return liveSupportedPIDs.contains("42")
-                    default: return false
-                    }
+                let supportedCommands = ELMReadCommand.allCases.filter { candidate in
+                    candidate.livePID.map(liveSupportedPIDs.contains) == true && scheduledLivePIDCommands.insert(candidate).inserted
                 }
                 pendingCommands.insert(contentsOf: supportedCommands, at: 0)
                 plan(commands: supportedCommands)
+                if let nextPage = command.nextSupportedPIDPage,
+                   let nextPageBase = nextPage.supportedPIDPageBase,
+                   results.contains(where: { $0.pids.contains(nextPageBase) }),
+                   scheduledSupportedPIDPages.insert(nextPage).inserted {
+                    pendingCommands.insert(nextPage, at: 0)
+                    plan(commands: [nextPage])
+                }
             case .readinessStatus:
                 switch OBD2ReadoutDecoder.decodeReadiness(response: response) {
                 case .success(let results):
@@ -299,7 +304,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .engineRPM, .coolantTemperature, .controlModuleVoltage:
+            case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .controlModuleVoltage:
                 switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
                 case .success(let results):
                     results.forEach { result in
