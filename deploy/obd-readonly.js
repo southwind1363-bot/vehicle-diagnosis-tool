@@ -19285,6 +19285,36 @@
     const freezeFrameSafetyInput = readBridgeResponseErrorCodes(freezeFrameSnapshotInput).length
       ? { ...freezeFrameSnapshotInput, blocked: true }
       : freezeFrameSnapshotInput;
+    const readinessResponseData = readinessSnapshotInput?.data && typeof readinessSnapshotInput.data === "object" && !Array.isArray(readinessSnapshotInput.data)
+      ? readinessSnapshotInput.data
+      : {};
+    const readinessHasObservation = [
+      readinessSnapshotInput?.monitors,
+      readinessSnapshotInput?.values,
+      readinessSnapshotInput?.monitor_values,
+      readinessSnapshotInput?.readiness_values,
+      readinessResponseData.monitors,
+      readinessResponseData.values,
+      readinessResponseData.monitor_values,
+      readinessResponseData.readiness_values
+    ].some((value) => Array.isArray(value) && value.length > 0)
+      || [
+        readinessSnapshotInput?.mil_on,
+        readinessSnapshotInput?.milOn,
+        readinessSnapshotInput?.readiness_status_byte_a,
+        readinessSnapshotInput?.readiness_status_byte_b,
+        readinessSnapshotInput?.readiness_status_byte_c,
+        readinessSnapshotInput?.readiness_status_byte_d,
+        readinessResponseData.mil_on,
+        readinessResponseData.milOn,
+        readinessResponseData.readiness_status_byte_a,
+        readinessResponseData.readiness_status_byte_b,
+        readinessResponseData.readiness_status_byte_c,
+        readinessResponseData.readiness_status_byte_d
+      ].some((value) => value !== undefined && value !== null);
+    const readinessSafetyInput = readBridgeResponseErrorCodes(readinessSnapshotInput).length && readinessHasObservation
+      ? { ...readinessSnapshotInput, blocked: true }
+      : readinessSnapshotInput;
     const onboardMonitorResponseInput = onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && !Array.isArray(onboardMonitorSnapshotInput)
       ? (onboardMonitorSnapshotInput.data && typeof onboardMonitorSnapshotInput.data === "object"
           ? {
@@ -19314,7 +19344,7 @@
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
-        : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSnapshotInput, ["readinessReadoutStatus", "readiness_readout_status"]);
+        : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);
     const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? onboardMonitorSnapshotInput
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
@@ -19400,7 +19430,7 @@
       freezeFrameSnapshot,
       freezeFrameSnapshotSafetyInput: freezeFrameSnapshotInput,
       readinessSnapshot,
-      readinessSnapshotSafetyInput: readinessSnapshotInput,
+      readinessSnapshotSafetyInput: readinessSafetyInput,
       ecuInfoSnapshot,
       ecuInfoSnapshotSafetyInput: ecuInfoSnapshotInput,
       onboardMonitorSnapshot,
