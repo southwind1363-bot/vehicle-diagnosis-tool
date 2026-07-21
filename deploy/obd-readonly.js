@@ -3278,8 +3278,11 @@
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
         return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
       });
-    const bridgeSafety = readBridgeSnapshotSafety(response, [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray));
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const bridgeSafety = readBridgeSnapshotSafety(
+      response,
+      errorCodes.length === 0 && [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray)
+    );
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
@@ -19247,6 +19250,9 @@
           }
           : freezeFrameSnapshotInput)
       : freezeFrameSnapshotInput;
+    const freezeFrameSafetyInput = readBridgeResponseErrorCodes(freezeFrameSnapshotInput).length
+      ? { ...freezeFrameSnapshotInput, blocked: true }
+      : freezeFrameSnapshotInput;
     const onboardMonitorResponseInput = onboardMonitorSnapshotInput && typeof onboardMonitorSnapshotInput === "object" && !Array.isArray(onboardMonitorSnapshotInput)
       ? (onboardMonitorSnapshotInput.data && typeof onboardMonitorSnapshotInput.data === "object"
           ? {
@@ -19269,7 +19275,9 @@
       ? freezeFrameSnapshotInput
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
-        : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)), freezeFrameSnapshotInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
+        : (freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data))
+          ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput)
+          : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)), freezeFrameSafetyInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
     const readinessSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? readinessSnapshotInput
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
