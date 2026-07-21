@@ -10,6 +10,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case storedDTC
     case pendingDTC
     case permanentDTC
+    case onboardMonitor
     case freezeFrameCapabilities
     case freezeFrameTriggerDTC
     case freezeFrameCoolantTemperature
@@ -49,6 +50,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .storedDTC: return "03"
         case .pendingDTC: return "07"
         case .permanentDTC: return "0A"
+        case .onboardMonitor: return "06"
         case .freezeFrameCapabilities: return "020000"
         case .freezeFrameTriggerDTC: return "020200"
         case .freezeFrameCoolantTemperature: return "020500"
@@ -85,6 +87,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .storedDTC: return "read_stored_dtc"
         case .pendingDTC: return "read_pending_dtc"
         case .permanentDTC: return "read_permanent_dtc"
+        case .onboardMonitor: return "read_onboard_monitor"
         case .freezeFrameCapabilities: return "read_freeze_frame"
         case .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "read_ecu_info"
@@ -99,6 +102,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .storedDTC: return "stored_dtc_snapshot"
         case .pendingDTC: return "pending_dtc_snapshot"
         case .permanentDTC: return "permanent_dtc_snapshot"
+        case .onboardMonitor: return "onboard_monitor_snapshot"
         case .supportedPIDs, .supportedPIDs20, .supportedPIDs40: return "supported_pid_matrix"
         case .readinessStatus: return "readiness_snapshot"
         case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
@@ -117,7 +121,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
 
     public var timeout: TimeInterval {
         switch self {
-        case .storedDTC: return 12
+        case .storedDTC, .onboardMonitor: return 12
         case .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName, .readinessStatus: return 8
         default: return 4
         }

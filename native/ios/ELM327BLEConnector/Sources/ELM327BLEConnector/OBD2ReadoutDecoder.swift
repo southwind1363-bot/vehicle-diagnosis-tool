@@ -15,6 +15,14 @@ public struct OBD2ReadinessStatus: Equatable, Sendable {
     public let ignitionType: String
 }
 
+public struct OBD2OnboardMonitorTest: Equatable, Sendable {
+    public let testID: String
+    public let componentID: String
+    public let value: Int
+    public let minimum: Int
+    public let maximum: Int
+}
+
 public enum OBD2ReadoutDecodeFailure: String, Error, Equatable, Sendable {
     case noData = "readout_not_available"
     case negativeResponse = "negative_response"
@@ -49,6 +57,31 @@ public enum OBD2ReadoutDecoder {
                 }
                 var seenCodes = Set<String>()
                 decoded.append((scopeID: packet.scopeID, dtcs: dtcs.filter { seenCodes.insert($0.code).inserted }))
+            }
+            return .success(decoded)
+        }
+    }
+
+    public static func decodeOnboardMonitorTests(response: String) -> Result<[(scopeID: String?, tests: [OBD2OnboardMonitorTest])], OBD2ReadoutDecodeFailure> {
+        packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, tests: [OBD2OnboardMonitorTest])] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count >= 9, payload.count.isMultiple(of: 9) else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                var tests: [OBD2OnboardMonitorTest] = []
+                for index in stride(from: 0, to: payload.count, by: 9) {
+                    guard payload[index] == 0x46 else { return .failure(.malformedResponse) }
+                    tests.append(OBD2OnboardMonitorTest(
+                        testID: String(format: "%02X", payload[index + 1]),
+                        componentID: String(format: "%02X", payload[index + 2]),
+                        value: Int(payload[index + 3]) * 256 + Int(payload[index + 4]),
+                        minimum: Int(payload[index + 5]) * 256 + Int(payload[index + 6]),
+                        maximum: Int(payload[index + 7]) * 256 + Int(payload[index + 8])
+                    ))
+                }
+                decoded.append((packet.scopeID, tests))
             }
             return .success(decoded)
         }

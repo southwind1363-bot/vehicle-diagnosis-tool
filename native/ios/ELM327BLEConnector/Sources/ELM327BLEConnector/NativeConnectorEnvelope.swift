@@ -155,6 +155,25 @@ public enum NativeConnectorEnvelopeFactory {
         )
     }
 
+    public static func onboardMonitor(
+        context: NativeConnectorSessionContext,
+        sequence: Int,
+        scopeID: String?,
+        tests: [OBD2OnboardMonitorTest]
+    ) -> NativeConnectorEnvelope {
+        make(context: context, sequence: sequence, intent: "read_onboard_monitor", data: [
+            "tests": .array(tests.map { test in .object([
+                "test_id": .string(test.testID),
+                "component_id": .string(test.componentID),
+                "value": .number(Double(test.value)),
+                "min": .number(Double(test.minimum)),
+                "max": .number(Double(test.maximum)),
+                "source_ecu": scopeID.map { .string($0) } ?? .null
+            ]) }),
+            "onboard_monitor_readout_status": .string("reported")
+        ], readoutID: "onboard_monitor_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
+    }
+
     public static func readiness(
         context: NativeConnectorSessionContext,
         sequence: Int,

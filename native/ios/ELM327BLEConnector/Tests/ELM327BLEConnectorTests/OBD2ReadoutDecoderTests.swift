@@ -28,6 +28,26 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertTrue(result[0].dtcs.isEmpty)
     }
 
+    func testOnboardMonitorTestsPreserveScopeAndRequireCompleteRows() throws {
+        let results = try OBD2ReadoutDecoder.decodeOnboardMonitorTests(
+            response: "7E8 10 12 46 01 02 00 03 00\n7E8 21 01 00 05 46 03 04 00\n7E8 22 06 00 01 00 05"
+        ).get()
+        XCTAssertEqual(results.count, 1)
+        XCTAssertEqual(results[0].scopeID, "7E8")
+        XCTAssertEqual(results[0].tests, [
+            OBD2OnboardMonitorTest(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5),
+            OBD2OnboardMonitorTest(testID: "03", componentID: "04", value: 6, minimum: 1, maximum: 5)
+        ])
+        switch OBD2ReadoutDecoder.decodeOnboardMonitorTests(response: "46 01 02 00 03 00 01 00") {
+        case .failure: break
+        case .success: XCTFail("Incomplete Mode 06 rows must be rejected")
+        }
+        switch OBD2ReadoutDecoder.decodeOnboardMonitorTests(response: "47 01 02 00 03 00 01 00 05") {
+        case .failure: break
+        case .success: XCTFail("Non-Mode 06 responses must be rejected")
+        }
+    }
+
     func testInvalidOrIncompleteResponsesAreRejected() {
         assertDTCFailure("NO DATA", expected: .noData)
         assertDTCFailure("7F 03 11", expected: .negativeResponse)

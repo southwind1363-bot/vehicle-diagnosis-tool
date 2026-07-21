@@ -49,4 +49,23 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
         XCTAssertTrue(json.contains("\"readiness_status_byte_b\":7"))
     }
+
+    func testOnboardMonitorEnvelopeUsesTheReadOnlyMode06Contract() throws {
+        let context = NativeConnectorSessionContext(
+            scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,
+            connectionID: UUID(uuidString: "22222222-2222-4222-8222-222222222222")!,
+            vehicleContextID: UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        )
+        let envelope = NativeConnectorEnvelopeFactory.onboardMonitor(
+            context: context,
+            sequence: 5,
+            scopeID: "7E8",
+            tests: [OBD2OnboardMonitorTest(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5)]
+        )
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"intent\":\"read_onboard_monitor\""))
+        XCTAssertTrue(json.contains("\"readout_id\":\"onboard_monitor_snapshot\""))
+        XCTAssertTrue(json.contains("\"source_ecu\":\"7E8\""))
+        XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
 }
