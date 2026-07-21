@@ -46,6 +46,7 @@ public final class ELM327BLEConnector: NSObject {
     private var adapterName: String?
     private var protocolHint: String?
     private var freezeFrameSupportedPIDs = Set<String>()
+    private var liveSupportedPIDs = Set<String>()
 
     public override init() {
         super.init()
@@ -102,7 +103,8 @@ public final class ELM327BLEConnector: NSObject {
         adapterName = nil
         protocolHint = nil
         freezeFrameSupportedPIDs.removeAll()
-        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage].contains($0) }
+        liveSupportedPIDs.removeAll()
+        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .engineRPM, .coolantTemperature, .controlModuleVoltage].contains($0) }
         runNextCommand()
     }
 
@@ -210,8 +212,18 @@ public final class ELM327BLEConnector: NSObject {
                     emitFailure(for: command, error: error.rawValue)
                 }
             case .supportedPIDs:
+                liveSupportedPIDs = Set(OBD2PIDDecoder.supportedPIDs(response: response))
                 sequence += 1
-                delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, pids: OBD2PIDDecoder.supportedPIDs(response: response)))
+                delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, pids: [...liveSupportedPIDs].sorted()))
+                let candidates: [ELMReadCommand] = [.engineRPM, .coolantTemperature, .controlModuleVoltage]
+                pendingCommands.insert(contentsOf: candidates.filter { command in
+                    switch command {
+                    case .engineRPM: return liveSupportedPIDs.contains("0C")
+                    case .coolantTemperature: return liveSupportedPIDs.contains("05")
+                    case .controlModuleVoltage: return liveSupportedPIDs.contains("42")
+                    default: return false
+                    }
+                }, at: 0)
             case .readinessStatus:
                 switch OBD2ReadoutDecoder.decodeReadiness(response: response) {
                 case .success(let results):
