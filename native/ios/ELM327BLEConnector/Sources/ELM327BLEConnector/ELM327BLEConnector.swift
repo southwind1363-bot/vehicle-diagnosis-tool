@@ -140,21 +140,63 @@ public final class ELM327BLEConnector: NSObject {
         timeoutWorkItem = nil
         activeCommand = nil
         state = .ready
-        if response.uppercased().contains("NO DATA") || response.uppercased().contains("UNABLE TO CONNECT") || response.uppercased().contains("STOPPED") {
+        let normalizedResponse = response.uppercased()
+        if normalizedResponse.contains("CAN ERROR") || normalizedResponse.contains("BUFFER FULL") {
+            emitFailure(for: command, error: "transport_failure")
+            interrupt(.invalidResponse)
+            return
+        }
+        if normalizedResponse.contains("NO DATA") || normalizedResponse.contains("UNABLE TO CONNECT") || normalizedResponse.contains("STOPPED") {
             emitFailure(for: command, error: "readout_not_available")
         } else {
-            sequence += 1
             switch command {
+            case .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol:
+                break
             case .identifyAdapter:
                 adapterName = firstResponseLine(in: response, excluding: command)
+                sequence += 1
                 delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
             case .describeProtocol:
                 protocolHint = firstResponseLine(in: response, excluding: command)
+                sequence += 1
                 delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
+            case .storedDTC, .pendingDTC, .permanentDTC:
+                switch OBD2ReadoutDecoder.decodeDTCs(command: command, response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.dtcs(
+                            context: context,
+                            sequence: sequence,
+                            intent: command.intent,
+                            scopeID: result.scopeID,
+                            dtcs: result.dtcs
+                        ))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
             case .supportedPIDs:
+                sequence += 1
                 delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, pids: OBD2PIDDecoder.supportedPIDs(response: response)))
+            case .readinessStatus:
+                switch OBD2ReadoutDecoder.decodeReadiness(response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.readiness(
+                            context: context,
+                            sequence: sequence,
+                            scopeID: result.scopeID,
+                            status: result.status
+                        ))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
             case .engineRPM, .coolantTemperature, .controlModuleVoltage:
                 if let value = OBD2PIDDecoder.decode(command, response: response) {
+                    sequence += 1
                     delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.livePID(context: context, sequence: sequence, value: value))
                 } else {
                     emitFailure(for: command, error: "unparsed_pid_response")

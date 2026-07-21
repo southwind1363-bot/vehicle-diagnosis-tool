@@ -53,6 +53,8 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
     public let connectionID: UUID
     public let vehicleContextID: UUID
     public let sequence: Int
+    public let readoutID: String?
+    public let readoutScopeID: String?
     public let ok: Bool
     public let blocked: Bool
     public let wouldTransmit: Bool
@@ -68,6 +70,8 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
         case connectionID = "connection_id"
         case vehicleContextID = "vehicle_context_id"
         case sequence, ok, blocked
+        case readoutID = "readout_id"
+        case readoutScopeID = "readout_scope_id"
         case wouldTransmit = "would_transmit"
         case errors, data
     }
@@ -113,13 +117,61 @@ public enum NativeConnectorEnvelopeFactory {
         value: OBD2MonitorValue
     ) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_live_pid_snapshot", data: [
+            "readout_id": .string("live_pid_snapshot"),
             "monitor_values": .array([.object([
                 "id": .string(value.id),
                 "pid": .string(value.pid),
                 "value": .number(value.value),
                 "unit": .string(value.unit)
             ])])
-        ])
+        ], readoutID: "live_pid_snapshot")
+    }
+
+    public static func dtcs(
+        context: NativeConnectorSessionContext,
+        sequence: Int,
+        intent: String,
+        scopeID: String?,
+        dtcs: [OBD2DTC]
+    ) -> NativeConnectorEnvelope {
+        make(
+            context: context,
+            sequence: sequence,
+            intent: intent,
+            data: [
+                "dtcs": .array(dtcs.map { .object(["code": .string($0.code), "status": .string($0.status)]) }),
+                "source_ecu": scopeID.map { .string($0) } ?? .null
+            ],
+            readoutScopeID: scopeID
+        )
+    }
+
+    public static func readiness(
+        context: NativeConnectorSessionContext,
+        sequence: Int,
+        scopeID: String?,
+        status: OBD2ReadinessStatus
+    ) -> NativeConnectorEnvelope {
+        make(
+            context: context,
+            sequence: sequence,
+            intent: "read_live_pid_snapshot",
+            data: [
+                "readout_id": .string("readiness_snapshot"),
+                "pid": .string("01"),
+                "source_ecu": scopeID.map { .string($0) } ?? .null,
+                "mil_on": .bool(status.milOn),
+                "dtc_count": .number(Double(status.dtcCount)),
+                "readiness_status_byte_a": .number(Double(status.statusByteA)),
+                "readiness_status_byte_b": .number(Double(status.statusByteB)),
+                "readiness_status_byte_c": .number(Double(status.statusByteC)),
+                "readiness_status_byte_d": .number(Double(status.statusByteD)),
+                "readiness_ignition_type": .string(status.ignitionType),
+                "monitors": .array([])
+            ],
+            readoutID: "readiness_snapshot",
+            readoutScopeID: scopeID
+        )
     }
 
     public static func failedReadout(
@@ -128,12 +180,13 @@ public enum NativeConnectorEnvelopeFactory {
         command: ELMReadCommand,
         error: String
     ) -> NativeConnectorEnvelope {
-        let data: [String: NativeConnectorJSONValue] = command.intent == "read_supported_pids"
+        var data: [String: NativeConnectorJSONValue] = command.intent == "read_supported_pids"
             ? ["supported_pids": .array([])]
             : command.intent == "read_live_pid_snapshot"
                 ? ["monitor_values": .array([])]
                 : ["adapter_family": .string("ELM327")]
-        return make(context: context, sequence: sequence, intent: command.intent, data: data, ok: false, errors: [error])
+        if let readoutID = command.readoutID { data["readout_id"] = .string(readoutID) }
+        return make(context: context, sequence: sequence, intent: command.intent, data: data, ok: false, errors: [error], readoutID: command.readoutID)
     }
 
     private static func make(
@@ -142,7 +195,9 @@ public enum NativeConnectorEnvelopeFactory {
         intent: String,
         data: [String: NativeConnectorJSONValue],
         ok: Bool = true,
-        errors: [String] = []
+        errors: [String] = [],
+        readoutID: String? = nil,
+        readoutScopeID: String? = nil
     ) -> NativeConnectorEnvelope {
         NativeConnectorEnvelope(
             schemaVersion: "native_connector_contract_v1",
@@ -154,6 +209,8 @@ public enum NativeConnectorEnvelopeFactory {
             connectionID: context.connectionID,
             vehicleContextID: context.vehicleContextID,
             sequence: sequence,
+            readoutID: readoutID,
+            readoutScopeID: readoutScopeID,
             ok: ok,
             blocked: false,
             wouldTransmit: false,

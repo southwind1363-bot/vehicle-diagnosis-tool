@@ -3041,8 +3041,13 @@ const nativeElmEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmEnvelop
 const nativeElmLivePidGoldenEnvelope = JSON.parse(
   fs.readFileSync(new URL("fixtures/native-elm327-live-pid-envelope.json", import.meta.url), "utf8")
 );
+const nativeElmReadinessGoldenEnvelope = JSON.parse(
+  fs.readFileSync(new URL("fixtures/native-elm327-readiness-envelope.json", import.meta.url), "utf8")
+);
 const nativeElmLivePidGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmLivePidGoldenEnvelope);
 const nativeElmLivePidGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmLivePidGoldenEnvelope);
+const nativeElmReadinessGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmReadinessGoldenEnvelope);
+const nativeElmReadinessGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmReadinessGoldenEnvelope);
 check(
   nativeElmLivePidGoldenEvaluation.accepted === true
     && nativeElmLivePidGoldenEvaluation.readoutSucceeded === true
@@ -3050,6 +3055,17 @@ check(
     && nativeElmLivePidGoldenImport.session?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726)
     && nativeElmLivePidGoldenImport.session?.vehicleCommandEnabled === false,
   "iPhone ELM327 BLE live PID envelope did not match the read-only diagnostic-session contract"
+);
+check(
+  nativeElmReadinessGoldenEvaluation.accepted === true
+    && nativeElmReadinessGoldenEvaluation.readoutId === "readiness_snapshot"
+    && nativeElmReadinessGoldenEvaluation.readoutScopeId === "7E8"
+    && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.milOn === true
+    && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.sourceEcu === "7E8"
+    && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.readinessStatusBytes?.a === "83"
+    && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.readinessStatusBytes?.b === "07"
+    && nativeElmReadinessGoldenImport.session?.vehicleCommandEnabled === false,
+  "iPhone ELM327 PID 01 readiness envelope did not preserve the read-only scope and status bytes"
 );
 check(nativeElmEvaluation.accepted === true && nativeElmEvaluation.knownReadIntent === true && nativeElmEvaluation.connectionEnabled === false && nativeElmEvaluation.wouldTransmit === false && nativeElmEvaluation.retainedRawPayload === false, "正規のiPhone read-only envelopeを安全に受理できません");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, captured_at: "2026-07-20T15:00:00+09:00" }).capturedAt === "2026-07-20T06:00:00.000Z" && obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, captured_at: "2026-07-20T06:00:00" }).errors.includes("invalid_captured_at") && obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, captured_at: "2026-02-30T06:00:00Z" }).errors.includes("invalid_captured_at"), "iPhoneコネクタ時刻をタイムゾーン付きRFC 3339として検証・UTC正規化できません");
