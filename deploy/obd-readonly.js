@@ -174,6 +174,50 @@
     ])
   });
 
+  const elmTransportKinds = Object.freeze(["unknown", "ble_gatt", "bluetooth_classic", "wifi_tcp"]);
+
+  function getElmTransportProfile(input = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const platform = String(source.platform || "ios").trim().toLowerCase() || "ios";
+    const requestedTransport = String(source.adapterTransport || source.adapter_transport || "unknown").trim().toLowerCase();
+    const adapterTransport = elmTransportKinds.includes(requestedTransport) ? requestedTransport : "unknown";
+    const adapterOpened = source.adapterOpened === true || source.adapter_opened === true;
+    const elmIdentified = adapterOpened && (source.elmIdentified === true || source.elm_identified === true);
+    const vehicleVerified = elmIdentified && (source.vehicleVerified === true || source.vehicle_verified === true);
+    const compatibilityStatus = vehicleVerified && elmIdentified
+      ? "vehicle_verified"
+      : elmIdentified
+        ? "elm_identified"
+        : adapterOpened
+          ? "adapter_opened"
+          : adapterTransport !== "unknown"
+            ? "detected"
+            : "unverified";
+
+    return {
+      schemaVersion: "elm_transport_profile_v1",
+      schema_version: "elm_transport_profile_v1",
+      platform,
+      adapterTransport,
+      adapter_transport: adapterTransport,
+      compatibilityStatus,
+      compatibility_status: compatibilityStatus,
+      connectorStatus: platform === "ios" ? "not_implemented" : "unavailable",
+      connector_status: platform === "ios" ? "not_implemented" : "unavailable",
+      canConnect: false,
+      can_connect: false,
+      canSendReadQuery: false,
+      can_send_read_query: false,
+      canStreamPid: false,
+      can_stream_pid: false,
+      canClearDtc: false,
+      can_clear_dtc: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      reason: "Native ELM transport is not implemented; transport detection never enables vehicle communication."
+    };
+  }
+
   const mobileReadoutTransportPlan = Object.freeze([
     Object.freeze({
       id: "android_chrome_ble_gatt",
@@ -20831,6 +20875,7 @@
     getVehicleOperationPlan,
     getServiceOperationReadinessRequirements,
     getServiceExperimentContract,
+    getElmTransportProfile,
     buildServiceOperationReadiness,
     getMobileReadoutTransportPlan,
     evaluateMobileReadoutTransport,

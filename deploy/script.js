@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.99";
+const APP_VERSION = "3.4.0";
 const APP_LAST_UPDATED = "2026-07-21";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1799,7 +1799,7 @@ function resolveObdInterfaceId(capability = window.ObdReadOnly?.getCapability?.(
   const requestedInterfaceId = obdInterfaceSelect.value || "";
   if (requestedInterfaceId && requestedInterfaceId !== "auto") return requestedInterfaceId;
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
-  if (isMobileDevice()) return "user-vci-thinkcar-bluetooth";
+  if (isMobileDevice()) return "user-vci-elm327";
   if (serialReady) return "user-vci-elm327";
   return "user-vci-techstream-j2534";
 }
@@ -1811,7 +1811,7 @@ function isObdInterfaceAutoRequested() {
 function getObdInterfaceSelectionNote(capability = window.ObdReadOnly?.getCapability?.()) {
   if (!isObdInterfaceAutoRequested()) return "手動選択";
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
-  if (isMobileDevice()) return "自動判定: スマホのため Bluetooth 候補を選択（直接接続は未実装）";
+  if (isMobileDevice()) return "自動判定: スマホ用 ELM327 を優先（iPhone直接接続は自前コネクタを準備中）";
   if (serialReady) return "自動判定: Web Serial 対応のため ELM327 を優先";
   return "自動判定: Web Serial 非対応のため有線OBD2/J2534適合確認を優先";
 }
@@ -2031,6 +2031,14 @@ function renderObdConnectionGuide() {
         : interfaceRoute.route;
     routeItem.append(routeLabel, document.createTextNode(routeValue));
     obdConnectionGuide.appendChild(routeItem);
+  }
+  if (isIosElm) {
+    const profile = window.ObdReadOnly.getElmTransportProfile({ platform: "ios" });
+    const profileItem = document.createElement("span");
+    const profileLabel = document.createElement("strong");
+    profileLabel.textContent = "ELM profile";
+    profileItem.append(profileLabel, document.createTextNode(`${profile.adapterTransport} / ${profile.compatibilityStatus} / ${profile.connectorStatus}`));
+    obdConnectionGuide.appendChild(profileItem);
   }
   renderObdAccessGate();
   renderObdSetupActionButtons();
