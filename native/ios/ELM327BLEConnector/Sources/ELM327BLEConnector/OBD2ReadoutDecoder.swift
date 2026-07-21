@@ -95,6 +95,14 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
+    public static func freezeFrameSupportsTriggerDTC(response: String) -> Bool {
+        guard case .success(let packets) = packets(in: response) else { return false }
+        return packets.contains { packet in
+            guard packet.payload.count == 6, packet.payload[0] == 0x42, packet.payload[1] == 0x00 else { return false }
+            return (packet.payload[2] & 0x40) != 0
+        }
+    }
+
     private struct Packet: Sendable {
         let scopeID: String?
         let payload: [UInt8]

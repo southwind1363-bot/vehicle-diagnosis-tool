@@ -45,6 +45,7 @@ public final class ELM327BLEConnector: NSObject {
     private var sessionContext: NativeConnectorSessionContext?
     private var adapterName: String?
     private var protocolHint: String?
+    private var freezeFrameTriggerSupported = false
 
     public override init() {
         super.init()
@@ -100,7 +101,8 @@ public final class ELM327BLEConnector: NSObject {
         sequence = 0
         adapterName = nil
         protocolHint = nil
-        pendingCommands = ELMReadCommand.allCases
+        freezeFrameTriggerSupported = false
+        pendingCommands = ELMReadCommand.allCases.filter { $0 != .freezeFrameTriggerDTC }
         runNextCommand()
     }
 
@@ -175,6 +177,13 @@ public final class ELM327BLEConnector: NSObject {
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
+                }
+            case .freezeFrameCapabilities:
+                freezeFrameTriggerSupported = OBD2ReadoutDecoder.freezeFrameSupportsTriggerDTC(response: response)
+                if freezeFrameTriggerSupported {
+                    pendingCommands.insert(.freezeFrameTriggerDTC, at: 0)
+                } else {
+                    emitFailure(for: .freezeFrameTriggerDTC, error: "freeze_frame_unsupported")
                 }
             case .freezeFrameTriggerDTC:
                 switch OBD2ReadoutDecoder.decodeFreezeFrameTriggerDTC(response: response) {

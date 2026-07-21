@@ -10,6 +10,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case storedDTC
     case pendingDTC
     case permanentDTC
+    case freezeFrameCapabilities
     case freezeFrameTriggerDTC
     case supportedPIDs
     case readinessStatus
@@ -28,6 +29,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .storedDTC: return "03"
         case .pendingDTC: return "07"
         case .permanentDTC: return "0A"
+        case .freezeFrameCapabilities: return "020000"
         case .freezeFrameTriggerDTC: return "020200"
         case .supportedPIDs: return "0100"
         case .readinessStatus: return "0101"
@@ -43,6 +45,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .storedDTC: return "read_stored_dtc"
         case .pendingDTC: return "read_pending_dtc"
         case .permanentDTC: return "read_permanent_dtc"
+        case .freezeFrameCapabilities: return "read_freeze_frame"
         case .freezeFrameTriggerDTC: return "read_freeze_frame"
         case .supportedPIDs: return "read_supported_pids"
         case .readinessStatus, .engineRPM, .coolantTemperature, .controlModuleVoltage: return "read_live_pid_snapshot"
@@ -52,7 +55,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     public var readoutID: String? {
         switch self {
         case .readinessStatus: return "readiness_snapshot"
-        case .freezeFrameTriggerDTC: return "freeze_frame_snapshot"
+        case .freezeFrameCapabilities, .freezeFrameTriggerDTC: return "freeze_frame_snapshot"
         case .engineRPM, .coolantTemperature, .controlModuleVoltage: return "live_pid_snapshot"
         default: return nil
         }
@@ -68,7 +71,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     public var timeout: TimeInterval {
         switch self {
         case .storedDTC: return 12
-        case .pendingDTC, .permanentDTC, .freezeFrameTriggerDTC, .readinessStatus: return 8
+        case .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .freezeFrameTriggerDTC, .readinessStatus: return 8
         default: return 4
         }
     }
