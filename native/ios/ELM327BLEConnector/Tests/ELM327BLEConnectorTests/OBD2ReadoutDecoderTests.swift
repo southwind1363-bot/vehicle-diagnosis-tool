@@ -57,6 +57,7 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
     func testFreezeFrameCapabilityOnlyEnablesAdvertisedTriggerDTC() {
         XCTAssertTrue(OBD2ReadoutDecoder.freezeFrameSupportsTriggerDTC(response: "7E8 06 42 00 40 00 00 00"))
         XCTAssertFalse(OBD2ReadoutDecoder.freezeFrameSupportsTriggerDTC(response: "7E8 06 42 00 00 00 00 00"))
+        XCTAssertEqual(OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: "7E8 06 42 00 C0 00 00 00"), Set(["01", "02"]))
     }
 
     private func assertDTCFailure(_ response: String, expected: OBD2ReadoutDecodeFailure, file: StaticString = #filePath, line: UInt = #line) {

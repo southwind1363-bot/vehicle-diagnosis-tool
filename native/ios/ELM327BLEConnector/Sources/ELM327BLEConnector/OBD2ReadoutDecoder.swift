@@ -96,10 +96,18 @@ public enum OBD2ReadoutDecoder {
     }
 
     public static func freezeFrameSupportsTriggerDTC(response: String) -> Bool {
-        guard case .success(let packets) = packets(in: response) else { return false }
-        return packets.contains { packet in
-            guard packet.payload.count == 6, packet.payload[0] == 0x42, packet.payload[1] == 0x00 else { return false }
-            return (packet.payload[2] & 0x40) != 0
+        freezeFrameSupportedPIDs(response: response).contains("02")
+    }
+
+    public static func freezeFrameSupportedPIDs(response: String) -> Set<String> {
+        guard case .success(let packets) = packets(in: response) else { return [] }
+        return Set(packets.flatMap { packet in
+            guard packet.payload.count == 6, packet.payload[0] == 0x42, packet.payload[1] == 0x00 else { return [] }
+            return packet.payload.dropFirst(2).enumerated().flatMap { byteIndex, byte in
+                (0..<8).compactMap { bitIndex in
+                    byte & UInt8(1 << (7 - bitIndex)) == 0 ? nil : String(format: "%02X", byteIndex * 8 + bitIndex + 1)
+                }
+            }
         }
     }
 
