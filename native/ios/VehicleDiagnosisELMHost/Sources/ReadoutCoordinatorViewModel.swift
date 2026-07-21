@@ -56,6 +56,16 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         connectorState == .ready
     }
 
+    static func suggestedCharacteristicIDs(from candidates: [BLECharacteristicCandidate]) -> (transmitID: String, receiveID: String)? {
+        let transmitCandidates = candidates.filter { $0.supportsWrite || $0.supportsWriteWithoutResponse }
+        let receiveCandidates = candidates.filter(\.supportsNotify)
+        guard transmitCandidates.count == 1, receiveCandidates.count == 1 else { return nil }
+        return (
+            "\(transmitCandidates[0].serviceUUID)/\(transmitCandidates[0].characteristicUUID)",
+            "\(receiveCandidates[0].serviceUUID)/\(receiveCandidates[0].characteristicUUID)"
+        )
+    }
+
     func startPeripheralScan() {
         exportURL = nil
         coordinator.startPeripheralScan()
@@ -130,6 +140,10 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         }
         if !characteristicChoices.contains(where: { $0.id == selectedReceiveID }) {
             selectedReceiveID = ""
+        }
+        if let suggested = Self.suggestedCharacteristicIDs(from: coordinator.characteristicCandidates) {
+            if selectedTransmitID.isEmpty { selectedTransmitID = suggested.transmitID }
+            if selectedReceiveID.isEmpty { selectedReceiveID = suggested.receiveID }
         }
     }
 }

@@ -4,6 +4,35 @@ import ELM327BLEConnector
 
 @MainActor
 final class ReadoutCoordinatorViewModelTests: XCTestCase {
+    func testUniqueGattCharacteristicPairIsSuggestedButAmbiguousPairsAreNot() {
+        let transmit = BLECharacteristicCandidate(
+            serviceUUID: "FFF0",
+            characteristicUUID: "FFF1",
+            supportsNotify: false,
+            supportsWrite: true,
+            supportsWriteWithoutResponse: false
+        )
+        let receive = BLECharacteristicCandidate(
+            serviceUUID: "FFF0",
+            characteristicUUID: "FFF2",
+            supportsNotify: true,
+            supportsWrite: false,
+            supportsWriteWithoutResponse: false
+        )
+        let suggestion = ReadoutCoordinatorViewModel.suggestedCharacteristicIDs(from: [transmit, receive])
+        XCTAssertEqual(suggestion?.transmitID, "FFF0/FFF1")
+        XCTAssertEqual(suggestion?.receiveID, "FFF0/FFF2")
+
+        let alternateTransmit = BLECharacteristicCandidate(
+            serviceUUID: "FFF0",
+            characteristicUUID: "FFF3",
+            supportsNotify: false,
+            supportsWrite: false,
+            supportsWriteWithoutResponse: true
+        )
+        XCTAssertNil(ReadoutCoordinatorViewModel.suggestedCharacteristicIDs(from: [transmit, receive, alternateTransmit]))
+    }
+
     func testCompletedArchiveUpdatesTheHostState() async throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,

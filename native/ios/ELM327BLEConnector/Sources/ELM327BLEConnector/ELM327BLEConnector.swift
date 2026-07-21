@@ -16,6 +16,20 @@ public struct BLECharacteristicCandidate: Sendable {
     public let supportsNotify: Bool
     public let supportsWrite: Bool
     public let supportsWriteWithoutResponse: Bool
+
+    public init(
+        serviceUUID: String,
+        characteristicUUID: String,
+        supportsNotify: Bool,
+        supportsWrite: Bool,
+        supportsWriteWithoutResponse: Bool
+    ) {
+        self.serviceUUID = serviceUUID
+        self.characteristicUUID = characteristicUUID
+        self.supportsNotify = supportsNotify
+        self.supportsWrite = supportsWrite
+        self.supportsWriteWithoutResponse = supportsWriteWithoutResponse
+    }
 }
 
 public protocol ELM327BLEConnectorDelegate: AnyObject {
