@@ -245,9 +245,9 @@
       browser: "webkit",
       adapterTransport: "ble-gatt-or-classic",
       route: "native_connector_required",
-      currentAvailability: "Web Bluetooth非対応のため自前iPhoneコネクタを準備中",
+      currentAvailability: "Native iPhone BLE host implemented; real adapter verification pending",
       requiresCompanionBridge: true,
-      requiredBeforeReadout: Object.freeze(["自前iPhoneコネクタのread-only実装", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
+      requiredBeforeReadout: Object.freeze(["\u81ea\u524diPhone\u30b3\u30cd\u30af\u30bf\u5b9f\u88c5\u6e08\u307f", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
     })
   ]);
 
@@ -265,7 +265,7 @@
       platform: "ios",
       route: "native_connector_required",
       requiresDesktop: false,
-      currentAvailability: "Bluetooth方式と自前iPhoneコネクタの実機確認待ち",
+      currentAvailability: "Native iPhone BLE host implemented; ELM327 transport verification pending",
       requiredBeforeReadout: Object.freeze(["ELM327のBluetooth Classic/BLE方式確認", "自前コネクタでMode 03/07/02/01をread-only取得", "AT初期化差分とタイムアウト停止の確認", "識別情報を保存前にマスク", "読取結果を診断セッションへ正規化"])
     }),
     Object.freeze({
