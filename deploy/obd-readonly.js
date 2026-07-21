@@ -3549,8 +3549,12 @@
       const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
       return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
     });
-    const bridgeSafety = readBridgeSnapshotSafety(response, collectEcuInfoRows(data).length > 0);
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const hasItemEvidence = items.length > 0;
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasItemEvidence);
+    const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+      ? { ...bridgeSafety, ok: false, blocked: hasItemEvidence, unparsed: !hasItemEvidence }
+      : bridgeSafety;
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
@@ -3558,13 +3562,13 @@
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
         protocol: readBridgeProtocol(data),
-        ecu_info_readout_status: getBridgeReadoutStatus(bridgeSafety)
+        ecu_info_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)
       }),
       intent: "read_ecu_info",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      would_transmit: resolvedBridgeSafety.wouldTransmit,
       errorCodes,
       error_codes: [...errorCodes]
     };
@@ -19333,6 +19337,11 @@
           }
           : ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput;
+    const ecuInfoSafetyInput = ecuInfoSnapshotInput?.data && typeof ecuInfoSnapshotInput.data === "object" && !Array.isArray(ecuInfoSnapshotInput.data)
+      && readBridgeResponseErrorCodes(ecuInfoSnapshotInput).length
+      && collectEcuInfoRows(ecuInfoSnapshotInput.data).length > 0
+      ? { ...ecuInfoSnapshotInput, blocked: true }
+      : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
@@ -19355,7 +19364,9 @@
       ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
-        : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSnapshotInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
+        : (ecuInfoSnapshotInput?.data && typeof ecuInfoSnapshotInput.data === "object" && !Array.isArray(ecuInfoSnapshotInput.data))
+          ? normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput)
+          : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSafetyInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
     const supportedPidMatrix = preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
@@ -19432,7 +19443,7 @@
       readinessSnapshot,
       readinessSnapshotSafetyInput: readinessSafetyInput,
       ecuInfoSnapshot,
-      ecuInfoSnapshotSafetyInput: ecuInfoSnapshotInput,
+      ecuInfoSnapshotSafetyInput: ecuInfoSafetyInput,
       onboardMonitorSnapshot,
       onboardMonitorSnapshotSafetyInput: onboardMonitorSnapshotInput,
       supportedPidMatrix,
