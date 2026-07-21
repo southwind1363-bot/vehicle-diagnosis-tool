@@ -81,6 +81,38 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
+    public static func decodeSupportedPIDs(response: String) -> Result<[(scopeID: String?, pids: [String])], OBD2ReadoutDecodeFailure> {
+        packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, pids: [String])] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count == 6, payload[0] == 0x41, payload[1] == 0x00 else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                decoded.append((scopeID: packet.scopeID, pids: supportedPIDs(from: Array(payload.dropFirst(2)))))
+            }
+            return .success(decoded)
+        }
+    }
+
+    public static func decodeLivePID(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2MonitorValue)], OBD2ReadoutDecodeFailure> {
+        guard let expectedPID = livePID(command), let expectedPIDByte = UInt8(expectedPID, radix: 16) else { return .failure(.malformedResponse) }
+        return packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, value: OBD2MonitorValue)] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count >= 3, payload[0] == 0x41, payload[1] == expectedPIDByte else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                guard let value = livePIDValue(command: command, bytes: Array(payload.dropFirst(2))) else {
+                    return .failure(.malformedResponse)
+                }
+                decoded.append((scopeID: packet.scopeID, value: value))
+            }
+            return .success(decoded)
+        }
+    }
+
     public static func decodeFreezeFrameTriggerDTC(response: String) -> Result<[(scopeID: String?, code: String?)], OBD2ReadoutDecodeFailure> {
         packets(in: response).flatMap { packets in
             var decoded: [(scopeID: String?, code: String?)] = []
@@ -238,5 +270,38 @@ public enum OBD2ReadoutDecoder {
     private static func dtcCode(high: UInt8, low: UInt8) -> String {
         let system = ["P", "C", "B", "U"][Int((high & 0xC0) >> 6)]
         return String(format: "%@%X%X%X%X", system, (high & 0x30) >> 4, high & 0x0F, (low & 0xF0) >> 4, low & 0x0F)
+    }
+
+    private static func supportedPIDs(from bitmap: [UInt8]) -> [String] {
+        bitmap.enumerated().flatMap { byteIndex, byte in
+            (0..<8).compactMap { bitIndex in
+                byte & UInt8(1 << (7 - bitIndex)) == 0 ? nil : String(format: "%02X", byteIndex * 8 + bitIndex + 1)
+            }
+        }
+    }
+
+    private static func livePID(_ command: ELMReadCommand) -> String? {
+        switch command {
+        case .engineRPM: return "0C"
+        case .coolantTemperature: return "05"
+        case .controlModuleVoltage: return "42"
+        default: return nil
+        }
+    }
+
+    private static func livePIDValue(command: ELMReadCommand, bytes: [UInt8]) -> OBD2MonitorValue? {
+        switch command {
+        case .engineRPM:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "engine_speed", pid: "0C", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 4, unit: "rpm")
+        case .coolantTemperature:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "coolant_temp", pid: "05", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .controlModuleVoltage:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "control_module_voltage", pid: "42", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V")
+        default:
+            return nil
+        }
     }
 }

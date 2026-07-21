@@ -49,6 +49,22 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(result[0].status.ignitionType, "spark")
     }
 
+    func testLivePidAndSupportedPidResponsesPreserveEveryEcuScope() throws {
+        let liveValues = try OBD2ReadoutDecoder.decodeLivePID(
+            command: .engineRPM,
+            response: "7E8 04 41 0C 1A F8\n7E9 04 41 0C 0F A0"
+        ).get()
+        XCTAssertEqual(liveValues.map(\.scopeID), ["7E8", "7E9"])
+        XCTAssertEqual(liveValues.map { $0.value.value }, [1726, 1000])
+
+        let supported = try OBD2ReadoutDecoder.decodeSupportedPIDs(
+            response: "7E8 06 41 00 A0 00 00 00\n7E9 06 41 00 90 00 00 00"
+        ).get()
+        XCTAssertEqual(supported.map(\.scopeID), ["7E8", "7E9"])
+        XCTAssertEqual(supported[0].pids, ["01", "03"])
+        XCTAssertEqual(supported[1].pids, ["01", "04"])
+    }
+
     func testFreezeFrameTriggerDTCRequiresFrameZeroAndPreservesScope() throws {
         let result = try OBD2ReadoutDecoder.decodeFreezeFrameTriggerDTC(response: "7E8 05 42 02 00 01 71").get()
         XCTAssertEqual(result[0].scopeID, "7E8")

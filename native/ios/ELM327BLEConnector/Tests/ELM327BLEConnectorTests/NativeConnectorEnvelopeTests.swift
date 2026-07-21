@@ -11,12 +11,14 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         let envelope = NativeConnectorEnvelopeFactory.livePID(
             context: context,
             sequence: 3,
+            scopeID: "7E8",
             value: OBD2MonitorValue(id: "engine_speed", pid: "0C", value: 1726, unit: "rpm")
         )
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
         XCTAssertTrue(json.contains("\"schema_version\":\"native_connector_contract_v1\""))
         XCTAssertTrue(json.contains("\"would_transmit\":false"))
         XCTAssertTrue(json.contains("\"readout_id\":\"live_pid_snapshot\""))
+        XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))
         XCTAssertTrue(json.contains("\"readout_attempt\":0"))
         XCTAssertFalse(json.contains("vehicle_command_enabled\":true"))
     }

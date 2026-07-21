@@ -7,7 +7,7 @@ This Swift package is the product-owned iPhone connection layer for BLE GATT ELM
 - User-initiated BLE scan, explicit peripheral selection, connection, service discovery, and characteristic selection.
 - Notify/indicate subscription is confirmed before any command is written.
 - One fixed read-only setup and core queue: adapter identity/protocol, stored/pending/permanent DTCs, Mode 01 PID support/readiness/live values, Mode 02 freeze-frame support and supported values, and scoped Mode 09 ECU-name support.
-- Capability-gated follow-up reads only for PIDs and Mode 09 information types reported by the vehicle.
+- Capability-gated follow-up reads only for PIDs and Mode 09 information types reported by the vehicle. Header-bearing responses retain the responding ECU scope for supported PID and live PID values instead of flattening multiple ECU replies.
 - Prompt-delimited response handling with a four-second per-command timeout and no automatic retry.
 - Typed `native_connector_contract_v1` envelopes plus a separate terminal `native_connector_completion_manifest_v1` record for the existing diagnostic-session importer.
 - `NativeConnectorScanArchiveBuilder` keeps one structured, in-memory scan boundary and exports only `{ envelopes, completion_manifest }`. It rejects raw transport strings, write intents, unsafe flags, mixed scan boundaries, sequence gaps, and terminal count/range mismatches.

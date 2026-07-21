@@ -261,9 +261,18 @@ public final class ELM327BLEConnector: NSObject {
                     emitFailure(for: command, error: error.rawValue)
                 }
             case .supportedPIDs:
-                liveSupportedPIDs = Set(OBD2PIDDecoder.supportedPIDs(response: response))
-                sequence += 1
-                emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, pids: [...liveSupportedPIDs].sorted()))
+                switch OBD2ReadoutDecoder.decodeSupportedPIDs(response: response) {
+                case .success(let results):
+                    liveSupportedPIDs = Set(results.flatMap(\.pids))
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, scopeID: result.scopeID, pids: result.pids))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                    runNextCommand()
+                    return
+                }
                 let candidates: [ELMReadCommand] = [.engineRPM, .coolantTemperature, .controlModuleVoltage]
                 let supportedCommands = candidates.filter { command in
                     switch command {
@@ -291,11 +300,14 @@ public final class ELM327BLEConnector: NSObject {
                     emitFailure(for: command, error: error.rawValue)
                 }
             case .engineRPM, .coolantTemperature, .controlModuleVoltage:
-                if let value = OBD2PIDDecoder.decode(command, response: response) {
-                    sequence += 1
-                    emit(NativeConnectorEnvelopeFactory.livePID(context: context, sequence: sequence, value: value))
-                } else {
-                    emitFailure(for: command, error: "unparsed_pid_response")
+                switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.livePID(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
                 }
             }
         }

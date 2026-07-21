@@ -106,16 +106,19 @@ public enum NativeConnectorEnvelopeFactory {
     public static func supportedPIDs(
         context: NativeConnectorSessionContext,
         sequence: Int,
+        scopeID: String?,
         pids: [String]
     ) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_supported_pids", data: [
-            "supported_pids": .array(pids.map(NativeConnectorJSONValue.string))
-        ], readoutAttempt: 0)
+            "supported_pids": .array(pids.map(NativeConnectorJSONValue.string)),
+            "source_ecu": scopeID.map { .string($0) } ?? .null
+        ], readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
     public static func livePID(
         context: NativeConnectorSessionContext,
         sequence: Int,
+        scopeID: String?,
         value: OBD2MonitorValue
     ) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_live_pid_snapshot", data: [
@@ -124,9 +127,10 @@ public enum NativeConnectorEnvelopeFactory {
                 "id": .string(value.id),
                 "pid": .string(value.pid),
                 "value": .number(value.value),
-                "unit": .string(value.unit)
+                "unit": .string(value.unit),
+                "source_ecu": scopeID.map { .string($0) } ?? .null
             ])])
-        ], readoutID: "live_pid_snapshot", readoutAttempt: 0)
+        ], readoutID: "live_pid_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
     public static func dtcs(
