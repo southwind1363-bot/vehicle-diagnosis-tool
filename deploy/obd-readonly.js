@@ -4407,6 +4407,69 @@
       }
       return 0;
     };
+    const normalizeCodeList = (values) => [...new Set((Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim().slice(0, 48))
+      .filter(Boolean))]
+      .slice(0, 12);
+    const normalizeYear = (value) => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) && numeric >= 1900 && numeric <= 2100 ? Math.round(numeric) : null;
+    };
+    const normalizeSourceUrl = (value) => {
+      try {
+        const url = new URL(String(value || "").trim());
+        if (!/^https?:$/.test(url.protocol) || url.username || url.password) return null;
+        return `${url.protocol}//${url.host}${url.pathname}`;
+      } catch {
+        return null;
+      }
+    };
+    const normalizeRangeDescriptor = (range) => {
+      if (!range || typeof range !== "object" || Array.isArray(range)) return null;
+      const modelCodes = normalizeCodeList([range.modelCodes || range.model_codes || range.modelCode || range.model_code].flat());
+      const engineCodes = normalizeCodeList([range.engineCodes || range.engine_codes || range.engineCode || range.engine_code].flat());
+      const yearFrom = normalizeYear(range.yearFrom ?? range.year_from ?? range.start);
+      const yearTo = normalizeYear(range.yearTo ?? range.year_to ?? range.end);
+      const verifiedThroughYear = normalizeYear(range.verifiedThroughYear ?? range.verified_through_year);
+      const sourceInput = range.source && typeof range.source === "object" && !Array.isArray(range.source) ? range.source : {};
+      const sourceName = String(sourceInput.name || sourceInput.source_name || range.sourceName || range.source_name || (typeof range.source === "string" ? range.source : "")).trim().slice(0, 160) || null;
+      const sourceUrl = normalizeSourceUrl(sourceInput.url || sourceInput.source_url || range.sourceUrl || range.source_url);
+      const sourceDate = String(sourceInput.date || sourceInput.source_date || range.sourceDate || range.source_date || "").trim().slice(0, 20) || null;
+      const sourceEvidenceId = String(sourceInput.evidenceId || sourceInput.evidence_id || range.evidenceId || range.evidence_id || "").trim().slice(0, 80) || null;
+      const sourceVerified = sourceInput.verified === true || sourceInput.source_verified === true || range.sourceVerified === true || range.source_verified === true;
+      const detailConfirmationRequired = range.detailConfirmationRequired === true || range.detail_confirmation_required === true;
+      if (!modelCodes.length && !engineCodes.length && !yearFrom && !yearTo && !verifiedThroughYear && !sourceName) return null;
+      return {
+        modelCodes,
+        model_codes: modelCodes,
+        engineCodes,
+        engine_codes: engineCodes,
+        yearFrom,
+        year_from: yearFrom,
+        yearTo,
+        year_to: yearTo,
+        verifiedThroughYear,
+        verified_through_year: verifiedThroughYear,
+        source: { name: sourceName, url: sourceUrl, date: sourceDate, evidenceId: sourceEvidenceId, verified: sourceVerified },
+        detailConfirmationRequired,
+        detail_confirmation_required: detailConfirmationRequired
+      };
+    };
+    const normalizedCandidateRanges = candidateRanges.map(normalizeRangeDescriptor).filter(Boolean).slice(0, 20);
+    const normalizedApplicableRanges = applicableRanges.map(normalizeRangeDescriptor).filter(Boolean).slice(0, 20);
+    const normalizedSupportedEngineCodes = normalizeCodeList(supportedEngineCodes);
+    const normalizeEcuDescriptor = (ecu) => {
+      const sourceEcu = ecu && typeof ecu === "object" && !Array.isArray(ecu) ? ecu : { ecuName: ecu };
+      const value = (input, limit = 80) => String(input || "").trim().slice(0, limit) || null;
+      const diagnosticAddress = value(sourceEcu.diagnosticAddress || sourceEcu.diagnostic_address || sourceEcu.ecuAddress || sourceEcu.ecu_address || sourceEcu.canId || sourceEcu.can_id || sourceEcu.address, 16);
+      const normalizedAddress = diagnosticAddress && /^[0-9A-Fa-fxX-]+$/.test(diagnosticAddress) ? diagnosticAddress.toUpperCase() : null;
+      const systemName = value(sourceEcu.systemName || sourceEcu.system_name || sourceEcu.targetSystem || sourceEcu.target_system || sourceEcu.system, 80);
+      const ecuName = value(sourceEcu.ecuName || sourceEcu.ecu_name || sourceEcu.targetEcu || sourceEcu.target_ecu || sourceEcu.moduleName || sourceEcu.module_name || sourceEcu.name, 80);
+      const protocol = value(sourceEcu.protocol || sourceEcu.communicationProtocol || sourceEcu.communication_protocol, 40);
+      if (!systemName && !ecuName && !normalizedAddress && !protocol) return null;
+      return { systemName, system_name: systemName, ecuName, ecu_name: ecuName, diagnosticAddress: normalizedAddress, diagnostic_address: normalizedAddress, protocol };
+    };
+    const normalizedSupportedEcus = supportedEcus.map(normalizeEcuDescriptor).filter(Boolean).slice(0, 20);
     const maker = source.maker || source.make || source.manufacturer || source.brand || source.oem || source.vehicleMaker || source.vehicle_maker || source.vehicleMake || source.vehicle_make || null;
     const model = source.model || source.modelName || source.model_name || source.vehicleModel || source.vehicle_model || source.carModel || source.car_model || null;
     const modelCode = source.modelCode || source.model_code || source.chassisCode || source.chassis_code || source.frameCode || source.frame_code || source.vehicleModelCode || source.vehicle_model_code || source.bodyCode || source.body_code || null;
@@ -4431,10 +4494,10 @@
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
     const modelCodeMatched = source.modelCodeMatched === true || source.model_code_matched === true || source.modelCodeMatch === true || source.model_code_match === true;
-    const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);
-    const applicableRangeCount = toCount(source.applicableRangeCount, source.applicable_range_count, applicableRanges.length);
-    const supportedEngineCodeCount = toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, supportedEngineCodes.length);
-    const supportedEcuCount = toCount(source.supportedEcuCount, source.supported_ecu_count, supportedEcus.length);
+    const candidateRangeCount = Math.max(toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length), candidateRanges.length, normalizedCandidateRanges.length);
+    const applicableRangeCount = Math.max(toCount(source.applicableRangeCount, source.applicable_range_count, applicableRanges.length), applicableRanges.length, normalizedApplicableRanges.length);
+    const supportedEngineCodeCount = Math.max(toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, supportedEngineCodes.length), supportedEngineCodes.length, normalizedSupportedEngineCodes.length);
+    const supportedEcuCount = Math.max(toCount(source.supportedEcuCount, source.supported_ecu_count, supportedEcus.length), supportedEcus.length, normalizedSupportedEcus.length);
     const providedStatus = typeof source.status === "string" ? source.status.trim() : typeof source.applicabilityStatus === "string" ? source.applicabilityStatus.trim() : typeof source.applicability_status === "string" ? source.applicability_status.trim() : "";
     const summaryLabel = source.summaryLabel || source.summary_label || source.displayLabel || source.display_label || source.summary || source.label || null;
     let status = providedStatus;
@@ -4450,8 +4513,8 @@
       }
     }
     return {
-      schemaVersion: "vehicle_applicability_v1",
-      schema_version: "vehicle_applicability_v1",
+      schemaVersion: "vehicle_applicability_v2",
+      schema_version: "vehicle_applicability_v2",
       maker,
       model,
       modelCode,
@@ -4501,12 +4564,34 @@
       candidate_range_count: candidateRangeCount,
       applicableRangeCount,
       applicable_range_count: applicableRangeCount,
+      candidateRanges: normalizedCandidateRanges,
+      candidate_ranges: normalizedCandidateRanges,
+      retainedCandidateRangeCount: normalizedCandidateRanges.length,
+      retained_candidate_range_count: normalizedCandidateRanges.length,
+      candidateRangesTruncated: candidateRangeCount > normalizedCandidateRanges.length,
+      candidate_ranges_truncated: candidateRangeCount > normalizedCandidateRanges.length,
+      applicableRanges: normalizedApplicableRanges,
+      applicable_ranges: normalizedApplicableRanges,
+      retainedApplicableRangeCount: normalizedApplicableRanges.length,
+      retained_applicable_range_count: normalizedApplicableRanges.length,
+      applicableRangesTruncated: applicableRangeCount > normalizedApplicableRanges.length,
+      applicable_ranges_truncated: applicableRangeCount > normalizedApplicableRanges.length,
+      supportedEngineCodes: normalizedSupportedEngineCodes,
+      supported_engine_codes: normalizedSupportedEngineCodes,
       supportedEngineCodeCount,
       supported_engine_code_count: supportedEngineCodeCount,
-      supportedEcus,
-      supported_ecus: supportedEcus,
+      retainedSupportedEngineCodeCount: normalizedSupportedEngineCodes.length,
+      retained_supported_engine_code_count: normalizedSupportedEngineCodes.length,
+      supportedEngineCodesTruncated: supportedEngineCodeCount > normalizedSupportedEngineCodes.length,
+      supported_engine_codes_truncated: supportedEngineCodeCount > normalizedSupportedEngineCodes.length,
+      supportedEcus: normalizedSupportedEcus,
+      supported_ecus: normalizedSupportedEcus,
       supportedEcuCount,
       supported_ecu_count: supportedEcuCount,
+      retainedSupportedEcuCount: normalizedSupportedEcus.length,
+      retained_supported_ecu_count: normalizedSupportedEcus.length,
+      supportedEcusTruncated: supportedEcuCount > normalizedSupportedEcus.length,
+      supported_ecus_truncated: supportedEcuCount > normalizedSupportedEcus.length,
       status,
       summaryLabel,
       summary_label: summaryLabel
@@ -17197,6 +17282,11 @@
     const scannerJsonVehicleBasis = scannerJsonVehicleApplicabilityInput || scannerJsonVehicleProfileInput;
     const scannerJsonVehicle = normalizeVehicleApplicabilitySnapshot(scannerJsonVehicleBasis || {});
     const hasScannerJsonVehicleIdentity = Boolean(scannerJsonVehicle.maker || scannerJsonVehicle.model || scannerJsonVehicle.modelCode || scannerJsonVehicle.year || scannerJsonVehicle.engineCode);
+    const hasScannerJsonApplicabilityContent = hasScannerJsonVehicleIdentity
+      || scannerJsonVehicle.candidateRanges?.length > 0
+      || scannerJsonVehicle.applicableRanges?.length > 0
+      || scannerJsonVehicle.supportedEngineCodes?.length > 0
+      || scannerJsonVehicle.supportedEcus?.length > 0;
     const scannerJsonVehicleProfile = hasScannerJsonVehicleIdentity
       ? {
         maker: scannerJsonVehicle.maker,
@@ -17220,7 +17310,7 @@
         hybrid_system: scannerJsonVehicle.hybrid_system
       }
       : null;
-    const scannerJsonVehicleApplicability = hasScannerJsonVehicleIdentity
+    const scannerJsonVehicleApplicability = hasScannerJsonApplicabilityContent
       ? isTrustedBridgeSessionExport
         ? scannerJsonVehicle
         : normalizeVehicleApplicabilitySnapshot({
@@ -17235,6 +17325,29 @@
           drivetrain: scannerJsonVehicle.drivetrain,
           fuelType: scannerJsonVehicle.fuelType,
           electrification: scannerJsonVehicle.electrification,
+          candidateRangeCount: scannerJsonVehicle.candidateRangeCount,
+          applicableRangeCount: scannerJsonVehicle.applicableRangeCount,
+          supportedEngineCodeCount: scannerJsonVehicle.supportedEngineCodeCount,
+          supportedEcuCount: scannerJsonVehicle.supportedEcuCount,
+          candidateRanges: scannerJsonVehicle.candidateRanges.map((range) => ({
+            ...range,
+            source: { ...(range?.source || {}), verified: false },
+            sourceVerified: false,
+            source_verified: false
+          })),
+          applicableRanges: scannerJsonVehicle.applicableRanges.map((range) => ({
+            ...range,
+            source: { ...(range?.source || {}), verified: false },
+            sourceVerified: false,
+            source_verified: false
+          })),
+          supportedEngineCodes: scannerJsonVehicle.supportedEngineCodes,
+          supportedEcus: scannerJsonVehicle.supportedEcus,
+          sourceVerified: false,
+          catalogMatched: false,
+          yearMatched: false,
+          engineMatched: false,
+          modelCodeMatched: false,
           status: "unknown"
         })
       : null;

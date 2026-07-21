@@ -49,7 +49,8 @@ const officialReferenceNotes = JSON.parse(
 );
 const context = {
   window: { isSecureContext: true },
-  navigator: { serial: {} }
+  navigator: { serial: {} },
+  URL
 };
 
 vm.createContext(context);
@@ -277,10 +278,10 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('source.dataSource') && functionBody.includes('source.reference_source') && functionBody.includes('source.catalog_url'), "normalizeVehicleApplicabilitySnapshot should normalize applicability source aliases");
     check(functionBody.includes('source.referenceId') && functionBody.includes('source.confidence_score') && functionBody.includes('source.source_verified'), "normalizeVehicleApplicabilitySnapshot should normalize applicability evidence aliases");
     check(functionBody.includes('source.catalogMatch === true') && functionBody.includes('source.model_code_match === true'), "normalizeVehicleApplicabilitySnapshot should normalize match flag aliases");
-    check(functionBody.includes('const candidateRangeCount = toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length);'), "normalizeVehicleApplicabilitySnapshot should derive candidate range counts from explicit values or array length");
+    check(functionBody.includes('const candidateRangeCount = Math.max(toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length), candidateRanges.length, normalizedCandidateRanges.length);') && functionBody.includes('supportedEngineCodesTruncated: supportedEngineCodeCount > normalizedSupportedEngineCodes.length,'), "normalizeVehicleApplicabilitySnapshot should retain counts that cannot understate retained ranges or engine codes");
     check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
     check(functionBody.includes('source.displayLabel') && functionBody.includes('source.display_label') && functionBody.includes('source.summary'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
-    check(functionBody.includes('schema_version: "vehicle_applicability_v1"'), "normalizeVehicleApplicabilitySnapshot should expose snake_case schema version");
+    check(functionBody.includes('schema_version: "vehicle_applicability_v2"'), "normalizeVehicleApplicabilitySnapshot should expose snake_case schema version");
     check(functionBody.includes('model_code: modelCode,') && functionBody.includes('engine_code: engineCode,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case vehicle identity aliases");
     check(functionBody.includes('trim: grade,') && functionBody.includes('region: market,'), "normalizeVehicleApplicabilitySnapshot should expose trim and region aliases");
     check(functionBody.includes('transmission_type: transmission,') && functionBody.includes('drive_type: drivetrain,') && functionBody.includes('fuel_type: fuelType,') && functionBody.includes('hybrid_system: electrification,'), "normalizeVehicleApplicabilitySnapshot should expose drivetrain and powertrain aliases");
@@ -289,7 +290,9 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('confidence,') && functionBody.includes('source_verified: sourceVerified,') && functionBody.includes('verified: sourceVerified,'), "normalizeVehicleApplicabilitySnapshot should expose applicability confidence aliases");
     check(functionBody.includes('catalog_matched: catalogMatched,') && functionBody.includes('model_code_matched: modelCodeMatched,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case match flag aliases");
     check(functionBody.includes('candidate_range_count: candidateRangeCount,') && functionBody.includes('supported_engine_code_count: supportedEngineCodeCount,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case applicability count aliases");
-    check(functionBody.includes('supported_ecus: supportedEcus,') && functionBody.includes('supported_ecu_count: supportedEcuCount,'), "normalizeVehicleApplicabilitySnapshot should expose supported ECU list aliases");
+    check(functionBody.includes('const normalizeRangeDescriptor = (range) => {') && functionBody.includes('const normalizedCandidateRanges = candidateRanges.map(normalizeRangeDescriptor)') && functionBody.includes('candidate_ranges: normalizedCandidateRanges,') && functionBody.includes('applicable_ranges: normalizedApplicableRanges,'), "normalizeVehicleApplicabilitySnapshot should retain safe candidate and applicable range descriptors");
+    check(functionBody.includes('const sourceInput = range.source && typeof range.source === "object"') && functionBody.includes('const sourceUrl = normalizeSourceUrl(') && functionBody.includes('source: { name: sourceName, url: sourceUrl,'), "normalizeVehicleApplicabilitySnapshot should retain sanitized range source provenance");
+    check(functionBody.includes('const normalizeEcuDescriptor = (ecu) => {') && functionBody.includes('supported_ecus: normalizedSupportedEcus,') && functionBody.includes('supported_ecu_count: supportedEcuCount,'), "normalizeVehicleApplicabilitySnapshot should expose allowlisted supported ECU aliases");
     check(functionBody.includes('summary_label: summaryLabel'), "normalizeVehicleApplicabilitySnapshot should expose snake_case summary label alias");
   }
 };
@@ -2777,8 +2780,8 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.89";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.89";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.89", "OBD offline cache version should match the active app version");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.3.90";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-21";'), "OBD app should retain typed scanner text live PID snapshots");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.3.90";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.3.90", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -7212,6 +7215,54 @@ const normalizedVehicleApplicabilityCamelArrays = obd.normalizeVehicleApplicabil
 check(normalizedVehicleApplicabilityCamelArrays.candidateRangeCount === 3 && normalizedVehicleApplicabilityCamelArrays.applicableRangeCount === 2, "Vehicle applicability normalization did not accept camelCase range aliases");
 check(normalizedVehicleApplicabilityCamelArrays.supportedEngineCodeCount === 1, "Vehicle applicability normalization did not accept camelCase supported engine code aliases");
 check(normalizedVehicleApplicabilityCamelArrays.status === "matched" && normalizedVehicleApplicabilityCamelArrays.modelCodeMatched === true, "Vehicle applicability normalization did not preserve camelCase match flags");
+const normalizedVehicleApplicabilityRangeDetails = obd.normalizeVehicleApplicabilitySnapshot({
+  maker: "Toyota",
+  model: "Prius",
+  catalogMatched: true,
+  candidateRanges: [{ model_codes: ["ZVW60", "ZVW65"], engine_codes: ["2ZR-FXE"], year_from: 2023, verified_through_year: 2026, source: "Toyota catalog", source_date: "2026-06-01", detail_confirmation_required: true, source_url: "must-not-retain" }],
+  applicableRanges: [{ modelCodes: ["ZVW60"], engineCodes: ["2ZR-FXE"], yearFrom: 2023, verifiedThroughYear: 2026, sourceName: "Toyota catalog", sourceDate: "2026-06-01" }],
+  supportedEngineCodes: ["2ZR-FXE"]
+});
+check(normalizedVehicleApplicabilityRangeDetails.candidateRanges?.[0]?.modelCodes?.includes("ZVW60") && normalizedVehicleApplicabilityRangeDetails.candidate_ranges?.[0]?.verified_through_year === 2026 && normalizedVehicleApplicabilityRangeDetails.applicableRanges?.[0]?.detailConfirmationRequired === false, "Vehicle applicability normalization did not retain safe candidate and applicable range detail aliases");
+check(normalizedVehicleApplicabilityRangeDetails.candidateRanges?.[0]?.source?.name === "Toyota catalog" && normalizedVehicleApplicabilityRangeDetails.candidateRanges?.[0]?.source?.url === null && normalizedVehicleApplicabilityRangeDetails.supported_engine_codes?.[0] === "2ZR-FXE", "Vehicle applicability normalization retained unsafe range URLs or lost supported engine codes");
+const normalizedVehicleApplicabilityRangeDetailsRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ vehicleApplicability: normalizedVehicleApplicabilityRangeDetails }))));
+check(normalizedVehicleApplicabilityRangeDetailsRoundTrip?.vehicleApplicability?.candidateRanges?.[0]?.yearFrom === 2023 && normalizedVehicleApplicabilityRangeDetailsRoundTrip?.vehicle_applicability?.applicable_ranges?.[0]?.engineCodes?.[0] === "2ZR-FXE", "Vehicle applicability range details were not retained through read-only export and reimport");
+const normalizedVehicleApplicabilitySafety = obd.normalizeVehicleApplicabilitySnapshot({
+  maker: "Toyota",
+  model: "Prius",
+  candidateRanges: Array.from({ length: 22 }, (_, index) => ({ model_codes: [`ZVW${index}`], year_from: 2000 + index, source: "Toyota catalog", source_url: "https://example.com/catalog?token=discard#fragment", source_date: "2026-06-01" })),
+  supportedEcus: [{ system_name: "Engine", ecu_name: "ECM", can_id: "7e8", protocol: "CAN", vin: "1HGCM82633A004352", serial_number: "discard", calibration_id: "discard", raw: "discard" }]
+});
+check(normalizedVehicleApplicabilitySafety.schemaVersion === "vehicle_applicability_v2" && normalizedVehicleApplicabilitySafety.retainedCandidateRangeCount === 20 && normalizedVehicleApplicabilitySafety.candidateRangesTruncated === true && normalizedVehicleApplicabilitySafety.candidateRanges?.[0]?.source?.url === "https://example.com/catalog", "Vehicle applicability v2 did not retain bounded range provenance or record truncation");
+check(normalizedVehicleApplicabilitySafety.supportedEcus?.[0]?.ecuName === "ECM" && normalizedVehicleApplicabilitySafety.supported_ecus?.[0]?.diagnostic_address === "7E8" && !JSON.stringify(normalizedVehicleApplicabilitySafety.supportedEcus).includes("1HGCM82633A004352") && !JSON.stringify(normalizedVehicleApplicabilitySafety.supportedEcus).includes("discard"), "Vehicle applicability v2 did not allowlist supported ECU descriptors");
+const normalizedVehicleApplicabilityCountSafety = obd.normalizeVehicleApplicabilitySnapshot({
+  candidate_range_count: 1,
+  candidate_ranges: [{ start: 2020 }, { start: 2021 }, { start: 2022 }],
+  supported_engine_code_count: 1,
+  supported_engine_codes: Array.from({ length: 13 }, (_, index) => `ENG-${index}`),
+  supported_ecu_count: 0,
+  supported_ecus: [{ ecu_name: "ECM", can_id: "7E8" }]
+});
+check(normalizedVehicleApplicabilityCountSafety.candidateRangeCount === 3 && normalizedVehicleApplicabilityCountSafety.retainedCandidateRangeCount === 3 && normalizedVehicleApplicabilityCountSafety.supportedEngineCodeCount === 13 && normalizedVehicleApplicabilityCountSafety.retainedSupportedEngineCodeCount === 12 && normalizedVehicleApplicabilityCountSafety.supportedEngineCodesTruncated === true && normalizedVehicleApplicabilityCountSafety.supportedEcuCount === 1, "Vehicle applicability v2 did not normalize counts against retained ranges, engine codes, and ECU descriptors");
+const scannerJsonApplicabilityUnverified = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  dtcs: [{ code: "P0300", status: "stored" }],
+  vehicle_applicability: {
+    schema_version: "vehicle_applicability_v2",
+    maker: "Toyota", model: "Prius", model_code: "ZVW60", year: "2024", engine_code: "2ZR-FXE",
+    catalog_matched: true, year_matched: true, engine_matched: true, model_code_matched: true, source_verified: true, candidate_range_count: 22,
+    candidate_ranges: [{ model_codes: ["ZVW60"], year_from: 2023, verified_through_year: 2026, source: { name: "Toyota catalog", url: "https://example.com/catalog?secret=discard", date: "2026-06-01", verified: true } }],
+    supported_ecus: [{ ecu_name: "ECM", can_id: "7E8", serial_number: "discard" }]
+  }
+}));
+check(scannerJsonApplicabilityUnverified?.vehicleApplicability?.status === "unknown" && scannerJsonApplicabilityUnverified?.vehicleApplicability?.catalogMatched === false && scannerJsonApplicabilityUnverified?.vehicleApplicability?.sourceVerified === false && scannerJsonApplicabilityUnverified?.vehicleApplicability?.candidateRanges?.[0]?.source?.url === "https://example.com/catalog" && scannerJsonApplicabilityUnverified?.vehicleApplicability?.candidateRanges?.[0]?.source?.verified === false && scannerJsonApplicabilityUnverified?.vehicleApplicability?.candidateRangeCount === 22 && scannerJsonApplicabilityUnverified?.vehicleApplicability?.candidateRangesTruncated === true && scannerJsonApplicabilityUnverified?.vehicleApplicability?.supportedEcus?.[0]?.serial_number === undefined, "Untrusted scanner JSON did not retain safe applicability ranges while downgrading match confidence");
+const scannerJsonRangeOnlyApplicability = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  dtcs: [{ code: "P0300", status: "stored" }],
+  vehicle_applicability: {
+    candidate_ranges: [{ model_codes: ["ZVW60"], year_from: 2023, source: { name: "Toyota catalog", verified: true } }],
+    supported_ecus: [{ ecu_name: "ECM", can_id: "7E8", raw: "discard" }]
+  }
+}));
+check(scannerJsonRangeOnlyApplicability?.vehicleApplicability?.status === "unknown" && scannerJsonRangeOnlyApplicability?.vehicleApplicability?.candidateRanges?.[0]?.modelCodes?.[0] === "ZVW60" && scannerJsonRangeOnlyApplicability?.vehicleApplicability?.candidateRanges?.[0]?.source?.verified === false && scannerJsonRangeOnlyApplicability?.vehicleApplicability?.supportedEcus?.[0]?.ecuName === "ECM", "Range-only scanner JSON did not retain safe applicability content as unverified");
 const normalizedVehicleApplicabilityImportAliases = obd.normalizeVehicleApplicabilitySnapshot({
   manufacturer: "Toyota",
   vehicle_model: "Aqua",

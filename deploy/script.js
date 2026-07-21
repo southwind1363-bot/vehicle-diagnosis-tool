@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.89";
+const APP_VERSION = "3.3.90";
 const APP_LAST_UPDATED = "2026-07-21";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1537,6 +1537,31 @@ function buildSelectedObdVehicleProfile() {
   };
 }
 
+function buildVehicleApplicabilityRangeDescriptors(ranges = []) {
+  const normalizeCodes = (values) => collectUnique((Array.isArray(values) ? values : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean))
+    .slice(0, 12);
+  const normalizeYear = (value) => {
+    const year = Number(value);
+    return Number.isFinite(year) && year >= 1900 && year <= 2100 ? Math.round(year) : null;
+  };
+  return (Array.isArray(ranges) ? ranges : [])
+    .slice(0, 20)
+    .map((range) => ({
+      modelCodes: normalizeCodes(range?.model_codes || range?.modelCodes),
+      engineCodes: normalizeCodes(range?.engine_codes || range?.engineCodes),
+      yearFrom: normalizeYear(range?.year_from ?? range?.yearFrom),
+      yearTo: normalizeYear(range?.year_to ?? range?.yearTo),
+      verifiedThroughYear: normalizeYear(range?.verified_through_year ?? range?.verifiedThroughYear),
+      sourceName: String(range?.source || range?.sourceName || "").trim().slice(0, 160) || null,
+      sourceUrl: String(range?.source_url || range?.sourceUrl || "").trim() || null,
+      sourceDate: String(range?.source_date || range?.sourceDate || "").trim().slice(0, 20) || null,
+      detailConfirmationRequired: range?.detail_confirmation_required === true || range?.detailConfirmationRequired === true
+    }))
+    .filter((range) => range.modelCodes.length || range.engineCodes.length || range.yearFrom || range.yearTo || range.verifiedThroughYear || range.sourceName);
+}
+
 function buildSelectedObdVehicleApplicability(profile = null) {
   const selectedProfile = profile || buildSelectedObdVehicleProfile();
   if (!selectedProfile) return null;
@@ -1550,6 +1575,8 @@ function buildSelectedObdVehicleApplicability(profile = null) {
   const candidateRanges = hasCatalogSelection ? findVehicleYearRanges(maker, model, modelCode || "") : [];
   const applicableRanges = hasCatalogSelection ? findApplicableVehicleYearRanges(maker, model, modelCode || "", year || "") : [];
   const supportedEngineCodes = collectUnique(applicableRanges.flatMap((item) => item.engine_codes || []));
+  const candidateRangeDescriptors = buildVehicleApplicabilityRangeDescriptors(candidateRanges);
+  const applicableRangeDescriptors = buildVehicleApplicabilityRangeDescriptors(applicableRanges);
   const catalogMatched = Boolean(vehicleOption);
   const modelCodeMatched = !modelCode || candidateRanges.some((item) => (item.model_codes || []).includes(modelCode));
   const yearMatched = !year || applicableRanges.length > 0;
@@ -1569,7 +1596,7 @@ function buildSelectedObdVehicleApplicability(profile = null) {
     status === "matched" ? "適合候補あり" : status === "partial" ? "候補要確認" : status === "unlisted" ? "未登録" : "手入力"
   ].filter(Boolean);
   return {
-    schemaVersion: "vehicle_applicability_v1",
+    schemaVersion: "vehicle_applicability_v2",
     maker,
     model,
     modelCode,
@@ -1581,6 +1608,9 @@ function buildSelectedObdVehicleApplicability(profile = null) {
     modelCodeMatched,
     candidateRangeCount: candidateRanges.length,
     applicableRangeCount: applicableRanges.length,
+    candidateRanges: candidateRangeDescriptors,
+    applicableRanges: applicableRangeDescriptors,
+    supportedEngineCodes,
     supportedEngineCodeCount: supportedEngineCodes.length,
     status,
     summaryLabel: summaryParts.join(" / ")
