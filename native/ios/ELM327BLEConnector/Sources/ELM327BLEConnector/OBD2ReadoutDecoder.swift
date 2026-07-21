@@ -170,15 +170,20 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
-    public static func decodeMode09SupportedInfoTypes(response: String) -> Result<[(scopeID: String?, bitmap: String, supportsEcuName: Bool)], OBD2ReadoutDecodeFailure> {
+    public static func decodeMode09SupportedInfoTypes(response: String) -> Result<[(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsEcuName: Bool)], OBD2ReadoutDecodeFailure> {
         packets(in: response).flatMap { packets in
-            var decoded: [(scopeID: String?, bitmap: String, supportsEcuName: Bool)] = []
+            var decoded: [(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsEcuName: Bool)] = []
             for packet in packets {
                 let payload = packet.payload
                 guard payload.count == 6, payload[0] == 0x49, payload[1] == 0x00 else {
                     return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
                 }
-                decoded.append((packet.scopeID, payload.dropFirst(2).map { String(format: "%02X", $0) }.joined(), (payload[3] & 0x40) != 0))
+                decoded.append((
+                    packet.scopeID,
+                    payload.dropFirst(2).map { String(format: "%02X", $0) }.joined(),
+                    (payload[2] & 0x10) != 0,
+                    (payload[3] & 0x40) != 0
+                ))
             }
             return .success(decoded)
         }
@@ -195,6 +200,22 @@ public enum OBD2ReadoutDecoder {
                 while textBytes.last == 0x00 || textBytes.last == 0x20 { textBytes.removeLast() }
                 guard !textBytes.isEmpty, textBytes.allSatisfy({ $0 >= 0x20 && $0 <= 0x7E }), let name = String(bytes: textBytes, encoding: .ascii), name.count <= 80 else { return .failure(.malformedResponse) }
                 decoded.append((packet.scopeID, name))
+            }
+            return decoded.isEmpty ? .failure(.malformedResponse) : .success(decoded)
+        }
+    }
+
+    public static func decodeMode09CalibrationIDs(response: String, supportedScopeIDs: Set<String>) -> Result<[(scopeID: String?, calibrationID: String)], OBD2ReadoutDecodeFailure> {
+        packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, calibrationID: String)] = []
+            for packet in packets {
+                let scopeKey = packet.scopeID ?? "LEGACY"
+                let payload = packet.payload
+                guard supportedScopeIDs.contains(scopeKey), payload.count >= 4, payload[0] == 0x49, payload[1] == 0x04 else { continue }
+                var textBytes = Array(payload.dropFirst(3))
+                while textBytes.last == 0x00 || textBytes.last == 0x20 { textBytes.removeLast() }
+                guard !textBytes.isEmpty, textBytes.allSatisfy({ $0 >= 0x20 && $0 <= 0x7E }), let calibrationID = String(bytes: textBytes, encoding: .ascii), calibrationID.count <= 80 else { return .failure(.malformedResponse) }
+                decoded.append((packet.scopeID, calibrationID))
             }
             return decoded.isEmpty ? .failure(.malformedResponse) : .success(decoded)
         }

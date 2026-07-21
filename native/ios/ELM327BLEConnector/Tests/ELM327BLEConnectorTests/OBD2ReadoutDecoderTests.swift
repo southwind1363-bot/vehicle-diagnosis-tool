@@ -123,14 +123,23 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
 
     func testMode09AcceptsOnlyAdvertisedEcuNamesAndNeverVin() throws {
         let support = try OBD2ReadoutDecoder.decodeMode09SupportedInfoTypes(response: "7E8 06 49 00 00 40 00 00\n7E9 06 49 00 00 00 00 00").get()
+        XCTAssertEqual(support.map(\.supportsCalibrationID), [false, false])
         XCTAssertEqual(support.map(\.supportsEcuName), [true, false])
         let names = try OBD2ReadoutDecoder.decodeMode09EcuNames(response: "7E8 10 0B 49 0A 00 45 4E 47\n7E8 21 49 4E 45 20 20", supportedScopeIDs: ["7E8"]).get()
         XCTAssertEqual(names.count, 1)
         XCTAssertEqual(names[0].scopeID, "7E8")
         XCTAssertEqual(names[0].name, "ENGINE")
+        let calibrationIDs = try OBD2ReadoutDecoder.decodeMode09CalibrationIDs(response: "7E8 10 13 49 04 01 43 41 4C\n7E8 21 2D 49 44 2D 30 31 20\n7E8 22 20 20 20 20 20 20", supportedScopeIDs: ["7E8"]).get()
+        XCTAssertEqual(calibrationIDs.count, 1)
+        XCTAssertEqual(calibrationIDs[0].scopeID, "7E8")
+        XCTAssertEqual(calibrationIDs[0].calibrationID, "CAL-ID-01")
         switch OBD2ReadoutDecoder.decodeMode09EcuNames(response: "7E8 03 49 02 00", supportedScopeIDs: ["7E8"]) {
         case .failure: break
         case .success: XCTFail("VIN response must not be accepted")
+        }
+        switch OBD2ReadoutDecoder.decodeMode09CalibrationIDs(response: "7E8 03 49 02 00", supportedScopeIDs: ["7E8"]) {
+        case .failure: break
+        case .success: XCTFail("Non-calibration Mode 09 response must not be accepted")
         }
     }
 

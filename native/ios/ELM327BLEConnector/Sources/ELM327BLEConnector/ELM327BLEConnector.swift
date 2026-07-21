@@ -54,6 +54,7 @@ public final class ELM327BLEConnector: NSObject {
     private var liveSupportedPIDs = Set<String>()
     private var scheduledLivePIDCommands = Set<ELMReadCommand>()
     private var scheduledSupportedPIDPages = Set<ELMReadCommand>()
+    private var mode09CalibrationIDScopes = Set<String>()
     private var mode09EcuNameScopes = Set<String>()
     private var plannedIntents = Set<String>()
     private var plannedReadoutIDs = Set<String>()
@@ -119,13 +120,14 @@ public final class ELM327BLEConnector: NSObject {
         liveSupportedPIDs.removeAll()
         scheduledLivePIDCommands.removeAll()
         scheduledSupportedPIDPages = [.supportedPIDs]
+        mode09CalibrationIDScopes.removeAll()
         mode09EcuNameScopes.removeAll()
         plannedIntents.removeAll()
         plannedReadoutIDs.removeAll()
         emittedEnvelopeCount = 0
         firstEnvelopeSequence = nil
         didEmitTerminalManifest = false
-        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .mode09EcuName].contains($0) && $0.livePID == nil }
+        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .mode09CalibrationID, .mode09EcuName].contains($0) && $0.livePID == nil }
         plan(commands: pendingCommands)
         runNextCommand()
     }
@@ -245,11 +247,26 @@ public final class ELM327BLEConnector: NSObject {
                     results.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "supported_info_types_00", infoType: "00", value: result.bitmap))
+                        if result.supportsCalibrationID { mode09CalibrationIDScopes.insert(result.scopeID ?? "LEGACY") }
                         if result.supportsEcuName { mode09EcuNameScopes.insert(result.scopeID ?? "LEGACY") }
                     }
-                    if !mode09EcuNameScopes.isEmpty {
-                        pendingCommands.insert(.mode09EcuName, at: 0)
-                        plan(commands: [.mode09EcuName])
+                    let followUpCommands: [ELMReadCommand] = [
+                        mode09CalibrationIDScopes.isEmpty ? nil : .mode09CalibrationID,
+                        mode09EcuNameScopes.isEmpty ? nil : .mode09EcuName
+                    ].compactMap { $0 }
+                    if !followUpCommands.isEmpty {
+                        pendingCommands.insert(contentsOf: followUpCommands, at: 0)
+                        plan(commands: followUpCommands)
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
+            case .mode09CalibrationID:
+                switch OBD2ReadoutDecoder.decodeMode09CalibrationIDs(response: response, supportedScopeIDs: mode09CalibrationIDScopes) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "calibration_id", infoType: "04", value: result.calibrationID))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
