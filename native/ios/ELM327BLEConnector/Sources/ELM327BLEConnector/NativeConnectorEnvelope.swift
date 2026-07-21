@@ -55,6 +55,7 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
     public let sequence: Int
     public let readoutID: String?
     public let readoutScopeID: String?
+    public let readoutAttempt: Int?
     public let ok: Bool
     public let blocked: Bool
     public let wouldTransmit: Bool
@@ -72,6 +73,7 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
         case sequence, ok, blocked
         case readoutID = "readout_id"
         case readoutScopeID = "readout_scope_id"
+        case readoutAttempt = "readout_attempt"
         case wouldTransmit = "would_transmit"
         case errors, data
     }
@@ -108,7 +110,7 @@ public enum NativeConnectorEnvelopeFactory {
     ) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_supported_pids", data: [
             "supported_pids": .array(pids.map(NativeConnectorJSONValue.string))
-        ])
+        ], readoutAttempt: 0)
     }
 
     public static func livePID(
@@ -124,7 +126,7 @@ public enum NativeConnectorEnvelopeFactory {
                 "value": .number(value.value),
                 "unit": .string(value.unit)
             ])])
-        ], readoutID: "live_pid_snapshot")
+        ], readoutID: "live_pid_snapshot", readoutAttempt: 0)
     }
 
     public static func dtcs(
@@ -142,7 +144,8 @@ public enum NativeConnectorEnvelopeFactory {
                 "dtcs": .array(dtcs.map { .object(["code": .string($0.code), "status": .string($0.status)]) }),
                 "source_ecu": scopeID.map { .string($0) } ?? .null
             ],
-            readoutScopeID: scopeID
+            readoutScopeID: scopeID,
+            readoutAttempt: 0
         )
     }
 
@@ -170,7 +173,8 @@ public enum NativeConnectorEnvelopeFactory {
                 "monitors": .array([])
             ],
             readoutID: "readiness_snapshot",
-            readoutScopeID: scopeID
+            readoutScopeID: scopeID,
+            readoutAttempt: 0
         )
     }
 
@@ -180,21 +184,21 @@ public enum NativeConnectorEnvelopeFactory {
             "trigger_dtc_entries": .array(code.map { [.object(["code": .string($0)])] } ?? []),
             "values": .array([]),
             "freeze_frame_readout_status": .string("reported")
-        ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID)
+        ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
     public static func freezeFrameValue(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, value: OBD2MonitorValue) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_freeze_frame", data: [
             "values": .array([.object(["id": .string(value.id), "pid": .string(value.pid), "value": .number(value.value), "unit": .string(value.unit), "freeze_frame_number": .number(0)])]),
             "freeze_frame_readout_status": .string("reported")
-        ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID)
+        ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
     public static func ecuInfo(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, id: String, infoType: String, value: String) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_ecu_info", data: [
             "items": .array([.object(["id": .string(id), "service": .string("09"), "info_type": .string(infoType), "value": .string(value), "source_ecu": scopeID.map { .string($0) } ?? .null])]),
             "ecu_info_readout_status": .string("reported")
-        ], readoutID: "ecu_info_snapshot", readoutScopeID: scopeID)
+        ], readoutID: "ecu_info_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
     public static func failedReadout(
@@ -209,7 +213,7 @@ public enum NativeConnectorEnvelopeFactory {
                 ? ["monitor_values": .array([])]
                 : ["adapter_family": .string("ELM327")]
         if let readoutID = command.readoutID { data["readout_id"] = .string(readoutID) }
-        return make(context: context, sequence: sequence, intent: command.intent, data: data, ok: false, errors: [error], readoutID: command.readoutID)
+        return make(context: context, sequence: sequence, intent: command.intent, data: data, ok: false, errors: [error], readoutID: command.readoutID, readoutAttempt: command.readoutID == nil ? nil : 0)
     }
 
     private static func make(
@@ -220,7 +224,8 @@ public enum NativeConnectorEnvelopeFactory {
         ok: Bool = true,
         errors: [String] = [],
         readoutID: String? = nil,
-        readoutScopeID: String? = nil
+        readoutScopeID: String? = nil,
+        readoutAttempt: Int? = nil
     ) -> NativeConnectorEnvelope {
         NativeConnectorEnvelope(
             schemaVersion: "native_connector_contract_v1",
@@ -234,6 +239,7 @@ public enum NativeConnectorEnvelopeFactory {
             sequence: sequence,
             readoutID: readoutID,
             readoutScopeID: readoutScopeID,
+            readoutAttempt: readoutAttempt,
             ok: ok,
             blocked: false,
             wouldTransmit: false,

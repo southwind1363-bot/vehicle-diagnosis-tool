@@ -2268,8 +2268,6 @@
       const requiresAttempt = expectedReadoutScopes.length > 0 && scopeId !== "LEGACY";
       const hasAttempt = attempts.some((attempt) => attempt !== null);
       if ((requiresAttempt || hasAttempt) && attempts.some((attempt) => attempt === null)) invalidAttemptGroups.push({ readoutId, scopeId, error: "missing_readout_attempt" });
-      const presentAttempts = attempts.filter((attempt) => attempt !== null);
-      if (new Set(presentAttempts).size !== presentAttempts.length) invalidAttemptGroups.push({ readoutId, scopeId, error: "duplicate_readout_attempt" });
     }));
     if (invalidAttemptGroups.length) {
       return blockedResult(
@@ -2280,10 +2278,37 @@
     const latestOutcomeEntries = [];
     entriesByReadoutAndScope.forEach((entriesByScope, readoutId) => entriesByScope.forEach((entries, scopeId) => {
       const entriesWithAttempt = entries.filter(({ evaluation }) => evaluation.readoutAttempt !== null);
-      const entry = entriesWithAttempt.length
-        ? entriesWithAttempt.reduce((latest, candidate) => candidate.evaluation.readoutAttempt > latest.evaluation.readoutAttempt ? candidate : latest)
-        : entries.at(-1);
-      latestOutcomeEntries.push({ ...entry, readoutId, scopeId });
+      const selectedEntries = entriesWithAttempt.length
+        ? (() => {
+          const highestAttempt = Math.max(...entriesWithAttempt.map(({ evaluation }) => evaluation.readoutAttempt));
+          return entriesWithAttempt.filter(({ evaluation }) => evaluation.readoutAttempt === highestAttempt);
+        })()
+        : [entries.at(-1)];
+      const lastEntry = selectedEntries.at(-1);
+      const selectedErrors = [...new Set(selectedEntries.flatMap(({ evaluation }) => [
+        ...(Array.isArray(evaluation.errors) ? evaluation.errors : []),
+        ...(Array.isArray(evaluation.readoutErrors) ? evaluation.readoutErrors : [])
+      ]))];
+      const selectedBlocked = selectedEntries.some(({ evaluation }) => evaluation.readoutStatus === "blocked");
+      const selectedSucceeded = selectedEntries.every(({ evaluation }) => evaluation.accepted && evaluation.readoutSucceeded);
+      const selectedStatus = selectedSucceeded ? "reported" : selectedBlocked ? "blocked" : "unparsed";
+      latestOutcomeEntries.push({
+        ...lastEntry,
+        readoutId,
+        scopeId,
+        selectedEntries,
+        evaluation: {
+          ...lastEntry.evaluation,
+          accepted: selectedSucceeded,
+          readoutSucceeded: selectedSucceeded,
+          readout_succeeded: selectedSucceeded,
+          readoutStatus: selectedStatus,
+          readout_status: selectedStatus,
+          readoutErrors: selectedErrors,
+          readout_errors: [...selectedErrors],
+          errors: selectedErrors
+        }
+      });
     }));
     const scopeKey = (readoutId, scopeId) => `${readoutId}\u0000${scopeId}`;
     const expectedScopeKeys = new Set(expectedReadoutScopes.map((item) => scopeKey(item.readoutId, item.scopeId)));
@@ -2326,7 +2351,16 @@
       const latestEntries = latestOutcomeEntries.filter((entry) => entry.readoutId === readoutId);
       const evaluation = latestEntries[0]?.evaluation;
       if (!evaluation) return;
-      const data = buildNativeConnectorScopedSnapshotInput(latestEntries, readoutId);
+      const successfulSelectedEntries = latestEntries
+        .filter(({ evaluation: selectedEvaluation }) => selectedEvaluation.accepted && selectedEvaluation.readoutSucceeded)
+        .flatMap(({ selectedEntries }) => selectedEntries);
+      const failedSelectedEntries = latestEntries
+        .filter(({ evaluation: selectedEvaluation }) => !selectedEvaluation.accepted || !selectedEvaluation.readoutSucceeded)
+        .flatMap(({ selectedEntries }) => selectedEntries);
+      const data = buildNativeConnectorScopedSnapshotInput(
+        successfulSelectedEntries.length ? successfulSelectedEntries : failedSelectedEntries.slice(-1),
+        readoutId
+      );
       const intentInput = {
         bridge_status: { connection_status: data },
         list_vci: { vci_devices: data },
@@ -2350,7 +2384,7 @@
     });
     const selectedLivePidEntryIndexes = new Set(latestOutcomeEntries
       .filter(({ readoutId }) => readoutId === "live_pid_snapshot")
-      .map(({ index }) => index));
+      .flatMap(({ selectedEntries }) => selectedEntries.map(({ index }) => index)));
     acceptedEntries.filter(({ index, evaluation }) => evaluation.readoutSucceeded
         && evaluation.readoutId === "live_pid_snapshot"
         && (!retriedLivePidScopeKeys.has(scopeKey(evaluation.readoutId, evaluation.readoutScopeId)) || selectedLivePidEntryIndexes.has(index)))

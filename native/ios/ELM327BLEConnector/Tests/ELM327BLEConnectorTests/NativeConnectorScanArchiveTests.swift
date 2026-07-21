@@ -68,6 +68,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             sequence: mixed.sequence,
             readoutID: mixed.readoutID,
             readoutScopeID: mixed.readoutScopeID,
+            readoutAttempt: mixed.readoutAttempt,
             ok: mixed.ok,
             blocked: mixed.blocked,
             wouldTransmit: mixed.wouldTransmit,
@@ -77,7 +78,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         XCTAssertThrowsError(try builder.append(mixed))
 
         let unsafe = NativeConnectorEnvelope(
-            schemaVersion: "native_connector_contract_v1", interfaceID: "user-vci-elm327", platform: "ios", intent: "read_stored_dtc", capturedAt: "2026-07-21T00:00:00Z", scanID: context.scanID, connectionID: context.connectionID, vehicleContextID: context.vehicleContextID, sequence: 2, readoutID: nil, readoutScopeID: nil, ok: true, blocked: false, wouldTransmit: false, errors: [], data: ["nested": .object(["raw_frames": .array([])])]
+            schemaVersion: "native_connector_contract_v1", interfaceID: "user-vci-elm327", platform: "ios", intent: "read_stored_dtc", capturedAt: "2026-07-21T00:00:00Z", scanID: context.scanID, connectionID: context.connectionID, vehicleContextID: context.vehicleContextID, sequence: 2, readoutID: nil, readoutScopeID: nil, readoutAttempt: 0, ok: true, blocked: false, wouldTransmit: false, errors: [], data: ["nested": .object(["raw_frames": .array([])])]
         )
         XCTAssertThrowsError(try builder.append(unsafe))
     }

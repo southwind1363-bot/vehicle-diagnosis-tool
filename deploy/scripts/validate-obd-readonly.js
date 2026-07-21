@@ -3402,7 +3402,7 @@ const unexpectedScopeScan = obd.buildNativeConnectorScanSession({ envelopes: [sc
 check(missingScopeScan.scanState === "interrupted" && missingScopeScan.missingReadoutScopes?.some((item) => item.scopeId === "7E9") && unexpectedScopeScan.scanState === "interrupted" && unexpectedScopeScan.unexpectedReadoutScopes?.some((item) => item.scopeId === "7E9"), "Missing or unexpected native ECU scopes are not interrupting completion");
 const missingAttemptScan = obd.buildNativeConnectorScanSession({ envelopes: [{ ...scopedNativeEnvelope("7E8", 723, "P0300"), readout_attempt: undefined }], scan_state: "completed", expected_readouts: ["stored_dtc_snapshot"], expected_readout_scopes: [{ readout_id: "stored_dtc_snapshot", scope_id: "7E8" }] });
 const duplicateAttemptScan = obd.buildNativeConnectorScanSession({ envelopes: [scopedNativeEnvelope("7E8", 724, "P0300"), scopedNativeEnvelope("7E8", 725, "P0171")], scan_state: "completed", expected_readouts: ["stored_dtc_snapshot"], expected_readout_scopes: [{ readout_id: "stored_dtc_snapshot", scope_id: "7E8" }] });
-check(missingAttemptScan.blocked === true && missingAttemptScan.errors.includes("missing_readout_attempt") && duplicateAttemptScan.blocked === true && duplicateAttemptScan.errors.includes("duplicate_readout_attempt"), "Ambiguous native ECU retry attempts are not rejected");
+check(missingAttemptScan.blocked === true && missingAttemptScan.errors.includes("missing_readout_attempt") && duplicateAttemptScan.scanState === "completed" && duplicateAttemptScan.session?.dtcSnapshot?.codes?.includes("P0300") && duplicateAttemptScan.session?.dtcSnapshot?.codes?.includes("P0171"), "Native readout attempt groups do not distinguish a missing attempt from multiple values in one attempt");
 const reimportedMultiEcuNativeScan = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuNativeScan.session)));
 check(reimportedMultiEcuNativeScan?.dtcSnapshot?.codes?.length === 2 && reimportedMultiEcuNativeScan?.nativeConnectorScanLifecycle?.completedReadoutScopes?.length === 2 && reimportedMultiEcuNativeScan?.nativeConnectorScanLifecycle?.readoutScopeOutcomes?.every((item) => item.readoutAttempt === 0 && item.readoutSucceeded === true) && reimportedMultiEcuNativeScan?.vehicleCommandEnabled === false, "Native ECU scope data, attempt outcome, or lifecycle was lost during export/import");
 const scopedNativeReadEnvelope = (intent, readoutId, scopeId, sequence, data, outcome = {}) => ({
@@ -3413,6 +3413,61 @@ const scopedNativeReadEnvelope = (intent, readoutId, scopeId, sequence, data, ou
   ...outcome
 });
 const nativeScopeManifest = (readoutId) => ["7E8", "7E9"].map((scope_id) => ({ readout_id: readoutId, scope_id }));
+const sameAttemptFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 760, { trigger_dtc: "P0300", monitor_values: [{ id: "coolant_temp", value: 82, unit: "C" }] }),
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 761, { monitor_values: [{ id: "engine_speed", value: 1520, unit: "rpm" }] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: [{ readout_id: "freeze_frame_snapshot", scope_id: "7E8" }]
+});
+check(sameAttemptFreezeFrameScan.scanState === "completed" && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtc === "P0300" && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 82) && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1520), "Same-attempt freeze-frame PID envelopes lost values before session normalization");
+const retriedFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 762, { monitor_values: [{ id: "coolant_temp", value: 60, unit: "C" }] }), readout_attempt: 0 },
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 763, { monitor_values: [{ id: "engine_speed", value: 900, unit: "rpm" }] }), readout_attempt: 0 },
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 764, { monitor_values: [{ id: "coolant_temp", value: 84, unit: "C" }] }), readout_attempt: 1 },
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 765, { monitor_values: [{ id: "engine_speed", value: 1550, unit: "rpm" }] }), readout_attempt: 1 }
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: [{ readout_id: "freeze_frame_snapshot", scope_id: "7E8" }]
+});
+check(retriedFreezeFrameScan.scanState === "completed" && retriedFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 84) && retriedFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1550) && !retriedFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.value === 60 || item.value === 900), "Latest freeze-frame retry group did not replace every superseded PID value");
+const failedSelectedFreezeFrameGroup = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 766, { monitor_values: [{ id: "coolant_temp", value: 82, unit: "C" }] }),
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 767, { monitor_values: [{ id: "engine_speed", value: 1550, unit: "rpm" }] }), ok: false, blocked: false, errors: ["transport:timeout"] }
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: [{ readout_id: "freeze_frame_snapshot", scope_id: "7E8" }]
+});
+check(failedSelectedFreezeFrameGroup.scanState === "interrupted" && failedSelectedFreezeFrameGroup.failedReadoutScopes?.some((item) => item.scopeId === "7E8") && failedSelectedFreezeFrameGroup.readoutErrorsById?.freeze_frame_snapshot?.includes("transport:timeout") && failedSelectedFreezeFrameGroup.session?.freezeFrameSnapshot?.monitorValues?.length === 0, "Failed selected freeze-frame attempt leaked partial values or completed the scan");
+const recoveredFreezeFrameRetry = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 768, { monitor_values: [{ id: "coolant_temp", value: 60, unit: "C" }] }), readout_attempt: 0, ok: false, blocked: false, errors: ["transport:timeout"] },
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 769, { monitor_values: [{ id: "coolant_temp", value: 85, unit: "C" }] }), readout_attempt: 1 },
+    { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 770, { monitor_values: [{ id: "engine_speed", value: 1600, unit: "rpm" }] }), readout_attempt: 1 }
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: [{ readout_id: "freeze_frame_snapshot", scope_id: "7E8" }]
+});
+check(recoveredFreezeFrameRetry.scanState === "completed" && recoveredFreezeFrameRetry.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.value === 85) && recoveredFreezeFrameRetry.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.value === 1600) && !recoveredFreezeFrameRetry.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.value === 60), "A recovered freeze-frame retry retained a failed prior-attempt value");
+const groupedLivePidRetryScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    { ...scopedNativeReadEnvelope("read_live_pid_snapshot", "live_pid_snapshot", "7E8", 771, { monitor_values: [{ id: "engine_speed", value: 700, unit: "rpm" }] }), readout_attempt: 0 },
+    { ...scopedNativeReadEnvelope("read_live_pid_snapshot", "live_pid_snapshot", "7E8", 772, { monitor_values: [{ id: "coolant_temp", value: 60, unit: "C" }] }), readout_attempt: 0 },
+    { ...scopedNativeReadEnvelope("read_live_pid_snapshot", "live_pid_snapshot", "7E8", 773, { monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }] }), readout_attempt: 1 },
+    { ...scopedNativeReadEnvelope("read_live_pid_snapshot", "live_pid_snapshot", "7E8", 774, { monitor_values: [{ id: "coolant_temp", value: 85, unit: "C" }] }), readout_attempt: 1 }
+  ],
+  scan_state: "completed",
+  expected_readouts: ["live_pid_snapshot"],
+  expected_readout_scopes: [{ readout_id: "live_pid_snapshot", scope_id: "7E8" }]
+});
+check(groupedLivePidRetryScan.scanState === "completed" && groupedLivePidRetryScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.value === 800) && groupedLivePidRetryScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.value === 85) && !groupedLivePidRetryScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.value === 700 || item.value === 60) && groupedLivePidRetryScan.session?.livePidTimeline?.sampleCount === 2 && groupedLivePidRetryScan.session?.livePidTimeline?.samples?.every((item) => item.monitorValues?.every((value) => value.value === 800 || value.value === 85)), "Live PID retry grouping retained superseded samples or lost selected-attempt values");
 const multiEcuNativeReadinessScan = obd.buildNativeConnectorScanSession({
   envelopes: [
     scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E8", 730, { pid: "01", mil_on: false, monitors: [{ id: "misfire", status: "complete" }] }),

@@ -17,6 +17,7 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"schema_version\":\"native_connector_contract_v1\""))
         XCTAssertTrue(json.contains("\"would_transmit\":false"))
         XCTAssertTrue(json.contains("\"readout_id\":\"live_pid_snapshot\""))
+        XCTAssertTrue(json.contains("\"readout_attempt\":0"))
         XCTAssertFalse(json.contains("vehicle_command_enabled\":true"))
     }
 
