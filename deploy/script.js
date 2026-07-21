@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.3.97";
+const APP_VERSION = "3.3.98";
 const APP_LAST_UPDATED = "2026-07-21";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1811,7 +1811,7 @@ function isObdInterfaceAutoRequested() {
 function getObdInterfaceSelectionNote(capability = window.ObdReadOnly?.getCapability?.()) {
   if (!isObdInterfaceAutoRequested()) return "手動選択";
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
-  if (isMobileDevice()) return "自動判定: スマホのため Bluetooth 系を優先";
+  if (isMobileDevice()) return "自動判定: スマホのため Bluetooth 候補を選択（直接接続は未実装）";
   if (serialReady) return "自動判定: Web Serial 対応のため ELM327 を優先";
   return "自動判定: Web Serial 非対応のため有線OBD2/J2534適合確認を優先";
 }
@@ -1924,7 +1924,7 @@ function getObdAccessStatusMessage(unlocked, capability = window.ObdReadOnly?.ge
     return `${autoPrefix}有線OBD2機器を使います。J2534 DLL適合とPC側ローカルブリッジ確認から進めます。`;
   }
   if (interfaceId === "user-vci-thinkcar-bluetooth") {
-    return `${autoPrefix}THINKCAR Bluetooth を使います。自前iPhoneコネクタと通信仕様の確認から進めます。`;
+    return `${autoPrefix}THINKCAR Bluetooth 候補を選択しました。iPhoneからの直接接続は未実装のため、現時点では車両・VCIへの通信を開始しません。`;
   }
   if (interfaceId === "user-vci-rcmall-mks-canable-v2-pro") {
     return `${autoPrefix}CANable 候補を使います。CAN系 読取専用応答確認から進めます。`;
