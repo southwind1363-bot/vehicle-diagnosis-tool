@@ -3596,26 +3596,28 @@
     const compressionIgnition = (b & 0x08) !== 0;
     const monitorBits = compressionIgnition
       ? [
-          ["misfire", b, 0x10, 0x40],
-          ["fuel_system", b, 0x20, 0x80],
-          ["comprehensive_component", c, 0x01, 0x10],
-          ["nox_scr", c, 0x02, 0x20],
-          ["boost_pressure", c, 0x04, 0x40],
-          ["exhaust_gas_sensor", c, 0x08, 0x80],
-          ["pm_filter", d, 0x01, 0x10],
-          ["egr_vvt", d, 0x02, 0x20]
+          ["misfire", b, 0x01, b, 0x10],
+          ["fuel_system", b, 0x02, b, 0x20],
+          ["comprehensive_component", b, 0x04, b, 0x40],
+          ["nmhc_catalyst", c, 0x01, d, 0x01],
+          ["nox_scr", c, 0x02, d, 0x02],
+          ["boost_pressure", c, 0x08, d, 0x08],
+          ["exhaust_gas_sensor", c, 0x20, d, 0x20],
+          ["pm_filter", c, 0x40, d, 0x40],
+          ["egr_vvt", c, 0x80, d, 0x80]
         ]
       : [
-          ["misfire", b, 0x10, 0x40],
-          ["fuel_system", b, 0x20, 0x80],
-          ["comprehensive_component", c, 0x01, 0x10],
-          ["catalyst", c, 0x02, 0x20],
-          ["heated_catalyst", c, 0x04, 0x40],
-          ["evaporative_system", c, 0x08, 0x80],
-          ["secondary_air", d, 0x01, 0x10],
-          ["oxygen_sensor", d, 0x02, 0x20],
-          ["oxygen_sensor_heater", d, 0x04, 0x40],
-          ["egr_vvt", d, 0x08, 0x80]
+          ["misfire", b, 0x01, b, 0x10],
+          ["fuel_system", b, 0x02, b, 0x20],
+          ["comprehensive_component", b, 0x04, b, 0x40],
+          ["catalyst", c, 0x01, d, 0x01],
+          ["heated_catalyst", c, 0x02, d, 0x02],
+          ["evaporative_system", c, 0x04, d, 0x04],
+          ["secondary_air", c, 0x08, d, 0x08],
+          ["ac_refrigerant", c, 0x10, d, 0x10],
+          ["oxygen_sensor", c, 0x20, d, 0x20],
+          ["oxygen_sensor_heater", c, 0x40, d, 0x40],
+          ["egr_vvt", c, 0x80, d, 0x80]
         ];
     return withBridgeMetadata(normalizeReadinessSnapshot({
       source: "local_bridge",
@@ -3629,9 +3631,9 @@
       readiness_status_byte_d: d,
       mil_on: valueById.get("mil_status") === true || valueById.get("monitor_status_mil") === "mil_on",
       readiness_ignition_type: compressionIgnition ? "compression" : "spark",
-      monitors: monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
-        const supported = (byte & supportedBit) !== 0;
-        const complete = supported ? (byte & incompleteBit) === 0 : false;
+      monitors: monitorBits.map(([id, supportedByte, supportedBit, incompleteByte = supportedByte, incompleteBit]) => {
+        const supported = (supportedByte & supportedBit) !== 0;
+        const complete = supported ? (incompleteByte & incompleteBit) === 0 : false;
         return { id, supported, complete, status: supported ? (complete ? "complete" : "not_complete") : "not_supported" };
       })
     }));
@@ -16511,30 +16513,32 @@
     const compressionIgnition = (b & 0x08) !== 0;
     const monitorBits = compressionIgnition
       ? [
-          ["misfire", b, 0x10, 0x40],
-          ["fuel_system", b, 0x20, 0x80],
-          ["comprehensive_component", c, 0x01, 0x10],
-          ["nox_scr", c, 0x02, 0x20],
-          ["boost_pressure", c, 0x04, 0x40],
-          ["exhaust_gas_sensor", c, 0x08, 0x80],
-          ["pm_filter", d, 0x01, 0x10],
-          ["egr_vvt", d, 0x02, 0x20]
+          ["misfire", b, 0x01, b, 0x10],
+          ["fuel_system", b, 0x02, b, 0x20],
+          ["comprehensive_component", b, 0x04, b, 0x40],
+          ["nmhc_catalyst", c, 0x01, d, 0x01],
+          ["nox_scr", c, 0x02, d, 0x02],
+          ["boost_pressure", c, 0x08, d, 0x08],
+          ["exhaust_gas_sensor", c, 0x20, d, 0x20],
+          ["pm_filter", c, 0x40, d, 0x40],
+          ["egr_vvt", c, 0x80, d, 0x80]
         ]
       : [
-          ["misfire", b, 0x10, 0x40],
-          ["fuel_system", b, 0x20, 0x80],
-          ["comprehensive_component", c, 0x01, 0x10],
-          ["catalyst", c, 0x02, 0x20],
-          ["heated_catalyst", c, 0x04, 0x40],
-          ["evaporative_system", c, 0x08, 0x80],
-          ["secondary_air", d, 0x01, 0x10],
-          ["oxygen_sensor", d, 0x02, 0x20],
-          ["oxygen_sensor_heater", d, 0x04, 0x40],
-          ["egr_vvt", d, 0x08, 0x80]
+          ["misfire", b, 0x01, b, 0x10],
+          ["fuel_system", b, 0x02, b, 0x20],
+          ["comprehensive_component", b, 0x04, b, 0x40],
+          ["catalyst", c, 0x01, d, 0x01],
+          ["heated_catalyst", c, 0x02, d, 0x02],
+          ["evaporative_system", c, 0x04, d, 0x04],
+          ["secondary_air", c, 0x08, d, 0x08],
+          ["ac_refrigerant", c, 0x10, d, 0x10],
+          ["oxygen_sensor", c, 0x20, d, 0x20],
+          ["oxygen_sensor_heater", c, 0x40, d, 0x40],
+          ["egr_vvt", c, 0x80, d, 0x80]
         ];
-    const monitors = monitorBits.map(([id, byte, supportedBit, incompleteBit]) => {
-      const supported = (byte & supportedBit) !== 0;
-      const complete = supported ? (byte & incompleteBit) === 0 : false;
+    const monitors = monitorBits.map(([id, supportedByte, supportedBit, incompleteByte = supportedByte, incompleteBit]) => {
+      const supported = (supportedByte & supportedBit) !== 0;
+      const complete = supported ? (incompleteByte & incompleteBit) === 0 : false;
       return { id, supported, complete, status: supported ? (complete ? "complete" : "not_complete") : "not_supported" };
     });
 

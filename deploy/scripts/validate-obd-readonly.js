@@ -492,7 +492,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {'), "normalizeBridgeReadinessSnapshot should build readiness values by normalized id");
     check(functionBody.includes('const bridgeReadoutStatus = getBridgeReadoutStatus(bridgeSafety);') && functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus'), "normalizeBridgeReadinessSnapshot should distinguish blocked and unparsed readiness responses without B/C/D bytes");
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
-    check(functionBody.includes('["nox_scr", c, 0x02, 0x20]') && functionBody.includes('["evaporative_system", c, 0x08, 0x80]'), "normalizeBridgeReadinessSnapshot should preserve compression and spark monitor layouts");
+    check(functionBody.includes('["nox_scr", c, 0x02, d, 0x02]') && functionBody.includes('["ac_refrigerant", c, 0x10, d, 0x10]') && functionBody.includes('["comprehensive_component", b, 0x04, b, 0x40]'), "normalizeBridgeReadinessSnapshot should preserve corrected compression and spark monitor layouts");
     check(functionBody.includes('status: supported ? (complete ? "complete" : "not_complete") : "not_supported"'), "normalizeBridgeReadinessSnapshot should derive readiness monitor status from supported and incomplete bits");
     check(functionBody.includes('source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus,') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeReadinessSnapshot should preserve bridge failure status and source ECU");
   }
@@ -2739,7 +2739,7 @@ const scannerTextCompactSupportedPidBitmask = obd.analyzeScannerText("0100: 41 0
 check(scannerTextSupportedPidBitmask?.supportedPidMatrix?.supportedPids?.includes("0C") && scannerTextSupportedPidBitmask?.supportedPidMatrix?.supportedPidPageBases?.includes("00") && scannerTextSupportedPidResponseBitmask?.supportedPidMatrix?.supportedPids?.includes("0C") && scannerTextSupportedPidResponseBitmask?.supportedPidMatrix?.supportedPidPageBases?.includes("00") && scannerTextCompactSupportedPidBitmask?.supportedPidMatrix?.supportedPids?.includes("0C") && scannerTextCompactSupportedPidBitmask?.supportedPidMatrix?.supportedPidPageBases?.includes("00") && scannerTextSupportedPidBitmask?.supportedPidMatrix?.supportedPidReadoutStatus === "reported" && scannerTextSupportedPidBitmask?.supportedPidMatrix?.retainedRawText === false && obd.analyzeScannerText("0100: 41 20 BE 1F A8 13")?.supportedPidMatrix === null && obd.analyzeScannerText("0100: BE 1F A8")?.supportedPidMatrix === null && obd.analyzeScannerText("01 00 BE 1F A8 13")?.supportedPidMatrix === null, "Scanner text supported PID bitmasks did not require matching explicit request labels, response PIDs, and complete masks");
 const scannerTextReadinessResponse = obd.analyzeScannerText("Mode 01 PID 01: 41 01 00 07 65 00");
 const scannerTextCompactReadinessResponse = obd.analyzeScannerText("0101: 41 01 00 07 65 00");
-check(scannerTextReadinessResponse?.readinessSnapshot?.readinessReadoutStatus === "reported" && scannerTextReadinessResponse?.readinessSnapshot?.milOn === false && scannerTextReadinessResponse?.readinessSnapshot?.readinessStatusBytes?.a === "00" && scannerTextReadinessResponse?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.status === "not_supported") && scannerTextCompactReadinessResponse?.readinessSnapshot?.readinessReadoutStatus === "reported" && scannerTextCompactReadinessResponse?.readinessSnapshot?.readinessStatusBytes?.d === "00" && obd.analyzeScannerText("0101: 41 02 00 07 65 00")?.readinessSnapshot === null && obd.analyzeScannerText("0101: 00 07 65 00")?.readinessSnapshot === null && obd.analyzeScannerText("41 01 00 07 65 00")?.readinessSnapshot === null, "Scanner text readiness responses did not require matching explicit request labels, response PIDs, and complete status payloads");
+check(scannerTextReadinessResponse?.readinessSnapshot?.readinessReadoutStatus === "reported" && scannerTextReadinessResponse?.readinessSnapshot?.milOn === false && scannerTextReadinessResponse?.readinessSnapshot?.readinessStatusBytes?.a === "00" && scannerTextReadinessResponse?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.status === "complete") && scannerTextCompactReadinessResponse?.readinessSnapshot?.readinessReadoutStatus === "reported" && scannerTextCompactReadinessResponse?.readinessSnapshot?.readinessStatusBytes?.d === "00" && obd.analyzeScannerText("0101: 41 02 00 07 65 00")?.readinessSnapshot === null && obd.analyzeScannerText("0101: 00 07 65 00")?.readinessSnapshot === null && obd.analyzeScannerText("41 01 00 07 65 00")?.readinessSnapshot === null, "Scanner text readiness responses did not require matching explicit request labels, response PIDs, and complete status payloads");
 const scannerTextRawDtcResponse = obd.analyzeScannerText("Mode 03: 43 01 71 03 00");
 const scannerTextCompactDtcResponse = obd.analyzeScannerText("03: 43 01 71\n07: 47 03 00\n0A: 4A 04 40");
 check(scannerTextRawDtcResponse?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored") && scannerTextRawDtcResponse?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored") && scannerTextCompactDtcResponse?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored") && scannerTextCompactDtcResponse?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "pending") && scannerTextCompactDtcResponse?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0440" && item.status === "permanent") && obd.analyzeScannerText("03: 01 71")?.dtcSnapshot?.codeCount === 0 && obd.analyzeScannerText("03: 47 01 71")?.dtcSnapshot?.codeCount === 0 && obd.analyzeScannerText("43 01 71")?.dtcSnapshot?.codeCount === 0, "Scanner text DTC responses did not require matching compact service labels and response bytes");
@@ -6352,7 +6352,7 @@ const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
       { id: "mil_status", value: true },
       { id: "readiness_status_byte_b", value: 0x07 },
       { id: "readiness_status_byte_c", value: 0x22 },
-      { id: "readiness_status_byte_d", value: 0x00 }
+      { id: "readiness_status_byte_d", value: 0x02 }
     ],
     source_ecu: "7E8",
     captured_at: "2026-06-28T00:01:48Z"
@@ -6361,7 +6361,7 @@ const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
 check(bridgeReadinessSnapshot.source === "local_bridge" && bridgeReadinessSnapshot.sourceEcu === "7E8" && bridgeReadinessSnapshot.source_ecu === "7E8", "Bridge readiness source was not normalized");
 check(bridgeReadinessSnapshot.intent === "readiness_snapshot" && bridgeReadinessSnapshot.blocked === false && bridgeReadinessSnapshot.wouldTransmit === false, "Bridge readiness safety metadata was not normalized");
 check(bridgeReadinessSnapshot.milOn === true, "Bridge readiness did not carry MIL status");
-check(bridgeReadinessSnapshot.incompleteCount === 1, "Bridge readiness did not count incomplete monitors");
+check(bridgeReadinessSnapshot.incompleteCount === 1, "Bridge readiness did not use matching PID 01 support and incomplete bits");
 check(bridgeReadinessSnapshot.mil_on === true && bridgeReadinessSnapshot.monitor_count === bridgeReadinessSnapshot.monitorCount, "Bridge readiness did not expose snake_case MIL and monitor aliases");
 check(bridgeReadinessSnapshot.incomplete_count === 1 && bridgeReadinessSnapshot.complete_count === bridgeReadinessSnapshot.completeCount && bridgeReadinessSnapshot.not_supported_count === bridgeReadinessSnapshot.notSupportedCount, "Bridge readiness did not expose snake_case completion count aliases");
 check(bridgeReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeReadinessSnapshot.readiness_readout_status === "reported", "Bridge readiness did not mark a complete B/C/D response as reported");
@@ -6371,7 +6371,7 @@ check(bridgeReadinessSourceRoundTrip?.readinessSnapshot?.sourceEcu === "7E8" && 
 const bridgeMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   data: {
     readiness_ecu_snapshots: [
-      { source_ecu: "7E8", readiness_status_byte_a: 0x81, readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 },
+      { source_ecu: "7E8", readiness_status_byte_a: 0x81, readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x02 },
       { source_ecu: "7E9", readiness_status_byte_a: 0x00, readiness_status_byte_b: 0x08, readiness_status_byte_c: 0x00, readiness_status_byte_d: 0x00 }
     ]
   }
@@ -6387,7 +6387,7 @@ const bridgeMixedEcuReadinessValueRows = obd.normalizeBridgeReadinessSnapshot({
       { id: "readiness_status_byte_a", value: 0x81, source_ecu: "7E8" },
       { id: "readiness_status_byte_b", value: 0x07, source_ecu: "7E8" },
       { id: "readiness_status_byte_c", value: 0x22, source_ecu: "7E8" },
-      { id: "readiness_status_byte_d", value: 0x00, source_ecu: "7E8" },
+      { id: "readiness_status_byte_d", value: 0x02, source_ecu: "7E8" },
       { id: "readiness_status_byte_a", value: 0x00, source_ecu: "7E9" },
       { id: "readiness_status_byte_b", value: 0x08, source_ecu: "7E9" },
       { id: "readiness_status_byte_c", value: 0x00, source_ecu: "7E9" },
@@ -6402,7 +6402,7 @@ const bridgeBlockedMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnaps
   would_transmit: false,
   data: {
     readiness_ecu_snapshots: [
-      { source_ecu: "7E8", readiness_status_byte_a: 0x81, readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 },
+      { source_ecu: "7E8", readiness_status_byte_a: 0x81, readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x02 },
       { source_ecu: "7E9", readiness_status_byte_a: 0x00, readiness_status_byte_b: 0x08, readiness_status_byte_c: 0x00, readiness_status_byte_d: 0x00 }
     ]
   }
@@ -6419,7 +6419,7 @@ const bridgeObjectReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
     mil_on: true,
     readiness_status_byte_b: 0x07,
     readiness_status_byte_c: 0x22,
-    readiness_status_byte_d: 0x00
+    readiness_status_byte_d: 0x02
   }
 });
 check(bridgeObjectReadinessSnapshot.milOn === true && bridgeObjectReadinessSnapshot.incompleteCount === 1, "Object bridge readiness fields were not normalized");
@@ -6432,7 +6432,7 @@ const bridgeReadinessAliasRows = obd.normalizeBridgeReadinessSnapshot({
       { id: "mil_status", value: true },
       { id: "readiness_status_byte_b", value: 0x07 },
       { id: "readiness_status_byte_c", value: 0x22 },
-      { id: "readiness_status_byte_d", value: 0x00 }
+      { id: "readiness_status_byte_d", value: 0x02 }
     ]
   }
 });
@@ -6446,7 +6446,7 @@ const bridgeReadinessPidValuesAliasRows = obd.normalizeBridgeReadinessSnapshot({
       { id: "mil_status", value: true },
       { id: "readiness_status_byte_b", value: 0x07 },
       { id: "readiness_status_byte_c", value: 0x22 },
-      { id: "readiness_status_byte_d", value: 0x00 }
+      { id: "readiness_status_byte_d", value: 0x02 }
     ]
   }
 });
@@ -6459,7 +6459,7 @@ const bridgeReadinessStatusByteAliases = obd.normalizeBridgeReadinessSnapshot({
     mil: true,
     statusByteB: 0x07,
     statusByteC: 0x22,
-    statusByteD: 0x00
+    statusByteD: 0x02
   }
 });
 check(bridgeReadinessStatusByteAliases.milOn === true && bridgeReadinessStatusByteAliases.incompleteCount === 1, "Bridge readiness statusByte aliases were not normalized");
@@ -6472,7 +6472,7 @@ const bridgeReadinessRowNameAliases = obd.normalizeBridgeReadinessSnapshot({
       { name: "MIL Status", result: true },
       { label: "Readiness Status Byte B", rawValue: 0x07 },
       { label: "Readiness Status Byte C", rawValue: 0x22 },
-      { label: "Readiness Status Byte D", rawValue: 0x00 }
+      { label: "Readiness Status Byte D", rawValue: 0x02 }
     ]
   }
 });
@@ -7759,7 +7759,7 @@ const bridgeSummaryCamelResponseAliases = obd.buildBridgeSessionSummary({
 check(bridgeSummaryCamelResponseAliases.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode livePidResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.supportedPidMatrix?.supportedPids.includes("40"), "Bridge session summary did not decode supportedPidResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Bridge session summary did not decode freezeFrameResponse camelCase alias input");
-check(bridgeSummaryCamelResponseAliases.readinessSnapshot?.incompleteCount === 1, "Bridge session summary did not decode readinessResponse camelCase alias input");
+check(bridgeSummaryCamelResponseAliases.readinessSnapshot?.incompleteCount === 0, "Bridge session summary did not decode readinessResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Bridge session summary did not decode onboardMonitorResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Bridge session summary did not decode ecuInfoResponse camelCase alias input");
 check(bridgeSummaryCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Bridge session summary did not accept ecuResponseSummaryResponse camelCase alias input");
@@ -12050,12 +12050,17 @@ check(decodedReadiness.monitors.find((item) => item.id === "evaporative_system")
 check(decodedReadiness.retainedRawText === false, "レディネスデコードが原文保持になっています");
 check(decodedReadiness.readinessReadoutStatus === "reported" && obd.decodeReadinessResponse({ raw: "41 01" }).readiness_readout_status === "unparsed", "Readiness decoder did not distinguish valid and incomplete raw responses");
 check(decodedReadiness.readinessIgnitionType === "spark" && decodedReadiness.readiness_ignition_type === "spark" && obd.decodeReadinessResponse({ raw: "41 01 00 08 00 00" }).readinessIgnitionType === "compression", "Readiness decoder did not retain the observed ignition layout");
+const correctedSparkReadiness = obd.decodeReadinessResponse({ raw: "41 01 03 07 95 15" });
+check(correctedSparkReadiness.monitors.find((item) => item.id === "misfire")?.complete === true && correctedSparkReadiness.monitors.find((item) => item.id === "fuel_system")?.complete === true && correctedSparkReadiness.monitors.find((item) => item.id === "comprehensive_component")?.supported === true, "Readiness decoder did not use PID 01 byte B continuous-monitor support bits");
+check(correctedSparkReadiness.monitors.find((item) => item.id === "catalyst")?.status === "not_complete" && correctedSparkReadiness.monitors.find((item) => item.id === "evaporative_system")?.status === "not_complete" && correctedSparkReadiness.monitors.find((item) => item.id === "ac_refrigerant")?.status === "not_complete" && correctedSparkReadiness.monitors.find((item) => item.id === "egr_vvt")?.status === "complete", "Spark readiness monitor support and incomplete bits were not paired correctly");
+const correctedCompressionReadiness = obd.decodeReadinessResponse({ raw: "41 01 00 0F EB A2" });
+check(correctedCompressionReadiness.monitors.find((item) => item.id === "nmhc_catalyst")?.status === "complete" && correctedCompressionReadiness.monitors.find((item) => item.id === "nox_scr")?.status === "not_complete" && correctedCompressionReadiness.monitors.find((item) => item.id === "boost_pressure")?.status === "complete" && correctedCompressionReadiness.monitors.find((item) => item.id === "exhaust_gas_sensor")?.status === "not_complete" && correctedCompressionReadiness.monitors.find((item) => item.id === "pm_filter")?.status === "complete" && correctedCompressionReadiness.monitors.find((item) => item.id === "egr_vvt")?.status === "not_complete" && !correctedCompressionReadiness.monitors.some((item) => item.id === "evaporative_system"), "Compression readiness monitor layout did not preserve reserved PID 01 bits");
 const rawReadinessSourceSnapshot = obd.decodeReadinessResponse({ raw: "41 01 81 07 22 00", source_ecu: "7E8" });
 const compactReadinessSourceSession = obd.buildScanSessionFromObdText("can0 7E8#06410181072200", { session_id: "compact-readiness-source", protocol: "ISO15765-4" });
 const readinessSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: rawReadinessSourceSnapshot })) }));
 check(rawReadinessSourceSnapshot.sourceEcu === "7E8" && rawReadinessSourceSnapshot.source_ecu === "7E8" && compactReadinessSourceSession.readinessSnapshot?.source_ecu === "7E8" && readinessSourceRoundTrip?.readinessSnapshot?.sourceEcu === "7E8" && readinessSourceRoundTrip?.vehicleCommandEnabled === false, "Readiness ECU source was not retained through raw, CAN, and read-only JSON paths");
 const mixedEcuReadinessSession = obd.buildScanSessionFromObdText([
-  "can0 7E8#06410181072200",
+  "can0 7E8#06410181072202",
   "can0 7E9#06410100080000"
 ].join("\n"), { session_id: "compact-mixed-readiness", protocol: "ISO15765-4" });
 const mixedEcuReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(mixedEcuReadinessSession) }));
@@ -12326,7 +12331,7 @@ const decodedScanSessionNestedAlias = obd.buildDecodedObdScanSession({
 });
 check(decodedScanSessionNestedAlias.dtcSnapshot.codes.includes("P0171"), "Decoded OBD session did not accept scan_session nested DTC alias input");
 check(decodedScanSessionNestedAlias.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept scan_session nested supported_pid alias input");
-check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept scan_session nested readiness alias input");
+check(decodedScanSessionNestedAlias.readinessSnapshot.incompleteCount === 0, "Decoded OBD session did not accept scan_session nested readiness alias input");
 check(decodedScanSessionNestedAlias.vehicleProfile?.model === "Yaris", "Decoded OBD session did not carry vehicle_profile from scan_session nested alias input");
 const decodedScanSessionNestedCamelResponseAliases = obd.buildDecodedObdScanSession({
   scanSession: {
@@ -12340,7 +12345,7 @@ const decodedScanSessionNestedCamelResponseAliases = obd.buildDecodedObdScanSess
 });
 check(decodedScanSessionNestedCamelResponseAliases.livePidSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "Decoded OBD session did not decode livePidResponse from scanSession camelCase alias input");
 check(decodedScanSessionNestedCamelResponseAliases.supportedPidMatrix.supportedPids.includes("40"), "Decoded OBD session did not accept supportedPidResponse from scanSession camelCase alias input");
-check(decodedScanSessionNestedCamelResponseAliases.readinessSnapshot.incompleteCount === 1, "Decoded OBD session did not accept readinessResponse from scanSession camelCase alias input");
+check(decodedScanSessionNestedCamelResponseAliases.readinessSnapshot.incompleteCount === 0, "Decoded OBD session did not accept readinessResponse from scanSession camelCase alias input");
 check(decodedScanSessionNestedCamelResponseAliases.onboardMonitorSnapshot.testCount === 1, "Decoded OBD session did not accept onboardMonitorResponse from scanSession camelCase alias input");
 check(decodedScanSessionNestedCamelResponseAliases.vehicleProfile?.model === "Axio", "Decoded OBD session did not carry vehicleProfile from scanSession camelCase alias input");
 check(decodedScanSessionNestedCamelResponseAliases.sessionId === "decoded-camel-nested", "Decoded OBD session did not carry sessionId from scanSession camelCase alias input");
@@ -14756,7 +14761,7 @@ const scanSessionBridgeCamelResponseAliases = obd.buildDiagnosticScanSession({
 check(scanSessionBridgeCamelResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode livePidResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.supportedPidMatrix?.supportedPids.includes("40"), "Diagnostic scan session did not decode supportedPidResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode freezeFrameResponse from bridgeSession camelCase alias input");
-check(scanSessionBridgeCamelResponseAliases.readinessSnapshot?.incompleteCount === 1, "Diagnostic scan session did not decode readinessResponse from bridgeSession camelCase alias input");
+check(scanSessionBridgeCamelResponseAliases.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not decode readinessResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Diagnostic scan session did not decode onboardMonitorResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Diagnostic scan session did not decode ecuInfoResponse from bridgeSession camelCase alias input");
 check(scanSessionBridgeCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecuResponseSummaryResponse from bridgeSession camelCase alias input");
@@ -14806,7 +14811,7 @@ const scanSessionNestedCamelResponseAliases = obd.buildDiagnosticScanSession({
 check(scanSessionNestedCamelResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode livePidResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.supportedPidMatrix?.supportedPids.includes("40"), "Diagnostic scan session did not decode supportedPidResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not decode freezeFrameResponse from scanSession camelCase alias input");
-check(scanSessionNestedCamelResponseAliases.readinessSnapshot?.incompleteCount === 1, "Diagnostic scan session did not decode readinessResponse from scanSession camelCase alias input");
+check(scanSessionNestedCamelResponseAliases.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not decode readinessResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Diagnostic scan session did not decode onboardMonitorResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Diagnostic scan session did not decode ecuInfoResponse from scanSession camelCase alias input");
 check(scanSessionNestedCamelResponseAliases.ecuResponseSummary?.schemaVersion === bridgeSummary.ecuResponseSummary.schemaVersion, "Diagnostic scan session did not accept ecuResponseSummaryResponse from scanSession camelCase alias input");
@@ -16383,7 +16388,7 @@ const scanSessionNestedNullOuterResponseAliases = obd.buildDiagnosticScanSession
 });
 check(scanSessionNestedNullOuterResponseAliases.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not preserve nested live_pid_response when outer input was null");
 check(scanSessionNestedNullOuterResponseAliases.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.value === 1726, "Diagnostic scan session did not preserve nested freeze_frame_response when outer input was null");
-check(scanSessionNestedNullOuterResponseAliases.readinessSnapshot?.incompleteCount === 1, "Diagnostic scan session did not preserve nested readiness_response when outer input was null");
+check(scanSessionNestedNullOuterResponseAliases.readinessSnapshot?.incompleteCount === 0, "Diagnostic scan session did not preserve nested readiness_response when outer input was null");
 check(scanSessionNestedNullOuterResponseAliases.onboardMonitorSnapshot?.testCount === 1, "Diagnostic scan session did not preserve nested onboard_monitor_response when outer input was null");
 check(scanSessionNestedNullOuterResponseAliases.ecuInfoSnapshot?.itemCount === 1, "Diagnostic scan session did not preserve nested ecu_info_response when outer input was null");
 check(scanSessionNestedNullOuterResponseAliases.supportedPidMatrix?.supportedPids?.includes("40"), "Diagnostic scan session did not preserve nested supported_pid_response when outer input was null");
