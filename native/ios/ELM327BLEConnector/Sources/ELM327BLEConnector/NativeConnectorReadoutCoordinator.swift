@@ -1,6 +1,7 @@
 import Foundation
 
 public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnectorDelegate {
+    public var didUpdate: (() -> Void)?
     public private(set) var connectorState: ELMConnectorState = .idle
     public private(set) var peripherals: [BLEPeripheralCandidate] = []
     public private(set) var characteristicCandidates: [BLECharacteristicCandidate] = []
@@ -22,6 +23,7 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
         peripherals.removeAll()
         characteristicCandidates.removeAll()
         connectorError = nil
+        notifyUpdate()
         connector.startScan()
     }
 
@@ -51,6 +53,7 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
         archiveError = nil
         connectorError = nil
         archiveRejected = false
+        notifyUpdate()
         connector.runInitialReadout()
     }
 
@@ -65,16 +68,19 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
 
     public func connector(_ connector: ELM327BLEConnector, didChange state: ELMConnectorState) {
         connectorState = state
+        notifyUpdate()
     }
 
     public func connector(_ connector: ELM327BLEConnector, didDiscover peripheral: BLEPeripheralCandidate) {
         guard !peripherals.contains(where: { $0.id == peripheral.id }) else { return }
         peripherals.append(peripheral)
         peripherals.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        notifyUpdate()
     }
 
     public func connector(_ connector: ELM327BLEConnector, requiresCharacteristicSelection candidates: [BLECharacteristicCandidate]) {
         characteristicCandidates = candidates
+        notifyUpdate()
     }
 
     public func connector(_ connector: ELM327BLEConnector, didEmit envelope: NativeConnectorEnvelope) {
@@ -90,6 +96,7 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
             archiveRejected = true
             connector.disconnect()
         }
+        notifyUpdate()
     }
 
     public func connector(_ connector: ELM327BLEConnector, didComplete manifest: NativeConnectorCompletionManifest) {
@@ -102,9 +109,15 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
         } catch {
             archiveError = .invalidManifest
         }
+        notifyUpdate()
     }
 
     public func connector(_ connector: ELM327BLEConnector, didFail error: ELMConnectorError) {
         connectorError = error
+        notifyUpdate()
+    }
+
+    private func notifyUpdate() {
+        didUpdate?()
     }
 }

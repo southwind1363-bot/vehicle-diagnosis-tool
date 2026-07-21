@@ -10,6 +10,8 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
 
     func testCoordinatorExportsOnlyACompletedStructuredArchive() throws {
         let coordinator = NativeConnectorReadoutCoordinator()
+        var updateCount = 0
+        coordinator.didUpdate = { updateCount += 1 }
         let envelope = NativeConnectorEnvelopeFactory.dtcs(
             context: context,
             sequence: 1,
@@ -45,6 +47,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertEqual(archive.envelopes, [envelope])
         XCTAssertEqual(archive.completionManifest, manifest)
         XCTAssertNil(coordinator.archiveError)
+        XCTAssertGreaterThanOrEqual(updateCount, 2)
         XCTAssertThrowsError(try NativeConnectorReadoutCoordinator().exportCompletedArchive())
     }
 }
