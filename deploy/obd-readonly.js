@@ -3184,16 +3184,21 @@
     return /^[0-9A-F]{1,2}$/.test(raw) ? raw.padStart(2, "0") : null;
   }
 
+  function hasBridgeSupportedPidEvidence(data = {}) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+    const hasPid = collectBridgeSupportedPids(data).some((pid) => Boolean(normalizeSupportedPidCode(pid)));
+    const pageRows = data.supported_pid_page_bases || data.supportedPidPageBases || data.queried_pid_bases || data.queriedPidBases || data.supported_pid_pages || data.supportedPidPages || [];
+    const hasPage = (Array.isArray(pageRows) ? pageRows : [pageRows]).some((page) => {
+      const normalized = normalizeSupportedPidCode(page?.pid || page?.base || page?.value || page);
+      return normalized && isSupportedPidBase(parseInt(normalized, 16));
+    });
+    return hasPid || hasPage;
+  }
+
   function hasBridgeSupportedPidSnapshotEvidence(rows = []) {
     return Array.isArray(rows) && rows.some((row) => {
-      if (!row || typeof row !== "object" || Array.isArray(row)) return false;
-      const hasPid = collectBridgeSupportedPids(row).some((pid) => Boolean(normalizeSupportedPidCode(pid)));
-      const pageRows = row.supported_pid_page_bases || row.supportedPidPageBases || row.queried_pid_bases || row.queriedPidBases || [];
-      const hasPage = (Array.isArray(pageRows) ? pageRows : [pageRows]).some((page) => {
-        const normalized = normalizeSupportedPidCode(page?.pid || page?.base || page?.value || page);
-        return normalized && isSupportedPidBase(parseInt(normalized, 16));
-      });
-      return hasPid || hasPage;
+      if (!row || typeof row !== "object" || Array.isArray(row) || !readObdResponseSourceEcu(row)) return false;
+      return hasBridgeSupportedPidEvidence(row);
     });
   }
 
@@ -3216,27 +3221,36 @@
       || data.supportedPidPages
       || [];
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const explicitReadoutStatus = String(data.supported_pid_readout_status || data.supportedPidReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
+    const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(
       response,
       errorCodes.length === 0 && (
-        [data.supported_pids, data.supportedPids, data.pids, data.pid_list, data.pidList, data.supportedPidRows].some(Array.isArray)
+        hasExplicitReadoutStatus || hasBridgeSupportedPidEvidence(data)
         || hasBridgeSupportedPidSnapshotEvidence(supportedPidEcuSnapshots)
       )
     );
+    const readoutStatus = bridgeSafety.blocked || bridgeSafety.unparsed
+      ? getBridgeReadoutStatus(bridgeSafety)
+      : hasExplicitReadoutStatus
+        ? explicitReadoutStatus
+        : getBridgeReadoutStatus(bridgeSafety);
+    const blocked = bridgeSafety.blocked || readoutStatus === "blocked";
+    const readoutOk = blocked ? false : readoutStatus === "reported" ? true : readoutStatus === "unparsed" ? false : undefined;
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
       protocol: readBridgeProtocol(data),
-      supported_pid_readout_status: getBridgeReadoutStatus(bridgeSafety),
+      supported_pid_readout_status: readoutStatus,
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       supported_pid_page_bases: supportedPidPageBases,
       supported_pids: supportedPids,
       supported_pid_ecu_snapshots: supportedPidEcuSnapshots
       }),
       intent: "read_supported_pids",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
+      ...(readoutOk === undefined ? {} : { ok: readoutOk }),
+      blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
       would_transmit: bridgeSafety.wouldTransmit,
       errorCodes,
@@ -18850,7 +18864,15 @@
           ? row.supportedPids
           : Array.isArray(row.pids)
             ? row.pids
-            : [];
+            : Array.isArray(row.pid_list)
+              ? row.pid_list
+              : Array.isArray(row.pidList)
+                ? row.pidList
+                : Array.isArray(row.supported_pid_rows)
+                  ? row.supported_pid_rows
+                  : Array.isArray(row.supportedPidRows)
+                    ? row.supportedPidRows
+                    : [];
       const pids = [...new Set(pidRows.map(normalizeSupportedPidCode).filter(Boolean))];
       const pageRows = row.supportedPidPageBases || row.supported_pid_page_bases || row.queriedPidBases || row.queried_pid_bases || [];
       const pageBases = [...new Set((Array.isArray(pageRows) ? pageRows : [pageRows])
