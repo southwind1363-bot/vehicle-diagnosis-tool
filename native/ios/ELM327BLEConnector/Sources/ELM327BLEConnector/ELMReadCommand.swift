@@ -25,6 +25,9 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case supportedPIDs
     case supportedPIDs20
     case supportedPIDs40
+    case supportedPIDs60
+    case supportedPIDs80
+    case supportedPIDsA0
     case readinessStatus
     case calculatedLoad
     case shortTermFuelTrimBank1
@@ -71,6 +74,9 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .supportedPIDs: return "0100"
         case .supportedPIDs20: return "0120"
         case .supportedPIDs40: return "0140"
+        case .supportedPIDs60: return "0160"
+        case .supportedPIDs80: return "0180"
+        case .supportedPIDsA0: return "01A0"
         case .readinessStatus: return "0101"
         case .calculatedLoad: return "0104"
         case .shortTermFuelTrimBank1: return "0106"
@@ -103,7 +109,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameCapabilities: return "read_freeze_frame"
         case .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "read_ecu_info"
-        case .supportedPIDs, .supportedPIDs20, .supportedPIDs40: return "read_supported_pids"
+        case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0: return "read_supported_pids"
         case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .fuelLevel, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .engineOilTemperature, .engineFuelRate: return "read_live_pid_snapshot"
         }
     }
@@ -115,7 +121,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .pendingDTC: return "pending_dtc_snapshot"
         case .permanentDTC: return "permanent_dtc_snapshot"
         case .onboardMonitor: return "onboard_monitor_snapshot"
-        case .supportedPIDs, .supportedPIDs20, .supportedPIDs40: return "supported_pid_matrix"
+        case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0: return "supported_pid_matrix"
         case .readinessStatus: return "readiness_snapshot"
         case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "ecu_info_snapshot"
@@ -180,6 +186,9 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .supportedPIDs: return "00"
         case .supportedPIDs20: return "20"
         case .supportedPIDs40: return "40"
+        case .supportedPIDs60: return "60"
+        case .supportedPIDs80: return "80"
+        case .supportedPIDsA0: return "A0"
         default: return nil
         }
     }
@@ -188,6 +197,9 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         switch self {
         case .supportedPIDs: return .supportedPIDs20
         case .supportedPIDs20: return .supportedPIDs40
+        case .supportedPIDs40: return .supportedPIDs60
+        case .supportedPIDs60: return .supportedPIDs80
+        case .supportedPIDs80: return .supportedPIDsA0
         default: return nil
         }
     }

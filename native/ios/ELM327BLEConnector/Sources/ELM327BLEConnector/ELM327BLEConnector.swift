@@ -143,7 +143,7 @@ public final class ELM327BLEConnector: NSObject {
         emittedEnvelopeCount = 0
         firstEnvelopeSequence = nil
         didEmitTerminalManifest = false
-        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName].contains($0) && $0.livePID == nil }
+        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName].contains($0) && $0.livePID == nil }
         plan(commands: pendingCommands)
         runNextCommand()
     }
@@ -319,7 +319,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .supportedPIDs, .supportedPIDs20, .supportedPIDs40:
+            case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0:
                 switch OBD2ReadoutDecoder.decodeSupportedPIDs(command: command, response: response) {
                 case .success(let results):
                     liveSupportedPIDs.formUnion(results.flatMap(\.pids))
