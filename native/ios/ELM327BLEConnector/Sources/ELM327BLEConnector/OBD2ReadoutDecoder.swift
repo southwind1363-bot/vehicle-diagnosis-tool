@@ -234,10 +234,17 @@ public enum OBD2ReadoutDecoder {
                 let bytes = Array(payload.dropFirst(3))
                 let value: OBD2MonitorValue?
                 switch command {
+                case .freezeFrameCalculatedLoad: value = bytes.count == 1 ? OBD2MonitorValue(id: "calculated_load", pid: pid, value: Double(bytes[0]) * 100 / 255, unit: "%") : nil
+                case .freezeFrameShortTermFuelTrimBank1: value = bytes.count == 1 ? OBD2MonitorValue(id: "stft_b1", pid: pid, value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%") : nil
+                case .freezeFrameLongTermFuelTrimBank1: value = bytes.count == 1 ? OBD2MonitorValue(id: "ltft_b1", pid: pid, value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%") : nil
+                case .freezeFrameFuelPressure: value = bytes.count == 1 ? OBD2MonitorValue(id: "fuel_pressure", pid: pid, value: Double(bytes[0]) * 3, unit: "kPa") : nil
+                case .freezeFrameManifoldAbsolutePressure: value = bytes.count == 1 ? OBD2MonitorValue(id: "map", pid: pid, value: Double(bytes[0]), unit: "kPa") : nil
                 case .freezeFrameCoolantTemperature: value = bytes.count == 1 ? OBD2MonitorValue(id: "coolant_temp", pid: pid, value: Double(Int(bytes[0]) - 40), unit: "C") : nil
                 case .freezeFrameEngineRPM: value = bytes.count == 2 ? OBD2MonitorValue(id: "engine_speed", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 4, unit: "rpm") : nil
                 case .freezeFrameVehicleSpeed: value = bytes.count == 1 ? OBD2MonitorValue(id: "vehicle_speed", pid: pid, value: Double(bytes[0]), unit: "km/h") : nil
                 case .freezeFrameIntakeAirTemperature: value = bytes.count == 1 ? OBD2MonitorValue(id: "intake_air_temp", pid: pid, value: Double(Int(bytes[0]) - 40), unit: "C") : nil
+                case .freezeFrameThrottlePosition: value = bytes.count == 1 ? OBD2MonitorValue(id: "throttle_position", pid: pid, value: Double(bytes[0]) * 100 / 255, unit: "%") : nil
+                case .freezeFrameEngineRuntime: value = bytes.count == 2 ? OBD2MonitorValue(id: "engine_runtime", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "s") : nil
                 case .freezeFrameControlModuleVoltage: value = bytes.count == 2 ? OBD2MonitorValue(id: "control_module_voltage", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V") : nil
                 default: value = nil
                 }

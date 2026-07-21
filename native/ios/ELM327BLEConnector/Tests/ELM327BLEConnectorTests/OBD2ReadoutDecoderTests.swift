@@ -151,6 +151,7 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertTrue(OBD2ReadoutDecoder.freezeFrameSupportsTriggerDTC(response: "7E8 06 42 00 40 00 00 00"))
         XCTAssertFalse(OBD2ReadoutDecoder.freezeFrameSupportsTriggerDTC(response: "7E8 06 42 00 00 00 00 00"))
         XCTAssertEqual(OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: "7E8 06 42 00 C0 00 00 00"), Set(["01", "02"]))
+        XCTAssertEqual(OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: "7E8 06 42 00 56 60 80 02"), Set(["02", "04", "06", "07", "0A", "0B", "11", "1F"]))
     }
 
     func testFreezeFrameValuesRequireMatchingPidAndFrame() throws {
@@ -159,6 +160,10 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(coolant[0].value, OBD2MonitorValue(id: "coolant_temp", pid: "05", value: 50, unit: "C"))
         let rpm = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameEngineRPM, response: "7E8 05 42 0C 00 1A F8").get()
         XCTAssertEqual(rpm[0].value.value, 1726)
+        let fuelTrim = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameShortTermFuelTrimBank1, response: "7E8 04 42 06 00 90").get()
+        XCTAssertEqual(fuelTrim[0].value, OBD2MonitorValue(id: "stft_b1", pid: "06", value: 12.5, unit: "%"))
+        let runtime = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameEngineRuntime, response: "7E8 05 42 1F 00 02 58").get()
+        XCTAssertEqual(runtime[0].value, OBD2MonitorValue(id: "engine_runtime", pid: "1F", value: 600, unit: "s"))
         switch OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameVehicleSpeed, response: "42 0C 00 00") {
         case .failure(let error): XCTAssertEqual(error, .malformedResponse)
         case .success: XCTFail("Expected mismatched PID rejection")

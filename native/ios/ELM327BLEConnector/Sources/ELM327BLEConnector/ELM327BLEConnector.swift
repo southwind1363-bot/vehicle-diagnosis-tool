@@ -143,7 +143,7 @@ public final class ELM327BLEConnector: NSObject {
         emittedEnvelopeCount = 0
         firstEnvelopeSequence = nil
         didEmitTerminalManifest = false
-        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName].contains($0) && $0.livePID == nil }
+        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName].contains($0) && $0.livePID == nil }
         plan(commands: pendingCommands)
         runNextCommand()
     }
@@ -237,7 +237,7 @@ public final class ELM327BLEConnector: NSObject {
                 }
             case .freezeFrameCapabilities:
                 freezeFrameSupportedPIDs = OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: response)
-                let candidates: [ELMReadCommand] = [.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage]
+                let candidates: [ELMReadCommand] = [.freezeFrameTriggerDTC, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage]
                 let supported = candidates.filter { command in
                     command.freezeFramePID.map(freezeFrameSupportedPIDs.contains) ?? false
                 }
@@ -257,7 +257,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage:
+            case .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage:
                 switch OBD2ReadoutDecoder.decodeFreezeFrameValue(command: command, response: response) {
                 case .success(let results):
                     results.forEach { result in

@@ -5,7 +5,7 @@ final class ELMReadCommandTests: XCTestCase {
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
         XCTAssertEqual(
             ELMReadCommand.allCases.map(\.wireValue),
-            ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "06", "020000", "020200", "020500", "020C00", "020D00", "020F00", "024200", "0900", "0904", "0906", "090A", "0100", "0120", "0140", "0160", "0180", "01A0", "0101", "0104", "0106", "0107", "010A", "010B", "010C", "010D", "010E", "0105", "010F", "0110", "0111", "011F", "0121", "012F", "0130", "0131", "0133", "0142", "0146", "014D", "014E", "015C", "015E"]
+            ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "06", "020000", "020200", "020400", "020600", "020700", "020A00", "020B00", "020500", "020C00", "020D00", "020F00", "021100", "021F00", "024200", "0900", "0904", "0906", "090A", "0100", "0120", "0140", "0160", "0180", "01A0", "0101", "0104", "0106", "0107", "010A", "010B", "010C", "010D", "010E", "0105", "010F", "0110", "0111", "011F", "0121", "012F", "0130", "0131", "0133", "0142", "0146", "014D", "014E", "015C", "015E"]
         )
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains("04"))
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains(where: { $0.hasPrefix("ATZ") }))
@@ -13,6 +13,7 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertEqual(ELMReadCommand.mode09CalibrationID.intent, "read_ecu_info")
         XCTAssertEqual(ELMReadCommand.mode09CalibrationVerificationNumber.intent, "read_ecu_info")
         XCTAssertEqual(ELMReadCommand.onboardMonitor.intent, "read_onboard_monitor")
+        XCTAssertEqual(ELMReadCommand.freezeFrameEngineRuntime.intent, "read_freeze_frame")
     }
 
     func testEveryVehicleReadoutUsesAnAllowedReadIntent() {
