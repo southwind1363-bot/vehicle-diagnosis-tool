@@ -3062,6 +3062,7 @@ check(
     && nativeElmReadinessGoldenEvaluation.readoutScopeId === "7E8"
     && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.milOn === true
     && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.sourceEcu === "7E8"
+    && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.storedDtcCount === 3
     && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.readinessStatusBytes?.a === "83"
     && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.readinessStatusBytes?.b === "07"
     && nativeElmReadinessGoldenImport.session?.vehicleCommandEnabled === false,

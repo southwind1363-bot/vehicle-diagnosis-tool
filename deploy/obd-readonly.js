@@ -15372,6 +15372,10 @@
 
     const milInput = pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, undefined);
     const milOn = readinessScope === "multiple_ecus" ? null : readOptionalBooleanAlias(milInput);
+    const byteDtcCount = readinessStatusBytes?.a ? Number.parseInt(readinessStatusBytes.a, 16) & 0x7F : null;
+    const explicitDtcCount = pickDefined(sourceInput.dtc_count, sourceInput.dtcCount);
+    const normalizedExplicitDtcCount = Number.isInteger(explicitDtcCount) && explicitDtcCount >= 0 && explicitDtcCount <= 127 ? explicitDtcCount : null;
+    const storedDtcCount = readinessScope === "multiple_ecus" ? null : byteDtcCount ?? normalizedExplicitDtcCount;
     const localMonitorCount = normalized.length;
     const localCompleteCount = normalized.filter((item) => item.supported === true && item.complete === true).length;
     const localIncompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length;
@@ -15466,6 +15470,8 @@
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       milOn,
       mil_on: milOn,
+      storedDtcCount,
+      stored_dtc_count: storedDtcCount,
       monitorCount,
       monitor_count: monitorCount,
       completeCount,
