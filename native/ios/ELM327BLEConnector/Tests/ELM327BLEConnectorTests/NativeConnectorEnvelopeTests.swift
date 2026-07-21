@@ -48,6 +48,9 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))
         XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
         XCTAssertTrue(json.contains("\"readiness_status_byte_b\":7"))
+        XCTAssertTrue(json.contains("\"id\":\"misfire\""))
+        XCTAssertTrue(json.contains("\"id\":\"oxygen_sensor\""))
+        XCTAssertTrue(json.contains("\"status\":\"complete\""))
     }
 
     func testOnboardMonitorEnvelopeUsesTheReadOnlyMode06Contract() throws {

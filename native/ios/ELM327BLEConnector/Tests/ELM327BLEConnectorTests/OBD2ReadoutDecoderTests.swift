@@ -67,6 +67,24 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(result[0].status.statusByteC, 34)
         XCTAssertEqual(result[0].status.statusByteD, 0)
         XCTAssertEqual(result[0].status.ignitionType, "spark")
+        XCTAssertEqual(OBD2ReadoutDecoder.readinessMonitors(for: result[0].status).first(where: { $0.id == "misfire" }), OBD2ReadinessMonitor(id: "misfire", supported: true, complete: true))
+        XCTAssertEqual(OBD2ReadoutDecoder.readinessMonitors(for: result[0].status).first(where: { $0.id == "oxygen_sensor" }), OBD2ReadinessMonitor(id: "oxygen_sensor", supported: true, complete: true))
+    }
+
+    func testReadinessMonitorsUseTheCompressionIgnitionLayout() {
+        let status = OBD2ReadinessStatus(
+            milOn: false,
+            dtcCount: 0,
+            statusByteA: 0,
+            statusByteB: 0x0F,
+            statusByteC: 0x21,
+            statusByteD: 0x20,
+            ignitionType: "compression"
+        )
+        let monitors = OBD2ReadoutDecoder.readinessMonitors(for: status)
+        XCTAssertEqual(monitors.first(where: { $0.id == "nmhc_catalyst" }), OBD2ReadinessMonitor(id: "nmhc_catalyst", supported: true, complete: true))
+        XCTAssertEqual(monitors.first(where: { $0.id == "exhaust_gas_sensor" }), OBD2ReadinessMonitor(id: "exhaust_gas_sensor", supported: true, complete: false))
+        XCTAssertFalse(monitors.contains(where: { $0.id == "oxygen_sensor" }))
     }
 
     func testLivePidAndSupportedPidResponsesPreserveEveryEcuScope() throws {

@@ -195,7 +195,12 @@ public enum NativeConnectorEnvelopeFactory {
                 "readiness_status_byte_c": .number(Double(status.statusByteC)),
                 "readiness_status_byte_d": .number(Double(status.statusByteD)),
                 "readiness_ignition_type": .string(status.ignitionType),
-                "monitors": .array([])
+                "monitors": .array(OBD2ReadoutDecoder.readinessMonitors(for: status).map { monitor in .object([
+                    "id": .string(monitor.id),
+                    "supported": .bool(monitor.supported),
+                    "complete": .bool(monitor.complete),
+                    "status": .string(monitor.supported ? (monitor.complete ? "complete" : "not_complete") : "not_supported")
+                ]) })
             ],
             readoutID: "readiness_snapshot",
             readoutScopeID: scopeID,

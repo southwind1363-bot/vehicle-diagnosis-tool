@@ -15,6 +15,12 @@ public struct OBD2ReadinessStatus: Equatable, Sendable {
     public let ignitionType: String
 }
 
+public struct OBD2ReadinessMonitor: Equatable, Sendable {
+    public let id: String
+    public let supported: Bool
+    public let complete: Bool
+}
+
 public struct OBD2OnboardMonitorTest: Equatable, Sendable {
     public let testID: String
     public let componentID: String
@@ -111,6 +117,45 @@ public enum OBD2ReadoutDecoder {
                 ))
             }
             return .success(decoded)
+        }
+    }
+
+    public static func readinessMonitors(for status: OBD2ReadinessStatus) -> [OBD2ReadinessMonitor] {
+        let b = status.statusByteB
+        let c = status.statusByteC
+        let d = status.statusByteD
+        let monitorBits: [(id: String, supportedByte: Int, supportedBit: Int, incompleteByte: Int, incompleteBit: Int)] = status.ignitionType == "compression"
+            ? [
+                ("misfire", b, 0x01, b, 0x10),
+                ("fuel_system", b, 0x02, b, 0x20),
+                ("comprehensive_component", b, 0x04, b, 0x40),
+                ("nmhc_catalyst", c, 0x01, d, 0x01),
+                ("nox_scr", c, 0x02, d, 0x02),
+                ("boost_pressure", c, 0x08, d, 0x08),
+                ("exhaust_gas_sensor", c, 0x20, d, 0x20),
+                ("pm_filter", c, 0x40, d, 0x40),
+                ("egr_vvt", c, 0x80, d, 0x80)
+            ]
+            : [
+                ("misfire", b, 0x01, b, 0x10),
+                ("fuel_system", b, 0x02, b, 0x20),
+                ("comprehensive_component", b, 0x04, b, 0x40),
+                ("catalyst", c, 0x01, d, 0x01),
+                ("heated_catalyst", c, 0x02, d, 0x02),
+                ("evaporative_system", c, 0x04, d, 0x04),
+                ("secondary_air", c, 0x08, d, 0x08),
+                ("ac_refrigerant", c, 0x10, d, 0x10),
+                ("oxygen_sensor", c, 0x20, d, 0x20),
+                ("oxygen_sensor_heater", c, 0x40, d, 0x40),
+                ("egr_vvt", c, 0x80, d, 0x80)
+            ]
+        return monitorBits.map { monitor in
+            let supported = (monitor.supportedByte & monitor.supportedBit) != 0
+            return OBD2ReadinessMonitor(
+                id: monitor.id,
+                supported: supported,
+                complete: supported && (monitor.incompleteByte & monitor.incompleteBit) == 0
+            )
         }
     }
 
