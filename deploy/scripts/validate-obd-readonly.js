@@ -3157,6 +3157,47 @@ const nativeScanBatch = [
 const nativeExpectedIntents = [...new Set(nativeScanBatch.map((envelope) => envelope.intent))];
 const nativeExpectedReadouts = ["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "freeze_frame_snapshot", "supported_pid_matrix", "ecu_info_snapshot", "onboard_monitor_snapshot", "readiness_snapshot", "live_pid_snapshot"];
 const nativeScanSession = obd.buildNativeConnectorScanSession({ envelopes: nativeScanBatch, scan_state: "completed", expected_intents: nativeExpectedIntents, expected_readouts: nativeExpectedReadouts });
+const nativeCompletionManifest = Object.freeze({
+  schema_version: "native_connector_completion_manifest_v1",
+  record_type: "completion_manifest",
+  platform: "ios",
+  interface_id: "user-vci-elm327",
+  scan_id: nativeBoundary.scanId,
+  vehicle_context_id: nativeBoundary.vehicleContextId,
+  captured_at: "2026-07-20T07:00:10Z",
+  scan_state: "completed",
+  expected_intents: nativeExpectedIntents,
+  expected_readouts: nativeExpectedReadouts,
+  expected_readout_scopes: [],
+  connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: 0, last_sequence: 9, envelope_count: 10 }],
+  interruption: null,
+  read_only: true,
+  vehicle_command_enabled: false,
+  execution_enabled: false,
+  would_transmit: false,
+  retained_raw_payload: false
+});
+const manifestNativeScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest });
+check(nativeConnectorContract.completionManifestSchemaVersion === "native_connector_completion_manifest_v1" && nativeConnectorContract.completionManifestRecordType === "completion_manifest" && manifestNativeScanSession.ok === true && manifestNativeScanSession.scanState === "completed" && manifestNativeScanSession.partial === false && manifestNativeScanSession.completionManifest?.recordType === "completion_manifest" && manifestNativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && manifestNativeScanSession.vehicleCommandEnabled === false, "Native connector terminal manifest did not produce a complete read-only session");
+const manifestBoundaryMismatch = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: { ...nativeCompletionManifest, connection_segments: [{ ...nativeCompletionManifest.connection_segments[0], envelope_count: 9 }] } });
+const manifestMissingReadout = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch.slice(0, 2), completion_manifest: { ...nativeCompletionManifest, connection_segments: [{ ...nativeCompletionManifest.connection_segments[0], last_sequence: 7, envelope_count: 2 }] } });
+const manifestRawData = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: { ...nativeCompletionManifest, raw_frames: ["do-not-retain"] } });
+const emptyInterruptedManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
+  envelopes: [],
+  completion_manifest: {
+    ...nativeCompletionManifest,
+    captured_at: "2026-07-20T07:01:00Z",
+    scan_state: "interrupted",
+    expected_readouts: ["stored_dtc_snapshot"],
+    expected_intents: ["read_stored_dtc"],
+    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: null, last_sequence: null, envelope_count: 0 }],
+    interruption: { code: "transport:disconnected", connection_id: nativeBoundary.connectionId, sequence: 0 }
+  }
+});
+check(manifestBoundaryMismatch.blocked === true && manifestBoundaryMismatch.errors.includes("completion_manifest_boundary_mismatch"), "Native completion manifest did not reject a terminal boundary mismatch");
+check(manifestMissingReadout.ok === true && manifestMissingReadout.scanState === "interrupted" && manifestMissingReadout.partial === true, "Native completion manifest treated a missing expected readout as completed");
+check(manifestRawData.blocked === true && manifestRawData.errors.includes("completion_manifest_retains_raw_data"), "Native completion manifest retained raw transport data");
+check(emptyInterruptedManifest.ok === true && emptyInterruptedManifest.scanState === "interrupted" && emptyInterruptedManifest.partial === true && emptyInterruptedManifest.session?.nativeConnectorScanLifecycle?.interruption?.code === "transport:disconnected" && emptyInterruptedManifest.session?.vehicleCommandEnabled === false, "Native empty interruption did not retain a safe partial lifecycle session");
 check(nativeScanSession.ok === true && nativeScanSession.accepted === true && nativeScanSession.partial === false && nativeScanSession.envelopeCount === 10 && nativeScanSession.acceptedEnvelopeCount === 10 && nativeScanSession.rejectedEnvelopeCount === 0, "iPhoneコネクタ連続読取を完全な診断セッションとして受理できません");
 check(nativeScanSession.scanState === "completed" && nativeScanSession.nativeConnectorScanLifecycle?.completionExplicit === true && nativeScanSession.nativeConnectorScanLifecycle?.connectionCount === 1 && nativeScanSession.nativeConnectorScanLifecycle?.missingIntents?.length === 0 && nativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed", "iPhoneコネクタ完了manifestを診断セッションへ保持できません");
 check(nativeScanSession.startedAt === "2026-07-20T07:00:00.000Z" && nativeScanSession.completedAt === "2026-07-20T07:00:09.000Z" && nativeScanSession.evaluations[0]?.capturedAt === "2026-07-20T07:00:07.000Z" && nativeScanSession.scanId === nativeBoundary.scanId && nativeScanSession.session?.sessionId === nativeBoundary.scanId && nativeScanSession.session?.nativeConnectorBoundary?.connectionId === nativeBoundary.connectionId && nativeScanSession.session?.nativeConnectorBoundary?.vehicleContextId === nativeBoundary.vehicleContextId && nativeScanSession.session?.startedAt === nativeScanSession.startedAt && nativeScanSession.session?.endedAt === nativeScanSession.completedAt, "iPhoneコネクタ連続読取の境界、時刻範囲または元応答順を保持できません");

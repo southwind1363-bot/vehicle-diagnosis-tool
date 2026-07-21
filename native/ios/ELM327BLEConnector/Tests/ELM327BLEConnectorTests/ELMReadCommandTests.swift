@@ -21,4 +21,16 @@ final class ELMReadCommandTests: XCTestCase {
             $0.intent == "read_live_pid_snapshot"
         })
     }
+
+    func testReadoutPlanMapsOnlyKnownReadoutIDs() {
+        XCTAssertEqual(ELMReadCommand.storedDTC.readoutID, "stored_dtc_snapshot")
+        XCTAssertEqual(ELMReadCommand.pendingDTC.readoutID, "pending_dtc_snapshot")
+        XCTAssertEqual(ELMReadCommand.permanentDTC.readoutID, "permanent_dtc_snapshot")
+        XCTAssertEqual(ELMReadCommand.freezeFrameCapabilities.readoutID, "freeze_frame_snapshot")
+        XCTAssertEqual(ELMReadCommand.mode09SupportedInfoTypes.readoutID, "ecu_info_snapshot")
+        XCTAssertEqual(ELMReadCommand.supportedPIDs.readoutID, "supported_pid_matrix")
+        XCTAssertEqual(ELMReadCommand.readinessStatus.readoutID, "readiness_snapshot")
+        XCTAssertEqual(ELMReadCommand.engineRPM.readoutID, "live_pid_snapshot")
+        XCTAssertNil(ELMReadCommand.disableEcho.readoutID)
+    }
 }

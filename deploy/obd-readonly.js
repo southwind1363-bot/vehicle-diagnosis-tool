@@ -594,7 +594,9 @@
     requiredFailedLivePidEnvelopeFields: Object.freeze(["readout_id"]),
     responseOutcomeFields: Object.freeze(["ok", "blocked", "errors"]),
     readoutScopeFields: Object.freeze(["readout_scope_id", "readout_attempt"]),
-    completionManifestFields: Object.freeze(["scan_state", "expected_readouts", "expected_readout_scopes"]),
+    completionManifestSchemaVersion: "native_connector_completion_manifest_v1",
+    completionManifestRecordType: "completion_manifest",
+    completionManifestFields: Object.freeze(["schema_version", "record_type", "scan_state", "expected_readouts", "expected_readout_scopes", "connection_segments", "interruption"]),
     allowedReadoutIds: nativeConnectorReadoutIds,
     logPolicy: Object.freeze({
       storeRawPayload: false,
@@ -1343,6 +1345,37 @@
     return [...byKey.values()];
   }
 
+  function normalizeNativeConnectorInterruption(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const code = String(value.code || "").trim();
+    const capturedAt = normalizeNativeConnectorCapturedAt(value.capturedAt || value.captured_at);
+    const connectionId = normalizeNativeConnectorUuid(value.connectionId || value.connection_id);
+    const sequenceValue = value.sequence;
+    const sequence = Number.isSafeInteger(sequenceValue) && sequenceValue >= 0 && sequenceValue <= nativeConnectorContract.maxSequence
+      ? sequenceValue
+      : null;
+    const readoutId = String(value.readoutId || value.readout_id || "").trim();
+    const scopeId = normalizeNativeConnectorReadoutScopeId(value.scopeId || value.scope_id || value.readoutScopeId || value.readout_scope_id);
+    if (!/^[a-z][a-z0-9:_-]{0,80}$/.test(code)) return null;
+    if ((value.capturedAt != null || value.captured_at != null) && !capturedAt) return null;
+    if ((value.connectionId != null || value.connection_id != null) && !connectionId) return null;
+    if (sequenceValue != null && sequence === null) return null;
+    if (readoutId && !nativeConnectorContract.allowedReadoutIds.includes(readoutId)) return null;
+    if ((value.scopeId != null || value.scope_id != null || value.readoutScopeId != null || value.readout_scope_id != null) && !scopeId) return null;
+    return {
+      code,
+      capturedAt,
+      captured_at: capturedAt,
+      connectionId,
+      connection_id: connectionId,
+      sequence,
+      readoutId: readoutId || null,
+      readout_id: readoutId || null,
+      scopeId,
+      scope_id: scopeId
+    };
+  }
+
   function getNativeConnectorReadoutId(intent, data = {}, explicitReadoutId = null) {
     if (intent === "read_live_pid_snapshot") {
       const normalizedExplicitReadoutId = String(explicitReadoutId || data.readout_id || data.readoutId || "").trim();
@@ -1386,6 +1419,7 @@
       || Array.isArray(input.expected_readout_scopes)
       || Array.isArray(input.readoutScopeOutcomes)
       || Array.isArray(input.readout_scope_outcomes)
+      || input.interruption
       || input.readoutErrorsById
       || input.readout_errors_by_id
       || Array.isArray(input.connectionSegments)
@@ -1395,6 +1429,7 @@
     const requestedScanState = ["open", "completed", "interrupted"].includes(String(input.scanState || input.scan_state || ""))
       ? String(input.scanState || input.scan_state)
       : "open";
+    const interruption = normalizeNativeConnectorInterruption(input.interruption);
     const normalizeCount = (camelKey, snakeKey) => Math.max(0, Math.min(nativeConnectorContract.maxEnvelopeCount, Math.round(Number(input[camelKey] ?? input[snakeKey] ?? 0) || 0)));
     const expectedIntents = normalizeNativeConnectorIntentList(input.expectedIntents || input.expected_intents);
     const attemptedIntents = normalizeNativeConnectorIntentList(input.attemptedIntents || input.attempted_intents);
@@ -1433,8 +1468,10 @@
         const connectionId = normalizeNativeConnectorUuid(segment.connectionId || segment.connection_id);
         if (!connectionId) return null;
         const connectionSequenceValue = Number(segment.connectionSequence ?? segment.connection_sequence);
-        const firstSequenceValue = Number(segment.firstSequence ?? segment.first_sequence);
-        const lastSequenceValue = Number(segment.lastSequence ?? segment.last_sequence);
+        const firstSequenceSource = segment.firstSequence ?? segment.first_sequence;
+        const lastSequenceSource = segment.lastSequence ?? segment.last_sequence;
+        const firstSequenceValue = firstSequenceSource === null ? null : Number(firstSequenceSource);
+        const lastSequenceValue = lastSequenceSource === null ? null : Number(lastSequenceSource);
         const missingSequenceSample = [...new Set((Array.isArray(segment.missingSequenceSample) ? segment.missingSequenceSample : Array.isArray(segment.missing_sequence_sample) ? segment.missing_sequence_sample : [])
           .map(Number)
           .filter((item) => Number.isSafeInteger(item) && item >= 0 && item <= nativeConnectorContract.maxSequence))].slice(0, 32);
@@ -1497,6 +1534,7 @@
       && acceptedEnvelopeCount > 0
       && rejectedEnvelopeCount === 0
       && sequenceGapCount === 0
+      && !interruption
       && connectionOrderValid;
     const scanState = requestedScanState === "completed" && !completedLifecycleValid ? "interrupted" : requestedScanState;
     const partial = scanState !== "completed" || rejectedEnvelopeCount > 0 || missingReadouts.length > 0 || missingIntents.length > 0 || missingReadoutScopes.length > 0 || failedReadoutScopes.length > 0 || unexpectedReadoutScopes.length > 0 || sequenceGapCount > 0;
@@ -1505,6 +1543,7 @@
       schema_version: "native_connector_scan_lifecycle_v1",
       scanState,
       scan_state: scanState,
+      interruption: interruption ? { ...interruption } : null,
       completionExplicit,
       completion_explicit: completionExplicit,
       expectedIntents,
@@ -2053,6 +2092,7 @@
     const expectedReadouts = normalizeNativeConnectorReadoutList(expectedReadoutsInput);
     const expectedReadoutScopesInput = batchInput.expectedReadoutScopes ?? batchInput.expected_readout_scopes;
     const expectedReadoutScopes = normalizeNativeConnectorReadoutScopes(expectedReadoutScopesInput);
+    const interruption = batchInput.interruption === undefined ? null : normalizeNativeConnectorInterruption(batchInput.interruption);
     const blockedResult = (errors, evaluations = []) => ({
       schemaVersion: "native_connector_scan_session_v1",
       schema_version: "native_connector_scan_session_v1",
@@ -2084,6 +2124,8 @@
     if (expectedIntentsInput !== undefined && (!Array.isArray(expectedIntentsInput) || expectedIntents.length !== new Set(expectedIntentsInput.map((item) => String(item || "").trim()).filter(Boolean)).size)) return blockedResult(["invalid_expected_intents"]);
     if (expectedReadoutsInput !== undefined && (!Array.isArray(expectedReadoutsInput) || expectedReadouts.length !== new Set(expectedReadoutsInput.map((item) => String(item || "").trim()).filter(Boolean)).size)) return blockedResult(["invalid_expected_readouts"]);
     if (expectedReadoutScopesInput !== undefined && (!Array.isArray(expectedReadoutScopesInput) || expectedReadoutScopes.length !== expectedReadoutScopesInput.length || expectedReadoutScopes.some((item) => !expectedReadouts.includes(item.readoutId)))) return blockedResult(["invalid_expected_readout_scopes"]);
+    if (batchInput.interruption !== undefined && batchInput.interruption !== null && !interruption) return blockedResult(["invalid_interruption"]);
+    if (requestedScanState === "completed" && interruption) return blockedResult(["completed_scan_has_interruption"]);
 
     const evaluations = envelopes.map((envelope, index) => ({
       index,
@@ -2382,6 +2424,7 @@
     const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle({
       scan_state: scanState,
       completion_explicit: completionExplicit,
+      interruption,
       expected_intents: expectedIntents,
       attempted_intents: attemptedIntents,
       completed_intents: completedIntents,
@@ -2486,6 +2529,7 @@
       native_connector_boundary: nativeConnectorBoundary,
       nativeConnectorScanLifecycle,
       native_connector_scan_lifecycle: nativeConnectorScanLifecycle,
+      interruption: nativeConnectorScanLifecycle?.interruption || null,
       scanState,
       scan_state: scanState,
       expectedIntents,
@@ -2563,6 +2607,213 @@
       execution_enabled: false,
       wouldTransmit: false,
       would_transmit: false
+    };
+  }
+
+  function normalizeNativeConnectorCompletionManifest(input = {}) {
+    const manifest = input && typeof input === "object" && !Array.isArray(input) ? input : null;
+    const errors = [];
+    if (!manifest) return { manifest: null, errors: ["missing_completion_manifest"] };
+    if (manifest.schema_version !== nativeConnectorContract.completionManifestSchemaVersion) errors.push("invalid_completion_manifest_schema");
+    if (manifest.record_type !== nativeConnectorContract.completionManifestRecordType) errors.push("invalid_completion_manifest_record_type");
+    if (manifest.platform !== nativeConnectorContract.platform) errors.push("invalid_completion_manifest_platform");
+    if (!nativeConnectorContract.allowedInterfaceIds.includes(manifest.interface_id)) errors.push("invalid_completion_manifest_interface");
+    const scanId = normalizeNativeConnectorUuid(manifest.scan_id);
+    const vehicleContextId = normalizeNativeConnectorUuid(manifest.vehicle_context_id);
+    const capturedAt = normalizeNativeConnectorCapturedAt(manifest.captured_at);
+    if (!scanId) errors.push("invalid_completion_manifest_scan_id");
+    if (!vehicleContextId) errors.push("invalid_completion_manifest_vehicle_context_id");
+    if (!capturedAt) errors.push("invalid_completion_manifest_captured_at");
+    const scanState = ["completed", "interrupted"].includes(String(manifest.scan_state || "")) ? manifest.scan_state : null;
+    if (!scanState) errors.push("invalid_completion_manifest_scan_state");
+    const expectedIntentsSource = manifest.expected_intents;
+    const expectedReadoutsSource = manifest.expected_readouts;
+    const expectedReadoutScopesSource = manifest.expected_readout_scopes;
+    const expectedIntents = normalizeNativeConnectorIntentList(expectedIntentsSource);
+    const expectedReadouts = normalizeNativeConnectorReadoutList(expectedReadoutsSource);
+    const expectedReadoutScopes = normalizeNativeConnectorReadoutScopes(expectedReadoutScopesSource);
+    const distinctStrings = (value) => new Set((Array.isArray(value) ? value : []).map((item) => String(item || "").trim()).filter(Boolean)).size;
+    if (!Array.isArray(expectedIntentsSource) || expectedIntents.length !== distinctStrings(expectedIntentsSource)) errors.push("invalid_completion_manifest_expected_intents");
+    if (!Array.isArray(expectedReadoutsSource) || expectedReadouts.length !== distinctStrings(expectedReadoutsSource)) errors.push("invalid_completion_manifest_expected_readouts");
+    if (!Array.isArray(expectedReadoutScopesSource) || expectedReadoutScopes.length !== expectedReadoutScopesSource.length || expectedReadoutScopes.some((item) => !expectedReadouts.includes(item.readoutId))) errors.push("invalid_completion_manifest_expected_readout_scopes");
+    if (scanState === "completed" && !expectedReadouts.length) errors.push("completion_manifest_missing_readouts");
+    const interruption = manifest.interruption === null ? null : normalizeNativeConnectorInterruption(manifest.interruption);
+    if (scanState === "completed" && manifest.interruption !== null) errors.push("completed_manifest_has_interruption");
+    if (scanState === "interrupted" && !interruption) errors.push("interrupted_manifest_missing_interruption");
+    if (manifest.read_only !== true || manifest.vehicle_command_enabled !== false || manifest.execution_enabled !== false || manifest.would_transmit !== false || manifest.retained_raw_payload !== false) errors.push("unsafe_completion_manifest_flags");
+    const segmentSource = manifest.connection_segments;
+    const normalizedSegments = normalizeNativeConnectorScanLifecycle({
+      scan_state: "interrupted",
+      expected_readouts: expectedReadouts,
+      connection_segments: segmentSource
+    })?.connectionSegments || [];
+    const segmentIsValid = (segment) => segment && typeof segment === "object" && !Array.isArray(segment)
+      && Boolean(normalizeNativeConnectorUuid(segment.connection_id))
+      && Number.isSafeInteger(segment.connection_sequence) && segment.connection_sequence >= 0 && segment.connection_sequence <= nativeConnectorContract.maxConnectionSequence
+      && Number.isSafeInteger(segment.envelope_count) && segment.envelope_count >= 0 && segment.envelope_count <= nativeConnectorContract.maxEnvelopeCount
+      && (segment.first_sequence === null || segment.first_sequence === undefined || (Number.isSafeInteger(segment.first_sequence) && segment.first_sequence >= 0 && segment.first_sequence <= nativeConnectorContract.maxSequence))
+      && (segment.last_sequence === null || segment.last_sequence === undefined || (Number.isSafeInteger(segment.last_sequence) && segment.last_sequence >= 0 && segment.last_sequence <= nativeConnectorContract.maxSequence));
+    if (!Array.isArray(segmentSource) || !segmentSource.length || normalizedSegments.length !== segmentSource.length || segmentSource.some((segment) => !segmentIsValid(segment))) errors.push("invalid_completion_manifest_connection_segments");
+    const hasForbiddenManifestField = (value, key = "") => {
+      if (!value || typeof value !== "object") return false;
+      return Object.entries(value).some(([childKey, childValue]) => {
+        const normalizedKey = childKey.toLowerCase();
+        if (["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "log", "logs", "debug"].includes(normalizedKey)) return true;
+        return hasForbiddenManifestField(childValue, normalizedKey);
+      });
+    };
+    if (hasForbiddenManifestField(manifest)) errors.push("completion_manifest_retains_raw_data");
+    return {
+      manifest: errors.length ? null : {
+        interfaceId: manifest.interface_id,
+        scanId,
+        vehicleContextId,
+        capturedAt,
+        scanState,
+        expectedIntents,
+        expectedReadouts,
+        expectedReadoutScopes,
+        connectionSegments: normalizedSegments,
+        interruption
+      },
+      errors
+    };
+  }
+
+  function buildNativeConnectorScanSessionFromCompletionManifest(input = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const envelopes = Array.isArray(source.envelopes) ? source.envelopes : [];
+    const normalized = normalizeNativeConnectorCompletionManifest(source.completion_manifest || source.completionManifest);
+    const blockedResult = (errors) => ({
+      schemaVersion: "native_connector_scan_session_v1",
+      schema_version: "native_connector_scan_session_v1",
+      ok: false,
+      accepted: false,
+      partial: false,
+      blocked: true,
+      envelopeCount: envelopes.length,
+      envelope_count: envelopes.length,
+      errors: [...new Set(errors)],
+      session: null,
+      retainedRawPayload: false,
+      retained_raw_payload: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
+    });
+    if (!normalized.manifest) return blockedResult(normalized.errors);
+    const manifest = normalized.manifest;
+    const matchesTerminalSegments = (actualSegments = []) => actualSegments.length === manifest.connectionSegments.length
+      && actualSegments.every((segment, index) => {
+        const terminal = manifest.connectionSegments[index];
+        return terminal
+          && segment.connectionId === terminal.connectionId
+          && segment.connectionSequence === terminal.connectionSequence
+          && segment.envelopeCount === terminal.envelopeCount
+          && segment.firstSequence === terminal.firstSequence
+          && segment.lastSequence === terminal.lastSequence;
+      });
+    if (!envelopes.length) {
+      if (manifest.scanState !== "interrupted" || manifest.connectionSegments.some((segment) => segment.envelopeCount !== 0 || segment.firstSequence !== null || segment.lastSequence !== null)) return blockedResult(["completion_manifest_empty_boundary_mismatch"]);
+      const connection = manifest.connectionSegments[0];
+      const lifecycle = normalizeNativeConnectorScanLifecycle({
+        scan_state: "interrupted",
+        completion_explicit: true,
+        interruption: manifest.interruption,
+        expected_intents: manifest.expectedIntents,
+        expected_readouts: manifest.expectedReadouts,
+        expected_readout_scopes: manifest.expectedReadoutScopes,
+        error_codes: [manifest.interruption.code],
+        connection_segments: manifest.connectionSegments,
+        envelope_count: 0,
+        accepted_envelope_count: 0,
+        rejected_envelope_count: 0
+      });
+      const readoutInterface = normalizeReadoutInterfaceSnapshot({
+        interface_id: manifest.interfaceId,
+        interface_label: manifest.interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR Bluetooth" : "ELM327",
+        device_model: manifest.interfaceId === "user-vci-thinkcar-bluetooth" ? "TCMa" : "ELM327 mini",
+        readout_route: "native_connector_readout",
+        platform: "ios",
+        observed_use: "native connector read-only scan interruption",
+        hardware_compatibility_confirmed: false
+      });
+      const session = buildDiagnosticScanSession({
+        session_id: manifest.scanId,
+        started_at: manifest.capturedAt,
+        ended_at: manifest.capturedAt,
+        source: "native_connector",
+        captured_at: manifest.capturedAt,
+        native_connector_boundary: { scan_id: manifest.scanId, connection_id: connection.connectionId, vehicle_context_id: manifest.vehicleContextId },
+        native_connector_scan_lifecycle: lifecycle,
+        readout_interface: readoutInterface,
+        warnings: ["native_connector_scan_interrupted", "native_connector_empty_interruption"],
+        retained_raw_payload: false,
+        vehicle_command_enabled: false,
+        execution_enabled: false,
+        would_transmit: false
+      });
+      return {
+        schemaVersion: "native_connector_scan_session_v1",
+        schema_version: "native_connector_scan_session_v1",
+        ok: true,
+        accepted: true,
+        partial: true,
+        blocked: false,
+        interfaceId: manifest.interfaceId,
+        interface_id: manifest.interfaceId,
+        scanId: manifest.scanId,
+        scan_id: manifest.scanId,
+        connectionId: connection.connectionId,
+        connection_id: connection.connectionId,
+        vehicleContextId: manifest.vehicleContextId,
+        vehicle_context_id: manifest.vehicleContextId,
+        nativeConnectorScanLifecycle: lifecycle,
+        native_connector_scan_lifecycle: lifecycle,
+        scanState: "interrupted",
+        scan_state: "interrupted",
+        expectedReadouts: manifest.expectedReadouts,
+        expected_readouts: [...manifest.expectedReadouts],
+        envelopeCount: 0,
+        envelope_count: 0,
+        errors: [manifest.interruption.code],
+        session,
+        retainedRawPayload: false,
+        retained_raw_payload: false,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        executionEnabled: false,
+        execution_enabled: false,
+        wouldTransmit: false,
+        would_transmit: false
+      };
+    }
+    const result = buildNativeConnectorScanSession({
+      envelopes,
+      scan_state: manifest.scanState,
+      interruption: manifest.interruption,
+      expected_intents: manifest.expectedIntents,
+      expected_readouts: manifest.expectedReadouts,
+      expected_readout_scopes: manifest.expectedReadoutScopes
+    });
+    if (result.blocked) return result;
+    if (result.interfaceId !== manifest.interfaceId || result.scanId !== manifest.scanId || result.vehicleContextId !== manifest.vehicleContextId || !matchesTerminalSegments(result.nativeConnectorScanLifecycle?.connectionSegments)) {
+      return { ...blockedResult(["completion_manifest_boundary_mismatch"]), evaluations: result.evaluations || [] };
+    }
+    return {
+      ...result,
+      completionManifest: {
+        schemaVersion: nativeConnectorContract.completionManifestSchemaVersion,
+        schema_version: nativeConnectorContract.completionManifestSchemaVersion,
+        recordType: nativeConnectorContract.completionManifestRecordType,
+        record_type: nativeConnectorContract.completionManifestRecordType,
+        scanState: manifest.scanState,
+        scan_state: manifest.scanState,
+        interruption: manifest.interruption ? { ...manifest.interruption } : null
+      }
     };
   }
 
@@ -20895,6 +21146,7 @@
     evaluateNativeConnectorEnvelope,
     buildNativeConnectorDiagnosticImport,
     buildNativeConnectorScanSession,
+    buildNativeConnectorScanSessionFromCompletionManifest,
     getVehicleConnectionProfile,
     getVehicleDamagePreventionInterlock,
     getPreparedVehicleRequests,

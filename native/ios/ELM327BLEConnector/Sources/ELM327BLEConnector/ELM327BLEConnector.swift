@@ -23,7 +23,12 @@ public protocol ELM327BLEConnectorDelegate: AnyObject {
     func connector(_ connector: ELM327BLEConnector, didDiscover peripheral: BLEPeripheralCandidate)
     func connector(_ connector: ELM327BLEConnector, requiresCharacteristicSelection candidates: [BLECharacteristicCandidate])
     func connector(_ connector: ELM327BLEConnector, didEmit envelope: NativeConnectorEnvelope)
+    func connector(_ connector: ELM327BLEConnector, didComplete manifest: NativeConnectorCompletionManifest)
     func connector(_ connector: ELM327BLEConnector, didFail error: ELMConnectorError)
+}
+
+public extension ELM327BLEConnectorDelegate {
+    func connector(_ connector: ELM327BLEConnector, didComplete manifest: NativeConnectorCompletionManifest) {}
 }
 
 public final class ELM327BLEConnector: NSObject {
@@ -48,6 +53,11 @@ public final class ELM327BLEConnector: NSObject {
     private var freezeFrameSupportedPIDs = Set<String>()
     private var liveSupportedPIDs = Set<String>()
     private var mode09EcuNameScopes = Set<String>()
+    private var plannedIntents = Set<String>()
+    private var plannedReadoutIDs = Set<String>()
+    private var emittedEnvelopeCount = 0
+    private var firstEnvelopeSequence: Int?
+    private var didEmitTerminalManifest = false
 
     public override init() {
         super.init()
@@ -106,13 +116,20 @@ public final class ELM327BLEConnector: NSObject {
         freezeFrameSupportedPIDs.removeAll()
         liveSupportedPIDs.removeAll()
         mode09EcuNameScopes.removeAll()
+        plannedIntents.removeAll()
+        plannedReadoutIDs.removeAll()
+        emittedEnvelopeCount = 0
+        firstEnvelopeSequence = nil
+        didEmitTerminalManifest = false
         pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .engineRPM, .coolantTemperature, .controlModuleVoltage, .mode09EcuName].contains($0) }
+        plan(commands: pendingCommands)
         runNextCommand()
     }
 
     public func disconnect() {
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
+        if sessionContext != nil && !didEmitTerminalManifest { emitCompletionManifest(state: .interrupted, interruptionCode: "transport:user_disconnected") }
         pendingCommands.removeAll()
         activeCommand = nil
         promptDecoder.reset()
@@ -122,7 +139,11 @@ public final class ELM327BLEConnector: NSObject {
     }
 
     private func runNextCommand() {
-        guard state == .ready, let command = pendingCommands.first else { return }
+        guard state == .ready else { return }
+        guard let command = pendingCommands.first else {
+            emitCompletionManifest(state: .completed, interruptionCode: nil)
+            return
+        }
         guard let peripheral = selectedPeripheral, let transmit = transmitCharacteristic else { return fail(.disconnected) }
         pendingCommands.removeFirst()
         activeCommand = command
@@ -161,17 +182,17 @@ public final class ELM327BLEConnector: NSObject {
             case .identifyAdapter:
                 adapterName = firstResponseLine(in: response, excluding: command)
                 sequence += 1
-                delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
             case .describeProtocol:
                 protocolHint = firstResponseLine(in: response, excluding: command)
                 sequence += 1
-                delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
             case .storedDTC, .pendingDTC, .permanentDTC:
                 switch OBD2ReadoutDecoder.decodeDTCs(command: command, response: response) {
                 case .success(let results):
                     results.forEach { result in
                         sequence += 1
-                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.dtcs(
+                        emit(NativeConnectorEnvelopeFactory.dtcs(
                             context: context,
                             sequence: sequence,
                             intent: command.intent,
@@ -190,6 +211,7 @@ public final class ELM327BLEConnector: NSObject {
                 }
                 if supported.contains(.freezeFrameTriggerDTC) {
                     pendingCommands.insert(contentsOf: supported, at: 0)
+                    plan(commands: supported)
                 } else {
                     emitFailure(for: .freezeFrameTriggerDTC, error: "freeze_frame_unsupported")
                 }
@@ -198,7 +220,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .success(let results):
                     results.forEach { result in
                         sequence += 1
-                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: result.scopeID, code: result.code))
+                        emit(NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: result.scopeID, code: result.code))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
@@ -208,7 +230,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .success(let results):
                     results.forEach { result in
                         sequence += 1
-                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.freezeFrameValue(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
+                        emit(NativeConnectorEnvelopeFactory.freezeFrameValue(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
@@ -218,10 +240,13 @@ public final class ELM327BLEConnector: NSObject {
                 case .success(let results):
                     results.forEach { result in
                         sequence += 1
-                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "supported_info_types_00", infoType: "00", value: result.bitmap))
+                        emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "supported_info_types_00", infoType: "00", value: result.bitmap))
                         if result.supportsEcuName { mode09EcuNameScopes.insert(result.scopeID ?? "LEGACY") }
                     }
-                    if !mode09EcuNameScopes.isEmpty { pendingCommands.insert(.mode09EcuName, at: 0) }
+                    if !mode09EcuNameScopes.isEmpty {
+                        pendingCommands.insert(.mode09EcuName, at: 0)
+                        plan(commands: [.mode09EcuName])
+                    }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
@@ -230,7 +255,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .success(let results):
                     results.forEach { result in
                         sequence += 1
-                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "ecu_name", infoType: "0A", value: result.name))
+                        emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "ecu_name", infoType: "0A", value: result.name))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
@@ -238,22 +263,24 @@ public final class ELM327BLEConnector: NSObject {
             case .supportedPIDs:
                 liveSupportedPIDs = Set(OBD2PIDDecoder.supportedPIDs(response: response))
                 sequence += 1
-                delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, pids: [...liveSupportedPIDs].sorted()))
+                emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, pids: [...liveSupportedPIDs].sorted()))
                 let candidates: [ELMReadCommand] = [.engineRPM, .coolantTemperature, .controlModuleVoltage]
-                pendingCommands.insert(contentsOf: candidates.filter { command in
+                let supportedCommands = candidates.filter { command in
                     switch command {
                     case .engineRPM: return liveSupportedPIDs.contains("0C")
                     case .coolantTemperature: return liveSupportedPIDs.contains("05")
                     case .controlModuleVoltage: return liveSupportedPIDs.contains("42")
                     default: return false
                     }
-                }, at: 0)
+                }
+                pendingCommands.insert(contentsOf: supportedCommands, at: 0)
+                plan(commands: supportedCommands)
             case .readinessStatus:
                 switch OBD2ReadoutDecoder.decodeReadiness(response: response) {
                 case .success(let results):
                     results.forEach { result in
                         sequence += 1
-                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.readiness(
+                        emit(NativeConnectorEnvelopeFactory.readiness(
                             context: context,
                             sequence: sequence,
                             scopeID: result.scopeID,
@@ -266,7 +293,7 @@ public final class ELM327BLEConnector: NSObject {
             case .engineRPM, .coolantTemperature, .controlModuleVoltage:
                 if let value = OBD2PIDDecoder.decode(command, response: response) {
                     sequence += 1
-                    delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.livePID(context: context, sequence: sequence, value: value))
+                    emit(NativeConnectorEnvelopeFactory.livePID(context: context, sequence: sequence, value: value))
                 } else {
                     emitFailure(for: command, error: "unparsed_pid_response")
                 }
@@ -278,16 +305,78 @@ public final class ELM327BLEConnector: NSObject {
     private func emitFailure(for command: ELMReadCommand, error: String) {
         guard let context = sessionContext else { return }
         sequence += 1
-        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.failedReadout(context: context, sequence: sequence, command: command, error: error))
+        emit(NativeConnectorEnvelopeFactory.failedReadout(context: context, sequence: sequence, command: command, error: error))
+    }
+
+    private func plan(commands: [ELMReadCommand]) {
+        commands.filter { !$0.isAdapterSetup }.forEach { command in
+            plannedIntents.insert(command.intent)
+            if let readoutID = command.readoutID { plannedReadoutIDs.insert(readoutID) }
+        }
+    }
+
+    private func emit(_ envelope: NativeConnectorEnvelope) {
+        emittedEnvelopeCount += 1
+        if firstEnvelopeSequence == nil { firstEnvelopeSequence = envelope.sequence }
+        delegate?.connector(self, didEmit: envelope)
+    }
+
+    private func emitCompletionManifest(state: NativeConnectorScanState, interruptionCode: String?) {
+        guard let context = sessionContext, !didEmitTerminalManifest else { return }
+        didEmitTerminalManifest = true
+        let interruption = interruptionCode.map {
+            NativeConnectorInterruption(code: $0, connectionID: context.connectionID, sequence: sequence)
+        }
+        let manifest = NativeConnectorCompletionManifest(
+            schemaVersion: "native_connector_completion_manifest_v1",
+            recordType: "completion_manifest",
+            platform: "ios",
+            interfaceID: "user-vci-elm327",
+            scanID: context.scanID,
+            vehicleContextID: context.vehicleContextID,
+            capturedAt: ISO8601DateFormatter().string(from: Date()),
+            scanState: state,
+            expectedIntents: plannedIntents.sorted(),
+            expectedReadouts: plannedReadoutIDs.sorted(),
+            expectedReadoutScopes: [],
+            connectionSegments: [NativeConnectorConnectionSegment(
+                connectionID: context.connectionID,
+                connectionSequence: 0,
+                firstSequence: firstEnvelopeSequence,
+                lastSequence: emittedEnvelopeCount > 0 ? sequence : nil,
+                envelopeCount: emittedEnvelopeCount
+            )],
+            interruption: interruption,
+            readOnly: true,
+            vehicleCommandEnabled: false,
+            executionEnabled: false,
+            wouldTransmit: false,
+            retainedRawPayload: false
+        )
+        delegate?.connector(self, didComplete: manifest)
     }
 
     private func interrupt(_ error: ELMConnectorError) {
+        emitCompletionManifest(state: .interrupted, interruptionCode: interruptionCode(for: error))
         pendingCommands.removeAll()
         activeCommand = nil
         promptDecoder.reset()
         state = .interrupted
         delegate?.connector(self, didFail: error)
         if let peripheral = selectedPeripheral { central.cancelPeripheralConnection(peripheral) }
+    }
+
+    private func interruptionCode(for error: ELMConnectorError) -> String {
+        switch error {
+        case .bluetoothUnavailable: return "transport:bluetooth_unavailable"
+        case .invalidState: return "connector:invalid_state"
+        case .peripheralNotSelected: return "connector:peripheral_not_selected"
+        case .characteristicNotReady: return "connector:characteristic_not_ready"
+        case .responseTooLarge: return "transport:response_too_large"
+        case .responseTimeout: return "transport:response_timeout"
+        case .disconnected: return "transport:disconnected"
+        case .invalidResponse: return "readout:invalid_response"
+        }
     }
 
     private func fail(_ error: ELMConnectorError) {

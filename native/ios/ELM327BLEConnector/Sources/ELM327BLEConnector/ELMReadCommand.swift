@@ -69,6 +69,11 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
 
     public var readoutID: String? {
         switch self {
+        case .identifyAdapter, .describeProtocol: return "adapter_identity"
+        case .storedDTC: return "stored_dtc_snapshot"
+        case .pendingDTC: return "pending_dtc_snapshot"
+        case .permanentDTC: return "permanent_dtc_snapshot"
+        case .supportedPIDs: return "supported_pid_matrix"
         case .readinessStatus: return "readiness_snapshot"
         case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .mode09SupportedInfoTypes, .mode09EcuName: return "ecu_info_snapshot"
