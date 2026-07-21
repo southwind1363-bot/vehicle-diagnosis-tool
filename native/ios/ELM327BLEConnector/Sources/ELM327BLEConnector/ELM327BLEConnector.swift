@@ -55,6 +55,7 @@ public final class ELM327BLEConnector: NSObject {
     private var scheduledLivePIDCommands = Set<ELMReadCommand>()
     private var scheduledSupportedPIDPages = Set<ELMReadCommand>()
     private var mode09CalibrationIDScopes = Set<String>()
+    private var mode09CalibrationVerificationNumberScopes = Set<String>()
     private var mode09EcuNameScopes = Set<String>()
     private var plannedIntents = Set<String>()
     private var plannedReadoutIDs = Set<String>()
@@ -121,13 +122,14 @@ public final class ELM327BLEConnector: NSObject {
         scheduledLivePIDCommands.removeAll()
         scheduledSupportedPIDPages = [.supportedPIDs]
         mode09CalibrationIDScopes.removeAll()
+        mode09CalibrationVerificationNumberScopes.removeAll()
         mode09EcuNameScopes.removeAll()
         plannedIntents.removeAll()
         plannedReadoutIDs.removeAll()
         emittedEnvelopeCount = 0
         firstEnvelopeSequence = nil
         didEmitTerminalManifest = false
-        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .mode09CalibrationID, .mode09EcuName].contains($0) && $0.livePID == nil }
+        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .supportedPIDs20, .supportedPIDs40, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName].contains($0) && $0.livePID == nil }
         plan(commands: pendingCommands)
         runNextCommand()
     }
@@ -248,10 +250,12 @@ public final class ELM327BLEConnector: NSObject {
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "supported_info_types_00", infoType: "00", value: result.bitmap))
                         if result.supportsCalibrationID { mode09CalibrationIDScopes.insert(result.scopeID ?? "LEGACY") }
+                        if result.supportsCalibrationVerificationNumber { mode09CalibrationVerificationNumberScopes.insert(result.scopeID ?? "LEGACY") }
                         if result.supportsEcuName { mode09EcuNameScopes.insert(result.scopeID ?? "LEGACY") }
                     }
                     let followUpCommands: [ELMReadCommand] = [
                         mode09CalibrationIDScopes.isEmpty ? nil : .mode09CalibrationID,
+                        mode09CalibrationVerificationNumberScopes.isEmpty ? nil : .mode09CalibrationVerificationNumber,
                         mode09EcuNameScopes.isEmpty ? nil : .mode09EcuName
                     ].compactMap { $0 }
                     if !followUpCommands.isEmpty {
@@ -267,6 +271,16 @@ public final class ELM327BLEConnector: NSObject {
                     results.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "calibration_id", infoType: "04", value: result.calibrationID))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
+            case .mode09CalibrationVerificationNumber:
+                switch OBD2ReadoutDecoder.decodeMode09CalibrationVerificationNumbers(response: response, supportedScopeIDs: mode09CalibrationVerificationNumberScopes) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "calibration_verification_number", infoType: "06", value: result.value))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)

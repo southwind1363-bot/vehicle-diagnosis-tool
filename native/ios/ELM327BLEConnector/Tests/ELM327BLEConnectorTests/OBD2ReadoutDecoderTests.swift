@@ -124,6 +124,7 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
     func testMode09AcceptsOnlyAdvertisedEcuNamesAndNeverVin() throws {
         let support = try OBD2ReadoutDecoder.decodeMode09SupportedInfoTypes(response: "7E8 06 49 00 00 40 00 00\n7E9 06 49 00 00 00 00 00").get()
         XCTAssertEqual(support.map(\.supportsCalibrationID), [false, false])
+        XCTAssertEqual(support.map(\.supportsCalibrationVerificationNumber), [false, false])
         XCTAssertEqual(support.map(\.supportsEcuName), [true, false])
         let names = try OBD2ReadoutDecoder.decodeMode09EcuNames(response: "7E8 10 0B 49 0A 00 45 4E 47\n7E8 21 49 4E 45 20 20", supportedScopeIDs: ["7E8"]).get()
         XCTAssertEqual(names.count, 1)
@@ -140,6 +141,25 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         switch OBD2ReadoutDecoder.decodeMode09CalibrationIDs(response: "7E8 03 49 02 00", supportedScopeIDs: ["7E8"]) {
         case .failure: break
         case .success: XCTFail("Non-calibration Mode 09 response must not be accepted")
+        }
+    }
+
+    func testMode09CalibrationVerificationNumbersRequireAdvertisedScopeAndExactLength() throws {
+        let support = try OBD2ReadoutDecoder.decodeMode09SupportedInfoTypes(response: "7E8 06 49 00 04 00 00 00\n7E9 06 49 00 00 00 00 00").get()
+        XCTAssertEqual(support.map(\.supportsCalibrationVerificationNumber), [true, false])
+        let values = try OBD2ReadoutDecoder.decodeMode09CalibrationVerificationNumbers(
+            response: "7E8 10 0B 49 06 02 DE AD BE\n7E8 21 EF 01 23 45 67",
+            supportedScopeIDs: ["7E8"]
+        ).get()
+        XCTAssertEqual(values.map(\.scopeID), ["7E8", "7E8"])
+        XCTAssertEqual(values.map(\.value), ["DEADBEEF", "01234567"])
+        switch OBD2ReadoutDecoder.decodeMode09CalibrationVerificationNumbers(response: "7E8 07 49 06 02 DE AD BE EF", supportedScopeIDs: ["7E8"]) {
+        case .failure: break
+        case .success: XCTFail("CVN count and payload length must match")
+        }
+        switch OBD2ReadoutDecoder.decodeMode09CalibrationVerificationNumbers(response: "7E8 07 49 04 01 DE AD BE EF", supportedScopeIDs: ["7E8"]) {
+        case .failure: break
+        case .success: XCTFail("Non-CVN Mode 09 response must not be accepted")
         }
     }
 

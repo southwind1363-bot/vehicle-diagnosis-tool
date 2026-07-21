@@ -170,9 +170,9 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
-    public static func decodeMode09SupportedInfoTypes(response: String) -> Result<[(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsEcuName: Bool)], OBD2ReadoutDecodeFailure> {
+    public static func decodeMode09SupportedInfoTypes(response: String) -> Result<[(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsCalibrationVerificationNumber: Bool, supportsEcuName: Bool)], OBD2ReadoutDecodeFailure> {
         packets(in: response).flatMap { packets in
-            var decoded: [(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsEcuName: Bool)] = []
+            var decoded: [(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsCalibrationVerificationNumber: Bool, supportsEcuName: Bool)] = []
             for packet in packets {
                 let payload = packet.payload
                 guard payload.count == 6, payload[0] == 0x49, payload[1] == 0x00 else {
@@ -182,6 +182,7 @@ public enum OBD2ReadoutDecoder {
                     packet.scopeID,
                     payload.dropFirst(2).map { String(format: "%02X", $0) }.joined(),
                     (payload[2] & 0x10) != 0,
+                    (payload[2] & 0x04) != 0,
                     (payload[3] & 0x40) != 0
                 ))
             }
@@ -216,6 +217,24 @@ public enum OBD2ReadoutDecoder {
                 while textBytes.last == 0x00 || textBytes.last == 0x20 { textBytes.removeLast() }
                 guard !textBytes.isEmpty, textBytes.allSatisfy({ $0 >= 0x20 && $0 <= 0x7E }), let calibrationID = String(bytes: textBytes, encoding: .ascii), calibrationID.count <= 80 else { return .failure(.malformedResponse) }
                 decoded.append((packet.scopeID, calibrationID))
+            }
+            return decoded.isEmpty ? .failure(.malformedResponse) : .success(decoded)
+        }
+    }
+
+    public static func decodeMode09CalibrationVerificationNumbers(response: String, supportedScopeIDs: Set<String>) -> Result<[(scopeID: String?, value: String)], OBD2ReadoutDecodeFailure> {
+        packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, value: String)] = []
+            for packet in packets {
+                let scopeKey = packet.scopeID ?? "LEGACY"
+                let payload = packet.payload
+                guard supportedScopeIDs.contains(scopeKey), payload.count >= 7, payload[0] == 0x49, payload[1] == 0x06 else { continue }
+                let count = Int(payload[2])
+                let valueBytes = Array(payload.dropFirst(3))
+                guard count > 0, count <= 16, valueBytes.count == count * 4 else { return .failure(.malformedResponse) }
+                for index in stride(from: 0, to: valueBytes.count, by: 4) {
+                    decoded.append((packet.scopeID, valueBytes[index..<(index + 4)].map { String(format: "%02X", $0) }.joined()))
+                }
             }
             return decoded.isEmpty ? .failure(.malformedResponse) : .success(decoded)
         }
