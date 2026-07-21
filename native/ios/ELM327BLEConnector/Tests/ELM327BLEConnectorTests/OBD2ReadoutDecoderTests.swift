@@ -33,6 +33,7 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         assertDTCFailure("7F 03 11", expected: .negativeResponse)
         assertDTCFailure("43 01", expected: .malformedResponse)
         assertDTCFailure("43 00 00\n43 00 00", expected: .ambiguousResponse)
+        assertDTCFailure("7E8 03 43 00 00\n7E8 03 43 00 00", expected: .malformedResponse)
         assertDTCFailure("7E8 10 07 43 01 71 03 00\n7E8 22 00 00", expected: .malformedResponse)
     }
 

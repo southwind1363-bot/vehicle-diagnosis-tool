@@ -184,6 +184,7 @@ public enum OBD2ReadoutDecoder {
         guard let first = frames.first, !first.isEmpty else { return nil }
         switch first[0] >> 4 {
         case 0:
+            guard frames.count == 1 else { return nil }
             let length = Int(first[0] & 0x0F)
             guard first.count >= length + 1 else { return nil }
             return length == 0 ? [] : Array(first[1...length])
