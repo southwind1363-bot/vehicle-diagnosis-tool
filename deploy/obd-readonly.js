@@ -3614,21 +3614,25 @@
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
         return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
       });
-    const bridgeSafety = readBridgeSnapshotSafety(response, [data.tests, data.values, data.mode06_tests, data.mode06Tests, data.mode06_rows, data.mode06Rows, data.monitor_tests, data.monitorTests, data.test_rows, data.testRows, data.onboard_monitor_tests, data.onboardMonitorTests].some(Array.isArray));
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const hasTestEvidence = tests.length > 0;
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasTestEvidence);
+    const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+      ? { ...bridgeSafety, ok: false, blocked: hasTestEvidence, unparsed: !hasTestEvidence }
+      : bridgeSafety;
     return {
       ...normalizeOnboardMonitorSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || null,
       protocol: readBridgeProtocol(data),
-      onboard_monitor_readout_status: getBridgeReadoutStatus(bridgeSafety),
+      onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety),
       tests
       }),
       intent: "read_onboard_monitor",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      would_transmit: resolvedBridgeSafety.wouldTransmit,
       errorCodes,
       error_codes: [...errorCodes]
     };
@@ -19328,6 +19332,26 @@
           }
           : onboardMonitorSnapshotInput)
       : onboardMonitorSnapshotInput;
+    const onboardMonitorResponseData = onboardMonitorSnapshotInput?.data && typeof onboardMonitorSnapshotInput.data === "object" && !Array.isArray(onboardMonitorSnapshotInput.data)
+      ? onboardMonitorSnapshotInput.data
+      : {};
+    const onboardMonitorSafetyInput = readBridgeResponseErrorCodes(onboardMonitorSnapshotInput).length
+      && [
+        onboardMonitorResponseData.tests,
+        onboardMonitorResponseData.values,
+        onboardMonitorResponseData.mode06_tests,
+        onboardMonitorResponseData.mode06Tests,
+        onboardMonitorResponseData.mode06_rows,
+        onboardMonitorResponseData.mode06Rows,
+        onboardMonitorResponseData.monitor_tests,
+        onboardMonitorResponseData.monitorTests,
+        onboardMonitorResponseData.test_rows,
+        onboardMonitorResponseData.testRows,
+        onboardMonitorResponseData.onboard_monitor_tests,
+        onboardMonitorResponseData.onboardMonitorTests
+      ].some((value) => Array.isArray(value) && value.length > 0)
+      ? { ...onboardMonitorSnapshotInput, blocked: true }
+      : onboardMonitorSnapshotInput;
     const ecuInfoResponseInput = ecuInfoSnapshotInput && typeof ecuInfoSnapshotInput === "object" && !Array.isArray(ecuInfoSnapshotInput)
       ? (ecuInfoSnapshotInput.data && typeof ecuInfoSnapshotInput.data === "object"
           ? {
@@ -19358,7 +19382,9 @@
       ? onboardMonitorSnapshotInput
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
-        : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSnapshotInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
+        : (onboardMonitorSnapshotInput?.data && typeof onboardMonitorSnapshotInput.data === "object" && !Array.isArray(onboardMonitorSnapshotInput.data))
+          ? normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)
+          : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSafetyInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
     const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput));
     const ecuInfoSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
@@ -19445,7 +19471,7 @@
       ecuInfoSnapshot,
       ecuInfoSnapshotSafetyInput: ecuInfoSafetyInput,
       onboardMonitorSnapshot,
-      onboardMonitorSnapshotSafetyInput: onboardMonitorSnapshotInput,
+      onboardMonitorSnapshotSafetyInput: onboardMonitorSafetyInput,
       supportedPidMatrix,
       supportedPidMatrixSafetyInput: supportedPidMatrixInput
     });
