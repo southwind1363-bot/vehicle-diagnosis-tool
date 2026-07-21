@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.2";
+const APP_VERSION = "3.4.3";
 const APP_LAST_UPDATED = "2026-07-22";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1869,7 +1869,7 @@ function getObdDevelopmentOperationNote(interfaceId) {
   }
   if (interfaceId === "user-vci-techstream-j2534") return "運用: 型番/J2534 DLL確認 -> 読取前プレビュー確認 -> ローカルブリッジ確認 -> 読取専用 DTC/ECU情報から実測";
   if (interfaceId === "user-vci-thinkcar-bluetooth") return getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios"
-    ? "運用: 自前iPhoneコネクタでVCI接続 -> read-only読取 -> OBD側でセッション化して保存と確認"
+    ? "運用: THINKCAR通信仕様を確認 -> iPhone用専用コネクタを実装 -> read-only読取を実機確認"
     : "運用: PC側でVCI確認 -> ローカルブリッジでread-only読取 -> OBD側で保存と確認";
   return "運用: 読取前プレビュー確認 -> 読取準備 -> 読取専用で取れる項目だけ確認 -> OBD側で保存と確認";
 }
@@ -1977,8 +1977,8 @@ function renderObdConnectionGuide() {
       "安全: DTC / ライブデータ / FFの読取専用のみ"
     ],
     "user-vci-thinkcar-bluetooth": [
-      interfaceRoute?.platform === "ios" ? "端末: Native iPhone BLE host implemented; hardware verification pending" : "端末: PC側ローカルブリッジを使用",
-      interfaceRoute?.platform === "ios" ? "読取手順: THINKCARへ直接接続 -> read-only診断セッション" : "読取手順: VCI列挙 -> ローカルブリッジでread-only確認",
+      interfaceRoute?.platform === "ios" ? "端末: iPhone用THINKCARコネクタは未実装。BLE/SDK通信仕様の確認待ち" : "端末: PC側ローカルブリッジを使用",
+      interfaceRoute?.platform === "ios" ? "読取手順: 通信仕様確認 -> 専用コネクタ実装 -> read-only診断セッションを実機確認" : "読取手順: VCI列挙 -> ローカルブリッジでread-only確認",
       "安全: 接続・送信は通信仕様と実機適合の確認まで無効"
     ],
     "user-vci-techstream-j2534": [
@@ -2023,7 +2023,9 @@ function renderObdConnectionGuide() {
     const routeLabel = document.createElement("strong");
     routeLabel.textContent = "実装経路";
     const routeValue = interfaceRoute.route === "native_connector_required"
-      ? "Native iPhone BLE host implemented; hardware verification pending"
+      ? interfaceId === "user-vci-elm327"
+        ? "Native iPhone BLE host implemented; hardware verification pending"
+        : "iPhone direct transport is unimplemented; BLE/SDK protocol verification required"
       : interfaceRoute.route === "desktop_web_serial"
         ? "Web Serial（read-only実装済み・実機確認待ち）"
       : interfaceRoute.route === "desktop_local_bridge"
@@ -3917,7 +3919,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
     statusText: `${selected.label}の読取前プレビューです。今見える項目を確認し、読取は ${selected.connectionStatus.nextAction}。`,
     previewStatus: `読取前プレビュー中: 今見える項目を確認。読取は ${selected.connectionStatus.nextAction}`,
     previewGuide: [
-      `スマホ単体: ${["user-vci-thinkcar-bluetooth", "user-vci-elm327"].includes(interfaceId) ? "自前iPhoneコネクタの実装・実機確認待ち" : "表示確認のみ"}`,
+      `スマホ単体: ${interfaceId === "user-vci-elm327" ? "ELM327用自前iPhoneコネクタの実装済み・実機確認待ち" : interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR通信仕様確認と専用iPhoneコネクタ実装待ち" : "表示確認のみ"}`,
       `読取入口: ${selected.connectionStatus.nextAction.replace(/^読取は/, "").replace(/で確認$/, "")}`,
       `操作順: ${previewRoute}`,
       "表示項目: DTC / フリーズフレーム / ライブデータ / ECU情報 / Mode06 / 対応PID"
