@@ -18,6 +18,15 @@ targets:
     dependencies:
       - package: ELM327BLEConnector
         product: ELM327BLEConnector
+  VehicleDiagnosisELMHostTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: VehicleDiagnosisELMHost
+      - package: ELM327BLEConnector
+        product: ELM327BLEConnector
 packages:
   ELM327BLEConnector:
     path: ../ELM327BLEConnector
