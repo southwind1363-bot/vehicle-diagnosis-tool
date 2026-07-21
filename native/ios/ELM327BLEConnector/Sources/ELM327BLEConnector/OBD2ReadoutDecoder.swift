@@ -434,9 +434,27 @@ public enum OBD2ReadoutDecoder {
         case .throttlePosition:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "throttle_position", pid: "11", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .engineRuntime:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "engine_runtime", pid: "1F", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "s")
+        case .fuelLevel:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "fuel_level", pid: "2F", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .controlModuleVoltage:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "control_module_voltage", pid: "42", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V")
+        case .ambientAirTemperature:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "ambient_air_temp", pid: "46", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .timeWithMIL:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "time_with_mil", pid: "4D", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "min")
+        case .engineOilTemperature:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "engine_oil_temp", pid: "5C", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .engineFuelRate:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "engine_fuel_rate", pid: "5E", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 0.05, unit: "L/h")
         default:
             return nil
         }

@@ -37,7 +37,13 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case intakeAirTemperature
     case massAirFlow
     case throttlePosition
+    case engineRuntime
+    case fuelLevel
     case controlModuleVoltage
+    case ambientAirTemperature
+    case timeWithMIL
+    case engineOilTemperature
+    case engineFuelRate
 
     public var wireValue: String {
         switch self {
@@ -77,7 +83,13 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .intakeAirTemperature: return "010F"
         case .massAirFlow: return "0110"
         case .throttlePosition: return "0111"
+        case .engineRuntime: return "011F"
+        case .fuelLevel: return "012F"
         case .controlModuleVoltage: return "0142"
+        case .ambientAirTemperature: return "0146"
+        case .timeWithMIL: return "014D"
+        case .engineOilTemperature: return "015C"
+        case .engineFuelRate: return "015E"
         }
     }
 
@@ -92,7 +104,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "read_ecu_info"
         case .supportedPIDs, .supportedPIDs20, .supportedPIDs40: return "read_supported_pids"
-        case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .controlModuleVoltage: return "read_live_pid_snapshot"
+        case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .fuelLevel, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .engineOilTemperature, .engineFuelRate: return "read_live_pid_snapshot"
         }
     }
 
@@ -107,7 +119,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .readinessStatus: return "readiness_snapshot"
         case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "ecu_info_snapshot"
-        case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .controlModuleVoltage: return "live_pid_snapshot"
+        case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .fuelLevel, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .engineOilTemperature, .engineFuelRate: return "live_pid_snapshot"
         default: return nil
         }
     }
@@ -152,7 +164,13 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .intakeAirTemperature: return "0F"
         case .massAirFlow: return "10"
         case .throttlePosition: return "11"
+        case .engineRuntime: return "1F"
+        case .fuelLevel: return "2F"
         case .controlModuleVoltage: return "42"
+        case .ambientAirTemperature: return "46"
+        case .timeWithMIL: return "4D"
+        case .engineOilTemperature: return "5C"
+        case .engineFuelRate: return "5E"
         default: return nil
         }
     }

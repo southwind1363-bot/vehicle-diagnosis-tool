@@ -5,7 +5,7 @@ final class ELMReadCommandTests: XCTestCase {
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
         XCTAssertEqual(
             ELMReadCommand.allCases.map(\.wireValue),
-            ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "06", "020000", "020200", "020500", "020C00", "020D00", "020F00", "024200", "0900", "0904", "0906", "090A", "0100", "0120", "0140", "0101", "0104", "0106", "0107", "010B", "010C", "010D", "010E", "0105", "010F", "0110", "0111", "0142"]
+            ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "06", "020000", "020200", "020500", "020C00", "020D00", "020F00", "024200", "0900", "0904", "0906", "090A", "0100", "0120", "0140", "0101", "0104", "0106", "0107", "010B", "010C", "010D", "010E", "0105", "010F", "0110", "0111", "011F", "012F", "0142", "0146", "014D", "015C", "015E"]
         )
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains("04"))
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains(where: { $0.hasPrefix("ATZ") }))
@@ -20,7 +20,7 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertEqual(ELMReadCommand.storedDTC.intent, "read_stored_dtc")
         XCTAssertEqual(ELMReadCommand.pendingDTC.intent, "read_pending_dtc")
         XCTAssertEqual(ELMReadCommand.permanentDTC.intent, "read_permanent_dtc")
-        XCTAssertTrue([ELMReadCommand.calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .controlModuleVoltage].allSatisfy {
+        XCTAssertTrue([ELMReadCommand.calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .fuelLevel, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .engineOilTemperature, .engineFuelRate].allSatisfy {
             $0.intent == "read_live_pid_snapshot"
         })
     }
@@ -38,6 +38,7 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertEqual(ELMReadCommand.readinessStatus.readoutID, "readiness_snapshot")
         XCTAssertEqual(ELMReadCommand.engineRPM.readoutID, "live_pid_snapshot")
         XCTAssertEqual(ELMReadCommand.massAirFlow.livePID, "10")
+        XCTAssertEqual(ELMReadCommand.engineFuelRate.livePID, "5E")
         XCTAssertEqual(ELMReadCommand.supportedPIDs20.supportedPIDPageBase, "20")
         XCTAssertEqual(ELMReadCommand.supportedPIDs20.nextSupportedPIDPage, .supportedPIDs40)
         XCTAssertNil(ELMReadCommand.disableEcho.readoutID)

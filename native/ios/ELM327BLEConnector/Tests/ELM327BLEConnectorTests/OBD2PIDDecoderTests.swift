@@ -6,6 +6,12 @@ final class OBD2PIDDecoderTests: XCTestCase {
         XCTAssertEqual(OBD2PIDDecoder.decode(.engineRPM, response: "41 0C 1A F8")?.value, 1726)
         XCTAssertEqual(OBD2PIDDecoder.decode(.coolantTemperature, response: "41 05 7B")?.value, 83)
         XCTAssertEqual(OBD2PIDDecoder.decode(.controlModuleVoltage, response: "41 42 37 10")?.value, 14.096)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.engineRuntime, response: "41 1F 02 58")?.value, 600)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.fuelLevel, response: "41 2F 80")?.value, 50.19607843137255, accuracy: 0.0000001)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.ambientAirTemperature, response: "41 46 50")?.value, 40)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.timeWithMIL, response: "41 4D 00 3C")?.value, 60)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.engineOilTemperature, response: "41 5C 64")?.value, 60)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.engineFuelRate, response: "41 5E 00 64")?.value, 5)
     }
 
     func testSupportedPidBitmap() {
