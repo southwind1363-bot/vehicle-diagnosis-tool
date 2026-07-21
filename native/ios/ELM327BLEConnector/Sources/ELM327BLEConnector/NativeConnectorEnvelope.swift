@@ -183,6 +183,13 @@ public enum NativeConnectorEnvelopeFactory {
         ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID)
     }
 
+    public static func freezeFrameValue(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, value: OBD2MonitorValue) -> NativeConnectorEnvelope {
+        make(context: context, sequence: sequence, intent: "read_freeze_frame", data: [
+            "values": .array([.object(["id": .string(value.id), "pid": .string(value.pid), "value": .number(value.value), "unit": .string(value.unit), "freeze_frame_number": .number(0)])]),
+            "freeze_frame_readout_status": .string("reported")
+        ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID)
+    }
+
     public static func failedReadout(
         context: NativeConnectorSessionContext,
         sequence: Int,

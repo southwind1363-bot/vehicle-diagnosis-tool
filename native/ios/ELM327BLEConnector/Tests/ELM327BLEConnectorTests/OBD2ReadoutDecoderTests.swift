@@ -60,6 +60,18 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: "7E8 06 42 00 C0 00 00 00"), Set(["01", "02"]))
     }
 
+    func testFreezeFrameValuesRequireMatchingPidAndFrame() throws {
+        let coolant = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameCoolantTemperature, response: "7E8 04 42 05 00 5A").get()
+        XCTAssertEqual(coolant[0].scopeID, "7E8")
+        XCTAssertEqual(coolant[0].value, OBD2MonitorValue(id: "coolant_temp", pid: "05", value: 50, unit: "C"))
+        let rpm = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameEngineRPM, response: "7E8 05 42 0C 00 1A F8").get()
+        XCTAssertEqual(rpm[0].value.value, 1726)
+        switch OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameVehicleSpeed, response: "42 0C 00 00") {
+        case .failure(let error): XCTAssertEqual(error, .malformedResponse)
+        case .success: XCTFail("Expected mismatched PID rejection")
+        }
+    }
+
     private func assertDTCFailure(_ response: String, expected: OBD2ReadoutDecodeFailure, file: StaticString = #filePath, line: UInt = #line) {
         switch OBD2ReadoutDecoder.decodeDTCs(command: .storedDTC, response: response) {
         case .failure(let actual):

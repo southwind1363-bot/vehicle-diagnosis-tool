@@ -5,7 +5,7 @@ final class ELMReadCommandTests: XCTestCase {
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
         XCTAssertEqual(
             ELMReadCommand.allCases.map(\.wireValue),
-            ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "020000", "020200", "0100", "0101", "010C", "0105", "0142"]
+            ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "020000", "020200", "020500", "020C00", "020D00", "020F00", "024200", "0100", "0101", "010C", "0105", "0142"]
         )
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains("04"))
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains(where: { $0.hasPrefix("ATZ") }))

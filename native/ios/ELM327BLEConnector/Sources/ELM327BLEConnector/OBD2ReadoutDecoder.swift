@@ -111,6 +111,32 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
+    public static func decodeFreezeFrameValue(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2MonitorValue)], OBD2ReadoutDecodeFailure> {
+        guard let pid = command.freezeFramePID, pid != "02", let expectedPID = UInt8(pid, radix: 16) else { return .failure(.malformedResponse) }
+        return packets(in: response).flatMap { packets in
+            var values: [(scopeID: String?, value: OBD2MonitorValue)] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count >= 4, payload[0] == 0x42, payload[1] == expectedPID, payload[2] == 0x00 else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                let bytes = Array(payload.dropFirst(3))
+                let value: OBD2MonitorValue?
+                switch command {
+                case .freezeFrameCoolantTemperature: value = bytes.count == 1 ? OBD2MonitorValue(id: "coolant_temp", pid: pid, value: Double(Int(bytes[0]) - 40), unit: "C") : nil
+                case .freezeFrameEngineRPM: value = bytes.count == 2 ? OBD2MonitorValue(id: "engine_speed", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 4, unit: "rpm") : nil
+                case .freezeFrameVehicleSpeed: value = bytes.count == 1 ? OBD2MonitorValue(id: "vehicle_speed", pid: pid, value: Double(bytes[0]), unit: "km/h") : nil
+                case .freezeFrameIntakeAirTemperature: value = bytes.count == 1 ? OBD2MonitorValue(id: "intake_air_temp", pid: pid, value: Double(Int(bytes[0]) - 40), unit: "C") : nil
+                case .freezeFrameControlModuleVoltage: value = bytes.count == 2 ? OBD2MonitorValue(id: "control_module_voltage", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V") : nil
+                default: value = nil
+                }
+                guard let value else { return .failure(.malformedResponse) }
+                values.append((scopeID: packet.scopeID, value: value))
+            }
+            return .success(values)
+        }
+    }
+
     private struct Packet: Sendable {
         let scopeID: String?
         let payload: [UInt8]

@@ -12,6 +12,11 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case permanentDTC
     case freezeFrameCapabilities
     case freezeFrameTriggerDTC
+    case freezeFrameCoolantTemperature
+    case freezeFrameEngineRPM
+    case freezeFrameVehicleSpeed
+    case freezeFrameIntakeAirTemperature
+    case freezeFrameControlModuleVoltage
     case supportedPIDs
     case readinessStatus
     case engineRPM
@@ -31,6 +36,11 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .permanentDTC: return "0A"
         case .freezeFrameCapabilities: return "020000"
         case .freezeFrameTriggerDTC: return "020200"
+        case .freezeFrameCoolantTemperature: return "020500"
+        case .freezeFrameEngineRPM: return "020C00"
+        case .freezeFrameVehicleSpeed: return "020D00"
+        case .freezeFrameIntakeAirTemperature: return "020F00"
+        case .freezeFrameControlModuleVoltage: return "024200"
         case .supportedPIDs: return "0100"
         case .readinessStatus: return "0101"
         case .engineRPM: return "010C"
@@ -46,7 +56,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .pendingDTC: return "read_pending_dtc"
         case .permanentDTC: return "read_permanent_dtc"
         case .freezeFrameCapabilities: return "read_freeze_frame"
-        case .freezeFrameTriggerDTC: return "read_freeze_frame"
+        case .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .supportedPIDs: return "read_supported_pids"
         case .readinessStatus, .engineRPM, .coolantTemperature, .controlModuleVoltage: return "read_live_pid_snapshot"
         }
@@ -55,7 +65,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     public var readoutID: String? {
         switch self {
         case .readinessStatus: return "readiness_snapshot"
-        case .freezeFrameCapabilities, .freezeFrameTriggerDTC: return "freeze_frame_snapshot"
+        case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .engineRPM, .coolantTemperature, .controlModuleVoltage: return "live_pid_snapshot"
         default: return nil
         }
@@ -71,8 +81,20 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     public var timeout: TimeInterval {
         switch self {
         case .storedDTC: return 12
-        case .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .freezeFrameTriggerDTC, .readinessStatus: return 8
+        case .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .readinessStatus: return 8
         default: return 4
+        }
+    }
+
+    public var freezeFramePID: String? {
+        switch self {
+        case .freezeFrameTriggerDTC: return "02"
+        case .freezeFrameCoolantTemperature: return "05"
+        case .freezeFrameEngineRPM: return "0C"
+        case .freezeFrameVehicleSpeed: return "0D"
+        case .freezeFrameIntakeAirTemperature: return "0F"
+        case .freezeFrameControlModuleVoltage: return "42"
+        default: return nil
         }
     }
 }
