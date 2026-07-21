@@ -130,6 +130,50 @@
     ])
   });
 
+  // Future state-changing trials stay local and owner-only until a dedicated transport exists.
+  const serviceExperimentContract = Object.freeze({
+    id: "service_experiment_contract_v1",
+    status: "owner-experiment-contract-only",
+    publicExecutionEnabled: false,
+    ownerExperimentExecutionEnabled: false,
+    executionTransportImplemented: false,
+    requiresLocalWorker: true,
+    requiresExplicitVehicleAndEcuApplicability: true,
+    requiresDedicatedTestVehicle: true,
+    requiresOperationAllowlist: true,
+    requiresBeforeAfterEvidence: true,
+    requiresAbortAndRecoveryPlan: true,
+    prohibitsPublicRemoteExecution: true,
+    prohibitedUntilIndividuallyImplemented: Object.freeze([
+      "unverified_manufacturer_specific_commands",
+      "security_access",
+      "programming_or_coding",
+      "automatic_device_selection",
+      "background_or_unattended_execution"
+    ]),
+    requiredEvidence: Object.freeze([
+      "owner_authentication",
+      "vehicle_and_ecu_applicability",
+      "pre_operation_scan_saved",
+      "operation_specific_preconditions",
+      "explicit_confirmation",
+      "before_after_evidence",
+      "abort_and_recovery_plan",
+      "transport_and_protocol_qualification"
+    ]),
+    auditFields: Object.freeze([
+      "operation_id",
+      "vehicle_context_id",
+      "ecu_identity",
+      "vci_identity",
+      "operator_confirmation",
+      "pre_operation_session_id",
+      "post_operation_session_id",
+      "outcome",
+      "recovery_outcome"
+    ])
+  });
+
   const mobileReadoutTransportPlan = Object.freeze([
     Object.freeze({
       id: "android_chrome_ble_gatt",
@@ -947,6 +991,15 @@
     return (serviceOperationReadinessRequirements[operationId] || []).map((item) => ({ ...item }));
   }
 
+  function getServiceExperimentContract() {
+    return {
+      ...serviceExperimentContract,
+      prohibitedUntilIndividuallyImplemented: [...serviceExperimentContract.prohibitedUntilIndividuallyImplemented],
+      requiredEvidence: [...serviceExperimentContract.requiredEvidence],
+      auditFields: [...serviceExperimentContract.auditFields]
+    };
+  }
+
   function buildServiceOperationReadiness(operationId, evidence = {}) {
     const operation = vehicleOperationPlan.find((item) => item.id === operationId) || null;
     const requirements = getServiceOperationReadinessRequirements(operationId);
@@ -972,6 +1025,12 @@
       completed_count: checks.length - missingRequirementIds.length,
       totalCount: checks.length,
       total_count: checks.length,
+      executionScope: operation?.commandClass === "state-changing" ? "owner-experiment-only" : "not-applicable",
+      execution_scope: operation?.commandClass === "state-changing" ? "owner-experiment-only" : "not_applicable",
+      ownerExperimentEligibleForImplementation: operation?.commandClass === "state-changing" && missingRequirementIds.length === 0,
+      owner_experiment_eligible_for_implementation: operation?.commandClass === "state-changing" && missingRequirementIds.length === 0,
+      publicExecutionEnabled: false,
+      public_execution_enabled: false,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
       executionEnabled: false,
@@ -20771,6 +20830,7 @@
     getEcuInfoItems,
     getVehicleOperationPlan,
     getServiceOperationReadinessRequirements,
+    getServiceExperimentContract,
     buildServiceOperationReadiness,
     getMobileReadoutTransportPlan,
     evaluateMobileReadoutTransport,
