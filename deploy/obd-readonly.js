@@ -1602,7 +1602,7 @@
       read_pending_dtc: ["dtcs", "codes"],
       read_permanent_dtc: ["dtcs", "codes"],
       read_freeze_frame: ["monitor_values", "monitorValues", "items"],
-      read_supported_pids: ["supported_pids", "supportedPids", "pids"],
+      read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
       read_onboard_monitor: ["tests", "items"],
       read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
@@ -3176,6 +3176,27 @@
       : [];
   }
 
+  function normalizeSupportedPidCode(value) {
+    const raw = String(value?.pid || value?.code || value?.id || value?.pid_code || value?.pidCode || value?.pid_id || value?.pidId || value?.value || value || "")
+      .trim()
+      .toUpperCase()
+      .replace(/^0X/, "");
+    return /^[0-9A-F]{1,2}$/.test(raw) ? raw.padStart(2, "0") : null;
+  }
+
+  function hasBridgeSupportedPidSnapshotEvidence(rows = []) {
+    return Array.isArray(rows) && rows.some((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+      const hasPid = collectBridgeSupportedPids(row).some((pid) => Boolean(normalizeSupportedPidCode(pid)));
+      const pageRows = row.supported_pid_page_bases || row.supportedPidPageBases || row.queried_pid_bases || row.queriedPidBases || [];
+      const hasPage = (Array.isArray(pageRows) ? pageRows : [pageRows]).some((page) => {
+        const normalized = normalizeSupportedPidCode(page?.pid || page?.base || page?.value || page);
+        return normalized && isSupportedPidBase(parseInt(normalized, 16));
+      });
+      return hasPid || hasPage;
+    });
+  }
+
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
     const data = response && typeof response === "object"
       ? response.data && typeof response.data === "object"
@@ -3186,6 +3207,7 @@
         : response
       : {};
     const supportedPids = collectBridgeSupportedPids(data);
+    const supportedPidEcuSnapshots = data.supported_pid_ecu_snapshots || data.supportedPidEcuSnapshots || data.ecu_snapshots || data.ecuSnapshots || [];
     const supportedPidPageBases = data.supported_pid_page_bases
       || data.supportedPidPageBases
       || data.queried_pid_bases
@@ -3193,8 +3215,14 @@
       || data.supported_pid_pages
       || data.supportedPidPages
       || [];
-    const bridgeSafety = readBridgeSnapshotSafety(response, [data.supported_pids, data.supportedPids, data.pids, data.pid_list, data.pidList, data.supportedPidRows].some(Array.isArray));
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const bridgeSafety = readBridgeSnapshotSafety(
+      response,
+      errorCodes.length === 0 && (
+        [data.supported_pids, data.supportedPids, data.pids, data.pid_list, data.pidList, data.supportedPidRows].some(Array.isArray)
+        || hasBridgeSupportedPidSnapshotEvidence(supportedPidEcuSnapshots)
+      )
+    );
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
@@ -3204,7 +3232,7 @@
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       supported_pid_page_bases: supportedPidPageBases,
       supported_pids: supportedPids,
-      supported_pid_ecu_snapshots: data.supported_pid_ecu_snapshots || data.supportedPidEcuSnapshots || data.ecu_snapshots || data.ecuSnapshots || []
+      supported_pid_ecu_snapshots: supportedPidEcuSnapshots
       }),
       intent: "read_supported_pids",
       ok: bridgeSafety.ok,
@@ -18788,30 +18816,8 @@
                           : typeof sourceInput.supportedPidsText === "string"
                             ? sourceInput.supportedPidsText.split(/[\s,;|/]+/)
                             : [];
-    const supported = new Set(supportedRows
-      .map((pid) => {
-        if (pid && typeof pid === "object") {
-          return String(pid.pid || pid.code || pid.id || pid.pid_code || pid.pidCode || pid.pid_id || pid.pidId || pid.value || "").toUpperCase().replace(/^0X/, "").padStart(2, "0");
-        }
-        return String(pid).toUpperCase().replace(/^0X/, "").padStart(2, "0");
-      })
-      .filter(Boolean));
-    const items = monitorDefinitions
-      .filter((definition) => definition.service === "01" && definition.pid)
-      .map((definition) => ({
-        id: definition.id,
-        label: definition.label,
-        service: definition.service,
-        pid: definition.pid,
-        unit: definition.unit,
-        category: definition.category,
-        supported: supported.has(String(definition.pid).toUpperCase()),
-        scope: definition.scope,
-        supportNote: definition.supportNote
-      }));
-
+    const supported = new Set(supportedRows.map(normalizeSupportedPidCode).filter(Boolean));
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
-    const supportedPids = [...supported];
     const supportedPidPageBasesInput = sourceInput.supportedPidPageBases
       || sourceInput.supported_pid_page_bases
       || sourceInput.queriedPidBases
@@ -18819,24 +18825,9 @@
       || sourceInput.supportedPidPages
       || sourceInput.supported_pid_pages
       || [];
-    const supportedPidPageBases = [...new Set((Array.isArray(supportedPidPageBasesInput) ? supportedPidPageBasesInput : [supportedPidPageBasesInput])
-      .map((value) => String(value?.pid || value?.base || value?.value || value || "").trim().toUpperCase().replace(/^0X/, ""))
-      .filter((value) => /^[0-9A-F]{1,2}$/.test(value))
-      .map((value) => value.padStart(2, "0"))
-      .filter((value) => isSupportedPidBase(parseInt(value, 16)))
-    )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
-    const supportedPidPageSummary = {
-      schemaVersion: "supported_pid_page_summary_v1",
-      schema_version: "supported_pid_page_summary_v1",
-      pageBases: supportedPidPageBases,
-      page_bases: supportedPidPageBases,
-      pageCount: supportedPidPageBases.length,
-      page_count: supportedPidPageBases.length
-    };
-    const supportedCount = items.filter((item) => item.supported).length;
-    const unsupportedCount = items.filter((item) => !item.supported).length;
-    const knownPidCount = items.length;
-    const readoutStatus = sourceInput.supportedPidReadoutStatus || sourceInput.supported_pid_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (supportedPids.length ? "reported" : "unknown");
+    const supportedPidPageBaseSet = new Set((Array.isArray(supportedPidPageBasesInput) ? supportedPidPageBasesInput : [supportedPidPageBasesInput])
+      .map(normalizeSupportedPidCode)
+      .filter((value) => value && isSupportedPidBase(parseInt(value, 16))));
     const ecuSnapshotRows = Array.isArray(sourceInput.supportedPidEcuSnapshots)
       ? sourceInput.supportedPidEcuSnapshots
       : Array.isArray(sourceInput.supported_pid_ecu_snapshots)
@@ -18857,13 +18848,11 @@
           : Array.isArray(row.pids)
             ? row.pids
             : [];
-      const pids = [...new Set(pidRows.map((pid) => String(pid?.pid || pid?.code || pid?.id || pid?.value || pid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0")).filter(Boolean))];
+      const pids = [...new Set(pidRows.map(normalizeSupportedPidCode).filter(Boolean))];
       const pageRows = row.supportedPidPageBases || row.supported_pid_page_bases || row.queriedPidBases || row.queried_pid_bases || [];
       const pageBases = [...new Set((Array.isArray(pageRows) ? pageRows : [pageRows])
-        .map((value) => String(value?.pid || value?.base || value?.value || value || "").trim().toUpperCase().replace(/^0X/, ""))
-        .filter((value) => /^[0-9A-F]{1,2}$/.test(value))
-        .map((value) => value.padStart(2, "0"))
-        .filter((value) => isSupportedPidBase(parseInt(value, 16)))
+        .map(normalizeSupportedPidCode)
+        .filter((value) => value && isSupportedPidBase(parseInt(value, 16)))
       )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
       const status = row.supportedPidReadoutStatus || row.supported_pid_readout_status || (pids.length || pageBases.length ? "reported" : "unknown");
       return {
@@ -18880,6 +18869,37 @@
       };
     };
     const supportedPidEcuSnapshots = ecuSnapshotRows.map(normalizeEcuSnapshot).filter(Boolean);
+    supportedPidEcuSnapshots.forEach((snapshot) => {
+      snapshot.supportedPids.forEach((pid) => supported.add(pid));
+      snapshot.supportedPidPageBases.forEach((page) => supportedPidPageBaseSet.add(page));
+    });
+    const supportedPids = [...supported];
+    const supportedPidPageBases = [...supportedPidPageBaseSet].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
+    const items = monitorDefinitions
+      .filter((definition) => definition.service === "01" && definition.pid)
+      .map((definition) => ({
+        id: definition.id,
+        label: definition.label,
+        service: definition.service,
+        pid: definition.pid,
+        unit: definition.unit,
+        category: definition.category,
+        supported: supported.has(String(definition.pid).toUpperCase()),
+        scope: definition.scope,
+        supportNote: definition.supportNote
+      }));
+    const supportedPidPageSummary = {
+      schemaVersion: "supported_pid_page_summary_v1",
+      schema_version: "supported_pid_page_summary_v1",
+      pageBases: supportedPidPageBases,
+      page_bases: supportedPidPageBases,
+      pageCount: supportedPidPageBases.length,
+      page_count: supportedPidPageBases.length
+    };
+    const supportedCount = items.filter((item) => item.supported).length;
+    const unsupportedCount = items.filter((item) => !item.supported).length;
+    const knownPidCount = items.length;
+    const readoutStatus = sourceInput.supportedPidReadoutStatus || sourceInput.supported_pid_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (supportedPids.length || supportedPidPageBases.length ? "reported" : "unknown");
     if (!supportedPidEcuSnapshots.length && sourceEcu) {
       supportedPidEcuSnapshots.push({
         sourceEcu,
