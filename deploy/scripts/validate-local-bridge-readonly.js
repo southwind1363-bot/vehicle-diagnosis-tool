@@ -166,6 +166,7 @@ try {
   const parsedJ2534Drivers = parseJ2534RegistryDrivers(j2534RegistryText);
   check(parsedJ2534Drivers.length === 2 && parsedJ2534Drivers[0]?.label === "Example J2534 VCI" && parsedJ2534Drivers[1]?.label === "Other Vendor", "J2534 registry parser did not retain safe driver labels");
   check(parsedJ2534Drivers.every((item) => item.driver_status === "j2534_registry_detected" && item.connected === false && item.vehicle_command_enabled === false), "J2534 registry parser did not preserve read-only driver detection state");
+  check(parsedJ2534Drivers.every((item) => /^j2534-[0-9a-f]{16}$/.test(item.id) && item.driver_readonly_api_ready === false && item.driver_restricted_apis.includes("PassThruSetProgrammingVoltage")), "J2534 registry parser did not expose a stable disabled read-only host profile");
   check(!JSON.stringify(parsedJ2534Drivers).includes("C:\\Program Files"), "J2534 registry parser exposed a local driver path");
   const j2534PeFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle-diagnosis-j2534-"));
   try {
@@ -182,8 +183,8 @@ try {
     const arm64Inspection = inspectJ2534LibraryFile(arm64LibraryPath);
     const invalidInspection = inspectJ2534LibraryFile(invalidLibraryPath);
     const missingInspection = inspectJ2534LibraryFile(path.join(j2534PeFixtureDir, "missing.dll"));
-    check(x86Inspection.inspection_status === "inspected" && x86Inspection.pe_architecture === "x86" && x86Inspection.pe_bitness === 32 && x86Inspection.required_api_ready === true && x86Inspection.detected_required_api_count === 14, "J2534 PE inspection did not recognize a complete decorated 32-bit API export set");
-    check(x64Inspection.inspection_status === "inspected" && x64Inspection.pe_architecture === "x64" && x64Inspection.pe_bitness === 64 && x64Inspection.required_api_ready === false && x64Inspection.missing_required_apis.includes("PassThruConnect"), "J2534 PE inspection did not report missing 64-bit API exports");
+    check(x86Inspection.inspection_status === "inspected" && x86Inspection.pe_architecture === "x86" && x86Inspection.pe_bitness === 32 && x86Inspection.required_api_ready === true && x86Inspection.readonly_api_ready === true && x86Inspection.detected_required_api_count === 14 && x86Inspection.detected_readonly_api_count === 10, "J2534 PE inspection did not recognize a complete decorated 32-bit read-only API export set");
+    check(x64Inspection.inspection_status === "inspected" && x64Inspection.pe_architecture === "x64" && x64Inspection.pe_bitness === 64 && x64Inspection.required_api_ready === false && x64Inspection.readonly_api_ready === false && x64Inspection.missing_required_apis.includes("PassThruConnect") && x64Inspection.missing_readonly_apis.includes("PassThruConnect"), "J2534 PE inspection did not report missing 64-bit read-only API exports");
     check(arm64Inspection.pe_architecture === "arm64" && arm64Inspection.pe_bitness === 64 && arm64Inspection.required_api_ready === true, "J2534 PE inspection did not recognize an ARM64 library");
     check(invalidInspection.inspection_status === "invalid_pe" && missingInspection.inspection_status === "file_not_found" && x86Inspection.vehicle_command_enabled === false && !JSON.stringify(x86Inspection).includes(j2534PeFixtureDir), "J2534 PE inspection did not safely reject invalid input or exposed its local path");
     const inspectedRegistryDrivers = parseJ2534RegistryDrivers([
@@ -192,7 +193,7 @@ try {
       "    Vendor    REG_SZ    Fixture Vendor",
       `    FunctionLibrary    REG_SZ    ${x86LibraryPath}`
     ].join("\n"), { inspectLibraries: true });
-    check(inspectedRegistryDrivers[0]?.driver_library_architecture === "x86" && inspectedRegistryDrivers[0]?.driver_library_bitness === 32 && inspectedRegistryDrivers[0]?.driver_required_api_ready === true && inspectedRegistryDrivers[0]?.driver_detected_required_api_count === 14, "J2534 registry discovery did not attach safe DLL compatibility metadata");
+    check(inspectedRegistryDrivers[0]?.driver_library_architecture === "x86" && inspectedRegistryDrivers[0]?.driver_library_bitness === 32 && inspectedRegistryDrivers[0]?.driver_required_api_ready === true && inspectedRegistryDrivers[0]?.driver_readonly_api_ready === true && inspectedRegistryDrivers[0]?.driver_detected_required_api_count === 14 && inspectedRegistryDrivers[0]?.driver_detected_readonly_api_count === 10, "J2534 registry discovery did not attach safe DLL compatibility metadata");
     check(!JSON.stringify(inspectedRegistryDrivers).includes(x86LibraryPath) && inspectedRegistryDrivers[0]?.vehicle_command_enabled === false, "J2534 registry discovery exposed a DLL path or enabled vehicle commands");
   } finally {
     fs.rmSync(j2534PeFixtureDir, { recursive: true, force: true });

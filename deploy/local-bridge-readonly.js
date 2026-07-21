@@ -1,4 +1,5 @@
 import http from "node:http";
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -26,6 +27,25 @@ const J2534_REQUIRED_API_NAMES = Object.freeze([
   "PassThruSetProgrammingVoltage",
   "PassThruReadVersion",
   "PassThruGetLastError",
+  "PassThruIoctl"
+]);
+// v1 can only issue whitelisted diagnostic read queries through a separate worker.
+const J2534_READONLY_REQUIRED_API_NAMES = Object.freeze([
+  "PassThruOpen",
+  "PassThruClose",
+  "PassThruConnect",
+  "PassThruDisconnect",
+  "PassThruReadMsgs",
+  "PassThruWriteMsgs",
+  "PassThruStartMsgFilter",
+  "PassThruStopMsgFilter",
+  "PassThruReadVersion",
+  "PassThruGetLastError"
+]);
+const J2534_RESTRICTED_API_NAMES = Object.freeze([
+  "PassThruStartPeriodicMsg",
+  "PassThruStopPeriodicMsg",
+  "PassThruSetProgrammingVoltage",
   "PassThruIoctl"
 ]);
 const REPLAY_RESPONSE_SERVICES = new Set([0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F]);
@@ -500,7 +520,7 @@ export function parseJ2534RegistryDrivers(text = "", options = {}) {
     const label = current.name || current.vendor || "J2534 Pass-Thru";
     const libraryInspection = options.inspectLibraries === true ? inspectJ2534LibraryFile(current.functionLibrary) : null;
     rows.push({
-      id: `j2534-registry-${rows.length + 1}`,
+      id: createStableJ2534DeviceId(current),
       label,
       vendor: current.vendor || "unknown",
       adapter_family: "j2534_passthru",
@@ -514,6 +534,11 @@ export function parseJ2534RegistryDrivers(text = "", options = {}) {
       driver_detected_required_api_count: libraryInspection?.detected_required_api_count || 0,
       driver_missing_required_apis: libraryInspection?.missing_required_apis || [],
       driver_required_api_ready: libraryInspection?.required_api_ready === true,
+      driver_readonly_required_api_count: libraryInspection?.readonly_required_api_count || J2534_READONLY_REQUIRED_API_NAMES.length,
+      driver_detected_readonly_api_count: libraryInspection?.detected_readonly_api_count || 0,
+      driver_missing_readonly_apis: libraryInspection?.missing_readonly_apis || [],
+      driver_readonly_api_ready: libraryInspection?.readonly_api_ready === true,
+      driver_restricted_apis: [...J2534_RESTRICTED_API_NAMES],
       sample_mode: false,
       replay_mode: false,
       connected: false,
@@ -524,7 +549,7 @@ export function parseJ2534RegistryDrivers(text = "", options = {}) {
   String(text || "").split(/\r?\n/).forEach((line) => {
     if (/^HKEY_LOCAL_MACHINE\\/i.test(line.trim())) {
       appendCurrent();
-      current = { name: "", vendor: "", functionLibrary: "" };
+      current = { registryKey: line.trim(), name: "", vendor: "", functionLibrary: "" };
       return;
     }
     if (!current) return;
@@ -535,6 +560,14 @@ export function parseJ2534RegistryDrivers(text = "", options = {}) {
   });
   appendCurrent();
   return rows;
+}
+
+function createStableJ2534DeviceId(driver = {}) {
+  const identity = [driver.registryKey, driver.vendor, driver.name, driver.functionLibrary]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .join("\u0000");
+  const digest = createHash("sha256").update(identity).digest("hex").slice(0, 16);
+  return `j2534-${digest}`;
 }
 
 export function inspectJ2534LibraryFile(filePath = "") {
@@ -548,6 +581,12 @@ export function inspectJ2534LibraryFile(filePath = "") {
     detected_required_apis: [],
     missing_required_apis: [...J2534_REQUIRED_API_NAMES],
     required_api_ready: false,
+    readonly_required_api_count: J2534_READONLY_REQUIRED_API_NAMES.length,
+    detected_readonly_api_count: 0,
+    detected_readonly_apis: [],
+    missing_readonly_apis: [...J2534_READONLY_REQUIRED_API_NAMES],
+    readonly_api_ready: false,
+    restricted_apis: [...J2534_RESTRICTED_API_NAMES],
     vehicle_command_enabled: false
   };
   const resolvedPath = String(filePath || "").trim();
@@ -563,6 +602,8 @@ export function inspectJ2534LibraryFile(filePath = "") {
     const normalizedExports = new Set(metadata.exportNames.map(normalizePeExportName));
     const detectedRequiredApis = J2534_REQUIRED_API_NAMES.filter((name) => normalizedExports.has(name));
     const missingRequiredApis = J2534_REQUIRED_API_NAMES.filter((name) => !normalizedExports.has(name));
+    const detectedReadonlyApis = J2534_READONLY_REQUIRED_API_NAMES.filter((name) => normalizedExports.has(name));
+    const missingReadonlyApis = J2534_READONLY_REQUIRED_API_NAMES.filter((name) => !normalizedExports.has(name));
     return {
       ...base,
       inspection_status: "inspected",
@@ -572,7 +613,11 @@ export function inspectJ2534LibraryFile(filePath = "") {
       detected_required_api_count: detectedRequiredApis.length,
       detected_required_apis: detectedRequiredApis,
       missing_required_apis: missingRequiredApis,
-      required_api_ready: missingRequiredApis.length === 0
+      required_api_ready: missingRequiredApis.length === 0,
+      detected_readonly_api_count: detectedReadonlyApis.length,
+      detected_readonly_apis: detectedReadonlyApis,
+      missing_readonly_apis: missingReadonlyApis,
+      readonly_api_ready: missingReadonlyApis.length === 0
     };
   } catch (error) {
     return {
