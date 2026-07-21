@@ -2781,10 +2781,10 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.4.1";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-22";'), "OBD app should retain typed scanner text live PID snapshots");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && appSource.includes('const APP_VERSION = "3.4.2";') && appSource.includes('const APP_LAST_UPDATED = "2026-07-22";'), "OBD app should retain typed scanner text live PID snapshots");
 check(appSource.includes('if (isMobileDevice()) return "user-vci-elm327";') && appSource.includes('スマホ用 ELM327 を優先') && !appSource.includes('if (isMobileDevice()) return "user-vci-thinkcar-bluetooth";'), "Mobile automatic interface selection should prioritize ELM327 without claiming direct iPhone transport");
 check(appSource.includes('window.ObdReadOnly.getElmTransportProfile({ platform: "ios" })') && appSource.includes('profile.adapterTransport} / ${profile.compatibilityStatus} / ${profile.connectorStatus}'), "iPhone ELM connection guide should expose the unverified transport profile");
-check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.4.1";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.4.1", "OBD offline cache version should match the active app version");
+check(fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8").includes('const CACHE_VERSION = "3.4.2";') && JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8")).version === "3.4.2", "OBD offline cache version should match the active app version");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
 check(dtcStandardsReference.some((item) => item.id === "sae-j2012da-current-2025-10" && item.title.includes("J2012DA_202510") && item.last_verified_date === "2026-07-18" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J2012DA source verification is missing");
@@ -12205,6 +12205,28 @@ check(mixedEcuReadinessSession.readinessSnapshot?.readinessReadoutStatus === "re
 const readinessStatusBytesSourceSession = obd.buildDiagnosticScanSession({ readiness_snapshot: { readiness_status_bytes: { a: "0x81", b: 7, c: "22", d: 0 }, monitors: [] } });
 const reimportedReadinessStatusBytesSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(readinessStatusBytesSourceSession) }));
 check(readinessStatusBytesSourceSession.readinessSnapshot?.readinessStatusBytes?.a === "81" && readinessStatusBytesSourceSession.readinessSnapshot?.readiness_status_bytes?.b === "07" && reimportedReadinessStatusBytesSession?.readinessSnapshot?.readinessStatusBytes?.c === "22" && reimportedReadinessStatusBytesSession?.readinessSnapshot?.readiness_status_bytes?.d === "00" && reimportedReadinessStatusBytesSession?.vehicleCommandEnabled === false, "Readiness status bytes were not retained through read-only export and JSON reimport");
+const nativeReadinessStatusBytesSnapshot = obd.normalizeReadinessSnapshot({
+  source: "native_connector",
+  source_ecu: "7E8",
+  readiness_readout_status: "reported",
+  readiness_status_byte_a: 0,
+  readiness_status_byte_b: 7,
+  readiness_status_byte_c: 33,
+  readiness_status_byte_d: 32,
+  readiness_ignition_type: "spark",
+  monitors: []
+});
+const reimportedNativeReadinessStatusBytesSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readinessSnapshot: nativeReadinessStatusBytesSnapshot }))
+}));
+const explicitReadinessMonitorSnapshot = obd.normalizeReadinessSnapshot({
+  readiness_readout_status: "reported",
+  readiness_status_byte_b: 7,
+  readiness_status_byte_c: 33,
+  readiness_status_byte_d: 32,
+  monitors: [{ id: "catalyst", supported: true, complete: false }]
+});
+check(nativeReadinessStatusBytesSnapshot.readinessIgnitionType === "spark" && nativeReadinessStatusBytesSnapshot.monitors.some((item) => item.id === "catalyst" && item.supported === true && item.complete === true) && nativeReadinessStatusBytesSnapshot.monitors.some((item) => item.id === "oxygen_sensor" && item.supported === true && item.complete === false) && nativeReadinessStatusBytesSnapshot.incompleteCount === 1 && explicitReadinessMonitorSnapshot.monitorCount === 1 && explicitReadinessMonitorSnapshot.monitors[0]?.id === "catalyst" && explicitReadinessMonitorSnapshot.monitors[0]?.complete === false && reimportedNativeReadinessStatusBytesSession?.readinessSnapshot?.monitors?.some((item) => item.id === "oxygen_sensor" && item.complete === false) && reimportedNativeReadinessStatusBytesSession?.vehicleCommandEnabled === false, "Native readiness status bytes did not restore monitor completion without overwriting explicit values or the read-only session contract");
 check(obd.normalizeReadinessSnapshot({ readiness_readout_status: "reported", readiness_ignition_type: "compression", monitors: [] }).readinessIgnitionType === "compression" && obd.normalizeReadinessSnapshot({ readiness_readout_status: "reported", ignitionType: "spark", monitors: [] }).readiness_ignition_type === "spark" && obd.normalizeReadinessSnapshot({ readiness_readout_status: "reported", ignition_type: "compression", monitors: [] }).readinessIgnitionType === "compression" && obd.normalizeReadinessSnapshot({ readiness_readout_status: "unparsed", readiness_ignition_type: "spark", monitors: [] }).readinessIgnitionType === null, "Readiness ignition layout aliases should require a reported readout");
 const readinessIgnitionAliasSession = obd.buildDiagnosticScanSession({ readiness_snapshot: { readiness_readout_status: "reported", ignition_type: "compression", monitors: [] } });
 const reimportedReadinessIgnitionAliasSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(readinessIgnitionAliasSession) });
