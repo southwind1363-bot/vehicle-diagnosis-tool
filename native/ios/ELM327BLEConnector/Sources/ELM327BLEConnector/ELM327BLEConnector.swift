@@ -359,7 +359,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .fuelLevel, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .engineOilTemperature, .engineFuelRate:
+            case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .distanceWithMIL, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .engineOilTemperature, .engineFuelRate:
                 switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
                 case .success(let results):
                     results.forEach { result in

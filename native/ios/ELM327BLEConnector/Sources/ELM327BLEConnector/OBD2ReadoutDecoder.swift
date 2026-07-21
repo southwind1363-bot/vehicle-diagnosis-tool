@@ -410,6 +410,9 @@ public enum OBD2ReadoutDecoder {
         case .longTermFuelTrimBank1:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "ltft_b1", pid: "07", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
+        case .fuelPressure:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "fuel_pressure", pid: "0A", value: Double(bytes[0]) * 3, unit: "kPa")
         case .manifoldAbsolutePressure:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "map", pid: "0B", value: Double(bytes[0]), unit: "kPa")
@@ -437,9 +440,21 @@ public enum OBD2ReadoutDecoder {
         case .engineRuntime:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "engine_runtime", pid: "1F", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "s")
+        case .distanceWithMIL:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "distance_with_mil", pid: "21", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "km")
         case .fuelLevel:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "fuel_level", pid: "2F", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .warmupsSinceClear:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "warmups_since_clear", pid: "30", value: Double(bytes[0]), unit: "count")
+        case .distanceSinceClear:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "distance_since_clear", pid: "31", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "km")
+        case .barometricPressure:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "barometric_pressure", pid: "33", value: Double(bytes[0]), unit: "kPa")
         case .controlModuleVoltage:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "control_module_voltage", pid: "42", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V")
@@ -449,6 +464,9 @@ public enum OBD2ReadoutDecoder {
         case .timeWithMIL:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "time_with_mil", pid: "4D", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "min")
+        case .timeSinceClear:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "time_since_clear", pid: "4E", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "min")
         case .engineOilTemperature:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "engine_oil_temp", pid: "5C", value: Double(Int(bytes[0]) - 40), unit: "C")
