@@ -81,6 +81,20 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
+    public static func decodeFreezeFrameTriggerDTC(response: String) -> Result<[(scopeID: String?, code: String?)], OBD2ReadoutDecodeFailure> {
+        packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, code: String?)] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count == 5, payload[0] == 0x42, payload[1] == 0x02, payload[2] == 0x00 else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                decoded.append((scopeID: packet.scopeID, code: payload[3] == 0 && payload[4] == 0 ? nil : dtcCode(high: payload[3], low: payload[4])))
+            }
+            return .success(decoded)
+        }
+    }
+
     private struct Packet: Sendable {
         let scopeID: String?
         let payload: [UInt8]

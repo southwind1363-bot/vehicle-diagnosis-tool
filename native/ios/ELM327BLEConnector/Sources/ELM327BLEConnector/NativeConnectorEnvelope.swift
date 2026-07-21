@@ -174,6 +174,15 @@ public enum NativeConnectorEnvelopeFactory {
         )
     }
 
+    public static func freezeFrameTriggerDTC(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, code: String?) -> NativeConnectorEnvelope {
+        make(context: context, sequence: sequence, intent: "read_freeze_frame", data: [
+            "trigger_dtc": code.map { .string($0) } ?? .null,
+            "trigger_dtc_entries": .array(code.map { [.object(["code": .string($0)])] } ?? []),
+            "values": .array([]),
+            "freeze_frame_readout_status": .string("reported")
+        ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID)
+    }
+
     public static func failedReadout(
         context: NativeConnectorSessionContext,
         sequence: Int,

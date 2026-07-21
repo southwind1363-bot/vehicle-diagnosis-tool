@@ -176,6 +176,16 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
+            case .freezeFrameTriggerDTC:
+                switch OBD2ReadoutDecoder.decodeFreezeFrameTriggerDTC(response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: result.scopeID, code: result.code))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
             case .supportedPIDs:
                 sequence += 1
                 delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, pids: OBD2PIDDecoder.supportedPIDs(response: response)))

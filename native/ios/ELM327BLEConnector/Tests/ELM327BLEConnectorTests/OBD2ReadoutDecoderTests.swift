@@ -48,6 +48,12 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(result[0].status.ignitionType, "spark")
     }
 
+    func testFreezeFrameTriggerDTCRequiresFrameZeroAndPreservesScope() throws {
+        let result = try OBD2ReadoutDecoder.decodeFreezeFrameTriggerDTC(response: "7E8 05 42 02 00 01 71").get()
+        XCTAssertEqual(result[0].scopeID, "7E8")
+        XCTAssertEqual(result[0].code, "P0171")
+    }
+
     private func assertDTCFailure(_ response: String, expected: OBD2ReadoutDecodeFailure, file: StaticString = #filePath, line: UInt = #line) {
         switch OBD2ReadoutDecoder.decodeDTCs(command: .storedDTC, response: response) {
         case .failure(let actual):
