@@ -26,7 +26,6 @@ public struct NativeConnectorScanArchive: Codable, Sendable, Equatable {
     }
 }
 
-@MainActor
 public final class NativeConnectorScanArchiveBuilder {
     private static let allowedIntents: Set<String> = [
         "adapter_identity",

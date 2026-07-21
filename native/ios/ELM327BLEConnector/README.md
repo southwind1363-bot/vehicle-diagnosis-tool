@@ -11,6 +11,7 @@ This Swift package is the product-owned iPhone connection layer for BLE GATT ELM
 - Prompt-delimited response handling with a four-second per-command timeout and no automatic retry.
 - Typed `native_connector_contract_v1` envelopes plus a separate terminal `native_connector_completion_manifest_v1` record for the existing diagnostic-session importer.
 - `NativeConnectorScanArchiveBuilder` keeps one structured, in-memory scan boundary and exports only `{ envelopes, completion_manifest }`. It rejects raw transport strings, write intents, unsafe flags, mixed scan boundaries, sequence gaps, and terminal count/range mismatches.
+- `NativeConnectorReadoutCoordinator` is the host-app boundary: it manages BLE candidate selection, read-characteristic configuration, the fixed initial readout, archive completion, and export. Archive validation failure disconnects without exposing an export.
 
 ## Safety boundary
 
