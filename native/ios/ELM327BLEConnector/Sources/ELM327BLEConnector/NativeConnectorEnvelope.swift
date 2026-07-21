@@ -190,6 +190,13 @@ public enum NativeConnectorEnvelopeFactory {
         ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID)
     }
 
+    public static func ecuInfo(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, id: String, infoType: String, value: String) -> NativeConnectorEnvelope {
+        make(context: context, sequence: sequence, intent: "read_ecu_info", data: [
+            "items": .array([.object(["id": .string(id), "service": .string("09"), "info_type": .string(infoType), "value": .string(value), "source_ecu": scopeID.map { .string($0) } ?? .null])]),
+            "ecu_info_readout_status": .string("reported")
+        ], readoutID: "ecu_info_snapshot", readoutScopeID: scopeID)
+    }
+
     public static func failedReadout(
         context: NativeConnectorSessionContext,
         sequence: Int,

@@ -47,6 +47,7 @@ public final class ELM327BLEConnector: NSObject {
     private var protocolHint: String?
     private var freezeFrameSupportedPIDs = Set<String>()
     private var liveSupportedPIDs = Set<String>()
+    private var mode09EcuNameScopes = Set<String>()
 
     public override init() {
         super.init()
@@ -104,7 +105,8 @@ public final class ELM327BLEConnector: NSObject {
         protocolHint = nil
         freezeFrameSupportedPIDs.removeAll()
         liveSupportedPIDs.removeAll()
-        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .engineRPM, .coolantTemperature, .controlModuleVoltage].contains($0) }
+        mode09EcuNameScopes.removeAll()
+        pendingCommands = ELMReadCommand.allCases.filter { ![.freezeFrameTriggerDTC, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameControlModuleVoltage, .engineRPM, .coolantTemperature, .controlModuleVoltage, .mode09EcuName].contains($0) }
         runNextCommand()
     }
 
@@ -207,6 +209,28 @@ public final class ELM327BLEConnector: NSObject {
                     results.forEach { result in
                         sequence += 1
                         delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.freezeFrameValue(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
+            case .mode09SupportedInfoTypes:
+                switch OBD2ReadoutDecoder.decodeMode09SupportedInfoTypes(response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "supported_info_types_00", infoType: "00", value: result.bitmap))
+                        if result.supportsEcuName { mode09EcuNameScopes.insert(result.scopeID ?? "LEGACY") }
+                    }
+                    if !mode09EcuNameScopes.isEmpty { pendingCommands.insert(.mode09EcuName, at: 0) }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
+            case .mode09EcuName:
+                switch OBD2ReadoutDecoder.decodeMode09EcuNames(response: response, supportedScopeIDs: mode09EcuNameScopes) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        delegate?.connector(self, didEmit: NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "ecu_name", infoType: "0A", value: result.name))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)

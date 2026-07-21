@@ -73,6 +73,19 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         }
     }
 
+    func testMode09AcceptsOnlyAdvertisedEcuNamesAndNeverVin() throws {
+        let support = try OBD2ReadoutDecoder.decodeMode09SupportedInfoTypes(response: "7E8 06 49 00 00 40 00 00\n7E9 06 49 00 00 00 00 00").get()
+        XCTAssertEqual(support.map(\.supportsEcuName), [true, false])
+        let names = try OBD2ReadoutDecoder.decodeMode09EcuNames(response: "7E8 10 0B 49 0A 00 45 4E 47\n7E8 21 49 4E 45 20 20", supportedScopeIDs: ["7E8"]).get()
+        XCTAssertEqual(names.count, 1)
+        XCTAssertEqual(names[0].scopeID, "7E8")
+        XCTAssertEqual(names[0].name, "ENGINE")
+        switch OBD2ReadoutDecoder.decodeMode09EcuNames(response: "7E8 03 49 02 00", supportedScopeIDs: ["7E8"]) {
+        case .failure: break
+        case .success: XCTFail("VIN response must not be accepted")
+        }
+    }
+
     private func assertDTCFailure(_ response: String, expected: OBD2ReadoutDecodeFailure, file: StaticString = #filePath, line: UInt = #line) {
         switch OBD2ReadoutDecoder.decodeDTCs(command: .storedDTC, response: response) {
         case .failure(let actual):
