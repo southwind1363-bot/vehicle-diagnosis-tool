@@ -7,7 +7,7 @@ struct ReadoutCoordinatorView: View {
         NavigationStack {
             Form {
                 Section("読取状態") {
-                    LabeledContent("接続", value: viewModel.connectorState.rawValue)
+                    LabeledContent("接続", value: viewModel.connectorStateLabel)
                     LabeledContent("アーカイブ", value: viewModel.archiveStateLabel)
                     LabeledContent("アーカイブ件数", value: "\(viewModel.archiveRecordCount)")
                     if let errorMessage = viewModel.errorMessage {

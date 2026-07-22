@@ -60,6 +60,20 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         archiveState == "Complete" ? "完了" : "未完了"
     }
 
+    var connectorStateLabel: String {
+        switch connectorState {
+        case .idle: return "未接続"
+        case .scanning: return "検索中"
+        case .selected: return "選択済み"
+        case .connecting: return "接続中"
+        case .discovering: return "通信特性を確認中"
+        case .subscribing: return "応答受信を準備中"
+        case .ready: return "読取準備完了"
+        case .awaitingPrompt: return "車両応答を待機中"
+        case .interrupted: return "中断"
+        }
+    }
+
     static func suggestedCharacteristicIDs(from candidates: [BLECharacteristicCandidate]) -> (transmitID: String, receiveID: String)? {
         let transmitCandidates = candidates.filter { $0.supportsWrite || $0.supportsWriteWithoutResponse }
         let receiveCandidates = candidates.filter(\.supportsNotify)
@@ -129,7 +143,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         archiveRecordCount = coordinator.completedArchive?.envelopes.count ?? 0
         archiveState = coordinator.completedArchive == nil ? "Incomplete" : "Complete"
         errorMessage = coordinator.archiveError.map { "読取アーカイブの検証エラー: \($0)" }
-            ?? coordinator.connectorError.map { "通信エラー: \($0)" }
+            ?? coordinator.connectorError.map { self.connectorErrorMessage($0) }
 
         if let selectedPeripheralID, !peripherals.contains(where: { $0.id == selectedPeripheralID }) {
             self.selectedPeripheralID = nil
@@ -143,6 +157,19 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         if let suggested = Self.suggestedCharacteristicIDs(from: coordinator.characteristicCandidates) {
             if selectedTransmitID.isEmpty { selectedTransmitID = suggested.transmitID }
             if selectedReceiveID.isEmpty { selectedReceiveID = suggested.receiveID }
+        }
+    }
+
+    private func connectorErrorMessage(_ error: ELMConnectorError) -> String {
+        switch error {
+        case .bluetoothUnavailable: return "Bluetoothを有効にし、このアプリの使用許可を確認してください。"
+        case .invalidState: return "前の通信処理が完了してから、もう一度操作してください。"
+        case .peripheralNotSelected: return "読取に使うBLEアダプターを選択してください。"
+        case .characteristicNotReady: return "送信・受信の通信特性を確認してから読取を開始してください。"
+        case .responseTooLarge: return "アダプター応答が上限を超えたため、安全に読取を中断しました。"
+        case .responseTimeout: return "車両またはアダプターからの応答が時間内に届きませんでした。"
+        case .disconnected: return "アダプターとの接続が切断されました。"
+        case .invalidResponse: return "アダプター応答を安全に解釈できませんでした。"
         }
     }
 }
