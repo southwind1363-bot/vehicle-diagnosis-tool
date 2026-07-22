@@ -17749,6 +17749,27 @@
     } catch {
       return null;
     }
+    const nativeConnectorArchive = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed.native_connector_archive || parsed.nativeConnectorArchive || parsed)
+      : null;
+    const hasNativeConnectorArchiveMarker = Boolean(nativeConnectorArchive
+      && typeof nativeConnectorArchive === "object"
+      && !Array.isArray(nativeConnectorArchive)
+      && Object.prototype.hasOwnProperty.call(nativeConnectorArchive, "envelopes")
+      && (nativeConnectorArchive.completion_manifest || nativeConnectorArchive.completionManifest));
+    if (hasNativeConnectorArchiveMarker) {
+      const nativeImport = buildNativeConnectorScanSessionFromCompletionManifest(nativeConnectorArchive);
+      if (nativeImport.accepted && nativeImport.session) return nativeImport.session;
+      // Do not fall back to permissive scanner parsing when a declared native archive fails validation.
+      return buildDiagnosticScanSession({
+        source: "native_connector",
+        warnings: ["native_connector_import_rejected", ...(nativeImport.errors || [])],
+        retained_raw_payload: false,
+        vehicle_command_enabled: false,
+        execution_enabled: false,
+        would_transmit: false
+      });
+    }
     const hasDtcRows = (rows) => Array.isArray(rows) && rows.some((row) => {
       const rowValue = row?.value && typeof row.value === "object" ? row.value : row;
       const candidate = typeof rowValue === "string"
