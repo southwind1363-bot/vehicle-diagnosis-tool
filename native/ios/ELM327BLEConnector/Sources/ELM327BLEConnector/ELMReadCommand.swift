@@ -50,11 +50,19 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case throttlePosition
     case engineRuntime
     case distanceWithMIL
+    case fuelRailPressureVacuum
+    case fuelRailPressure
+    case commandedEGR
+    case egrError
+    case commandedEvapPurge
     case fuelLevel
     case warmupsSinceClear
     case distanceSinceClear
     case barometricPressure
     case controlModuleVoltage
+    case absoluteLoad
+    case commandedEquivalenceRatio
+    case relativeThrottlePosition
     case ambientAirTemperature
     case timeWithMIL
     case timeSinceClear
@@ -112,11 +120,19 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .throttlePosition: return "0111"
         case .engineRuntime: return "011F"
         case .distanceWithMIL: return "0121"
+        case .fuelRailPressureVacuum: return "0122"
+        case .fuelRailPressure: return "0123"
+        case .commandedEGR: return "012C"
+        case .egrError: return "012D"
+        case .commandedEvapPurge: return "012E"
         case .fuelLevel: return "012F"
         case .warmupsSinceClear: return "0130"
         case .distanceSinceClear: return "0131"
         case .barometricPressure: return "0133"
         case .controlModuleVoltage: return "0142"
+        case .absoluteLoad: return "0143"
+        case .commandedEquivalenceRatio: return "0144"
+        case .relativeThrottlePosition: return "0145"
         case .ambientAirTemperature: return "0146"
         case .timeWithMIL: return "014D"
         case .timeSinceClear: return "014E"
@@ -136,7 +152,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameTriggerDTC, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "read_ecu_info"
         case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0: return "read_supported_pids"
-        case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .distanceWithMIL, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .engineOilTemperature, .engineFuelRate: return "read_live_pid_snapshot"
+        case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .distanceWithMIL, .fuelRailPressureVacuum, .fuelRailPressure, .commandedEGR, .egrError, .commandedEvapPurge, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .controlModuleVoltage, .absoluteLoad, .commandedEquivalenceRatio, .relativeThrottlePosition, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .engineOilTemperature, .engineFuelRate: return "read_live_pid_snapshot"
         }
     }
 
@@ -151,7 +167,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .readinessStatus: return "readiness_snapshot"
         case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "ecu_info_snapshot"
-        case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .distanceWithMIL, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .controlModuleVoltage, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .engineOilTemperature, .engineFuelRate: return "live_pid_snapshot"
+        case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .engineRuntime, .distanceWithMIL, .fuelRailPressureVacuum, .fuelRailPressure, .commandedEGR, .egrError, .commandedEvapPurge, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .controlModuleVoltage, .absoluteLoad, .commandedEquivalenceRatio, .relativeThrottlePosition, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .engineOilTemperature, .engineFuelRate: return "live_pid_snapshot"
         default: return nil
         }
     }
@@ -206,11 +222,19 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .throttlePosition: return "11"
         case .engineRuntime: return "1F"
         case .distanceWithMIL: return "21"
+        case .fuelRailPressureVacuum: return "22"
+        case .fuelRailPressure: return "23"
+        case .commandedEGR: return "2C"
+        case .egrError: return "2D"
+        case .commandedEvapPurge: return "2E"
         case .fuelLevel: return "2F"
         case .warmupsSinceClear: return "30"
         case .distanceSinceClear: return "31"
         case .barometricPressure: return "33"
         case .controlModuleVoltage: return "42"
+        case .absoluteLoad: return "43"
+        case .commandedEquivalenceRatio: return "44"
+        case .relativeThrottlePosition: return "45"
         case .ambientAirTemperature: return "46"
         case .timeWithMIL: return "4D"
         case .timeSinceClear: return "4E"

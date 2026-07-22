@@ -450,6 +450,21 @@ public enum OBD2ReadoutDecoder {
         case .distanceWithMIL:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "distance_with_mil", pid: "21", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "km")
+        case .fuelRailPressureVacuum:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "fuel_rail_pressure_vacuum", pid: "22", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 0.079, unit: "kPa")
+        case .fuelRailPressure:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "fuel_rail_pressure", pid: "23", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 10, unit: "kPa")
+        case .commandedEGR:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "commanded_egr", pid: "2C", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .egrError:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "egr_error", pid: "2D", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
+        case .commandedEvapPurge:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "commanded_evap_purge", pid: "2E", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .fuelLevel:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "fuel_level", pid: "2F", value: Double(bytes[0]) * 100 / 255, unit: "%")
@@ -465,6 +480,15 @@ public enum OBD2ReadoutDecoder {
         case .controlModuleVoltage:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "control_module_voltage", pid: "42", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V")
+        case .absoluteLoad:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "absolute_load", pid: "43", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 100 / 255, unit: "%")
+        case .commandedEquivalenceRatio:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "commanded_equivalence_ratio", pid: "44", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 32768, unit: "")
+        case .relativeThrottlePosition:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "relative_throttle_position", pid: "45", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .ambientAirTemperature:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "ambient_air_temp", pid: "46", value: Double(Int(bytes[0]) - 40), unit: "C")
