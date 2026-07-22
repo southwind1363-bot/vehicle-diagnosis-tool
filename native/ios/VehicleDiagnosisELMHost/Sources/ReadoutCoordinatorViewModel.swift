@@ -69,6 +69,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         case .discovering: return "通信特性を確認中"
         case .subscribing: return "応答受信を準備中"
         case .ready: return "読取準備完了"
+        case .awaitingWriteCapacity: return "アダプター送信待機中"
         case .awaitingPrompt: return "車両応答を待機中"
         case .interrupted: return "中断"
         }
@@ -167,6 +168,8 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         case .peripheralNotSelected: return "読取に使うBLEアダプターを選択してください。"
         case .characteristicNotReady: return "送信・受信の通信特性を確認してから読取を開始してください。"
         case .responseTooLarge: return "アダプター応答が上限を超えたため、安全に読取を中断しました。"
+        case .writeCapacityTimeout: return "アダプターが読取要求を送信できる状態にならなかったため、中断しました。"
+        case .writeFailed: return "アダプターが読取要求を受け付けなかったため、中断しました。"
         case .responseTimeout: return "車両またはアダプターからの応答が時間内に届きませんでした。"
         case .disconnected: return "アダプターとの接続が切断されました。"
         case .invalidResponse: return "アダプター応答を安全に解釈できませんでした。"

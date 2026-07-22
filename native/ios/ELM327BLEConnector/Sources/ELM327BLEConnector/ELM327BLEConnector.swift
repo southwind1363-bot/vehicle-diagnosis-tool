@@ -2,7 +2,7 @@ import CoreBluetooth
 import Foundation
 
 public enum ELMConnectorState: String, Sendable {
-    case idle, scanning, selected, connecting, discovering, subscribing, ready, awaitingPrompt, interrupted
+    case idle, scanning, selected, connecting, discovering, subscribing, ready, awaitingWriteCapacity, awaitingPrompt, interrupted
 }
 
 public struct BLEPeripheralCandidate: Identifiable, Sendable {
@@ -169,12 +169,46 @@ public final class ELM327BLEConnector: NSObject {
             return
         }
         guard let peripheral = selectedPeripheral, let transmit = transmitCharacteristic else { return fail(.disconnected) }
+        let type: CBCharacteristicWriteType = transmit.properties.contains(.write) ? .withResponse : .withoutResponse
+        guard let request = "\(command.wireValue)\r".data(using: .utf8) else { return fail(.invalidResponse) }
+        if type == .withoutResponse && !peripheral.canSendWriteWithoutResponse {
+            waitForWriteCapacity(command, request: request, to: peripheral, characteristic: transmit)
+            return
+        }
+        send(command, request: request, to: peripheral, characteristic: transmit, type: type)
+    }
+
+    private func waitForWriteCapacity(
+        _ command: ELMReadCommand,
+        request: Data,
+        to peripheral: CBPeripheral,
+        characteristic: CBCharacteristic
+    ) {
+        state = .awaitingWriteCapacity
+        let timeout = DispatchWorkItem { [weak self] in
+            guard let self,
+                  self.state == .awaitingWriteCapacity,
+                  self.pendingCommands.first == command
+            else { return }
+            self.emitFailure(for: command, error: "write_capacity_timeout")
+            self.interrupt(.writeCapacityTimeout)
+        }
+        timeoutWorkItem = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + command.timeout, execute: timeout)
+        peripheral.writeValue(request, for: characteristic, type: .withoutResponse)
+    }
+
+    private func send(
+        _ command: ELMReadCommand,
+        request: Data,
+        to peripheral: CBPeripheral,
+        characteristic: CBCharacteristic,
+        type: CBCharacteristicWriteType
+    ) {
         pendingCommands.removeFirst()
         activeCommand = command
         promptDecoder.reset()
-        let type: CBCharacteristicWriteType = transmit.properties.contains(.write) ? .withResponse : .withoutResponse
-        guard let request = "\(command.wireValue)\r".data(using: .utf8) else { return fail(.invalidResponse) }
-        peripheral.writeValue(request, for: transmit, type: type)
+        peripheral.writeValue(request, for: characteristic, type: type)
         state = .awaitingPrompt
         let timeout = DispatchWorkItem { [weak self] in
             guard let self, self.activeCommand == command else { return }
@@ -446,6 +480,8 @@ public final class ELM327BLEConnector: NSObject {
     }
 
     private func interrupt(_ error: ELMConnectorError) {
+        timeoutWorkItem?.cancel()
+        timeoutWorkItem = nil
         emitCompletionManifest(state: .interrupted, interruptionCode: interruptionCode(for: error))
         pendingCommands.removeAll()
         activeCommand = nil
@@ -462,6 +498,8 @@ public final class ELM327BLEConnector: NSObject {
         case .peripheralNotSelected: return "connector:peripheral_not_selected"
         case .characteristicNotReady: return "connector:characteristic_not_ready"
         case .responseTooLarge: return "transport:response_too_large"
+        case .writeCapacityTimeout: return "transport:write_capacity_timeout"
+        case .writeFailed: return "transport:write_failed"
         case .responseTimeout: return "transport:response_timeout"
         case .disconnected: return "transport:disconnected"
         case .invalidResponse: return "readout:invalid_response"
@@ -512,6 +550,14 @@ extension ELM327BLEConnector: CBCentralManagerDelegate {
 }
 
 extension ELM327BLEConnector: CBPeripheralDelegate {
+    public func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
+        guard peripheral.identifier == selectedPeripheral?.identifier, state == .awaitingWriteCapacity else { return }
+        timeoutWorkItem?.cancel()
+        timeoutWorkItem = nil
+        state = .ready
+        runNextCommand()
+    }
+
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard state == .discovering, peripheral.identifier == selectedPeripheral?.identifier else { return }
         guard error == nil, let services = peripheral.services, !services.isEmpty else { return fail(.characteristicNotReady) }
@@ -543,6 +589,19 @@ extension ELM327BLEConnector: CBPeripheralDelegate {
     public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         guard error == nil, characteristic === receiveCharacteristic, characteristic.isNotifying else { return fail(.characteristicNotReady) }
         state = .ready
+    }
+
+    public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        guard peripheral.identifier == selectedPeripheral?.identifier,
+              characteristic === transmitCharacteristic,
+              error != nil,
+              let command = activeCommand
+        else { return }
+        timeoutWorkItem?.cancel()
+        timeoutWorkItem = nil
+        activeCommand = nil
+        emitFailure(for: command, error: "write_failed")
+        interrupt(.writeFailed)
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
