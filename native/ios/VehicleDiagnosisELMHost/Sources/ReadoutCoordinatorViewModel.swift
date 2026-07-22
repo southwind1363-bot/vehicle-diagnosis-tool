@@ -141,7 +141,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         connectorState = coordinator.connectorState
         peripherals = coordinator.peripherals
         characteristicChoices = coordinator.characteristicCandidates.map(CharacteristicChoice.init(candidate:))
-        archiveRecordCount = coordinator.completedArchive?.envelopes.count ?? 0
+        archiveRecordCount = coordinator.capturedEnvelopeCount
         archiveState = coordinator.completedArchive == nil ? "Incomplete" : "Complete"
         errorMessage = coordinator.archiveError.map { self.archiveErrorMessage($0) }
             ?? coordinator.connectorError.map { self.connectorErrorMessage($0) }

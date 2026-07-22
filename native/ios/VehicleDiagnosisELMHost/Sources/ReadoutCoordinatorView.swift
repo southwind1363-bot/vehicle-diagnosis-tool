@@ -9,7 +9,7 @@ struct ReadoutCoordinatorView: View {
                 Section("読取状態") {
                     LabeledContent("接続", value: viewModel.connectorStateLabel)
                     LabeledContent("アーカイブ", value: viewModel.archiveStateLabel)
-                    LabeledContent("アーカイブ件数", value: "\(viewModel.archiveRecordCount)")
+                    LabeledContent("取得済みレコード", value: "\(viewModel.archiveRecordCount)")
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
                             .foregroundStyle(.red)

@@ -41,6 +41,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         )
 
         coordinator.connector(coordinator.connector, didEmit: envelope)
+        XCTAssertEqual(coordinator.capturedEnvelopeCount, 1)
         coordinator.connector(coordinator.connector, didComplete: manifest)
         let archive = try coordinator.exportCompletedArchive()
 
