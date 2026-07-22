@@ -5,7 +5,7 @@ public enum NativeConnectorScanState: String, Codable, Sendable, Equatable {
     case interrupted
 }
 
-public struct NativeConnectorReadoutScope: Codable, Sendable, Equatable {
+public struct NativeConnectorReadoutScope: Codable, Sendable, Hashable {
     public let readoutID: String
     public let scopeID: String
 

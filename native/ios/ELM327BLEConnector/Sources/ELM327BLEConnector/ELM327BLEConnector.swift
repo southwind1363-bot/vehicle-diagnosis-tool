@@ -73,6 +73,7 @@ public final class ELM327BLEConnector: NSObject {
     private var mode09EcuNameScopes = Set<String>()
     private var plannedIntents = Set<String>()
     private var plannedReadoutIDs = Set<String>()
+    private var observedReadoutScopes = Set<NativeConnectorReadoutScope>()
     private var emittedEnvelopeCount = 0
     private var firstEnvelopeSequence: Int?
     private var didEmitTerminalManifest = false
@@ -140,6 +141,7 @@ public final class ELM327BLEConnector: NSObject {
         mode09EcuNameScopes.removeAll()
         plannedIntents.removeAll()
         plannedReadoutIDs.removeAll()
+        observedReadoutScopes.removeAll()
         emittedEnvelopeCount = 0
         firstEnvelopeSequence = nil
         didEmitTerminalManifest = false
@@ -400,6 +402,9 @@ public final class ELM327BLEConnector: NSObject {
     private func emit(_ envelope: NativeConnectorEnvelope) {
         emittedEnvelopeCount += 1
         if firstEnvelopeSequence == nil { firstEnvelopeSequence = envelope.sequence }
+        if let readoutID = envelope.readoutID, let scopeID = envelope.readoutScopeID, !scopeID.isEmpty {
+            observedReadoutScopes.insert(NativeConnectorReadoutScope(readoutID: readoutID, scopeID: scopeID))
+        }
         delegate?.connector(self, didEmit: envelope)
     }
 
@@ -420,7 +425,9 @@ public final class ELM327BLEConnector: NSObject {
             scanState: state,
             expectedIntents: plannedIntents.sorted(),
             expectedReadouts: plannedReadoutIDs.sorted(),
-            expectedReadoutScopes: [],
+            expectedReadoutScopes: observedReadoutScopes.sorted {
+                $0.readoutID == $1.readoutID ? $0.scopeID < $1.scopeID : $0.readoutID < $1.readoutID
+            },
             connectionSegments: [NativeConnectorConnectionSegment(
                 connectionID: context.connectionID,
                 connectionSequence: 0,

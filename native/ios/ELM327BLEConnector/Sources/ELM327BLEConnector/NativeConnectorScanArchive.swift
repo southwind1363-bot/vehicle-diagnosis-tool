@@ -98,9 +98,13 @@ public final class NativeConnectorScanArchiveBuilder {
               manifest.connectionSegments.count == 1,
               Set(manifest.expectedIntents).count == manifest.expectedIntents.count,
               Set(manifest.expectedReadouts).count == manifest.expectedReadouts.count,
+              Set(manifest.expectedReadoutScopes).count == manifest.expectedReadoutScopes.count,
               Set(manifest.expectedIntents).isSubset(of: Self.allowedIntents),
               Set(manifest.expectedReadouts).isSubset(of: Self.allowedReadoutIDs),
-              manifest.expectedReadoutScopes.allSatisfy({ Self.allowedReadoutIDs.contains($0.readoutID) && !$0.scopeID.isEmpty })
+              manifest.expectedReadoutScopes.allSatisfy({
+                  manifest.expectedReadouts.contains($0.readoutID)
+                      && Self.isValidScope($0.scopeID)
+              })
         else { throw NativeConnectorScanArchiveError.invalidManifest }
         guard (manifest.scanState == .completed && manifest.interruption == nil)
               || (manifest.scanState == .interrupted && manifest.interruption != nil)
@@ -147,6 +151,12 @@ public final class NativeConnectorScanArchiveBuilder {
             if ["read_only", "readonly"].contains(normalizedKey) && !isEnabled(value) { return false }
             return isSafe(value: value)
         }
+    }
+
+    private static func isValidScope(_ value: String) -> Bool {
+        guard !value.isEmpty, value.count <= 80 else { return false }
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.:-")
+        return value.unicodeScalars.allSatisfy(allowed.contains)
     }
 
     private static func isSafe(value: NativeConnectorJSONValue) -> Bool {

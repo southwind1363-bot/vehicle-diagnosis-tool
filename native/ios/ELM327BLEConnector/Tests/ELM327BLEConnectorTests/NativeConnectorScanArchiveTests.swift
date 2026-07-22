@@ -10,11 +10,11 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         vehicleContextID: UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
     )
 
-    private func envelope(sequence: Int, code: String = "P0300") -> NativeConnectorEnvelope {
-        NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: sequence, intent: "read_stored_dtc", scopeID: nil, dtcs: [OBD2DTC(code: code, status: "stored")])
+    private func envelope(sequence: Int, code: String = "P0300", scopeID: String? = nil) -> NativeConnectorEnvelope {
+        NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: sequence, intent: "read_stored_dtc", scopeID: scopeID, dtcs: [OBD2DTC(code: code, status: "stored")])
     }
 
-    private func manifest(state: NativeConnectorScanState = .completed, count: Int = 2, first: Int? = 1, last: Int? = 2, interruption: NativeConnectorInterruption? = nil) -> NativeConnectorCompletionManifest {
+    private func manifest(state: NativeConnectorScanState = .completed, count: Int = 2, first: Int? = 1, last: Int? = 2, interruption: NativeConnectorInterruption? = nil, scopes: [NativeConnectorReadoutScope] = []) -> NativeConnectorCompletionManifest {
         NativeConnectorCompletionManifest(
             schemaVersion: "native_connector_completion_manifest_v1",
             recordType: "completion_manifest",
@@ -26,7 +26,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             scanState: state,
             expectedIntents: ["read_stored_dtc"],
             expectedReadouts: ["stored_dtc_snapshot"],
-            expectedReadoutScopes: [],
+            expectedReadoutScopes: scopes,
             connectionSegments: [NativeConnectorConnectionSegment(connectionID: context.connectionID, connectionSequence: 0, firstSequence: first, lastSequence: last, envelopeCount: count)],
             interruption: interruption,
             readOnly: true,
@@ -88,6 +88,23 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         try builder.append(envelope(sequence: 1))
         XCTAssertThrowsError(try builder.append(envelope(sequence: 3)))
         XCTAssertThrowsError(try builder.complete(with: manifest(count: 1, first: 1, last: 2)))
+    }
+
+    func testAcceptsOnlyUniqueDeclaredReadoutScopes() throws {
+        let scope = NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E8")
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(envelope(sequence: 1, scopeID: "7E8"))
+        try builder.complete(with: manifest(count: 1, first: 1, last: 1, scopes: [scope]))
+        XCTAssertEqual(try builder.export().completionManifest.expectedReadoutScopes, [scope])
+
+        let duplicateScopeBuilder = NativeConnectorScanArchiveBuilder()
+        try duplicateScopeBuilder.append(envelope(sequence: 1, scopeID: "7E8"))
+        XCTAssertThrowsError(try duplicateScopeBuilder.complete(with: manifest(count: 1, first: 1, last: 1, scopes: [scope, scope])))
+
+        let mismatchedScopeBuilder = NativeConnectorScanArchiveBuilder()
+        try mismatchedScopeBuilder.append(envelope(sequence: 1, scopeID: "7E8"))
+        let mismatchedScope = NativeConnectorReadoutScope(readoutID: "ecu_info_snapshot", scopeID: "7E8")
+        XCTAssertThrowsError(try mismatchedScopeBuilder.complete(with: manifest(count: 1, first: 1, last: 1, scopes: [mismatchedScope])))
     }
 
     func testEnforcesTheSharedNativeArchiveEnvelopeLimit() throws {
