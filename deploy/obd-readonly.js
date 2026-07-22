@@ -89,6 +89,8 @@
     { id: "accelerator_position_d", label: "Accelerator pedal position D", unit: "%", category: "driver input", aliases: ["accelerator pedal position d", "accelerator position d"] },
     { id: "accelerator_position_e", label: "Accelerator pedal position E", unit: "%", category: "driver input", aliases: ["accelerator pedal position e", "accelerator position e"] },
     { id: "accelerator_position_f", label: "Accelerator pedal position F", unit: "%", category: "driver input", aliases: ["accelerator pedal position f", "accelerator position f"] },
+    { id: "fuel_rail_pressure_absolute", label: "Fuel rail absolute pressure", unit: "kPa", category: "fuel", aliases: ["fuel rail absolute pressure", "absolute fuel rail pressure"] },
+    { id: "relative_accelerator_position", label: "Relative accelerator pedal position", unit: "%", category: "driver input", aliases: ["relative accelerator pedal position", "relative accelerator position"] },
     { id: "equivalence_ratio", label: "当量比", unit: "", category: "燃料補正", aliases: ["commanded equivalence ratio", "equivalence ratio", "lambda", "当量比", "ラムダ"] },
     { id: "engine_runtime", label: "エンジン始動後時間", unit: "s", category: "状態", aliases: ["time since engine start", "engine runtime", "run time", "エンジン始動後時間", "始動後時間"] }
   ].map((item) => Object.freeze({ ...item, aliases: Object.freeze(item.aliases) })));

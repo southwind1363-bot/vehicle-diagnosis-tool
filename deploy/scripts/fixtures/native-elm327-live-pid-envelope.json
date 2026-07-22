@@ -31,7 +31,9 @@
       { "id": "absolute_throttle_c", "pid": "48", "value": 40, "unit": "%" },
       { "id": "accelerator_position_d", "pid": "49", "value": 50.19607843137255, "unit": "%" },
       { "id": "accelerator_position_e", "pid": "4A", "value": 25.098039215686274, "unit": "%" },
-      { "id": "accelerator_position_f", "pid": "4B", "value": 75.29411764705883, "unit": "%" }
+      { "id": "accelerator_position_f", "pid": "4B", "value": 75.29411764705883, "unit": "%" },
+      { "id": "fuel_rail_pressure_absolute", "pid": "59", "value": 2000, "unit": "kPa" },
+      { "id": "relative_accelerator_position", "pid": "5A", "value": 50.19607843137255, "unit": "%" }
     ]
   }
 }

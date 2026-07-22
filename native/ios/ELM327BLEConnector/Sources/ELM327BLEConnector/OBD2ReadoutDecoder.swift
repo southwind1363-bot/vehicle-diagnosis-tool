@@ -536,6 +536,12 @@ public enum OBD2ReadoutDecoder {
         case .ethanolPercentage:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "ethanol_percentage", pid: "52", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .fuelRailPressureAbsolute:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "fuel_rail_pressure_absolute", pid: "59", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 10, unit: "kPa")
+        case .relativeAcceleratorPosition:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "relative_accelerator_position", pid: "5A", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .hybridBatteryRemaining:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "hybrid_battery_remaining", pid: "5B", value: Double(bytes[0]) * 100 / 255, unit: "%")

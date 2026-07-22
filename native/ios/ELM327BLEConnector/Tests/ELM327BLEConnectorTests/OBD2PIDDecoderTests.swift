@@ -47,6 +47,8 @@ final class OBD2PIDDecoderTests: XCTestCase {
         XCTAssertEqual(OBD2PIDDecoder.decode(.acceleratorPositionD, response: "41 49 80")?.value, 50.19607843137255, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decode(.acceleratorPositionE, response: "41 4A 40")?.value, 25.098039215686274, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decode(.acceleratorPositionF, response: "41 4B C0")?.value, 75.29411764705883, accuracy: 0.0000001)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.fuelRailPressureAbsolute, response: "41 59 00 C8"), OBD2MonitorValue(id: "fuel_rail_pressure_absolute", pid: "59", value: 2000, unit: "kPa"))
+        XCTAssertEqual(OBD2PIDDecoder.decode(.relativeAcceleratorPosition, response: "41 5A 80")?.value, 50.19607843137255, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decodeValues(.wideOxygenVoltageB1S1, response: "41 24 80 00 20 00"), [
             OBD2MonitorValue(id: "wide_o2_b1s1_ratio", pid: "24", value: 1, unit: ""),
             OBD2MonitorValue(id: "wide_o2_b1s1_voltage_wide", pid: "24", value: 1, unit: "V")
