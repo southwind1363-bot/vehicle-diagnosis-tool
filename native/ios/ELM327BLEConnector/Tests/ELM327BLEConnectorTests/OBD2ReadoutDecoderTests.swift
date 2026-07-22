@@ -165,6 +165,25 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         }
     }
 
+    func testEnginePercentTorqueDataProducesFiveScopedValues() throws {
+        let result = try OBD2ReadoutDecoder.decodeLivePID(
+            command: .enginePercentTorqueData,
+            response: "7E8 07 41 64 7D 82 87 8C 91"
+        ).get()
+        XCTAssertEqual(result.map(\.scopeID), ["7E8", "7E8", "7E8", "7E8", "7E8"])
+        XCTAssertEqual(result.map(\.value), [
+            OBD2MonitorValue(id: "engine_percent_torque_idle", pid: "64", value: 0, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point1", pid: "64", value: 5, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point2", pid: "64", value: 10, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point3", pid: "64", value: 15, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point4", pid: "64", value: 20, unit: "%")
+        ])
+        switch OBD2ReadoutDecoder.decodeLivePID(command: .enginePercentTorqueData, response: "41 64 7D 82 87 8C") {
+        case .failure: break
+        case .success: XCTFail("Engine percent torque PID requires five data bytes")
+        }
+    }
+
     func testSupportedPidContinuationPagesKeepTheirActualBase() throws {
         let page20 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
             command: .supportedPIDs20,

@@ -187,6 +187,7 @@ public enum OBD2ReadoutDecoder {
                 let values = oxygenSensorValues(command: command, bytes: bytes)
                     ?? wideOxygenVoltageValues(command: command, bytes: bytes)
                     ?? wideOxygenCurrentValues(command: command, bytes: bytes)
+                    ?? enginePercentTorqueValues(command: command, bytes: bytes)
                     ?? livePIDValue(command: command, bytes: bytes).map { [$0] }
                 guard let values else {
                     return .failure(.malformedResponse)
@@ -622,5 +623,13 @@ public enum OBD2ReadoutDecoder {
             OBD2MonitorValue(id: ids.ratio, pid: ids.pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 32768, unit: ""),
             OBD2MonitorValue(id: ids.current, pid: ids.pid, value: Double(Int(bytes[2]) * 256 + Int(bytes[3])) / 256 - 128, unit: "mA")
         ]
+    }
+
+    private static func enginePercentTorqueValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {
+        guard command == .enginePercentTorqueData, bytes.count == 5 else { return nil }
+        let ids = ["engine_percent_torque_idle", "engine_percent_torque_point1", "engine_percent_torque_point2", "engine_percent_torque_point3", "engine_percent_torque_point4"]
+        return zip(ids, bytes).map { pair in
+            OBD2MonitorValue(id: pair.0, pid: "64", value: Double(Int(pair.1) - 125), unit: "%")
+        }
     }
 }

@@ -57,6 +57,13 @@ final class OBD2PIDDecoderTests: XCTestCase {
             OBD2MonitorValue(id: "wide_o2_b1s1_current_ratio", pid: "34", value: 1, unit: ""),
             OBD2MonitorValue(id: "wide_o2_b1s1_current", pid: "34", value: -1, unit: "mA")
         ])
+        XCTAssertEqual(OBD2PIDDecoder.decodeValues(.enginePercentTorqueData, response: "41 64 7D 82 87 8C 91").map(\.value), [
+            OBD2MonitorValue(id: "engine_percent_torque_idle", pid: "64", value: 0, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point1", pid: "64", value: 5, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point2", pid: "64", value: 10, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point3", pid: "64", value: 15, unit: "%"),
+            OBD2MonitorValue(id: "engine_percent_torque_point4", pid: "64", value: 20, unit: "%")
+        ])
     }
 
     func testSupportedPidBitmap() {
