@@ -53,5 +53,16 @@ jobs:
         working-directory: native/ios/ELM327BLEHost
 
       - name: Test read-only connector for iOS Simulator
-        run: xcodebuild -project ELM327BLEHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' CODE_SIGNING_ALLOWED=NO test
+        run: |
+          set +e
+          set -o pipefail
+          xcodebuild -project ELM327BLEHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' CODE_SIGNING_ALLOWED=NO test 2>&1 | tee /tmp/elm327bleconnector-tests.log
+          test_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$test_status" -ne 0 ]; then
+            details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:|Testing failed:|Unable to find a destination)' /tmp/elm327bleconnector-tests.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
+            if [ -z "$details" ]; then details=$(tail -n 12 /tmp/elm327bleconnector-tests.log | cut -c 1-600 | tr '\n' ' '); fi
+            echo "::error title=iOS connector test failure::${details:-xcodebuild test failed without a diagnostic}"
+            exit "$test_status"
+          fi
         working-directory: native/ios/ELM327BLEHost
