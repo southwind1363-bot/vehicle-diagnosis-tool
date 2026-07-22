@@ -26,7 +26,12 @@
       { "id": "wide_o2_b1s1_ratio", "pid": "24", "value": 1, "unit": "" },
       { "id": "wide_o2_b1s1_voltage_wide", "pid": "24", "value": 1, "unit": "V" },
       { "id": "wide_o2_b1s1_current_ratio", "pid": "34", "value": 1, "unit": "" },
-      { "id": "wide_o2_b1s1_current", "pid": "34", "value": -1, "unit": "mA" }
+      { "id": "wide_o2_b1s1_current", "pid": "34", "value": -1, "unit": "mA" },
+      { "id": "absolute_throttle_b", "pid": "47", "value": 60, "unit": "%" },
+      { "id": "absolute_throttle_c", "pid": "48", "value": 40, "unit": "%" },
+      { "id": "accelerator_position_d", "pid": "49", "value": 50.19607843137255, "unit": "%" },
+      { "id": "accelerator_position_e", "pid": "4A", "value": 25.098039215686274, "unit": "%" },
+      { "id": "accelerator_position_f", "pid": "4B", "value": 75.29411764705883, "unit": "%" }
     ]
   }
 }

@@ -512,6 +512,21 @@ public enum OBD2ReadoutDecoder {
         case .ambientAirTemperature:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "ambient_air_temp", pid: "46", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .absoluteThrottlePositionB:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "absolute_throttle_b", pid: "47", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .absoluteThrottlePositionC:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "absolute_throttle_c", pid: "48", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .acceleratorPositionD:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "accelerator_position_d", pid: "49", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .acceleratorPositionE:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "accelerator_position_e", pid: "4A", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .acceleratorPositionF:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "accelerator_position_f", pid: "4B", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .timeWithMIL:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "time_with_mil", pid: "4D", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "min")

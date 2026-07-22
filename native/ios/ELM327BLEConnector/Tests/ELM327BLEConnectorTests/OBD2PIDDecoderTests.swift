@@ -42,6 +42,11 @@ final class OBD2PIDDecoderTests: XCTestCase {
             OBD2MonitorValue(id: "o2_b1s1_stft", pid: "14", value: 12.5, unit: "%")
         ])
         XCTAssertNil(OBD2PIDDecoder.decode(.oxygenSensorB1S1, response: "41 14 80 90"))
+        XCTAssertEqual(OBD2PIDDecoder.decode(.absoluteThrottlePositionB, response: "41 47 99"), OBD2MonitorValue(id: "absolute_throttle_b", pid: "47", value: 60, unit: "%"))
+        XCTAssertEqual(OBD2PIDDecoder.decode(.absoluteThrottlePositionC, response: "41 48 66"), OBD2MonitorValue(id: "absolute_throttle_c", pid: "48", value: 40, unit: "%"))
+        XCTAssertEqual(OBD2PIDDecoder.decode(.acceleratorPositionD, response: "41 49 80")?.value, 50.19607843137255, accuracy: 0.0000001)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.acceleratorPositionE, response: "41 4A 40")?.value, 25.098039215686274, accuracy: 0.0000001)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.acceleratorPositionF, response: "41 4B C0")?.value, 75.29411764705883, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decodeValues(.wideOxygenVoltageB1S1, response: "41 24 80 00 20 00"), [
             OBD2MonitorValue(id: "wide_o2_b1s1_ratio", pid: "24", value: 1, unit: ""),
             OBD2MonitorValue(id: "wide_o2_b1s1_voltage_wide", pid: "24", value: 1, unit: "V")
