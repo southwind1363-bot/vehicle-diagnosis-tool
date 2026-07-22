@@ -35,12 +35,22 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         public var id: String { sourceScopeID }
     }
 
+    public struct ECUInfo: Identifiable, Sendable, Equatable {
+        public let infoID: String
+        public let infoType: String
+        public let value: String
+        public let sourceScopeID: String
+
+        public var id: String { "\(infoID):\(sourceScopeID)" }
+    }
+
     public let storedDTCs: [DTC]
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
     public let liveValues: [MonitorValue]
     public let freezeFrameValues: [MonitorValue]
     public let readiness: [Readiness]
+    public let ecuInfo: [ECUInfo]
 
     public init(
         storedDTCs: [DTC],
@@ -48,7 +58,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         permanentDTCs: [DTC],
         liveValues: [MonitorValue],
         freezeFrameValues: [MonitorValue],
-        readiness: [Readiness]
+        readiness: [Readiness],
+        ecuInfo: [ECUInfo]
     ) {
         self.storedDTCs = storedDTCs
         self.pendingDTCs = pendingDTCs
@@ -56,6 +67,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.liveValues = liveValues
         self.freezeFrameValues = freezeFrameValues
         self.readiness = readiness
+        self.ecuInfo = ecuInfo
     }
 
     public static let empty = NativeConnectorReadoutPreview(
@@ -64,7 +76,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         permanentDTCs: [],
         liveValues: [],
         freezeFrameValues: [],
-        readiness: []
+        readiness: [],
+        ecuInfo: []
     )
 
     public init(envelopes: [NativeConnectorEnvelope]) {
@@ -74,6 +87,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var liveValues: [String: MonitorValue] = [:]
         var freezeFrameValues: [String: MonitorValue] = [:]
         var readiness: [String: Readiness] = [:]
+        var ecuInfo: [String: ECUInfo] = [:]
 
         for envelope in envelopes {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
@@ -92,6 +106,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 }
             case "read_freeze_frame":
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameValues[$0.id] = $0 }
+            case "read_ecu_info":
+                Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo[$0.id] = $0 }
             default:
                 break
             }
@@ -103,6 +119,9 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.liveValues = Self.sortedMonitorValues(liveValues.values)
         self.freezeFrameValues = Self.sortedMonitorValues(freezeFrameValues.values)
         self.readiness = readiness.values.sorted { $0.sourceScopeID < $1.sourceScopeID }
+        self.ecuInfo = ecuInfo.values.sorted { lhs, rhs in
+            lhs.sourceScopeID == rhs.sourceScopeID ? lhs.infoID < rhs.infoID : lhs.sourceScopeID < rhs.sourceScopeID
+        }
     }
 
     private static func dtcStatus(for intent: String) -> String {
@@ -169,6 +188,25 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
             supportedMonitorCount: supportedMonitors.count,
             incompleteMonitorCount: supportedMonitors.filter { !$0.complete }.count
         )
+    }
+
+    private static func ecuInfoItems(in data: [String: NativeConnectorJSONValue], scopeID: String) -> [ECUInfo] {
+        guard case .array(let values)? = data["items"] else { return [] }
+        return values.compactMap { value in
+            guard case .object(let object) = value,
+                  case .string(let infoID)? = object["id"],
+                  case .string(let rawValue)? = object["value"]
+            else { return nil }
+            let infoType: String
+            if case .string(let rawInfoType)? = object["info_type"] {
+                infoType = rawInfoType
+            } else {
+                infoType = ""
+            }
+            let trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !infoID.isEmpty, !trimmedValue.isEmpty else { return nil }
+            return ECUInfo(infoID: infoID, infoType: infoType, value: trimmedValue, sourceScopeID: scopeID)
+        }
     }
 
     private static func sortedDTCs(_ values: Dictionary<String, DTC>.Values) -> [DTC] {

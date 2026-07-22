@@ -118,6 +118,19 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.ecuInfo.isEmpty {
+                    Section("ECU情報") {
+                        ForEach(viewModel.readoutPreview.ecuInfo) { info in
+                            LabeledContent("\(info.infoID) / \(info.sourceScopeID)", value: info.value)
+                            if !info.infoType.isEmpty {
+                                Text("情報タイプ \(info.infoType)")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
                 Section("4. 読取結果") {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()
