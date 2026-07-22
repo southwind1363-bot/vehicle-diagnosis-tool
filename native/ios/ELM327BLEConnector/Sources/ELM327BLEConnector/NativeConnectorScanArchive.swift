@@ -55,6 +55,21 @@ public final class NativeConnectorScanArchiveBuilder {
         "live_pid_snapshot"
     ]
 
+    private static let sensitiveDataKeys: Set<String> = [
+        "adapter_name",
+        "adapter_serial",
+        "adapter_serial_number",
+        "serial",
+        "serial_number",
+        "mac",
+        "mac_address",
+        "bluetooth_address",
+        "peripheral_id",
+        "device_id",
+        "vin",
+        "vehicle_identification_number"
+    ]
+
     private var envelopes: [NativeConnectorEnvelope] = []
     private var completionManifest: NativeConnectorCompletionManifest?
 
@@ -147,6 +162,7 @@ public final class NativeConnectorScanArchiveBuilder {
         data.allSatisfy { key, value in
             let normalizedKey = key.lowercased()
             if ["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "log", "logs", "debug"].contains(normalizedKey) { return false }
+            if sensitiveDataKeys.contains(normalizedKey) { return false }
             if ["vehicle_command_enabled", "vehiclecommandenabled", "execution_enabled", "executionenabled", "would_transmit", "wouldtransmit"].contains(normalizedKey) && isEnabled(value) { return false }
             if ["read_only", "readonly"].contains(normalizedKey) && !isEnabled(value) { return false }
             return isSafe(value: value)
