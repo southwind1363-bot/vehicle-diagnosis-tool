@@ -45,7 +45,7 @@ jobs:
           build_status=${PIPESTATUS[0]}
           set -e
           if [ "$build_status" -ne 0 ]; then
-            details=$(grep -E '(^| )((fatal )?error:|warning:)' /tmp/elm327blehost-xcodebuild.log | tail -n 8 | tr '\n' ' ')
+            details=$(tail -n 30 /tmp/elm327blehost-xcodebuild.log | tr '\n' ' ')
             echo "::error title=iOS host build failure::${details:-xcodebuild failed without a compiler diagnostic}"
             exit "$build_status"
           fi
