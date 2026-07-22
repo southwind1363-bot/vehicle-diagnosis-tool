@@ -477,6 +477,18 @@ public enum OBD2ReadoutDecoder {
         case .barometricPressure:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "barometric_pressure", pid: "33", value: Double(bytes[0]), unit: "kPa")
+        case .catalystTemperatureB1S1:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "catalyst_temp_b1s1", pid: "3C", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 10 - 40, unit: "C")
+        case .catalystTemperatureB1S2:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "catalyst_temp_b1s2", pid: "3D", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 10 - 40, unit: "C")
+        case .catalystTemperatureB2S1:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "catalyst_temp_b2s1", pid: "3E", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 10 - 40, unit: "C")
+        case .catalystTemperatureB2S2:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "catalyst_temp_b2s2", pid: "3F", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 10 - 40, unit: "C")
         case .controlModuleVoltage:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "control_module_voltage", pid: "42", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V")

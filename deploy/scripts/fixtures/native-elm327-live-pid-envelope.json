@@ -18,7 +18,8 @@
       { "id": "engine_speed", "pid": "0C", "value": 1726, "unit": "rpm" },
       { "id": "fuel_rail_pressure", "pid": "23", "value": 2000, "unit": "kPa" },
       { "id": "commanded_egr", "pid": "2C", "value": 50.19607843137255, "unit": "%" },
-      { "id": "commanded_equivalence_ratio", "pid": "44", "value": 1, "unit": "" }
+      { "id": "commanded_equivalence_ratio", "pid": "44", "value": 1, "unit": "" },
+      { "id": "catalyst_temp_b1s1", "pid": "3C", "value": 360, "unit": "C" }
     ]
   }
 }
