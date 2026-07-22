@@ -161,7 +161,7 @@ public enum OBD2ReadoutDecoder {
 
     public static func decodeSupportedPIDs(command: ELMReadCommand = .supportedPIDs, response: String) -> Result<[(scopeID: String?, pids: [String])], OBD2ReadoutDecodeFailure> {
         guard let pageBase = command.supportedPIDPageBase, let pageBaseByte = UInt8(pageBase, radix: 16) else { return .failure(.malformedResponse) }
-        packets(in: response).flatMap { packets in
+        return packets(in: response).flatMap { packets -> Result<[(scopeID: String?, pids: [String])], OBD2ReadoutDecodeFailure> in
             var decoded: [(scopeID: String?, pids: [String])] = []
             for packet in packets {
                 let payload = packet.payload
