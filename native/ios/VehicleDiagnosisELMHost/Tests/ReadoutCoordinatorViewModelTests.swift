@@ -1,9 +1,10 @@
+import Foundation
 import XCTest
 @testable import VehicleDiagnosisELMHost
 import ELM327BLEConnector
 
-@MainActor
 final class ReadoutCoordinatorViewModelTests: XCTestCase {
+    @MainActor
     func testUniqueGattCharacteristicPairIsSuggestedButAmbiguousPairsAreNot() {
         let transmit = BLECharacteristicCandidate(
             serviceUUID: "FFF0",
@@ -33,6 +34,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         XCTAssertNil(ReadoutCoordinatorViewModel.suggestedCharacteristicIDs(from: [transmit, receive, alternateTransmit]))
     }
 
+    @MainActor
     func testCompletedArchiveUpdatesTheHostState() async throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,
@@ -41,41 +43,46 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         )
         let coordinator = NativeConnectorReadoutCoordinator()
         let viewModel = ReadoutCoordinatorViewModel(coordinator: coordinator)
-        let envelope = NativeConnectorEnvelopeFactory.dtcs(
-            context: context,
-            sequence: 1,
-            intent: "read_stored_dtc",
-            scopeID: "7E8",
-            dtcs: [OBD2DTC(code: "P0300", status: "stored")]
-        )
-        let manifest = NativeConnectorCompletionManifest(
-            schemaVersion: "native_connector_completion_manifest_v1",
-            recordType: "completion_manifest",
-            platform: "ios",
-            interfaceID: "user-vci-elm327",
-            scanID: context.scanID,
-            vehicleContextID: context.vehicleContextID,
-            capturedAt: "2026-07-22T00:00:00Z",
-            scanState: .completed,
-            expectedIntents: ["read_stored_dtc"],
-            expectedReadouts: ["stored_dtc_snapshot"],
-            expectedReadoutScopes: [],
-            connectionSegments: [
-                NativeConnectorConnectionSegment(
-                    connectionID: context.connectionID,
-                    connectionSequence: 0,
-                    firstSequence: 1,
-                    lastSequence: 1,
-                    envelopeCount: 1
-                )
-            ],
-            interruption: nil,
-            readOnly: true,
-            vehicleCommandEnabled: false,
-            executionEnabled: false,
-            wouldTransmit: false,
-            retainedRawPayload: false
-        )
+        let envelope = try decode(NativeConnectorEnvelope.self, json: """
+        {
+          "schema_version": "native_connector_contract_v1",
+          "interface_id": "user-vci-elm327",
+          "platform": "ios",
+          "intent": "read_stored_dtc",
+          "captured_at": "2026-07-22T00:00:00Z",
+          "scan_id": "\(context.scanID.uuidString)",
+          "connection_id": "\(context.connectionID.uuidString)",
+          "vehicle_context_id": "\(context.vehicleContextID.uuidString)",
+          "sequence": 1,
+          "ok": true,
+          "blocked": false,
+          "would_transmit": false,
+          "errors": [],
+          "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8" }
+        }
+        """)
+        let manifest = try decode(NativeConnectorCompletionManifest.self, json: """
+        {
+          "schema_version": "native_connector_completion_manifest_v1",
+          "record_type": "completion_manifest",
+          "platform": "ios",
+          "interface_id": "user-vci-elm327",
+          "scan_id": "\(context.scanID.uuidString)",
+          "vehicle_context_id": "\(context.vehicleContextID.uuidString)",
+          "captured_at": "2026-07-22T00:00:00Z",
+          "scan_state": "completed",
+          "expected_intents": ["read_stored_dtc"],
+          "expected_readouts": ["stored_dtc_snapshot"],
+          "expected_readout_scopes": [],
+          "connection_segments": [{ "connection_id": "\(context.connectionID.uuidString)", "connection_sequence": 0, "first_sequence": 1, "last_sequence": 1, "envelope_count": 1 }],
+          "interruption": null,
+          "read_only": true,
+          "vehicle_command_enabled": false,
+          "execution_enabled": false,
+          "would_transmit": false,
+          "retained_raw_payload": false
+        }
+        """)
 
         coordinator.connector(coordinator.connector, didEmit: envelope)
         coordinator.connector(coordinator.connector, didComplete: manifest)
@@ -84,5 +91,9 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.archiveState, "Complete")
         XCTAssertEqual(viewModel.archiveRecordCount, 1)
         XCTAssertNil(viewModel.errorMessage)
+    }
+
+    private func decode<T: Decodable>(_ type: T.Type, json: String) throws -> T {
+        try JSONDecoder().decode(type, from: Data(json.utf8))
     }
 }
