@@ -100,14 +100,9 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     func prepareArchiveExport() {
         do {
             let archive = try coordinator.exportCompletedArchive()
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(archive)
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime]
-            let timestamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
             let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("vehicle-readout-\(timestamp).json")
+                .appendingPathComponent(archive.suggestedExportFilename)
+            let data = try archive.jsonData()
             try data.write(to: url, options: .atomic)
             exportURL = url
         } catch {
