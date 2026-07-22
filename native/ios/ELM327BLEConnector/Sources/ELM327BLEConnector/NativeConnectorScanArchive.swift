@@ -7,6 +7,7 @@ public enum NativeConnectorScanArchiveError: Error, Equatable, Sendable {
     case unsafeEnvelope
     case mixedScanBoundary
     case invalidSequence
+    case tooManyEnvelopes
     case invalidManifest
     case manifestBoundaryMismatch
 }
@@ -27,6 +28,8 @@ public struct NativeConnectorScanArchive: Codable, Sendable, Equatable {
 }
 
 public final class NativeConnectorScanArchiveBuilder {
+    public static let maximumEnvelopeCount = 256
+
     private static let allowedIntents: Set<String> = [
         "adapter_identity",
         "read_stored_dtc",
@@ -59,6 +62,7 @@ public final class NativeConnectorScanArchiveBuilder {
 
     public func append(_ envelope: NativeConnectorEnvelope) throws {
         guard completionManifest == nil else { throw NativeConnectorScanArchiveError.scanAlreadyCompleted }
+        guard envelopes.count < Self.maximumEnvelopeCount else { throw NativeConnectorScanArchiveError.tooManyEnvelopes }
         guard envelope.schemaVersion == "native_connector_contract_v1",
               envelope.platform == "ios",
               envelope.interfaceID == "user-vci-elm327",

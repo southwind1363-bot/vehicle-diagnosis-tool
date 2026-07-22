@@ -90,6 +90,22 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         XCTAssertThrowsError(try builder.complete(with: manifest(count: 1, first: 1, last: 2)))
     }
 
+    func testEnforcesTheSharedNativeArchiveEnvelopeLimit() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        for sequence in 1...NativeConnectorScanArchiveBuilder.maximumEnvelopeCount {
+            try builder.append(envelope(sequence: sequence))
+        }
+        XCTAssertThrowsError(try builder.append(envelope(sequence: NativeConnectorScanArchiveBuilder.maximumEnvelopeCount + 1))) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .tooManyEnvelopes)
+        }
+        try builder.complete(with: manifest(
+            count: NativeConnectorScanArchiveBuilder.maximumEnvelopeCount,
+            first: 1,
+            last: NativeConnectorScanArchiveBuilder.maximumEnvelopeCount
+        ))
+        XCTAssertEqual(try builder.export().envelopes.count, NativeConnectorScanArchiveBuilder.maximumEnvelopeCount)
+    }
+
     func testRetainsEmptyInterruptedSessionWithoutSyntheticEnvelope() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         let interruption = NativeConnectorInterruption(code: "transport:disconnected", connectionID: context.connectionID, sequence: 0)
