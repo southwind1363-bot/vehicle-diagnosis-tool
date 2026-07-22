@@ -570,6 +570,10 @@ public enum OBD2ReadoutDecoder {
         case .engineReferenceTorque:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "engine_reference_torque", pid: "63", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "Nm")
+        case .odometer:
+            guard bytes.count == 4 else { return nil }
+            let value = Int(bytes[0]) * 0x1000000 + Int(bytes[1]) * 0x10000 + Int(bytes[2]) * 0x100 + Int(bytes[3])
+            return OBD2MonitorValue(id: "odometer", pid: "A6", value: Double(value) / 10, unit: "km")
         default:
             return nil
         }

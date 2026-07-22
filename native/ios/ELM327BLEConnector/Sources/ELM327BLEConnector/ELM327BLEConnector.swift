@@ -359,6 +359,16 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
+            case .odometer:
+                switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.livePID(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
             case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .oxygenSensorB1S1, .oxygenSensorB1S2, .oxygenSensorB1S3, .oxygenSensorB1S4, .oxygenSensorB2S1, .oxygenSensorB2S2, .oxygenSensorB2S3, .oxygenSensorB2S4, .wideOxygenVoltageB1S1, .wideOxygenVoltageB1S2, .wideOxygenVoltageB1S3, .wideOxygenVoltageB1S4, .wideOxygenVoltageB2S1, .wideOxygenVoltageB2S2, .wideOxygenVoltageB2S3, .wideOxygenVoltageB2S4, .engineRuntime, .distanceWithMIL, .fuelRailPressureVacuum, .fuelRailPressure, .commandedEGR, .egrError, .commandedEvapPurge, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .evapVaporPressure, .barometricPressure, .wideOxygenCurrentB1S1, .wideOxygenCurrentB1S2, .wideOxygenCurrentB2S1, .wideOxygenCurrentB2S2, .catalystTemperatureB1S1, .catalystTemperatureB1S2, .catalystTemperatureB2S1, .catalystTemperatureB2S2, .commandedThrottleActuator, .controlModuleVoltage, .absoluteLoad, .commandedEquivalenceRatio, .relativeThrottlePosition, .ambientAirTemperature, .absoluteThrottlePositionB, .absoluteThrottlePositionC, .acceleratorPositionD, .acceleratorPositionE, .acceleratorPositionF, .timeWithMIL, .timeSinceClear, .ethanolPercentage, .fuelRailPressureAbsolute, .relativeAcceleratorPosition, .hybridBatteryRemaining, .engineOilTemperature, .fuelInjectionTiming, .engineFuelRate, .driverDemandTorque, .actualEngineTorque, .engineReferenceTorque, .enginePercentTorqueData, .commandedEGRAndError:
                 switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
                 case .success(let results):

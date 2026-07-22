@@ -69,6 +69,7 @@ final class OBD2PIDDecoderTests: XCTestCase {
             OBD2MonitorValue(id: "commanded_egr_pid69", pid: "69", value: 50.19607843137255, unit: "%"),
             OBD2MonitorValue(id: "egr_error_pid69", pid: "69", value: 12.5, unit: "%")
         ])
+        XCTAssertEqual(OBD2PIDDecoder.decode(.odometer, response: "41 A6 00 01 E2 40"), OBD2MonitorValue(id: "odometer", pid: "A6", value: 12345.6, unit: "km"))
     }
 
     func testSupportedPidBitmap() {
