@@ -56,15 +56,8 @@ jobs:
         run: |
           set +e
           set -o pipefail
-          xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme VehicleDiagnosisELMHostTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/vehicle-diagnosis-elm-host-tests.log
-          host_test_status=${PIPESTATUS[0]}
-          if [ "$host_test_status" -eq 0 ]; then
-            xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/elm327bleconnector-tests.log
-            test_status=${PIPESTATUS[0]}
-          else
-            test_status=$host_test_status
-            cp /tmp/vehicle-diagnosis-elm-host-tests.log /tmp/elm327bleconnector-tests.log
-          fi
+          xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/elm327bleconnector-tests.log
+          test_status=${PIPESTATUS[0]}
           set -e
           if [ "$test_status" -ne 0 ]; then
             details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:|Testing failed:|Unable to find a destination)' /tmp/elm327bleconnector-tests.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
