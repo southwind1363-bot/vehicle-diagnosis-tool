@@ -142,7 +142,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         characteristicChoices = coordinator.characteristicCandidates.map(CharacteristicChoice.init(candidate:))
         archiveRecordCount = coordinator.completedArchive?.envelopes.count ?? 0
         archiveState = coordinator.completedArchive == nil ? "Incomplete" : "Complete"
-        errorMessage = coordinator.archiveError.map { "読取アーカイブの検証エラー: \($0)" }
+        errorMessage = coordinator.archiveError.map { self.archiveErrorMessage($0) }
             ?? coordinator.connectorError.map { self.connectorErrorMessage($0) }
 
         if let selectedPeripheralID, !peripherals.contains(where: { $0.id == selectedPeripheralID }) {
@@ -170,6 +170,21 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         case .responseTimeout: return "車両またはアダプターからの応答が時間内に届きませんでした。"
         case .disconnected: return "アダプターとの接続が切断されました。"
         case .invalidResponse: return "アダプター応答を安全に解釈できませんでした。"
+        }
+    }
+
+    private func archiveErrorMessage(_ error: NativeConnectorScanArchiveError) -> String {
+        switch error {
+        case .tooManyEnvelopes:
+            return "読取結果が安全な保存上限の256件を超えたため、中断しました。"
+        case .scanNotStarted:
+            return "完了した読取結果がないため、アーカイブを作成できません。"
+        case .scanAlreadyCompleted:
+            return "完了済みの読取アーカイブには追加できません。"
+        case .invalidEnvelope, .unsafeEnvelope, .mixedScanBoundary, .invalidSequence:
+            return "一貫性を確認できない読取結果を受け取ったため、保存しませんでした。"
+        case .invalidManifest, .manifestBoundaryMismatch:
+            return "読取完了情報を検証できなかったため、保存しませんでした。"
         }
     }
 }
