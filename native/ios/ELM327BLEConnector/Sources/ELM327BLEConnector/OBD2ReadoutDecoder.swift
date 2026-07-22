@@ -219,14 +219,17 @@ public enum OBD2ReadoutDecoder {
 
     public static func freezeFrameSupportedPIDs(response: String) -> Set<String> {
         guard case .success(let packets) = packets(in: response) else { return [] }
-        return Set(packets.flatMap { packet in
-            guard packet.payload.count == 6, packet.payload[0] == 0x42, packet.payload[1] == 0x00 else { return [] }
-            return packet.payload.dropFirst(2).enumerated().flatMap { byteIndex, byte in
-                (0..<8).compactMap { bitIndex in
-                    byte & UInt8(1 << (7 - bitIndex)) == 0 ? nil : String(format: "%02X", byteIndex * 8 + bitIndex + 1)
+        var supported = Set<String>()
+        for packet in packets {
+            let payload = packet.payload
+            guard payload.count == 6, payload[0] == 0x42, payload[1] == 0x00 else { continue }
+            for (byteIndex, byte) in payload.dropFirst(2).enumerated() {
+                for bitIndex in 0..<8 where (byte & UInt8(1 << (7 - bitIndex))) != 0 {
+                    supported.insert(String(format: "%02X", byteIndex * 8 + bitIndex + 1))
                 }
             }
         }
+        return supported
     }
 
     public static func decodeFreezeFrameValue(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2MonitorValue)], OBD2ReadoutDecodeFailure> {
@@ -365,8 +368,9 @@ public enum OBD2ReadoutDecoder {
         guard !tokens.isEmpty else { return nil }
         let hasHeader = tokens.count > 1 && (tokens[0].count == 3 || tokens[0].count == 8) && tokens[0].allSatisfy(\.isHexDigit)
         let scopeID = hasHeader ? tokens[0] : nil
-        let payloadText = (hasHeader ? tokens.dropFirst() : tokens).joined()
-        guard payloadText.count.isMultiple(of: 2), payloadText.allSatisfy(\.isHexDigit) else { return nil }
+        let payloadTokens: [String] = hasHeader ? Array(tokens.dropFirst()) : tokens
+        let payloadText = payloadTokens.joined()
+        guard payloadText.count.isMultiple(of: 2), payloadText.allSatisfy({ $0.isHexDigit }) else { return nil }
         let bytes = stride(from: 0, to: payloadText.count, by: 2).compactMap { offset -> UInt8? in
             let start = payloadText.index(payloadText.startIndex, offsetBy: offset)
             let end = payloadText.index(start, offsetBy: 2)
@@ -406,11 +410,13 @@ public enum OBD2ReadoutDecoder {
     }
 
     private static func supportedPIDs(from bitmap: [UInt8], pageBase: Int) -> [String] {
-        bitmap.enumerated().flatMap { byteIndex, byte in
-            (0..<8).compactMap { bitIndex in
-                byte & UInt8(1 << (7 - bitIndex)) == 0 ? nil : String(format: "%02X", pageBase + byteIndex * 8 + bitIndex + 1)
+        var supported: [String] = []
+        for (byteIndex, byte) in bitmap.enumerated() {
+            for bitIndex in 0..<8 where (byte & UInt8(1 << (7 - bitIndex))) != 0 {
+                supported.append(String(format: "%02X", pageBase + byteIndex * 8 + bitIndex + 1))
             }
         }
+        return supported
     }
 
     private static func livePIDValue(command: ELMReadCommand, bytes: [UInt8]) -> OBD2MonitorValue? {

@@ -327,22 +327,22 @@ public final class ELM327BLEConnector: NSObject {
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, scopeID: result.scopeID, pageBase: command.supportedPIDPageBase!, pids: result.pids))
                     }
+                    let supportedCommands = ELMReadCommand.allCases.filter { candidate in
+                        candidate.livePID.map(liveSupportedPIDs.contains) == true && scheduledLivePIDCommands.insert(candidate).inserted
+                    }
+                    pendingCommands.insert(contentsOf: supportedCommands, at: 0)
+                    plan(commands: supportedCommands)
+                    if let nextPage = command.nextSupportedPIDPage,
+                       let nextPageBase = nextPage.supportedPIDPageBase,
+                       results.contains(where: { $0.pids.contains(nextPageBase) }),
+                       scheduledSupportedPIDPages.insert(nextPage).inserted {
+                        pendingCommands.insert(nextPage, at: 0)
+                        plan(commands: [nextPage])
+                    }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                     runNextCommand()
                     return
-                }
-                let supportedCommands = ELMReadCommand.allCases.filter { candidate in
-                    candidate.livePID.map(liveSupportedPIDs.contains) == true && scheduledLivePIDCommands.insert(candidate).inserted
-                }
-                pendingCommands.insert(contentsOf: supportedCommands, at: 0)
-                plan(commands: supportedCommands)
-                if let nextPage = command.nextSupportedPIDPage,
-                   let nextPageBase = nextPage.supportedPIDPageBase,
-                   results.contains(where: { $0.pids.contains(nextPageBase) }),
-                   scheduledSupportedPIDPages.insert(nextPage).inserted {
-                    pendingCommands.insert(nextPage, at: 0)
-                    plan(commands: [nextPage])
                 }
             case .readinessStatus:
                 switch OBD2ReadoutDecoder.decodeReadiness(response: response) {
@@ -520,9 +520,10 @@ extension ELM327BLEConnector: CBPeripheralDelegate {
         }
         pendingServiceIDs.remove(service.uuid)
         guard pendingServiceIDs.isEmpty else { return }
-        let candidates = characteristics.values.map { characteristic in
-            BLECharacteristicCandidate(
-                serviceUUID: characteristic.service.uuid.uuidString,
+        let candidates = characteristics.values.compactMap { characteristic -> BLECharacteristicCandidate? in
+            guard let service = characteristic.service else { return nil }
+            return BLECharacteristicCandidate(
+                serviceUUID: service.uuid.uuidString,
                 characteristicUUID: characteristic.uuid.uuidString,
                 supportsNotify: characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate),
                 supportsWrite: characteristic.properties.contains(.write),
