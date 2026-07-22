@@ -77,6 +77,36 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.storedDTCs.isEmpty || !viewModel.readoutPreview.pendingDTCs.isEmpty || !viewModel.readoutPreview.permanentDTCs.isEmpty {
+                    Section("故障コード") {
+                        ForEach(viewModel.readoutPreview.storedDTCs) { dtc in
+                            LabeledContent(dtc.code, value: "保存 / \(dtc.sourceScopeID)")
+                        }
+                        ForEach(viewModel.readoutPreview.pendingDTCs) { dtc in
+                            LabeledContent(dtc.code, value: "保留 / \(dtc.sourceScopeID)")
+                        }
+                        ForEach(viewModel.readoutPreview.permanentDTCs) { dtc in
+                            LabeledContent(dtc.code, value: "永久 / \(dtc.sourceScopeID)")
+                        }
+                    }
+                }
+
+                if !viewModel.readoutPreview.liveValues.isEmpty {
+                    Section("ライブデータ") {
+                        ForEach(viewModel.readoutPreview.liveValues) { value in
+                            LabeledContent("\(value.monitorID) / PID \(value.pid)", value: "\(value.displayValue) / \(value.sourceScopeID)")
+                        }
+                    }
+                }
+
+                if !viewModel.readoutPreview.freezeFrameValues.isEmpty {
+                    Section("フリーズフレーム") {
+                        ForEach(viewModel.readoutPreview.freezeFrameValues) { value in
+                            LabeledContent("\(value.monitorID) / PID \(value.pid)", value: "\(value.displayValue) / \(value.sourceScopeID)")
+                        }
+                    }
+                }
+
                 Section("4. 読取結果") {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()

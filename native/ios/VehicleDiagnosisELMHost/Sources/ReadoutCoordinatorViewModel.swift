@@ -26,6 +26,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     @Published private(set) var characteristicChoices: [CharacteristicChoice] = []
     @Published private(set) var archiveRecordCount = 0
     @Published private(set) var archiveState = "Incomplete"
+    @Published private(set) var readoutPreview = NativeConnectorReadoutPreview.empty
     @Published private(set) var errorMessage: String?
     @Published private(set) var exportURL: URL?
     @Published var selectedPeripheralID: UUID?
@@ -143,6 +144,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         characteristicChoices = coordinator.characteristicCandidates.map(CharacteristicChoice.init(candidate:))
         archiveRecordCount = coordinator.capturedEnvelopeCount
         archiveState = coordinator.completedArchive == nil ? "Incomplete" : "Complete"
+        readoutPreview = coordinator.readoutPreview
         errorMessage = coordinator.archiveError.map { self.archiveErrorMessage($0) }
             ?? coordinator.connectorError.map { self.connectorErrorMessage($0) }
 

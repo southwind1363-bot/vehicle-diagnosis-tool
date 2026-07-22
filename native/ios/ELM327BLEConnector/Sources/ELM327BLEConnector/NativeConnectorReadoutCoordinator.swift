@@ -7,11 +7,13 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
     public private(set) var characteristicCandidates: [BLECharacteristicCandidate] = []
     public private(set) var completedArchive: NativeConnectorScanArchive?
     public private(set) var capturedEnvelopeCount = 0
+    public private(set) var readoutPreview = NativeConnectorReadoutPreview.empty
     public private(set) var archiveError: NativeConnectorScanArchiveError?
     public private(set) var connectorError: ELMConnectorError?
 
     public let connector: ELM327BLEConnector
     private let archiveBuilder = NativeConnectorScanArchiveBuilder()
+    private var capturedEnvelopes: [NativeConnectorEnvelope] = []
     private var archiveRejected = false
 
     public init(connector: ELM327BLEConnector = ELM327BLEConnector()) {
@@ -52,6 +54,8 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
         archiveBuilder.reset()
         completedArchive = nil
         capturedEnvelopeCount = 0
+        readoutPreview = .empty
+        capturedEnvelopes.removeAll()
         archiveError = nil
         connectorError = nil
         archiveRejected = false
@@ -89,7 +93,9 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
         guard !archiveRejected else { return }
         do {
             try archiveBuilder.append(envelope)
+            capturedEnvelopes.append(envelope)
             capturedEnvelopeCount += 1
+            readoutPreview = NativeConnectorReadoutPreview(envelopes: capturedEnvelopes)
         } catch let error as NativeConnectorScanArchiveError {
             archiveError = error
             archiveRejected = true

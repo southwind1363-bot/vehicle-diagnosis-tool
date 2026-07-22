@@ -51,4 +51,35 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(updateCount, 2)
         XCTAssertThrowsError(try NativeConnectorReadoutCoordinator().exportCompletedArchive())
     }
+
+    func testCoordinatorBuildsDeduplicatedPreviewFromAcceptedEnvelopes() {
+        let coordinator = NativeConnectorReadoutCoordinator()
+        let dtc = NativeConnectorEnvelopeFactory.dtcs(
+            context: context,
+            sequence: 1,
+            intent: "read_stored_dtc",
+            scopeID: "7E8",
+            dtcs: [OBD2DTC(code: "P0300", status: "stored")]
+        )
+        let duplicateDTC = NativeConnectorEnvelopeFactory.dtcs(
+            context: context,
+            sequence: 2,
+            intent: "read_stored_dtc",
+            scopeID: "7E8",
+            dtcs: [OBD2DTC(code: "P0300", status: "stored")]
+        )
+        let monitor = NativeConnectorEnvelopeFactory.livePID(
+            context: context,
+            sequence: 3,
+            scopeID: "7E8",
+            value: OBD2MonitorValue(id: "engine_speed", pid: "0C", value: 1726, unit: "rpm")
+        )
+
+        coordinator.connector(coordinator.connector, didEmit: dtc)
+        coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
+        coordinator.connector(coordinator.connector, didEmit: monitor)
+
+        XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
+        XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
+    }
 }
