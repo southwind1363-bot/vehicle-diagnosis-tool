@@ -2,6 +2,21 @@ import XCTest
 @testable import ELM327BLEConnector
 
 final class NativeConnectorEnvelopeTests: XCTestCase {
+    func testAdapterIdentityOmitsRawAdapterIdentifiers() throws {
+        let envelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: NativeConnectorSessionContext(),
+            sequence: 1,
+            adapterName: "STN1170 SN: 979867700221",
+            protocolHint: "AUTO, ISO 15765-4 (CAN 11/500)"
+        )
+
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"adapter_family\":\"STN\""))
+        XCTAssertTrue(json.contains("\"adapter_protocol_hint\":\"ISO 15765-4\""))
+        XCTAssertFalse(json.contains("adapter_name"))
+        XCTAssertFalse(json.contains("979867700221"))
+    }
+
     func testLivePidEnvelopeUsesTheExistingReadOnlyContract() throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,

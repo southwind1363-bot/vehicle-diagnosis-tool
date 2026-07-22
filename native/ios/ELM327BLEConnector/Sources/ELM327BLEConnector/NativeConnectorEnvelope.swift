@@ -92,15 +92,37 @@ public enum NativeConnectorEnvelopeFactory {
         adapterName: String?,
         protocolHint: String?
     ) -> NativeConnectorEnvelope {
-        let safeName = adapterName?.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)
-        let safeProtocol = protocolHint?.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)
         var data: [String: NativeConnectorJSONValue] = [
-            "adapter_family": .string("ELM327"),
+            "adapter_family": .string(adapterFamily(for: adapterName)),
             "vehicle_command_enabled": .bool(false)
         ]
-        if let safeName, !safeName.isEmpty { data["adapter_name"] = .string(String(safeName)) }
-        if let safeProtocol, !safeProtocol.isEmpty { data["adapter_protocol_hint"] = .string(String(safeProtocol)) }
+        if let protocolFamily = protocolFamily(for: protocolHint) {
+            data["adapter_protocol_hint"] = .string(protocolFamily)
+        }
         return make(context: context, sequence: sequence, intent: "adapter_identity", data: data)
+    }
+
+    private static func adapterFamily(for adapterName: String?) -> String {
+        let normalizedName = adapterName?.uppercased() ?? ""
+        return normalizedName.contains("STN") ? "STN" : "ELM327"
+    }
+
+    private static func protocolFamily(for protocolHint: String?) -> String? {
+        let normalizedHint = protocolHint?
+            .uppercased()
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let knownProtocols = [
+            "ISO 15765-4",
+            "SAE J1850 PWM",
+            "SAE J1850 VPW",
+            "ISO 9141-2",
+            "ISO 14230-4",
+            "CAN",
+            "AUTO"
+        ]
+        return knownProtocols.first { normalizedHint.contains($0) }
     }
 
     public static func supportedPIDs(
