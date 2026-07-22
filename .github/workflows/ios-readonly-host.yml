@@ -1,0 +1,38 @@
+name: iOS Read-Only Host
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "native/ios/**"
+      - ".github/workflows/ios-readonly-host.yml"
+  pull_request:
+    paths:
+      - "native/ios/**"
+      - ".github/workflows/ios-readonly-host.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build iPhone BLE host
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Validate Bluetooth permission manifest
+        run: plutil -lint Sources/Info.plist
+        working-directory: native/ios/ELM327BLEHost
+
+      - name: Generate host project
+        run: xcodegen generate
+        working-directory: native/ios/ELM327BLEHost
+
+      - name: Build read-only host for iOS Simulator
+        run: xcodebuild -project ELM327BLEHost.xcodeproj -scheme ELM327BLEHost -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+        working-directory: native/ios/ELM327BLEHost
