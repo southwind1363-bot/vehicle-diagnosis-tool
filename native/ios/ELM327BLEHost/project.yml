@@ -2,6 +2,7 @@ name: ELM327BLEHost
 options:
   minimumXcodeGenVersion: 2.38.0
   xcodeVersion: "15.4"
+  projectFormat: xcode15_0
 settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: 16.0
