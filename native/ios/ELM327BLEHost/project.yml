@@ -22,3 +22,10 @@ targets:
         INFOPLIST_FILE: Sources/Info.plist
     dependencies:
       - package: ELM327BLEConnector
+  ELM327BLEConnectorTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ../ELM327BLEConnector/Tests/ELM327BLEConnectorTests
+    dependencies:
+      - package: ELM327BLEConnector

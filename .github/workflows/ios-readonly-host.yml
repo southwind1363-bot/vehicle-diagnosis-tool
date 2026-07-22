@@ -51,3 +51,7 @@ jobs:
             exit "$build_status"
           fi
         working-directory: native/ios/ELM327BLEHost
+
+      - name: Test read-only connector for iOS Simulator
+        run: xcodebuild -project ELM327BLEHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' CODE_SIGNING_ALLOWED=NO test
+        working-directory: native/ios/ELM327BLEHost
