@@ -5,7 +5,7 @@ public enum NativeConnectorArchiveExportError: Error, Equatable, Sendable {
 }
 
 public extension NativeConnectorScanArchive {
-    static let maximumTransferBytes = 2_000_000
+    static var maximumTransferBytes: Int { 2_000_000 }
 
     func jsonData(prettyPrinted: Bool = true) throws -> Data {
         let encoder = JSONEncoder()
