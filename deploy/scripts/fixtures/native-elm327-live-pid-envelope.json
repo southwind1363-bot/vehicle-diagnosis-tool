@@ -33,7 +33,15 @@
       { "id": "accelerator_position_e", "pid": "4A", "value": 25.098039215686274, "unit": "%" },
       { "id": "accelerator_position_f", "pid": "4B", "value": 75.29411764705883, "unit": "%" },
       { "id": "fuel_rail_pressure_absolute", "pid": "59", "value": 2000, "unit": "kPa" },
-      { "id": "relative_accelerator_position", "pid": "5A", "value": 50.19607843137255, "unit": "%" }
+      { "id": "relative_accelerator_position", "pid": "5A", "value": 50.19607843137255, "unit": "%" },
+      { "id": "evap_vapor_pressure", "pid": "32", "value": -50, "unit": "Pa" },
+      { "id": "engine_percent_torque_idle", "pid": "64", "value": 0, "unit": "%" },
+      { "id": "engine_percent_torque_point1", "pid": "64", "value": 5, "unit": "%" },
+      { "id": "engine_percent_torque_point2", "pid": "64", "value": 10, "unit": "%" },
+      { "id": "engine_percent_torque_point3", "pid": "64", "value": 15, "unit": "%" },
+      { "id": "engine_percent_torque_point4", "pid": "64", "value": 20, "unit": "%" },
+      { "id": "commanded_egr_pid69", "pid": "69", "value": 50.19607843137255, "unit": "%" },
+      { "id": "egr_error_pid69", "pid": "69", "value": 12.5, "unit": "%" }
     ]
   }
 }
