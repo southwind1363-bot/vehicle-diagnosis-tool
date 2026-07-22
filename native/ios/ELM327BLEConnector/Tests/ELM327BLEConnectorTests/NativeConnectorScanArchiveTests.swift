@@ -82,7 +82,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         )
         XCTAssertThrowsError(try builder.append(unsafe))
 
-        ["adapter_name", "serial_number", "bluetooth_address", "vin"].forEach { key in
+        for key in ["adapter_name", "serial_number", "bluetooth_address", "vin"] {
             let sensitive = NativeConnectorEnvelope(
                 schemaVersion: "native_connector_contract_v1", interfaceID: "user-vci-elm327", platform: "ios", intent: "read_stored_dtc", capturedAt: "2026-07-21T00:00:00Z", scanID: context.scanID, connectionID: context.connectionID, vehicleContextID: context.vehicleContextID, sequence: 1, readoutID: "stored_dtc_snapshot", readoutScopeID: nil, readoutAttempt: 0, ok: true, blocked: false, wouldTransmit: false, errors: [], data: [key: .string("sensitive-value")]
             )
