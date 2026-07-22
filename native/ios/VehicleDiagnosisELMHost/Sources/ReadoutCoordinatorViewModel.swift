@@ -4,7 +4,7 @@ import ELM327BLEConnector
 
 @MainActor
 final class ReadoutCoordinatorViewModel: ObservableObject {
-    struct CharacteristicChoice: Identifiable, Equatable {
+    struct CharacteristicChoice: Identifiable {
         let candidate: BLECharacteristicCandidate
 
         var id: String {
