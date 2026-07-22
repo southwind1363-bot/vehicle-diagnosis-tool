@@ -489,6 +489,9 @@ public enum OBD2ReadoutDecoder {
         case .catalystTemperatureB2S2:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "catalyst_temp_b2s2", pid: "3F", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 10 - 40, unit: "C")
+        case .commandedThrottleActuator:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "commanded_throttle_actuator", pid: "4C", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .controlModuleVoltage:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "control_module_voltage", pid: "42", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V")
@@ -510,12 +513,30 @@ public enum OBD2ReadoutDecoder {
         case .timeSinceClear:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "time_since_clear", pid: "4E", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "min")
+        case .ethanolPercentage:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "ethanol_percentage", pid: "52", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .hybridBatteryRemaining:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "hybrid_battery_remaining", pid: "5B", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .engineOilTemperature:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "engine_oil_temp", pid: "5C", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .fuelInjectionTiming:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "fuel_injection_timing", pid: "5D", value: (Double(Int(bytes[0]) * 256 + Int(bytes[1])) - 26880) / 128, unit: "deg")
         case .engineFuelRate:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "engine_fuel_rate", pid: "5E", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 0.05, unit: "L/h")
+        case .driverDemandTorque:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "driver_demand_torque", pid: "61", value: Double(Int(bytes[0]) - 125), unit: "%")
+        case .actualEngineTorque:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "actual_engine_torque", pid: "62", value: Double(Int(bytes[0]) - 125), unit: "%")
+        case .engineReferenceTorque:
+            guard bytes.count == 2 else { return nil }
+            return OBD2MonitorValue(id: "engine_reference_torque", pid: "63", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "Nm")
         default:
             return nil
         }

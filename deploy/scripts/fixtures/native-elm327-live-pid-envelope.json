@@ -19,7 +19,8 @@
       { "id": "fuel_rail_pressure", "pid": "23", "value": 2000, "unit": "kPa" },
       { "id": "commanded_egr", "pid": "2C", "value": 50.19607843137255, "unit": "%" },
       { "id": "commanded_equivalence_ratio", "pid": "44", "value": 1, "unit": "" },
-      { "id": "catalyst_temp_b1s1", "pid": "3C", "value": 360, "unit": "C" }
+      { "id": "catalyst_temp_b1s1", "pid": "3C", "value": 360, "unit": "C" },
+      { "id": "commanded_throttle_actuator", "pid": "4C", "value": 50.19607843137255, "unit": "%" }
     ]
   }
 }

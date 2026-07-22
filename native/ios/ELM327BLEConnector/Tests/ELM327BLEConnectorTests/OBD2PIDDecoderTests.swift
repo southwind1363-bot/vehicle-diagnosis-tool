@@ -22,14 +22,21 @@ final class OBD2PIDDecoderTests: XCTestCase {
         XCTAssertEqual(OBD2PIDDecoder.decode(.catalystTemperatureB1S2, response: "41 3D 0F A0")?.value, 360)
         XCTAssertEqual(OBD2PIDDecoder.decode(.catalystTemperatureB2S1, response: "41 3E 0F A0")?.value, 360)
         XCTAssertEqual(OBD2PIDDecoder.decode(.catalystTemperatureB2S2, response: "41 3F 0F A0")?.value, 360)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.commandedThrottleActuator, response: "41 4C 80")?.value, 50.19607843137255, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decode(.absoluteLoad, response: "41 43 01 00")?.value, 100.3921568627451, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decode(.commandedEquivalenceRatio, response: "41 44 80 00")?.value, 1)
         XCTAssertEqual(OBD2PIDDecoder.decode(.relativeThrottlePosition, response: "41 45 80")?.value, 50.19607843137255, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decode(.ambientAirTemperature, response: "41 46 50")?.value, 40)
         XCTAssertEqual(OBD2PIDDecoder.decode(.timeWithMIL, response: "41 4D 00 3C")?.value, 60)
         XCTAssertEqual(OBD2PIDDecoder.decode(.timeSinceClear, response: "41 4E 00 78")?.value, 120)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.ethanolPercentage, response: "41 52 40")?.value, 25.098039215686274, accuracy: 0.0000001)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.hybridBatteryRemaining, response: "41 5B 90")?.value, 56.470588235294116, accuracy: 0.0000001)
         XCTAssertEqual(OBD2PIDDecoder.decode(.engineOilTemperature, response: "41 5C 64")?.value, 60)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.fuelInjectionTiming, response: "41 5D 6D 00")?.value, 8)
         XCTAssertEqual(OBD2PIDDecoder.decode(.engineFuelRate, response: "41 5E 00 64")?.value, 5)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.driverDemandTorque, response: "41 61 8C")?.value, 15)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.actualEngineTorque, response: "41 62 96")?.value, 25)
+        XCTAssertEqual(OBD2PIDDecoder.decode(.engineReferenceTorque, response: "41 63 01 90")?.value, 400)
     }
 
     func testSupportedPidBitmap() {
