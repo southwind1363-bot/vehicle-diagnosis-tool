@@ -100,4 +100,47 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         XCTAssertEqual(archive.completionManifest.scanState, .interrupted)
         XCTAssertEqual(archive.completionManifest.interruption?.code, "transport:disconnected")
     }
+
+    func testExportsBoundedLocalJsonWithNonSensitiveFilename() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(envelope(sequence: 1))
+        try builder.append(envelope(sequence: 2, code: "P0171"))
+        try builder.complete(with: manifest())
+        let archive = try builder.export()
+        let json = try archive.jsonData()
+        let object = try JSONSerialization.jsonObject(with: json) as? [String: Any]
+
+        XCTAssertLessThanOrEqual(json.count, NativeConnectorScanArchive.maximumTransferBytes)
+        XCTAssertEqual(archive.suggestedExportFilename, "vehicle-diagnosis-readout-11111111.json")
+        XCTAssertEqual((object?["completion_manifest"] as? [String: Any])?["record_type"] as? String, "completion_manifest")
+        XCTAssertNil(object?["raw_frames"])
+    }
+
+    func testRejectsArchiveExportBeyondTheOfflineImportLimit() {
+        let base = envelope(sequence: 1)
+        let oversizedEnvelope = NativeConnectorEnvelope(
+            schemaVersion: base.schemaVersion,
+            interfaceID: base.interfaceID,
+            platform: base.platform,
+            intent: base.intent,
+            capturedAt: base.capturedAt,
+            scanID: base.scanID,
+            connectionID: base.connectionID,
+            vehicleContextID: base.vehicleContextID,
+            sequence: base.sequence,
+            readoutID: base.readoutID,
+            readoutScopeID: base.readoutScopeID,
+            readoutAttempt: base.readoutAttempt,
+            ok: base.ok,
+            blocked: base.blocked,
+            wouldTransmit: base.wouldTransmit,
+            errors: base.errors,
+            data: ["note": .string(String(repeating: "x", count: NativeConnectorScanArchive.maximumTransferBytes))]
+        )
+        let archive = NativeConnectorScanArchive(envelopes: [oversizedEnvelope], completionManifest: manifest(count: 1, first: 1, last: 1))
+
+        XCTAssertThrowsError(try archive.jsonData()) { error in
+            XCTAssertEqual(error as? NativeConnectorArchiveExportError, .archiveTooLarge)
+        }
+    }
 }

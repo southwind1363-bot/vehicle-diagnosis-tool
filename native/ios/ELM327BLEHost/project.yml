@@ -1,0 +1,22 @@
+name: ELM327BLEHost
+options:
+  minimumXcodeGenVersion: 2.38.0
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: 16.0
+    PRODUCT_BUNDLE_IDENTIFIER: com.mukiguri.vehicleDiagnosis.ELM327BLEHost
+    SWIFT_VERSION: 5.9
+packages:
+  ELM327BLEConnector:
+    path: ../ELM327BLEConnector
+targets:
+  ELM327BLEHost:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    settings:
+      base:
+        INFOPLIST_FILE: Sources/Info.plist
+    dependencies:
+      - package: ELM327BLEConnector

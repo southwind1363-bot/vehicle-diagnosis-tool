@@ -21,6 +21,6 @@ There is no generic command API. Mode 04, DTC clear, active tests, coding, routi
 
 ## Integration status
 
-This package still needs an iOS host app, entitlement/configuration work, and a user-facing bridge into the offline diagnostic UI. The host app must include `NSBluetoothAlwaysUsageDescription`. It supports BLE GATT only; Bluetooth Classic ELM327 adapters require a separate MFi/vendor-supported route and are not claimed compatible.
+The companion `../ELM327BLEHost` target provides the iOS host-app source, Bluetooth permission configuration, characteristic-confirmation screen, fixed read-only start control, and local JSON archive export for the offline diagnostic UI. It supports BLE GATT only; Bluetooth Classic ELM327 adapters require a separate MFi/vendor-supported route and are not claimed compatible.
 
 Windows cannot build, sign, or run this iOS package. Before a vehicle trial, build it on macOS/Xcode, verify BLE discovery and GATT characteristic selection with the actual adapter, then run the fixed read-only queue while recording only the structured scan archive.
