@@ -24,24 +24,38 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         }
     }
 
+    public struct Readiness: Identifiable, Sendable, Equatable {
+        public let sourceScopeID: String
+        public let milOn: Bool
+        public let dtcCount: Int
+        public let ignitionType: String
+        public let supportedMonitorCount: Int
+        public let incompleteMonitorCount: Int
+
+        public var id: String { sourceScopeID }
+    }
+
     public let storedDTCs: [DTC]
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
     public let liveValues: [MonitorValue]
     public let freezeFrameValues: [MonitorValue]
+    public let readiness: [Readiness]
 
     public init(
         storedDTCs: [DTC],
         pendingDTCs: [DTC],
         permanentDTCs: [DTC],
         liveValues: [MonitorValue],
-        freezeFrameValues: [MonitorValue]
+        freezeFrameValues: [MonitorValue],
+        readiness: [Readiness]
     ) {
         self.storedDTCs = storedDTCs
         self.pendingDTCs = pendingDTCs
         self.permanentDTCs = permanentDTCs
         self.liveValues = liveValues
         self.freezeFrameValues = freezeFrameValues
+        self.readiness = readiness
     }
 
     public static let empty = NativeConnectorReadoutPreview(
@@ -49,7 +63,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         pendingDTCs: [],
         permanentDTCs: [],
         liveValues: [],
-        freezeFrameValues: []
+        freezeFrameValues: [],
+        readiness: []
     )
 
     public init(envelopes: [NativeConnectorEnvelope]) {
@@ -58,6 +73,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var permanentDTCs: [String: DTC] = [:]
         var liveValues: [String: MonitorValue] = [:]
         var freezeFrameValues: [String: MonitorValue] = [:]
+        var readiness: [String: Readiness] = [:]
 
         for envelope in envelopes {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
@@ -71,6 +87,9 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 }
             case "read_live_pid_snapshot":
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { liveValues[$0.id] = $0 }
+                if let snapshot = Self.readiness(in: envelope.data, scopeID: scopeID) {
+                    readiness[snapshot.id] = snapshot
+                }
             case "read_freeze_frame":
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameValues[$0.id] = $0 }
             default:
@@ -83,6 +102,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.permanentDTCs = Self.sortedDTCs(permanentDTCs.values)
         self.liveValues = Self.sortedMonitorValues(liveValues.values)
         self.freezeFrameValues = Self.sortedMonitorValues(freezeFrameValues.values)
+        self.readiness = readiness.values.sorted { $0.sourceScopeID < $1.sourceScopeID }
     }
 
     private static func dtcStatus(for intent: String) -> String {
@@ -122,6 +142,33 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
             }
             return MonitorValue(monitorID: id, pid: pid, value: numericValue, unit: unit, sourceScopeID: scopeID)
         }
+    }
+
+    private static func readiness(in data: [String: NativeConnectorJSONValue], scopeID: String) -> Readiness? {
+        guard case .bool(let milOn)? = data["mil_on"],
+              case .number(let rawDTCCount)? = data["dtc_count"],
+              rawDTCCount.isFinite,
+              rawDTCCount >= 0,
+              rawDTCCount.rounded() == rawDTCCount,
+              rawDTCCount <= 255,
+              case .string(let ignitionType)? = data["readiness_ignition_type"],
+              case .array(let monitors)? = data["monitors"]
+        else { return nil }
+        let supportedMonitors = monitors.compactMap { value -> (supported: Bool, complete: Bool)? in
+            guard case .object(let object) = value,
+                  case .bool(let supported)? = object["supported"],
+                  case .bool(let complete)? = object["complete"]
+            else { return nil }
+            return (supported, complete)
+        }.filter { $0.supported }
+        return Readiness(
+            sourceScopeID: scopeID,
+            milOn: milOn,
+            dtcCount: Int(rawDTCCount),
+            ignitionType: ignitionType,
+            supportedMonitorCount: supportedMonitors.count,
+            incompleteMonitorCount: supportedMonitors.filter { !$0.complete }.count
+        )
     }
 
     private static func sortedDTCs(_ values: Dictionary<String, DTC>.Values) -> [DTC] {

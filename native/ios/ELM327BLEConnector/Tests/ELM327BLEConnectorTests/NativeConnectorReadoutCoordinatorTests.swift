@@ -74,12 +74,28 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             scopeID: "7E8",
             value: OBD2MonitorValue(id: "engine_speed", pid: "0C", value: 1726, unit: "rpm")
         )
+        let readiness = NativeConnectorEnvelopeFactory.readiness(
+            context: context,
+            sequence: 4,
+            scopeID: "7E8",
+            status: OBD2ReadinessStatus(
+                milOn: false,
+                dtcCount: 1,
+                statusByteA: 1,
+                statusByteB: 1,
+                statusByteC: 0,
+                statusByteD: 0,
+                ignitionType: "spark"
+            )
+        )
 
         coordinator.connector(coordinator.connector, didEmit: dtc)
         coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
         coordinator.connector(coordinator.connector, didEmit: monitor)
+        coordinator.connector(coordinator.connector, didEmit: readiness)
 
         XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
+        XCTAssertEqual(coordinator.readoutPreview.readiness, [NativeConnectorReadoutPreview.Readiness(sourceScopeID: "7E8", milOn: false, dtcCount: 1, ignitionType: "spark", supportedMonitorCount: 1, incompleteMonitorCount: 0)])
     }
 }

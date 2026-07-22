@@ -107,6 +107,17 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.readiness.isEmpty {
+                    Section("レディネス") {
+                        ForEach(viewModel.readoutPreview.readiness) { readiness in
+                            LabeledContent("ECU \(readiness.sourceScopeID)", value: "MIL \(readiness.milOn ? \"ON\" : \"OFF\") / DTC \(readiness.dtcCount)")
+                            Text("対応モニター \(readiness.supportedMonitorCount)件 / 未完了 \(readiness.incompleteMonitorCount)件 / \(readiness.ignitionType)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 Section("4. 読取結果") {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()
