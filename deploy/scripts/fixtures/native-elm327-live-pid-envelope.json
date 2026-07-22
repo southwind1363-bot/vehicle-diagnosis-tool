@@ -41,7 +41,8 @@
       { "id": "engine_percent_torque_point3", "pid": "64", "value": 15, "unit": "%" },
       { "id": "engine_percent_torque_point4", "pid": "64", "value": 20, "unit": "%" },
       { "id": "commanded_egr_pid69", "pid": "69", "value": 50.19607843137255, "unit": "%" },
-      { "id": "egr_error_pid69", "pid": "69", "value": 12.5, "unit": "%" }
+      { "id": "egr_error_pid69", "pid": "69", "value": 12.5, "unit": "%" },
+      { "id": "odometer", "pid": "A6", "value": 12345.6, "unit": "km" }
     ]
   }
 }
