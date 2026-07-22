@@ -1,6 +1,14 @@
 import XCTest
 @testable import ELM327BLEConnector
 
+private func XCTAssertEqual(_ actual: Double?, _ expected: Double, accuracy: Double, file: StaticString = #filePath, line: UInt = #line) {
+    guard let actual else {
+        XCTFail("Expected a decoded value", file: file, line: line)
+        return
+    }
+    XCTAssertEqual(actual, expected, accuracy: accuracy, file: file, line: line)
+}
+
 final class OBD2PIDDecoderTests: XCTestCase {
     func testStandardPidEquations() {
         XCTAssertEqual(OBD2PIDDecoder.decode(.engineRPM, response: "41 0C 1A F8")?.value, 1726)
@@ -58,7 +66,7 @@ final class OBD2PIDDecoderTests: XCTestCase {
             OBD2MonitorValue(id: "wide_o2_b1s1_current_ratio", pid: "34", value: 1, unit: ""),
             OBD2MonitorValue(id: "wide_o2_b1s1_current", pid: "34", value: -1, unit: "mA")
         ])
-        XCTAssertEqual(OBD2PIDDecoder.decodeValues(.enginePercentTorqueData, response: "41 64 7D 82 87 8C 91").map(\.value), [
+        XCTAssertEqual(OBD2PIDDecoder.decodeValues(.enginePercentTorqueData, response: "41 64 7D 82 87 8C 91"), [
             OBD2MonitorValue(id: "engine_percent_torque_idle", pid: "64", value: 0, unit: "%"),
             OBD2MonitorValue(id: "engine_percent_torque_point1", pid: "64", value: 5, unit: "%"),
             OBD2MonitorValue(id: "engine_percent_torque_point2", pid: "64", value: 10, unit: "%"),
