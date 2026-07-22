@@ -42,6 +42,14 @@ final class OBD2PIDDecoderTests: XCTestCase {
             OBD2MonitorValue(id: "o2_b1s1_stft", pid: "14", value: 12.5, unit: "%")
         ])
         XCTAssertNil(OBD2PIDDecoder.decode(.oxygenSensorB1S1, response: "41 14 80 90"))
+        XCTAssertEqual(OBD2PIDDecoder.decodeValues(.wideOxygenVoltageB1S1, response: "41 24 80 00 20 00"), [
+            OBD2MonitorValue(id: "wide_o2_b1s1_ratio", pid: "24", value: 1, unit: ""),
+            OBD2MonitorValue(id: "wide_o2_b1s1_voltage_wide", pid: "24", value: 1, unit: "V")
+        ])
+        XCTAssertEqual(OBD2PIDDecoder.decodeValues(.wideOxygenCurrentB1S1, response: "41 34 80 00 7F 00"), [
+            OBD2MonitorValue(id: "wide_o2_b1s1_current_ratio", pid: "34", value: 1, unit: ""),
+            OBD2MonitorValue(id: "wide_o2_b1s1_current", pid: "34", value: -1, unit: "mA")
+        ])
     }
 
     func testSupportedPidBitmap() {

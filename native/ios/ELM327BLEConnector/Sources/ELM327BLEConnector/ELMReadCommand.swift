@@ -56,6 +56,14 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case oxygenSensorB2S2
     case oxygenSensorB2S3
     case oxygenSensorB2S4
+    case wideOxygenVoltageB1S1
+    case wideOxygenVoltageB1S2
+    case wideOxygenVoltageB1S3
+    case wideOxygenVoltageB1S4
+    case wideOxygenVoltageB2S1
+    case wideOxygenVoltageB2S2
+    case wideOxygenVoltageB2S3
+    case wideOxygenVoltageB2S4
     case engineRuntime
     case distanceWithMIL
     case fuelRailPressureVacuum
@@ -67,6 +75,10 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case warmupsSinceClear
     case distanceSinceClear
     case barometricPressure
+    case wideOxygenCurrentB1S1
+    case wideOxygenCurrentB1S2
+    case wideOxygenCurrentB2S1
+    case wideOxygenCurrentB2S2
     case catalystTemperatureB1S1
     case catalystTemperatureB1S2
     case catalystTemperatureB2S1
@@ -145,6 +157,14 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .oxygenSensorB2S2: return "0119"
         case .oxygenSensorB2S3: return "011A"
         case .oxygenSensorB2S4: return "011B"
+        case .wideOxygenVoltageB1S1: return "0124"
+        case .wideOxygenVoltageB1S2: return "0125"
+        case .wideOxygenVoltageB1S3: return "0126"
+        case .wideOxygenVoltageB1S4: return "0127"
+        case .wideOxygenVoltageB2S1: return "0128"
+        case .wideOxygenVoltageB2S2: return "0129"
+        case .wideOxygenVoltageB2S3: return "012A"
+        case .wideOxygenVoltageB2S4: return "012B"
         case .engineRuntime: return "011F"
         case .distanceWithMIL: return "0121"
         case .fuelRailPressureVacuum: return "0122"
@@ -156,6 +176,10 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .warmupsSinceClear: return "0130"
         case .distanceSinceClear: return "0131"
         case .barometricPressure: return "0133"
+        case .wideOxygenCurrentB1S1: return "0134"
+        case .wideOxygenCurrentB1S2: return "0135"
+        case .wideOxygenCurrentB2S1: return "0138"
+        case .wideOxygenCurrentB2S2: return "0139"
         case .catalystTemperatureB1S1: return "013C"
         case .catalystTemperatureB1S2: return "013D"
         case .catalystTemperatureB2S1: return "013E"
@@ -190,7 +214,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameTriggerDTC, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "read_ecu_info"
         case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0: return "read_supported_pids"
-        case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .oxygenSensorB1S1, .oxygenSensorB1S2, .oxygenSensorB1S3, .oxygenSensorB1S4, .oxygenSensorB2S1, .oxygenSensorB2S2, .oxygenSensorB2S3, .oxygenSensorB2S4, .engineRuntime, .distanceWithMIL, .fuelRailPressureVacuum, .fuelRailPressure, .commandedEGR, .egrError, .commandedEvapPurge, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .catalystTemperatureB1S1, .catalystTemperatureB1S2, .catalystTemperatureB2S1, .catalystTemperatureB2S2, .commandedThrottleActuator, .controlModuleVoltage, .absoluteLoad, .commandedEquivalenceRatio, .relativeThrottlePosition, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .ethanolPercentage, .hybridBatteryRemaining, .engineOilTemperature, .fuelInjectionTiming, .engineFuelRate, .driverDemandTorque, .actualEngineTorque, .engineReferenceTorque: return "read_live_pid_snapshot"
+        case .readinessStatus, .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .oxygenSensorB1S1, .oxygenSensorB1S2, .oxygenSensorB1S3, .oxygenSensorB1S4, .oxygenSensorB2S1, .oxygenSensorB2S2, .oxygenSensorB2S3, .oxygenSensorB2S4, .wideOxygenVoltageB1S1, .wideOxygenVoltageB1S2, .wideOxygenVoltageB1S3, .wideOxygenVoltageB1S4, .wideOxygenVoltageB2S1, .wideOxygenVoltageB2S2, .wideOxygenVoltageB2S3, .wideOxygenVoltageB2S4, .engineRuntime, .distanceWithMIL, .fuelRailPressureVacuum, .fuelRailPressure, .commandedEGR, .egrError, .commandedEvapPurge, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .wideOxygenCurrentB1S1, .wideOxygenCurrentB1S2, .wideOxygenCurrentB2S1, .wideOxygenCurrentB2S2, .catalystTemperatureB1S1, .catalystTemperatureB1S2, .catalystTemperatureB2S1, .catalystTemperatureB2S2, .commandedThrottleActuator, .controlModuleVoltage, .absoluteLoad, .commandedEquivalenceRatio, .relativeThrottlePosition, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .ethanolPercentage, .hybridBatteryRemaining, .engineOilTemperature, .fuelInjectionTiming, .engineFuelRate, .driverDemandTorque, .actualEngineTorque, .engineReferenceTorque: return "read_live_pid_snapshot"
         }
     }
 
@@ -205,7 +229,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .readinessStatus: return "readiness_snapshot"
         case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameIntakeAirTemperature, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09EcuName: return "ecu_info_snapshot"
-        case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .oxygenSensorB1S1, .oxygenSensorB1S2, .oxygenSensorB1S3, .oxygenSensorB1S4, .oxygenSensorB2S1, .oxygenSensorB2S2, .oxygenSensorB2S3, .oxygenSensorB2S4, .engineRuntime, .distanceWithMIL, .fuelRailPressureVacuum, .fuelRailPressure, .commandedEGR, .egrError, .commandedEvapPurge, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .catalystTemperatureB1S1, .catalystTemperatureB1S2, .catalystTemperatureB2S1, .catalystTemperatureB2S2, .commandedThrottleActuator, .controlModuleVoltage, .absoluteLoad, .commandedEquivalenceRatio, .relativeThrottlePosition, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .ethanolPercentage, .hybridBatteryRemaining, .engineOilTemperature, .fuelInjectionTiming, .engineFuelRate, .driverDemandTorque, .actualEngineTorque, .engineReferenceTorque: return "live_pid_snapshot"
+        case .calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .oxygenSensorB1S1, .oxygenSensorB1S2, .oxygenSensorB1S3, .oxygenSensorB1S4, .oxygenSensorB2S1, .oxygenSensorB2S2, .oxygenSensorB2S3, .oxygenSensorB2S4, .wideOxygenVoltageB1S1, .wideOxygenVoltageB1S2, .wideOxygenVoltageB1S3, .wideOxygenVoltageB1S4, .wideOxygenVoltageB2S1, .wideOxygenVoltageB2S2, .wideOxygenVoltageB2S3, .wideOxygenVoltageB2S4, .engineRuntime, .distanceWithMIL, .fuelRailPressureVacuum, .fuelRailPressure, .commandedEGR, .egrError, .commandedEvapPurge, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .wideOxygenCurrentB1S1, .wideOxygenCurrentB1S2, .wideOxygenCurrentB2S1, .wideOxygenCurrentB2S2, .catalystTemperatureB1S1, .catalystTemperatureB1S2, .catalystTemperatureB2S1, .catalystTemperatureB2S2, .commandedThrottleActuator, .controlModuleVoltage, .absoluteLoad, .commandedEquivalenceRatio, .relativeThrottlePosition, .ambientAirTemperature, .timeWithMIL, .timeSinceClear, .ethanolPercentage, .hybridBatteryRemaining, .engineOilTemperature, .fuelInjectionTiming, .engineFuelRate, .driverDemandTorque, .actualEngineTorque, .engineReferenceTorque: return "live_pid_snapshot"
         default: return nil
         }
     }
@@ -266,6 +290,14 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .oxygenSensorB2S2: return "19"
         case .oxygenSensorB2S3: return "1A"
         case .oxygenSensorB2S4: return "1B"
+        case .wideOxygenVoltageB1S1: return "24"
+        case .wideOxygenVoltageB1S2: return "25"
+        case .wideOxygenVoltageB1S3: return "26"
+        case .wideOxygenVoltageB1S4: return "27"
+        case .wideOxygenVoltageB2S1: return "28"
+        case .wideOxygenVoltageB2S2: return "29"
+        case .wideOxygenVoltageB2S3: return "2A"
+        case .wideOxygenVoltageB2S4: return "2B"
         case .engineRuntime: return "1F"
         case .distanceWithMIL: return "21"
         case .fuelRailPressureVacuum: return "22"
@@ -277,6 +309,10 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .warmupsSinceClear: return "30"
         case .distanceSinceClear: return "31"
         case .barometricPressure: return "33"
+        case .wideOxygenCurrentB1S1: return "34"
+        case .wideOxygenCurrentB1S2: return "35"
+        case .wideOxygenCurrentB2S1: return "38"
+        case .wideOxygenCurrentB2S2: return "39"
         case .catalystTemperatureB1S1: return "3C"
         case .catalystTemperatureB1S2: return "3D"
         case .catalystTemperatureB2S1: return "3E"

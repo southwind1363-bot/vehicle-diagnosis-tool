@@ -185,6 +185,8 @@ public enum OBD2ReadoutDecoder {
                 }
                 let bytes = Array(payload.dropFirst(2))
                 let values = oxygenSensorValues(command: command, bytes: bytes)
+                    ?? wideOxygenVoltageValues(command: command, bytes: bytes)
+                    ?? wideOxygenCurrentValues(command: command, bytes: bytes)
                     ?? livePIDValue(command: command, bytes: bytes).map { [$0] }
                 guard let values else {
                     return .failure(.malformedResponse)
@@ -562,6 +564,42 @@ public enum OBD2ReadoutDecoder {
         return [
             OBD2MonitorValue(id: ids.voltage, pid: ids.pid, value: Double(bytes[0]) / 200, unit: "V"),
             OBD2MonitorValue(id: ids.trim, pid: ids.pid, value: Double(Int(bytes[1]) - 128) * 100 / 128, unit: "%")
+        ]
+    }
+
+    private static func wideOxygenVoltageValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {
+        let ids: (ratio: String, voltage: String, pid: String)
+        switch command {
+        case .wideOxygenVoltageB1S1: ids = ("wide_o2_b1s1_ratio", "wide_o2_b1s1_voltage_wide", "24")
+        case .wideOxygenVoltageB1S2: ids = ("wide_o2_b1s2_ratio", "wide_o2_b1s2_voltage_wide", "25")
+        case .wideOxygenVoltageB1S3: ids = ("wide_o2_b1s3_ratio", "wide_o2_b1s3_voltage_wide", "26")
+        case .wideOxygenVoltageB1S4: ids = ("wide_o2_b1s4_ratio", "wide_o2_b1s4_voltage_wide", "27")
+        case .wideOxygenVoltageB2S1: ids = ("wide_o2_b2s1_ratio", "wide_o2_b2s1_voltage_wide", "28")
+        case .wideOxygenVoltageB2S2: ids = ("wide_o2_b2s2_ratio", "wide_o2_b2s2_voltage_wide", "29")
+        case .wideOxygenVoltageB2S3: ids = ("wide_o2_b2s3_ratio", "wide_o2_b2s3_voltage_wide", "2A")
+        case .wideOxygenVoltageB2S4: ids = ("wide_o2_b2s4_ratio", "wide_o2_b2s4_voltage_wide", "2B")
+        default: return nil
+        }
+        guard bytes.count == 4 else { return nil }
+        return [
+            OBD2MonitorValue(id: ids.ratio, pid: ids.pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 32768, unit: ""),
+            OBD2MonitorValue(id: ids.voltage, pid: ids.pid, value: Double(Int(bytes[2]) * 256 + Int(bytes[3])) / 8192, unit: "V")
+        ]
+    }
+
+    private static func wideOxygenCurrentValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {
+        let ids: (ratio: String, current: String, pid: String)
+        switch command {
+        case .wideOxygenCurrentB1S1: ids = ("wide_o2_b1s1_current_ratio", "wide_o2_b1s1_current", "34")
+        case .wideOxygenCurrentB1S2: ids = ("wide_o2_b1s2_current_ratio", "wide_o2_b1s2_current", "35")
+        case .wideOxygenCurrentB2S1: ids = ("wide_o2_b2s1_current_ratio", "wide_o2_b2s1_current", "38")
+        case .wideOxygenCurrentB2S2: ids = ("wide_o2_b2s2_current_ratio", "wide_o2_b2s2_current", "39")
+        default: return nil
+        }
+        guard bytes.count == 4 else { return nil }
+        return [
+            OBD2MonitorValue(id: ids.ratio, pid: ids.pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 32768, unit: ""),
+            OBD2MonitorValue(id: ids.current, pid: ids.pid, value: Double(Int(bytes[2]) * 256 + Int(bytes[3])) / 256 - 128, unit: "mA")
         ]
     }
 }

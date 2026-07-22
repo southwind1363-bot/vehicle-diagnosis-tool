@@ -139,6 +139,32 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         }
     }
 
+    func testWideOxygenPidsProduceTwoValuesForEveryEcuScope() throws {
+        let voltageResult = try OBD2ReadoutDecoder.decodeLivePID(
+            command: .wideOxygenVoltageB1S1,
+            response: "7E8 06 41 24 80 00 20 00\n7E9 06 41 24 40 00 10 00"
+        ).get()
+        XCTAssertEqual(voltageResult.map(\.scopeID), ["7E8", "7E8", "7E9", "7E9"])
+        XCTAssertEqual(voltageResult.map(\.value), [
+            OBD2MonitorValue(id: "wide_o2_b1s1_ratio", pid: "24", value: 1, unit: ""),
+            OBD2MonitorValue(id: "wide_o2_b1s1_voltage_wide", pid: "24", value: 1, unit: "V"),
+            OBD2MonitorValue(id: "wide_o2_b1s1_ratio", pid: "24", value: 0.5, unit: ""),
+            OBD2MonitorValue(id: "wide_o2_b1s1_voltage_wide", pid: "24", value: 0.5, unit: "V")
+        ])
+        let currentResult = try OBD2ReadoutDecoder.decodeLivePID(
+            command: .wideOxygenCurrentB1S1,
+            response: "41 34 80 00 7F 00"
+        ).get()
+        XCTAssertEqual(currentResult.map(\.value), [
+            OBD2MonitorValue(id: "wide_o2_b1s1_current_ratio", pid: "34", value: 1, unit: ""),
+            OBD2MonitorValue(id: "wide_o2_b1s1_current", pid: "34", value: -1, unit: "mA")
+        ])
+        switch OBD2ReadoutDecoder.decodeLivePID(command: .wideOxygenVoltageB1S1, response: "41 24 80 00 20") {
+        case .failure: break
+        case .success: XCTFail("Wide oxygen sensor PID requires four data bytes")
+        }
+    }
+
     func testSupportedPidContinuationPagesKeepTheirActualBase() throws {
         let page20 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
             command: .supportedPIDs20,
