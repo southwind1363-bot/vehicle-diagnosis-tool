@@ -9,8 +9,13 @@ public struct OBD2MonitorValue: Equatable, Sendable {
 
 public enum OBD2PIDDecoder {
     public static func decode(_ command: ELMReadCommand, response: String) -> OBD2MonitorValue? {
-        guard case .success(let results) = OBD2ReadoutDecoder.decodeLivePID(command: command, response: response), results.count == 1 else { return nil }
-        return results[0].value
+        let values = decodeValues(command, response: response)
+        return values.count == 1 ? values[0] : nil
+    }
+
+    public static func decodeValues(_ command: ELMReadCommand, response: String) -> [OBD2MonitorValue] {
+        guard case .success(let results) = OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) else { return [] }
+        return results.map(\.value)
     }
 
     public static func supportedPIDs(response: String) -> [String] {

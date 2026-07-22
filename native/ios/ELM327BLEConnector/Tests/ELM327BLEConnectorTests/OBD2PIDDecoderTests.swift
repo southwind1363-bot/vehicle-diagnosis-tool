@@ -37,6 +37,11 @@ final class OBD2PIDDecoderTests: XCTestCase {
         XCTAssertEqual(OBD2PIDDecoder.decode(.driverDemandTorque, response: "41 61 8C")?.value, 15)
         XCTAssertEqual(OBD2PIDDecoder.decode(.actualEngineTorque, response: "41 62 96")?.value, 25)
         XCTAssertEqual(OBD2PIDDecoder.decode(.engineReferenceTorque, response: "41 63 01 90")?.value, 400)
+        XCTAssertEqual(OBD2PIDDecoder.decodeValues(.oxygenSensorB1S1, response: "41 14 80 90"), [
+            OBD2MonitorValue(id: "o2_b1s1_voltage", pid: "14", value: 0.64, unit: "V"),
+            OBD2MonitorValue(id: "o2_b1s1_stft", pid: "14", value: 12.5, unit: "%")
+        ])
+        XCTAssertNil(OBD2PIDDecoder.decode(.oxygenSensorB1S1, response: "41 14 80 90"))
     }
 
     func testSupportedPidBitmap() {

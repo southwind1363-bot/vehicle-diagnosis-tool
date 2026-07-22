@@ -183,10 +183,13 @@ public enum OBD2ReadoutDecoder {
                 guard payload.count >= 3, payload[0] == 0x41, payload[1] == expectedPIDByte else {
                     return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
                 }
-                guard let value = livePIDValue(command: command, bytes: Array(payload.dropFirst(2))) else {
+                let bytes = Array(payload.dropFirst(2))
+                let values = oxygenSensorValues(command: command, bytes: bytes)
+                    ?? livePIDValue(command: command, bytes: bytes).map { [$0] }
+                guard let values else {
                     return .failure(.malformedResponse)
                 }
-                decoded.append((scopeID: packet.scopeID, value: value))
+                decoded.append(contentsOf: values.map { (scopeID: packet.scopeID, value: $0) })
             }
             return .success(decoded)
         }
@@ -540,5 +543,25 @@ public enum OBD2ReadoutDecoder {
         default:
             return nil
         }
+    }
+
+    private static func oxygenSensorValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {
+        let ids: (voltage: String, trim: String, pid: String)
+        switch command {
+        case .oxygenSensorB1S1: ids = ("o2_b1s1_voltage", "o2_b1s1_stft", "14")
+        case .oxygenSensorB1S2: ids = ("o2_b1s2_voltage", "o2_b1s2_stft", "15")
+        case .oxygenSensorB1S3: ids = ("o2_b1s3_voltage", "o2_b1s3_stft", "16")
+        case .oxygenSensorB1S4: ids = ("o2_b1s4_voltage", "o2_b1s4_stft", "17")
+        case .oxygenSensorB2S1: ids = ("o2_b2s1_voltage", "o2_b2s1_stft", "18")
+        case .oxygenSensorB2S2: ids = ("o2_b2s2_voltage", "o2_b2s2_stft", "19")
+        case .oxygenSensorB2S3: ids = ("o2_b2s3_voltage", "o2_b2s3_stft", "1A")
+        case .oxygenSensorB2S4: ids = ("o2_b2s4_voltage", "o2_b2s4_stft", "1B")
+        default: return nil
+        }
+        guard bytes.count == 2 else { return nil }
+        return [
+            OBD2MonitorValue(id: ids.voltage, pid: ids.pid, value: Double(bytes[0]) / 200, unit: "V"),
+            OBD2MonitorValue(id: ids.trim, pid: ids.pid, value: Double(Int(bytes[1]) - 128) * 100 / 128, unit: "%")
+        ]
     }
 }

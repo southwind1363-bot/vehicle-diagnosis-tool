@@ -121,6 +121,24 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         }
     }
 
+    func testOxygenSensorPidProducesVoltageAndShortTermFuelTrimForEveryEcuScope() throws {
+        let result = try OBD2ReadoutDecoder.decodeLivePID(
+            command: .oxygenSensorB1S1,
+            response: "7E8 04 41 14 80 90\n7E9 04 41 14 64 70"
+        ).get()
+        XCTAssertEqual(result.map(\.scopeID), ["7E8", "7E8", "7E9", "7E9"])
+        XCTAssertEqual(result.map(\.value), [
+            OBD2MonitorValue(id: "o2_b1s1_voltage", pid: "14", value: 0.64, unit: "V"),
+            OBD2MonitorValue(id: "o2_b1s1_stft", pid: "14", value: 12.5, unit: "%"),
+            OBD2MonitorValue(id: "o2_b1s1_voltage", pid: "14", value: 0.5, unit: "V"),
+            OBD2MonitorValue(id: "o2_b1s1_stft", pid: "14", value: -12.5, unit: "%")
+        ])
+        switch OBD2ReadoutDecoder.decodeLivePID(command: .oxygenSensorB1S1, response: "41 14 80") {
+        case .failure: break
+        case .success: XCTFail("Oxygen sensor PID requires voltage and trim bytes")
+        }
+    }
+
     func testSupportedPidContinuationPagesKeepTheirActualBase() throws {
         let page20 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
             command: .supportedPIDs20,

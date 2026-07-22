@@ -20,7 +20,9 @@
       { "id": "commanded_egr", "pid": "2C", "value": 50.19607843137255, "unit": "%" },
       { "id": "commanded_equivalence_ratio", "pid": "44", "value": 1, "unit": "" },
       { "id": "catalyst_temp_b1s1", "pid": "3C", "value": 360, "unit": "C" },
-      { "id": "commanded_throttle_actuator", "pid": "4C", "value": 50.19607843137255, "unit": "%" }
+      { "id": "commanded_throttle_actuator", "pid": "4C", "value": 50.19607843137255, "unit": "%" },
+      { "id": "o2_b1s1_voltage", "pid": "14", "value": 0.64, "unit": "V" },
+      { "id": "o2_b1s1_stft", "pid": "14", "value": 12.5, "unit": "%" }
     ]
   }
 }
