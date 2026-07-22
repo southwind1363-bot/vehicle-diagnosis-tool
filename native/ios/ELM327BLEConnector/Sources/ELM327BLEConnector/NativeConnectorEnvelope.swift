@@ -10,7 +10,7 @@ public enum NativeConnectorJSONValue: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        if try container.decodeNil() { self = .null }
+        if container.decodeNil() { self = .null }
         else if let value = try? container.decode(Bool.self) { self = .bool(value) }
         else if let value = try? container.decode(Double.self) { self = .number(value) }
         else if let value = try? container.decode(String.self) { self = .string(value) }
