@@ -6,21 +6,21 @@ struct ReadoutCoordinatorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Readout status") {
-                    LabeledContent("Connection", value: viewModel.connectorState.rawValue)
-                    LabeledContent("Archive", value: viewModel.archiveState)
-                    LabeledContent("Archive records", value: "\(viewModel.archiveRecordCount)")
+                Section("読取状態") {
+                    LabeledContent("接続", value: viewModel.connectorState.rawValue)
+                    LabeledContent("アーカイブ", value: viewModel.archiveStateLabel)
+                    LabeledContent("アーカイブ件数", value: "\(viewModel.archiveRecordCount)")
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
                             .foregroundStyle(.red)
                     }
                 }
 
-                Section("1. BLE adapter") {
-                    Text("Only BLE GATT ELM327 adapters are supported. Bluetooth Classic-only ELM327 mini adapters cannot use this iPhone transport.")
+                Section("1. BLEアダプター") {
+                    Text("iPhoneではBLE GATT対応のELM327だけを使います。Bluetooth Classic専用のELM327 miniはこの経路では使えません。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Button("Scan nearby adapters") {
+                    Button("近くのアダプターを検索") {
                         viewModel.startPeripheralScan()
                     }
                     ForEach(viewModel.peripherals) { peripheral in
@@ -28,7 +28,7 @@ struct ReadoutCoordinatorView: View {
                             viewModel.selectPeripheral(peripheral)
                         } label: {
                             HStack {
-                                Text(peripheral.displayName.isEmpty ? "Unnamed adapter" : peripheral.displayName)
+                                Text(peripheral.displayName.isEmpty ? "名称未取得のアダプター" : peripheral.displayName)
                                 Spacer()
                                 if viewModel.selectedPeripheralID == peripheral.id {
                                     Image(systemName: "checkmark")
@@ -36,60 +36,60 @@ struct ReadoutCoordinatorView: View {
                             }
                         }
                     }
-                    Button("Connect selected adapter") {
+                    Button("選択したアダプターへ接続") {
                         viewModel.connectSelectedPeripheral()
                     }
                     .disabled(!viewModel.canConnect)
                 }
 
-                Section("2. GATT characteristics") {
-                    Text("After connection, choose a write characteristic for commands and a notify characteristic for responses.")
+                Section("2. 通信特性") {
+                    Text("接続後に、要求送信用の書込み特性と応答受信用の通知特性を選択します。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Picker("Transmit", selection: $viewModel.selectedTransmitID) {
-                        Text("Choose").tag("")
+                    Picker("送信", selection: $viewModel.selectedTransmitID) {
+                        Text("選択してください").tag("")
                         ForEach(viewModel.characteristicChoices) { choice in
                             Text(choice.label).tag(choice.id)
                         }
                     }
-                    Picker("Receive", selection: $viewModel.selectedReceiveID) {
-                        Text("Choose").tag("")
+                    Picker("受信", selection: $viewModel.selectedReceiveID) {
+                        Text("選択してください").tag("")
                         ForEach(viewModel.characteristicChoices) { choice in
                             Text(choice.label).tag(choice.id)
                         }
                     }
-                    Button("Confirm read characteristics") {
+                    Button("読取用の通信特性を確定") {
                         viewModel.configureReadCharacteristics()
                     }
                     .disabled(!viewModel.canConfigure)
                 }
 
-                Section("3. Read-only scan") {
-                    Text("Reads DTCs, freeze frame, readiness, ECU information, supported PIDs, and standard PIDs. It does not send clear, active test, or write commands.")
+                Section("3. 読取専用スキャン") {
+                    Text("DTC、フリーズフレーム、レディネス、ECU情報、対応PID、標準PIDを読取ります。消去、アクティブテスト、書込みは送信しません。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Button("Start initial readout") {
+                    Button("初回読取を開始") {
                         viewModel.beginInitialReadout()
                     }
                     .disabled(!viewModel.canStartReadout)
-                    Button("Disconnect", role: .destructive) {
+                    Button("切断", role: .destructive) {
                         viewModel.disconnect()
                     }
                 }
 
-                Section("4. Result") {
-                    Button("Build verified JSON") {
+                Section("4. 読取結果") {
+                    Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()
                     }
                     .disabled(viewModel.archiveState != "Complete")
                     if let exportURL = viewModel.exportURL {
                         ShareLink(item: exportURL) {
-                            Label("Share JSON", systemImage: "square.and.arrow.up")
+                            Label("JSONを共有", systemImage: "square.and.arrow.up")
                         }
                     }
                 }
             }
-            .navigationTitle("Vehicle readout")
+            .navigationTitle("車両読取")
         }
     }
 }

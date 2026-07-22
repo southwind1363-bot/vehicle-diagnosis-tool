@@ -21,7 +21,7 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Bluetooth is used to read diagnostic data from a BLE ELM327 adapter.</string>
+    <string>BLE ELM327アダプターから診断データを読取るためにBluetoothを使用します。</string>
     <key>UILaunchScreen</key>
     <dict/>
 </dict>

@@ -56,6 +56,10 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         connectorState == .ready
     }
 
+    var archiveStateLabel: String {
+        archiveState == "Complete" ? "完了" : "未完了"
+    }
+
     static func suggestedCharacteristicIDs(from candidates: [BLECharacteristicCandidate]) -> (transmitID: String, receiveID: String)? {
         let transmitCandidates = candidates.filter { $0.supportsWrite || $0.supportsWriteWithoutResponse }
         let receiveCandidates = candidates.filter(\.supportsNotify)
@@ -106,7 +110,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
             try data.write(to: url, options: .atomic)
             exportURL = url
         } catch {
-            errorMessage = "Archive export failed: \(error.localizedDescription)"
+            errorMessage = "読取アーカイブを作成できませんでした: \(error.localizedDescription)"
         }
     }
 
@@ -124,8 +128,8 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         characteristicChoices = coordinator.characteristicCandidates.map(CharacteristicChoice.init(candidate:))
         archiveRecordCount = coordinator.completedArchive?.envelopes.count ?? 0
         archiveState = coordinator.completedArchive == nil ? "Incomplete" : "Complete"
-        errorMessage = coordinator.archiveError.map { "Archive validation error: \($0)" }
-            ?? coordinator.connectorError.map { "Transport error: \($0)" }
+        errorMessage = coordinator.archiveError.map { "読取アーカイブの検証エラー: \($0)" }
+            ?? coordinator.connectorError.map { "通信エラー: \($0)" }
 
         if let selectedPeripheralID, !peripherals.contains(where: { $0.id == selectedPeripheralID }) {
             self.selectedPeripheralID = nil
