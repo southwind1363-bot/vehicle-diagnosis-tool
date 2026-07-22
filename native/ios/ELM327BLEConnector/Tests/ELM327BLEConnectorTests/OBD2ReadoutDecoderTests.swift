@@ -184,6 +184,16 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         }
     }
 
+    func testEvapVaporPressurePreservesScopeAndRejectsIncompleteResponse() throws {
+        let result = try OBD2ReadoutDecoder.decodeLivePID(command: .evapVaporPressure, response: "7E8 04 41 32 FF 38").get()
+        XCTAssertEqual(result.map(\.scopeID), ["7E8"])
+        XCTAssertEqual(result.map(\.value), [OBD2MonitorValue(id: "evap_vapor_pressure", pid: "32", value: -50, unit: "Pa")])
+        switch OBD2ReadoutDecoder.decodeLivePID(command: .evapVaporPressure, response: "41 32 FF") {
+        case .failure: break
+        case .success: XCTFail("EVAP vapor pressure PID requires two data bytes")
+        }
+    }
+
     func testSupportedPidContinuationPagesKeepTheirActualBase() throws {
         let page20 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
             command: .supportedPIDs20,

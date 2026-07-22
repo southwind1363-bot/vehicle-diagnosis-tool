@@ -480,6 +480,11 @@ public enum OBD2ReadoutDecoder {
         case .distanceSinceClear:
             guard bytes.count == 2 else { return nil }
             return OBD2MonitorValue(id: "distance_since_clear", pid: "31", value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "km")
+        case .evapVaporPressure:
+            guard bytes.count == 2 else { return nil }
+            let raw = Int(bytes[0]) * 256 + Int(bytes[1])
+            let signed = raw >= 0x8000 ? raw - 0x10000 : raw
+            return OBD2MonitorValue(id: "evap_vapor_pressure", pid: "32", value: Double(signed) / 4, unit: "Pa")
         case .barometricPressure:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "barometric_pressure", pid: "33", value: Double(bytes[0]), unit: "kPa")
