@@ -188,6 +188,7 @@ public enum OBD2ReadoutDecoder {
                     ?? wideOxygenVoltageValues(command: command, bytes: bytes)
                     ?? wideOxygenCurrentValues(command: command, bytes: bytes)
                     ?? enginePercentTorqueValues(command: command, bytes: bytes)
+                    ?? commandedEGRAndErrorValues(command: command, bytes: bytes)
                     ?? livePIDValue(command: command, bytes: bytes).map { [$0] }
                 guard let values else {
                     return .failure(.malformedResponse)
@@ -636,5 +637,13 @@ public enum OBD2ReadoutDecoder {
         return zip(ids, bytes).map { pair in
             OBD2MonitorValue(id: pair.0, pid: "64", value: Double(Int(pair.1) - 125), unit: "%")
         }
+    }
+
+    private static func commandedEGRAndErrorValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {
+        guard command == .commandedEGRAndError, bytes.count == 2 else { return nil }
+        return [
+            OBD2MonitorValue(id: "commanded_egr_pid69", pid: "69", value: Double(bytes[0]) * 100 / 255, unit: "%"),
+            OBD2MonitorValue(id: "egr_error_pid69", pid: "69", value: Double(Int(bytes[1]) - 128) * 100 / 128, unit: "%")
+        ]
     }
 }

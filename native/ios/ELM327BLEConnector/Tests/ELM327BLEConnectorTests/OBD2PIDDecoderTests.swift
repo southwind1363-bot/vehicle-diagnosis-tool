@@ -65,6 +65,10 @@ final class OBD2PIDDecoderTests: XCTestCase {
             OBD2MonitorValue(id: "engine_percent_torque_point3", pid: "64", value: 15, unit: "%"),
             OBD2MonitorValue(id: "engine_percent_torque_point4", pid: "64", value: 20, unit: "%")
         ])
+        XCTAssertEqual(OBD2PIDDecoder.decodeValues(.commandedEGRAndError, response: "41 69 80 90"), [
+            OBD2MonitorValue(id: "commanded_egr_pid69", pid: "69", value: 50.19607843137255, unit: "%"),
+            OBD2MonitorValue(id: "egr_error_pid69", pid: "69", value: 12.5, unit: "%")
+        ])
     }
 
     func testSupportedPidBitmap() {
