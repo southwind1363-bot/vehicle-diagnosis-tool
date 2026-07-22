@@ -39,9 +39,11 @@ jobs:
 
       - name: Build read-only host for iOS Simulator
         run: |
+          set +e
           set -o pipefail
           xcodebuild -project ELM327BLEHost.xcodeproj -scheme ELM327BLEHost -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee /tmp/elm327blehost-xcodebuild.log
           build_status=${PIPESTATUS[0]}
+          set -e
           if [ "$build_status" -ne 0 ]; then
             details=$(grep -E '(^| )((fatal )?error:|warning:)' /tmp/elm327blehost-xcodebuild.log | tail -n 8 | tr '\n' ' ')
             echo "::error title=iOS host build failure::${details:-xcodebuild failed without a compiler diagnostic}"
