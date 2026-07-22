@@ -1,5 +1,8 @@
 name: VehicleDiagnosisELMHost
 options:
+  minimumXcodeGenVersion: 2.38.0
+  xcodeVersion: "15.4"
+  projectFormat: xcode15_0
   deploymentTarget:
     iOS: "16.0"
 settings:
@@ -25,6 +28,14 @@ targets:
       - Tests
     dependencies:
       - target: VehicleDiagnosisELMHost
+      - package: ELM327BLEConnector
+        product: ELM327BLEConnector
+  ELM327BLEConnectorTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ../ELM327BLEConnector/Tests/ELM327BLEConnectorTests
+    dependencies:
       - package: ELM327BLEConnector
         product: ELM327BLEConnector
 packages:

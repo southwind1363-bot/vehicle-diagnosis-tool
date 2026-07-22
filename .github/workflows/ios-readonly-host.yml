@@ -31,33 +31,40 @@ jobs:
 
       - name: Validate Bluetooth permission manifest
         run: plutil -lint Sources/Info.plist
-        working-directory: native/ios/ELM327BLEHost
+        working-directory: native/ios/VehicleDiagnosisELMHost
 
       - name: Generate host project
         run: xcodegen generate
-        working-directory: native/ios/ELM327BLEHost
+        working-directory: native/ios/VehicleDiagnosisELMHost
 
       - name: Build read-only host for iOS Simulator
         run: |
           set +e
           set -o pipefail
-          xcodebuild -project ELM327BLEHost.xcodeproj -scheme ELM327BLEHost -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee /tmp/elm327blehost-xcodebuild.log
+          xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme VehicleDiagnosisELMHost -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee /tmp/vehicle-diagnosis-elm-host-xcodebuild.log
           build_status=${PIPESTATUS[0]}
           set -e
           if [ "$build_status" -ne 0 ]; then
-            details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:)' /tmp/elm327blehost-xcodebuild.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
-            if [ -z "$details" ]; then details=$(tail -n 12 /tmp/elm327blehost-xcodebuild.log | cut -c 1-600 | tr '\n' ' '); fi
+            details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:)' /tmp/vehicle-diagnosis-elm-host-xcodebuild.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
+            if [ -z "$details" ]; then details=$(tail -n 12 /tmp/vehicle-diagnosis-elm-host-xcodebuild.log | cut -c 1-600 | tr '\n' ' '); fi
             echo "::error title=iOS host build failure::${details:-xcodebuild failed without a compiler diagnostic}"
             exit "$build_status"
           fi
-        working-directory: native/ios/ELM327BLEHost
+        working-directory: native/ios/VehicleDiagnosisELMHost
 
       - name: Compile read-only connector tests for iOS Simulator
         run: |
           set +e
           set -o pipefail
-          xcodebuild -project ELM327BLEHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/elm327bleconnector-tests.log
-          test_status=${PIPESTATUS[0]}
+          xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme VehicleDiagnosisELMHostTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/vehicle-diagnosis-elm-host-tests.log
+          host_test_status=${PIPESTATUS[0]}
+          if [ "$host_test_status" -eq 0 ]; then
+            xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/elm327bleconnector-tests.log
+            test_status=${PIPESTATUS[0]}
+          else
+            test_status=$host_test_status
+            cp /tmp/vehicle-diagnosis-elm-host-tests.log /tmp/elm327bleconnector-tests.log
+          fi
           set -e
           if [ "$test_status" -ne 0 ]; then
             details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:|Testing failed:|Unable to find a destination)' /tmp/elm327bleconnector-tests.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
@@ -65,4 +72,4 @@ jobs:
             echo "::error title=iOS connector test compilation failure::${details:-xcodebuild build-for-testing failed without a diagnostic}"
             exit "$test_status"
           fi
-        working-directory: native/ios/ELM327BLEHost
+        working-directory: native/ios/VehicleDiagnosisELMHost
