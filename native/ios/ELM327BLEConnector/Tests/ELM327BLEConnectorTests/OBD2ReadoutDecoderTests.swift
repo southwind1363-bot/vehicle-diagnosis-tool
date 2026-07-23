@@ -35,6 +35,12 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         ).get()
         XCTAssertEqual(result[0].dtcs, [OBD2DTC(code: "P0171", status: "stored")])
 
+        let inlineResult = try OBD2ReadoutDecoder.decodeDTCs(
+            command: .storedDTC,
+            response: "SEARCHING\nBUS INIT: OK\n43 01 71 00 00"
+        ).get()
+        XCTAssertEqual(inlineResult[0].dtcs, [OBD2DTC(code: "P0171", status: "stored")])
+
         assertDTCFailure("BUS INIT: ...\nERROR", expected: .malformedResponse)
     }
 

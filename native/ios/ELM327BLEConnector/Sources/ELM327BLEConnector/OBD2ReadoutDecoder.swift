@@ -368,11 +368,14 @@ public enum OBD2ReadoutDecoder {
         var waitingForBusInitResult = false
 
         return lines.compactMap { line in
-            if line == "SEARCHING..." {
+            if line == "SEARCHING..." || line == "SEARCHING" {
                 return nil
             }
             if line == "BUS INIT: ..." {
                 waitingForBusInitResult = true
+                return nil
+            }
+            if line == "BUS INIT: OK" || line == "BUS INIT: ... OK" {
                 return nil
             }
             if waitingForBusInitResult && line == "OK" {
