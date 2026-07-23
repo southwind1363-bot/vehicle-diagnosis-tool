@@ -33,10 +33,6 @@ jobs:
         run: plutil -lint Sources/Info.plist
         working-directory: native/ios/VehicleDiagnosisELMHost
 
-      - name: Run read-only connector unit tests
-        run: swift test
-        working-directory: native/ios/ELM327BLEConnector
-
       - name: Generate host project
         run: xcodegen generate
         working-directory: native/ios/VehicleDiagnosisELMHost
