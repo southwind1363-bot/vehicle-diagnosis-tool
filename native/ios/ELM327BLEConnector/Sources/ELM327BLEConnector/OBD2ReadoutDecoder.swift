@@ -341,10 +341,11 @@ public enum OBD2ReadoutDecoder {
     }
 
     private static func packets(in response: String) -> Result<[Packet], OBD2ReadoutDecodeFailure> {
-        let lines = response
+        let rawLines = response
             .split(whereSeparator: { $0.isNewline })
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
             .filter { !$0.isEmpty }
+        let lines = withoutELMTransportPreamble(rawLines)
         guard !lines.isEmpty else { return .failure(.noData) }
         if lines.contains(where: { $0 == "NO DATA" || $0.contains("UNABLE TO CONNECT") }) { return .failure(.noData) }
         if lines.contains(where: { $0.contains("CAN ERROR") || $0.contains("BUFFER FULL") || $0 == "STOPPED" || $0 == "?" }) { return .failure(.malformedResponse) }
@@ -361,6 +362,26 @@ public enum OBD2ReadoutDecoder {
             result.append(Packet(scopeID: scopeID, payload: payload))
         }
         return .success(result.sorted { ($0.scopeID ?? "LEGACY") < ($1.scopeID ?? "LEGACY") })
+    }
+
+    private static func withoutELMTransportPreamble(_ lines: [String]) -> [String] {
+        var waitingForBusInitResult = false
+
+        return lines.compactMap { line in
+            if line == "SEARCHING..." {
+                return nil
+            }
+            if line == "BUS INIT: ..." {
+                waitingForBusInitResult = true
+                return nil
+            }
+            if waitingForBusInitResult && line == "OK" {
+                waitingForBusInitResult = false
+                return nil
+            }
+            waitingForBusInitResult = false
+            return line
+        }
     }
 
     private static func parseLine(_ line: String) -> (scopeID: String?, bytes: [UInt8])? {

@@ -28,6 +28,16 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertTrue(result[0].dtcs.isEmpty)
     }
 
+    func testELMTransportPreambleDoesNotChangeTheReadout() throws {
+        let result = try OBD2ReadoutDecoder.decodeDTCs(
+            command: .storedDTC,
+            response: "SEARCHING...\nBUS INIT: ...\nOK\n43 01 71 00 00"
+        ).get()
+        XCTAssertEqual(result[0].dtcs, [OBD2DTC(code: "P0171", status: "stored")])
+
+        assertDTCFailure("BUS INIT: ...\nERROR", expected: .malformedResponse)
+    }
+
     func testOnboardMonitorTestsPreserveScopeAndRequireCompleteRows() throws {
         let results = try OBD2ReadoutDecoder.decodeOnboardMonitorTests(
             response: "7E8 10 12 46 01 02 00 03 00\n7E8 21 01 00 05 46 03 04 00\n7E8 22 06 00 01 00 05"
