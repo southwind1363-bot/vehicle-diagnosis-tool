@@ -35,7 +35,7 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"readout_id\":\"live_pid_snapshot\""))
         XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))
         XCTAssertTrue(json.contains("\"readout_attempt\":0"))
-        XCTAssertFalse(json.contains("vehicle_command_enabled\":true"))
+        XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
     }
 
     func testReadinessEnvelopeCarriesThePid01ScopeAndStatusBytes() throws {

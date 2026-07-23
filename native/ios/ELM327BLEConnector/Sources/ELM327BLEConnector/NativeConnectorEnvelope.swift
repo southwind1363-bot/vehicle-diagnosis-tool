@@ -279,6 +279,8 @@ public enum NativeConnectorEnvelopeFactory {
         readoutScopeID: String? = nil,
         readoutAttempt: Int? = nil
     ) -> NativeConnectorEnvelope {
+        var safeData = data
+        safeData["vehicle_command_enabled"] = .bool(false)
         NativeConnectorEnvelope(
             schemaVersion: "native_connector_contract_v1",
             interfaceID: "user-vci-elm327",
@@ -296,7 +298,7 @@ public enum NativeConnectorEnvelopeFactory {
             blocked: false,
             wouldTransmit: false,
             errors: errors,
-            data: data
+            data: safeData
         )
     }
 }
