@@ -102,6 +102,13 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             scopeID: "7E8",
             tests: [OBD2OnboardMonitorTest(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5)]
         )
+        let supportedPIDs = NativeConnectorEnvelopeFactory.supportedPIDs(
+            context: context,
+            sequence: 7,
+            scopeID: "7E8",
+            pageBase: "00",
+            pids: ["0C", "04"]
+        )
 
         coordinator.connector(coordinator.connector, didEmit: dtc)
         coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
@@ -109,11 +116,13 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         coordinator.connector(coordinator.connector, didEmit: readiness)
         coordinator.connector(coordinator.connector, didEmit: ecuInfo)
         coordinator.connector(coordinator.connector, didEmit: onboardMonitor)
+        coordinator.connector(coordinator.connector, didEmit: supportedPIDs)
 
         XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.readiness, [NativeConnectorReadoutPreview.Readiness(sourceScopeID: "7E8", milOn: false, dtcCount: 1, ignitionType: "spark", supportedMonitorCount: 1, incompleteMonitorCount: 0)])
         XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.onboardMonitors, [NativeConnectorReadoutPreview.OnboardMonitor(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5, sourceScopeID: "7E8")])
+        XCTAssertEqual(coordinator.readoutPreview.supportedPIDs, [NativeConnectorReadoutPreview.SupportedPIDs(sourceScopeID: "7E8", pids: ["04", "0C"])])
     }
 }

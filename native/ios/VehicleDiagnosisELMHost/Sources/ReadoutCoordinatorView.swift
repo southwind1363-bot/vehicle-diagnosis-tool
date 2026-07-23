@@ -139,6 +139,18 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.supportedPIDs.isEmpty {
+                    Section("対応PID") {
+                        ForEach(viewModel.readoutPreview.supportedPIDs) { supported in
+                            DisclosureGroup("ECU \(supported.sourceScopeID) / \(supported.pids.count)項目") {
+                                Text(supported.pids.joined(separator: ", "))
+                                    .font(.footnote)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
+                }
+
                 Section("4. 読取結果") {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()

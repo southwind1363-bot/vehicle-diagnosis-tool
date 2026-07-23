@@ -63,6 +63,13 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         }
     }
 
+    public struct SupportedPIDs: Identifiable, Sendable, Equatable {
+        public let sourceScopeID: String
+        public let pids: [String]
+
+        public var id: String { sourceScopeID }
+    }
+
     public let storedDTCs: [DTC]
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
@@ -71,6 +78,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     public let readiness: [Readiness]
     public let ecuInfo: [ECUInfo]
     public let onboardMonitors: [OnboardMonitor]
+    public let supportedPIDs: [SupportedPIDs]
 
     public init(
         storedDTCs: [DTC],
@@ -80,7 +88,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         freezeFrameValues: [MonitorValue],
         readiness: [Readiness],
         ecuInfo: [ECUInfo],
-        onboardMonitors: [OnboardMonitor]
+        onboardMonitors: [OnboardMonitor],
+        supportedPIDs: [SupportedPIDs]
     ) {
         self.storedDTCs = storedDTCs
         self.pendingDTCs = pendingDTCs
@@ -90,6 +99,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.readiness = readiness
         self.ecuInfo = ecuInfo
         self.onboardMonitors = onboardMonitors
+        self.supportedPIDs = supportedPIDs
     }
 
     public static let empty = NativeConnectorReadoutPreview(
@@ -100,7 +110,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         freezeFrameValues: [],
         readiness: [],
         ecuInfo: [],
-        onboardMonitors: []
+        onboardMonitors: [],
+        supportedPIDs: []
     )
 
     public init(envelopes: [NativeConnectorEnvelope]) {
@@ -112,6 +123,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var readiness: [String: Readiness] = [:]
         var ecuInfo: [String: ECUInfo] = [:]
         var onboardMonitors: [String: OnboardMonitor] = [:]
+        var supportedPIDs: [String: Set<String>] = [:]
 
         for envelope in envelopes {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
@@ -134,6 +146,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo[$0.id] = $0 }
             case "read_onboard_monitor":
                 Self.onboardMonitorItems(in: envelope.data, scopeID: scopeID).forEach { onboardMonitors[$0.id] = $0 }
+            case "read_supported_pids":
+                supportedPIDs[scopeID, default: []].formUnion(Self.supportedPIDItems(in: envelope.data))
             default:
                 break
             }
@@ -151,6 +165,9 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.onboardMonitors = onboardMonitors.values.sorted { lhs, rhs in
             lhs.sourceScopeID == rhs.sourceScopeID ? lhs.testID < rhs.testID : lhs.sourceScopeID < rhs.sourceScopeID
         }
+        self.supportedPIDs = supportedPIDs
+            .map { SupportedPIDs(sourceScopeID: $0.key, pids: $0.value.sorted()) }
+            .sorted { $0.sourceScopeID < $1.sourceScopeID }
     }
 
     private static func dtcStatus(for intent: String) -> String {
@@ -259,6 +276,15 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 maximum: maximum,
                 sourceScopeID: scopeID
             )
+        }
+    }
+
+    private static func supportedPIDItems(in data: [String: NativeConnectorJSONValue]) -> [String] {
+        guard case .array(let values)? = data["supported_pids"] else { return [] }
+        return values.compactMap { value in
+            guard case .string(let rawPID) = value else { return nil }
+            let pid = rawPID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            return pid.range(of: "^[0-9A-F]{2}$", options: .regularExpression) == nil ? nil : pid
         }
     }
 
