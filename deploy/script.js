@@ -6069,6 +6069,7 @@ function renderObdNextReadoutActions(session = null) {
 function formatObdSessionSourceLabel(source, fallback = NO_DATA) {
   return {
     local_bridge: "ローカルブリッジ",
+    native_connector: "iPhone native read-only connector",
     scanner_text: "スキャナーテキスト",
     scanner_text_and_local_bridge: "統合入力",
     diagnostic_core: "診断コア",
@@ -8053,6 +8054,8 @@ function analyzeObdScannerImport(options = {}) {
     ? hasScannerText
       ? "貼り付け結果とローカルブリッジ読取を統合し、"
       : "ローカルブリッジ読取結果を反映し、"
+    : summarySourceType === "native_connector"
+      ? "iPhone native read-only connector archive を検証して取り込み、"
     : "";
   const coreReadinessHeadline = buildCoreReadinessHeadline(summaryCoreSessionStatus);
   const detailNote = notes.length ? ` ${notes.join(" / ")}。` : "";
