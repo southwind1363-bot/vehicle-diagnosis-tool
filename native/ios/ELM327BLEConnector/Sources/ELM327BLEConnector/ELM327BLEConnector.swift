@@ -23,6 +23,19 @@ func classifyELMReadResponse(_ response: String) -> ELMReadResponseDisposition {
     return normalized.contains("NO DATA") ? .noData : .process
 }
 
+func enqueueSupportedPIDFollowUps(
+    pendingCommands: [ELMReadCommand],
+    liveCommands: [ELMReadCommand],
+    nextSupportedPIDPage: ELMReadCommand?
+) -> [ELMReadCommand] {
+    var next = pendingCommands
+    if let nextSupportedPIDPage {
+        next.insert(nextSupportedPIDPage, at: 0)
+    }
+    next.append(contentsOf: liveCommands)
+    return next
+}
+
 public struct BLEPeripheralCandidate: Identifiable, Sendable {
     public let id: UUID
     public let displayName: String
@@ -387,13 +400,20 @@ public final class ELM327BLEConnector: NSObject {
                     let supportedCommands = ELMReadCommand.allCases.filter { candidate in
                         candidate.livePID.map(liveSupportedPIDs.contains) == true && scheduledLivePIDCommands.insert(candidate).inserted
                     }
-                    pendingCommands.insert(contentsOf: supportedCommands, at: 0)
-                    plan(commands: supportedCommands)
-                    if let nextPage = command.nextSupportedPIDPage,
-                       let nextPageBase = nextPage.supportedPIDPageBase,
+                    var nextPage: ELMReadCommand?
+                    if let candidate = command.nextSupportedPIDPage,
+                       let nextPageBase = candidate.supportedPIDPageBase,
                        results.contains(where: { $0.pids.contains(nextPageBase) }),
-                       scheduledSupportedPIDPages.insert(nextPage).inserted {
-                        pendingCommands.insert(nextPage, at: 0)
+                       scheduledSupportedPIDPages.insert(candidate).inserted {
+                        nextPage = candidate
+                    }
+                    pendingCommands = enqueueSupportedPIDFollowUps(
+                        pendingCommands: pendingCommands,
+                        liveCommands: supportedCommands,
+                        nextSupportedPIDPage: nextPage
+                    )
+                    plan(commands: supportedCommands)
+                    if let nextPage {
                         plan(commands: [nextPage])
                     }
                 case .failure(let error):

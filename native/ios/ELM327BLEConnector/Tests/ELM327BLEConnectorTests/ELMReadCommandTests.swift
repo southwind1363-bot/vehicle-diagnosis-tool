@@ -2,6 +2,25 @@ import XCTest
 @testable import ELM327BLEConnector
 
 final class ELMReadCommandTests: XCTestCase {
+    func testSupportedPIDFollowUpsKeepReadinessAheadOfLiveValues() {
+        XCTAssertEqual(
+            enqueueSupportedPIDFollowUps(
+                pendingCommands: [.readinessStatus],
+                liveCommands: [.engineRPM, .coolantTemperature],
+                nextSupportedPIDPage: .supportedPIDs20
+            ),
+            [.supportedPIDs20, .readinessStatus, .engineRPM, .coolantTemperature]
+        )
+        XCTAssertEqual(
+            enqueueSupportedPIDFollowUps(
+                pendingCommands: [.readinessStatus],
+                liveCommands: [.engineRPM],
+                nextSupportedPIDPage: nil
+            ),
+            [.readinessStatus, .engineRPM]
+        )
+    }
+
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
         XCTAssertEqual(
             ELMReadCommand.allCases.map(\.wireValue),
