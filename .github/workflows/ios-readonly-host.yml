@@ -33,6 +33,21 @@ jobs:
         run: plutil -lint Sources/Info.plist
         working-directory: native/ios/VehicleDiagnosisELMHost
 
+      - name: Run read-only connector unit tests
+        run: |
+          set +e
+          set -o pipefail
+          swift test 2>&1 | tee /tmp/elm327bleconnector-swift-test.log
+          test_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$test_status" -ne 0 ]; then
+            details=$(grep -E '(error:|failed:|fatal error:)' /tmp/elm327bleconnector-swift-test.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
+            if [ -z "$details" ]; then details=$(tail -n 12 /tmp/elm327bleconnector-swift-test.log | cut -c 1-600 | tr '\n' ' '); fi
+            echo "::error title=ELM327 connector unit tests failed::${details:-swift test failed without a diagnostic}"
+            exit "$test_status"
+          fi
+        working-directory: native/ios/ELM327BLEConnector
+
       - name: Generate host project
         run: xcodegen generate
         working-directory: native/ios/VehicleDiagnosisELMHost
