@@ -4484,7 +4484,8 @@ async function initializeElmDeveloperAdapter() {
   const initCommands = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
   const responses = [];
   for (const command of initCommands) {
-    const response = await sendElmDeveloperCommand(command, 2500);
+    const timeoutMs = command === "ATZ" ? 5000 : 2500;
+    const response = await sendElmDeveloperCommand(command, timeoutMs);
     const outcome = classifyWebSerialCommandResponse(command, response);
     if (outcome.commandStatus !== "completed") {
       throw new Error(`elm_adapter_initialization_failed:${command}:${outcome.stopReason || outcome.commandStatus}`);
