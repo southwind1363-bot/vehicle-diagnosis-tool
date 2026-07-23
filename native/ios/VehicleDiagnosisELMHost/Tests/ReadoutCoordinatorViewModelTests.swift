@@ -170,6 +170,15 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.canExportArchive)
     }
 
+    @MainActor
+    func testReadoutFailureLabelsExplainTransportStopConditions() {
+        let viewModel = ReadoutCoordinatorViewModel()
+
+        XCTAssertEqual(viewModel.readoutFailureLabel("adapter_setup_failed"), "ELM327初期化応答を確認できないため、読取前に中断しました")
+        XCTAssertEqual(viewModel.readoutFailureLabel("vehicle_link_error"), "車両ECUとの通信を確立できないため、以降の読取を中断しました")
+        XCTAssertEqual(viewModel.readoutFailureLabel("transport_failure"), "アダプターまたは車両通信の異常を検出したため、中断しました")
+    }
+
     private func decode<T: Decodable>(_ type: T.Type, json: String) throws -> T {
         try JSONDecoder().decode(type, from: Data(json.utf8))
     }

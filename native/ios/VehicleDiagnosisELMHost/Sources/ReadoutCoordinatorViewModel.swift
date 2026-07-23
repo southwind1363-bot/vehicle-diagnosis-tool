@@ -95,6 +95,9 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     func readoutFailureLabel(_ errorCode: String) -> String {
         switch errorCode {
         case "readout_not_available": return "ECU応答なしまたは未対応"
+        case "adapter_setup_failed": return "ELM327初期化応答を確認できないため、読取前に中断しました"
+        case "vehicle_link_error": return "車両ECUとの通信を確立できないため、以降の読取を中断しました"
+        case "transport_failure": return "アダプターまたは車両通信の異常を検出したため、中断しました"
         case "response_timeout": return "応答待機時間切れ"
         case "write_capacity_timeout": return "アダプター送信待機時間切れ"
         case "write_failed": return "アダプター送信失敗"
