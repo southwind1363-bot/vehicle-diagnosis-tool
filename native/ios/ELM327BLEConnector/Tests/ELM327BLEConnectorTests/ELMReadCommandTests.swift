@@ -12,6 +12,12 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .storedDTC, response: "OK"))
     }
 
+    func testWriteWithoutResponseWaitsForBleCapacity() {
+        XCTAssertTrue(requiresELMWriteCapacityWait(writeWithoutResponse: true, canSendWithoutResponse: false))
+        XCTAssertFalse(requiresELMWriteCapacityWait(writeWithoutResponse: true, canSendWithoutResponse: true))
+        XCTAssertFalse(requiresELMWriteCapacityWait(writeWithoutResponse: false, canSendWithoutResponse: false))
+    }
+
     func testSupportedPIDFollowUpsKeepReadinessAheadOfLiveValues() {
         XCTAssertEqual(
             enqueueSupportedPIDFollowUps(

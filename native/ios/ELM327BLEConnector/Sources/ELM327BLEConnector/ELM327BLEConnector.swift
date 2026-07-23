@@ -35,6 +35,10 @@ func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: Strin
     return lines.contains("OK")
 }
 
+func requiresELMWriteCapacityWait(writeWithoutResponse: Bool, canSendWithoutResponse: Bool) -> Bool {
+    writeWithoutResponse && !canSendWithoutResponse
+}
+
 func enqueueSupportedPIDFollowUps(
     pendingCommands: [ELMReadCommand],
     liveCommands: [ELMReadCommand],
@@ -214,19 +218,17 @@ public final class ELM327BLEConnector: NSObject {
         guard let peripheral = selectedPeripheral, let transmit = transmitCharacteristic else { return fail(.disconnected) }
         let type: CBCharacteristicWriteType = transmit.properties.contains(.write) ? .withResponse : .withoutResponse
         guard let request = "\(command.wireValue)\r".data(using: .utf8) else { return fail(.invalidResponse) }
-        if type == .withoutResponse && !peripheral.canSendWriteWithoutResponse {
-            waitForWriteCapacity(command, request: request, to: peripheral, characteristic: transmit)
+        if requiresELMWriteCapacityWait(
+            writeWithoutResponse: type == .withoutResponse,
+            canSendWithoutResponse: peripheral.canSendWriteWithoutResponse
+        ) {
+            waitForWriteCapacity(command)
             return
         }
         send(command, request: request, to: peripheral, characteristic: transmit, type: type)
     }
 
-    private func waitForWriteCapacity(
-        _ command: ELMReadCommand,
-        request: Data,
-        to peripheral: CBPeripheral,
-        characteristic: CBCharacteristic
-    ) {
+    private func waitForWriteCapacity(_ command: ELMReadCommand) {
         state = .awaitingWriteCapacity
         let timeout = DispatchWorkItem { [weak self] in
             guard let self,
@@ -238,7 +240,6 @@ public final class ELM327BLEConnector: NSObject {
         }
         timeoutWorkItem = timeout
         DispatchQueue.main.asyncAfter(deadline: .now() + command.timeout, execute: timeout)
-        peripheral.writeValue(request, for: characteristic, type: .withoutResponse)
     }
 
     private func send(
