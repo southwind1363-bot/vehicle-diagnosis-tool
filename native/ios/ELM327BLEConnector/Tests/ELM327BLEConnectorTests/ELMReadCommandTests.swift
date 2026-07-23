@@ -43,6 +43,12 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(acceptsELMResponseNotification(peripheralMatches: true, awaitingPrompt: true, hasActiveCommand: false))
     }
 
+    func testNotificationStateUpdatesRequireTheCurrentSubscription() {
+        XCTAssertTrue(acceptsELMNotificationStateUpdate(peripheralMatches: true, subscribing: true))
+        XCTAssertFalse(acceptsELMNotificationStateUpdate(peripheralMatches: false, subscribing: true))
+        XCTAssertFalse(acceptsELMNotificationStateUpdate(peripheralMatches: true, subscribing: false))
+    }
+
     func testSupportedPIDFollowUpsKeepReadinessAheadOfLiveValues() {
         XCTAssertEqual(
             enqueueSupportedPIDFollowUps(

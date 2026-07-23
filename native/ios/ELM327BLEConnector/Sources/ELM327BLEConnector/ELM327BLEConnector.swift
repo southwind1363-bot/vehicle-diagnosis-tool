@@ -48,6 +48,10 @@ func acceptsELMResponseNotification(peripheralMatches: Bool, awaitingPrompt: Boo
     peripheralMatches && awaitingPrompt && hasActiveCommand
 }
 
+func acceptsELMNotificationStateUpdate(peripheralMatches: Bool, subscribing: Bool) -> Bool {
+    peripheralMatches && subscribing
+}
+
 func enqueueSupportedPIDFollowUps(
     pendingCommands: [ELMReadCommand],
     liveCommands: [ELMReadCommand],
@@ -145,6 +149,10 @@ public final class ELM327BLEConnector: NSObject {
         peripherals.removeAll()
         selectedPeripheral = nil
         characteristics.removeAll()
+        transmitCharacteristic = nil
+        receiveCharacteristic = nil
+        pendingServiceIDs.removeAll()
+        promptDecoder.reset()
         central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
         state = .scanning
     }
@@ -613,10 +621,13 @@ extension ELM327BLEConnector: CBCentralManagerDelegate {
         peripheral.discoverServices(nil)
     }
 
-    public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) { fail(.disconnected) }
+    public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        guard peripheral.identifier == selectedPeripheral?.identifier else { return }
+        fail(.disconnected)
+    }
 
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        guard state != .idle else { return }
+        guard peripheral.identifier == selectedPeripheral?.identifier, state != .idle else { return }
         if state != .interrupted { interrupt(.disconnected) }
     }
 }
@@ -659,6 +670,10 @@ extension ELM327BLEConnector: CBPeripheralDelegate {
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+        guard acceptsELMNotificationStateUpdate(
+            peripheralMatches: peripheral.identifier == selectedPeripheral?.identifier,
+            subscribing: state == .subscribing
+        ) else { return }
         guard error == nil, characteristic === receiveCharacteristic, characteristic.isNotifying else { return fail(.characteristicNotReady) }
         state = .ready
     }
