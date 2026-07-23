@@ -58,7 +58,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
           "blocked": false,
           "would_transmit": false,
           "errors": [],
-          "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8" }
+          "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8", "vehicle_command_enabled": false }
         }
         """)
         let manifest = try decode(NativeConnectorCompletionManifest.self, json: """
@@ -118,7 +118,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
           "blocked": false,
           "would_transmit": false,
           "errors": [],
-          "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8" }
+          "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8", "vehicle_command_enabled": false }
         }
         """)
         let manifest = try decode(NativeConnectorCompletionManifest.self, json: """

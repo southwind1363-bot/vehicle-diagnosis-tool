@@ -88,6 +88,30 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             )
             XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().append(sensitive))
         }
+
+        let safeEnvelope = envelope(sequence: 1)
+        var dataWithoutSafetyFlag = safeEnvelope.data
+        dataWithoutSafetyFlag.removeValue(forKey: "vehicle_command_enabled")
+        let missingSafetyFlag = NativeConnectorEnvelope(
+            schemaVersion: safeEnvelope.schemaVersion,
+            interfaceID: safeEnvelope.interfaceID,
+            platform: safeEnvelope.platform,
+            intent: safeEnvelope.intent,
+            capturedAt: safeEnvelope.capturedAt,
+            scanID: safeEnvelope.scanID,
+            connectionID: safeEnvelope.connectionID,
+            vehicleContextID: safeEnvelope.vehicleContextID,
+            sequence: safeEnvelope.sequence,
+            readoutID: safeEnvelope.readoutID,
+            readoutScopeID: safeEnvelope.readoutScopeID,
+            readoutAttempt: safeEnvelope.readoutAttempt,
+            ok: safeEnvelope.ok,
+            blocked: safeEnvelope.blocked,
+            wouldTransmit: safeEnvelope.wouldTransmit,
+            errors: safeEnvelope.errors,
+            data: dataWithoutSafetyFlag
+        )
+        XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().append(missingSafetyFlag))
     }
 
     func testRejectsSequenceAndTerminalBoundaryMismatch() throws {

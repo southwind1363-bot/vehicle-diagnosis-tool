@@ -84,6 +84,7 @@ public final class NativeConnectorScanArchiveBuilder {
               Self.allowedIntents.contains(envelope.intent),
               !envelope.blocked,
               !envelope.wouldTransmit,
+              Self.hasExplicitVehicleCommandDisabled(in: envelope.data),
               envelope.sequence >= 0
         else { throw NativeConnectorScanArchiveError.invalidEnvelope }
         guard Self.isSafe(data: envelope.data) else { throw NativeConnectorScanArchiveError.unsafeEnvelope }
@@ -167,6 +168,11 @@ public final class NativeConnectorScanArchiveBuilder {
             if ["read_only", "readonly"].contains(normalizedKey) && !isEnabled(value) { return false }
             return isSafe(value: value)
         }
+    }
+
+    private static func hasExplicitVehicleCommandDisabled(in data: [String: NativeConnectorJSONValue]) -> Bool {
+        guard case .bool(false) = data["vehicle_command_enabled"] else { return false }
+        return true
     }
 
     private static func isValidScope(_ value: String) -> Bool {
