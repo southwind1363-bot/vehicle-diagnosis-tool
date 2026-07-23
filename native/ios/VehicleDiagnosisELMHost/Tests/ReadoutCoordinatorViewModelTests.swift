@@ -90,7 +90,18 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.archiveState, "Complete")
         XCTAssertEqual(viewModel.archiveRecordCount, 1)
+        XCTAssertTrue(viewModel.canExportArchive)
         XCTAssertNil(viewModel.errorMessage)
+    }
+
+    @MainActor
+    func testArchiveStateDistinguishesCompletedInterruptedAndMissingArchives() {
+        XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .completed), "Complete")
+        XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .interrupted), "Interrupted")
+        XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: nil), "Incomplete")
+
+        let viewModel = ReadoutCoordinatorViewModel()
+        XCTAssertFalse(viewModel.canExportArchive)
     }
 
     private func decode<T: Decodable>(_ type: T.Type, json: String) throws -> T {

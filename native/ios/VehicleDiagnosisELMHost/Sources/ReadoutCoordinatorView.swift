@@ -166,7 +166,7 @@ struct ReadoutCoordinatorView: View {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()
                     }
-                    .disabled(viewModel.archiveState != "Complete")
+                    .disabled(!viewModel.canExportArchive)
                     if let exportURL = viewModel.exportURL {
                         ShareLink(item: exportURL) {
                             Label("JSONを共有", systemImage: "square.and.arrow.up")

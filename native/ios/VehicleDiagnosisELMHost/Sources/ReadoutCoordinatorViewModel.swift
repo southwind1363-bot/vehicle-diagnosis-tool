@@ -58,7 +58,23 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     }
 
     var archiveStateLabel: String {
-        archiveState == "Complete" ? "完了" : "未完了"
+        switch archiveState {
+        case "Complete": return "完了"
+        case "Interrupted": return "中断済み"
+        default: return "未完了"
+        }
+    }
+
+    var canExportArchive: Bool {
+        archiveState == "Complete" || archiveState == "Interrupted"
+    }
+
+    static func archiveState(for scanState: NativeConnectorScanState?) -> String {
+        switch scanState {
+        case .completed: return "Complete"
+        case .interrupted: return "Interrupted"
+        case nil: return "Incomplete"
+        }
     }
 
     func readoutLabel(intent: String, readoutID: String?) -> String {
@@ -171,7 +187,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         peripherals = coordinator.peripherals
         characteristicChoices = coordinator.characteristicCandidates.map(CharacteristicChoice.init(candidate:))
         archiveRecordCount = coordinator.capturedEnvelopeCount
-        archiveState = coordinator.completedArchive == nil ? "Incomplete" : "Complete"
+        archiveState = Self.archiveState(for: coordinator.completedArchive?.completionManifest.scanState)
         readoutPreview = coordinator.readoutPreview
         errorMessage = coordinator.archiveError.map { self.archiveErrorMessage($0) }
             ?? coordinator.connectorError.map { self.connectorErrorMessage($0) }
