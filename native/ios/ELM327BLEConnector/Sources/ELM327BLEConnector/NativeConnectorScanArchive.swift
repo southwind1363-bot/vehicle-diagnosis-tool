@@ -28,7 +28,8 @@ public struct NativeConnectorScanArchive: Codable, Sendable, Equatable {
 }
 
 public final class NativeConnectorScanArchiveBuilder {
-    public static let maximumEnvelopeCount = 256
+    // Multi-ECU replies can produce several scoped envelopes for one readout command.
+    public static let maximumEnvelopeCount = 1_024
 
     private static let allowedIntents: Set<String> = [
         "adapter_identity",
