@@ -77,9 +77,25 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  const isDiagnosticDataRequest = url.pathname.includes("/data/") && url.pathname.endsWith(".json");
 
   event.respondWith(
     (async () => {
+      if (isDiagnosticDataRequest) {
+        try {
+          const response = await fetch(request);
+          if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, response.clone());
+          }
+          return response;
+        } catch (error) {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          throw error;
+        }
+      }
+
       const cached = await caches.match(request);
       if (cached) return cached;
 
