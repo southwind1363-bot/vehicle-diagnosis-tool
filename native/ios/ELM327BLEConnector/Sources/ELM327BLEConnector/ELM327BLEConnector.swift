@@ -23,6 +23,18 @@ func classifyELMReadResponse(_ response: String) -> ELMReadResponseDisposition {
     return normalized.contains("NO DATA") ? .noData : .process
 }
 
+func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: String) -> Bool {
+    guard command.isAdapterSetup else { return false }
+    let lines = response
+        .split(whereSeparator: { $0.isNewline })
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+        .filter { !$0.isEmpty }
+    guard !lines.contains(where: { ["ERROR", "?", "STOPPED", "CAN ERROR", "BUS ERROR", "BUFFER FULL"].contains($0) }) else {
+        return false
+    }
+    return lines.contains("OK")
+}
+
 func enqueueSupportedPIDFollowUps(
     pendingCommands: [ELMReadCommand],
     liveCommands: [ELMReadCommand],
@@ -266,11 +278,20 @@ public final class ELM327BLEConnector: NSObject {
             interrupt(.invalidResponse)
             return
         case .noData:
+            if command.isAdapterSetup {
+                emitFailure(for: command, error: "adapter_setup_failed")
+                interrupt(.invalidResponse)
+                return
+            }
             emitFailure(for: command, error: "readout_not_available")
         case .process:
             switch command {
             case .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol:
-                break
+                guard isCompletedELMAdapterSetupResponse(command: command, response: response) else {
+                    emitFailure(for: command, error: "adapter_setup_failed")
+                    interrupt(.invalidResponse)
+                    return
+                }
             case .identifyAdapter:
                 adapterName = firstResponseLine(in: response, excluding: command)
                 sequence += 1

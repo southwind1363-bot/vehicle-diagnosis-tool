@@ -2,6 +2,16 @@ import XCTest
 @testable import ELM327BLEConnector
 
 final class ELMReadCommandTests: XCTestCase {
+    func testAdapterSetupRequiresAnExplicitSuccessfulResponse() {
+        XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .disableEcho, response: "ATE0\rOK"))
+        XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "OK"))
+        XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .enableHeaders, response: "ATH1"))
+        XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .disableLinefeeds, response: "?"))
+        XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "ERROR"))
+        XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "NO DATA"))
+        XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .storedDTC, response: "OK"))
+    }
+
     func testSupportedPIDFollowUpsKeepReadinessAheadOfLiveValues() {
         XCTAssertEqual(
             enqueueSupportedPIDFollowUps(
