@@ -4484,7 +4484,12 @@ async function initializeElmDeveloperAdapter() {
   const initCommands = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
   const responses = [];
   for (const command of initCommands) {
-    responses.push(`${command}\n${await sendElmDeveloperCommand(command, 2500)}`);
+    const response = await sendElmDeveloperCommand(command, 2500);
+    const outcome = classifyWebSerialCommandResponse(command, response);
+    if (outcome.commandStatus !== "completed") {
+      throw new Error(`elm_adapter_initialization_failed:${command}:${outcome.stopReason || outcome.commandStatus}`);
+    }
+    responses.push(`${command}\n${response}`);
   }
   appendObdDeveloperLog(responses.join("\n"));
   obdDevStatus.textContent = "VCI初期化を送信しました。次にVCI確認、DTC読取、ライブデータ読取を試せます。";
