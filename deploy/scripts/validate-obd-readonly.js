@@ -3245,10 +3245,28 @@ const emptyInterruptedManifest = obd.buildNativeConnectorScanSessionFromCompleti
     interruption: { code: "transport:disconnected", connection_id: nativeBoundary.connectionId, sequence: 0 }
   }
 });
+const adapterSetupFailureManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
+  envelopes: [{
+    ...nativeEnvelope("adapter_identity", "2026-07-20T07:02:00Z", { adapter_family: "ELM327", vehicle_command_enabled: false }, "user-vci-elm327", { sequence: 1 }),
+    ok: false,
+    blocked: false,
+    errors: ["adapter_setup_failed"]
+  }],
+  completion_manifest: {
+    ...nativeCompletionManifest,
+    captured_at: "2026-07-20T07:02:01Z",
+    scan_state: "interrupted",
+    expected_intents: ["adapter_identity"],
+    expected_readouts: ["adapter_identity"],
+    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: 1, last_sequence: 1, envelope_count: 1 }],
+    interruption: { code: "readout:invalid_response", connection_id: nativeBoundary.connectionId, sequence: 1 }
+  }
+});
 check(manifestBoundaryMismatch.blocked === true && manifestBoundaryMismatch.errors.includes("completion_manifest_boundary_mismatch"), "Native completion manifest did not reject a terminal boundary mismatch");
 check(manifestMissingReadout.ok === true && manifestMissingReadout.scanState === "interrupted" && manifestMissingReadout.partial === true, "Native completion manifest treated a missing expected readout as completed");
 check(manifestRawData.blocked === true && manifestRawData.errors.includes("completion_manifest_retains_raw_data"), "Native completion manifest retained raw transport data");
 check(emptyInterruptedManifest.ok === true && emptyInterruptedManifest.scanState === "interrupted" && emptyInterruptedManifest.partial === true && emptyInterruptedManifest.session?.nativeConnectorScanLifecycle?.interruption?.code === "transport:disconnected" && emptyInterruptedManifest.session?.vehicleCommandEnabled === false, "Native empty interruption did not retain a safe partial lifecycle session");
+check(adapterSetupFailureManifest.ok === true && adapterSetupFailureManifest.scanState === "interrupted" && adapterSetupFailureManifest.partial === true && adapterSetupFailureManifest.session?.nativeConnectorScanLifecycle?.errorCodes?.includes("adapter_setup_failed") && adapterSetupFailureManifest.session?.dtcSnapshot?.codes?.length === 0 && adapterSetupFailureManifest.vehicleCommandEnabled === false && adapterSetupFailureManifest.wouldTransmit === false, "Native adapter setup failure was not retained as a safe interrupted session");
 check(nativeScanSession.ok === true && nativeScanSession.accepted === true && nativeScanSession.partial === false && nativeScanSession.envelopeCount === 10 && nativeScanSession.acceptedEnvelopeCount === 10 && nativeScanSession.rejectedEnvelopeCount === 0, "iPhoneコネクタ連続読取を完全な診断セッションとして受理できません");
 check(nativeScanSession.scanState === "completed" && nativeScanSession.nativeConnectorScanLifecycle?.completionExplicit === true && nativeScanSession.nativeConnectorScanLifecycle?.connectionCount === 1 && nativeScanSession.nativeConnectorScanLifecycle?.missingIntents?.length === 0 && nativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed", "iPhoneコネクタ完了manifestを診断セッションへ保持できません");
 check(nativeScanSession.startedAt === "2026-07-20T07:00:00.000Z" && nativeScanSession.completedAt === "2026-07-20T07:00:09.000Z" && nativeScanSession.evaluations[0]?.capturedAt === "2026-07-20T07:00:07.000Z" && nativeScanSession.scanId === nativeBoundary.scanId && nativeScanSession.session?.sessionId === nativeBoundary.scanId && nativeScanSession.session?.nativeConnectorBoundary?.connectionId === nativeBoundary.connectionId && nativeScanSession.session?.nativeConnectorBoundary?.vehicleContextId === nativeBoundary.vehicleContextId && nativeScanSession.session?.startedAt === nativeScanSession.startedAt && nativeScanSession.session?.endedAt === nativeScanSession.completedAt, "iPhoneコネクタ連続読取の境界、時刻範囲または元応答順を保持できません");
