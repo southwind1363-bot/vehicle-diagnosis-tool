@@ -2,6 +2,22 @@ import XCTest
 @testable import ELM327BLEConnector
 
 final class ELMReadCommandTests: XCTestCase {
+    func testInitialReadoutPlanIsAnExplicitReadOnlyAllowlist() {
+        XCTAssertEqual(
+            ELMReadCommand.initialReadoutCommands,
+            [
+                .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol,
+                .identifyAdapter, .describeProtocol,
+                .storedDTC, .pendingDTC, .permanentDTC,
+                .onboardMonitor, .freezeFrameCapabilities, .mode09SupportedInfoTypes,
+                .supportedPIDs, .readinessStatus
+            ]
+        )
+        XCTAssertFalse(ELMReadCommand.initialReadoutCommands.contains(.freezeFrameTriggerDTC))
+        XCTAssertFalse(ELMReadCommand.initialReadoutCommands.contains(.mode09CalibrationID))
+        XCTAssertFalse(ELMReadCommand.initialReadoutCommands.contains(.engineRPM))
+    }
+
     func testAdapterSetupRequiresAnExplicitSuccessfulResponse() {
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .disableEcho, response: "ATE0\rOK"))
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "OK"))

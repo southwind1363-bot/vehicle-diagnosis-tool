@@ -111,6 +111,23 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case commandedEGRAndError
     case odometer
 
+    public static let initialReadoutCommands: [ELMReadCommand] = [
+        .disableEcho,
+        .disableLinefeeds,
+        .enableHeaders,
+        .autoProtocol,
+        .identifyAdapter,
+        .describeProtocol,
+        .storedDTC,
+        .pendingDTC,
+        .permanentDTC,
+        .onboardMonitor,
+        .freezeFrameCapabilities,
+        .mode09SupportedInfoTypes,
+        .supportedPIDs,
+        .readinessStatus
+    ]
+
     public var wireValue: String {
         switch self {
         case .disableEcho: return "ATE0"
