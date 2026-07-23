@@ -249,6 +249,7 @@
     const adapterOpened = source.adapterOpened === true || source.adapter_opened === true;
     const elmIdentified = adapterOpened && (source.elmIdentified === true || source.elm_identified === true);
     const vehicleVerified = elmIdentified && (source.vehicleVerified === true || source.vehicle_verified === true);
+    const nativeHostImplemented = platform === "ios";
     const compatibilityStatus = vehicleVerified && elmIdentified
       ? "vehicle_verified"
       : elmIdentified
@@ -267,8 +268,10 @@
       adapter_transport: adapterTransport,
       compatibilityStatus,
       compatibility_status: compatibilityStatus,
-      connectorStatus: platform === "ios" ? "not_implemented" : "unavailable",
-      connector_status: platform === "ios" ? "not_implemented" : "unavailable",
+      nativeHostImplemented,
+      native_host_implemented: nativeHostImplemented,
+      connectorStatus: nativeHostImplemented ? "native_host_implemented" : "unavailable",
+      connector_status: nativeHostImplemented ? "native_host_implemented" : "unavailable",
       canConnect: false,
       can_connect: false,
       canSendReadQuery: false,
@@ -279,7 +282,9 @@
       can_clear_dtc: false,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
-      reason: "Native ELM transport is not implemented; transport detection never enables vehicle communication."
+      reason: nativeHostImplemented
+        ? "The native iPhone BLE read-only host is implemented; adapter and vehicle compatibility remain unverified."
+        : "No native ELM transport is available on this platform; transport detection never enables vehicle communication."
     };
   }
 
