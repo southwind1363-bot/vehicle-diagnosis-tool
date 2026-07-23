@@ -24,6 +24,8 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .enableHeaders, response: "ATH1"))
         XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .disableLinefeeds, response: "?"))
         XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "ERROR"))
+        XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "ERROR 1\rOK"))
+        XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "BUS INIT: ERROR\rOK"))
         XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "NO DATA"))
         XCTAssertFalse(isCompletedELMAdapterSetupResponse(command: .storedDTC, response: "OK"))
     }

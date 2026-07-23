@@ -29,7 +29,12 @@ func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: Strin
         .split(whereSeparator: { $0.isNewline })
         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
         .filter { !$0.isEmpty }
-    guard !lines.contains(where: { ["ERROR", "?", "STOPPED", "CAN ERROR", "BUS ERROR", "BUFFER FULL"].contains($0) }) else {
+    guard !lines.contains(where: {
+        $0 == "?" ||
+        $0.contains("ERROR") ||
+        $0 == "STOPPED" ||
+        $0 == "BUFFER FULL"
+    }) else {
         return false
     }
     return lines.contains("OK")
