@@ -44,6 +44,10 @@ func requiresELMWriteCapacityWait(writeWithoutResponse: Bool, canSendWithoutResp
     writeWithoutResponse && !canSendWithoutResponse
 }
 
+func acceptsELMResponseNotification(peripheralMatches: Bool, awaitingPrompt: Bool, hasActiveCommand: Bool) -> Bool {
+    peripheralMatches && awaitingPrompt && hasActiveCommand
+}
+
 func enqueueSupportedPIDFollowUps(
     pendingCommands: [ELMReadCommand],
     liveCommands: [ELMReadCommand],
@@ -673,7 +677,14 @@ extension ELM327BLEConnector: CBPeripheralDelegate {
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard error == nil, characteristic === receiveCharacteristic, let value = characteristic.value else { return fail(.invalidResponse) }
+        guard characteristic === receiveCharacteristic,
+              acceptsELMResponseNotification(
+                  peripheralMatches: peripheral.identifier == selectedPeripheral?.identifier,
+                  awaitingPrompt: state == .awaitingPrompt,
+                  hasActiveCommand: activeCommand != nil
+              )
+        else { return }
+        guard error == nil, let value = characteristic.value else { return fail(.invalidResponse) }
         do {
             if let response = try promptDecoder.append(value) { completeActiveCommand(with: response) }
         } catch let connectorError as ELMConnectorError {

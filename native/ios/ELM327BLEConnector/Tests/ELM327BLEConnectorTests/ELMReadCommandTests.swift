@@ -36,6 +36,13 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(requiresELMWriteCapacityWait(writeWithoutResponse: false, canSendWithoutResponse: false))
     }
 
+    func testResponseNotificationsRequireTheActiveBleRead() {
+        XCTAssertTrue(acceptsELMResponseNotification(peripheralMatches: true, awaitingPrompt: true, hasActiveCommand: true))
+        XCTAssertFalse(acceptsELMResponseNotification(peripheralMatches: false, awaitingPrompt: true, hasActiveCommand: true))
+        XCTAssertFalse(acceptsELMResponseNotification(peripheralMatches: true, awaitingPrompt: false, hasActiveCommand: true))
+        XCTAssertFalse(acceptsELMResponseNotification(peripheralMatches: true, awaitingPrompt: true, hasActiveCommand: false))
+    }
+
     func testSupportedPIDFollowUpsKeepReadinessAheadOfLiveValues() {
         XCTAssertEqual(
             enqueueSupportedPIDFollowUps(
