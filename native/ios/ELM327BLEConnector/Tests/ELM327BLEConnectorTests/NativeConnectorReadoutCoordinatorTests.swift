@@ -96,16 +96,24 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             infoType: "04",
             value: "ECM-CAL-01"
         )
+        let onboardMonitor = NativeConnectorEnvelopeFactory.onboardMonitor(
+            context: context,
+            sequence: 6,
+            scopeID: "7E8",
+            tests: [OBD2OnboardMonitorTest(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5)]
+        )
 
         coordinator.connector(coordinator.connector, didEmit: dtc)
         coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
         coordinator.connector(coordinator.connector, didEmit: monitor)
         coordinator.connector(coordinator.connector, didEmit: readiness)
         coordinator.connector(coordinator.connector, didEmit: ecuInfo)
+        coordinator.connector(coordinator.connector, didEmit: onboardMonitor)
 
         XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.readiness, [NativeConnectorReadoutPreview.Readiness(sourceScopeID: "7E8", milOn: false, dtcCount: 1, ignitionType: "spark", supportedMonitorCount: 1, incompleteMonitorCount: 0)])
         XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8")])
+        XCTAssertEqual(coordinator.readoutPreview.onboardMonitors, [NativeConnectorReadoutPreview.OnboardMonitor(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5, sourceScopeID: "7E8")])
     }
 }

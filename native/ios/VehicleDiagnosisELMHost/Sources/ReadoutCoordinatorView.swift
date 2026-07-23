@@ -131,6 +131,14 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.onboardMonitors.isEmpty {
+                    Section("Mode 06 監視結果") {
+                        ForEach(viewModel.readoutPreview.onboardMonitors) { monitor in
+                            LabeledContent("TID \(monitor.testID) / CID \(monitor.componentID) / \(monitor.sourceScopeID)", value: monitor.displayRange)
+                        }
+                    }
+                }
+
                 Section("4. 読取結果") {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()

@@ -44,6 +44,25 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         public var id: String { "\(infoID):\(sourceScopeID)" }
     }
 
+    public struct OnboardMonitor: Identifiable, Sendable, Equatable {
+        public let testID: String
+        public let componentID: String
+        public let value: Double
+        public let minimum: Double
+        public let maximum: Double
+        public let sourceScopeID: String
+
+        public var id: String { "\(testID):\(componentID):\(sourceScopeID)" }
+
+        public var displayRange: String {
+            "\(Self.format(value)) / \(Self.format(minimum)) - \(Self.format(maximum))"
+        }
+
+        private static func format(_ value: Double) -> String {
+            value.rounded() == value ? String(Int(value)) : String(format: "%.2f", value)
+        }
+    }
+
     public let storedDTCs: [DTC]
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
@@ -51,6 +70,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     public let freezeFrameValues: [MonitorValue]
     public let readiness: [Readiness]
     public let ecuInfo: [ECUInfo]
+    public let onboardMonitors: [OnboardMonitor]
 
     public init(
         storedDTCs: [DTC],
@@ -59,7 +79,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         liveValues: [MonitorValue],
         freezeFrameValues: [MonitorValue],
         readiness: [Readiness],
-        ecuInfo: [ECUInfo]
+        ecuInfo: [ECUInfo],
+        onboardMonitors: [OnboardMonitor]
     ) {
         self.storedDTCs = storedDTCs
         self.pendingDTCs = pendingDTCs
@@ -68,6 +89,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.freezeFrameValues = freezeFrameValues
         self.readiness = readiness
         self.ecuInfo = ecuInfo
+        self.onboardMonitors = onboardMonitors
     }
 
     public static let empty = NativeConnectorReadoutPreview(
@@ -77,7 +99,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         liveValues: [],
         freezeFrameValues: [],
         readiness: [],
-        ecuInfo: []
+        ecuInfo: [],
+        onboardMonitors: []
     )
 
     public init(envelopes: [NativeConnectorEnvelope]) {
@@ -88,6 +111,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var freezeFrameValues: [String: MonitorValue] = [:]
         var readiness: [String: Readiness] = [:]
         var ecuInfo: [String: ECUInfo] = [:]
+        var onboardMonitors: [String: OnboardMonitor] = [:]
 
         for envelope in envelopes {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
@@ -108,6 +132,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameValues[$0.id] = $0 }
             case "read_ecu_info":
                 Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo[$0.id] = $0 }
+            case "read_onboard_monitor":
+                Self.onboardMonitorItems(in: envelope.data, scopeID: scopeID).forEach { onboardMonitors[$0.id] = $0 }
             default:
                 break
             }
@@ -121,6 +147,9 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.readiness = readiness.values.sorted { $0.sourceScopeID < $1.sourceScopeID }
         self.ecuInfo = ecuInfo.values.sorted { lhs, rhs in
             lhs.sourceScopeID == rhs.sourceScopeID ? lhs.infoID < rhs.infoID : lhs.sourceScopeID < rhs.sourceScopeID
+        }
+        self.onboardMonitors = onboardMonitors.values.sorted { lhs, rhs in
+            lhs.sourceScopeID == rhs.sourceScopeID ? lhs.testID < rhs.testID : lhs.sourceScopeID < rhs.sourceScopeID
         }
     }
 
@@ -206,6 +235,30 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
             let trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !infoID.isEmpty, !trimmedValue.isEmpty else { return nil }
             return ECUInfo(infoID: infoID, infoType: infoType, value: trimmedValue, sourceScopeID: scopeID)
+        }
+    }
+
+    private static func onboardMonitorItems(in data: [String: NativeConnectorJSONValue], scopeID: String) -> [OnboardMonitor] {
+        guard case .array(let values)? = data["tests"] else { return [] }
+        return values.compactMap { value in
+            guard case .object(let object) = value,
+                  case .string(let testID)? = object["test_id"],
+                  case .string(let componentID)? = object["component_id"],
+                  case .number(let measuredValue)? = object["value"],
+                  case .number(let minimum)? = object["min"],
+                  case .number(let maximum)? = object["max"],
+                  measuredValue.isFinite,
+                  minimum.isFinite,
+                  maximum.isFinite
+            else { return nil }
+            return OnboardMonitor(
+                testID: testID,
+                componentID: componentID,
+                value: measuredValue,
+                minimum: minimum,
+                maximum: maximum,
+                sourceScopeID: scopeID
+            )
         }
     }
 
