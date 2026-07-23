@@ -95,6 +95,72 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCompletedArchiveWritesAShareableValidatedJSONFile() async throws {
+        let context = NativeConnectorSessionContext(
+            scanID: UUID(uuidString: "44444444-4444-4444-8444-444444444444")!,
+            connectionID: UUID(uuidString: "55555555-5555-4555-8555-555555555555")!,
+            vehicleContextID: UUID(uuidString: "66666666-6666-4666-8666-666666666666")!
+        )
+        let coordinator = NativeConnectorReadoutCoordinator()
+        let viewModel = ReadoutCoordinatorViewModel(coordinator: coordinator)
+        let envelope = try decode(NativeConnectorEnvelope.self, json: """
+        {
+          "schema_version": "native_connector_contract_v1",
+          "interface_id": "user-vci-elm327",
+          "platform": "ios",
+          "intent": "read_stored_dtc",
+          "captured_at": "2026-07-23T00:00:00Z",
+          "scan_id": "\(context.scanID.uuidString)",
+          "connection_id": "\(context.connectionID.uuidString)",
+          "vehicle_context_id": "\(context.vehicleContextID.uuidString)",
+          "sequence": 1,
+          "ok": true,
+          "blocked": false,
+          "would_transmit": false,
+          "errors": [],
+          "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8" }
+        }
+        """)
+        let manifest = try decode(NativeConnectorCompletionManifest.self, json: """
+        {
+          "schema_version": "native_connector_completion_manifest_v1",
+          "record_type": "completion_manifest",
+          "platform": "ios",
+          "interface_id": "user-vci-elm327",
+          "scan_id": "\(context.scanID.uuidString)",
+          "vehicle_context_id": "\(context.vehicleContextID.uuidString)",
+          "captured_at": "2026-07-23T00:00:01Z",
+          "scan_state": "completed",
+          "expected_intents": ["read_stored_dtc"],
+          "expected_readouts": ["stored_dtc_snapshot"],
+          "expected_readout_scopes": [],
+          "connection_segments": [{ "connection_id": "\(context.connectionID.uuidString)", "connection_sequence": 0, "first_sequence": 1, "last_sequence": 1, "envelope_count": 1 }],
+          "interruption": null,
+          "read_only": true,
+          "vehicle_command_enabled": false,
+          "execution_enabled": false,
+          "would_transmit": false,
+          "retained_raw_payload": false
+        }
+        """)
+
+        coordinator.connector(coordinator.connector, didEmit: envelope)
+        coordinator.connector(coordinator.connector, didComplete: manifest)
+        await Task.yield()
+        viewModel.prepareArchiveExport()
+
+        let url = try XCTUnwrap(viewModel.exportURL)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let object = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+
+        XCTAssertEqual(url.lastPathComponent, "vehicle-diagnosis-readout-44444444.json")
+        XCTAssertEqual((object?["completion_manifest"] as? [String: Any])?["record_type"] as? String, "completion_manifest")
+        XCTAssertEqual((object?["envelopes"] as? [[String: Any]])?.count, 1)
+        XCTAssertNil(object?["raw_frames"])
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    @MainActor
     func testArchiveStateDistinguishesCompletedInterruptedAndMissingArchives() {
         XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .completed), "Complete")
         XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .interrupted), "Interrupted")
