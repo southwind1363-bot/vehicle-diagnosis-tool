@@ -61,6 +61,34 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         archiveState == "Complete" ? "完了" : "未完了"
     }
 
+    func readoutLabel(intent: String, readoutID: String?) -> String {
+        switch readoutID ?? intent {
+        case "stored_dtc_snapshot": return "保存DTC"
+        case "pending_dtc_snapshot": return "保留DTC"
+        case "permanent_dtc_snapshot": return "永久DTC"
+        case "freeze_frame_snapshot": return "フリーズフレーム"
+        case "supported_pid_matrix": return "対応PID"
+        case "readiness_snapshot": return "レディネス"
+        case "ecu_info_snapshot": return "ECU情報"
+        case "onboard_monitor_snapshot": return "Mode 06"
+        case "live_pid_snapshot": return "ライブデータ"
+        default: return readoutID ?? intent
+        }
+    }
+
+    func readoutFailureLabel(_ errorCode: String) -> String {
+        switch errorCode {
+        case "readout_not_available": return "ECU応答なしまたは未対応"
+        case "response_timeout": return "応答待機時間切れ"
+        case "write_capacity_timeout": return "アダプター送信待機時間切れ"
+        case "write_failed": return "アダプター送信失敗"
+        case "freeze_frame_unsupported": return "フリーズフレーム未対応"
+        case "negative_response": return "ECUが読取要求を受け付けませんでした"
+        case "malformed_response": return "応答形式を安全に解釈できませんでした"
+        default: return errorCode
+        }
+    }
+
     var connectorStateLabel: String {
         switch connectorState {
         case .idle: return "未接続"

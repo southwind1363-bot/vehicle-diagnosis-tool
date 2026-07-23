@@ -151,6 +151,17 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.readoutFailures.isEmpty {
+                    Section("取得できなかった項目") {
+                        ForEach(viewModel.readoutPreview.readoutFailures) { failure in
+                            LabeledContent(
+                                viewModel.readoutLabel(intent: failure.intent, readoutID: failure.readoutID),
+                                value: failure.errorCodes.map { viewModel.readoutFailureLabel($0) }.joined(separator: " / ")
+                            )
+                        }
+                    }
+                }
+
                 Section("4. 読取結果") {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()

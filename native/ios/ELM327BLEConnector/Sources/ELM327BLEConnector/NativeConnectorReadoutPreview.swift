@@ -70,6 +70,15 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         public var id: String { sourceScopeID }
     }
 
+    public struct ReadoutFailure: Identifiable, Sendable, Equatable {
+        public let intent: String
+        public let readoutID: String?
+        public let sourceScopeID: String
+        public let errorCodes: [String]
+
+        public var id: String { "\(readoutID ?? intent):\(sourceScopeID):\(errorCodes.joined(separator: ","))" }
+    }
+
     public let storedDTCs: [DTC]
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
@@ -79,6 +88,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     public let ecuInfo: [ECUInfo]
     public let onboardMonitors: [OnboardMonitor]
     public let supportedPIDs: [SupportedPIDs]
+    public let readoutFailures: [ReadoutFailure]
 
     public init(
         storedDTCs: [DTC],
@@ -89,7 +99,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         readiness: [Readiness],
         ecuInfo: [ECUInfo],
         onboardMonitors: [OnboardMonitor],
-        supportedPIDs: [SupportedPIDs]
+        supportedPIDs: [SupportedPIDs],
+        readoutFailures: [ReadoutFailure]
     ) {
         self.storedDTCs = storedDTCs
         self.pendingDTCs = pendingDTCs
@@ -100,6 +111,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.ecuInfo = ecuInfo
         self.onboardMonitors = onboardMonitors
         self.supportedPIDs = supportedPIDs
+        self.readoutFailures = readoutFailures
     }
 
     public static let empty = NativeConnectorReadoutPreview(
@@ -111,7 +123,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         readiness: [],
         ecuInfo: [],
         onboardMonitors: [],
-        supportedPIDs: []
+        supportedPIDs: [],
+        readoutFailures: []
     )
 
     public init(envelopes: [NativeConnectorEnvelope]) {
@@ -124,9 +137,19 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var ecuInfo: [String: ECUInfo] = [:]
         var onboardMonitors: [String: OnboardMonitor] = [:]
         var supportedPIDs: [String: Set<String>] = [:]
+        var readoutFailures: [String: ReadoutFailure] = [:]
 
         for envelope in envelopes {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
+            if !envelope.ok, !envelope.errors.isEmpty {
+                let failure = ReadoutFailure(
+                    intent: envelope.intent,
+                    readoutID: envelope.readoutID,
+                    sourceScopeID: scopeID,
+                    errorCodes: envelope.errors.sorted()
+                )
+                readoutFailures[failure.id] = failure
+            }
             switch envelope.intent {
             case "read_stored_dtc", "read_pending_dtc", "read_permanent_dtc":
                 let dtcs = Self.dtcs(in: envelope.data, status: Self.dtcStatus(for: envelope.intent), scopeID: scopeID)
@@ -168,6 +191,9 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.supportedPIDs = supportedPIDs
             .map { SupportedPIDs(sourceScopeID: $0.key, pids: $0.value.sorted()) }
             .sorted { $0.sourceScopeID < $1.sourceScopeID }
+        self.readoutFailures = readoutFailures.values.sorted { lhs, rhs in
+            lhs.sourceScopeID == rhs.sourceScopeID ? lhs.intent < rhs.intent : lhs.sourceScopeID < rhs.sourceScopeID
+        }
     }
 
     private static func dtcStatus(for intent: String) -> String {

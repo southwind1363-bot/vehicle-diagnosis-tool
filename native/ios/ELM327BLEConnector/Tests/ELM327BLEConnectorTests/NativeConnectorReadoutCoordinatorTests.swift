@@ -109,6 +109,12 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             pageBase: "00",
             pids: ["0C", "04"]
         )
+        let permanentDTCFailure = NativeConnectorEnvelopeFactory.failedReadout(
+            context: context,
+            sequence: 8,
+            command: .permanentDTC,
+            error: "readout_not_available"
+        )
 
         coordinator.connector(coordinator.connector, didEmit: dtc)
         coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
@@ -117,6 +123,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         coordinator.connector(coordinator.connector, didEmit: ecuInfo)
         coordinator.connector(coordinator.connector, didEmit: onboardMonitor)
         coordinator.connector(coordinator.connector, didEmit: supportedPIDs)
+        coordinator.connector(coordinator.connector, didEmit: permanentDTCFailure)
 
         XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
@@ -124,5 +131,6 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.onboardMonitors, [NativeConnectorReadoutPreview.OnboardMonitor(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5, sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.supportedPIDs, [NativeConnectorReadoutPreview.SupportedPIDs(sourceScopeID: "7E8", pids: ["04", "0C"])])
+        XCTAssertEqual(coordinator.readoutPreview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_permanent_dtc", readoutID: "permanent_dtc_snapshot", sourceScopeID: "LEGACY", errorCodes: ["readout_not_available"])])
     }
 }
