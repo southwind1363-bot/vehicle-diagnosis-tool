@@ -281,7 +281,7 @@ public enum NativeConnectorEnvelopeFactory {
     ) -> NativeConnectorEnvelope {
         var safeData = data
         safeData["vehicle_command_enabled"] = .bool(false)
-        NativeConnectorEnvelope(
+        return NativeConnectorEnvelope(
             schemaVersion: "native_connector_contract_v1",
             interfaceID: "user-vci-elm327",
             platform: "ios",
