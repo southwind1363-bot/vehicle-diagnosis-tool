@@ -5,6 +5,24 @@ public enum ELMConnectorState: String, Sendable {
     case idle, scanning, selected, connecting, discovering, subscribing, ready, awaitingWriteCapacity, awaitingPrompt, interrupted
 }
 
+enum ELMReadResponseDisposition: Equatable {
+    case process
+    case noData
+    case transportFailure
+    case vehicleLinkFailure
+}
+
+func classifyELMReadResponse(_ response: String) -> ELMReadResponseDisposition {
+    let normalized = response.uppercased()
+    if ["CAN ERROR", "BUS ERROR", "BUS INIT: ERROR", "BUFFER FULL", "LV RESET"].contains(where: normalized.contains) {
+        return .transportFailure
+    }
+    if ["UNABLE TO CONNECT", "STOPPED"].contains(where: normalized.contains) {
+        return .vehicleLinkFailure
+    }
+    return normalized.contains("NO DATA") ? .noData : .process
+}
+
 public struct BLEPeripheralCandidate: Identifiable, Sendable {
     public let id: UUID
     public let displayName: String
@@ -225,15 +243,18 @@ public final class ELM327BLEConnector: NSObject {
         timeoutWorkItem = nil
         activeCommand = nil
         state = .ready
-        let normalizedResponse = response.uppercased()
-        if normalizedResponse.contains("CAN ERROR") || normalizedResponse.contains("BUFFER FULL") {
+        switch classifyELMReadResponse(response) {
+        case .transportFailure:
             emitFailure(for: command, error: "transport_failure")
             interrupt(.invalidResponse)
             return
-        }
-        if normalizedResponse.contains("NO DATA") || normalizedResponse.contains("UNABLE TO CONNECT") || normalizedResponse.contains("STOPPED") {
+        case .vehicleLinkFailure:
+            emitFailure(for: command, error: "vehicle_link_error")
+            interrupt(.invalidResponse)
+            return
+        case .noData:
             emitFailure(for: command, error: "readout_not_available")
-        } else {
+        case .process:
             switch command {
             case .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol:
                 break
