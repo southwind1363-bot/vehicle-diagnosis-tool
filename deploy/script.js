@@ -4497,7 +4497,18 @@ async function initializeElmDeveloperAdapter() {
 }
 
 async function identifyObdDeveloperVci() {
-  await runObdDeveloperRead("VCI確認", ["ATI", "AT@1", "ATDP"]);
+  const commands = ["ATI", "AT@1", "ATDP"];
+  const commandResponses = [];
+  for (const command of commands) {
+    const response = await sendElmDeveloperCommand(command, 2500);
+    if (classifyWebSerialCommandResponse(command, response).commandStatus === "completed") {
+      commandResponses.push({ command, response });
+    }
+  }
+  const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
+  if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
+  appendObdDeveloperLog(commands.map((command) => `>${command}\n[adapter identity response not retained]`).join("\n"));
+  renderObdDeveloperGate();
 }
 
 function getWebSerialAdapterProtocolHint(commandResponses = []) {
