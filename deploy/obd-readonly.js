@@ -5494,9 +5494,12 @@
     return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
   }
 
-  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null, ecuInfoSnapshot = null, dtcSnapshot = null, supportedPidMatrix = null) {
+  function buildNextReadoutCandidates(readoutCoverage = null, vehicleApplicability = null, ecuInfoSnapshot = null, dtcSnapshot = null, supportedPidMatrix = null, vehicleApplicabilityEcuMatchSummary = null) {
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const applicabilityEcuMismatch = vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
+      || vehicleApplicabilityEcuMatchSummary?.reviewRequired === true
+      || vehicleApplicabilityEcuMatchSummary?.review_required === true;
     const priorityById = {
       dtc_snapshot: 100,
       freeze_frame_snapshot: 95,
@@ -5518,7 +5521,9 @@
         let reason = item.status === "missing"
           ? "未読取のため次候補"
           : "読取応答が空のため再確認候補";
-        if (item.id === "ecu_info_snapshot" && applicability.status === "manual") {
+        if (item.id === "ecu_info_snapshot" && applicabilityEcuMismatch) {
+          reason = "応答ECUと適合ECUの不一致確認のため再確認候補";
+        } else if (item.id === "ecu_info_snapshot" && applicability.status === "manual") {
           reason = "車両適合確認のため再確認候補";
         } else if (item.id === "ecu_info_snapshot" && applicability.status === "unlisted") {
           reason = "車種未掲載確認のため再確認候補";
@@ -5565,11 +5570,13 @@
           id: item.id || "",
           label: item.label || item.id || "",
           status: item.status,
-          priority: item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")
-            ? 102
-            : item.id === "ecu_info_snapshot" && applicability.status === "partial"
-              ? 92
-            : (priorityById[item.id] || 10),
+          priority: item.id === "ecu_info_snapshot" && applicabilityEcuMismatch
+            ? 103
+            : item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")
+              ? 102
+              : item.id === "ecu_info_snapshot" && applicability.status === "partial"
+                ? 92
+              : (priorityById[item.id] || 10),
           reason,
           applicabilityStatus: applicability.status || null
         };
@@ -5592,12 +5599,13 @@
     vehicleApplicability = null,
     ecuInfoSnapshot = null,
     dtcSnapshot = null,
-    supportedPidMatrix = null
+    supportedPidMatrix = null,
+    vehicleApplicabilityEcuMatchSummary = null
   } = {}) {
     return normalizeNextReadoutCandidates(
       Array.isArray(explicitCandidates) && explicitCandidates.length
         ? explicitCandidates
-        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix)
+        : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix, vehicleApplicabilityEcuMatchSummary)
     );
   }
 
@@ -6244,6 +6252,16 @@
       supportedPidMatrix
     });
     appendBridgeReadoutCoverageWarnings(warnings, { hasBridgeInfrastructureContext, readoutCoverage });
+    const vehicleApplicabilityEcuMatchSummary = buildVehicleApplicabilityEcuMatchSummary({
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix
+    });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
       explicitCandidates: explicitNextReadoutCandidates,
@@ -6251,7 +6269,8 @@
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       ecuInfoSnapshot,
       dtcSnapshot,
-      supportedPidMatrix
+      supportedPidMatrix,
+      vehicleApplicabilityEcuMatchSummary
     });
     const coreSessionStatus = buildCoreSessionStatus({
       readoutCoverage,
@@ -6468,7 +6487,8 @@
       ...buildReadOnlyFlags({
         exportRequired: true,
         retainedRawText: false,
-        wouldTransmit: false
+        wouldTransmit: false,
+        vehicleCommandEnabled: false
       })
     };
   }
@@ -6864,15 +6884,26 @@
       derivedReadoutCoverage
     );
     const resolvedWarnings = resolveWarningList(Array.isArray(warningsInput) && warningsInput.length ? warningsInput : derivedWarnings);
+    const vehicleApplicabilityEcuMatchSummary = buildVehicleApplicabilityEcuMatchSummary({
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix
+    });
     const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
       Array.isArray(nextReadoutCandidatesInput) && nextReadoutCandidatesInput.length
         ? nextReadoutCandidatesInput
         : buildNextReadoutCandidates(
           getReadoutCoverageInput(parts) || resolvedReadoutCoverage,
-          metadataOverrides.vehicleApplicability || {},
+          resolvedMetadata.vehicleApplicability,
           ecuInfoSnapshot,
           dtcSnapshot,
-          supportedPidMatrix
+          supportedPidMatrix,
+          vehicleApplicabilityEcuMatchSummary
         )
     );
     const coreSessionStatus = normalizeCoreSessionStatusAliases(parts.coreSessionStatus || parts.core_session_status || null)
@@ -14016,7 +14047,17 @@
           vehicleApplicability: summary.vehicleApplicability,
           ecuInfoSnapshot: summary.ecuInfoSnapshot,
           dtcSnapshot: summary.dtcSnapshot,
-          supportedPidMatrix: summary.supportedPidMatrix
+          supportedPidMatrix: summary.supportedPidMatrix,
+          vehicleApplicabilityEcuMatchSummary: buildVehicleApplicabilityEcuMatchSummary({
+            vehicleApplicability: summary.vehicleApplicability,
+            dtcSnapshot: summary.dtcSnapshot,
+            freezeFrameSnapshot: summary.freezeFrameSnapshot,
+            readinessSnapshot: summary.readinessSnapshot,
+            ecuInfoSnapshot: summary.ecuInfoSnapshot,
+            onboardMonitorSnapshot: summary.onboardMonitorSnapshot,
+            livePidSnapshot: summary.livePidSnapshot,
+            supportedPidMatrix: summary.supportedPidMatrix
+          })
         })
         : metadataFields.nextReadoutCandidates,
       importClassification: preserveNestedBridgeSessionMetadata
@@ -14822,7 +14863,17 @@
           effectiveVehicleApplicability,
           ecuInfoSnapshot,
           dtcSnapshot,
-          supportedPidMatrix
+          supportedPidMatrix,
+          buildVehicleApplicabilityEcuMatchSummary({
+            vehicleApplicability: effectiveVehicleApplicability,
+            dtcSnapshot,
+            freezeFrameSnapshot,
+            readinessSnapshot,
+            ecuInfoSnapshot,
+            onboardMonitorSnapshot,
+            livePidSnapshot: { monitorValues, monitorValueSummary },
+            supportedPidMatrix
+          })
         )
       );
     const coreSessionStatus = buildCoreSessionStatus({
@@ -20023,13 +20074,24 @@
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
     const explicitWarnings = resolveWarningList(metadataOverrides.warnings);
     const resolvedWarnings = resolveWarningList(warnings, explicitWarnings);
+    const vehicleApplicabilityEcuMatchSummary = buildVehicleApplicabilityEcuMatchSummary({
+      vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      livePidSnapshot,
+      supportedPidMatrix
+    });
     const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
       explicitCandidates: explicitNextReadoutCandidates,
       readoutCoverage,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       ecuInfoSnapshot,
       dtcSnapshot,
-      supportedPidMatrix
+      supportedPidMatrix,
+      vehicleApplicabilityEcuMatchSummary
     });
     const coreSessionStatus = buildCoreSessionStatus({
       readoutCoverage,

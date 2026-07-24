@@ -61,7 +61,7 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
-const resolveNextReadoutCandidatesFunctionSource = source.match(/function resolveNextReadoutCandidates[\s\S]*?buildNextReadoutCandidates\(readoutCoverage, vehicleApplicability \|\| \{\}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix\)\r?\n    \);\r?\n  \}/);
+const resolveNextReadoutCandidatesFunctionSource = source.match(/function resolveNextReadoutCandidates[\s\S]*?buildNextReadoutCandidates\(readoutCoverage, vehicleApplicability \|\| \{\}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix, vehicleApplicabilityEcuMatchSummary\)\r?\n    \);\r?\n  \}/);
 const normalizeNextReadoutCandidatesFunctionSource = source.match(/function normalizeNextReadoutCandidates[\s\S]*?return String\(left\?\.label \|\| left\?\.id \|\| \"\"\)\.localeCompare\(String\(right\?\.label \|\| right\?\.id \|\| \"\"\), \"ja\"\);\r?\n      \}\);\r?\n  \}/);
 const nextReadoutCandidatesFunctionSource = source.match(/function buildNextReadoutCandidates[\s\S]*?\.slice\(0, 5\);\r?\n  \}/);
 const coreSessionStatusFunctionSource = source.match(/function buildCoreSessionStatus[\s\S]*?readyForAnalysis\r?\n    \};\r?\n  \}/);
@@ -1115,7 +1115,9 @@ const nextReadoutCandidatesFunctionChecks = () => {
   if (nextReadoutCandidatesFunctionSource) {
     const functionBody = nextReadoutCandidatesFunctionSource[0];
     check(functionBody.includes('const applicabilityNeedsVehicleConfirmation = applicability.status === "partial"') && functionBody.includes('|| applicability.status === "unlisted"') && functionBody.includes('|| applicability.status === "manual";'), "buildNextReadoutCandidates should derive applicability confirmation states");
-    check(functionBody.includes('priority: item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")') && functionBody.includes('? 102') && functionBody.includes('item.id === "ecu_info_snapshot" && applicability.status === "partial"') && functionBody.includes('? 92'), "buildNextReadoutCandidates should prioritize ecu_info_snapshot for manual, unlisted, and partial applicability");
+    check(functionBody.includes('const applicabilityEcuMismatch = vehicleApplicabilityEcuMatchSummary?.status === "mismatch"') && functionBody.includes('vehicleApplicabilityEcuMatchSummary?.reviewRequired === true') && functionBody.includes('vehicleApplicabilityEcuMatchSummary?.review_required === true'), "buildNextReadoutCandidates should accept canonical and alias ECU mismatch review state");
+    check(functionBody.includes('item.id === "ecu_info_snapshot" && applicabilityEcuMismatch') && functionBody.includes('応答ECUと適合ECUの不一致確認のため再確認候補') && functionBody.includes('? 103'), "buildNextReadoutCandidates should prioritize ECU information for applicability ECU mismatches");
+    check(functionBody.includes('(applicability.status === "manual" || applicability.status === "unlisted")') && functionBody.includes('? 102') && functionBody.includes('item.id === "ecu_info_snapshot" && applicability.status === "partial"') && functionBody.includes('? 92'), "buildNextReadoutCandidates should retain ECU information priority for manual, unlisted, and partial applicability");
     check(functionBody.includes('.sort((left, right) => {'), "buildNextReadoutCandidates should sort candidate priorities");
     check(functionBody.includes('if ((applicability.status === "manual" || applicability.status === "unlisted") && left.id !== right.id) {'), "buildNextReadoutCandidates should force ecu_info_snapshot to the front for manual and unlisted applicability");
     check(functionBody.includes('.slice(0, 5);'), "buildNextReadoutCandidates should cap fallback candidates to five items");
@@ -1128,7 +1130,7 @@ const resolveNextReadoutCandidatesFunctionChecks = () => {
     check(functionBody.includes('return normalizeNextReadoutCandidates('), "resolveNextReadoutCandidates should normalize resolved candidate lists");
     check(functionBody.includes('Array.isArray(explicitCandidates) && explicitCandidates.length'), "resolveNextReadoutCandidates should prefer explicit candidate arrays when provided");
     check(functionBody.includes('? explicitCandidates'), "resolveNextReadoutCandidates should preserve explicit candidates before fallback generation");
-    check(functionBody.includes(': buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix)'), "resolveNextReadoutCandidates should fall back to generated candidates when explicit candidates are absent");
+    check(functionBody.includes('vehicleApplicabilityEcuMatchSummary = null') && functionBody.includes(': buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix, vehicleApplicabilityEcuMatchSummary)'), "resolveNextReadoutCandidates should carry applicability ECU review state into generated candidates");
   }
 };
 const normalizeNextReadoutCandidatesFunctionChecks = () => {
@@ -14069,8 +14071,14 @@ const scanSessionApplicabilityEcuMismatch = obd.buildDiagnosticScanSession({
 });
 check(scanSessionApplicabilityEcuMismatch.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && scanSessionApplicabilityEcuMismatch.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true, "Different canonical applicability and response ECUs should require review");
 check(scanSessionApplicabilityEcuMismatch.coreSessionStatus?.analysisChecklistById?.vehicle_applicability?.state === "review" && !scanSessionApplicabilityEcuMismatch.coreSessionStatus?.blockingWarningIds?.includes("vehicle_applicability_ecu_mismatch") && scanSessionApplicabilityEcuMismatch.vehicleCommandEnabled === false, "Applicability ECU mismatches must remain non-blocking and read-only");
+check(scanSessionApplicabilityEcuMismatch.nextReadoutCandidates?.[0]?.id === "ecu_info_snapshot" && scanSessionApplicabilityEcuMismatch.nextReadoutCandidates?.[0]?.reason === "応答ECUと適合ECUの不一致確認のため再確認候補" && scanSessionApplicabilityEcuMismatch.vehicleCommandEnabled === false, "Applicability ECU mismatches should prioritize a read-only ECU information recheck");
 const applicabilityEcuMismatchRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionApplicabilityEcuMismatch) }));
-check(applicabilityEcuMismatchRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && applicabilityEcuMismatchRoundTrip?.diagnosticFlowSummary?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && applicabilityEcuMismatchRoundTrip?.vehicleCommandEnabled === false, "Applicability ECU review state was not retained through read-only bridge export and JSON import");
+check(applicabilityEcuMismatchRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && applicabilityEcuMismatchRoundTrip?.diagnosticFlowSummary?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && applicabilityEcuMismatchRoundTrip?.nextReadoutCandidates?.[0]?.id === "ecu_info_snapshot" && applicabilityEcuMismatchRoundTrip?.nextReadoutCandidates?.[0]?.reason === "応答ECUと適合ECUの不一致確認のため再確認候補" && applicabilityEcuMismatchRoundTrip?.vehicleCommandEnabled === false, "Applicability ECU review state and read-only recheck were not retained through bridge export and JSON import");
+const bridgeSummaryApplicabilityEcuMismatch = obd.buildBridgeSessionSummary({
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", source_verified: true },
+  dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] }
+});
+check(bridgeSummaryApplicabilityEcuMismatch.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && bridgeSummaryApplicabilityEcuMismatch.nextReadoutCandidates?.[0]?.id === "ecu_info_snapshot" && bridgeSummaryApplicabilityEcuMismatch.nextReadoutCandidates?.[0]?.reason === "応答ECUと適合ECUの不一致確認のため再確認候補" && bridgeSummaryApplicabilityEcuMismatch.vehicleCommandEnabled === false && bridgeSummaryApplicabilityEcuMismatch.vehicle_command_enabled === false && bridgeSummaryApplicabilityEcuMismatch.wouldTransmit === false, "Bridge summary should preserve an ECU mismatch as a read-only ECU information recheck");
 const scanSessionApplicabilityEcuIncomparable = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-ecu-incomparable",
   vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
