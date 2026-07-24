@@ -7,6 +7,7 @@ const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
 const OBD_LOCAL_BRIDGE_PORTS = [8765, 17653];
 const OBD_LOCAL_BRIDGE_PATHS = ["/v1/bridge", "/v1/request", "/v1"];
+const OBD_LOCAL_BRIDGE_TIMEOUT_MS = 20000;
 const BRIDGE_BACKED_INTERFACE_IDS = Object.freeze([
   "user-vci-thinkcar-bluetooth",
   "user-vci-techstream-j2534",
@@ -228,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.15";
+const APP_VERSION = "3.4.16";
 const APP_LAST_UPDATED = "2026-07-22";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4775,6 +4776,27 @@ async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
   }
 }
 
+async function fetchObdLocalBridgeEndpoint(endpoint, request) {
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), OBD_LOCAL_BRIDGE_TIMEOUT_MS) : null;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      cache: "no-store",
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  } catch (error) {
+    if (controller?.signal.aborted) throw new Error("local_bridge_timeout");
+    throw error;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 async function sendObdLocalBridgeIntent(intent, payload = {}, options = {}) {
   if (!isAllowedLocalBridgeIntent(intent)) throw new Error(`許可していないIntentです: ${intent}`);
   const pairingToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
@@ -4795,14 +4817,7 @@ async function sendObdLocalBridgeIntent(intent, payload = {}, options = {}) {
   let lastError = null;
   for (const endpoint of endpoints) {
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-        cache: "no-store"
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const json = await response.json();
+      const json = await fetchObdLocalBridgeEndpoint(endpoint, request);
       obdDevSession.bridgeEndpoint = endpoint;
       return json;
     } catch (error) {
@@ -4850,14 +4865,7 @@ async function sendObdLocalBridgeStatusIntent(intent, payload = {}, options = {}
   let lastError = null;
   for (const endpoint of endpoints) {
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-        cache: "no-store"
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const json = await response.json();
+      const json = await fetchObdLocalBridgeEndpoint(endpoint, request);
       obdDevSession.bridgeEndpoint = endpoint;
       return json;
     } catch (error) {
