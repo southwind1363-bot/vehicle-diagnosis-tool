@@ -5347,7 +5347,8 @@
     add("freeze_frame_snapshot", [
       freezeFrameSnapshot?.sourceEcu,
       freezeFrameSnapshot?.source_ecu,
-      ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
     ]);
     add("readiness_snapshot", [
       readinessSnapshot?.sourceEcu,
@@ -5447,6 +5448,7 @@
       freezeFrameSnapshot?.sourceEcu,
       freezeFrameSnapshot?.source_ecu,
       ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       readinessSnapshot?.sourceEcu,
       readinessSnapshot?.source_ecu,
       ...(readinessSnapshot?.readinessEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null),

@@ -13748,6 +13748,19 @@ const mixedEcuFreezeFrameSession = obd.buildScanSessionFromObdText([
 ].join("\n"), { session_id: "compact-mixed-freeze-frame", protocol: "ISO15765-4" });
 const mixedEcuFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(mixedEcuFreezeFrameSession) }));
 check(mixedEcuFreezeFrameSession.freezeFrameSnapshot?.triggerDtc === null && mixedEcuFreezeFrameSession.freezeFrameSnapshot?.sourceEcu === null && mixedEcuFreezeFrameSession.freezeFrameSnapshot?.source_ecu === null && mixedEcuFreezeFrameSession.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.code === "P0171" && item.frameNumber === 0 && item.sourceEcu === "7E8") && mixedEcuFreezeFrameSession.freezeFrameSnapshot?.trigger_dtc_entries?.some((item) => item.code === "P0300" && item.frame_number === 0 && item.source_ecu === "7E9") && mixedEcuFreezeFrameSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.sourceEcu === "7E8" && item.value === 1726) && mixedEcuFreezeFrameSession.freezeFrameSnapshot?.monitor_values?.some((item) => item.id === "engine_speed" && item.source_ecu === "7E9" && item.value === 1000) && mixedEcuFreezeFrameRoundTrip?.freezeFrameSnapshot?.triggerDtc === null && mixedEcuFreezeFrameRoundTrip?.freezeFrameSnapshot?.trigger_dtc_entries?.some((item) => item.source_ecu === "7E8") && mixedEcuFreezeFrameRoundTrip?.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.sourceEcu === "7E9") && mixedEcuFreezeFrameSession.vehicleCommandEnabled === false && mixedEcuFreezeFrameRoundTrip?.vehicleCommandEnabled === false, "Mixed-ECU freeze-frame triggers did not retain response boundaries safely");
+const triggerOnlyFreezeFrameProvenanceSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  freeze_frame_snapshot: {
+    freeze_frame_readout_status: "reported",
+    trigger_dtc_entries: [
+      { code: "P0171", frame_number: 0, source_ecu: "7E8" },
+      { code: "P0300", frame_number: 0, source_ecu: "7E9" }
+    ],
+    monitor_values: []
+  }
+});
+const triggerOnlyFreezeFrameProvenanceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(triggerOnlyFreezeFrameProvenanceSession)));
+check(triggerOnlyFreezeFrameProvenanceSession.freezeFrameSnapshot?.sourceEcu === null && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.observedEcuSummary?.ecus?.every((item) => item.readoutIds?.join(",") === "freeze_frame_snapshot") && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.observedEcuSummary?.sourceCoveragePercent === 100 && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && triggerOnlyFreezeFrameProvenanceRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && triggerOnlyFreezeFrameProvenanceRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && triggerOnlyFreezeFrameProvenanceSession.vehicleCommandEnabled === false && triggerOnlyFreezeFrameProvenanceRoundTrip?.vehicleCommandEnabled === false && triggerOnlyFreezeFrameProvenanceRoundTrip?.wouldTransmit === false, "Trigger-only freeze-frame ECU provenance did not reach session coverage or applicability review safely");
 const mixedEcuCompactSession = obd.buildScanSessionFromObdText([
   "can0 7E8#04410C1AF8",
   "can0 7E9#04410C0FA0"
