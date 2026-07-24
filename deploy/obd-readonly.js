@@ -651,7 +651,7 @@
     vehicleCommandEnabled: false,
     executionEnabled: false,
     maxPayloadBytes: 1000000,
-    maxEnvelopeCount: 256,
+    maxEnvelopeCount: 1024,
     maxSequence: 1000000,
     maxReadoutAttempt: 1000000,
     maxConnectionSequence: 63,
