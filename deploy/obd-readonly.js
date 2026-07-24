@@ -7176,7 +7176,8 @@
       ...buildReadOnlyFlags({
         exportRequired: true,
         retainedRawText: false,
-        wouldTransmit: false
+        wouldTransmit: false,
+        vehicleCommandEnabled: false
       })
     };
   }

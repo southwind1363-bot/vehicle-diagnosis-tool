@@ -62,6 +62,7 @@ vm.runInContext(source, context);
 const obd = context.window.ObdReadOnly;
 const failures = [];
 const resolveNextReadoutCandidatesFunctionSource = source.match(/function resolveNextReadoutCandidates[\s\S]*?buildNextReadoutCandidates\(readoutCoverage, vehicleApplicability \|\| \{\}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix, vehicleApplicabilityEcuMatchSummary\)\r?\n    \);\r?\n  \}/);
+const normalizeBridgeSummaryAliasesFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}\r?\n\r?\n  function cloneBridgeArrayItems/);
 const normalizeNextReadoutCandidatesFunctionSource = source.match(/function normalizeNextReadoutCandidates[\s\S]*?return String\(left\?\.label \|\| left\?\.id \|\| \"\"\)\.localeCompare\(String\(right\?\.label \|\| right\?\.id \|\| \"\"\), \"ja\"\);\r?\n      \}\);\r?\n  \}/);
 const nextReadoutCandidatesFunctionSource = source.match(/function buildNextReadoutCandidates[\s\S]*?\.slice\(0, 5\);\r?\n  \}/);
 const coreSessionStatusFunctionSource = source.match(/function buildCoreSessionStatus[\s\S]*?readyForAnalysis\r?\n    \};\r?\n  \}/);
@@ -339,6 +340,11 @@ const resolveBridgeSummaryFunctionChecks = () => {
     check(functionBody.includes('return hasBridgeSummaryContent(summaryInput) ? normalizeBridgeSummaryAliases(summaryInput) : buildBridgeSessionSummary(parts);'), "resolveBridgeSummary should normalize summary aliases before falling back to bridge session summary");
     check(source.includes('function getNestedBridgePayloadSession(payload)') && source.includes('payload.session_payload') && source.includes('payload.diagnostic_scan_session'), "getNestedBridgePayloadSession should unwrap saved bridge payload session aliases");
     check(source.includes('getNestedBridgePayloadSession(parts.localBridgeExportPayload)') && source.includes('getNestedBridgePayloadSession(parts.local_bridge_export_payload)'), "getBridgeSummaryInput should accept local bridge export payload session aliases");
+  }
+  check(Boolean(normalizeBridgeSummaryAliasesFunctionSource), "normalizeBridgeSummaryAliases is missing from obd-readonly.js");
+  if (normalizeBridgeSummaryAliasesFunctionSource) {
+    const functionBody = normalizeBridgeSummaryAliasesFunctionSource[0];
+    check(functionBody.includes('...buildReadOnlyFlags({') && functionBody.includes('wouldTransmit: false,') && functionBody.includes('vehicleCommandEnabled: false'), "Normalized bridge summaries should explicitly disable vehicle commands");
   }
   check(Boolean(bridgeSummaryContentFunctionSource), "hasBridgeSummaryContent is missing from obd-readonly.js");
   if (bridgeSummaryContentFunctionSource) {
@@ -7275,6 +7281,7 @@ check(onboardMonitorSnapshotDataAliases.tests[2]?.status === "fail" && onboardMo
 check(onboardMonitorSnapshotDataAliases.test_count === 3 && onboardMonitorSnapshotDataAliases.passed_count === 2 && onboardMonitorSnapshotDataAliases.failed_count === 1 && onboardMonitorSnapshotDataAliases.unknown_count === 0, "Mode 06 snapshot did not expose snake_case data payload count aliases");
 check(onboardMonitorSnapshotDataAliases.captured_at === "2026-07-07T00:50:00Z" && onboardMonitorSnapshotDataAliases.retained_raw_text === false, "Mode 06 snapshot did not expose snake_case capture and retention aliases");
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, supportedPidMatrix: bridgeSupportedPidSnapshot, adapterIdentity: bridgeAdapterIdentity });
+check(bridgeSummary.vehicleCommandEnabled === false && bridgeSummary.vehicle_command_enabled === false && bridgeSummary.wouldTransmit === false && bridgeSummary.would_transmit === false, "Bridge session summary should explicitly retain read-only top-level flags");
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
 const bridgeSummaryTypedDtcAliases = obd.buildBridgeSessionSummary({
   stored_dtc_snapshot: { dtcs: [{ code: "P0171" }] },
