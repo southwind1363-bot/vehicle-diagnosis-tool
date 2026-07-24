@@ -17746,9 +17746,10 @@
 
   function buildDiagnosticScanSessionFromJson(value, options = {}) {
     const text = String(value || "").trim();
+    const textByteLength = getUtf8ByteLength(text);
     const trustedBridgeExportMarker = /"(?:schema_version|schemaVersion)"\s*:\s*"bridge_session_export_v1"/.test(text.slice(0, 4096));
     const declaredNativeConnectorArchiveMarker = /"(?:schema_version|schemaVersion)"\s*:\s*"native_connector_contract_v1"/.test(text.slice(0, 4096));
-    if (!text || text.length > 2000000 || (!trustedBridgeExportMarker && !declaredNativeConnectorArchiveMarker && text.length > 500000) || !/^[{[]/.test(text)) return null;
+    if (!text || textByteLength > 2000000 || (!trustedBridgeExportMarker && !declaredNativeConnectorArchiveMarker && textByteLength > 500000) || !/^[{[]/.test(text)) return null;
     let parsed;
     try {
       parsed = JSON.parse(text);
