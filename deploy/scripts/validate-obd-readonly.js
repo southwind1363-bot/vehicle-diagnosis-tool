@@ -12125,6 +12125,14 @@ const mixedEcuTimeline = obd.normalizeLivePidTimeline({
 });
 const mixedEcuSummary = obd.buildLivePidTimelineSummary(mixedEcuTimeline);
 check(mixedEcuSummary.comparisonAvailable === true && mixedEcuSummary.comparedValueCount === 0 && mixedEcuSummary.changedValueCount === 0 && mixedEcuSummary.vehicle_command_enabled === false, "Live PID comparison mixed values from different source ECUs");
+const sameEcuTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-07-17T00:00:00Z", observation_condition: "warm", live_pid_snapshot: { monitorValues: [{ ...engineSpeedMonitor, sourceEcu: "7E8" }], livePidReadoutStatus: "reported", blocked: false, wouldTransmit: false } },
+    { captured_at: "2026-07-17T00:00:05Z", observation_condition: "warm", live_pid_snapshot: { monitorValues: [{ ...engineSpeedMonitor, sourceEcu: "7E8", value: engineSpeedMonitor.value + 100 }], livePidReadoutStatus: "reported", blocked: false, wouldTransmit: false } }
+  ]
+});
+const sameEcuSummary = obd.buildLivePidTimelineSummary(sameEcuTimeline);
+check(sameEcuSummary.comparedValueCount === 1 && sameEcuSummary.changedValueCount === 1 && sameEcuSummary.changes[0]?.sourceEcu === "7E8" && sameEcuSummary.changes[0]?.source_ecu === "7E8" && sameEcuSummary.vehicle_command_enabled === false, "Live PID comparison changes did not retain the observed source ECU");
 check(decodedLivePids.monitorValues.find((item) => item.id === "o2_b1s1_voltage")?.value === 0.64, "O2 sensor voltage PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "o2_b1s1_stft")?.value === 12.5, "O2 sensor short trim PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "wide_o2_b1s1_ratio")?.value === 1, "Wide O2 voltage-style equivalence ratio PID was not decoded");

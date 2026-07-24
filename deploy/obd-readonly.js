@@ -3578,10 +3578,13 @@
       .map((item) => {
         const previous = previousValuesByKey.get(monitorComparisonKey(item));
         const delta = item.value - previous.value;
+        const sourceEcu = item.sourceEcu || item.source_ecu || previous.sourceEcu || previous.source_ecu || null;
         return {
           id: item.id,
           label: item.label || item.id,
           unit: item.unit || previous.unit || "",
+          sourceEcu,
+          source_ecu: sourceEcu,
           previousValue: previous.value,
           previous_value: previous.value,
           latestValue: item.value,
