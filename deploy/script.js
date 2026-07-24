@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.14";
+const APP_VERSION = "3.4.15";
 const APP_LAST_UPDATED = "2026-07-22";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4871,6 +4871,10 @@ const WEB_SERIAL_ADAPTER_ERROR_LINES = new Set(["ERROR", "?", "STOPPED", "BUFFER
 const WEB_SERIAL_VEHICLE_LINK_ERROR_LINES = new Set(["UNABLE TO CONNECT", "BUS ERROR", "CAN ERROR", "BUS INIT: ERROR", "LV RESET"]);
 const WEB_SERIAL_IGNORED_RESPONSE_LINES = new Set(["SEARCHING...", "BUS INIT: OK"]);
 
+function hasWebSerialResponseError(lines, errorLines) {
+  return lines.some((line) => [...errorLines].some((errorLine) => line === errorLine || line.startsWith(`${errorLine} `) || line.startsWith(`${errorLine}:`)));
+}
+
 function formatWebSerialStopReason(reason) {
   if (reason === "vehicle_link_error") return "車両通信を確立できません";
   if (reason === "adapter_error") return "アダプター応答エラー";
@@ -4906,10 +4910,10 @@ function classifyWebSerialCommandResponse(command, response) {
     ? lines.some((line) => line !== normalizedCommand)
     : responseServices.some((item) => item.type === "positive");
   if (!lines.length) return { commandStatus: "incomplete", emptyResponseCount: 1, stopScope: "none", stopReason: null };
-  if (lines.some((line) => WEB_SERIAL_VEHICLE_LINK_ERROR_LINES.has(line))) {
+  if (hasWebSerialResponseError(lines, WEB_SERIAL_VEHICLE_LINK_ERROR_LINES)) {
     return { commandStatus: "failed", unableToConnectCount: 1, stopScope: "scan", stopReason: "vehicle_link_error" };
   }
-  if (lines.some((line) => WEB_SERIAL_ADAPTER_ERROR_LINES.has(line))) {
+  if (hasWebSerialResponseError(lines, WEB_SERIAL_ADAPTER_ERROR_LINES)) {
     return { commandStatus: "failed", adapterErrorCount: 1, stopScope: "attempt", stopReason: "adapter_error" };
   }
   if (lines.some((line) => line === "NO DATA")) {
