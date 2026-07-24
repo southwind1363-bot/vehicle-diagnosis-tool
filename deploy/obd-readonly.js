@@ -651,6 +651,7 @@
     vehicleCommandEnabled: false,
     executionEnabled: false,
     maxPayloadBytes: 1000000,
+    maxArchiveBytes: 2000000,
     maxEnvelopeCount: 1024,
     maxSequence: 1000000,
     maxReadoutAttempt: 1000000,
@@ -17749,7 +17750,7 @@
     const textByteLength = getUtf8ByteLength(text);
     const trustedBridgeExportMarker = /"(?:schema_version|schemaVersion)"\s*:\s*"bridge_session_export_v1"/.test(text.slice(0, 4096));
     const declaredNativeConnectorArchiveMarker = /"(?:schema_version|schemaVersion)"\s*:\s*"native_connector_contract_v1"/.test(text.slice(0, 4096));
-    if (!text || textByteLength > 2000000 || (!trustedBridgeExportMarker && !declaredNativeConnectorArchiveMarker && textByteLength > 500000) || !/^[{[]/.test(text)) return null;
+    if (!text || textByteLength > nativeConnectorContract.maxArchiveBytes || (!trustedBridgeExportMarker && !declaredNativeConnectorArchiveMarker && textByteLength > 500000) || !/^[{[]/.test(text)) return null;
     let parsed;
     try {
       parsed = JSON.parse(text);
