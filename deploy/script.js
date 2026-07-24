@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.13";
+const APP_VERSION = "3.4.14";
 const APP_LAST_UPDATED = "2026-07-22";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5137,11 +5137,19 @@ function isAllowedObdDeveloperCommand(command) {
   ].includes(command);
 }
 
-async function readElmDeveloperLoop() {
+function isCurrentWebSerialReadLoop(reader, port) {
+  return obdDevSession.readLoopActive === true
+    && obdDevSession.reader === reader
+    && obdDevSession.port === port;
+}
+
+async function readElmDeveloperLoop(reader = obdDevSession.reader, port = obdDevSession.port) {
+  if (!reader || !port) return;
   let transportLossReason = null;
-  while (obdDevSession.readLoopActive && obdDevSession.reader) {
+  while (isCurrentWebSerialReadLoop(reader, port)) {
     try {
-      const result = await obdDevSession.reader.read();
+      const result = await reader.read();
+      if (!isCurrentWebSerialReadLoop(reader, port)) break;
       if (result.done) {
         transportLossReason = "serial_stream_closed";
         break;
@@ -5149,14 +5157,14 @@ async function readElmDeveloperLoop() {
       obdDevSession.textBuffer += obdDevSession.decoder.decode(result.value || new Uint8Array(), { stream: true });
       obdDevSession.textBuffer = obdDevSession.textBuffer.slice(-12000);
     } catch (_error) {
-      if (obdDevSession.readLoopActive) {
+      if (isCurrentWebSerialReadLoop(reader, port)) {
         obdDevStatus.textContent = "VCI受信が停止しました。読取をやり直してください。";
         transportLossReason = "serial_read_failed";
       }
       break;
     }
   }
-  if (transportLossReason && obdDevSession.readLoopActive && obdDevSession.port) {
+  if (transportLossReason && isCurrentWebSerialReadLoop(reader, port)) {
     void disconnectObdDeveloperVci({ reason: transportLossReason });
   }
 }
