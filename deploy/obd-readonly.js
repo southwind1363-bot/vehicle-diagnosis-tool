@@ -3053,7 +3053,7 @@
         dtc_severity: readDtcSeverityAlias(rowValue),
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
-        status: row.status || row.kind || rowValue.status || rowValue.kind || fallbackStatus,
+        status: row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || fallbackStatus,
         ecu: rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
         ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true

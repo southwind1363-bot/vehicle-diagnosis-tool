@@ -7154,6 +7154,15 @@ const bridgeDtcSourceAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
 const normalizedDtcSourceAliasSnapshot = obd.normalizeDtcSnapshot({ dtcs: [{ code: "P0171", source_ecu: "7E8" }, { code: "P0300", sourceEcu: "7E9" }] });
 const bridgeDtcSourceAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcSourceAliasSnapshot }))));
 check(bridgeDtcSourceAliasSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && bridgeDtcSourceAliasSnapshot.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E9") && bridgeDtcSourceAliasSnapshot.sourceEcu === null && normalizedDtcSourceAliasSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && normalizedDtcSourceAliasSnapshot.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E9") && normalizedDtcSourceAliasSnapshot.sourceEcu === null && bridgeDtcSourceAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && bridgeDtcSourceAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E9") && bridgeDtcSourceAliasRoundTrip?.vehicleCommandEnabled === false && bridgeDtcSourceAliasRoundTrip?.wouldTransmit === false, "DTC row source ECU aliases were not retained through normalization and read-only export");
+const bridgeDtcRowStatusAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { dtcs: [{ code: "P0171", dtc_status: "pending" }, { code: "P0300", value: { code: "P0300", dtcStatus: "permanent" } }, { code: "P0420", state: "stored" }] }
+});
+const bridgeDtcRowStatusAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcRowStatusAliasSnapshot }))));
+check(bridgeDtcRowStatusAliasSnapshot.dtcs?.some((item) => item.code === "P0171" && item.status === "pending") && bridgeDtcRowStatusAliasSnapshot.dtcs?.some((item) => item.code === "P0300" && item.status === "permanent") && bridgeDtcRowStatusAliasSnapshot.dtcs?.some((item) => item.code === "P0420" && item.status === "stored") && bridgeDtcRowStatusAliasSnapshot.storedCount === 1 && bridgeDtcRowStatusAliasSnapshot.pendingCount === 1 && bridgeDtcRowStatusAliasSnapshot.permanentCount === 1 && bridgeDtcRowStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "pending") && bridgeDtcRowStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "permanent") && bridgeDtcRowStatusAliasRoundTrip?.vehicleCommandEnabled === false && bridgeDtcRowStatusAliasRoundTrip?.wouldTransmit === false, "Bridge DTC row status aliases were not retained through read-only export");
 const bridgeLivePidParentSourceSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
