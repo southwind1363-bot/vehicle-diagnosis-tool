@@ -4370,6 +4370,8 @@
       {
         id: "readiness_snapshot",
         responseUnavailable: isUnavailableReadout(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, readinessSnapshotSafetyInput),
+        capturedEvidence: (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0)
+          || (Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) && readinessSnapshot.readiness_ecu_snapshots.length > 0),
         label: "レディネス",
         available: ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status) || isUnknownWithoutEvidence(readinessSnapshot, "monitors", readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
           ? false
@@ -5355,7 +5357,10 @@
     add("readiness_snapshot", [
       readinessSnapshot?.sourceEcu,
       readinessSnapshot?.source_ecu,
-      ...(readinessSnapshot?.readinessEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      ...[
+        ...(Array.isArray(readinessSnapshot?.readinessEcuSnapshots) ? readinessSnapshot.readinessEcuSnapshots : []),
+        ...(Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) ? readinessSnapshot.readiness_ecu_snapshots : [])
+      ].map((item) => item?.sourceEcu || item?.source_ecu || null)
     ]);
     add("ecu_info_snapshot", [
       ecuInfoSnapshot?.sourceEcu,
@@ -5395,7 +5400,11 @@
         || (Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) && freezeFrameSnapshot.trigger_dtc_entries.length > 0)
           ? "freeze_frame_snapshot"
           : null,
-      (Array.isArray(readinessSnapshot?.monitors) && readinessSnapshot.monitors.length > 0) || (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0) ? "readiness_snapshot" : null,
+      (Array.isArray(readinessSnapshot?.monitors) && readinessSnapshot.monitors.length > 0)
+        || (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0)
+        || (Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) && readinessSnapshot.readiness_ecu_snapshots.length > 0)
+          ? "readiness_snapshot"
+          : null,
       Array.isArray(ecuInfoSnapshot?.items) && ecuInfoSnapshot.items.length > 0 ? "ecu_info_snapshot" : null,
       Array.isArray(onboardMonitorSnapshot?.tests) && onboardMonitorSnapshot.tests.length > 0 ? "onboard_monitor_snapshot" : null,
       Array.isArray(supportedPidMatrix?.supportedPids) && supportedPidMatrix.supportedPids.length > 0 ? "supported_pid_matrix" : null
@@ -5458,7 +5467,10 @@
       ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       readinessSnapshot?.sourceEcu,
       readinessSnapshot?.source_ecu,
-      ...(readinessSnapshot?.readinessEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
+      ...[
+        ...(Array.isArray(readinessSnapshot?.readinessEcuSnapshots) ? readinessSnapshot.readinessEcuSnapshots : []),
+        ...(Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) ? readinessSnapshot.readiness_ecu_snapshots : [])
+      ].map((item) => item?.sourceEcu || item?.source_ecu || null),
       ecuInfoSnapshot?.sourceEcu,
       ecuInfoSnapshot?.source_ecu,
       ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null),

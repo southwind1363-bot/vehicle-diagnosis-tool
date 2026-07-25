@@ -6605,6 +6605,18 @@ const bridgeMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
 });
 const bridgeMixedEcuReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeMixedEcuReadinessSnapshot })) }));
 check(bridgeMixedEcuReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeMixedEcuReadinessSnapshot.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessSnapshot.milOn === null && bridgeMixedEcuReadinessSnapshot.monitors?.length === 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessSnapshot.monitorCount > 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1) && bridgeMixedEcuReadinessSnapshot.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.readinessIgnitionType === "compression") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9") && bridgeMixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge mixed-ECU readiness snapshots were combined instead of preserved as read-only ECU-specific data");
+const snakeOnlyReadinessEcuSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  readiness_snapshot: {
+    schemaVersion: "readiness_snapshot_v1",
+    readiness_readout_status: "reported",
+    readiness_ecu_snapshots: [{ source_ecu: "7E8", readiness_readout_status: "reported" }],
+    monitors: [],
+    blocked: false
+  }
+});
+const snakeOnlyReadinessEcuRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(snakeOnlyReadinessEcuSession)));
+check(snakeOnlyReadinessEcuSession.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && snakeOnlyReadinessEcuSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlyReadinessEcuSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("readiness_snapshot") && snakeOnlyReadinessEcuSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && snakeOnlyReadinessEcuRoundTrip?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && snakeOnlyReadinessEcuRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlyReadinessEcuRoundTrip?.vehicleCommandEnabled === false && snakeOnlyReadinessEcuRoundTrip?.wouldTransmit === false, "Snake-case readiness ECU snapshots were treated as an empty or unscoped readout");
 const bridgeMixedEcuReadinessValueRows = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
