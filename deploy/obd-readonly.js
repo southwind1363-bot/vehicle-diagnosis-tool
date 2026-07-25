@@ -15349,7 +15349,7 @@
       }
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
-      const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || sourceInput.status || "unknown";
+      const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || sourceInput.status || "unknown";
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "";
       const genericCodeReferences = extractDtcReferences(codeValue);
       const manufacturerCodeReference = !genericCodeReferences.length && isExplicitManufacturerSpecificDtcRow(rowValue)
