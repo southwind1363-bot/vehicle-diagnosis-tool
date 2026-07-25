@@ -13761,6 +13761,17 @@ const triggerOnlyFreezeFrameProvenanceSession = obd.buildDiagnosticScanSession({
 });
 const triggerOnlyFreezeFrameProvenanceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(triggerOnlyFreezeFrameProvenanceSession)));
 check(triggerOnlyFreezeFrameProvenanceSession.freezeFrameSnapshot?.sourceEcu === null && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.observedEcuSummary?.ecus?.every((item) => item.readoutIds?.join(",") === "freeze_frame_snapshot") && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.observedEcuSummary?.sourceCoveragePercent === 100 && triggerOnlyFreezeFrameProvenanceSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && triggerOnlyFreezeFrameProvenanceRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && triggerOnlyFreezeFrameProvenanceRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && triggerOnlyFreezeFrameProvenanceSession.vehicleCommandEnabled === false && triggerOnlyFreezeFrameProvenanceRoundTrip?.vehicleCommandEnabled === false && triggerOnlyFreezeFrameProvenanceRoundTrip?.wouldTransmit === false, "Trigger-only freeze-frame ECU provenance did not reach session coverage or applicability review safely");
+const snakeOnlyFreezeFrameEvidenceSession = obd.buildDiagnosticScanSession({
+  freeze_frame_snapshot: {
+    schemaVersion: "freeze_frame_snapshot_v1",
+    freeze_frame_readout_status: "reported",
+    trigger_dtc_entries: [{ code: "P0171", frame_number: 0, source_ecu: "7E8" }],
+    monitorValues: [],
+    blocked: false
+  }
+});
+const snakeOnlyFreezeFrameEvidenceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(snakeOnlyFreezeFrameEvidenceSession)));
+check(snakeOnlyFreezeFrameEvidenceSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && snakeOnlyFreezeFrameEvidenceSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlyFreezeFrameEvidenceSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("freeze_frame_snapshot") && snakeOnlyFreezeFrameEvidenceRoundTrip?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && snakeOnlyFreezeFrameEvidenceRoundTrip?.vehicleCommandEnabled === false && snakeOnlyFreezeFrameEvidenceRoundTrip?.wouldTransmit === false, "Snake-case freeze-frame trigger evidence was treated as an empty readout");
 const mixedEcuCompactSession = obd.buildScanSessionFromObdText([
   "can0 7E8#04410C1AF8",
   "can0 7E9#04410C0FA0"

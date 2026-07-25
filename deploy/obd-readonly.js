@@ -4360,7 +4360,9 @@
       {
         id: "freeze_frame_snapshot",
         responseUnavailable: isUnavailableReadout(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, freezeFrameSnapshotSafetyInput),
-        capturedEvidence: Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc) || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0),
+        capturedEvidence: Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
+          || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0)
+          || (Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) && freezeFrameSnapshot.trigger_dtc_entries.length > 0),
         label: "フリーズフレーム",
         available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues)),
         count: Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0
@@ -5387,7 +5389,12 @@
     const capturedReadoutIds = [
       Array.isArray(dtcSnapshot?.dtcs) && dtcSnapshot.dtcs.length > 0 ? "dtc_snapshot" : null,
       Array.isArray(livePidSnapshot?.monitorValues) && livePidSnapshot.monitorValues.length > 0 ? "live_pid_snapshot" : null,
-      (Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0) || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc) || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0) ? "freeze_frame_snapshot" : null,
+      (Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0)
+        || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
+        || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0)
+        || (Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) && freezeFrameSnapshot.trigger_dtc_entries.length > 0)
+          ? "freeze_frame_snapshot"
+          : null,
       (Array.isArray(readinessSnapshot?.monitors) && readinessSnapshot.monitors.length > 0) || (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0) ? "readiness_snapshot" : null,
       Array.isArray(ecuInfoSnapshot?.items) && ecuInfoSnapshot.items.length > 0 ? "ecu_info_snapshot" : null,
       Array.isArray(onboardMonitorSnapshot?.tests) && onboardMonitorSnapshot.tests.length > 0 ? "onboard_monitor_snapshot" : null,
