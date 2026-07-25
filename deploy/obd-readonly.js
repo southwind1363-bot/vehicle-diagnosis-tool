@@ -315,7 +315,7 @@
       route: "native_connector_required",
       currentAvailability: "iPhone read-only import contract ready; native BLE host and adapter verification pending",
       requiresCompanionBridge: true,
-      requiredBeforeReadout: Object.freeze(["\u81ea\u524diPhone\u30b3\u30cd\u30af\u30bf\u5b9f\u88c5\u6e08\u307f", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
+      requiredBeforeReadout: Object.freeze(["自前iPhoneコネクタの実装", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
     })
   ]);
 
@@ -342,7 +342,7 @@
       route: "desktop_web_serial",
       requiresDesktop: true,
       currentAvailability: "Web Serial read-only実装済み・実機適合確認待ち",
-      requiredBeforeReadout: Object.freeze(["HTTPSとWeb Serial対応Chrome系ブラウザ", "ELM327/STNのUSBシリアル認識", "読取専用AT/OBD初期化", "切断・タイムアウト時の安全停止", "実機応答の診断セッション正規化"])
+      requiredBeforeReadout: Object.freeze(["HTTPSとWeb Serial対応Chrome系ブラウザ", "ELM327/STNのUSBシリアル、またはWindowsでCOMポート化されたBluetooth Classic SPPの認識", "読取専用AT/OBD初期化", "切断・タイムアウト時の安全停止", "実機応答の診断セッション正規化"])
     }),
     Object.freeze({
       interfaceId: "user-vci-thinkcar-bluetooth",

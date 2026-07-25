@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.22";
+const APP_VERSION = "3.4.23";
 const APP_LAST_UPDATED = "2026-07-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1969,12 +1969,12 @@ function renderObdConnectionGuide() {
   const isIosElm = interfaceId === "user-vci-elm327" && interfaceRoute?.platform === "ios";
   const lines = isIosElm ? [
     "端末: iPhone読取契約は準備済み。ネイティブBLEホストと実機確認は未実装",
-    "読取手順: ELM327へ直接接続 -> read-only DTC/PID/FF/ECU読取",
+    "読取手順: 自前iPhoneコネクタ実装後にELM327へ接続 -> read-only DTC/PID/FF/ECU読取",
     "安全: 車両送信は無効。BLE実機読取は適合確認待ち"
   ] : {
     "user-vci-elm327": [
       "端末: 読取はデスクトップ版Chrome系ブラウザが必要",
-      "読取手順: Web SerialでELM327/STNを選択",
+      "読取手順: Web SerialでELM327/STNを選択。WindowsでCOMポート化されたBluetooth Classic SPPも候補",
       "安全: DTC / ライブデータ / FFの読取専用のみ"
     ],
     "user-vci-thinkcar-bluetooth": [
@@ -3194,7 +3194,7 @@ function initializeObdReadOnlyPanel() {
   }
 
   const serialStatus = capability.webSerialSupported
-    ? "このブラウザはUSBシリアル読取基盤に対応しています。"
+    ? "このブラウザはUSBシリアルと、OSがCOMポートとして公開したBluetooth Classic SPPの読取基盤に対応しています。BLE/Wi-Fiは対象外です。"
     : "このブラウザはWeb Serial非対応です。実機読取にはデスクトップ版Chrome系ブラウザが必要です。";
   const secureStatus = capability.secureContext
     ? "HTTPS読取環境は正常です。"
