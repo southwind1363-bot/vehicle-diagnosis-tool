@@ -692,6 +692,7 @@ function readJ2534RegistryText() {
       return execFileSync("reg.exe", ["query", registryRoot, "/s"], {
         encoding: "utf8",
         windowsHide: true,
+        stdio: ["ignore", "pipe", "ignore"],
         timeout: 4000,
         maxBuffer: 1024 * 1024
       });
