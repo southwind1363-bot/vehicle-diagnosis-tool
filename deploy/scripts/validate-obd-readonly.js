@@ -6438,6 +6438,18 @@ const bridgeEcuOnlySupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapsho
 check(bridgeEcuOnlySupportedPidSnapshot.ok === true && bridgeEcuOnlySupportedPidSnapshot.blocked === false && bridgeEcuOnlySupportedPidSnapshot.supportedPidReadoutStatus === "reported" && bridgeEcuOnlySupportedPidSnapshot.supportedPids.join(",") === "05,0C,0D" && bridgeEcuOnlySupportedPidSnapshot.supportedPidAggregationScope === "multiple_ecus_union" && bridgeEcuOnlySupportedPidSnapshot.supportedPidEcuSnapshots?.length === 2, "ECU-scoped supported PID evidence was not safely promoted into the aggregate readout");
 const bridgeEcuOnlySupportedPidSession = obd.buildDiagnosticScanSession({ supportedPidResponse: { data: { supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["0C"] }] } } });
 check(bridgeEcuOnlySupportedPidSession?.supportedPidMatrix?.supportedPids?.join(",") === "0C" && bridgeEcuOnlySupportedPidSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && bridgeEcuOnlySupportedPidSession?.vehicleCommandEnabled === false && bridgeEcuOnlySupportedPidSession?.wouldTransmit === false, "ECU-scoped supported PID evidence did not survive safe diagnostic-session import");
+const snakeOnlySupportedPidEcuSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  supported_pid_matrix: {
+    schemaVersion: "supported_pid_matrix_v1",
+    supported_pid_readout_status: "reported",
+    supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["0C"] }],
+    supportedPids: [],
+    blocked: false
+  }
+});
+const snakeOnlySupportedPidEcuRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(snakeOnlySupportedPidEcuSession)));
+check(snakeOnlySupportedPidEcuSession.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && snakeOnlySupportedPidEcuSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlySupportedPidEcuSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("supported_pid_matrix") && snakeOnlySupportedPidEcuSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && snakeOnlySupportedPidEcuRoundTrip?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && snakeOnlySupportedPidEcuRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlySupportedPidEcuRoundTrip?.vehicleCommandEnabled === false && snakeOnlySupportedPidEcuRoundTrip?.wouldTransmit === false, "Snake-case supported PID ECU snapshots were treated as an empty or unscoped readout");
 const bridgeEcuOnlyInvalidSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({ data: { supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["0C", "ZZ", "ABC", ""] }] } });
 check(bridgeEcuOnlyInvalidSupportedPidSnapshot.supportedPids.join(",") === "0C" && bridgeEcuOnlyInvalidSupportedPidSnapshot.supportedPidEcuSnapshots?.[0]?.supportedPids?.join(",") === "0C", "Invalid ECU-scoped PID values were retained or converted into a synthetic PID");
 const bridgeMissingEcuSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({ data: { supported_pid_ecu_snapshots: [{ supported_pids: ["0C"] }] } });

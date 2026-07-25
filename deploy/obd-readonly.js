@@ -4399,6 +4399,7 @@
       {
         id: "supported_pid_matrix",
         responseUnavailable: isUnavailableReadout(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status, supportedPidMatrixSafetyInput),
+        capturedEvidence: [supportedPidMatrix?.supportedPidEcuSnapshots, supportedPidMatrix?.supported_pid_ecu_snapshots].some((snapshots) => Array.isArray(snapshots) && snapshots.some((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].some((pids) => Array.isArray(pids) && pids.length > 0))),
         label: "対応PID",
         available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
         count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : 0
@@ -5375,7 +5376,10 @@
     add("supported_pid_matrix", [
       supportedPidMatrix?.sourceEcu,
       supportedPidMatrix?.source_ecu,
-      ...(supportedPidMatrix?.supportedPidEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      ...[
+        ...(Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots) ? supportedPidMatrix.supportedPidEcuSnapshots : []),
+        ...(Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots) ? supportedPidMatrix.supported_pid_ecu_snapshots : [])
+      ].map((item) => item?.sourceEcu || item?.source_ecu || null)
     ]);
     const byId = new Map();
     rows.forEach(({ ecuId, readoutId }) => {
@@ -5407,7 +5411,10 @@
           : null,
       Array.isArray(ecuInfoSnapshot?.items) && ecuInfoSnapshot.items.length > 0 ? "ecu_info_snapshot" : null,
       Array.isArray(onboardMonitorSnapshot?.tests) && onboardMonitorSnapshot.tests.length > 0 ? "onboard_monitor_snapshot" : null,
-      Array.isArray(supportedPidMatrix?.supportedPids) && supportedPidMatrix.supportedPids.length > 0 ? "supported_pid_matrix" : null
+      (Array.isArray(supportedPidMatrix?.supportedPids) && supportedPidMatrix.supportedPids.length > 0)
+        || [supportedPidMatrix?.supportedPidEcuSnapshots, supportedPidMatrix?.supported_pid_ecu_snapshots].some((snapshots) => Array.isArray(snapshots) && snapshots.some((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].some((pids) => Array.isArray(pids) && pids.length > 0)))
+          ? "supported_pid_matrix"
+          : null
     ].filter(Boolean);
     const unscopedReadoutIds = capturedReadoutIds.filter((id) => !readoutIds.includes(id));
     const sourceCoveragePercent = capturedReadoutIds.length
@@ -5479,7 +5486,10 @@
       ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       supportedPidMatrix?.sourceEcu,
       supportedPidMatrix?.source_ecu,
-      ...(supportedPidMatrix?.supportedPidEcuSnapshots || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      ...[
+        ...(Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots) ? supportedPidMatrix.supportedPidEcuSnapshots : []),
+        ...(Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots) ? supportedPidMatrix.supported_pid_ecu_snapshots : [])
+      ].map((item) => item?.sourceEcu || item?.source_ecu || null)
     ];
     const observedAddresses = [...new Set(observedAddressInputs.map(normalizeComparableCanEcuAddress).filter(Boolean))].sort();
     const comparableObservedAddresses = expectedAddress
