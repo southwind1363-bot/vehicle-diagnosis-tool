@@ -7,7 +7,7 @@
     "progress_percent": 62,
     "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
     "priority": 1,
-    "current_count_note": "P系個別定義 2923件",
+    "current_count_note": "P系親DTC 2923件 / 出典定義2924件・一意サブコード定義1件",
     "next_actions": [
       "未収録Pコードを公式/規格系ソースで照合する",
       "同時DTC、フリーズフレーム、ライブデータPIDへのリンクを増やす",
@@ -28,7 +28,7 @@
     "progress_percent": 56,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系個別定義 550件",
+    "current_count_note": "U系親DTC 550件 / 出典定義552件・一意サブコード定義2件",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
