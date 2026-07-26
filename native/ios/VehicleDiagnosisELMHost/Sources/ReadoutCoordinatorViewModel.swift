@@ -49,6 +49,19 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         connectorState == .selected
     }
 
+    var peripheralScanStatusLabel: String {
+        switch connectorState {
+        case .scanning:
+            return "BLE GATT機器を12秒間検索中"
+        case .scanComplete where peripherals.isEmpty:
+            return "BLE機器を検出できません。ELM327 miniがBluetooth Classic専用の場合、このiPhone経路では使用できません"
+        case .scanComplete:
+            return "BLE探索を完了しました。検出した機器を選択してください"
+        default:
+            return "未検索"
+        }
+    }
+
     var canConfigure: Bool {
         connectorState == .discovering && transmitChoice != nil && receiveChoice != nil
     }
@@ -112,6 +125,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         switch connectorState {
         case .idle: return "未接続"
         case .scanning: return "検索中"
+        case .scanComplete: return "検索完了"
         case .selected: return "選択済み"
         case .connecting: return "接続中"
         case .discovering: return "通信特性を確認中"

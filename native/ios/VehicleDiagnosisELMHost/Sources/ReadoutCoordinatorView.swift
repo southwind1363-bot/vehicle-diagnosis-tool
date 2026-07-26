@@ -20,6 +20,9 @@ struct ReadoutCoordinatorView: View {
                     Text("iPhoneではBLE GATT対応のELM327だけを使います。Bluetooth Classic専用のELM327 miniはこの経路では使えません。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    Text(viewModel.peripheralScanStatusLabel)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     Button("近くのアダプターを検索") {
                         viewModel.startPeripheralScan()
                     }

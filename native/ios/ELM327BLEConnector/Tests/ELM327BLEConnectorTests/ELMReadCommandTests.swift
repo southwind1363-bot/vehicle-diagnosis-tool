@@ -49,6 +49,17 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(acceptsELMNotificationStateUpdate(peripheralMatches: true, subscribing: false))
     }
 
+    func testCompletedBleScanStillAllowsSelectingADiscoveredPeripheral() {
+        XCTAssertTrue(allowsELMPeripheralSelection(state: .scanning))
+        XCTAssertTrue(allowsELMPeripheralSelection(state: .scanComplete))
+        XCTAssertFalse(allowsELMPeripheralSelection(state: .idle))
+        XCTAssertFalse(allowsELMPeripheralSelection(state: .discovering))
+        XCTAssertTrue(allowsELMScanStart(state: .idle))
+        XCTAssertTrue(allowsELMScanStart(state: .scanComplete))
+        XCTAssertTrue(allowsELMScanStart(state: .interrupted))
+        XCTAssertFalse(allowsELMScanStart(state: .scanning))
+    }
+
     func testSupportedPIDFollowUpsKeepReadinessAheadOfLiveValues() {
         XCTAssertEqual(
             enqueueSupportedPIDFollowUps(

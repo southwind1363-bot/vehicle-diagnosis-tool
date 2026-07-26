@@ -2,7 +2,7 @@ import CoreBluetooth
 import Foundation
 
 public enum ELMConnectorState: String, Sendable {
-    case idle, scanning, selected, connecting, discovering, subscribing, ready, awaitingWriteCapacity, awaitingPrompt, interrupted
+    case idle, scanning, scanComplete, selected, connecting, discovering, subscribing, ready, awaitingWriteCapacity, awaitingPrompt, interrupted
 }
 
 enum ELMReadResponseDisposition: Equatable {
@@ -50,6 +50,14 @@ func acceptsELMResponseNotification(peripheralMatches: Bool, awaitingPrompt: Boo
 
 func acceptsELMNotificationStateUpdate(peripheralMatches: Bool, subscribing: Bool) -> Bool {
     peripheralMatches && subscribing
+}
+
+func allowsELMPeripheralSelection(state: ELMConnectorState) -> Bool {
+    state == .scanning || state == .scanComplete
+}
+
+func allowsELMScanStart(state: ELMConnectorState) -> Bool {
+    state == .idle || state == .interrupted || state == .scanComplete
 }
 
 func enqueueSupportedPIDFollowUps(
@@ -120,6 +128,7 @@ public final class ELM327BLEConnector: NSObject {
     private var activeCommand: ELMReadCommand?
     private var promptDecoder = ELMPromptDecoder()
     private var timeoutWorkItem: DispatchWorkItem?
+    private var scanTimeoutWorkItem: DispatchWorkItem?
     private var sequence = 0
     private var sessionContext: NativeConnectorSessionContext?
     private var adapterName: String?
@@ -145,7 +154,8 @@ public final class ELM327BLEConnector: NSObject {
 
     public func startScan() {
         guard central.state == .poweredOn else { return fail(.bluetoothUnavailable) }
-        guard state == .idle || state == .interrupted else { return fail(.invalidState) }
+        guard allowsELMScanStart(state: state) else { return fail(.invalidState) }
+        scanTimeoutWorkItem?.cancel()
         peripherals.removeAll()
         selectedPeripheral = nil
         characteristics.removeAll()
@@ -155,10 +165,20 @@ public final class ELM327BLEConnector: NSObject {
         promptDecoder.reset()
         central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
         state = .scanning
+        let scanTimeout = DispatchWorkItem { [weak self] in
+            guard let self, self.state == .scanning else { return }
+            self.central.stopScan()
+            self.scanTimeoutWorkItem = nil
+            self.state = .scanComplete
+        }
+        scanTimeoutWorkItem = scanTimeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: scanTimeout)
     }
 
     public func select(peripheralID: UUID) {
-        guard state == .scanning, let peripheral = peripherals[peripheralID] else { return fail(.peripheralNotSelected) }
+        guard allowsELMPeripheralSelection(state: state), let peripheral = peripherals[peripheralID] else { return fail(.peripheralNotSelected) }
+        scanTimeoutWorkItem?.cancel()
+        scanTimeoutWorkItem = nil
         central.stopScan()
         selectedPeripheral = peripheral
         state = .selected
@@ -215,6 +235,8 @@ public final class ELM327BLEConnector: NSObject {
     }
 
     public func disconnect() {
+        scanTimeoutWorkItem?.cancel()
+        scanTimeoutWorkItem = nil
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
         if sessionContext != nil && !didEmitTerminalManifest { emitCompletionManifest(state: .interrupted, interruptionCode: "transport:user_disconnected") }
@@ -560,6 +582,8 @@ public final class ELM327BLEConnector: NSObject {
     }
 
     private func interrupt(_ error: ELMConnectorError) {
+        scanTimeoutWorkItem?.cancel()
+        scanTimeoutWorkItem = nil
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
         emitCompletionManifest(state: .interrupted, interruptionCode: interruptionCode(for: error))
