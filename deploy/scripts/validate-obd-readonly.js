@@ -7012,6 +7012,21 @@ const bridgeMode09SnakeAliasItems = obd.normalizeBridgeEcuInfoSnapshot({
 });
 check(bridgeMode09SnakeAliasItems.itemCount === 2, "Bridge mode09_items snake_case aliases were not normalized");
 check(bridgeMode09SnakeAliasItems.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-MODE09", "Bridge mode09_items snake_case CVN was not retained");
+const bridgeMode09SeparatedSnakeAliasItems = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    source_ecu: "7E8",
+    mode_09_items: [
+      { item_id: "calibration_id", mode09_type: "04", decoded_value: "CAL-MODE-09-SNAKE" },
+      { item_id: "ecu_name", mode09_type: "0A", raw_value: "Hybrid Control ECU" }
+    ]
+  }
+});
+check(bridgeMode09SeparatedSnakeAliasItems.itemCount === 2 && bridgeMode09SeparatedSnakeAliasItems.items.find((item) => item.id === "calibration_id")?.value === "CAL-MODE-09-SNAKE" && bridgeMode09SeparatedSnakeAliasItems.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E8", "Bridge mode_09_items aliases were not normalized with ECU provenance");
+const bridgeMode09SeparatedSnakeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeMode09SeparatedSnakeAliasItems })) }));
+check(bridgeMode09SeparatedSnakeRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_id")?.value === "CAL-MODE-09-SNAKE" && bridgeMode09SeparatedSnakeRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "ecu_name")?.sourceEcu === "7E8" && bridgeMode09SeparatedSnakeRoundTrip?.vehicleCommandEnabled === false, "Bridge mode_09_items were not retained through read-only export and JSON import");
 const bridgeExtendedObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,

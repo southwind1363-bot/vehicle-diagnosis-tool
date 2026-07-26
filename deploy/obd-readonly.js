@@ -16104,8 +16104,10 @@
     if (Array.isArray(input.ecuInfoRows)) return input.ecuInfoRows;
     if (Array.isArray(input.mode09_items)) return input.mode09_items;
     if (Array.isArray(input.mode09Items)) return input.mode09Items;
+    if (Array.isArray(input.mode_09_items)) return input.mode_09_items;
     if (Array.isArray(input.mode09_values)) return input.mode09_values;
     if (Array.isArray(input.mode09Values)) return input.mode09Values;
+    if (Array.isArray(input.mode_09_values)) return input.mode_09_values;
     if (Array.isArray(input.info_values)) return input.info_values;
     if (Array.isArray(input.infoValues)) return input.infoValues;
     if (!input || typeof input !== "object") return [];
