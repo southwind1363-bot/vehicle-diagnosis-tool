@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const DTC_REFERENCE_PATTERN = /\b([PCBU][0-9A-F]{4})(?:\s*[:\-]\s*([0-9A-F]{2,4}))?\b/gi;
+  const DTC_REFERENCE_PATTERN = /\b([PCBU][0-9A-F]{4})(?:\s*[:\-]\s*([0-9A-F]{2,4})|([0-9A-F]{2}))?\b/gi;
   const VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
   const PARTIALLY_MASKED_VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{3,10}(?:\.{2,}|…+)[A-HJ-NPR-Z0-9]{3,10}\b/gi;
   const NUMBER_PATTERN = /[-+]?\d+(?:\.\d+)?/;
@@ -20632,7 +20632,7 @@
     const seen = new Set();
     return matches.flatMap((match) => {
       const code = match[1];
-      const subcode = match[2] || null;
+      const subcode = match[2] || match[3] || null;
       const key = `${code}::${subcode || ""}`;
       if (!code || seen.has(key)) return [];
       seen.add(key);
