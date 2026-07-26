@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.35";
+const APP_VERSION = "3.4.36";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2258,6 +2258,7 @@ function getInput() {
 function buildDiagnosis(input) {
   const dtcDefinitions = findDtcDefinitionCandidates(input.obdCode, input.obdSubcode);
   const dtcApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, input.vehicleProfile);
+  const dtcApplicabilityScopeSummary = buildDtcDefinitionScopeSummary(dtcDefinitions);
   const obd = selectApplicableDtcDefinition(dtcDefinitions, input.vehicleProfile);
   const flow = findById(dataStore.symptomFlows, input.symptomId);
   const interview = buildInterviewAnalysis(input.interview);
@@ -2282,7 +2283,7 @@ function buildDiagnosis(input) {
   return {
     confidence: getConfidence(obd, flow, interview),
     safety: buildSafetyMessage(safetyTags),
-    facts: buildFacts(input, obd, flow, interview, dtcApplicability),
+    facts: buildFacts(input, obd, flow, interview, dtcApplicability, dtcApplicabilityScopeSummary),
     interview: interview.insights.length ? interview.insights : [NO_DATA],
     guesses: buildGuesses(obd, flow, interview),
     modernReferences,
@@ -2482,7 +2483,7 @@ function drivingText(value) {
   return labels[value] || "";
 }
 
-function buildFacts(input, obd, flow, interview, dtcApplicability = null) {
+function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApplicabilityScopeSummary = "") {
   const displayedDtc = formatDtcReference(input.obdCode, input.obdSubcode);
   const facts = [
     input.vehicle ? `車種情報: ${input.vehicle}` : `車種情報: ${NO_DATA}`,
@@ -2506,6 +2507,7 @@ function buildFacts(input, obd, flow, interview, dtcApplicability = null) {
     facts.push("出典限定DTCの適用範囲: 選択車両は対象外です。この定義は診断根拠に使わず、該当車種の整備書を確認してください。");
   } else if (dtcApplicability?.status === "unverified") {
     facts.push("出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。");
+    if (dtcApplicabilityScopeSummary) facts.push(`出典限定DTCの適用候補: ${dtcApplicabilityScopeSummary}`);
   }
 
   if (flow) {
@@ -8213,6 +8215,7 @@ function createObdDtcCard(codeOrDtc) {
   const vehicleProfile = buildSelectedObdVehicleProfile();
   const dtcDefinitions = findDtcDefinitionCandidates(code, subcode);
   const definitionApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, vehicleProfile);
+  const definitionScopeSummary = buildDtcDefinitionScopeSummary(dtcDefinitions);
   const registered = selectApplicableDtcDefinition(dtcDefinitions, vehicleProfile);
   const modern = getModernGenericMatches(code)[0];
   const hasImportedDefinitionEvidence = registered?.imported_definition_only === true && Boolean(registered?.source);
@@ -8266,7 +8269,7 @@ function createObdDtcCard(codeOrDtc) {
   } else if (definitionApplicability.status === "unverified") {
     const applicabilityUnverified = document.createElement("p");
     applicabilityUnverified.className = "obd-dtc-check";
-    applicabilityUnverified.textContent = "適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。";
+    applicabilityUnverified.textContent = `適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。${definitionScopeSummary ? ` 候補: ${definitionScopeSummary}` : ""}`;
     wrapper.appendChild(applicabilityUnverified);
   }
 
@@ -9636,6 +9639,23 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   if (!maker || !model || !Number.isInteger(year)) return { status: "unverified" };
   const matched = makers.includes(maker) && models.includes(model) && year >= yearFrom && year <= yearTo;
   return { status: matched ? "matched" : "mismatch" };
+}
+
+function buildDtcDefinitionScopeSummary(definitions) {
+  const scopes = [...new Set((Array.isArray(definitions) ? definitions : [])
+    .map((definition) => {
+      const filter = definition?.vehicle_filter || definition?.vehicleFilter || null;
+      if (!filter || typeof filter !== "object") return "";
+      const makers = (Array.isArray(filter.makers) ? filter.makers : []).map((value) => String(value || "").trim()).filter(Boolean);
+      const models = (Array.isArray(filter.models) ? filter.models : []).map((value) => String(value || "").trim()).filter(Boolean);
+      const yearFrom = Number(filter.year_from ?? filter.yearFrom);
+      const yearTo = Number(filter.year_to ?? filter.yearTo);
+      if (!makers.length || !models.length || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo)) return "";
+      const years = yearFrom === yearTo ? String(yearFrom) : `${yearFrom}-${yearTo}`;
+      return `${makers.join("/")} ${models.join("/")} ${years}`;
+    }))];
+  if (!scopes.length) return "";
+  return scopes.length > 3 ? `${scopes.slice(0, 3).join(" / ")} ほか${scopes.length - 3}件` : scopes.join(" / ");
 }
 
 function selectApplicableDtcDefinition(definitions, vehicleProfile = null) {
