@@ -4080,9 +4080,12 @@
         return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
       });
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const malformedMode06Alias = ["tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const hasTestEvidence = tests.length > 0;
     const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasTestEvidence);
-    const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+    const resolvedBridgeSafety = malformedMode06Alias
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, blocked: hasTestEvidence, unparsed: !hasTestEvidence }
       : bridgeSafety;
     return {

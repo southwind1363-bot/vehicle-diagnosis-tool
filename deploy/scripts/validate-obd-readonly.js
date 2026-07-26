@@ -7378,6 +7378,8 @@ check(observedEcuSummaryExport.session?.observed_ecu_summary?.ecu_ids?.join(",")
 const bridgeEmptyOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({});
 check(bridgeEmptyOnboardMonitorSnapshot.testCount === 0 && bridgeEmptyOnboardMonitorSnapshot.blocked === true, "Empty Bridge Mode 06 response was not fail-closed");
 check(bridgeEmptyOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "blocked", "Empty Bridge Mode 06 response was incorrectly treated as an empty reported readout");
+const bridgeMalformedMode06Snapshot = obd.normalizeBridgeOnboardMonitorSnapshot({ ok: true, blocked: false, would_transmit: false, data: { mode06_tests: { id: "catalyst", status: "fail" } } });
+check(bridgeMalformedMode06Snapshot.testCount === 0 && bridgeMalformedMode06Snapshot.blocked === true && bridgeMalformedMode06Snapshot.onboardMonitorReadoutStatus === "blocked", "Bridge Mode 06 must reject non-array test aliases and fail closed");
 const bridgeAliasOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
