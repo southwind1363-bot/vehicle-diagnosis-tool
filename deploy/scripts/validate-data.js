@@ -105,7 +105,9 @@ for (const file of jsonFiles) {
 
     if (row.code) {
       if (!isDtc(row.code) && row.code !== "P1xxx") reportError(`${label}: DTC形式が不正です: ${row.code}`);
-      codeRows.push({ file, code: row.code, id: row.id || "" });
+      const subcode = String(row.subcode || row.sub_code || "").trim().toUpperCase();
+      if (subcode && !/^[0-9A-F]{1,4}$/.test(subcode)) reportError(`${label}: DTCサブコード形式が不正です: ${subcode}`);
+      codeRows.push({ file, code: row.code, subcode, id: row.id || "" });
     }
 
     for (const code of row.dtc_codes || []) {
@@ -316,9 +318,10 @@ for (const [index, row] of vehicleYearRows.entries()) {
 
 const codeLocations = new Map();
 for (const row of codeRows) {
-  const locations = codeLocations.get(row.code) || [];
+  const codeKey = `${row.code}:${row.subcode || ""}`;
+  const locations = codeLocations.get(codeKey) || [];
   locations.push(`${row.file}:${row.id}`);
-  codeLocations.set(row.code, locations);
+  codeLocations.set(codeKey, locations);
 }
 
 for (const [code, locations] of codeLocations.entries()) {

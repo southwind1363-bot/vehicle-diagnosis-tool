@@ -229,8 +229,8 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.23";
-const APP_LAST_UPDATED = "2026-07-25";
+const APP_VERSION = "3.4.24";
+const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -8178,7 +8178,7 @@ function createObdDtcCard(codeOrDtc) {
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
   const displayCode = `${subcode ? `${code}:${subcode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
-  const registered = findByCode(code);
+  const registered = findByCode(code, subcode);
   const modern = getModernGenericMatches(code)[0];
   const system = registered?.faultSystem || registered?.system || modern?.system;
   const firstCheck = registered?.firstChecks?.[0] || registered?.check_order?.[0] || modern?.check_order?.[0];
@@ -8201,12 +8201,21 @@ function createObdDtcCard(codeOrDtc) {
 
   const description = document.createElement("p");
   description.className = "obd-dtc-description";
-  description.textContent = system
+  description.textContent = registered?.subcode && subcode
+    ? `出典確認済みの報告定義: ${registered.title}。コードだけで故障部品は確定しません。`
+    : system
     ? `${system}に関するDTCです。コードだけで故障部品は確定しません。`
     : describeUnregisteredDtc(code);
   wrapper.appendChild(description);
 
   if (reportedDescription) description.textContent = `診断機報告: ${reportedDescription}`;
+
+  if (registered?.subcode && subcode && registered.applicability_note) {
+    const applicability = document.createElement("p");
+    applicability.className = "obd-dtc-check";
+    applicability.textContent = `適用範囲: ${registered.applicability_note}`;
+    wrapper.appendChild(applicability);
+  }
 
   if (manufacturerSpecific) {
     const note = document.createElement("p");
@@ -9499,9 +9508,15 @@ function applyTheme(theme) {
   themeButton.setAttribute("aria-pressed", String(isDark));
 }
 
-function findByCode(code) {
+function findByCode(code, subcode = null) {
   if (!code) return null;
-  return dataStore.obdCodes.find((item) => item.code === code) || null;
+  const matches = dataStore.obdCodes.filter((item) => item.code === code);
+  const normalizedSubcode = String(subcode || "").trim().toUpperCase().replace(/^0X/, "");
+  if (/^[0-9A-F]{1,4}$/.test(normalizedSubcode)) {
+    const exact = matches.find((item) => String(item.subcode || item.sub_code || "").trim().toUpperCase() === normalizedSubcode);
+    if (exact) return exact;
+  }
+  return matches.find((item) => !item.subcode && !item.sub_code) || null;
 }
 
 function findById(items, id) {
