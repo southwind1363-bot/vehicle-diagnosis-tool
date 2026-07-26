@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.37";
+const APP_VERSION = "3.4.38";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2506,7 +2506,9 @@ function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApp
   } else if (dtcApplicability?.status === "mismatch") {
     facts.push("出典限定DTCの適用範囲: 選択車両は対象外です。この定義は診断根拠に使わず、該当車種の整備書を確認してください。");
   } else if (dtcApplicability?.status === "unverified") {
-    facts.push("出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。");
+    facts.push(dtcApplicability.reason === "additional_scope_confirmation_required"
+      ? "出典限定DTCの適用範囲: 車種・年式は候補と一致しますが、VIN・トリム等の追加条件が未確認です。適合が確認できるまで診断手順を流用しないでください。"
+      : "出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。");
     if (dtcApplicabilityScopeSummary) facts.push(`出典限定DTCの適用候補: ${dtcApplicabilityScopeSummary}`);
   }
 
@@ -8269,7 +8271,10 @@ function createObdDtcCard(codeOrDtc) {
   } else if (definitionApplicability.status === "unverified") {
     const applicabilityUnverified = document.createElement("p");
     applicabilityUnverified.className = "obd-dtc-check";
-    applicabilityUnverified.textContent = `適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。${definitionScopeSummary ? ` 候補: ${definitionScopeSummary}` : ""}`;
+    const unverifiedReason = definitionApplicability.reason === "additional_scope_confirmation_required"
+      ? "車種・年式は候補と一致しますが、VIN・トリム等の追加条件が未確認です。"
+      : "車種・年式が揃っていないため未確認です。";
+    applicabilityUnverified.textContent = `適用範囲: ${unverifiedReason}適合が確認できるまで診断手順を流用しないでください。${definitionScopeSummary ? ` 候補: ${definitionScopeSummary}` : ""}`;
     wrapper.appendChild(applicabilityUnverified);
   }
 
@@ -9616,12 +9621,13 @@ function findByCode(code, subcode = null, vehicleProfile = null) {
 }
 
 function evaluateDtcDefinitionCandidatesApplicability(definitions, vehicleProfile = null) {
-  const statuses = (Array.isArray(definitions) ? definitions : [])
-    .map((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile).status);
+  const evaluations = (Array.isArray(definitions) ? definitions : [])
+    .map((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile));
+  const statuses = evaluations.map((item) => item.status);
   if (!statuses.length) return { status: "not_limited" };
   if (statuses.includes("matched")) return { status: "matched" };
   if (statuses.includes("not_limited")) return { status: "not_limited" };
-  if (statuses.includes("unverified")) return { status: "unverified" };
+  if (statuses.includes("unverified")) return evaluations.find((item) => item.status === "unverified") || { status: "unverified" };
   return { status: "mismatch" };
 }
 
@@ -9636,9 +9642,13 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   const maker = normalize(vehicleProfile?.maker);
   const model = normalize(vehicleProfile?.model);
   const year = Number(vehicleProfile?.year);
-  if (!maker || !model || !Number.isInteger(year)) return { status: "unverified" };
+  if (!maker || !model || !Number.isInteger(year)) return { status: "unverified", reason: "vehicle_profile_incomplete" };
   const matched = makers.includes(maker) && models.includes(model) && year >= yearFrom && year <= yearTo;
-  return { status: matched ? "matched" : "mismatch" };
+  if (!matched) return { status: "mismatch" };
+  if (filter.scope_confirmation_required === true || filter.scopeConfirmationRequired === true) {
+    return { status: "unverified", reason: "additional_scope_confirmation_required" };
+  }
+  return { status: "matched" };
 }
 
 function buildDtcDefinitionScopeSummary(definitions) {
@@ -9652,7 +9662,10 @@ function buildDtcDefinitionScopeSummary(definitions) {
       const yearTo = Number(filter.year_to ?? filter.yearTo);
       if (!makers.length || !models.length || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo)) return "";
       const years = yearFrom === yearTo ? String(yearFrom) : `${yearFrom}-${yearTo}`;
-      return `${makers.join("/")} ${models.join("/")} ${years}`;
+      const additionalScope = filter.scope_confirmation_required === true || filter.scopeConfirmationRequired === true
+        ? " VIN/trim確認必須"
+        : "";
+      return `${makers.join("/")} ${models.join("/")} ${years}${additionalScope}`;
     }))];
   if (!scopes.length) return "";
   return scopes.length > 3 ? `${scopes.slice(0, 3).join(" / ")} ほか${scopes.length - 3}件` : scopes.join(" / ");

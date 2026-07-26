@@ -49,6 +49,7 @@ function isDtcVehicleFilter(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   if (!isNonEmptyStringArray(value.makers) || !isNonEmptyStringArray(value.models)) return false;
   if (!Number.isInteger(value.year_from) || !Number.isInteger(value.year_to)) return false;
+  if (value.scope_confirmation_required !== undefined && typeof value.scope_confirmation_required !== "boolean") return false;
   return value.year_from >= 1900 && value.year_to >= value.year_from && value.year_to <= 2100;
 }
 
