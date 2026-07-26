@@ -18480,7 +18480,7 @@
       const dtcFormat = cellAt(dtcFormatIndex, 48).toLowerCase();
       const reportedDtcDescription = normalizeDtcReportedDescription(cellAt(dtcDescriptionIndex, 240));
       const reportedDtcStatus = normalizeDtcReportedStatus(cellAt(statusIndex, 80));
-      const dtcSubcode = cellAt(subcodeIndex, 8).toUpperCase();
+      const dtcSubcode = normalizeDtcSubcode(cellAt(subcodeIndex, 8));
       const dtcStatusByte = cellAt(dtcStatusByteIndex, 12);
       if (dtcStatusAvailabilityMask === null) dtcStatusAvailabilityMask = cellAt(dtcStatusAvailabilityMaskIndex, 12) || null;
       const dtcSeverity = cellAt(dtcSeverityIndex, 80);
@@ -18535,7 +18535,7 @@
         dtcs.push({
           code: dtc,
           ...(manufacturerSpecificDtc ? { code_format: "manufacturer_specific", manufacturer_specific: true } : {}),
-          subcode: /^[0-9A-F]{1,4}$/.test(dtcSubcode) ? dtcSubcode : null,
+          subcode: dtcSubcode,
           ...(dtcStatusByte ? { status_byte: dtcStatusByte } : {}),
           ...(dtcSeverity ? { severity: dtcSeverity } : {}),
           ...(dtcOccurrenceCount ? { occurrence_count: dtcOccurrenceCount } : {}),

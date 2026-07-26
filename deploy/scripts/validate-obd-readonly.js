@@ -17708,6 +17708,11 @@ const scannerCsvSubcodeSession = obd.buildDiagnosticScanSessionFromCsv([
   "C0051,67,Pending,ABS"
 ].join("\n"));
 check(scannerCsvSubcodeSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "C0051" && item.subcode === "67" && item.status === "pending" && item.ecu === "ABS") && !scannerCsvSubcodeSession?.dtcSnapshot?.dtcs?.some((item) => item.subcode === "pending"), "Structured CSV import did not preserve an explicit hexadecimal DTC subcode");
+const scannerCsvPrefixedSubcodeSession = obd.buildDiagnosticScanSessionFromCsv([
+  "DTC,FTB,Status,ECU",
+  "C0051,0x67,Pending,ABS"
+].join("\n"));
+check(scannerCsvPrefixedSubcodeSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "C0051" && item.subcode === "67" && item.status === "pending" && item.ecu === "ABS") && scannerCsvPrefixedSubcodeSession?.vehicleCommandEnabled === false, "Structured CSV import did not normalize an 0x-prefixed FTB without changing read-only safety");
 const scannerCsvManufacturerSpecificSession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Code Format,Description,Status,ECU Name",
   "260100,Manufacturer Specific,Reported OEM sensor fault,Intermittent,Engine Control Module"
