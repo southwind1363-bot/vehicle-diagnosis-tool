@@ -7027,6 +7027,21 @@ const bridgeMode09SeparatedSnakeAliasItems = obd.normalizeBridgeEcuInfoSnapshot(
 check(bridgeMode09SeparatedSnakeAliasItems.itemCount === 2 && bridgeMode09SeparatedSnakeAliasItems.items.find((item) => item.id === "calibration_id")?.value === "CAL-MODE-09-SNAKE" && bridgeMode09SeparatedSnakeAliasItems.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E8", "Bridge mode_09_items aliases were not normalized with ECU provenance");
 const bridgeMode09SeparatedSnakeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeMode09SeparatedSnakeAliasItems })) }));
 check(bridgeMode09SeparatedSnakeRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_id")?.value === "CAL-MODE-09-SNAKE" && bridgeMode09SeparatedSnakeRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "ecu_name")?.sourceEcu === "7E8" && bridgeMode09SeparatedSnakeRoundTrip?.vehicleCommandEnabled === false, "Bridge mode_09_items were not retained through read-only export and JSON import");
+const bridgeMode09SeparatedSnakeValues = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    source_ecu: "7E9",
+    mode_09_values: [
+      { info_type: "06", decoded_value: "CVN-MODE-09-VALUES" },
+      { info_type: "0A", raw_value: "Brake ECU" }
+    ]
+  }
+});
+check(bridgeMode09SeparatedSnakeValues.itemCount === 2 && bridgeMode09SeparatedSnakeValues.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-MODE-09-VALUES" && bridgeMode09SeparatedSnakeValues.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E9", "Bridge mode_09_values aliases were not normalized with ECU provenance");
+const bridgeMode09SeparatedSnakeValuesRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeMode09SeparatedSnakeValues })) }));
+check(bridgeMode09SeparatedSnakeValuesRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_verification_number")?.value === "CVN-MODE-09-VALUES" && bridgeMode09SeparatedSnakeValuesRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "ecu_name")?.sourceEcu === "7E9" && bridgeMode09SeparatedSnakeValuesRoundTrip?.vehicleCommandEnabled === false, "Bridge mode_09_values were not retained through read-only export and JSON import");
 const bridgeExtendedObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
