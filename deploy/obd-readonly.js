@@ -3377,7 +3377,18 @@
       || Array.isArray(data.liveData)
       || Array.isArray(data.items);
     const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);
+    const malformedLivePidAlias = [
+      "values",
+      "monitor_values", "monitorValues",
+      "pid_values", "pidValues",
+      "live_pid_values", "livePidValues",
+      "live_data", "liveData",
+      "items"
+    ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);
+    const resolvedBridgeSafety = malformedLivePidAlias
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : bridgeSafety;
     const errorCodes = readBridgeResponseErrorCodes(response);
     const values = (Array.isArray(data.values)
       ? data.values
@@ -3411,11 +3422,11 @@
     const observedSourceEcus = [...new Set(monitorValues.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
-    const readoutStatus = bridgeSafety.blocked || bridgeSafety.unparsed
-      ? getBridgeReadoutStatus(bridgeSafety)
+    const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
+      ? getBridgeReadoutStatus(resolvedBridgeSafety)
       : ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
         ? String(explicitReadoutStatus).trim().toLowerCase()
-        : bridgeSafety.ok ? "reported" : "unknown";
+        : resolvedBridgeSafety.ok ? "reported" : "unknown";
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at || data.capturedAt || null;
     const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";
@@ -3430,10 +3441,10 @@
     return {
       source: "local_bridge",
       intent: "read_live_pid_snapshot",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      would_transmit: resolvedBridgeSafety.wouldTransmit,
       errorCodes,
       error_codes: [...errorCodes],
       protocol: readBridgeProtocol(data),
@@ -3735,6 +3746,13 @@
         : response
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const malformedFreezeFrameAlias = [
+      "values",
+      "freeze_frame_values", "freezeFrameValues",
+      "freeze_frame_rows", "freezeFrameRows",
+      "monitor_values", "monitorValues",
+      "pid_values", "pidValues"
+    ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const freezeFrameValues = (Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.freeze_frame_values)
@@ -3760,10 +3778,12 @@
         return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
       });
     const errorCodes = readBridgeResponseErrorCodes(response);
-    const bridgeSafety = readBridgeSnapshotSafety(
-      response,
-      errorCodes.length === 0 && [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray)
-    );
+    const bridgeSafety = malformedFreezeFrameAlias
+      ? { ...readBridgeSnapshotSafety(response, false), ok: false, blocked: true, unparsed: true }
+      : readBridgeSnapshotSafety(
+        response,
+        errorCodes.length === 0 && [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray)
+      );
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",

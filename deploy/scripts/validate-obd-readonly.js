@@ -475,7 +475,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);') && functionBody.includes('...analyzeMonitorValues(monitorValues)') && functionBody.includes('monitor_insights: monitorInsights'), "normalizeBridgeLivePidSnapshot should merge explicit and derived insights with snake_case alias");
     check(functionBody.includes('const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";') && functionBody.includes('observation_condition: observationCondition') && functionBody.includes('captured_at: capturedAt') && functionBody.includes('monitor_values: monitorValues') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeLivePidSnapshot should retain safe observation conditions with capture, values, and retention aliases");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeLivePidSnapshot should not retain raw bridge text");
-    check(functionBody.includes('const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);') && functionBody.includes('const readoutStatus = bridgeSafety.blocked || bridgeSafety.unparsed') && functionBody.includes('? getBridgeReadoutStatus(bridgeSafety)') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit'), "normalizeBridgeLivePidSnapshot should prioritize bridge failure states over reported status");
+    check(functionBody.includes('const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);') && functionBody.includes('const resolvedBridgeSafety = malformedLivePidAlias') && functionBody.includes('const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed') && functionBody.includes('? getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit'), "normalizeBridgeLivePidSnapshot should prioritize bridge failure states over reported status");
   }
   check(Boolean(bridgeSupportedPidSnapshotFunctionSource), "normalizeBridgeSupportedPidSnapshot is missing from obd-readonly.js");
   if (bridgeSupportedPidSnapshotFunctionSource) {
@@ -6398,6 +6398,13 @@ check(bridgePidSnapshot.monitorValues.find((item) => item.id === "fuel_system_st
 check(bridgePidSnapshot.monitorInsights.length > 0, "ブリッジPIDから相関ヒントを生成できません");
 check(bridgePidSnapshot.retainedRawText === false, "ブリッジPID変換が原文保持になっています");
 check(bridgePidSnapshot.livePidReadoutStatus === "reported" && bridgePidSnapshot.live_pid_readout_status === "reported", "ブリッジPID読取状態を取得済みとして保持できません");
+const bridgeMalformedLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { live_pid_values: { pid: "0C", value: 800, unit: "rpm" } }
+});
+check(bridgeMalformedLivePidSnapshot.monitorValues.length === 0 && bridgeMalformedLivePidSnapshot.blocked === true && bridgeMalformedLivePidSnapshot.livePidReadoutStatus === "blocked" && bridgeMalformedLivePidSnapshot.wouldTransmit === false, "Malformed bridge live PID row aliases must fail closed");
 const bridgeRawPidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
@@ -6617,6 +6624,15 @@ check(bridgeFreezeFrameSnapshot.triggerDtc === "P0171", "ブリッジフリー�
 check(bridgeFreezeFrameSnapshot.monitorValues.length === 2, "ブリッジフリーズフレーム値を整形できません");
 check(bridgeFreezeFrameSnapshot.trigger_dtc === "P0171" && bridgeFreezeFrameSnapshot.monitor_values.length === 2, "Bridge freeze-frame did not expose snake_case trigger and monitor aliases");
 check(bridgeFreezeFrameSnapshot.monitor_value_summary.total_count === 2 && bridgeFreezeFrameSnapshot.captured_at === "2026-06-28T00:01:45Z", "Bridge freeze-frame did not expose snake_case summary and capture aliases");
+const bridgeMalformedFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { freezeFrameRows: { pid: "0C", value: 800, unit: "rpm" } }
+});
+const bridgeMalformedFreezeFrameSession = obd.buildDiagnosticScanSession({ freeze_frame_snapshot: bridgeMalformedFreezeFrameSnapshot });
+const bridgeMalformedFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeMalformedFreezeFrameSession)));
+check(bridgeMalformedFreezeFrameSnapshot.monitorValues.length === 0 && bridgeMalformedFreezeFrameSnapshot.blocked === true && bridgeMalformedFreezeFrameSnapshot.freezeFrameReadoutStatus === "blocked" && bridgeMalformedFreezeFrameSession.vehicleCommandEnabled === false && bridgeMalformedFreezeFrameRoundTrip?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "blocked" && bridgeMalformedFreezeFrameRoundTrip?.vehicleCommandEnabled === false, "Malformed bridge freeze-frame row aliases must fail closed through read-only export");
 const bridgeEmptyFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({});
 check(bridgeEmptyFreezeFrameSnapshot.monitorValues.length === 0 && bridgeEmptyFreezeFrameSnapshot.blocked === true, "空のブリッジフリーズフレーム応答を安全側へ整形できません");
 const bridgeAliasFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
