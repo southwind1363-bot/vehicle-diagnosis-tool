@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.34";
+const APP_VERSION = "3.4.35";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2500,7 +2500,9 @@ function buildFacts(input, obd, flow, interview, dtcApplicability = null) {
     facts.push(`OBD2コード: ${NO_DATA}`);
   }
 
-  if (dtcApplicability?.status === "mismatch") {
+  if (dtcApplicability?.status === "matched") {
+    facts.push("出典限定DTCの適用範囲: 選択車両と一致しています。ECU・サブコード・整備書の適合確認は引き続き必要です。");
+  } else if (dtcApplicability?.status === "mismatch") {
     facts.push("出典限定DTCの適用範囲: 選択車両は対象外です。この定義は診断根拠に使わず、該当車種の整備書を確認してください。");
   } else if (dtcApplicability?.status === "unverified") {
     facts.push("出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。");
@@ -8251,7 +8253,12 @@ function createObdDtcCard(codeOrDtc) {
     wrapper.appendChild(applicability);
   }
 
-  if (definitionApplicability.status === "mismatch") {
+  if (definitionApplicability.status === "matched") {
+    const applicabilityMatched = document.createElement("p");
+    applicabilityMatched.className = "obd-dtc-check";
+    applicabilityMatched.textContent = "適用範囲: 選択車両と一致しています。ECU・サブコード・整備書の適合確認は引き続き必要です。";
+    wrapper.appendChild(applicabilityMatched);
+  } else if (definitionApplicability.status === "mismatch") {
     const applicabilityMismatch = document.createElement("p");
     applicabilityMismatch.className = "obd-dtc-check";
     applicabilityMismatch.textContent = "適用範囲: 選択車両はこの出典限定定義の対象外です。定義を診断根拠に使わず、該当車種の整備書を確認してください。";
