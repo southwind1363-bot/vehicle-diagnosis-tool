@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.25";
+const APP_VERSION = "3.4.26";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8219,6 +8219,28 @@ function createObdDtcCard(codeOrDtc) {
     applicability.className = "obd-dtc-check";
     applicability.textContent = `適用範囲: ${registered.applicability_note}`;
     wrapper.appendChild(applicability);
+  }
+
+  if (registered?.subcode && subcode) {
+    const sourceMeta = [registered.source, registered.source_date].filter(Boolean).join(" / ");
+    if (sourceMeta) {
+      const source = document.createElement("p");
+      source.className = "obd-dtc-check";
+      source.textContent = `出典: ${sourceMeta}`;
+      wrapper.appendChild(source);
+    }
+    if (registered.confidence) {
+      const confidence = document.createElement("p");
+      confidence.className = "obd-dtc-check";
+      confidence.textContent = `確信度: ${registered.confidence}`;
+      wrapper.appendChild(confidence);
+    }
+    if (registered.service_manual_required === true) {
+      const manual = document.createElement("p");
+      manual.className = "obd-dtc-check";
+      manual.textContent = "整備書確認必須: 車種・ECU・サブコードが適合した場合だけ診断手順を参照してください。";
+      wrapper.appendChild(manual);
+    }
   }
 
   if (manufacturerSpecific) {
