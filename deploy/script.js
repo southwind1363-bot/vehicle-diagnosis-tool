@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.30";
+const APP_VERSION = "3.4.31";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1402,6 +1402,14 @@ function selectedVehicleYear() {
   return year ? `${formatJapaneseEraYear(year)}年式` : "";
 }
 
+function buildSelectedDiagnosticVehicleProfile() {
+  const maker = selectedVehicleValue(vehicleMakerSelect);
+  const model = selectedVehicleValue(vehicleModelSelect);
+  const year = selectedVehicleValue(vehicleYearSelect) || vehicleYearManualInput.value.trim();
+  if (!maker && !model && !year) return null;
+  return { maker: maker || null, model: model || null, year: year || null };
+}
+
 function selectedVehicleValue(select) {
   return select.value && select.value !== MANUAL_VEHICLE_VALUE ? select.value : "";
 }
@@ -2238,6 +2246,7 @@ function getInput() {
   const dtcReference = normalizeDtcInputReference(document.querySelector("#obdCode").value);
   return {
     vehicle: vehicleInput.value.trim(),
+    vehicleProfile: buildSelectedDiagnosticVehicleProfile(),
     obdCode: dtcReference.code,
     obdSubcode: dtcReference.subcode,
     symptomId: symptomSelect.value,
@@ -2247,7 +2256,9 @@ function getInput() {
 }
 
 function buildDiagnosis(input) {
-  const obd = findByCode(input.obdCode, input.obdSubcode);
+  const rawDtcDefinition = findByCode(input.obdCode, input.obdSubcode);
+  const dtcApplicability = evaluateDtcDefinitionApplicability(rawDtcDefinition, input.vehicleProfile);
+  const obd = findByCode(input.obdCode, input.obdSubcode, input.vehicleProfile);
   const flow = findById(dataStore.symptomFlows, input.symptomId);
   const interview = buildInterviewAnalysis(input.interview);
   const modernGenericMatches = getModernGenericMatches(input.obdCode);
@@ -2271,7 +2282,7 @@ function buildDiagnosis(input) {
   return {
     confidence: getConfidence(obd, flow, interview),
     safety: buildSafetyMessage(safetyTags),
-    facts: buildFacts(input, obd, flow, interview),
+    facts: buildFacts(input, obd, flow, interview, dtcApplicability),
     interview: interview.insights.length ? interview.insights : [NO_DATA],
     guesses: buildGuesses(obd, flow, interview),
     modernReferences,
@@ -2471,7 +2482,7 @@ function drivingText(value) {
   return labels[value] || "";
 }
 
-function buildFacts(input, obd, flow, interview) {
+function buildFacts(input, obd, flow, interview, dtcApplicability = null) {
   const displayedDtc = formatDtcReference(input.obdCode, input.obdSubcode);
   const facts = [
     input.vehicle ? `車種情報: ${input.vehicle}` : `車種情報: ${NO_DATA}`,
@@ -2487,6 +2498,12 @@ function buildFacts(input, obd, flow, interview) {
     facts.push(describeUnregisteredDtc(input.obdCode));
   } else {
     facts.push(`OBD2コード: ${NO_DATA}`);
+  }
+
+  if (dtcApplicability?.status === "mismatch") {
+    facts.push("出典限定DTCの適用範囲: 選択車両は対象外です。この定義は診断根拠に使わず、該当車種の整備書を確認してください。");
+  } else if (dtcApplicability?.status === "unverified") {
+    facts.push("出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。");
   }
 
   if (flow) {
@@ -4361,6 +4378,7 @@ function unlockObdDeveloperMode() {
     localStorage.setItem(OBD_DEV_TOKEN_KEY, initialToken);
     configuredToken = initialToken;
   }
+
   if (obdDevPasswordInput.value !== configuredToken) {
     obdDevStatus.textContent = "詳細トークンが違います。";
     return;
@@ -8190,7 +8208,9 @@ function createObdDtcCard(codeOrDtc) {
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
   const displayCode = `${subcode ? `${code}:${subcode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
-  const registered = findByCode(code, subcode);
+  const rawDtcDefinition = findByCode(code, subcode);
+  const definitionApplicability = evaluateDtcDefinitionApplicability(rawDtcDefinition, buildSelectedObdVehicleProfile());
+  const registered = findByCode(code, subcode, buildSelectedObdVehicleProfile());
   const modern = getModernGenericMatches(code)[0];
   const hasImportedDefinitionEvidence = registered?.imported_definition_only === true && Boolean(registered?.source);
   const system = registered?.faultSystem || registered?.system || modern?.system;
@@ -8228,6 +8248,18 @@ function createObdDtcCard(codeOrDtc) {
     applicability.className = "obd-dtc-check";
     applicability.textContent = `適用範囲: ${registered.applicability_note}`;
     wrapper.appendChild(applicability);
+  }
+
+  if (definitionApplicability.status === "mismatch") {
+    const applicabilityMismatch = document.createElement("p");
+    applicabilityMismatch.className = "obd-dtc-check";
+    applicabilityMismatch.textContent = "適用範囲: 選択車両はこの出典限定定義の対象外です。定義を診断根拠に使わず、該当車種の整備書を確認してください。";
+    wrapper.appendChild(applicabilityMismatch);
+  } else if (definitionApplicability.status === "unverified") {
+    const applicabilityUnverified = document.createElement("p");
+    applicabilityUnverified.className = "obd-dtc-check";
+    applicabilityUnverified.textContent = "適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。";
+    wrapper.appendChild(applicabilityUnverified);
   }
 
   if (hasImportedDefinitionEvidence) {
@@ -9557,15 +9589,32 @@ function formatDtcReference(code, subcode = null) {
   return subcode ? `${code}:${subcode}` : code;
 }
 
-function findByCode(code, subcode = null) {
+function findByCode(code, subcode = null, vehicleProfile = null) {
   if (!code) return null;
   const matches = dataStore.obdCodes.filter((item) => item.code === code);
   const normalizedSubcode = String(subcode || "").trim().toUpperCase().replace(/^0X/, "");
   if (/^[0-9A-F]{1,4}$/.test(normalizedSubcode)) {
-    const exact = matches.find((item) => String(item.subcode || item.sub_code || "").trim().toUpperCase() === normalizedSubcode);
-    if (exact) return exact;
+    const exactMatches = matches.filter((item) => String(item.subcode || item.sub_code || "").trim().toUpperCase() === normalizedSubcode);
+    if (exactMatches.length) return exactMatches.find((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile).status !== "mismatch") || null;
   }
-  return matches.find((item) => !item.subcode && !item.sub_code) || null;
+  const baseMatches = matches.filter((item) => !item.subcode && !item.sub_code);
+  return baseMatches.find((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile).status !== "mismatch") || null;
+}
+
+function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
+  const filter = definition?.vehicle_filter || definition?.vehicleFilter || null;
+  if (!filter || typeof filter !== "object") return { status: "not_limited" };
+  const normalize = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
+  const makers = (Array.isArray(filter.makers) ? filter.makers : []).map(normalize).filter(Boolean);
+  const models = (Array.isArray(filter.models) ? filter.models : []).map(normalize).filter(Boolean);
+  const yearFrom = Number(filter.year_from ?? filter.yearFrom);
+  const yearTo = Number(filter.year_to ?? filter.yearTo);
+  const maker = normalize(vehicleProfile?.maker);
+  const model = normalize(vehicleProfile?.model);
+  const year = Number(vehicleProfile?.year);
+  if (!maker || !model || !Number.isInteger(year)) return { status: "unverified" };
+  const matched = makers.includes(maker) && models.includes(model) && year >= yearFrom && year <= yearTo;
+  return { status: matched ? "matched" : "mismatch" };
 }
 
 function findById(items, id) {
