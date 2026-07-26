@@ -28,7 +28,7 @@
     "progress_percent": 56,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 550件 / 出典定義552件・一意サブコード定義2件",
+    "current_count_note": "U系親DTC 550件 / 出典定義554件・一意サブコード定義4件",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
@@ -37,7 +37,7 @@
     "blocked_until": [],
     "safety_note": "通信線測定はショートや誤接続を避け、メーカー整備書の測定条件を優先する。",
     "source": "ローカル検証集計",
-    "source_date": "2026-06-28",
+    "source_date": "2026-07-26",
     "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   },
