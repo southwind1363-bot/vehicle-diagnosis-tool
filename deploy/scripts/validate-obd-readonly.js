@@ -13,7 +13,7 @@ const nativeReadCommandSource = fs.readFileSync(new URL("../../native/ios/ELM327
 const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventListener(\"submit\""));
 const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
 const syncVehicleInputSource = appSource.slice(appSource.indexOf("function syncVehicleInput()"), appSource.indexOf("function selectedVehicleYear()"));
-const dtcDefinitionApplicabilitySource = appSource.slice(appSource.indexOf("function evaluateDtcDefinitionApplicability"), appSource.indexOf("function findById"));
+const dtcDefinitionApplicabilitySource = appSource.slice(appSource.indexOf("function findByCode"), appSource.indexOf("function findById"));
 const developerSessionSummarySource = appSource.slice(
   appSource.indexOf("function renderObdDeveloperSessionSummary(session = null)"),
   appSource.indexOf("function renderObdOperationPlan(items)")
@@ -2520,13 +2520,15 @@ check(hondaSrsBodyDefinitions.every(([code, subcode, title]) => importedVerified
 const hondaSrsDefinition = importedVerifiedDtc.find((item) => item.code === "B0001" && item.subcode === "11");
 check(Boolean(dtcDefinitionApplicabilitySource) && typeof hondaSrsDefinition === "object", "DTC definition applicability function or Honda source definition is missing");
 if (dtcDefinitionApplicabilitySource && hondaSrsDefinition) {
-  const dtcApplicabilityContext = {};
+  const dtcApplicabilityContext = { dataStore: { obdCodes: [hondaSrsDefinition, { code: "P0300", title: "Random/multiple cylinder misfire" }] } };
   vm.createContext(dtcApplicabilityContext);
   vm.runInContext(dtcDefinitionApplicabilitySource, dtcApplicabilityContext);
   const evaluateDtcDefinitionApplicability = dtcApplicabilityContext.evaluateDtcDefinitionApplicability;
+  const findByCode = dtcApplicabilityContext.findByCode;
   check(evaluateDtcDefinitionApplicability(hondaSrsDefinition, { maker: "Honda", model: "CR-V", year: "2015" }).status === "matched", "DTC applicability did not match the documented Honda CR-V year range");
   check(evaluateDtcDefinitionApplicability(hondaSrsDefinition, { maker: "Toyota", model: "Prius", year: "2015" }).status === "mismatch", "DTC applicability accepted a vehicle outside the documented Honda scope");
   check(evaluateDtcDefinitionApplicability(hondaSrsDefinition, { maker: "Honda", model: "CR-V" }).status === "unverified" && evaluateDtcDefinitionApplicability({ code: "P0300" }, { maker: "Toyota", model: "Prius", year: "2020" }).status === "not_limited", "DTC applicability did not distinguish missing vehicle context from unrestricted definitions");
+  check(findByCode("B0001", "11", { maker: "Toyota", model: "Prius", year: "2015" }) === null && findByCode("B0001", "11", { maker: "Honda", model: "CR-V", year: "2015" }) === hondaSrsDefinition && findByCode("P0300", null, { maker: "Toyota", model: "Prius", year: "2015" })?.code === "P0300", "DTC lookup did not exclude mismatched source-specific definitions while retaining unrestricted definitions");
 }
 check(appSource.includes('const rawDtcDefinition = findByCode(code, subcode);') && appSource.includes('const definitionApplicability = evaluateDtcDefinitionApplicability(rawDtcDefinition, buildSelectedObdVehicleProfile());') && appSource.includes('const registered = findByCode(code, subcode, buildSelectedObdVehicleProfile());') && appSource.includes('選択車両はこの出典限定定義の対象外です。') && appSource.includes('車種・年式が揃っていないため未確認です。') && appSource.includes('button.dataset.dtcSubcode = subcode || "";') && appSource.includes('formatDtcReference(button.dataset.dtcCode, button.dataset.dtcSubcode)'), "DTC cards should block mismatched source-specific definitions while retaining an explicit applicability warning");
 check(appSource.includes('function normalizeDtcInputReference(value)') && appSource.includes('vehicleProfile: buildSelectedDiagnosticVehicleProfile(),') && appSource.includes('const rawDtcDefinition = findByCode(input.obdCode, input.obdSubcode);') && appSource.includes('const obd = findByCode(input.obdCode, input.obdSubcode, input.vehicleProfile);') && appSource.includes('出典限定DTCの適用範囲: 選択車両は対象外です。') && appSource.includes('出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。'), "Detailed diagnosis should apply structured DTC vehicle scope without changing an entered base code or subcode");

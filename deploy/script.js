@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.31";
+const APP_VERSION = "3.4.32";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9595,10 +9595,10 @@ function findByCode(code, subcode = null, vehicleProfile = null) {
   const normalizedSubcode = String(subcode || "").trim().toUpperCase().replace(/^0X/, "");
   if (/^[0-9A-F]{1,4}$/.test(normalizedSubcode)) {
     const exactMatches = matches.filter((item) => String(item.subcode || item.sub_code || "").trim().toUpperCase() === normalizedSubcode);
-    if (exactMatches.length) return exactMatches.find((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile).status !== "mismatch") || null;
+    if (exactMatches.length) return selectApplicableDtcDefinition(exactMatches, vehicleProfile);
   }
   const baseMatches = matches.filter((item) => !item.subcode && !item.sub_code);
-  return baseMatches.find((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile).status !== "mismatch") || null;
+  return selectApplicableDtcDefinition(baseMatches, vehicleProfile);
 }
 
 function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
@@ -9615,6 +9615,11 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   if (!maker || !model || !Number.isInteger(year)) return { status: "unverified" };
   const matched = makers.includes(maker) && models.includes(model) && year >= yearFrom && year <= yearTo;
   return { status: matched ? "matched" : "mismatch" };
+}
+
+function selectApplicableDtcDefinition(definitions, vehicleProfile = null) {
+  return (Array.isArray(definitions) ? definitions : [])
+    .find((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile).status !== "mismatch") || null;
 }
 
 function findById(items, id) {
