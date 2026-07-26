@@ -3691,6 +3691,14 @@
       : {};
     const supportedPids = collectBridgeSupportedPids(data);
     const supportedPidEcuSnapshots = data.supported_pid_ecu_snapshots || data.supportedPidEcuSnapshots || data.ecu_snapshots || data.ecuSnapshots || [];
+    const malformedSupportedPidAlias = [
+      "supported_pids", "supportedPids",
+      "pids",
+      "pid_list", "pidList",
+      "supported_pid_rows", "supportedPidRows",
+      "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots",
+      "ecu_snapshots", "ecuSnapshots"
+    ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const supportedPidPageBases = data.supported_pid_page_bases
       || data.supportedPidPageBases
       || data.queried_pid_bases
@@ -3708,12 +3716,15 @@
         || hasBridgeSupportedPidSnapshotEvidence(supportedPidEcuSnapshots)
       )
     );
-    const readoutStatus = bridgeSafety.blocked || bridgeSafety.unparsed
-      ? getBridgeReadoutStatus(bridgeSafety)
+    const resolvedBridgeSafety = malformedSupportedPidAlias
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : bridgeSafety;
+    const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
+      ? getBridgeReadoutStatus(resolvedBridgeSafety)
       : hasExplicitReadoutStatus
         ? explicitReadoutStatus
-        : getBridgeReadoutStatus(bridgeSafety);
-    const blocked = bridgeSafety.blocked || readoutStatus === "blocked";
+        : getBridgeReadoutStatus(resolvedBridgeSafety);
+    const blocked = resolvedBridgeSafety.blocked || readoutStatus === "blocked";
     const readoutOk = blocked ? false : readoutStatus === "reported" ? true : readoutStatus === "unparsed" ? false : undefined;
     return {
       ...buildSupportedPidMatrix({
@@ -3729,8 +3740,8 @@
       intent: "read_supported_pids",
       ...(readoutOk === undefined ? {} : { ok: readoutOk }),
       blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      would_transmit: resolvedBridgeSafety.wouldTransmit,
       errorCodes,
       error_codes: [...errorCodes]
     };
