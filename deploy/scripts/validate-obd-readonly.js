@@ -7049,6 +7049,13 @@ const bridgeMode09SeparatedSnakeObject = obd.normalizeBridgeEcuInfoSnapshot({
   data: { mode_09_values: { info_type: "04", decoded_value: "CAL-OBJECT-SHOULD-NOT-IMPORT" } }
 });
 check(bridgeMode09SeparatedSnakeObject.itemCount === 0 && bridgeMode09SeparatedSnakeObject.blocked === true, "Bridge mode_09_values must reject non-array input and fail closed");
+const bridgeMode09CamelObject = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { mode09Items: { item_id: "calibration_id", decoded_value: "CAL-OBJECT-SHOULD-NOT-IMPORT" } }
+});
+check(bridgeMode09CamelObject.itemCount === 0 && bridgeMode09CamelObject.blocked === true, "Bridge mode09Items must reject non-array input and fail closed");
 const bridgeExtendedObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
