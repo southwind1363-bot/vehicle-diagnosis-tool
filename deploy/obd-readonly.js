@@ -3021,6 +3021,11 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
+    const malformedDtcAlias = [
+      "dtcs",
+      "dtc_codes", "dtcCodes",
+      "ecu_responses", "ecuResponses"
+    ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
     const errorCodes = readBridgeResponseErrorCodes(response);
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
@@ -3029,9 +3034,11 @@
       response,
       errorCodes.length === 0 && (Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes))
     );
-    const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
-      ? { ...bridgeSafety, ok: false, blocked: hasDtcRowEvidence, unparsed: !hasDtcRowEvidence }
-      : bridgeSafety;
+    const resolvedBridgeSafety = malformedDtcAlias
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, blocked: hasDtcRowEvidence, unparsed: !hasDtcRowEvidence }
+        : bridgeSafety;
     const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
       ? response.intent
       : ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(data.intent)

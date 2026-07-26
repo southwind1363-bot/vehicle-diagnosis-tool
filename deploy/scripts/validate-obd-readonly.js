@@ -462,7 +462,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount') && functionBody.includes('stored_count: storedCount'), "normalizeBridgeDtcSnapshot should expose snake_case DTC count aliases");
     check(functionBody.includes('pending_count: pendingCount') && functionBody.includes('permanent_count: permanentCount') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeDtcSnapshot should expose snake_case status count and raw retention aliases");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeDtcSnapshot should not retain raw bridge text");
-    check(functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(') && functionBody.includes('const resolvedBridgeSafety = errorCodes.length') && functionBody.includes('const dtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);'), "normalizeBridgeDtcSnapshot should preserve explicit bridge blocked and unparsed states");
+    check(functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(') && functionBody.includes('const resolvedBridgeSafety = malformedDtcAlias') && functionBody.includes('const dtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);'), "normalizeBridgeDtcSnapshot should preserve explicit bridge blocked and unparsed states");
   }
   check(Boolean(bridgeLivePidSnapshotFunctionSource), "normalizeBridgeLivePidSnapshot is missing from obd-readonly.js");
   if (bridgeLivePidSnapshotFunctionSource) {
@@ -6205,6 +6205,15 @@ check(genericLocalBridgeExportPayloadSavedSessionSafetyAlias.nextReadoutRequestS
 const bridgeEmptyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({});
 check(bridgeEmptyDtcSnapshot.codes.length === 0 && bridgeEmptyDtcSnapshot.dtcs.length === 0 && bridgeEmptyDtcSnapshot.blocked === true, "空DTCブリッジ応答を安全側へ整形できません");
 const savedBridgeDtcSnapshot = obd.normalizeBridgeDtcSnapshot({ dtcs: [{ code: "P0171" }] });
+const bridgeMalformedDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { ecu_responses: { ecu: "7E8", dtcs: [{ code: "P0300" }] } }
+});
+const bridgeMalformedDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeMalformedDtcSnapshot });
+const bridgeMalformedDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeMalformedDtcSession)));
+check(bridgeMalformedDtcSnapshot.dtcs.length === 0 && bridgeMalformedDtcSnapshot.blocked === true && bridgeMalformedDtcSnapshot.dtcReadoutStatus === "blocked" && bridgeMalformedDtcSession.vehicleCommandEnabled === false && bridgeMalformedDtcRoundTrip?.dtcSnapshot?.dtcReadoutStatus === "blocked" && bridgeMalformedDtcRoundTrip?.vehicleCommandEnabled === false, "Malformed bridge DTC aliases must fail closed through read-only export");
 const nestedBridgeDtcSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
   source_ecu: "7E8",
   intent: "read_stored_dtc",
