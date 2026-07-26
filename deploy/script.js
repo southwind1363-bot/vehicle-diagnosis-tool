@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.29";
+const APP_VERSION = "3.4.30";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8192,6 +8192,7 @@ function createObdDtcCard(codeOrDtc) {
   const displayCode = `${subcode ? `${code}:${subcode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
   const registered = findByCode(code, subcode);
   const modern = getModernGenericMatches(code)[0];
+  const hasImportedDefinitionEvidence = registered?.imported_definition_only === true && Boolean(registered?.source);
   const system = registered?.faultSystem || registered?.system || modern?.system;
   const firstCheck = registered?.firstChecks?.[0] || registered?.check_order?.[0] || modern?.check_order?.[0];
   const wrapper = document.createElement("article");
@@ -8213,7 +8214,7 @@ function createObdDtcCard(codeOrDtc) {
 
   const description = document.createElement("p");
   description.className = "obd-dtc-description";
-  description.textContent = registered?.subcode && subcode
+  description.textContent = hasImportedDefinitionEvidence
     ? `出典確認済みの報告定義: ${registered.title}。コードだけで故障部品は確定しません。`
     : system
     ? `${system}に関するDTCです。コードだけで故障部品は確定しません。`
@@ -8222,14 +8223,14 @@ function createObdDtcCard(codeOrDtc) {
 
   if (reportedDescription) description.textContent = `診断機報告: ${reportedDescription}`;
 
-  if (registered?.subcode && subcode && registered.applicability_note) {
+  if (hasImportedDefinitionEvidence && registered.applicability_note) {
     const applicability = document.createElement("p");
     applicability.className = "obd-dtc-check";
     applicability.textContent = `適用範囲: ${registered.applicability_note}`;
     wrapper.appendChild(applicability);
   }
 
-  if (registered?.subcode && subcode) {
+  if (hasImportedDefinitionEvidence) {
     const sourceMeta = [registered.source, registered.source_date].filter(Boolean).join(" / ");
     if (sourceMeta) {
       const source = document.createElement("p");
@@ -8246,7 +8247,7 @@ function createObdDtcCard(codeOrDtc) {
     if (registered.service_manual_required === true) {
       const manual = document.createElement("p");
       manual.className = "obd-dtc-check";
-      manual.textContent = "整備書確認必須: 車種・ECU・サブコードが適合した場合だけ診断手順を参照してください。";
+      manual.textContent = "整備書確認必須: 車種・ECU・報告DTCが適合した場合だけ診断手順を参照してください。";
       wrapper.appendChild(manual);
     }
   }
