@@ -45,6 +45,13 @@ function isNonEmptyStringArray(value) {
   return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString);
 }
 
+function isDtcVehicleFilter(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (!isNonEmptyStringArray(value.makers) || !isNonEmptyStringArray(value.models)) return false;
+  if (!Number.isInteger(value.year_from) || !Number.isInteger(value.year_to)) return false;
+  return value.year_from >= 1900 && value.year_to >= value.year_from && value.year_to <= 2100;
+}
+
 function isSourceUrl(value) {
   return isNonEmptyString(value) || isNonEmptyStringArray(value);
 }
@@ -150,6 +157,9 @@ for (const file of jsonFiles) {
       if (!isIsoDate(row.last_verified_date)) reportError(`${label}: verified imported DTC last_verified_date is invalid`);
       if (row.service_manual_required !== true) reportError(`${label}: verified imported DTC must require the service manual`);
       if (row.imported_definition_only !== true) reportError(`${label}: verified imported DTC must be definition-only`);
+      if (row.applicability_note && !isDtcVehicleFilter(row.vehicle_filter)) {
+        reportError(`${label}: applicability_note がある verified imported DTC には makers/models/year_from/year_to を持つ vehicle_filter が必要です`);
+      }
     }
 
     if (file === "vehicle-model-catalog-domestic-2026.json" || file === "vehicle-model-catalog-domestic-2004-2026.json") {
