@@ -4011,10 +4011,13 @@
       const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
       return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
     });
+    const malformedMode09Alias = ["mode_09_items", "mode_09_values"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const errorCodes = readBridgeResponseErrorCodes(response);
     const hasItemEvidence = items.length > 0;
     const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasItemEvidence);
-    const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+    const resolvedBridgeSafety = malformedMode09Alias
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, blocked: hasItemEvidence, unparsed: !hasItemEvidence }
       : bridgeSafety;
     return {

@@ -7042,6 +7042,13 @@ const bridgeMode09SeparatedSnakeValues = obd.normalizeBridgeEcuInfoSnapshot({
 check(bridgeMode09SeparatedSnakeValues.itemCount === 2 && bridgeMode09SeparatedSnakeValues.items.find((item) => item.id === "calibration_verification_number")?.value === "CVN-MODE-09-VALUES" && bridgeMode09SeparatedSnakeValues.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E9", "Bridge mode_09_values aliases were not normalized with ECU provenance");
 const bridgeMode09SeparatedSnakeValuesRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeMode09SeparatedSnakeValues })) }));
 check(bridgeMode09SeparatedSnakeValuesRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_verification_number")?.value === "CVN-MODE-09-VALUES" && bridgeMode09SeparatedSnakeValuesRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "ecu_name")?.sourceEcu === "7E9" && bridgeMode09SeparatedSnakeValuesRoundTrip?.vehicleCommandEnabled === false, "Bridge mode_09_values were not retained through read-only export and JSON import");
+const bridgeMode09SeparatedSnakeObject = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { mode_09_values: { info_type: "04", decoded_value: "CAL-OBJECT-SHOULD-NOT-IMPORT" } }
+});
+check(bridgeMode09SeparatedSnakeObject.itemCount === 0 && bridgeMode09SeparatedSnakeObject.blocked === true, "Bridge mode_09_values must reject non-array input and fail closed");
 const bridgeExtendedObjectEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
