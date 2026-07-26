@@ -17,6 +17,11 @@ const legacySourceOptionalFiles = new Set([
   "service-notes.json",
   "symptom-flows.json"
 ]);
+// These legacy rows remain while the source-backed generic definitions supersede them at runtime.
+const allowedLegacyDtcOverlaps = new Set([
+  "P0101:", "P0128:", "P0172:", "P0201:", "P0401:", "P0441:",
+  "P0456:", "P0507:", "P0562:", "P0606:", "P0700:", "P0715:"
+]);
 const monitorDefinitionRows = JSON.parse(fs.readFileSync(path.join(dataDir, "obd-monitor-definitions.json"), "utf8"));
 const monitorDefinitionIds = new Set(monitorDefinitionRows.map((row) => row.id));
 
@@ -320,12 +325,20 @@ const codeLocations = new Map();
 for (const row of codeRows) {
   const codeKey = `${row.code}:${row.subcode || ""}`;
   const locations = codeLocations.get(codeKey) || [];
-  locations.push(`${row.file}:${row.id}`);
+  locations.push(row);
   codeLocations.set(codeKey, locations);
 }
 
-for (const [code, locations] of codeLocations.entries()) {
-  if (locations.length > 2) warnings.push(`${code}: 複数データ層に ${locations.length} 件あります: ${locations.join(", ")}`);
+for (const [code, rows] of codeLocations.entries()) {
+  if (rows.length < 2) continue;
+  const files = new Set(rows.map((row) => row.file));
+  const allowedLegacyOverlap = allowedLegacyDtcOverlaps.has(code)
+    && rows.length === 2
+    && files.has("obd-codes.json")
+    && [...files].some((file) => /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(file));
+  if (!allowedLegacyOverlap) {
+    reportError(`${code}: 同一DTCとサブコードの定義が重複しています: ${rows.map((row) => `${row.file}:${row.id}`).join(", ")}`);
+  }
 }
 
 console.log(`JSON files: ${jsonFiles.length}`);
