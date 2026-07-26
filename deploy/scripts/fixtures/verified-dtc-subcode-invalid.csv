@@ -1,0 +1,4 @@
+code,subcode,title
+B0001:11,12,Conflicting subcode fields
+B0001,11,First definition
+B0001,11,Duplicate definition

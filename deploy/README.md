@@ -428,6 +428,8 @@ node scripts/import-verified-dtc-csv.js `
 
 検査結果を確認した後だけ、同じコマンドへ `--write` を追加します。出力先は `data/imported-verified-dtc.json` です。
 
+基本列は `code,title` です。メーカー資料のサブコードまたはFTBがある場合は、`subcode` / `FTB` 列へ1〜4桁の16進数を入れるか、`B0001:11` のように `code` 列へ付けます。同じ定義に両方を指定した場合は一致が必要で、同じ `code + subcode` の重複は取込を中止します。
+
 正式名称だけを取り込み、原因候補、端子番号、基準値は自動生成しません。診断手順はメーカー整備書を優先します。
 
 ## 外部GPT相談

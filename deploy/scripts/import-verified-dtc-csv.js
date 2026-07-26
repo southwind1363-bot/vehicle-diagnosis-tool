@@ -23,6 +23,7 @@ if (rows.length < 2) fail("CSVにヘッダーとデータ行が必要です");
 
 const headers = rows[0].map(normalizeHeader);
 const codeIndex = findHeader(headers, ["code", "dtc", "dtccode", "故障コード", "コード"]);
+const subcodeIndex = findHeader(headers, ["subcode", "subcodeftb", "failuretypebyte", "ftb", "サブコード"]);
 const titleIndex = findHeader(headers, ["title", "description", "dtcdescription", "definition", "定義", "名称"]);
 const systemIndex = findHeader(headers, ["system", "category", "系統"]);
 
@@ -36,28 +37,43 @@ const errors = [];
 
 for (const [offset, row] of rows.slice(1).entries()) {
   const line = offset + 2;
-  const code = String(row[codeIndex] || "").trim().toUpperCase();
+  const reference = parseDtcReference(row[codeIndex]);
+  const columnSubcode = normalizeSubcode(row[subcodeIndex]);
   const title = String(row[titleIndex] || "").trim();
   const system = String(row[systemIndex] || "").trim();
 
-  if (!code && !title) continue;
-  if (!/^[PBCU][0-9A-F]{4}$/.test(code)) {
-    errors.push(`line ${line}: DTC形式が不正です: ${code || "(empty)"}`);
+  if (!reference && !title) continue;
+  if (!reference) {
+    errors.push(`line ${line}: DTC形式が不正です: ${String(row[codeIndex] || "").trim() || "(empty)"}`);
     continue;
   }
-  if (!title) {
-    errors.push(`line ${line}: title が空です: ${code}`);
+  if (columnSubcode.invalid) {
+    errors.push(`line ${line}: DTCサブコード形式が不正です: ${columnSubcode.value}`);
     continue;
   }
-  if (seen.has(code)) {
-    errors.push(`line ${line}: CSV内でDTCが重複しています: ${code}`);
+  if (reference.subcode && columnSubcode.value && reference.subcode !== columnSubcode.value) {
+    errors.push(`line ${line}: DTCコード内サブコードとsubcode列が一致しません: ${reference.code}:${reference.subcode} / ${columnSubcode.value}`);
     continue;
   }
 
-  seen.add(code);
+  const code = reference.code;
+  const subcode = reference.subcode || columnSubcode.value;
+  const displayCode = subcode ? `${code}:${subcode}` : code;
+  if (!title) {
+    errors.push(`line ${line}: title が空です: ${displayCode}`);
+    continue;
+  }
+  const definitionKey = `${code}:${subcode || ""}`;
+  if (seen.has(definitionKey)) {
+    errors.push(`line ${line}: CSV内でDTCが重複しています: ${displayCode}`);
+    continue;
+  }
+
+  seen.add(definitionKey);
   imported.push({
-    id: `verified-import-${code.toLowerCase()}`,
+    id: `verified-import-${code.toLowerCase()}${subcode ? `-${subcode.toLowerCase()}` : ""}`,
     code,
+    ...(subcode ? { subcode } : {}),
     title,
     system: system || "正式定義確認済み / 診断手順未登録",
     possible_causes: [],
@@ -156,6 +172,18 @@ function normalizeHeader(value) {
 
 function findHeader(headers, candidates) {
   return headers.findIndex((header) => candidates.map(normalizeHeader).includes(header));
+}
+
+function parseDtcReference(value) {
+  const normalized = String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+  const match = normalized.match(/^([PBCU][0-9A-F]{4})(?:[:-]([0-9A-F]{1,4}))?$/);
+  return match ? { code: match[1], subcode: match[2] || "" } : null;
+}
+
+function normalizeSubcode(value) {
+  const normalized = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+  if (!normalized) return { value: "", invalid: false };
+  return { value: normalized, invalid: !/^[0-9A-F]{1,4}$/.test(normalized) };
 }
 
 function requireNonEmptyString(value, label) {
