@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.24";
+const APP_VERSION = "3.4.25";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2235,9 +2235,11 @@ function prepareSelectedObdInterface() {
 }
 
 function getInput() {
+  const dtcReference = normalizeDtcInputReference(document.querySelector("#obdCode").value);
   return {
     vehicle: vehicleInput.value.trim(),
-    obdCode: normalizeCode(document.querySelector("#obdCode").value),
+    obdCode: dtcReference.code,
+    obdSubcode: dtcReference.subcode,
     symptomId: symptomSelect.value,
     facts: document.querySelector("#facts").value.trim(),
     interview: getInterviewInput()
@@ -2245,7 +2247,7 @@ function getInput() {
 }
 
 function buildDiagnosis(input) {
-  const obd = findByCode(input.obdCode);
+  const obd = findByCode(input.obdCode, input.obdSubcode);
   const flow = findById(dataStore.symptomFlows, input.symptomId);
   const interview = buildInterviewAnalysis(input.interview);
   const modernGenericMatches = getModernGenericMatches(input.obdCode);
@@ -2262,7 +2264,7 @@ function buildDiagnosis(input) {
     ...(flow?.beforeParts || []),
     ...interview.partsChecks,
     ...workflowMatches.flatMap((item) => item.before_replacement_checks || []),
-    obd ? `DTC ${obd.code} のメーカー別診断手順、端子番号、基準値を確認してください。` : ""
+    obd ? `DTC ${formatDtcReference(input.obdCode, input.obdSubcode)} のメーカー別診断手順、端子番号、基準値を確認してください。` : ""
   ]);
 
   return {
@@ -2469,14 +2471,16 @@ function drivingText(value) {
 }
 
 function buildFacts(input, obd, flow, interview) {
+  const displayedDtc = formatDtcReference(input.obdCode, input.obdSubcode);
   const facts = [
     input.vehicle ? `車種情報: ${input.vehicle}` : `車種情報: ${NO_DATA}`,
     input.facts ? `確認済みの事実: ${input.facts}` : `確認済みの事実: ${NO_DATA}`
   ];
 
   if (input.obdCode && obd) {
-    facts.push(`登録済みOBD2コード: ${obd.code} ${obd.title}`);
-    facts.push(`OBD2コード上の故障系統: ${obd.faultSystem}`);
+    facts.push(`登録済みOBD2コード: ${displayedDtc} ${obd.title}`);
+    facts.push(`OBD2コード上の故障系統: ${obd.faultSystem || obd.system || NO_DATA}`);
+    if (input.obdSubcode) facts.push(`報告サブコード: ${input.obdSubcode}。この定義の適用範囲を整備書で確認してください。`);
   } else if (input.obdCode) {
     facts.push(`OBD2コード ${input.obdCode}: ${NO_DATA}`);
     facts.push(describeUnregisteredDtc(input.obdCode));
@@ -8263,6 +8267,7 @@ function createObdDtcCard(codeOrDtc) {
   button.type = "button";
   button.className = "obd-code-button";
   button.dataset.dtcCode = code;
+  button.dataset.dtcSubcode = subcode || "";
   button.textContent = "詳しい診断手順を見る";
   wrapper.appendChild(button);
   return wrapper;
@@ -8494,7 +8499,7 @@ function handleDetectedDtcClick(event) {
   const button = event.target.closest("[data-dtc-code]");
   if (!button) return;
 
-  document.querySelector("#obdCode").value = button.dataset.dtcCode;
+  document.querySelector("#obdCode").value = formatDtcReference(button.dataset.dtcCode, button.dataset.dtcSubcode);
   activateTab("diagnosis-panel");
   renderDiagnosis(buildDiagnosis(getInput()));
   document.querySelector("#resultTitle").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -9506,6 +9511,19 @@ function applyTheme(theme) {
   document.body.classList.toggle("dark", isDark);
   themeButton.textContent = isDark ? "ライト" : "ダーク";
   themeButton.setAttribute("aria-pressed", String(isDark));
+}
+
+function normalizeDtcInputReference(value) {
+  const normalized = normalizeCode(String(value || ""));
+  const match = normalized.match(/^([PBCU][0-9A-F]{4})(?:[:-]([0-9A-F]{1,4}))?$/);
+  return {
+    code: match ? match[1] : normalized,
+    subcode: match?.[2] || null
+  };
+}
+
+function formatDtcReference(code, subcode = null) {
+  return subcode ? `${code}:${subcode}` : code;
 }
 
 function findByCode(code, subcode = null) {
