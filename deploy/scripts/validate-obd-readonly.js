@@ -503,7 +503,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(data.readinessEcuSnapshots)') && functionBody.includes('Array.isArray(data.readiness_ecu_snapshots)') && functionBody.includes('readiness_scope: "multiple_ecus"') && functionBody.includes('readiness_ecu_snapshots: readinessEcuSnapshots'), "normalizeBridgeReadinessSnapshot should retain multiple ECU readiness snapshots without a combined readiness claim");
     check(functionBody.includes('data.readinessStatusByteB !== undefined') && functionBody.includes('data.statusByteD !== undefined'), "normalizeBridgeReadinessSnapshot should accept direct readiness status byte aliases");
     check(functionBody.includes('const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {'), "normalizeBridgeReadinessSnapshot should build readiness values by normalized id");
-    check(functionBody.includes('const bridgeReadoutStatus = getBridgeReadoutStatus(bridgeSafety);') && functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus'), "normalizeBridgeReadinessSnapshot should distinguish blocked and unparsed readiness responses without B/C/D bytes");
+    check(functionBody.includes('const resolvedBridgeSafety = malformedReadinessAlias') && functionBody.includes('const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);') && functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus'), "normalizeBridgeReadinessSnapshot should distinguish blocked and unparsed readiness responses without B/C/D bytes");
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
     check(functionBody.includes('["nox_scr", c, 0x02, d, 0x02]') && functionBody.includes('["ac_refrigerant", c, 0x10, d, 0x10]') && functionBody.includes('["comprehensive_component", b, 0x04, b, 0x40]'), "normalizeBridgeReadinessSnapshot should preserve corrected compression and spark monitor layouts");
     check(functionBody.includes('status: supported ? (complete ? "complete" : "not_complete") : "not_supported"'), "normalizeBridgeReadinessSnapshot should derive readiness monitor status from supported and incomplete bits");
@@ -6698,6 +6698,15 @@ check(bridgeReadinessSnapshot.mil_on === true && bridgeReadinessSnapshot.monitor
 check(bridgeReadinessSnapshot.incomplete_count === 1 && bridgeReadinessSnapshot.complete_count === bridgeReadinessSnapshot.completeCount && bridgeReadinessSnapshot.not_supported_count === bridgeReadinessSnapshot.notSupportedCount, "Bridge readiness did not expose snake_case completion count aliases");
 check(bridgeReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeReadinessSnapshot.readiness_readout_status === "reported", "Bridge readiness did not mark a complete B/C/D response as reported");
 check(bridgeReadinessSnapshot.readinessIgnitionType === "spark" && bridgeReadinessSnapshot.readiness_ignition_type === "spark", "Bridge readiness did not retain observed spark ignition layout");
+const bridgeMalformedReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { readiness_values: { id: "readiness_status_byte_b", value: 7 } }
+});
+const bridgeMalformedReadinessSession = obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeMalformedReadinessSnapshot });
+const bridgeMalformedReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeMalformedReadinessSession)));
+check(bridgeMalformedReadinessSnapshot.readinessReadoutStatus === "blocked" && bridgeMalformedReadinessSnapshot.blocked === true && bridgeMalformedReadinessSession.vehicleCommandEnabled === false && bridgeMalformedReadinessRoundTrip?.readinessSnapshot?.readinessReadoutStatus === "blocked" && bridgeMalformedReadinessRoundTrip?.vehicleCommandEnabled === false, "Malformed bridge readiness row aliases must fail closed through read-only export");
 const bridgeReadinessSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeReadinessSnapshot })) }));
 check(bridgeReadinessSourceRoundTrip?.readinessSnapshot?.sourceEcu === "7E8" && bridgeReadinessSourceRoundTrip?.readinessSnapshot?.source_ecu === "7E8" && bridgeReadinessSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge readiness source ECU was not retained through read-only JSON export and import");
 const bridgeMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({

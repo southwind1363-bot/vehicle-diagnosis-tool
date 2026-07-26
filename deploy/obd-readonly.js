@@ -3820,6 +3820,15 @@
       : Array.isArray(data.readiness_ecu_snapshots)
         ? data.readiness_ecu_snapshots
         : [];
+    const malformedReadinessAlias = [
+      "readinessEcuSnapshots", "readiness_ecu_snapshots",
+      "values",
+      "monitor_values", "monitorValues",
+      "readiness_values", "readinessValues",
+      "pid_values", "pidValues",
+      "readiness_rows", "readinessRows"
+    ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]))
+      || (response.monitorValues !== undefined && response.monitorValues !== null && !Array.isArray(response.monitorValues));
     const readinessRowIdAliases = {
       milstatus: "mil_status",
       mil: "mil_status",
@@ -3876,15 +3885,18 @@
           ].filter(Boolean);
     const bridgeSafety = readBridgeSnapshotSafety(response, readinessEcuSnapshotRows.length > 0 || [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
       || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
+    const resolvedBridgeSafety = malformedReadinessAlias
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : bridgeSafety;
     const errorCodes = readBridgeResponseErrorCodes(response);
-    const bridgeReadoutStatus = getBridgeReadoutStatus(bridgeSafety);
+    const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
       intent: "readiness_snapshot",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      would_transmit: resolvedBridgeSafety.wouldTransmit,
       errorCodes,
       error_codes: [...errorCodes]
     });
