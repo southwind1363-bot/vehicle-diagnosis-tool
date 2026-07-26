@@ -46,10 +46,10 @@
     "label": "B系 ボディDTC",
     "coverage_area": "body-dtc",
     "current_state": "出典確認済み定義を追加開始",
-    "progress_percent": 10,
+    "progress_percent": 11,
     "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
     "priority": 3,
-    "current_count_note": "B系親DTC 2件 / サブコード定義 10件 (Honda 2015-16 CR-V SRS、出典限定)",
+    "current_count_note": "B系親DTC 2件 / 出典定義16件・一意サブコード定義10件 (Honda 2015-16および2023 CR-V/HR-V SRS、出典限定)",
     "next_actions": [
       "汎用/メーカー別のB系コード収録可否をソース別に分ける",
       "SRS、ブレーキ、盗難防止など安全系は強い注意と整備書必須を付ける",

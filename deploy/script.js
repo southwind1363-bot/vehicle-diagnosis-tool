@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.32";
+const APP_VERSION = "3.4.33";
 const APP_LAST_UPDATED = "2026-07-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2256,9 +2256,9 @@ function getInput() {
 }
 
 function buildDiagnosis(input) {
-  const rawDtcDefinition = findByCode(input.obdCode, input.obdSubcode);
-  const dtcApplicability = evaluateDtcDefinitionApplicability(rawDtcDefinition, input.vehicleProfile);
-  const obd = findByCode(input.obdCode, input.obdSubcode, input.vehicleProfile);
+  const dtcDefinitions = findDtcDefinitionCandidates(input.obdCode, input.obdSubcode);
+  const dtcApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, input.vehicleProfile);
+  const obd = selectApplicableDtcDefinition(dtcDefinitions, input.vehicleProfile);
   const flow = findById(dataStore.symptomFlows, input.symptomId);
   const interview = buildInterviewAnalysis(input.interview);
   const modernGenericMatches = getModernGenericMatches(input.obdCode);
@@ -8208,9 +8208,10 @@ function createObdDtcCard(codeOrDtc) {
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
   const displayCode = `${subcode ? `${code}:${subcode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
-  const rawDtcDefinition = findByCode(code, subcode);
-  const definitionApplicability = evaluateDtcDefinitionApplicability(rawDtcDefinition, buildSelectedObdVehicleProfile());
-  const registered = findByCode(code, subcode, buildSelectedObdVehicleProfile());
+  const vehicleProfile = buildSelectedObdVehicleProfile();
+  const dtcDefinitions = findDtcDefinitionCandidates(code, subcode);
+  const definitionApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, vehicleProfile);
+  const registered = selectApplicableDtcDefinition(dtcDefinitions, vehicleProfile);
   const modern = getModernGenericMatches(code)[0];
   const hasImportedDefinitionEvidence = registered?.imported_definition_only === true && Boolean(registered?.source);
   const system = registered?.faultSystem || registered?.system || modern?.system;
@@ -9589,16 +9590,29 @@ function formatDtcReference(code, subcode = null) {
   return subcode ? `${code}:${subcode}` : code;
 }
 
-function findByCode(code, subcode = null, vehicleProfile = null) {
-  if (!code) return null;
+function findDtcDefinitionCandidates(code, subcode = null) {
+  if (!code) return [];
   const matches = dataStore.obdCodes.filter((item) => item.code === code);
   const normalizedSubcode = String(subcode || "").trim().toUpperCase().replace(/^0X/, "");
   if (/^[0-9A-F]{1,4}$/.test(normalizedSubcode)) {
     const exactMatches = matches.filter((item) => String(item.subcode || item.sub_code || "").trim().toUpperCase() === normalizedSubcode);
-    if (exactMatches.length) return selectApplicableDtcDefinition(exactMatches, vehicleProfile);
+    if (exactMatches.length) return exactMatches;
   }
-  const baseMatches = matches.filter((item) => !item.subcode && !item.sub_code);
-  return selectApplicableDtcDefinition(baseMatches, vehicleProfile);
+  return matches.filter((item) => !item.subcode && !item.sub_code);
+}
+
+function findByCode(code, subcode = null, vehicleProfile = null) {
+  return selectApplicableDtcDefinition(findDtcDefinitionCandidates(code, subcode), vehicleProfile);
+}
+
+function evaluateDtcDefinitionCandidatesApplicability(definitions, vehicleProfile = null) {
+  const statuses = (Array.isArray(definitions) ? definitions : [])
+    .map((item) => evaluateDtcDefinitionApplicability(item, vehicleProfile).status);
+  if (!statuses.length) return { status: "not_limited" };
+  if (statuses.includes("matched")) return { status: "matched" };
+  if (statuses.includes("not_limited")) return { status: "not_limited" };
+  if (statuses.includes("unverified")) return { status: "unverified" };
+  return { status: "mismatch" };
 }
 
 function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {

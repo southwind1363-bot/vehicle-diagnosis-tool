@@ -52,6 +52,23 @@ function isDtcVehicleFilter(value) {
   return value.year_from >= 1900 && value.year_to >= value.year_from && value.year_to <= 2100;
 }
 
+function dtcVehicleFiltersOverlap(left, right) {
+  if (!isDtcVehicleFilter(left) || !isDtcVehicleFilter(right)) return true;
+  const normalize = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
+  const leftMakers = new Set(left.makers.map(normalize));
+  const leftModels = new Set(left.models.map(normalize));
+  const sameMaker = right.makers.some((value) => leftMakers.has(normalize(value)));
+  const sameModel = right.models.some((value) => leftModels.has(normalize(value)));
+  const overlappingYears = Math.max(left.year_from, right.year_from) <= Math.min(left.year_to, right.year_to);
+  return sameMaker && sameModel && overlappingYears;
+}
+
+function hasDisjointSourceSpecificDtcDefinitions(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) return false;
+  if (!rows.every((row) => row.file === "imported-verified-dtc.json" && row.imported_definition_only === true && isDtcVehicleFilter(row.vehicle_filter))) return false;
+  return rows.every((row, index) => rows.slice(index + 1).every((other) => !dtcVehicleFiltersOverlap(row.vehicle_filter, other.vehicle_filter)));
+}
+
 function isSourceUrl(value) {
   return isNonEmptyString(value) || isNonEmptyStringArray(value);
 }
@@ -119,7 +136,14 @@ for (const file of jsonFiles) {
       if (!isDtc(row.code) && row.code !== "P1xxx") reportError(`${label}: DTC形式が不正です: ${row.code}`);
       const subcode = String(row.subcode || row.sub_code || "").trim().toUpperCase();
       if (subcode && !/^[0-9A-F]{1,4}$/.test(subcode)) reportError(`${label}: DTCサブコード形式が不正です: ${subcode}`);
-      codeRows.push({ file, code: row.code, subcode, id: row.id || "" });
+      codeRows.push({
+        file,
+        code: row.code,
+        subcode,
+        id: row.id || "",
+        imported_definition_only: row.imported_definition_only === true,
+        vehicle_filter: row.vehicle_filter || null
+      });
     }
 
     for (const code of row.dtc_codes || []) {
@@ -346,7 +370,7 @@ for (const [code, rows] of codeLocations.entries()) {
     && rows.length === 2
     && files.has("obd-codes.json")
     && [...files].some((file) => /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(file));
-  if (!allowedLegacyOverlap) {
+  if (!allowedLegacyOverlap && !hasDisjointSourceSpecificDtcDefinitions(rows)) {
     reportError(`${code}: 同一DTCとサブコードの定義が重複しています: ${rows.map((row) => `${row.file}:${row.id}`).join(", ")}`);
   }
 }
