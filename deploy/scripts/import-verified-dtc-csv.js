@@ -26,9 +26,19 @@ const codeIndex = findHeader(headers, ["code", "dtc", "dtccode", "故障コー�
 const subcodeIndex = findHeader(headers, ["subcode", "subcodeftb", "failuretypebyte", "ftb", "サブコード"]);
 const titleIndex = findHeader(headers, ["title", "description", "dtcdescription", "definition", "定義", "名称"]);
 const systemIndex = findHeader(headers, ["system", "category", "系統"]);
+const makersIndex = findHeader(headers, ["makers", "maker", "manufacturer", "メーカー"]);
+const modelsIndex = findHeader(headers, ["models", "model", "vehiclemodel", "車種"]);
+const yearFromIndex = findHeader(headers, ["yearfrom", "year_from", "modelyearfrom", "年式開始"]);
+const yearToIndex = findHeader(headers, ["yearto", "year_to", "modelyearto", "年式終了"]);
+const scopeConfirmationIndex = findHeader(headers, ["scopeconfirmationrequired", "scope_confirmation_required", "vintrimconfirmationrequired", "適用確認必須"]);
+const applicabilityNoteIndex = findHeader(headers, ["applicabilitynote", "applicability_note", "適用範囲メモ"]);
+const scopeIndexes = [makersIndex, modelsIndex, yearFromIndex, yearToIndex, scopeConfirmationIndex];
 
 if (codeIndex < 0 || titleIndex < 0) {
   fail("CSVには code と title に相当する列が必要です");
+}
+if (scopeIndexes.some((index) => index >= 0) && scopeIndexes.some((index) => index < 0)) {
+  fail("車種限定DTC CSVには makers/models/year_from/year_to/scope_confirmation_required の全列が必要です");
 }
 
 const seen = new Set();
@@ -41,6 +51,14 @@ for (const [offset, row] of rows.slice(1).entries()) {
   const columnSubcode = normalizeSubcode(row[subcodeIndex]);
   const title = String(row[titleIndex] || "").trim();
   const system = String(row[systemIndex] || "").trim();
+  const scope = normalizeVehicleScope({
+    makers: makersIndex >= 0 ? row[makersIndex] : "",
+    models: modelsIndex >= 0 ? row[modelsIndex] : "",
+    yearFrom: yearFromIndex >= 0 ? row[yearFromIndex] : "",
+    yearTo: yearToIndex >= 0 ? row[yearToIndex] : "",
+    scopeConfirmationRequired: scopeConfirmationIndex >= 0 ? row[scopeConfirmationIndex] : "",
+    applicabilityNote: applicabilityNoteIndex >= 0 ? row[applicabilityNoteIndex] : ""
+  });
 
   if (!reference && !title) continue;
   if (!reference) {
@@ -61,6 +79,10 @@ for (const [offset, row] of rows.slice(1).entries()) {
   const displayCode = subcode ? `${code}:${subcode}` : code;
   if (!title) {
     errors.push(`line ${line}: title が空です: ${displayCode}`);
+    continue;
+  }
+  if (scope.error) {
+    errors.push(`line ${line}: ${scope.error}`);
     continue;
   }
   const definitionKey = `${code}:${subcode || ""}`;
@@ -87,6 +109,10 @@ for (const [offset, row] of rows.slice(1).entries()) {
     required_tools: ["対応スキャンツール", "メーカー整備書"],
     safety_notes: ["安全に関わる系統は作業を中止し、メーカー指定手順を優先する"],
     confidence: "定義確認済み・診断手順未登録",
+    ...(scope.vehicleFilter ? {
+      applicability_note: scope.applicabilityNote || "車種限定の出典定義です。VIN、ECU、サブコードおよび整備書で適合を確認してください。",
+      vehicle_filter: scope.vehicleFilter
+    } : {}),
     source,
     source_url: sourceUrl,
     source_date: sourceDate,
@@ -184,6 +210,39 @@ function normalizeSubcode(value) {
   const normalized = String(value || "").trim().toUpperCase().replace(/^0X/, "");
   if (!normalized) return { value: "", invalid: false };
   return { value: normalized, invalid: !/^[0-9A-F]{1,4}$/.test(normalized) };
+}
+
+function normalizeVehicleScope({ makers, models, yearFrom, yearTo, scopeConfirmationRequired, applicabilityNote }) {
+  const values = [makers, models, yearFrom, yearTo, scopeConfirmationRequired].map((value) => String(value || "").trim());
+  if (!values.some(Boolean)) return { vehicleFilter: null, applicabilityNote: "", error: "" };
+  if (values.some((value) => !value)) {
+    return { error: "車種限定DTCには makers/models/year_from/year_to/scope_confirmation_required の全値が必要です" };
+  }
+  const makerList = splitScopeList(makers);
+  const modelList = splitScopeList(models);
+  const startYear = Number(yearFrom);
+  const endYear = Number(yearTo);
+  if (!makerList.length || !modelList.length || !Number.isInteger(startYear) || !Number.isInteger(endYear) || startYear < 1900 || endYear < startYear || endYear > 2100) {
+    return { error: "車種限定DTCの makers/models/year_from/year_to が不正です" };
+  }
+  if (!/^(true|1|yes)$/i.test(String(scopeConfirmationRequired).trim())) {
+    return { error: "車種限定DTCの scope_confirmation_required は true である必要があります" };
+  }
+  return {
+    vehicleFilter: {
+      makers: makerList,
+      models: modelList,
+      year_from: startYear,
+      year_to: endYear,
+      scope_confirmation_required: true
+    },
+    applicabilityNote: String(applicabilityNote || "").trim(),
+    error: ""
+  };
+}
+
+function splitScopeList(value) {
+  return [...new Set(String(value || "").split(/[;|]/).map((item) => item.trim()).filter(Boolean))];
 }
 
 function requireNonEmptyString(value, label) {

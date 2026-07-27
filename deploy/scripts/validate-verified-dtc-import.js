@@ -9,6 +9,8 @@ const importer = path.join(projectRoot, "scripts", "import-verified-dtc-csv.js")
 const fixture = path.join(projectRoot, "scripts", "fixtures", "verified-dtc-sample.csv");
 const subcodeFixture = path.join(projectRoot, "scripts", "fixtures", "verified-dtc-subcode-sample.csv");
 const invalidSubcodeFixture = path.join(projectRoot, "scripts", "fixtures", "verified-dtc-subcode-invalid.csv");
+const scopedFixture = path.join(projectRoot, "scripts", "fixtures", "verified-dtc-scoped-sample.csv");
+const invalidScopeFixture = path.join(projectRoot, "scripts", "fixtures", "verified-dtc-scoped-invalid.csv");
 const failures = [];
 let checks = 0;
 
@@ -82,6 +84,22 @@ try {
   check(subcodeImport.status === 0 && definitions.length === 2, "valid subcode CSV import was rejected");
   check(definitions.some((row) => row.code === "B0001" && row.subcode === "11" && row.id === "verified-import-b0001-11"), "subcode column was not retained as a distinct DTC definition");
   check(definitions.some((row) => row.code === "B0001" && row.subcode === "12" && row.id === "verified-import-b0001-12"), "DTC suffix subcode was not retained as a distinct DTC definition");
+
+  const scopedOutput = path.join(tempDir, "scoped.json");
+  const scopedImport = runImport(scopedFixture,
+    "--source", "Verified scoped test source",
+    "--source-url", "https://example.invalid/verified-dtc-scoped-sample",
+    "--source-date", "2026-05-31",
+    "--output", scopedOutput,
+    "--write"
+  );
+  let scopedDefinitions = [];
+  try {
+    scopedDefinitions = JSON.parse(fs.readFileSync(scopedOutput, "utf8"));
+  } catch {
+    scopedDefinitions = [];
+  }
+  check(scopedImport.status === 0 && scopedDefinitions[0]?.vehicle_filter?.makers?.join(",") === "Honda" && scopedDefinitions[0]?.vehicle_filter?.models?.join(",") === "CR-V,HR-V" && scopedDefinitions[0]?.vehicle_filter?.year_from === 2023 && scopedDefinitions[0]?.vehicle_filter?.scope_confirmation_required === true, "scoped verified-DTC CSV did not retain required vehicle applicability");
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
@@ -93,6 +111,12 @@ const invalidSubcode = runImport(invalidSubcodeFixture,
 );
 check(invalidSubcode.status !== 0 && invalidSubcode.output.includes("一致しません"), "conflicting DTC suffix and subcode column were accepted");
 check(invalidSubcode.status !== 0 && invalidSubcode.output.includes("重複"), "duplicate DTC and subcode pair was accepted");
+const invalidScope = runImport(invalidScopeFixture,
+  "--source", "Verified scoped test source",
+  "--source-url", "https://example.invalid/verified-dtc-scoped-invalid",
+  "--source-date", "2026-05-31"
+);
+check(invalidScope.status !== 0 && invalidScope.output.includes("scope_confirmation_required"), "scoped DTC without confirmation requirement was accepted");
 
 console.log(`Verified-DTC import checks: ${checks - failures.length}`);
 console.log(`Errors: ${failures.length}`);

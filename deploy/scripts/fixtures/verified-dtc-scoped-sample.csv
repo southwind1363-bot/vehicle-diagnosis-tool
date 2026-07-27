@@ -1,0 +1,2 @@
+code,subcode,title,system,makers,models,year_from,year_to,scope_confirmation_required,applicability_note
+B0001,12,Driver Airbag First Inflator Deployment Control,SRS,Honda,CR-V|HR-V,2023,2023,true,Scope test only; confirm VIN and ECU.
