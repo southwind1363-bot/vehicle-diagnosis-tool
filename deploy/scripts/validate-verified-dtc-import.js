@@ -99,7 +99,7 @@ try {
   } catch {
     scopedDefinitions = [];
   }
-  check(scopedImport.status === 0 && scopedDefinitions[0]?.vehicle_filter?.makers?.join(",") === "Honda" && scopedDefinitions[0]?.vehicle_filter?.models?.join(",") === "CR-V,HR-V" && scopedDefinitions[0]?.vehicle_filter?.year_from === 2023 && scopedDefinitions[0]?.vehicle_filter?.scope_confirmation_required === true, "scoped verified-DTC CSV did not retain required vehicle applicability");
+  check(scopedImport.status === 0 && scopedDefinitions.length === 2 && new Set(scopedDefinitions.map((row) => row.id)).size === 2 && scopedDefinitions.every((row) => row.id.startsWith("verified-import-b0001-12-scope-") && row.vehicle_filter?.makers?.join(",") === "Honda" && row.vehicle_filter?.scope_confirmation_required === true) && scopedDefinitions.some((row) => row.vehicle_filter?.models?.join(",") === "CR-V,HR-V" && row.vehicle_filter?.year_from === 2023) && scopedDefinitions.some((row) => row.vehicle_filter?.models?.join(",") === "CR-V" && row.vehicle_filter?.year_from === 2024), "scoped verified-DTC CSV did not retain distinct vehicle applicability definitions");
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -85,7 +86,8 @@ for (const [offset, row] of rows.slice(1).entries()) {
     errors.push(`line ${line}: ${scope.error}`);
     continue;
   }
-  const definitionKey = `${code}:${subcode || ""}`;
+  const scopeKey = buildScopeKey(scope.vehicleFilter);
+  const definitionKey = `${code}:${subcode || ""}:${scopeKey}`;
   if (seen.has(definitionKey)) {
     errors.push(`line ${line}: CSV内でDTCが重複しています: ${displayCode}`);
     continue;
@@ -93,7 +95,7 @@ for (const [offset, row] of rows.slice(1).entries()) {
 
   seen.add(definitionKey);
   imported.push({
-    id: `verified-import-${code.toLowerCase()}${subcode ? `-${subcode.toLowerCase()}` : ""}`,
+    id: `verified-import-${code.toLowerCase()}${subcode ? `-${subcode.toLowerCase()}` : ""}${scope.vehicleFilter ? `-scope-${createHash("sha256").update(scopeKey).digest("hex").slice(0, 10)}` : ""}`,
     code,
     ...(subcode ? { subcode } : {}),
     title,
@@ -243,6 +245,17 @@ function normalizeVehicleScope({ makers, models, yearFrom, yearTo, scopeConfirma
 
 function splitScopeList(value) {
   return [...new Set(String(value || "").split(/[;|]/).map((item) => item.trim()).filter(Boolean))];
+}
+
+function buildScopeKey(vehicleFilter) {
+  if (!vehicleFilter) return "unscoped";
+  return [
+    vehicleFilter.makers.join("|"),
+    vehicleFilter.models.join("|"),
+    vehicleFilter.year_from,
+    vehicleFilter.year_to,
+    vehicleFilter.scope_confirmation_required === true ? "confirmed" : "unconfirmed"
+  ].join("::");
 }
 
 function requireNonEmptyString(value, label) {
