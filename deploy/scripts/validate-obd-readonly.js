@@ -17925,11 +17925,15 @@ const scannerCsvManufacturerSpecificSession = obd.buildDiagnosticScanSessionFrom
   "DTC,Code Format,Description,Status,ECU Name",
   "260100,Manufacturer Specific,Reported OEM sensor fault,Intermittent,Engine Control Module"
 ].join("\n"));
+const scannerCsvPrefixedManufacturerSpecificSession = obd.buildDiagnosticScanSessionFromCsv([
+  "DTC,Code Format,Description,Status,ECU Name",
+  "0xB7F8C3,Manufacturer Specific,Reported OEM communication fault,Intermittent,Car Information Computer"
+].join("\n"));
 const scannerCsvUnmarkedSixDigitSession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC,Status",
   "260100,Intermittent"
 ].join("\n"));
-check(scannerCsvManufacturerSpecificSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "260100" && item.manufacturerSpecific === true && item.codeFormat === "manufacturer_specific" && item.ecuName === "Engine Control Module" && item.reportedDescription === "Reported OEM sensor fault" && item.reportedStatus === "intermittent" && item.status === "unknown") && scannerCsvManufacturerSpecificSession?.vehicleCommandEnabled === false && scannerCsvUnmarkedSixDigitSession === null, "Structured CSV import should retain only explicitly marked manufacturer-specific DTC codes and their reported metadata");
+check(scannerCsvManufacturerSpecificSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "260100" && item.manufacturerSpecific === true && item.codeFormat === "manufacturer_specific" && item.ecuName === "Engine Control Module" && item.reportedDescription === "Reported OEM sensor fault" && item.reportedStatus === "intermittent" && item.status === "unknown") && scannerCsvPrefixedManufacturerSpecificSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "B7F8C3" && item.manufacturerSpecific === true && item.ecuName === "Car Information Computer" && item.reportedStatus === "intermittent") && scannerCsvManufacturerSpecificSession?.vehicleCommandEnabled === false && scannerCsvPrefixedManufacturerSpecificSession?.vehicleCommandEnabled === false && scannerCsvUnmarkedSixDigitSession === null, "Structured CSV import should retain explicitly marked manufacturer-specific DTC codes and their reported metadata");
 check(obd.buildDiagnosticScanSessionFromCsv("DTC,Status\nP0300,Stored")?.dtcSnapshot?.codes?.includes("P0300") && obd.buildDiagnosticScanSessionFromCsv("unlabeled,values\nfoo,bar") === null, "Structured CSV import should require recognized headers without blocking explicit DTC columns");
 const thinkcarReportSession = obd.buildScanSessionFromObdText([
   "THINKCAR",
