@@ -3250,14 +3250,15 @@
           : [];
     const malformedVciListAlias = ["devices", "vci_devices", "items"]
       .some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
+    const malformedVciDeviceRow = devices.some((device) => !device || typeof device !== "object" || Array.isArray(device));
     const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(response) || Array.isArray(data) || [data.devices, data.vci_devices, data.items].some(Array.isArray));
-    const resolvedBridgeSafety = malformedVciListAlias
+    const resolvedBridgeSafety = malformedVciListAlias || malformedVciDeviceRow
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : bridgeSafety;
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
     const replayMode = data.replay_mode === true || data.replayMode === true;
     const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
-    const normalizedDevices = devices.map((device, index) => {
+    const normalizedDevices = (malformedVciDeviceRow ? [] : devices).map((device, index) => {
       const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
       const deviceReplayMode = device?.replay_mode === true || device?.replayMode === true || replayMode;
       const deviceSampleMode = !deviceReplayMode && (device?.sample_mode === true || device?.sampleMode === true || sampleMode);

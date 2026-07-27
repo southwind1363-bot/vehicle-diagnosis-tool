@@ -3924,6 +3924,13 @@ const bridgeMalformedVciList = obd.normalizeBridgeVciList({
   data: { devices: { id: "vci-1", label: "Malformed VCI" } }
 });
 check(bridgeMalformedVciList.deviceCount === 0 && bridgeMalformedVciList.ok === false && bridgeMalformedVciList.blocked === true && bridgeMalformedVciList.wouldTransmit === false && bridgeMalformedVciList.vehicleCommandEnabled === false, "Malformed bridge VCI list aliases must fail closed");
+const bridgeMalformedVciDeviceRow = obd.normalizeBridgeVciList({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { devices: ["not-a-vci"] }
+});
+check(bridgeMalformedVciDeviceRow.deviceCount === 0 && bridgeMalformedVciDeviceRow.ok === false && bridgeMalformedVciDeviceRow.blocked === true && bridgeMalformedVciDeviceRow.wouldTransmit === false && bridgeMalformedVciDeviceRow.vehicleCommandEnabled === false, "Malformed bridge VCI device rows must fail closed");
 const bridgeVciListAliases = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,
