@@ -3029,12 +3029,16 @@
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
     const errorCodes = readBridgeResponseErrorCodes(response);
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
+    const malformedEcuDtcAlias = ecuRows.some((ecuRow) => ecuRow && typeof ecuRow === "object" && !Array.isArray(ecuRow) && [
+      "dtcs",
+      "dtc_codes", "dtcCodes"
+    ].some((key) => ecuRow[key] !== undefined && ecuRow[key] !== null && !Array.isArray(ecuRow[key])));
     const hasDtcRowEvidence = dtcRows.length > 0 || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
     const bridgeSafety = readBridgeSnapshotSafety(
       response,
       errorCodes.length === 0 && (Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes))
     );
-    const resolvedBridgeSafety = malformedDtcAlias
+    const resolvedBridgeSafety = malformedDtcAlias || malformedEcuDtcAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
         ? { ...bridgeSafety, ok: false, blocked: hasDtcRowEvidence, unparsed: !hasDtcRowEvidence }
@@ -3706,6 +3710,12 @@
       "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots",
       "ecu_snapshots", "ecuSnapshots"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
+    const malformedSupportedPidEcuAlias = Array.isArray(supportedPidEcuSnapshots) && supportedPidEcuSnapshots.some((snapshot) => snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) && [
+      "supported_pids", "supportedPids",
+      "pids",
+      "pid_list", "pidList",
+      "supported_pid_rows", "supportedPidRows"
+    ].some((key) => snapshot[key] !== undefined && snapshot[key] !== null && !Array.isArray(snapshot[key])));
     const supportedPidPageBases = data.supported_pid_page_bases
       || data.supportedPidPageBases
       || data.queried_pid_bases
@@ -3723,7 +3733,7 @@
         || hasBridgeSupportedPidSnapshotEvidence(supportedPidEcuSnapshots)
       )
     );
-    const resolvedBridgeSafety = malformedSupportedPidAlias
+    const resolvedBridgeSafety = malformedSupportedPidAlias || malformedSupportedPidEcuAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : bridgeSafety;
     const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed

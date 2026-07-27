@@ -6214,6 +6214,13 @@ const bridgeMalformedDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
 const bridgeMalformedDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeMalformedDtcSnapshot });
 const bridgeMalformedDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeMalformedDtcSession)));
 check(bridgeMalformedDtcSnapshot.dtcs.length === 0 && bridgeMalformedDtcSnapshot.blocked === true && bridgeMalformedDtcSnapshot.dtcReadoutStatus === "blocked" && bridgeMalformedDtcSession.vehicleCommandEnabled === false && bridgeMalformedDtcRoundTrip?.dtcSnapshot?.dtcReadoutStatus === "blocked" && bridgeMalformedDtcRoundTrip?.vehicleCommandEnabled === false, "Malformed bridge DTC aliases must fail closed through read-only export");
+const bridgeMalformedEcuDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { ecu_responses: [{ ecu: "7E8", dtcs: { code: "P0300" } }] }
+});
+check(bridgeMalformedEcuDtcSnapshot.dtcs.length === 0 && bridgeMalformedEcuDtcSnapshot.blocked === true && bridgeMalformedEcuDtcSnapshot.dtcReadoutStatus === "blocked" && bridgeMalformedEcuDtcSnapshot.wouldTransmit === false, "Malformed ECU-scoped bridge DTC aliases must fail closed");
 const nestedBridgeDtcSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
   source_ecu: "7E8",
   intent: "read_stored_dtc",
@@ -6566,6 +6573,13 @@ const bridgeMalformedSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnaps
 const bridgeMalformedSupportedPidSession = obd.buildDiagnosticScanSession({ supported_pid_matrix: bridgeMalformedSupportedPidSnapshot });
 const bridgeMalformedSupportedPidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeMalformedSupportedPidSession)));
 check(bridgeMalformedSupportedPidSnapshot.supportedPids.length === 0 && bridgeMalformedSupportedPidSnapshot.blocked === true && bridgeMalformedSupportedPidSnapshot.supportedPidReadoutStatus === "blocked" && bridgeMalformedSupportedPidSession.vehicleCommandEnabled === false && bridgeMalformedSupportedPidRoundTrip?.supportedPidMatrix?.supportedPidReadoutStatus === "blocked" && bridgeMalformedSupportedPidRoundTrip?.vehicleCommandEnabled === false, "Malformed bridge supported-PID aliases must fail closed through read-only export");
+const bridgeMalformedEcuSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: { pid: "0C" } }] }
+});
+check(bridgeMalformedEcuSupportedPidSnapshot.supportedPids.length === 0 && bridgeMalformedEcuSupportedPidSnapshot.blocked === true && bridgeMalformedEcuSupportedPidSnapshot.supportedPidReadoutStatus === "blocked" && bridgeMalformedEcuSupportedPidSnapshot.wouldTransmit === false, "Malformed ECU-scoped bridge supported-PID aliases must fail closed");
 const bridgeEmptySupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({});
 check(bridgeEmptySupportedPidSnapshot.supportedPids.length === 0 && bridgeEmptySupportedPidSnapshot.blocked === true, "空のブリッジ対応PID応答を安全側へ整形できません");
 const bridgeTextSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
