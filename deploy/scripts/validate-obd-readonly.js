@@ -3991,6 +3991,13 @@ const bridgeAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
 check(bridgeAdapterIdentity.adapterFamily === "elm327", "アダプター識別情報を整形できません");
 check(bridgeAdapterIdentity.vehicleCommandEnabled === false, "アダプター識別モデルが車両コマンド有効になっています");
 check(!("serial_number" in bridgeAdapterIdentity), "アダプター識別モデルが生識別子を保持しています");
+const bridgeMalformedAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { adapter_name: { value: "ELM327" } }
+});
+check(bridgeMalformedAdapterIdentity.ok === false && bridgeMalformedAdapterIdentity.blocked === true && bridgeMalformedAdapterIdentity.adapterName === null && bridgeMalformedAdapterIdentity.wouldTransmit === false && bridgeMalformedAdapterIdentity.vehicleCommandEnabled === false, "Malformed bridge adapter identity must fail closed");
 const bridgeAdapterProtocolHint = obd.normalizeBridgeAdapterIdentity({ adapter: "ELM327", protocol_hint: "AUTO, ISO 15765-4 (CAN 11/500)" });
 check(bridgeAdapterProtocolHint.adapterProtocolHint === "AUTO, ISO 15765-4 (CAN 11/500)" && bridgeAdapterProtocolHint.adapter_protocol_hint === bridgeAdapterProtocolHint.adapterProtocolHint && bridgeAdapterProtocolHint.vehicleCommandEnabled === false, "Bridge adapter protocol hint was not normalized safely");
 const bridgeAdapterIdentityAliases = obd.normalizeBridgeAdapterIdentity({

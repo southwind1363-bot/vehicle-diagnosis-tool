@@ -3340,21 +3340,30 @@
 
   function normalizeBridgeAdapterIdentity(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const hasAdapterIdentityData = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint"].some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint"];
+    const hasAdapterIdentityData = adapterIdentityKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
+    const resolvedBridgeSafety = malformedAdapterIdentity
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : bridgeSafety;
+    const readAdapterIdentityText = (...values) => {
+      const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
+      return value === undefined ? null : String(value).slice(0, 80);
+    };
     const replayMode = data.replay_mode === true || data.replayMode === true;
     const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
     return {
       source: "local_bridge",
       intent: "adapter_identity",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      adapterName: data.adapter_name ? String(data.adapter_name).slice(0, 80) : data.adapterName ? String(data.adapterName).slice(0, 80) : data.name ? String(data.name).slice(0, 80) : data.adapter ? String(data.adapter).slice(0, 80) : null,
-      adapterFamily: data.adapter_family ? String(data.adapter_family).slice(0, 80) : data.adapterFamily ? String(data.adapterFamily).slice(0, 80) : data.family ? String(data.family).slice(0, 80) : null,
-      firmwareVersion: data.firmware_version ? String(data.firmware_version).slice(0, 80) : data.firmwareVersion ? String(data.firmwareVersion).slice(0, 80) : data.firmware ? String(data.firmware).slice(0, 80) : data.version ? String(data.version).slice(0, 80) : null,
-      adapterProtocolHint: data.adapter_protocol_hint ? String(data.adapter_protocol_hint).slice(0, 80) : data.adapterProtocolHint ? String(data.adapterProtocolHint).slice(0, 80) : data.protocol_hint ? String(data.protocol_hint).slice(0, 80) : data.protocolHint ? String(data.protocolHint).slice(0, 80) : null,
-      adapter_protocol_hint: data.adapter_protocol_hint ? String(data.adapter_protocol_hint).slice(0, 80) : data.adapterProtocolHint ? String(data.adapterProtocolHint).slice(0, 80) : data.protocol_hint ? String(data.protocol_hint).slice(0, 80) : data.protocolHint ? String(data.protocolHint).slice(0, 80) : null,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      adapterName: readAdapterIdentityText(data.adapter_name, data.adapterName, data.name, data.adapter),
+      adapterFamily: readAdapterIdentityText(data.adapter_family, data.adapterFamily, data.family),
+      firmwareVersion: readAdapterIdentityText(data.firmware_version, data.firmwareVersion, data.firmware, data.version),
+      adapterProtocolHint: readAdapterIdentityText(data.adapter_protocol_hint, data.adapterProtocolHint, data.protocol_hint, data.protocolHint),
+      adapter_protocol_hint: readAdapterIdentityText(data.adapter_protocol_hint, data.adapterProtocolHint, data.protocol_hint, data.protocolHint),
       sampleMode,
       sample_mode: sampleMode,
       replayMode,
