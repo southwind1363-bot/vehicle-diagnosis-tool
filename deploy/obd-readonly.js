@@ -3239,7 +3239,12 @@
         : Array.isArray(data.items)
           ? data.items
           : [];
+    const malformedVciListAlias = ["devices", "vci_devices", "items"]
+      .some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(response) || Array.isArray(data) || [data.devices, data.vci_devices, data.items].some(Array.isArray));
+    const resolvedBridgeSafety = malformedVciListAlias
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : bridgeSafety;
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
     const replayMode = data.replay_mode === true || data.replayMode === true;
     const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
@@ -3316,9 +3321,9 @@
     return {
       source: "local_bridge",
       intent: "list_vci",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       driverStatus: data.driver_status || data.driverStatus || "not_checked",
       sampleMode,
       sample_mode: sampleMode,

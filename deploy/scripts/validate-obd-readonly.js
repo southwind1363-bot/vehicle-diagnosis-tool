@@ -3910,6 +3910,13 @@ check(bridgeVciList.deviceCount === 1, "VCI一覧の表示モデル件数が不�
 check(bridgeVciList.devices[0].selected === true, "VCI一覧の選択状態が不正です");
 check(!("serial_number" in bridgeVciList.devices[0]), "VCI一覧が生識別子を保持しています");
 check(bridgeVciList.connectionEnabled === true && bridgeVciList.vehicleCommandEnabled === false, "VCI一覧モデルの読取接続準備または安全状態が不正です");
+const bridgeMalformedVciList = obd.normalizeBridgeVciList({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { devices: { id: "vci-1", label: "Malformed VCI" } }
+});
+check(bridgeMalformedVciList.deviceCount === 0 && bridgeMalformedVciList.ok === false && bridgeMalformedVciList.blocked === true && bridgeMalformedVciList.wouldTransmit === false && bridgeMalformedVciList.vehicleCommandEnabled === false, "Malformed bridge VCI list aliases must fail closed");
 const bridgeVciListAliases = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,
