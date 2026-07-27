@@ -185,6 +185,9 @@ for (const file of jsonFiles) {
       if (row.applicability_note && !isDtcVehicleFilter(row.vehicle_filter)) {
         reportError(`${label}: applicability_note がある verified imported DTC には makers/models/year_from/year_to を持つ vehicle_filter が必要です`);
       }
+      if (row.applicability_note && row.vehicle_filter?.scope_confirmation_required !== true) {
+        reportError(`${label}: applicability_note がある verified imported DTC には scope_confirmation_required: true が必要です`);
+      }
     }
 
     if (file === "vehicle-model-catalog-domestic-2026.json" || file === "vehicle-model-catalog-domestic-2004-2026.json") {
