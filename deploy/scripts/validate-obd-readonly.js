@@ -6741,6 +6741,15 @@ const bridgeMalformedReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson
 check(bridgeMalformedReadinessSnapshot.readinessReadoutStatus === "blocked" && bridgeMalformedReadinessSnapshot.blocked === true && bridgeMalformedReadinessSession.vehicleCommandEnabled === false && bridgeMalformedReadinessRoundTrip?.readinessSnapshot?.readinessReadoutStatus === "blocked" && bridgeMalformedReadinessRoundTrip?.vehicleCommandEnabled === false, "Malformed bridge readiness row aliases must fail closed through read-only export");
 const bridgeReadinessSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeReadinessSnapshot })) }));
 check(bridgeReadinessSourceRoundTrip?.readinessSnapshot?.sourceEcu === "7E8" && bridgeReadinessSourceRoundTrip?.readinessSnapshot?.source_ecu === "7E8" && bridgeReadinessSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge readiness source ECU was not retained through read-only JSON export and import");
+const bridgeMalformedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { readiness_ecu_snapshots: [{ source_ecu: "7E8", readiness_values: { id: "readiness_status_byte_b", value: 7 } }] }
+});
+const bridgeMalformedEcuReadinessSession = obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeMalformedEcuReadinessSnapshot });
+const bridgeMalformedEcuReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeMalformedEcuReadinessSession)));
+check(bridgeMalformedEcuReadinessSnapshot.readinessReadoutStatus === "blocked" && bridgeMalformedEcuReadinessSnapshot.blocked === true && bridgeMalformedEcuReadinessSession.vehicleCommandEnabled === false && bridgeMalformedEcuReadinessRoundTrip?.readinessSnapshot?.readinessReadoutStatus === "blocked" && bridgeMalformedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Malformed ECU-scoped bridge readiness aliases must fail closed through read-only export");
 const bridgeMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   data: {
     readiness_ecu_snapshots: [
