@@ -3164,9 +3164,18 @@
 
   function normalizeBridgeConnectionStatus(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const hasConnectionStatusData = ["status", "bridge_version", "bridgeVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected"].some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected"];
+    const hasConnectionStatusData = connectionStatusKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    const malformedConnectionStatus = connectionStatusKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasConnectionStatusData);
-    const status = String(data.status || "not_connected");
+    const resolvedBridgeSafety = malformedConnectionStatus
+      ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : bridgeSafety;
+    const readConnectionText = (...values) => {
+      const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
+      return value === undefined ? null : String(value).slice(0, 80);
+    };
+    const status = readConnectionText(data.status) || "not_connected";
     const paired = data.paired === true || data.is_paired === true || data.isPaired === true;
     const vciConnected = data.vci_connected === true || data.vciConnected === true || data.vci_ready === true || data.vciReady === true;
     const vehicleConnected = data.vehicle_connected === true || data.vehicleConnected === true || data.car_connected === true || data.carConnected === true;
@@ -3202,11 +3211,11 @@
     return {
       source: "local_bridge",
       intent: "bridge_status",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      bridgeVersion: data.bridge_version || data.bridgeVersion || null,
-      apiVersion: data.api_version || data.apiVersion || localBridgeContract.apiVersion,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      bridgeVersion: readConnectionText(data.bridge_version, data.bridgeVersion),
+      apiVersion: readConnectionText(data.api_version, data.apiVersion) || localBridgeContract.apiVersion,
       status,
       displayStatus,
       paired,

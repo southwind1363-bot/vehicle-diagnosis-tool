@@ -3854,6 +3854,13 @@ check(bridgeStatus.displayStatus === "読取準備モデル", "ブリッジ接�
 check(bridgeStatus.connectionEnabled === true, "ブリッジ接続状態モデルが接続準備を保持していません");
 check(bridgeStatus.vehicleCommandEnabled === false, "ブリッジ接続状態モデルが車両コマンド有効になっています");
 check(bridgeStatus.retainedRawText === false, "ブリッジ接続状態モデルが原文保持になっています");
+const bridgeMalformedConnectionStatus = obd.normalizeBridgeConnectionStatus({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { status: { connected: true }, vci_connected: true }
+});
+check(bridgeMalformedConnectionStatus.ok === false && bridgeMalformedConnectionStatus.blocked === true && bridgeMalformedConnectionStatus.status === "not_connected" && bridgeMalformedConnectionStatus.vciConnected === true && bridgeMalformedConnectionStatus.wouldTransmit === false && bridgeMalformedConnectionStatus.vehicleCommandEnabled === false, "Malformed bridge connection status must fail closed");
 const bridgeStatusAliases = obd.normalizeBridgeConnectionStatus({
   ok: true,
   isBlocked: false,
