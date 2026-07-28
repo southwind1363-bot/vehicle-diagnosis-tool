@@ -276,6 +276,8 @@ for (const file of jsonFiles) {
       if (!isNonEmptyString(row.purpose)) reportError(`${label}: purpose がありません`);
       if (!isNonEmptyString(row.interpretation_note)) reportError(`${label}: interpretation_note がありません`);
       if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
+      if (!isSourceUrl(row.source_url)) reportError(`${label}: missing freeze-frame source_url`);
+      if (!isIsoDate(row.source_date)) reportError(`${label}: freeze-frame source_date must be ISO date`);
     }
 
     if (file === "obd-readiness-monitors-2026.json") {
@@ -286,6 +288,8 @@ for (const file of jsonFiles) {
       if (!isNonEmptyString(row.diagnostic_use)) reportError(`${label}: diagnostic_use がありません`);
       if (!isNonEmptyString(row.not_complete_note)) reportError(`${label}: not_complete_note がありません`);
       if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
+      if (!isSourceUrl(row.source_url)) reportError(`${label}: missing readiness source_url`);
+      if (!isIsoDate(row.source_date)) reportError(`${label}: readiness source_date must be ISO date`);
     }
 
     if (file === "obd-ecu-info-items-2026.json") {
@@ -297,6 +301,8 @@ for (const file of jsonFiles) {
       if (!isNonEmptyString(row.diagnostic_use)) reportError(`${label}: diagnostic_use がありません`);
       if (!isNonEmptyString(row.storage_policy)) reportError(`${label}: storage_policy がありません`);
       if (row.service_manual_required !== true) reportError(`${label}: service_manual_required が true ではありません`);
+      if (!isSourceUrl(row.source_url)) reportError(`${label}: missing ECU info source_url`);
+      if (!isIsoDate(row.source_date)) reportError(`${label}: ECU info source_date must be ISO date`);
     }
 
     if (file.startsWith("diagnostic-workflows") && "monitor_ids" in row) {
