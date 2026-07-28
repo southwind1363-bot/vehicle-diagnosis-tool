@@ -24,6 +24,7 @@ const allowedLegacyDtcOverlaps = new Set([
 ]);
 const monitorDefinitionRows = JSON.parse(fs.readFileSync(path.join(dataDir, "obd-monitor-definitions.json"), "utf8"));
 const monitorDefinitionIds = new Set(monitorDefinitionRows.map((row) => row.id));
+const monitorDefinitionsById = new Map(monitorDefinitionRows.map((row) => [row.id, row]));
 
 function reportError(message) {
   errors.push(message);
@@ -273,6 +274,10 @@ for (const file of jsonFiles) {
     if (file === "obd-freeze-frame-items-2026.json") {
       if (!isNonEmptyString(row.monitor_id)) reportError(`${label}: monitor_id がありません`);
       if (!monitorDefinitionIds.has(row.monitor_id)) reportError(`${label}: 未登録の monitor_id ${row.monitor_id} があります`);
+      const monitorDefinition = monitorDefinitionsById.get(row.monitor_id);
+      if (monitorDefinition && monitorDefinition.pid !== row.pid) {
+        reportError(`${label}: freeze-frame pid ${row.pid} does not match monitor definition pid ${monitorDefinition.pid}`);
+      }
       if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
       if (row.service !== "02") reportError(`${label}: service は 02 にしてください`);
       if (!/^[0-9A-F]{2}$/.test(row.pid || "")) reportError(`${label}: pid が不正です`);
