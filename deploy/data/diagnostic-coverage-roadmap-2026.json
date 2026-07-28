@@ -46,10 +46,10 @@
     "label": "B系 ボディDTC",
     "coverage_area": "body-dtc",
     "current_state": "出典確認済み定義を追加開始",
-    "progress_percent": 15,
+    "progress_percent": 16,
     "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
     "priority": 3,
-    "current_count_note": "B系親DTC 21件 / 出典定義36件・一意サブコード定義29件 (Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Subaru 2010-14 Legacy/Outback・2012 Impreza、Jeep 2019-20・2022-23 Renegade・2024-25 Wagoneer S、Bentley 2018-22 Continental GT/Flying Spur、出典限定)",
+    "current_count_note": "B系親DTC 22件 / 出典定義38件・一意サブコード定義30件 (Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Subaru 2010-14 Legacy/Outback・2012 Impreza、Jeep 2019-20・2022-23 Renegade・2024-25 Wagoneer S、Bentley 2018-22 Continental GT/Flying Spur、Audi 2020-21 ADAS、出典限定)",
     "next_actions": [
       "汎用/メーカー別のB系コード収録可否をソース別に分ける",
       "SRS、ブレーキ、盗難防止など安全系は強い注意と整備書必須を付ける",
