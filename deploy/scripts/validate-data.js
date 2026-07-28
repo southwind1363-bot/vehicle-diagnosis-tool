@@ -88,6 +88,11 @@ function hasGenericDtcPrimarySource(value) {
     && /^https:\/\/(saemobilus\.sae\.org|webstore\.ansi\.org)\//.test(url.trim()));
 }
 
+function hasNhtsaArchiveSource(value) {
+  return isSourceUrl(value) && sourceUrlList(value).every((url) => isNonEmptyString(url)
+    && /^https:\/\/(www\.|static\.)nhtsa\.gov\//.test(url.trim()));
+}
+
 function isIsoDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value || "");
 }
@@ -184,6 +189,9 @@ for (const file of jsonFiles) {
       if (!isNonEmptyStringArray(row.check_order)) reportError(`${label}: verified imported DTC check_order is missing`);
       if (!isSourceUrl(row.source_url) || !sourceUrlList(row.source_url).every((url) => /^https:\/\//.test(url))) {
         reportError(`${label}: verified imported DTC requires an HTTPS source_url`);
+      }
+      if (!hasNhtsaArchiveSource(row.source_url)) {
+        reportError(`${label}: verified imported DTC requires an NHTSA archive source_url`);
       }
       if (!isIsoDate(row.source_date)) reportError(`${label}: verified imported DTC source_date is invalid`);
       if (!isIsoDate(row.last_verified_date)) reportError(`${label}: verified imported DTC last_verified_date is invalid`);
