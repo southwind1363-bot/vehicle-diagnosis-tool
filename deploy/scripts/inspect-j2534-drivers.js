@@ -1,0 +1,30 @@
+import { discoverJ2534RegistryDrivers } from "../local-bridge-readonly.js";
+
+const devices = discoverJ2534RegistryDrivers({
+  enabled: true,
+  inspectLibraries: true
+});
+
+const summary = {
+  inspection: "registry_and_static_dll_metadata",
+  vehicle_communication_started: false,
+  vehicle_command_enabled: false,
+  detected_count: devices.length,
+  devices: devices.map((device) => ({
+    id: device.id,
+    label: device.label,
+    vendor: device.vendor,
+    adapter_family: device.adapter_family,
+    driver_status: device.driver_status,
+    driver_library_inspection_status: device.driver_library_inspection_status,
+    driver_library_architecture: device.driver_library_architecture,
+    driver_library_bitness: device.driver_library_bitness,
+    driver_required_api_ready: device.driver_required_api_ready,
+    driver_readonly_api_ready: device.driver_readonly_api_ready,
+    driver_missing_readonly_apis: device.driver_missing_readonly_apis,
+    connected: false,
+    vehicle_command_enabled: false
+  }))
+};
+
+console.log(JSON.stringify(summary, null, 2));

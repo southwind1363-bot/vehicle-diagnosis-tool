@@ -7,6 +7,7 @@
     "start": "C:\\Progra~1\\nodejs\\node.exe server.js",
     "dev": "C:\\Progra~1\\nodejs\\node.exe server.js",
     "bridge:dev": "C:\\Progra~1\\nodejs\\node.exe local-bridge-readonly.js",
+    "inspect:j2534": "C:\\Progra~1\\nodejs\\node.exe scripts/inspect-j2534-drivers.js",
     "validate:data": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-data.js",
     "validate:dtc-import": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-verified-dtc-import.js",
     "validate:obd": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-obd-readonly.js",
