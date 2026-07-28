@@ -49,7 +49,7 @@
     "progress_percent": 12,
     "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
     "priority": 3,
-    "current_count_note": "B系親DTC 5件 / 出典定義20件・一意サブコード定義13件 (Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Jeep 2024-25 Wagoneer S、出典限定)",
+    "current_count_note": "B系親DTC 6件 / 出典定義21件・一意サブコード定義14件 (Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Jeep 2022-23 Renegade・2024-25 Wagoneer S、出典限定)",
     "next_actions": [
       "汎用/メーカー別のB系コード収録可否をソース別に分ける",
       "SRS、ブレーキ、盗難防止など安全系は強い注意と整備書必須を付ける",

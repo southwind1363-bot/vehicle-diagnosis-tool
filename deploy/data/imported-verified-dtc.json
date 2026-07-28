@@ -461,4 +461,40 @@
   {"id":"verified-import-b15a1-00-jeep-wagoneer-s-2024-2025","code":"B15A1","subcode":"00","title":"Media Port Connection 1","system":"Body / radio media port (source-specific)","applicability_note":"Stellantis bulletin 08-152-25 applies only to 2024-2025 Jeep Wagoneer S with the listed Uconnect radio configurations; B15A1-00 is stated as an end-of-line issue with no customer impact. Confirm VIN, radio configuration, reporting ECU, and bulletin applicability.","vehicle_filter":{"makers":["Jeep"],"models":["Wagoneer S"],"year_from":2024,"year_to":2025,"scope_confirmation_required":true},"possible_causes":[],"check_order":["Save the DTC, radio software version, concurrent DTCs, and reporting ECU.","Do not clear DTCs or update radio software from this tool; confirm VIN, radio configuration, and bulletin applicability.","Use Stellantis service information and the specified diagnostic system for vehicle-specific diagnosis."],"measurement_points":[],"common_mistakes":["Do not infer a customer-facing media-port failure from this source-specific end-of-line DTC alone.","Do not apply this definition to a different radio, model, or model year."],"required_tools":["Compatible scan tool","Stellantis service information"],"safety_notes":["Radio software changes can affect ECU state; do not perform programming or configuration changes without the manufacturer procedure and recovery conditions."],"confidence":"Stellantis source-specific DTC definition; vehicle and radio configuration confirmation required.","source":"Stellantis TSB 08-152-25 / NHTSA MC-11018257","source_url":"https://static.nhtsa.gov/odi/tsbs/2025/MC-11018257-0001.pdf","source_date":"2025-05-09","last_verified_date":"2026-07-28","service_manual_required":true,"imported_definition_only":true},
   {"id":"verified-import-c1858-73-acura-rdx-2013-2014-awd","code":"C1858","subcode":"73","title":"Differential Fluid Pressure Deviation High","system":"Chassis / AWD rear differential pressure control (source-specific)","applicability_note":"Acura bulletin 15-012 applies only to 2013-2014 RDX AWD. Confirm VIN, model year, AWD drivetrain, reporting ECU, and Acura service information before using this source-specific definition.","vehicle_filter":{"makers":["Acura"],"models":["RDX"],"year_from":2013,"year_to":2014,"scope_confirmation_required":true},"possible_causes":["The source identifies abnormal wear of the electric differential pressure solenoid plunger as a possible cause only when the vehicle and bulletin conditions match."],"check_order":["Save DTCs, concurrent DTCs, AWD warning status, freeze-frame, and the reporting ECU.","Do not clear DTCs, perform AWD active tests, or begin differential work; confirm VIN, AWD drivetrain, ECU, and bulletin applicability.","Use Acura service information for rear differential diagnosis, fluid handling, and recovery conditions."],"measurement_points":[],"common_mistakes":["Do not apply this RDX AWD definition to FWD vehicles, CR-V, or vehicles outside the source model years.","Do not infer a solenoid failure from the DTC alone."],"required_tools":["Compatible scan tool","Acura service information"],"safety_notes":["AWD differential and fluid work requires vehicle support, fluid safety controls, and manufacturer procedures before any state-changing operation."],"confidence":"Acura source-specific DTC definition; VIN, AWD, and ECU confirmation required.","source":"Acura Service Bulletin 15-012 / NHTSA MC-10108837","source_url":"https://static.nhtsa.gov/odi/tsbs/2015/MC-10108837-9999.pdf","source_date":"2015-02-14","last_verified_date":"2026-07-28","service_manual_required":true,"imported_definition_only":true},
   {"id":"verified-import-c1858-73-honda-crv-2014-awd","code":"C1858","subcode":"73","title":"Differential Fluid Pressure Deviation High","system":"Chassis / AWD rear differential pressure control (source-specific)","applicability_note":"Honda bulletin 15-016 revision 3 applies only to 2014 CR-V AWD within the listed VIN ranges. Confirm VIN, AWD drivetrain, reporting ECU, and Honda service information before using this source-specific definition.","vehicle_filter":{"makers":["Honda"],"models":["CR-V"],"year_from":2014,"year_to":2014,"scope_confirmation_required":true},"possible_causes":["The source identifies abnormal wear of the electric differential pressure solenoid plunger as a possible cause only when the vehicle and bulletin conditions match."],"check_order":["Save DTCs, concurrent DTCs, AWD warning status, freeze-frame, and the reporting ECU.","Do not clear DTCs, perform AWD active tests, or begin differential work; confirm VIN, AWD drivetrain, ECU, and bulletin applicability.","Use Honda service information for rear differential diagnosis, fluid handling, and recovery conditions."],"measurement_points":[],"common_mistakes":["Do not apply this definition outside the listed 2014 CR-V AWD VIN ranges.","Do not infer a solenoid failure from the DTC alone."],"required_tools":["Compatible scan tool","Honda service information"],"safety_notes":["AWD differential and fluid work requires vehicle support, fluid safety controls, and manufacturer procedures before any state-changing operation."],"confidence":"Honda source-specific DTC definition; VIN, AWD, and ECU confirmation required.","source":"American Honda Service Bulletin 15-016 Rev. 3 / NHTSA MC-10115801","source_url":"https://static.nhtsa.gov/odi/tsbs/2017/MC-10115801-9999.pdf","source_date":"2017-08-12","last_verified_date":"2026-07-28","service_manual_required":true,"imported_definition_only":true}
+,
+  {
+    "id": "verified-import-b1006-49-jeep-renegade-2022-2023",
+    "code": "B1006",
+    "subcode": "49",
+    "title": "HALF (Haptic Lane Feedback) - Internal Electronic Failure",
+    "system": "Body / ADAS forward-facing camera (source-specific)",
+    "applicability_note": "Stellantis TSB 08-042-23 applies only to 2022-2023 Jeep Renegade in the bulletin's stated market and equipment scope. Confirm VIN, market, camera configuration, reporting FFCM, and Stellantis service information before using this source-specific definition.",
+    "vehicle_filter": {
+      "makers": ["Jeep"],
+      "models": ["Renegade"],
+      "year_from": 2022,
+      "year_to": 2023,
+      "scope_confirmation_required": true
+    },
+    "possible_causes": ["The source identifies the Forward Facing Camera Module (FFCM) as the cause only when the vehicle and bulletin conditions match."],
+    "check_order": [
+      "Save all DTCs, warning indicators, concurrent DTCs, freeze-frame where available, and the reporting ECU before inspection.",
+      "Do not clear DTCs, replace the camera, program modules, perform PROXI configuration, or start camera learning from this tool; confirm VIN, market, camera configuration, FFCM, and bulletin applicability.",
+      "Use Stellantis service information and the required diagnostic system for vehicle-specific diagnosis, configuration, calibration, and recovery."
+    ],
+    "measurement_points": [],
+    "common_mistakes": [
+      "Do not apply this source-specific definition to another Jeep model, market, model year, or camera configuration.",
+      "Do not infer a camera-module failure from this DTC alone."
+    ],
+    "required_tools": ["Compatible scan tool", "Stellantis service information"],
+    "safety_notes": ["Forward-camera replacement, configuration, and static or dynamic learning can affect ADAS operation. Do not perform state-changing operations without the manufacturer procedure, calibration conditions, and recovery plan."],
+    "confidence": "Stellantis source-specific DTC definition; VIN, market, camera configuration, and FFCM confirmation required.",
+    "source": "Stellantis TSB 08-042-23 / NHTSA MC-10248002",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2023/MC-10248002-9999.pdf",
+    "source_date": "2023-02-07",
+    "last_verified_date": "2026-07-28",
+    "service_manual_required": true,
+    "imported_definition_only": true
+  }
 ]
