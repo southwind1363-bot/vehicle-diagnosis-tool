@@ -117,6 +117,8 @@ for (const file of jsonFiles) {
   const vehicleDetails = new Set();
   const vehicleYearRanges = new Set();
   const monitorAliases = new Map();
+  const freezeFramePids = new Set();
+  const freezeFramePriorities = new Set();
   for (const [index, row] of rows.entries()) {
     const label = `${file}[${index}]`;
 
@@ -278,6 +280,10 @@ for (const file of jsonFiles) {
       if (monitorDefinition && monitorDefinition.pid !== row.pid) {
         reportError(`${label}: freeze-frame pid ${row.pid} does not match monitor definition pid ${monitorDefinition.pid}`);
       }
+      if (freezeFramePids.has(row.pid)) reportError(`${label}: freeze-frame pid ${row.pid} is duplicated`);
+      freezeFramePids.add(row.pid);
+      if (freezeFramePriorities.has(row.priority)) reportError(`${label}: freeze-frame priority ${row.priority} is duplicated`);
+      freezeFramePriorities.add(row.priority);
       if (!isNonEmptyString(row.label)) reportError(`${label}: label がありません`);
       if (row.service !== "02") reportError(`${label}: service は 02 にしてください`);
       if (!/^[0-9A-F]{2}$/.test(row.pid || "")) reportError(`${label}: pid が不正です`);

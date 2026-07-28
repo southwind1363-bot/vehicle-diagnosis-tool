@@ -2463,6 +2463,8 @@ check(obd.configureFreezeFrameItems(freezeFrameItems) === true, "フリーズフ
 check(obd.getFreezeFrameItems().length >= 14, "フリーズフレーム項目辞書が不足しています");
 check(obd.getFreezeFrameItems().some((item) => item.monitorId === "control_module_voltage"), "フリーズフレーム項目に制御モジュール電圧がありません");
 check(obd.getFreezeFrameItems().some((item) => item.monitorId === "map" && item.pid === "0B") && obd.getFreezeFrameItems().some((item) => item.monitorId === "timing_advance" && item.pid === "0E"), "Web Serial読取対象のMAPまたは点火時期フリーズフレーム項目がありません");
+const webSerialFreezeFrameValuePids = ["03", "04", "05", "06", "07", "0B", "0C", "0D", "0E", "0F", "10", "11", "42"];
+check(webSerialFreezeFrameValuePids.every((pid) => freezeFrameItems.some((item) => item.pid === pid)) && freezeFrameItems.filter((item) => item.pid !== "02").every((item) => webSerialFreezeFrameValuePids.includes(item.pid)), "Web Serialフリーズフレーム許可リストとカタログPIDが一致しません");
 const catalogMappedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 0B 00 28 42 0E 00 80" });
 check(catalogMappedFreezeFrame.monitorValues.some((item) => item.id === "map" && item.value === 40 && item.freezeFramePriority === 13 && item.interpretationNote) && catalogMappedFreezeFrame.monitorValues.some((item) => item.id === "timing_advance" && item.value === 0 && item.freezeFramePriority === 14 && item.interpretationNote), "MAPまたは点火時期のフリーズフレーム項目がデコードとカタログ補足へ結び付きません");
 check(obd.configureReadinessMonitors(readinessMonitors) === true, "レディネスモニター辞書を読み込めません");
