@@ -5748,7 +5748,10 @@
       ecu_info_snapshot: { bridgeIntent: "read_ecu_info", serviceMode: "09", pid: null },
       onboard_monitor_snapshot: { bridgeIntent: "read_onboard_monitor", serviceMode: "06", pid: null },
       supported_pid_matrix: { bridgeIntent: "read_supported_pids", serviceMode: "01", pid: "00" },
-      live_pid_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "supported-only" }
+      live_pid_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "supported-only" },
+      connection_status: { bridgeIntent: "bridge_status", serviceMode: null, pid: null },
+      vci_devices: { bridgeIntent: "list_vci", serviceMode: null, pid: null },
+      adapter_identity: { bridgeIntent: "adapter_identity", serviceMode: null, pid: null }
     };
     const request = requestByReadoutId[nextReadoutSummary.id] || null;
     return {
