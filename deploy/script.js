@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.71";
+const APP_VERSION = "3.4.72";
 const APP_LAST_UPDATED = "2026-07-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9594,10 +9594,10 @@ function applyTheme(theme) {
 
 function normalizeDtcInputReference(value) {
   const normalized = normalizeCode(String(value || ""));
-  const match = normalized.match(/^([PBCU][0-9A-F]{4})(?:[:-]([0-9A-F]{1,4}))?$/);
+  const match = normalized.match(/^([PBCU][0-9A-F]{4})(?:(?:[:-]([0-9A-F]{1,4}))|([0-9A-F]{2}))?$/);
   return {
     code: match ? match[1] : normalized,
-    subcode: match?.[2] || null
+    subcode: match?.[2] || match?.[3] || null
   };
 }
 

@@ -14,6 +14,7 @@ const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventLi
 const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
 const syncVehicleInputSource = appSource.slice(appSource.indexOf("function syncVehicleInput()"), appSource.indexOf("function selectedVehicleYear()"));
 const dtcDefinitionApplicabilitySource = appSource.slice(appSource.indexOf("function findDtcDefinitionCandidates"), appSource.indexOf("function findById"));
+const dtcInputReferenceFunctionSource = appSource.match(/function normalizeDtcInputReference\(value\) \{[\s\S]*?\r?\n\}/);
 const developerSessionSummarySource = appSource.slice(
   appSource.indexOf("function renderObdDeveloperSessionSummary(session = null)"),
   appSource.indexOf("function renderObdOperationPlan(items)")
@@ -65,6 +66,14 @@ vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
 const failures = [];
+check(Boolean(dtcInputReferenceFunctionSource), "normalizeDtcInputReference is missing from script.js");
+if (dtcInputReferenceFunctionSource) {
+  const dtcInputReferenceContext = { normalizeCode: (value) => String(value || "").trim().toUpperCase().replace(/\s+/g, "") };
+  vm.createContext(dtcInputReferenceContext);
+  vm.runInContext(dtcInputReferenceFunctionSource[0], dtcInputReferenceContext);
+  const normalizeDtcInputReference = dtcInputReferenceContext.normalizeDtcInputReference;
+  check(typeof normalizeDtcInputReference === "function" && normalizeDtcInputReference("B130474").code === "B1304" && normalizeDtcInputReference("B130474").subcode === "74" && normalizeDtcInputReference("B1304:74").code === "B1304" && normalizeDtcInputReference("B1304:74").subcode === "74" && normalizeDtcInputReference("P07407F").code === "P0740" && normalizeDtcInputReference("P07407F").subcode === "7F" && normalizeDtcInputReference("P0128").code === "P0128" && normalizeDtcInputReference("P0128").subcode === null && normalizeDtcInputReference("B1304740").code === "B1304740" && normalizeDtcInputReference("B1304740").subcode === null, "DTC input normalization must accept only two-digit concatenated subcodes while retaining standard and overlong inputs");
+}
 const resolveNextReadoutCandidatesFunctionSource = source.match(/function resolveNextReadoutCandidates[\s\S]*?buildNextReadoutCandidates\(readoutCoverage, vehicleApplicability \|\| \{\}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix, vehicleApplicabilityEcuMatchSummary\)\r?\n    \);\r?\n  \}/);
 const normalizeBridgeSummaryAliasesFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}\r?\n\r?\n  function cloneBridgeArrayItems/);
 const normalizeNextReadoutCandidatesFunctionSource = source.match(/function normalizeNextReadoutCandidates[\s\S]*?return String\(left\?\.label \|\| left\?\.id \|\| \"\"\)\.localeCompare\(String\(right\?\.label \|\| right\?\.id \|\| \"\"\), \"ja\"\);\r?\n      \}\);\r?\n  \}/);
