@@ -1,0 +1,50 @@
+name: Deploy Read-Only Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/**"
+      - ".github/workflows/deploy-readonly-validation.yml"
+  pull_request:
+    paths:
+      - "deploy/**"
+      - ".github/workflows/deploy-readonly-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate diagnostic data and read-only contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v22
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: deploy/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate data
+        run: node scripts/validate-data.js
+
+      - name: Validate DTC CSV import
+        run: node scripts/validate-verified-dtc-import.js
+
+      - name: Validate OBD read-only contract
+        run: node scripts/validate-obd-readonly.js
+
+      - name: Validate local bridge contract
+        run: node scripts/validate-local-bridge-readonly.js
+
+      - name: Report DTC coverage
+        run: node scripts/report-dtc-coverage.js
