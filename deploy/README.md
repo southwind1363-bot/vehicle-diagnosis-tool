@@ -302,7 +302,7 @@ $env:LOCAL_BRIDGE_PORT="8765"
 npm.cmd run bridge:dev
 ```
 
-WindowsでJ2534 Pass-Thruドライバの登録だけを確認する場合は、起動前に次を設定します。これはWindowsレジストリのドライバ登録を表示するだけで、DLLを開かず、VCIや車両へ通信しません。
+WindowsでJ2534 Pass-Thruドライバの登録を確認する場合は、起動前に次を設定します。これはWindowsレジストリを照会し、登録済みDLLを実行・ロードせずにファイルとして静的解析します。VCIや車両へ通信しません。
 
 ```powershell
 $env:LOCAL_BRIDGE_DISCOVER_J2534="1"
