@@ -84,6 +84,20 @@
     "source_date": "2025-05-01"
   },
   {
+    "id": "freeze_map",
+    "monitor_id": "map",
+    "label": "インテークマニホールド絶対圧",
+    "service": "02",
+    "pid": "0B",
+    "priority": 13,
+    "purpose": "故障発生時の吸気管絶対圧を、負荷と吸気系の観察条件として確認する",
+    "interpretation_note": "大気圧、回転数、スロットル開度、エアフローと合わせて確認する。単独の値だけで吸気漏れやセンサー異常を断定しない。",
+    "service_manual_required": true,
+    "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
+    "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2025-05-01"
+  },
+  {
     "id": "freeze_engine_speed",
     "monitor_id": "engine_speed",
     "label": "エンジン回転数",
@@ -106,6 +120,20 @@
     "priority": 8,
     "purpose": "故障発生時が停車中か走行中かを確認する",
     "interpretation_note": "走行時だけ出る不具合では、車速、負荷、回転数を再現条件の基準として扱う。",
+    "service_manual_required": true,
+    "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
+    "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2025-05-01"
+  },
+  {
+    "id": "freeze_timing_advance",
+    "monitor_id": "timing_advance",
+    "label": "点火時期進角",
+    "service": "02",
+    "pid": "0E",
+    "priority": 14,
+    "purpose": "故障発生時の点火進角を、負荷、温度、ノック制御の観察条件として確認する",
+    "interpretation_note": "回転数、負荷、冷却水温、ノック補正と合わせて確認する。車種別の目標値や補正要因は整備書で確認する。",
     "service_manual_required": true,
     "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
     "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],

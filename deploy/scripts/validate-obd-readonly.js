@@ -2460,8 +2460,11 @@ check(obd.getCapability().monitorDefinitionCount === monitorDefinitions.length, 
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-live-data" && item.done.includes("bridge/session alias を吸収してライブデータ要約へ統合")), "ライブデータ alias 統合の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-live-data" && item.progress_percent === 65 && item.done.includes("同一観察条件の複数時点で最初の値から最新値までの変化量を表示") && item.missing.includes("条件別比較と対象PIDを選ぶ単位別グラフ詳細")), "ライブPID時系列の進捗根拠が不足しています");
 check(obd.configureFreezeFrameItems(freezeFrameItems) === true, "フリーズフレーム項目辞書を読み込めません");
-check(obd.getFreezeFrameItems().length >= 12, "フリーズフレーム項目辞書が不足しています");
+check(obd.getFreezeFrameItems().length >= 14, "フリーズフレーム項目辞書が不足しています");
 check(obd.getFreezeFrameItems().some((item) => item.monitorId === "control_module_voltage"), "フリーズフレーム項目に制御モジュール電圧がありません");
+check(obd.getFreezeFrameItems().some((item) => item.monitorId === "map" && item.pid === "0B") && obd.getFreezeFrameItems().some((item) => item.monitorId === "timing_advance" && item.pid === "0E"), "Web Serial読取対象のMAPまたは点火時期フリーズフレーム項目がありません");
+const catalogMappedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 0B 00 28 42 0E 00 80" });
+check(catalogMappedFreezeFrame.monitorValues.some((item) => item.id === "map" && item.value === 40 && item.freezeFramePriority === 13 && item.interpretationNote) && catalogMappedFreezeFrame.monitorValues.some((item) => item.id === "timing_advance" && item.value === 0 && item.freezeFramePriority === 14 && item.interpretationNote), "MAPまたは点火時期のフリーズフレーム項目がデコードとカタログ補足へ結び付きません");
 check(obd.configureReadinessMonitors(readinessMonitors) === true, "レディネスモニター辞書を読み込めません");
 check(obd.getReadinessMonitors().length >= 14, "レディネスモニター辞書が不足しています");
 check(obd.getReadinessMonitors().some((item) => item.id === "evaporative_system"), "EVAPレディネスモニターがありません");
