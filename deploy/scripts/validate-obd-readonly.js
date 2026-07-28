@@ -2508,7 +2508,7 @@ check(interfaceCatalog.every((item) => Array.isArray(item.verificationRequired) 
 check(diagnosticCoverageRoadmap.length >= 6, "診断データ網羅ロードマップが不足しています");
 check(diagnosticCoverageRoadmap.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断データ網羅ロードマップの進捗率が不正です");
 check(diagnosticCoverageRoadmap.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断データ網羅ロードマップの目標時期が不足しています");
-check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-generic-powertrain-p" && item.current_count_note.includes("親DTC 2923件") && item.current_count_note.includes("出典定義2935件") && item.current_count_note.includes("一意サブコード定義10件")), "P系出典確認済みサブコード定義の進捗根拠が不足しています");
+check(diagnosticCoverageRoadmap.some((item) => item.id === "coverage-generic-powertrain-p" && item.current_count_note.includes("親DTC 2928件") && item.current_count_note.includes("出典定義2938件") && item.current_count_note.includes("一意サブコード定義10件")), "P系出典確認済みサブコード定義の進捗根拠が不足しています");
 const concatenatedSubcodeDtcSession = obd.buildScanSessionFromObdText("Stored DTC\nP07407F");
 check(concatenatedSubcodeDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "P0740" && item.subcode === "7F"), "Concatenated DTC and FTB notation should retain P0740-7F as a code and subcode");
 const overlongConcatenatedDtcSession = obd.buildScanSessionFromObdText("P07407F0");

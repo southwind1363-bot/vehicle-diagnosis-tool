@@ -7,7 +7,7 @@
     "progress_percent": 62,
     "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
     "priority": 1,
-    "current_count_note": "P系親DTC 2923件 / 出典定義2935件・一意サブコード定義10件",
+    "current_count_note": "P系親DTC 2928件 / 出典定義2938件・一意サブコード定義10件",
     "next_actions": [
       "未収録Pコードを公式/規格系ソースで照合する",
       "同時DTC、フリーズフレーム、ライブデータPIDへのリンクを増やす",
