@@ -672,5 +672,26 @@
     "last_verified_date": "2026-07-28",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-b1650-subaru-legacy-outback-2010-2014",
+    "code": "B1650",
+    "title": "Occupant Detection System (ODS) Failure",
+    "system": "Body / supplemental restraint occupant detection (source-specific)",
+    "applicability_note": "Subaru Service Information 07-84-14 applies only to 2010-2014 Legacy and Outback models. Confirm VIN, market, model year, reporting airbag/ODS ECU, and Subaru service information before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Subaru"], "models": ["Legacy", "Outback"], "year_from": 2010, "year_to": 2014, "scope_confirmation_required": true},
+    "possible_causes": ["The source lists the occupant detection sensor, occupant detection control module, related harnesses, airbag control module, fuse, communication path, or unsuccessful system calibration as possibilities only when the documented vehicle conditions match."],
+    "check_order": ["Save all DTCs, SRS warning status, concurrent DTCs, and the reporting ECU before inspection.", "Do not clear DTCs, perform ODS rezeroing, disconnect SRS circuits, or start calibration from this tool; confirm VIN, model year, ECU, and bulletin applicability.", "Use Subaru service information and qualified SRS procedures for diagnosis, calibration conditions, and recovery."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to a different Subaru model, market, model year, or restraint ECU.", "Do not infer a sensor, harness, or control-module failure from the DTC alone."],
+    "required_tools": ["Compatible scan tool", "Subaru service information", "Qualified SRS diagnostic equipment"],
+    "safety_notes": ["ODS and SRS work can affect occupant-restraint operation. Do not perform rezeroing, circuit disconnection, calibration, or replacement without the manufacturer procedure, trained personnel, and a recovery plan."],
+    "confidence": "Subaru source-specific DTC definition; VIN, model year, reporting ECU, and SRS procedure confirmation required.",
+    "source": "Subaru Service Information 07-84-14 / NHTSA SB-10090191-0699",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2014/SB-10090191-0699.pdf",
+    "source_date": "2014-03-13",
+    "last_verified_date": "2026-07-28",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
