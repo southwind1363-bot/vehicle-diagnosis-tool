@@ -591,6 +591,9 @@ export function inspectJ2534LibraryFile(filePath = "") {
   };
   const resolvedPath = String(filePath || "").trim();
   if (!resolvedPath) return { ...base, inspection_status: "path_missing" };
+  if (isJ2534NetworkLibraryPath(resolvedPath)) {
+    return { ...base, inspection_status: "network_path_blocked" };
+  }
   try {
     const stat = fs.statSync(resolvedPath);
     if (!stat.isFile()) return { ...base, inspection_status: "not_a_file" };
@@ -625,6 +628,11 @@ export function inspectJ2534LibraryFile(filePath = "") {
       inspection_status: error?.code === "ENOENT" ? "file_not_found" : "read_failed"
     };
   }
+}
+
+function isJ2534NetworkLibraryPath(filePath = "") {
+  const normalized = String(filePath || "").trim().replaceAll("/", "\\").toLowerCase();
+  return normalized.startsWith("\\\\") || normalized.startsWith("\\\\?\\unc\\");
 }
 
 function readPortableExecutableMetadata(buffer) {
