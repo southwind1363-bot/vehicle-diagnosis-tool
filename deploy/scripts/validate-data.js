@@ -408,6 +408,28 @@ for (const [code, rows] of codeLocations.entries()) {
   }
 }
 
+const coverageDtcFiles = new Set(jsonFiles.filter((file) => file === "obd-codes.json"
+  || file === "imported-verified-dtc.json"
+  || /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(file)));
+const coverageDtcRows = codeRows.filter((row) => coverageDtcFiles.has(row.file) && isDtc(row.code));
+const coverageDefinitionKeys = new Set(coverageDtcRows.map((row) => `${row.code}:${row.subcode || ""}`));
+const coverageParentCodes = new Set(coverageDtcRows.map((row) => row.code));
+const importedBodyRows = codeRows.filter((row) => row.file === "imported-verified-dtc.json" && /^B/.test(row.code));
+const importedBodySourceDefinitionCount = importedBodyRows.length;
+const bodyDefinitionCount = [...coverageDefinitionKeys].filter((key) => key.startsWith("B")).length;
+const bodyParentCodeCount = [...coverageParentCodes].filter((code) => code.startsWith("B")).length;
+const chassisParentCodeCount = [...coverageParentCodes].filter((code) => code.startsWith("C")).length;
+const coverageRoadmap = JSON.parse(fs.readFileSync(path.join(dataDir, "diagnostic-coverage-roadmap-2026.json"), "utf8"));
+const diagnosticCapabilityStatus = JSON.parse(fs.readFileSync(path.join(dataDir, "diagnostic-capability-status-2026.json"), "utf8"));
+const bodyCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-body-b");
+const genericDtcCapability = diagnosticCapabilityStatus.find((row) => row.id === "capability-generic-obd2-dtc");
+if (!bodyCoverageRoadmap || !String(bodyCoverageRoadmap.current_count_note || "").includes(`親DTC ${bodyParentCodeCount}件`) || !String(bodyCoverageRoadmap.current_count_note || "").includes(`出典定義${importedBodySourceDefinitionCount}件`) || !String(bodyCoverageRoadmap.current_count_note || "").includes(`一意サブコード定義${bodyDefinitionCount}件`)) {
+  reportError("B系ロードマップのDTC件数が実データ集計と一致しません");
+}
+if (!genericDtcCapability || !String(genericDtcCapability.current_basis || "").includes(`B系${bodyParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`C系${chassisParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`個別DTC定義${coverageDefinitionKeys.size}件`)) {
+  reportError("汎用OBD2 DTC能力表示の件数が実データ集計と一致しません");
+}
+
 console.log(`JSON files: ${jsonFiles.length}`);
 console.log(`DTC records: ${codeRows.length}`);
 console.log(`Errors: ${errors.length}`);
