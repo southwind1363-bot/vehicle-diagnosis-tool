@@ -14580,6 +14580,19 @@ check(scanSessionUnsafeExplicitCandidates.nextReadoutCandidates.length === 1 && 
 check(scanSessionUnsafeExplicitCandidates.nextReadoutCandidates[0]?.read_only === true && scanSessionUnsafeExplicitCandidates.nextReadoutCandidates[0]?.would_transmit === false && scanSessionUnsafeExplicitCandidates.nextReadoutCandidates[0]?.vehicle_command_enabled === false && scanSessionUnsafeExplicitCandidates.nextReadoutCandidates[0]?.execution_enabled === false, "Diagnostic scan session did not normalize retained next_readout_candidates as read-only non-executable entries");
 check(scanSessionUnsafeExplicitCandidates.coreSessionStatus?.next_readout_candidate_safety_summary?.schema_version === "next_readout_candidate_safety_summary_v1" && scanSessionUnsafeExplicitCandidates.coreSessionStatus.nextReadoutCandidateSafetySummary?.totalCount === 1 && scanSessionUnsafeExplicitCandidates.coreSessionStatus.nextReadoutCandidateSafetySummary?.allSafe === true && scanSessionUnsafeExplicitCandidates.coreSessionStatus.next_readout_candidate_safety_summary?.all_execution_disabled === true, "Diagnostic scan session did not expose safe next_readout_candidate safety summaries");
 check(scanSessionUnsafeExplicitCandidates.coreSessionStatus?.nextRecommendedReadoutId === "safe_readout_candidate", "Diagnostic scan session allowed unsafe next_readout_candidates to drive nextRecommendedReadoutId");
+const bridgeInfrastructureRequestPlans = [
+  ["connection_status", "bridge_status"],
+  ["vci_devices", "list_vci"],
+  ["adapter_identity", "adapter_identity"]
+].map(([readoutId, bridgeIntent]) => ({
+  readoutId,
+  bridgeIntent,
+  session: obd.buildDiagnosticScanSession({
+    session_id: `shop-test-${readoutId}-request`,
+    next_readout_candidates: [{ id: readoutId, status: "missing", read_only: true, would_transmit: false, vehicle_command_enabled: false, execution_enabled: false }]
+  })
+}));
+check(bridgeInfrastructureRequestPlans.every(({ readoutId, bridgeIntent, session }) => session.coreSessionStatus?.nextReadoutRequest?.readoutId === readoutId && session.coreSessionStatus?.nextReadoutRequest?.bridgeIntent === bridgeIntent && session.coreSessionStatus?.nextReadoutRequest?.executionEnabled === false && session.coreSessionStatus?.pendingReadoutRequestPlan?.unmappedCount === 0 && session.coreSessionStatus?.pendingReadoutRequestPlan?.safeForBridgePlanning === true), "Diagnostic scan session did not map bridge infrastructure next-readout requests as safe read-only intents");
 const scanSessionExplicitCandidatesEmptyReadouts = obd.buildDiagnosticScanSession({
   session_id: "shop-test-explicit-empty-readouts",
   dtc_snapshot: { blocked: false, capturedAt: "2026-07-06T00:22:00Z", codes: [], dtcs: [] },
