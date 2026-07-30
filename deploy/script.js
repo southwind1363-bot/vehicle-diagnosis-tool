@@ -224,12 +224,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2764件",
+  validationCheckLabel: "OBD安全検証 2765件",
   bridgeValidationCheckLabel: "bridge検証 197件",
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.80";
+const APP_VERSION = "3.4.81";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5108,12 +5108,18 @@ function buildWebSerialReadoutSummary() {
     positive_response_count: total("positiveResponseCount"),
     negativeResponseCount: total("negativeResponseCount"),
     negative_response_count: total("negativeResponseCount"),
+    pendingNegativeResponseCount: total("pendingNegativeResponseCount"),
+    pending_negative_response_count: total("pendingNegativeResponseCount"),
     noDataCount: total("noDataCount"),
     no_data_count: total("noDataCount"),
     unableToConnectCount: total("unableToConnectCount"),
     unable_to_connect_count: total("unableToConnectCount"),
     adapterErrorCount: total("adapterErrorCount"),
     adapter_error_count: total("adapterErrorCount"),
+    emptyResponseCount: total("emptyResponseCount"),
+    empty_response_count: total("emptyResponseCount"),
+    unrecognizedResponseCount: total("unrecognizedResponseCount"),
+    unrecognized_response_count: total("unrecognizedResponseCount"),
     transportErrorCount: total("transportErrorCount"),
     transport_error_count: total("transportErrorCount"),
     latestAttempt,
