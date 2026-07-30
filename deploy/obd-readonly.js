@@ -11144,6 +11144,16 @@
       onboard_monitor_test_failed: readCount(currentSummary, "onboardMonitorFailedCount") - readCount(importedQualitySummary, "onboardMonitorFailedCount"),
       web_serial_response_quality: readCount(currentSummary, "webSerialResponseReviewCount") - readCount(importedQualitySummary, "webSerialResponseReviewCount")
     };
+    const webSerialResponseOutcomeDeltas = {
+      negative_response: readCount(currentSummary, "webSerialNegativeResponseCount") - readCount(importedQualitySummary, "webSerialNegativeResponseCount"),
+      pending_negative_response: readCount(currentSummary, "webSerialPendingNegativeResponseCount") - readCount(importedQualitySummary, "webSerialPendingNegativeResponseCount"),
+      no_data: readCount(currentSummary, "webSerialNoDataCount") - readCount(importedQualitySummary, "webSerialNoDataCount"),
+      empty_response: readCount(currentSummary, "webSerialEmptyResponseCount") - readCount(importedQualitySummary, "webSerialEmptyResponseCount"),
+      unrecognized_response: readCount(currentSummary, "webSerialUnrecognizedResponseCount") - readCount(importedQualitySummary, "webSerialUnrecognizedResponseCount"),
+      adapter_error: readCount(currentSummary, "webSerialAdapterErrorCount") - readCount(importedQualitySummary, "webSerialAdapterErrorCount"),
+      unable_to_connect: readCount(currentSummary, "webSerialUnableToConnectCount") - readCount(importedQualitySummary, "webSerialUnableToConnectCount"),
+      transport_error: readCount(currentSummary, "webSerialTransportErrorCount") - readCount(importedQualitySummary, "webSerialTransportErrorCount")
+    };
     const changedIssueCountIds = Object.entries(issueFieldDeltas)
       .filter(([, delta]) => delta !== 0)
       .map(([id]) => id)
@@ -11236,7 +11246,13 @@
       onboardMonitorFailedDelta: issueFieldDeltas.onboard_monitor_test_failed,
       onboard_monitor_failed_delta: issueFieldDeltas.onboard_monitor_test_failed,
       webSerialResponseReviewDelta: issueFieldDeltas.web_serial_response_quality,
-      web_serial_response_review_delta: issueFieldDeltas.web_serial_response_quality
+      web_serial_response_review_delta: issueFieldDeltas.web_serial_response_quality,
+      webSerialResponseOutcomeDeltas,
+      web_serial_response_outcome_deltas: webSerialResponseOutcomeDeltas,
+      webSerialNegativeResponseDelta: webSerialResponseOutcomeDeltas.negative_response,
+      web_serial_negative_response_delta: webSerialResponseOutcomeDeltas.negative_response,
+      webSerialNoDataDelta: webSerialResponseOutcomeDeltas.no_data,
+      web_serial_no_data_delta: webSerialResponseOutcomeDeltas.no_data
     };
   }
 
