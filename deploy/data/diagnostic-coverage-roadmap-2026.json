@@ -16,7 +16,7 @@
     "blocked_until": [],
     "safety_note": "コード名だけで原因を断定しない。整備書確認と実測値を必須にする。",
     "source": "ローカル検証集計",
-    "source_date": "2026-07-26",
+    "source_date": "2026-07-30",
     "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   },
@@ -28,7 +28,7 @@
     "progress_percent": 56,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 550件 / 出典定義554件・一意サブコード定義4件",
+    "current_count_note": "U系親DTC 551件 / 出典定義555件・一意サブコード定義5件 (Audi 2023 component protectionを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
@@ -58,7 +58,7 @@
     "blocked_until": ["公式またはメーカー診断機表示に基づく定義ソース確認"],
     "safety_note": "SRSや盗難防止系は誤作動・復旧不能リスクがあるため、読取整理だけから始める。",
     "source": "ローカル検証集計",
-    "source_date": "2026-07-28",
+    "source_date": "2026-07-30",
     "eta_target": "2026-Q4 見込み",
     "service_manual_required": true
   },
@@ -70,7 +70,7 @@
     "progress_percent": 16,
     "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
     "priority": 4,
-    "current_count_note": "C系親DTC 35件 / 出典定義38件・一意サブコード定義7件 (NHTSA公開資料、Honda 2012-14/2017 CR-V・2022-23 Civic、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highlander、Jeep 2019-20 Renegade、出典限定)",
+    "current_count_note": "C系親DTC 36件 / 出典定義39件・一意サブコード定義8件 (NHTSA公開資料、Honda 2012-14/2017 CR-V・2022-23 Civic、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highlander、Jeep 2019-20 Renegade、Audi 2023 SRS、出典限定)",
     "next_actions": [
       "C系コードを制動、操舵、姿勢制御、車輪速、ヨーレート、電源系に分類する",
       "ライブデータ候補と点検条件を車種別確認前提で持たせる",
