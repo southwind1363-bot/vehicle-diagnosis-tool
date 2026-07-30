@@ -2533,6 +2533,8 @@ const concatenatedHondaAwdDtcSession = obd.buildScanSessionFromObdText("Stored D
 check(concatenatedHondaAwdDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "C1858" && item.subcode === "73"), "Concatenated Honda AWD DTC notation should retain C1858-73 as a code and subcode");
 const concatenatedHondaAudioDtcSession = obd.buildScanSessionFromObdText("Stored DTC\nB2B0592");
 check(concatenatedHondaAudioDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "B2B05" && item.subcode === "92"), "Concatenated Honda audio DTC notation should retain B2B05-92 as a code and subcode");
+const concatenatedAudiComponentProtectionDtcSession = obd.buildScanSessionFromObdText("Stored DTC\nU110100\nC115E54");
+check(concatenatedAudiComponentProtectionDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "U1101" && item.subcode === "00") && concatenatedAudiComponentProtectionDtcSession.dtcSnapshot.dtcs.some((item) => item.code === "C115E" && item.subcode === "54"), "Concatenated Audi DTC notation should retain U1101-00 and C115E-54 as codes and subcodes");
 check(importedVerifiedDtc.filter((item) => item.source === "Toyota T-SB-0094-24 / NHTSA MC-11010343").length === 7, "Toyota 2024 Tacoma transmission DTC source definitions are incomplete");
 check(importedVerifiedDtc.filter((item) => item.source === "Toyota T-SB-0094-24 / NHTSA MC-11010343").every((item) => item.vehicle_filter?.scope_confirmation_required === true && item.imported_definition_only === true && item.service_manual_required === true), "Toyota 2024 Tacoma transmission DTC source definitions require scope confirmation and manual review");
 check(importedVerifiedDtc.filter((item) => item.source === "Toyota T-SB-0112-24 Rev2 / NHTSA MC-11020668").length === 2, "Toyota 2018-2021 coolant bypass valve DTC source definitions are incomplete");
@@ -2705,7 +2707,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2761件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('Web SerialのCANヘッダ読取を確認'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2762件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('Web SerialのCANヘッダ読取を確認'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -18254,6 +18256,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2761");
+  console.log("OBD read-only safety checks: 2762");
   console.log("Errors: 0");
 }
