@@ -1150,5 +1150,27 @@
     "last_verified_date": "2026-07-30",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-u3000-04-mazda-connected-services-2021-2023-common",
+    "code": "U3000",
+    "subcode": "04",
+    "title": "Telematics communication unit internal malfunction",
+    "system": "Network / telematics communication unit internal malfunction (source-specific)",
+    "applicability_note": "Mazda Service Bulletin 09-002/23 applies only when the customer opted out of connected vehicle services (CSP04) and U3000:04 is stored. This definition retains only the bulletin models sharing the 2021-2023 range: Mazda3, CX-30, CX-5, and CX-9. Confirm VIN, market, model year, connected-services contract status, reporting TCU, software version, and Mazda service information before using this source-specific definition. Do not apply it to the bulletin's 2022 MX-30 or 2023 CX-50 without a model-specific definition.",
+    "vehicle_filter": {"makers": ["Mazda"], "models": ["Mazda3", "CX-30", "CX-5", "CX-9"], "year_from": 2021, "year_to": 2023, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all DTCs, warning messages, reporting ECU, connected-services contract status, TCU software information, and concurrent network DTCs before inspection.", "Do not clear DTCs, update TCU software, alter connected-services settings, or start active tests from this tool; confirm VIN, model year, contract status, reporting ECU, software version, and bulletin applicability.", "Use Mazda service information and qualified diagnostic procedures for diagnosis and recovery."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition unless the connected-services contract was discontinued and the vehicle is within the bulletin scope.", "Do not infer a hardware, wiring, TCU, or network failure from the DTC alone.", "Do not treat this definition as authorization to update TCU software or clear DTCs."],
+    "required_tools": ["Compatible scan tool", "Mazda service information", "Qualified diagnostic equipment", "Stable power support when required by the manufacturer"],
+    "safety_notes": ["TCU software updates, connected-services configuration, and DTC clearing can alter vehicle communication and security state. Do not perform them without the manufacturer procedure, authorization, stable power support, and a recovery plan."],
+    "confidence": "Mazda source-specific DTC and subcode definition; VIN, model year, connected-services contract status, reporting ECU, software version, and manufacturer procedure confirmation required.",
+    "source": "Mazda Service Bulletin 09-002/23 / NHTSA MC-10230894",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2023/MC-10230894-0001.pdf",
+    "source_date": "2023-01-31",
+    "last_verified_date": "2026-07-30",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
