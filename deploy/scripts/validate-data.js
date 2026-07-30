@@ -57,10 +57,11 @@ function isDtcVehicleFilter(value) {
 function dtcVehicleFiltersOverlap(left, right) {
   if (!isDtcVehicleFilter(left) || !isDtcVehicleFilter(right)) return true;
   const normalize = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
+  const normalizeModel = (value) => normalize(value).replace(/[\s_-]+/g, "");
   const leftMakers = new Set(left.makers.map(normalize));
-  const leftModels = new Set(left.models.map(normalize));
+  const leftModels = new Set(left.models.map(normalizeModel));
   const sameMaker = right.makers.some((value) => leftMakers.has(normalize(value)));
-  const sameModel = right.models.some((value) => leftModels.has(normalize(value)));
+  const sameModel = right.models.some((value) => leftModels.has(normalizeModel(value)));
   const overlappingYears = Math.max(left.year_from, right.year_from) <= Math.min(left.year_to, right.year_to);
   return sameMaker && sameModel && overlappingYears;
 }
