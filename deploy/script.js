@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.74";
+const APP_VERSION = "3.4.75";
 const APP_LAST_UPDATED = "2026-07-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5050,7 +5050,10 @@ async function runObdDeveloperRead(label, commands) {
     const timedOut = message.startsWith("elm_response_timeout:");
     const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { timedOut, transportErrorCount: true, attemptedCommandCount });
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
-    const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, { persistEmptyAttempt: true }));
+    const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, {
+      persistEmptyAttempt: true,
+      connectionStatus: buildWebSerialConnectionStatus(outcome)
+    }));
     const transportFailed = timedOut || message.startsWith("elm_transport_");
     if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
     if (obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = "transport_error";
@@ -5125,6 +5128,52 @@ function buildWebSerialReadoutSummary() {
   };
 }
 
+function buildWebSerialConnectionStatus(outcome = null) {
+  const latestAttempt = outcome && typeof outcome === "object"
+    ? outcome
+    : (obdDevSession.readoutAttempts || []).at(-1) || null;
+  const transportError = Number(latestAttempt?.transportErrorCount) > 0;
+  const adapterConnected = Boolean(obdDevSession.port) && !transportError;
+  const connectionState = String(obdDevSession.connectionState || "disconnected");
+  const status = transportError
+    ? "transport_error"
+    : adapterConnected
+      ? "adapter_connected"
+      : "disconnected";
+  const displayStatus = transportError
+    ? "Web Serial通信エラー"
+    : adapterConnected
+      ? "Web Serialアダプター接続中"
+      : "Web Serial未接続";
+  return {
+    source: "web_serial",
+    intent: "connection_status",
+    ok: !transportError,
+    blocked: false,
+    wouldTransmit: false,
+    readOnly: true,
+    vehicleCommandEnabled: false,
+    status,
+    displayStatus,
+    nextAction: transportError
+      ? "アダプター接続と通信速度を確認してから、読取専用で再接続"
+      : adapterConnected
+        ? "読取専用でDTCまたは対応PIDを確認"
+        : "Web Serialで読取アダプターを選択",
+    connectionState,
+    connection_state: connectionState,
+    vciConnected: adapterConnected,
+    vci_connected: adapterConnected,
+    vehicleConnected: null,
+    vehicle_connected: null,
+    ...(obdDevSession.lastDisconnectReason ? { lastDisconnectReason: obdDevSession.lastDisconnectReason, last_disconnect_reason: obdDevSession.lastDisconnectReason } : {}),
+    retainedRawText: false,
+    retained_raw_text: false,
+    vehicle_command_enabled: false,
+    would_transmit: false
+  };
+}
+
 function retainObdDeveloperReadout(commandResponses = [], chunks = [], options = {}) {
   const hasCommandResponses = commandResponses.length > 0;
   if (!hasCommandResponses && options?.persistEmptyAttempt !== true) return null;
@@ -5138,7 +5187,8 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     started_at: obdDevSession.connectedAt || capturedAt,
     ended_at: capturedAt,
     captured_at: capturedAt,
-    readoutInterface: buildSelectedObdReadoutInterface()
+    readoutInterface: buildSelectedObdReadoutInterface(),
+    connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus()
   });
   const webSerialReadoutSummary = buildWebSerialReadoutSummary();
   const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({

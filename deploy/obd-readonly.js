@@ -17276,6 +17276,7 @@
       ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
       captured_at: sessionInput.captured_at || sessionInput.capturedAt || null,
       ...metadataOverrides,
+      connectionStatus: sessionInput.connectionStatus || sessionInput.connection_status || sessionInput.connectionStatusResponse || sessionInput.connection_status_response || null,
       obdReportedProfile: getObdReportedProfileInput(sessionInput),
       dtcSnapshot,
       livePidSnapshot,
@@ -17847,6 +17848,7 @@
       warnings: metadataOverrides.warnings,
       sourceLength: metadataOverrides.sourceLength,
       hadSensitiveIdentifier: metadataOverrides.hadSensitiveIdentifier,
+      connectionStatus: sessionInput.connectionStatus || sessionInput.connection_status || sessionInput.connectionStatusResponse || sessionInput.connection_status_response || null,
       storedDtcResponse: readDtcResponseOption("storedDtcResponse", "stored_dtc_response", "storedDtcResponses"),
       pendingDtcResponse: readDtcResponseOption("pendingDtcResponse", "pending_dtc_response", "pendingDtcResponses"),
       permanentDtcResponse: readDtcResponseOption("permanentDtcResponse", "permanent_dtc_response", "permanentDtcResponses"),
@@ -20137,7 +20139,8 @@
       honorCoverageOverride: true
     });
     const hasNativeConnectorContext = Boolean(nativeConnectorScanLifecycle || nativeConnectorBoundary || String(sessionInput.source || sessionInput.source_type || "") === "native_connector");
-    const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext;
+    const hasWebSerialInfrastructureContext = String(connectionStatus?.source || connectionStatusInput?.source || "").toLowerCase() === "web_serial";
+    const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext && !hasWebSerialInfrastructureContext;
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);

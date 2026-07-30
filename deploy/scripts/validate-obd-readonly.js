@@ -2167,7 +2167,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('appendCommonCoreWarnings(warnings, {') && functionBody.includes('rawPidUndecodedCount:'), "buildDiagnosticScanSession should derive common core warnings including undecoded raw PID values");
     check(functionBody.includes('const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });'), "buildDiagnosticScanSession should resolve metadata after ECU info normalization");
     check(functionBody.includes('resolveSessionTemporalContext({') && functionBody.includes('supportedPidMatrix'), "buildDiagnosticScanSession should derive temporal context from all normalized snapshots");
-    check(functionBody.includes('const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext;') && functionBody.includes('includeInfrastructure: effectiveBridgeInfrastructureContext'), "buildDiagnosticScanSession should derive readout coverage with native-aware bridge infrastructure context");
+    check(functionBody.includes('const hasWebSerialInfrastructureContext = String(connectionStatus?.source || connectionStatusInput?.source || "").toLowerCase() === "web_serial";') && functionBody.includes('const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext && !hasWebSerialInfrastructureContext;') && functionBody.includes('includeInfrastructure: effectiveBridgeInfrastructureContext'), "buildDiagnosticScanSession should derive readout coverage without treating Web Serial state as local-bridge infrastructure");
     check(source.includes('function buildCoreReadoutInventorySummary({') && source.includes('schemaVersion: "core_readout_inventory_v1"'), "buildDiagnosticScanSession should have a core readout inventory summary builder");
     check(source.includes('schema_version: "core_readout_inventory_v1"'), "buildDiagnosticScanSession should expose core readout inventory snake_case schema version");
     check(functionBody.includes('const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({') && functionBody.includes('coreReadoutInventorySummary,'), "buildDiagnosticScanSession should expose core readout inventory summaries");
@@ -2740,8 +2740,9 @@ check(appSource.includes('["08", "0908"]') && appSource.includes('["0B", "090B"]
 check(appSource.includes('const response = await readElmDeveloperResponse(timeoutMs);') && appSource.includes('if (!response) throw new Error(`elm_response_timeout:${normalized}`);'), "Web Serial command handling must reject empty adapter responses as timeouts");
 check(appSource.includes('if (obdDevSession.textBuffer.includes(">")) {\n      return obdDevSession.textBuffer.replace(/[>\\r]/g, "").trim();\n    }') && appSource.includes('async function readElmDeveloperResponse(timeoutMs)') && appSource.includes('  return "";\n}'), "Web Serial must reject partial adapter responses that do not end with a prompt");
 check(appSource.includes('const timedOut = message.startsWith("elm_response_timeout:");') && appSource.includes('const transportFailed = timedOut || message.startsWith("elm_transport_");') && appSource.includes('if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });') && appSource.includes('安全に切断しました。'), "Web Serial read timeouts and transport failures must end the connection safely");
-check(appSource.includes('const chunks = [];') && appSource.includes('const commandResponses = [];') && appSource.includes('const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, { persistEmptyAttempt: true }));') && appSource.includes('読取実行結果を保持しています。'), "Web Serial read failures should retain a read-only execution outcome even before the first completed response");
+check(appSource.includes('const chunks = [];') && appSource.includes('const commandResponses = [];') && appSource.includes('persistEmptyAttempt: true,') && appSource.includes('connectionStatus: buildWebSerialConnectionStatus(outcome)') && appSource.includes('読取実行結果を保持しています。'), "Web Serial read failures should retain a read-only execution outcome even before the first completed response");
 check(appSource.includes('function retainObdDeveloperReadout(commandResponses = [], chunks = [], options = {})') && appSource.includes('if (!hasCommandResponses && options?.persistEmptyAttempt !== true) return null;') && appSource.includes('if (hasCommandResponses) appendObdDeveloperLog(chunks.join("\\n"));') && appSource.includes('const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText,'), "Web Serial failure retention should preserve a normalized session without synthesizing values or retaining empty raw responses");
+check(appSource.includes('function buildWebSerialConnectionStatus(outcome = null)') && appSource.includes('source: "web_serial"') && appSource.includes('vehicleConnected: null') && appSource.includes('connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus()'), "Web Serial sessions should retain adapter transport state without claiming vehicle-link confirmation");
 check(appSource.includes('readoutAttempts: []') && appSource.includes('obdDevSession.readoutAttempts = [];') && appSource.includes('function recordWebSerialReadoutAttempt(') && appSource.includes('["completed", "partial", "incomplete", "failed"]') && appSource.includes('retainedRawText: false') && appSource.includes('retainedCommands: false') && appSource.includes('vehicleCommandEnabled: false'), "Web Serial scan sessions should retain read-only execution outcomes without command bodies or raw responses");
 check(appSource.includes('function classifyWebSerialCommandResponse(command, response)') && appSource.includes('WEB_SERIAL_ADAPTER_ERROR_LINES') && appSource.includes('WEB_SERIAL_VEHICLE_LINK_ERROR_LINES') && appSource.includes('line === "NO DATA"') && appSource.includes('pendingNegativeResponseCount') && appSource.includes('function buildWebSerialReadoutOutcome(commands, commandResponses, options = {})'), "Web Serial should classify positive, negative, empty, adapter, and vehicle-link response quality without changing read commands");
 check(appSource.includes('function isCurrentWebSerialReadLoop(reader, port)') && appSource.includes('async function readElmDeveloperLoop(reader = obdDevSession.reader, port = obdDevSession.port)') && appSource.includes('while (isCurrentWebSerialReadLoop(reader, port))') && appSource.includes('const result = await reader.read();') && appSource.includes('if (!isCurrentWebSerialReadLoop(reader, port)) break;'), "Web Serial stale readers must not consume a later connection response stream");
@@ -17190,6 +17191,31 @@ check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.schemaVersio
 check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.completedCount === 1 && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.failed_count === 1, "Diagnostic scan session did not normalize Web Serial execution statuses");
 check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[1]?.completedCommandCount === 2 && scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.vehicleCommandEnabled === false, "Diagnostic scan session did not clamp Web Serial execution counts or preserve read-only mode");
 check(scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[0]?.commands === undefined && scanSessionWebSerialExecutionSummary.webSerialReadoutSummary?.attempts?.[0]?.retainedRawText === false && scanSessionWebSerialExecutionSummary.web_serial_readout_summary?.attempts?.[0]?.vehicle_command_enabled === false, "Diagnostic scan session retained unsafe Web Serial execution command bodies, raw responses, or write flags");
+const scanSessionWebSerialTransportState = obd.buildDiagnosticScanSession({
+  source: "obd_text_import",
+  connection_status: {
+    source: "web_serial",
+    intent: "connection_status",
+    ok: false,
+    blocked: false,
+    would_transmit: false,
+    read_only: true,
+    vehicle_command_enabled: false,
+    status: "transport_error",
+    displayStatus: "Web Serial communication error",
+    nextAction: "Reconnect read-only adapter",
+    connectionState: "reading",
+    vciConnected: false,
+    vehicleConnected: null,
+    retained_raw_text: false
+  }
+});
+check(scanSessionWebSerialTransportState.connectionStatus?.source === "web_serial" && scanSessionWebSerialTransportState.connectionStatus?.status === "transport_error" && scanSessionWebSerialTransportState.connectionStatus?.vehicleConnected === null && (scanSessionWebSerialTransportState.connectionStatus?.vehicleCommandEnabled ?? scanSessionWebSerialTransportState.connectionStatus?.vehicle_command_enabled) === false, "Diagnostic scan session did not retain Web Serial transport state without claiming a vehicle connection");
+check(!scanSessionWebSerialTransportState.warnings.includes("bridge_readout_incomplete") && !scanSessionWebSerialTransportState.warnings.includes("bridge_readout_empty_sections") && scanSessionWebSerialTransportState.readoutCoverage?.itemById?.connection_status === undefined, "Web Serial transport state was incorrectly treated as local-bridge infrastructure coverage");
+const textImportedWebSerialTransportState = obd.buildScanSessionFromObdText("", {
+  connection_status: scanSessionWebSerialTransportState.connection_status
+});
+check(textImportedWebSerialTransportState.connectionStatus?.source === "web_serial" && textImportedWebSerialTransportState.connectionStatus?.status === "transport_error" && textImportedWebSerialTransportState.vehicleCommandEnabled === false, "OBD text session did not preserve Web Serial transport state");
 const scanSessionWebSerialResponseQuality = obd.buildDiagnosticScanSession({
   web_serial_readout_summary: {
     schema_version: "web_serial_readout_execution_v2",
