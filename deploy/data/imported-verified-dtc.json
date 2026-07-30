@@ -1172,5 +1172,27 @@
     "last_verified_date": "2026-07-30",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-u0137-87-toyota-tundra-2022-lane-control",
+    "code": "U0137",
+    "subcode": "87",
+    "title": "Lost Communication with Trailer Brake Control Module Missing Message",
+    "system": "Network / lane control trailer brake control message (source-specific)",
+    "applicability_note": "Toyota T-SB-0006-22 applies only to 2022 Tundra SR vehicles with the listed VDS values, an LTA Malfunction warning, and U0137:87 stored in the Lane Control system. Confirm VIN/VDS, grade, market, reporting ECU, MID warning, and the specified camera or radar calibration ID before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Toyota"], "models": ["Tundra"], "year_from": 2022, "year_to": 2022, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all DTCs, MID warnings, reporting ECU, camera/radar calibration IDs, and concurrent network DTCs before inspection.", "Do not clear DTCs, reflash the forward recognition camera or radar sensor, run a reset tool, or start active tests from this tool; confirm VIN/VDS, SR grade, reporting Lane Control ECU, calibration ID, and bulletin applicability.", "Use Toyota service information and qualified diagnostic procedures for diagnosis and recovery."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to a Tundra grade other than SR, another model year, or another ECU.", "Do not infer a trailer brake module, camera, radar, wiring, or network failure from the DTC alone.", "Do not treat this definition as authorization to reflash, reset ADAS components, or clear DTCs."],
+    "required_tools": ["Compatible scan tool", "Toyota service information", "Qualified diagnostic equipment", "Stable power support when required by the manufacturer"],
+    "safety_notes": ["Forward camera or radar reprogramming and reset operations can affect ADAS operation. Do not perform them without the manufacturer procedure, trained personnel, stable power support, calibration verification, and a recovery plan."],
+    "confidence": "Toyota source-specific DTC and subcode definition; VIN/VDS, grade, Lane Control ECU, warning status, calibration, and manufacturer procedure confirmation required.",
+    "source": "Toyota T-SB-0006-22 / NHTSA MC-10208999",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2022/MC-10208999-9999.pdf",
+    "source_date": "2022-02-04",
+    "last_verified_date": "2026-07-30",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]

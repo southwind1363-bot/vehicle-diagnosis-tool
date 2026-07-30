@@ -28,7 +28,7 @@
     "progress_percent": 56,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 552件 / 出典定義560件・一意サブコード定義10件 (Mazda 2019-23 connected-services/telematics DTCを出典限定で追加)",
+    "current_count_note": "U系親DTC 552件 / 出典定義561件・一意サブコード定義11件 (Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control DTCを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
