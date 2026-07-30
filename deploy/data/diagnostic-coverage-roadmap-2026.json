@@ -28,7 +28,7 @@
     "progress_percent": 56,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 551件 / 出典定義556件・一意サブコード定義5件 (Audi 2023-24 component protectionを出典限定で追加)",
+    "current_count_note": "U系親DTC 552件 / 出典定義559件・一意サブコード定義9件 (Mazda 2019-20/2020 Mazda3/CX-30 telematics DTCを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
@@ -49,7 +49,7 @@
     "progress_percent": 16,
     "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
     "priority": 3,
-    "current_count_note": "B系親DTC 22件 / 出典定義38件・一意サブコード定義30件 (Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Subaru 2010-14 Legacy/Outback・2012 Impreza、Jeep 2019-20・2022-23 Renegade・2024-25 Wagoneer S、Bentley 2018-22 Continental GT/Flying Spur、Audi 2020-21 ADAS、出典限定)",
+    "current_count_note": "B系親DTC 24件 / 出典定義40件・一意サブコード定義32件 (Mazda 2019-20/2020 Mazda3/CX-30 telematics、Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Subaru 2010-14 Legacy/Outback・2012 Impreza、Jeep 2019-20・2022-23 Renegade・2024-25 Wagoneer S、Bentley 2018-22 Continental GT/Flying Spur、Audi 2020-21 ADAS、出典限定)",
     "next_actions": [
       "汎用/メーカー別のB系コード収録可否をソース別に分ける",
       "SRS、ブレーキ、盗難防止など安全系は強い注意と整備書必須を付ける",
