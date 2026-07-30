@@ -224,12 +224,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2763件",
+  validationCheckLabel: "OBD安全検証 2764件",
   bridgeValidationCheckLabel: "bridge検証 197件",
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.79";
+const APP_VERSION = "3.4.80";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5133,10 +5133,16 @@ function buildWebSerialConnectionStatus(outcome = null) {
     ? outcome
     : (obdDevSession.readoutAttempts || []).at(-1) || null;
   const transportError = Number(latestAttempt?.transportErrorCount) > 0;
+  const adapterError = Number(latestAttempt?.adapterErrorCount) > 0;
+  const vehicleLinkError = Number(latestAttempt?.unableToConnectCount) > 0;
   const adapterConnected = Boolean(obdDevSession.port) && !transportError;
   const connectionState = String(obdDevSession.connectionState || "disconnected");
   const status = transportError
     ? "transport_error"
+    : vehicleLinkError
+      ? "vehicle_link_error"
+      : adapterError
+        ? "adapter_error"
     : adapterConnected
       ? "adapter_connected"
       : "disconnected";
@@ -5148,14 +5154,22 @@ function buildWebSerialConnectionStatus(outcome = null) {
   return {
     source: "web_serial",
     intent: "connection_status",
-    ok: !transportError,
+    ok: !transportError && !adapterError && !vehicleLinkError,
     blocked: false,
     wouldTransmit: false,
     readOnly: true,
     vehicleCommandEnabled: false,
     status,
-    displayStatus,
-    nextAction: transportError
+    displayStatus: vehicleLinkError
+      ? "車両通信を確立できません"
+      : adapterError
+        ? "Web Serialアダプターエラー"
+        : displayStatus,
+    nextAction: vehicleLinkError
+      ? "イグニッション状態、OBDコネクター接続、車両プロトコル、アダプター状態を確認してから、読取専用で再試行"
+      : adapterError
+        ? "アダプター電源、ファームウェア応答、シリアル設定を確認してから、読取専用で再試行"
+        : transportError
       ? "アダプター接続と通信速度を確認してから、読取専用で再接続"
       : adapterConnected
         ? "読取専用でDTCまたは対応PIDを確認"
@@ -5164,8 +5178,12 @@ function buildWebSerialConnectionStatus(outcome = null) {
     connection_state: connectionState,
     vciConnected: adapterConnected,
     vci_connected: adapterConnected,
-    vehicleConnected: null,
-    vehicle_connected: null,
+    vehicleConnected: vehicleLinkError ? false : null,
+    vehicle_connected: vehicleLinkError ? false : null,
+    latestReadoutStatus: latestAttempt?.status || null,
+    latest_readout_status: latestAttempt?.status || null,
+    latestReadoutStopReason: latestAttempt?.stopReason || null,
+    latest_readout_stop_reason: latestAttempt?.stopReason || null,
     ...(obdDevSession.lastDisconnectReason ? { lastDisconnectReason: obdDevSession.lastDisconnectReason, last_disconnect_reason: obdDevSession.lastDisconnectReason } : {}),
     retainedRawText: false,
     retained_raw_text: false,
