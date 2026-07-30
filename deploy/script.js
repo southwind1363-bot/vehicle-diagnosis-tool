@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.73";
+const APP_VERSION = "3.4.74";
 const APP_LAST_UPDATED = "2026-07-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5050,13 +5050,13 @@ async function runObdDeveloperRead(label, commands) {
     const timedOut = message.startsWith("elm_response_timeout:");
     const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { timedOut, transportErrorCount: true, attemptedCommandCount });
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
-    const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks));
+    const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, { persistEmptyAttempt: true }));
     const transportFailed = timedOut || message.startsWith("elm_transport_");
     if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
     if (obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = "transport_error";
     obdDevStatus.textContent = timedOut
-      ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`
-      : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 先に取得した応答だけを保持しています。" : ""}`;
+      ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`
+      : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`;
     return false;
   } finally {
     obdDevSession.readInProgress = false;
@@ -5125,9 +5125,10 @@ function buildWebSerialReadoutSummary() {
   };
 }
 
-function retainObdDeveloperReadout(commandResponses = [], chunks = []) {
-  if (!commandResponses.length) return null;
-  appendObdDeveloperLog(chunks.join("\n"));
+function retainObdDeveloperReadout(commandResponses = [], chunks = [], options = {}) {
+  const hasCommandResponses = commandResponses.length > 0;
+  if (!hasCommandResponses && options?.persistEmptyAttempt !== true) return null;
+  if (hasCommandResponses) appendObdDeveloperLog(chunks.join("\n"));
   const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
   const capturedAt = new Date().toISOString();
