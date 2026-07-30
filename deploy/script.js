@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.89";
+const APP_VERSION = "3.4.90";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9739,11 +9739,24 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   const models = (Array.isArray(filter.models) ? filter.models : []).map(normalizeModel).filter(Boolean);
   const yearFrom = Number(filter.year_from ?? filter.yearFrom);
   const yearTo = Number(filter.year_to ?? filter.yearTo);
+  const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
+    ? filter.model_year_scopes
+    : Array.isArray(filter.modelYearScopes) ? filter.modelYearScopes : null;
+  const modelYearScopes = (rawModelYearScopes || [])
+    .map((scope) => ({
+      models: (Array.isArray(scope?.models) ? scope.models : []).map(normalizeModel).filter(Boolean),
+      yearFrom: Number(scope?.year_from ?? scope?.yearFrom),
+      yearTo: Number(scope?.year_to ?? scope?.yearTo)
+    }))
+    .filter((scope) => scope.models.length && Number.isInteger(scope.yearFrom) && Number.isInteger(scope.yearTo) && scope.yearFrom <= scope.yearTo);
+  const scopes = rawModelYearScopes
+    ? modelYearScopes
+    : [{ models, yearFrom, yearTo }];
   const maker = normalize(vehicleProfile?.maker);
   const model = normalizeModel(vehicleProfile?.model);
   const year = Number(vehicleProfile?.year);
   if (!maker || !model || !Number.isInteger(year)) return { status: "unverified", reason: "vehicle_profile_incomplete" };
-  const matched = makers.includes(maker) && models.includes(model) && year >= yearFrom && year <= yearTo;
+  const matched = makers.includes(maker) && scopes.some((scope) => scope.models.includes(model) && year >= scope.yearFrom && year <= scope.yearTo);
   if (!matched) return { status: "mismatch" };
   if (filter.scope_confirmation_required === true || filter.scopeConfirmationRequired === true) {
     return { status: "unverified", reason: "additional_scope_confirmation_required" };
@@ -9753,19 +9766,34 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
 
 function buildDtcDefinitionScopeSummary(definitions) {
   const scopes = [...new Set((Array.isArray(definitions) ? definitions : [])
-    .map((definition) => {
+    .flatMap((definition) => {
       const filter = definition?.vehicle_filter || definition?.vehicleFilter || null;
-      if (!filter || typeof filter !== "object") return "";
+      if (!filter || typeof filter !== "object") return [];
       const makers = (Array.isArray(filter.makers) ? filter.makers : []).map((value) => String(value || "").trim()).filter(Boolean);
       const models = (Array.isArray(filter.models) ? filter.models : []).map((value) => String(value || "").trim()).filter(Boolean);
       const yearFrom = Number(filter.year_from ?? filter.yearFrom);
       const yearTo = Number(filter.year_to ?? filter.yearTo);
-      if (!makers.length || !models.length || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo)) return "";
-      const years = yearFrom === yearTo ? String(yearFrom) : `${yearFrom}-${yearTo}`;
+      const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
+        ? filter.model_year_scopes
+        : Array.isArray(filter.modelYearScopes) ? filter.modelYearScopes : null;
+      const modelYearScopes = (rawModelYearScopes || [])
+        .map((scope) => ({
+          models: (Array.isArray(scope?.models) ? scope.models : []).map((value) => String(value || "").trim()).filter(Boolean),
+          yearFrom: Number(scope?.year_from ?? scope?.yearFrom),
+          yearTo: Number(scope?.year_to ?? scope?.yearTo)
+        }))
+        .filter((scope) => scope.models.length && Number.isInteger(scope.yearFrom) && Number.isInteger(scope.yearTo) && scope.yearFrom <= scope.yearTo);
+      const summaryScopes = rawModelYearScopes
+        ? modelYearScopes
+        : [{ models, yearFrom, yearTo }];
+      if (!makers.length || !summaryScopes.length) return [];
       const additionalScope = filter.scope_confirmation_required === true || filter.scopeConfirmationRequired === true
         ? " VIN/trim確認必須"
         : "";
-      return `${makers.join("/")} ${models.join("/")} ${years}${additionalScope}`;
+      return summaryScopes.map((scope) => {
+        const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
+        return `${makers.join("/")} ${scope.models.join("/")} ${years}${additionalScope}`;
+      });
     }))];
   if (!scopes.length) return "";
   return scopes.length > 3 ? `${scopes.slice(0, 3).join(" / ")} ほか${scopes.length - 3}件` : scopes.join(" / ");

@@ -46,12 +46,30 @@ function isNonEmptyStringArray(value) {
   return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString);
 }
 
+function isDtcVehicleModelYearScope(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value)
+    && isNonEmptyStringArray(value.models)
+    && Number.isInteger(value.year_from)
+    && Number.isInteger(value.year_to)
+    && value.year_from >= 1900
+    && value.year_to >= value.year_from
+    && value.year_to <= 2100);
+}
+
+function getDtcVehicleFilterScopes(value) {
+  const scopedRanges = Array.isArray(value?.model_year_scopes)
+    ? value.model_year_scopes
+    : Array.isArray(value?.modelYearScopes) ? value.modelYearScopes : null;
+  if (scopedRanges) return scopedRanges;
+  return [{ models: value?.models, year_from: value?.year_from, year_to: value?.year_to }];
+}
+
 function isDtcVehicleFilter(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  if (!isNonEmptyStringArray(value.makers) || !isNonEmptyStringArray(value.models)) return false;
-  if (!Number.isInteger(value.year_from) || !Number.isInteger(value.year_to)) return false;
+  if (!isNonEmptyStringArray(value.makers)) return false;
   if (value.scope_confirmation_required !== undefined && typeof value.scope_confirmation_required !== "boolean") return false;
-  return value.year_from >= 1900 && value.year_to >= value.year_from && value.year_to <= 2100;
+  const scopes = getDtcVehicleFilterScopes(value);
+  return scopes.length > 0 && scopes.every(isDtcVehicleModelYearScope);
 }
 
 function dtcVehicleFiltersOverlap(left, right) {
@@ -59,11 +77,16 @@ function dtcVehicleFiltersOverlap(left, right) {
   const normalize = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
   const normalizeModel = (value) => normalize(value).replace(/[\s_-]+/g, "");
   const leftMakers = new Set(left.makers.map(normalize));
-  const leftModels = new Set(left.models.map(normalizeModel));
   const sameMaker = right.makers.some((value) => leftMakers.has(normalize(value)));
-  const sameModel = right.models.some((value) => leftModels.has(normalizeModel(value)));
-  const overlappingYears = Math.max(left.year_from, right.year_from) <= Math.min(left.year_to, right.year_to);
-  return sameMaker && sameModel && overlappingYears;
+  if (!sameMaker) return false;
+  return getDtcVehicleFilterScopes(left).some((leftScope) => {
+    const leftModels = new Set(leftScope.models.map(normalizeModel));
+    return getDtcVehicleFilterScopes(right).some((rightScope) => {
+      const sameModel = rightScope.models.some((value) => leftModels.has(normalizeModel(value)));
+      const overlappingYears = Math.max(leftScope.year_from, rightScope.year_from) <= Math.min(leftScope.year_to, rightScope.year_to);
+      return sameModel && overlappingYears;
+    });
+  });
 }
 
 function hasDisjointSourceSpecificDtcDefinitions(rows) {
@@ -199,7 +222,7 @@ for (const file of jsonFiles) {
       if (row.service_manual_required !== true) reportError(`${label}: verified imported DTC must require the service manual`);
       if (row.imported_definition_only !== true) reportError(`${label}: verified imported DTC must be definition-only`);
       if (row.applicability_note && !isDtcVehicleFilter(row.vehicle_filter)) {
-        reportError(`${label}: applicability_note がある verified imported DTC には makers/models/year_from/year_to を持つ vehicle_filter が必要です`);
+        reportError(`${label}: applicability_note がある verified imported DTC には makers と有効な vehicle_filter 年式範囲が必要です`);
       }
       if (row.applicability_note && row.vehicle_filter?.scope_confirmation_required !== true) {
         reportError(`${label}: applicability_note がある verified imported DTC には scope_confirmation_required: true が必要です`);
