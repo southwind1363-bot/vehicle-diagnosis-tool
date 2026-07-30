@@ -224,12 +224,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2766件",
+  validationCheckLabel: "OBD安全検証 2767件",
   bridgeValidationCheckLabel: "bridge検証 197件",
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.84";
+const APP_VERSION = "3.4.85";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6910,17 +6910,20 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   const readinessDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
   const ecuDeltaValue = summary.ecuInfoMissingKeyDelta ?? summary.ecu_info_missing_key_delta;
   const mode06DeltaValue = summary.onboardMonitorFailedDelta ?? summary.onboard_monitor_failed_delta;
+  const webSerialResponseReviewDeltaValue = summary.webSerialResponseReviewDelta ?? summary.web_serial_response_review_delta;
   const issueDelta = Number.isFinite(Number(issueDeltaValue)) ? Number(issueDeltaValue) : 0;
   const rawDelta = Number.isFinite(Number(rawDeltaValue)) ? Number(rawDeltaValue) : 0;
   const readinessDelta = Number.isFinite(Number(readinessDeltaValue)) ? Number(readinessDeltaValue) : 0;
   const ecuDelta = Number.isFinite(Number(ecuDeltaValue)) ? Number(ecuDeltaValue) : 0;
   const mode06Delta = Number.isFinite(Number(mode06DeltaValue)) ? Number(mode06DeltaValue) : 0;
+  const webSerialResponseReviewDelta = Number.isFinite(Number(webSerialResponseReviewDeltaValue)) ? Number(webSerialResponseReviewDeltaValue) : 0;
   const parts = [];
   if (issueDelta !== 0) parts.push(`品質${issueDelta > 0 ? "+" : ""}${issueDelta}`);
   if (rawDelta !== 0) parts.push(`RAW${rawDelta > 0 ? "+" : ""}${rawDelta}`);
   if (readinessDelta !== 0) parts.push(`RDY${readinessDelta > 0 ? "+" : ""}${readinessDelta}`);
   if (ecuDelta !== 0) parts.push(`ECU${ecuDelta > 0 ? "+" : ""}${ecuDelta}`);
   if (mode06Delta !== 0) parts.push(`M06${mode06Delta > 0 ? "+" : ""}${mode06Delta}`);
+  if (webSerialResponseReviewDelta !== 0) parts.push(`通信${webSerialResponseReviewDelta > 0 ? "+" : ""}${webSerialResponseReviewDelta}`);
   if (summary.issueIdsChanged === true) parts.push("項目変化");
   if (summary.reviewRequiredChanged === true) parts.push("確認状態変化");
   const reviewActionSummary = summary.reviewActionSummary || summary.review_action_summary || null;

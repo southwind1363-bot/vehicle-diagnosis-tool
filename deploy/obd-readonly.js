@@ -11133,7 +11133,8 @@
       raw_pid_values_need_conversion: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedQualitySummary, "rawPidUndecodedCount"),
       readiness_incomplete: readCount(currentSummary, "readinessIncompleteCount") - readCount(importedQualitySummary, "readinessIncompleteCount"),
       mode09_key_items_missing: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedQualitySummary, "ecuInfoMissingKeyCount"),
-      onboard_monitor_test_failed: readCount(currentSummary, "onboardMonitorFailedCount") - readCount(importedQualitySummary, "onboardMonitorFailedCount")
+      onboard_monitor_test_failed: readCount(currentSummary, "onboardMonitorFailedCount") - readCount(importedQualitySummary, "onboardMonitorFailedCount"),
+      web_serial_response_quality: readCount(currentSummary, "webSerialResponseReviewCount") - readCount(importedQualitySummary, "webSerialResponseReviewCount")
     };
     const changedIssueCountIds = Object.entries(issueFieldDeltas)
       .filter(([, delta]) => delta !== 0)
@@ -11225,7 +11226,9 @@
       ecuInfoMissingKeyDelta: issueFieldDeltas.mode09_key_items_missing,
       ecu_info_missing_key_delta: issueFieldDeltas.mode09_key_items_missing,
       onboardMonitorFailedDelta: issueFieldDeltas.onboard_monitor_test_failed,
-      onboard_monitor_failed_delta: issueFieldDeltas.onboard_monitor_test_failed
+      onboard_monitor_failed_delta: issueFieldDeltas.onboard_monitor_test_failed,
+      webSerialResponseReviewDelta: issueFieldDeltas.web_serial_response_quality,
+      web_serial_response_review_delta: issueFieldDeltas.web_serial_response_quality
     };
   }
 

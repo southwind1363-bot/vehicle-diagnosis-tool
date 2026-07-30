@@ -2711,7 +2711,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2766件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('Web SerialのCANヘッダ読取を確認'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2767件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('Web SerialのCANヘッダ読取を確認'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -2841,7 +2841,7 @@ check(appSource.includes('summary.readout_quality_review_request_plan_summary') 
 check(appSource.includes('planSummary?.requestCount ?? planSummary?.request_count') && appSource.includes('summary.readoutQualityReviewRequestCount ?? summary.readout_quality_review_request_count'), "OBD app should preserve zero-valued readout quality review request counts");
 check(appSource.includes('planSummary?.primaryRequest') && appSource.includes('planSummary?.primary_request') && appSource.includes('planSummary?.readout_quality_review_request_summaries?.[0]'), "OBD app should format nested readout quality review request plan aliases");
 check(appSource.includes('planSummary?.vehicle_command_enabled === false') && appSource.includes('planSummary?.would_transmit === false') && appSource.includes('planSummary?.retained_raw_text === false'), "OBD app should format nested readout quality review request safety aliases");
-check(appSource.includes('const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);') && appSource.includes('addObdDiagnosticFlowMetric(grid, "品質比較", readoutQualityComparisonLabel'), "OBD diagnostic flow panel should show imported readout quality comparisons");
+check(appSource.includes('const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);') && appSource.includes('const webSerialResponseReviewDeltaValue = summary.webSerialResponseReviewDelta ?? summary.web_serial_response_review_delta;') && appSource.includes('`通信${webSerialResponseReviewDelta > 0 ? "+" : ""}${webSerialResponseReviewDelta}`') && appSource.includes('addObdDiagnosticFlowMetric(grid, "品質比較", readoutQualityComparisonLabel'), "OBD diagnostic flow panel should show imported readout quality comparisons");
 check(appSource.includes('session.imported_readout_quality_comparison_summary') && appSource.includes('summarySource.imported_readout_quality_comparison_summary'), "OBD UI should accept imported readout quality comparison snake_case aliases");
 check(appSource.includes('const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedReadoutQualityReviewRequestPlanSummary || session.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);') && appSource.includes('addObdDiagnosticFlowMetric(grid, "品質確認要求", readoutQualityReviewRequestLabel'), "OBD diagnostic flow panel should show readout quality review requests");
 check(appSource.includes('session.imported_readout_quality_review_request_plan_summary') && appSource.includes('session?.imported_readout_quality_review_request_plan_summary'), "OBD diagnostic flow UI should accept readout quality review request snake_case session aliases");
@@ -14865,6 +14865,17 @@ check(scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSumma
 check(scanSessionSnakeReadoutQualityImport.importedReadoutQualitySummary?.schemaVersion === "readout_quality_summary_v1" && scanSessionSnakeReadoutQualityImport.importedReadoutQualitySummary?.issueCount === 2, "Diagnostic scan session did not normalize imported readout quality summary aliases");
 check(scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.importedReviewRequired === true && scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.importedReadyForInterpretation === false, "Diagnostic scan session did not read snake_case imported readout quality review flag");
 check(scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.rawPidUndecodedDelta === -3 && scanSessionSnakeReadoutQualityImport.importedReadoutQualityComparisonSummary?.onboardMonitorFailedDelta === -1, "Diagnostic scan session did not read snake_case imported readout quality count deltas");
+const scanSessionWebSerialQualityImport = obd.buildDiagnosticScanSession({
+  readout_quality_summary: {
+    schema_version: "readout_quality_summary_v1",
+    review_required: true,
+    ready_for_interpretation: false,
+    issue_count: 1,
+    issue_ids: ["web_serial_response_quality"],
+    web_serial_response_review_count: 5
+  }
+});
+check(scanSessionWebSerialQualityImport.importedReadoutQualityComparisonSummary?.webSerialResponseReviewDelta === -5 && scanSessionWebSerialQualityImport.imported_readout_quality_comparison_summary?.web_serial_response_review_delta === -5 && scanSessionWebSerialQualityImport.importedReadoutQualityComparisonSummary?.changedIssueCountIds?.includes("web_serial_response_quality") && scanSessionWebSerialQualityImport.vehicleCommandEnabled === false, "Diagnostic scan session did not compare imported Web Serial response quality without enabling vehicle commands");
 check(scanSessionBridgeDiagnosticImportAlias.importedReadoutRequestPlanGateSummary?.state === bridgeDiagnosticImport.readoutRequestPlanGateSummary?.state, "Diagnostic scan session did not preserve imported readout request plan gate summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1", "Diagnostic scan session did not preserve imported core readout inventory summary from bridge_diagnostic_import alias input");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreReadoutInventorySummary?.schema_version === "core_readout_inventory_v1", "Diagnostic scan session did not preserve imported core readout inventory snake_case schema version");
@@ -18275,6 +18286,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2766");
+  console.log("OBD read-only safety checks: 2767");
   console.log("Errors: 0");
 }
