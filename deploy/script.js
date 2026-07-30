@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.92";
+const APP_VERSION = "3.4.93";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2877,6 +2877,7 @@ function scoreModernGenericCode(item, code) {
 
 function getModernGenericMatches(code) {
   return (dataStore.genericObdCodesModern || [])
+    .filter((item) => item?.imported_definition_only !== true)
     .map((item) => ({ ...item, _matchInfo: scoreModernGenericCode(item, code) }))
     .filter((item) => item._matchInfo.score > 0)
     .sort((a, b) => b._matchInfo.score - a._matchInfo.score);
