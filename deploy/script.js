@@ -224,12 +224,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2765件",
+  validationCheckLabel: "OBD安全検証 2766件",
   bridgeValidationCheckLabel: "bridge検証 197件",
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.83";
+const APP_VERSION = "3.4.84";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6886,16 +6886,19 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   const readinessCountValue = summary.readinessIncompleteCount ?? summary.readiness_incomplete_count;
   const ecuCountValue = summary.ecuInfoMissingKeyCount ?? summary.ecu_info_missing_key_count;
   const mode06CountValue = summary.onboardMonitorFailedCount ?? summary.onboard_monitor_failed_count;
+  const webSerialResponseReviewCountValue = summary.webSerialResponseReviewCount ?? summary.web_serial_response_review_count;
   const issueCount = Number.isFinite(Number(issueCountValue)) ? Number(issueCountValue) : 0;
   const rawCount = Number.isFinite(Number(rawCountValue)) ? Number(rawCountValue) : 0;
   const readinessCount = Number.isFinite(Number(readinessCountValue)) ? Number(readinessCountValue) : 0;
   const ecuCount = Number.isFinite(Number(ecuCountValue)) ? Number(ecuCountValue) : 0;
   const mode06Count = Number.isFinite(Number(mode06CountValue)) ? Number(mode06CountValue) : 0;
+  const webSerialResponseReviewCount = Number.isFinite(Number(webSerialResponseReviewCountValue)) ? Number(webSerialResponseReviewCountValue) : 0;
   const parts = [];
   if (rawCount) parts.push(`RAW${rawCount}`);
   if (readinessCount) parts.push(`RDY未完${readinessCount}`);
   if (ecuCount) parts.push(`ECU不足${ecuCount}`);
   if (mode06Count) parts.push(`M06失敗${mode06Count}`);
+  if (webSerialResponseReviewCount) parts.push(`通信応答${webSerialResponseReviewCount}`);
   if (!parts.length && issueCount === 0) return "要確認なし";
   return parts.length ? parts.join(" / ") : `${issueCount}件`;
 }

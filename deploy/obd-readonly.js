@@ -6415,6 +6415,7 @@
       onboardMonitorSnapshot,
       livePidSnapshot,
       supportedPidMatrix,
+      webSerialReadoutSummary: metadataOverrides.webSerialReadoutSummary,
       warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
@@ -7050,6 +7051,7 @@
         onboardMonitorSnapshot,
         livePidSnapshot,
         supportedPidMatrix,
+        webSerialReadoutSummary: metadataOverrides.webSerialReadoutSummary,
         warnings: resolvedWarnings,
         nextReadoutCandidates: resolvedNextReadoutCandidates
       });
@@ -7739,6 +7741,7 @@
     onboardMonitorSnapshot = null,
     livePidSnapshot = null,
     supportedPidMatrix = null,
+    webSerialReadoutSummary = null,
     warnings = [],
     nextReadoutCandidates = []
   } = {}) {
@@ -8298,6 +8301,19 @@
       }
       return 0;
     };
+    const normalizedWebSerialReadoutSummary = normalizeWebSerialReadoutSummary(webSerialReadoutSummary);
+    const webSerialPendingNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.pendingNegativeResponseCount, normalizedWebSerialReadoutSummary?.pending_negative_response_count);
+    const webSerialEmptyResponseCount = readCount(normalizedWebSerialReadoutSummary?.emptyResponseCount, normalizedWebSerialReadoutSummary?.empty_response_count);
+    const webSerialUnrecognizedResponseCount = readCount(normalizedWebSerialReadoutSummary?.unrecognizedResponseCount, normalizedWebSerialReadoutSummary?.unrecognized_response_count);
+    const webSerialAdapterErrorCount = readCount(normalizedWebSerialReadoutSummary?.adapterErrorCount, normalizedWebSerialReadoutSummary?.adapter_error_count);
+    const webSerialUnableToConnectCount = readCount(normalizedWebSerialReadoutSummary?.unableToConnectCount, normalizedWebSerialReadoutSummary?.unable_to_connect_count);
+    const webSerialTransportErrorCount = readCount(normalizedWebSerialReadoutSummary?.transportErrorCount, normalizedWebSerialReadoutSummary?.transport_error_count);
+    const webSerialResponseReviewCount = webSerialPendingNegativeResponseCount
+      + webSerialEmptyResponseCount
+      + webSerialUnrecognizedResponseCount
+      + webSerialAdapterErrorCount
+      + webSerialUnableToConnectCount
+      + webSerialTransportErrorCount;
     const rawPidUndecodedCount = (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"])
       ? readCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount)
       : 0)
@@ -8311,7 +8327,8 @@
       rawPidUndecodedCount > 0 ? { id: "raw_pid_values_need_conversion", count: rawPidUndecodedCount, severity: "review" } : null,
       readinessIncompleteCount > 0 ? { id: "readiness_incomplete", count: readinessIncompleteCount, severity: "review" } : null,
       ecuInfoMissingKeyCount > 0 ? { id: "mode09_key_items_missing", count: ecuInfoMissingKeyCount, severity: "review" } : null,
-      onboardMonitorFailedCount > 0 ? { id: "onboard_monitor_test_failed", count: onboardMonitorFailedCount, severity: "review" } : null
+      onboardMonitorFailedCount > 0 ? { id: "onboard_monitor_test_failed", count: onboardMonitorFailedCount, severity: "review" } : null,
+      webSerialResponseReviewCount > 0 ? { id: "web_serial_response_quality", count: webSerialResponseReviewCount, severity: "review" } : null
     ].filter(Boolean);
     const readoutQualitySummary = {
       schemaVersion: "readout_quality_summary_v1",
@@ -8332,7 +8349,21 @@
       ecuInfoMissingKeyCount,
       ecu_info_missing_key_count: ecuInfoMissingKeyCount,
       onboardMonitorFailedCount,
-      onboard_monitor_failed_count: onboardMonitorFailedCount
+      onboard_monitor_failed_count: onboardMonitorFailedCount,
+      webSerialResponseReviewCount,
+      web_serial_response_review_count: webSerialResponseReviewCount,
+      webSerialPendingNegativeResponseCount,
+      web_serial_pending_negative_response_count: webSerialPendingNegativeResponseCount,
+      webSerialEmptyResponseCount,
+      web_serial_empty_response_count: webSerialEmptyResponseCount,
+      webSerialUnrecognizedResponseCount,
+      web_serial_unrecognized_response_count: webSerialUnrecognizedResponseCount,
+      webSerialAdapterErrorCount,
+      web_serial_adapter_error_count: webSerialAdapterErrorCount,
+      webSerialUnableToConnectCount,
+      web_serial_unable_to_connect_count: webSerialUnableToConnectCount,
+      webSerialTransportErrorCount,
+      web_serial_transport_error_count: webSerialTransportErrorCount
     };
     const analysisChecklist = [
       {
@@ -8367,7 +8398,8 @@
         rawPidUndecodedCount,
         readinessIncompleteCount,
         ecuInfoMissingKeyCount,
-        onboardMonitorFailedCount
+        onboardMonitorFailedCount,
+        webSerialResponseReviewCount
       },
       {
         id: "vehicle_applicability",
@@ -11216,6 +11248,13 @@
     const readinessIncompleteCount = toCount("readinessIncompleteCount", "readiness_incomplete_count", 0);
     const ecuInfoMissingKeyCount = toCount("ecuInfoMissingKeyCount", "ecu_info_missing_key_count", 0);
     const onboardMonitorFailedCount = toCount("onboardMonitorFailedCount", "onboard_monitor_failed_count", 0);
+    const webSerialResponseReviewCount = toCount("webSerialResponseReviewCount", "web_serial_response_review_count", 0);
+    const webSerialPendingNegativeResponseCount = toCount("webSerialPendingNegativeResponseCount", "web_serial_pending_negative_response_count", 0);
+    const webSerialEmptyResponseCount = toCount("webSerialEmptyResponseCount", "web_serial_empty_response_count", 0);
+    const webSerialUnrecognizedResponseCount = toCount("webSerialUnrecognizedResponseCount", "web_serial_unrecognized_response_count", 0);
+    const webSerialAdapterErrorCount = toCount("webSerialAdapterErrorCount", "web_serial_adapter_error_count", 0);
+    const webSerialUnableToConnectCount = toCount("webSerialUnableToConnectCount", "web_serial_unable_to_connect_count", 0);
+    const webSerialTransportErrorCount = toCount("webSerialTransportErrorCount", "web_serial_transport_error_count", 0);
     return {
       ...summary,
       schemaVersion,
@@ -11235,7 +11274,21 @@
       ecuInfoMissingKeyCount,
       ecu_info_missing_key_count: ecuInfoMissingKeyCount,
       onboardMonitorFailedCount,
-      onboard_monitor_failed_count: onboardMonitorFailedCount
+      onboard_monitor_failed_count: onboardMonitorFailedCount,
+      webSerialResponseReviewCount,
+      web_serial_response_review_count: webSerialResponseReviewCount,
+      webSerialPendingNegativeResponseCount,
+      web_serial_pending_negative_response_count: webSerialPendingNegativeResponseCount,
+      webSerialEmptyResponseCount,
+      web_serial_empty_response_count: webSerialEmptyResponseCount,
+      webSerialUnrecognizedResponseCount,
+      web_serial_unrecognized_response_count: webSerialUnrecognizedResponseCount,
+      webSerialAdapterErrorCount,
+      web_serial_adapter_error_count: webSerialAdapterErrorCount,
+      webSerialUnableToConnectCount,
+      web_serial_unable_to_connect_count: webSerialUnableToConnectCount,
+      webSerialTransportErrorCount,
+      web_serial_transport_error_count: webSerialTransportErrorCount
     };
   }
 
@@ -12865,6 +12918,7 @@
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || summary.onboard_monitor_snapshot || null,
       livePidSnapshot: summary.livePidSnapshot || summary.live_pid_snapshot || { monitorValues: summary.monitorValues || summary.monitor_values || [], monitorValueSummary: summary.monitorValueSummary || summary.monitor_value_summary || null },
       supportedPidMatrix: summary.supportedPidMatrix || summary.supported_pid_matrix || null,
+      webSerialReadoutSummary: summary.webSerialReadoutSummary || summary.web_serial_readout_summary || null,
       warnings: warnings || summary.warnings || summary.warning_flags || [],
       nextReadoutCandidates: nextReadoutCandidates || summary.nextReadoutCandidates || summary.next_readout_candidates || []
     });
@@ -15016,6 +15070,17 @@
           })
         )
       );
+    const webSerialReadoutSummary = normalizeWebSerialReadoutSummary(
+      input.webSerialReadoutSummary
+      || input.web_serial_readout_summary
+      || bridgeImport?.webSerialReadoutSummary
+      || bridgeImport?.web_serial_readout_summary
+      || bridgeSession?.webSerialReadoutSummary
+      || bridgeSession?.web_serial_readout_summary
+      || bridgeImportInput?.webSerialReadoutSummary
+      || bridgeImportInput?.web_serial_readout_summary
+      || null
+    );
     const coreSessionStatus = buildCoreSessionStatus({
       readoutCoverage: mergedReadoutCoverage,
       vehicleApplicability: effectiveVehicleApplicability,
@@ -15026,6 +15091,7 @@
       onboardMonitorSnapshot,
       livePidSnapshot: { monitorValues, monitorValueSummary },
       supportedPidMatrix,
+      webSerialReadoutSummary,
       warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
@@ -15273,6 +15339,8 @@
       vci_devices: vciDevices,
       adapterIdentity,
       adapter_identity: adapterIdentity,
+      webSerialReadoutSummary,
+      web_serial_readout_summary: webSerialReadoutSummary,
       bridgeSession,
       bridge_session: bridgeSession,
       bridgeExportPayload,
@@ -20248,6 +20316,7 @@
       onboardMonitorSnapshot,
       livePidSnapshot,
       supportedPidMatrix,
+      webSerialReadoutSummary,
       warnings: resolvedWarnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
