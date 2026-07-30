@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.4.85";
+const APP_VERSION = "3.4.86";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5805,13 +5805,17 @@ function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA) {
   const partialCount = Number(summary.partialCount ?? summary.partial_count ?? 0) || 0;
   const incompleteCount = Number(summary.incompleteCount ?? summary.incomplete_count ?? 0) || 0;
   const failedCount = Number(summary.failedCount ?? summary.failed_count ?? 0) || 0;
+  const negativeResponseCount = Number(summary.negativeResponseCount ?? summary.negative_response_count ?? 0) || 0;
   const pendingNegativeResponseCount = Number(summary.pendingNegativeResponseCount ?? summary.pending_negative_response_count ?? 0) || 0;
+  const noDataCount = Number(summary.noDataCount ?? summary.no_data_count ?? 0) || 0;
   const emptyResponseCount = Number(summary.emptyResponseCount ?? summary.empty_response_count ?? 0) || 0;
   const unrecognizedResponseCount = Number(summary.unrecognizedResponseCount ?? summary.unrecognized_response_count ?? 0) || 0;
   const latestAttempt = summary.latestAttempt || summary.latest_attempt || null;
   const latestLabel = latestAttempt?.label ? ` 最終:${latestAttempt.label}` : "";
   const responseQuality = [
+    negativeResponseCount > 0 ? `NRC ${negativeResponseCount}` : "",
     pendingNegativeResponseCount > 0 ? `保留NRC ${pendingNegativeResponseCount}` : "",
+    noDataCount > 0 ? `NO DATA ${noDataCount}` : "",
     emptyResponseCount > 0 ? `空応答 ${emptyResponseCount}` : "",
     unrecognizedResponseCount > 0 ? `未解釈 ${unrecognizedResponseCount}` : ""
   ].filter(Boolean);

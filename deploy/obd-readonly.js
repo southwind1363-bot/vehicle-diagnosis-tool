@@ -8302,13 +8302,17 @@
       return 0;
     };
     const normalizedWebSerialReadoutSummary = normalizeWebSerialReadoutSummary(webSerialReadoutSummary);
+    const webSerialNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.negativeResponseCount, normalizedWebSerialReadoutSummary?.negative_response_count);
     const webSerialPendingNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.pendingNegativeResponseCount, normalizedWebSerialReadoutSummary?.pending_negative_response_count);
+    const webSerialNoDataCount = readCount(normalizedWebSerialReadoutSummary?.noDataCount, normalizedWebSerialReadoutSummary?.no_data_count);
     const webSerialEmptyResponseCount = readCount(normalizedWebSerialReadoutSummary?.emptyResponseCount, normalizedWebSerialReadoutSummary?.empty_response_count);
     const webSerialUnrecognizedResponseCount = readCount(normalizedWebSerialReadoutSummary?.unrecognizedResponseCount, normalizedWebSerialReadoutSummary?.unrecognized_response_count);
     const webSerialAdapterErrorCount = readCount(normalizedWebSerialReadoutSummary?.adapterErrorCount, normalizedWebSerialReadoutSummary?.adapter_error_count);
     const webSerialUnableToConnectCount = readCount(normalizedWebSerialReadoutSummary?.unableToConnectCount, normalizedWebSerialReadoutSummary?.unable_to_connect_count);
     const webSerialTransportErrorCount = readCount(normalizedWebSerialReadoutSummary?.transportErrorCount, normalizedWebSerialReadoutSummary?.transport_error_count);
-    const webSerialResponseReviewCount = webSerialPendingNegativeResponseCount
+    const webSerialResponseReviewCount = webSerialNegativeResponseCount
+      + webSerialPendingNegativeResponseCount
+      + webSerialNoDataCount
       + webSerialEmptyResponseCount
       + webSerialUnrecognizedResponseCount
       + webSerialAdapterErrorCount
@@ -8352,8 +8356,12 @@
       onboard_monitor_failed_count: onboardMonitorFailedCount,
       webSerialResponseReviewCount,
       web_serial_response_review_count: webSerialResponseReviewCount,
+      webSerialNegativeResponseCount,
+      web_serial_negative_response_count: webSerialNegativeResponseCount,
       webSerialPendingNegativeResponseCount,
       web_serial_pending_negative_response_count: webSerialPendingNegativeResponseCount,
+      webSerialNoDataCount,
+      web_serial_no_data_count: webSerialNoDataCount,
       webSerialEmptyResponseCount,
       web_serial_empty_response_count: webSerialEmptyResponseCount,
       webSerialUnrecognizedResponseCount,
@@ -11252,7 +11260,9 @@
     const ecuInfoMissingKeyCount = toCount("ecuInfoMissingKeyCount", "ecu_info_missing_key_count", 0);
     const onboardMonitorFailedCount = toCount("onboardMonitorFailedCount", "onboard_monitor_failed_count", 0);
     const webSerialResponseReviewCount = toCount("webSerialResponseReviewCount", "web_serial_response_review_count", 0);
+    const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
     const webSerialPendingNegativeResponseCount = toCount("webSerialPendingNegativeResponseCount", "web_serial_pending_negative_response_count", 0);
+    const webSerialNoDataCount = toCount("webSerialNoDataCount", "web_serial_no_data_count", 0);
     const webSerialEmptyResponseCount = toCount("webSerialEmptyResponseCount", "web_serial_empty_response_count", 0);
     const webSerialUnrecognizedResponseCount = toCount("webSerialUnrecognizedResponseCount", "web_serial_unrecognized_response_count", 0);
     const webSerialAdapterErrorCount = toCount("webSerialAdapterErrorCount", "web_serial_adapter_error_count", 0);
@@ -11280,8 +11290,12 @@
       onboard_monitor_failed_count: onboardMonitorFailedCount,
       webSerialResponseReviewCount,
       web_serial_response_review_count: webSerialResponseReviewCount,
+      webSerialNegativeResponseCount,
+      web_serial_negative_response_count: webSerialNegativeResponseCount,
       webSerialPendingNegativeResponseCount,
       web_serial_pending_negative_response_count: webSerialPendingNegativeResponseCount,
+      webSerialNoDataCount,
+      web_serial_no_data_count: webSerialNoDataCount,
       webSerialEmptyResponseCount,
       web_serial_empty_response_count: webSerialEmptyResponseCount,
       webSerialUnrecognizedResponseCount,
