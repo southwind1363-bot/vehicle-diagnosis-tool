@@ -530,7 +530,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
   check(Boolean(bridgeOnboardMonitorSnapshotFunctionSource), "normalizeBridgeOnboardMonitorSnapshot is missing from obd-readonly.js");
   if (bridgeOnboardMonitorSnapshotFunctionSource) {
     const functionBody = bridgeOnboardMonitorSnapshotFunctionSource[0];
-    check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };') && functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should retain a parent ECU source without replacing explicit Mode 06 row sources");
+    check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('source_ecu_name: sourceEcuName') && functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should retain a parent ECU name without replacing an explicit Mode 06 row source");
     check(functionBody.includes('Array.isArray(data.mode06_tests)') && functionBody.includes('Array.isArray(data.mode06Rows)') && functionBody.includes('Array.isArray(data.onboardMonitorTests)'), "normalizeBridgeOnboardMonitorSnapshot should accept Mode 06 test aliases");
     check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('const hasTestEvidence = tests.length > 0;') && functionBody.includes('readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasTestEvidence);'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge failure status");
   }
@@ -7448,13 +7448,14 @@ const bridgeMode06ParentSourceSnapshot = obd.normalizeBridgeOnboardMonitorSnapsh
   would_transmit: false,
   data: {
     source_ecu: "7E8",
+    source_ecu_name: "Engine Control Module",
     tests: [
       { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
       { test_id: "02", component_id: "01", value: 100, min: 50, max: 200, source_ecu: "7E9" }
     ]
   }
 });
-check(bridgeMode06ParentSourceSnapshot.tests[0]?.sourceEcu === "7E8" && bridgeMode06ParentSourceSnapshot.tests[0]?.source_ecu === "7E8" && bridgeMode06ParentSourceSnapshot.tests[1]?.sourceEcu === "7E9", "Bridge Mode 06 should inherit a parent ECU source only for rows without an explicit source");
+check(bridgeMode06ParentSourceSnapshot.sourceEcuName === "Engine Control Module" && bridgeMode06ParentSourceSnapshot.source_ecu_name === "Engine Control Module" && bridgeMode06ParentSourceSnapshot.tests[0]?.sourceEcu === "7E8" && bridgeMode06ParentSourceSnapshot.tests[0]?.source_ecu_name === "Engine Control Module" && bridgeMode06ParentSourceSnapshot.tests[1]?.sourceEcu === "7E9" && bridgeMode06ParentSourceSnapshot.tests[1]?.sourceEcuName === null, "Bridge Mode 06 should inherit a matching parent ECU name without relabelling another ECU");
 const bridgeMode06RowSourceSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
@@ -7469,7 +7470,7 @@ const bridgeMode06MixedSourceSnapshot = obd.normalizeBridgeOnboardMonitorSnapsho
 });
 check(bridgeMode06RowSourceSnapshot.sourceEcu === "7E8" && bridgeMode06RowSourceSnapshot.source_ecu === "7E8" && bridgeMode06MixedSourceSnapshot.sourceEcu === null && bridgeMode06MixedSourceSnapshot.source_ecu === null, "Bridge Mode 06 parent ECU was not derived only for a single observed ECU");
 const bridgeMode06ParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ onboard_monitor_snapshot: bridgeMode06ParentSourceSnapshot })) }));
-check(bridgeMode06ParentSourceRoundTrip?.onboardMonitorSnapshot?.tests?.[0]?.source_ecu === "7E8" && bridgeMode06ParentSourceRoundTrip?.onboardMonitorSnapshot?.tests?.[1]?.sourceEcu === "7E9" && bridgeMode06ParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge Mode 06 parent ECU provenance was not retained through read-only export and JSON import");
+check(bridgeMode06ParentSourceRoundTrip?.onboardMonitorSnapshot?.source_ecu_name === "Engine Control Module" && bridgeMode06ParentSourceRoundTrip?.onboardMonitorSnapshot?.tests?.[0]?.source_ecu_name === "Engine Control Module" && bridgeMode06ParentSourceRoundTrip?.onboardMonitorSnapshot?.tests?.[1]?.sourceEcu === "7E9" && bridgeMode06ParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge Mode 06 parent ECU provenance was not retained through read-only export and JSON import");
 const bridgeDtcParentSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
