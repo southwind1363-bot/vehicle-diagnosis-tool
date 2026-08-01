@@ -3739,7 +3739,8 @@
       ? response.data && typeof response.data === "object"
         ? {
           ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
         }
         : response
       : {};
@@ -3793,6 +3794,7 @@
       protocol: readBridgeProtocol(data),
       supported_pid_readout_status: readoutStatus,
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
+      source_ecu_name: data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null,
       supported_pid_page_bases: supportedPidPageBases,
       supported_pids: supportedPids,
       supported_pid_ecu_snapshots: supportedPidEcuSnapshots
@@ -19763,12 +19765,14 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
+    const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const supportedRows = Array.isArray(input)
       ? input
       : Array.isArray(sourceInput.supported_pids)
@@ -19819,6 +19823,9 @@
       if (!row || typeof row !== "object" || Array.isArray(row)) return null;
       const ecu = readObdResponseSourceEcu(row);
       if (!ecu) return null;
+      const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+      const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!sourceEcu || ecu === sourceEcu));
+      const ecuName = rowSourceEcuName || (shouldInheritEcuName ? sourceEcuName : null);
       const pidRows = Array.isArray(row.supported_pids)
         ? row.supported_pids
         : Array.isArray(row.supportedPids)
@@ -19844,6 +19851,8 @@
       return {
         sourceEcu: ecu,
         source_ecu: ecu,
+        sourceEcuName: ecuName,
+        source_ecu_name: ecuName,
         supportedPids: pids,
         supported_pids: pids,
         supportedPidPageBases: pageBases,
@@ -19890,6 +19899,8 @@
       supportedPidEcuSnapshots.push({
         sourceEcu,
         source_ecu: sourceEcu,
+        sourceEcuName,
+        source_ecu_name: sourceEcuName,
         supportedPids,
         supported_pids: supportedPids,
         supportedPidPageBases,
@@ -19901,6 +19912,7 @@
       });
     }
     const resolvedSourceEcu = sourceEcu || (supportedPidEcuSnapshots.length === 1 ? supportedPidEcuSnapshots[0].sourceEcu : null);
+    const resolvedSourceEcuName = sourceEcuName || (supportedPidEcuSnapshots.length === 1 ? supportedPidEcuSnapshots[0].sourceEcuName || null : null);
     const supportedPidAggregationScopeInput = String(sourceInput.supportedPidAggregationScope || sourceInput.supported_pid_aggregation_scope || "").trim();
     const supportedPidAggregationScope = ["single_ecu", "multiple_ecus_union", "unspecified"].includes(supportedPidAggregationScopeInput)
       ? supportedPidAggregationScopeInput
@@ -19916,6 +19928,8 @@
       source,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
+      sourceEcuName: resolvedSourceEcuName,
+      source_ecu_name: resolvedSourceEcuName,
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,

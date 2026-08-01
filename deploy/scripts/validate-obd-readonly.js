@@ -1951,7 +1951,7 @@ const supportedPidMatrixFunctionChecks = () => {
   if (supportedPidMatrixFunctionSource) {
     const functionBody = supportedPidMatrixFunctionSource[0];
     check(functionBody.includes('const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"') && functionBody.includes('input.data.communication_protocol'), "buildSupportedPidMatrix should unwrap data payloads and preserve protocol aliases");
-    check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(sourceInput);') && functionBody.includes('const ecuSnapshotRows = Array.isArray(sourceInput.supportedPidEcuSnapshots)') && functionBody.includes('supportedPidEcuSnapshots,') && functionBody.includes('supported_pid_ecu_snapshots: supportedPidEcuSnapshots'), "buildSupportedPidMatrix should retain ECU-scoped supported PID page snapshots");
+    check(functionBody.includes('const sourceEcu = readObdResponseSourceEcu(sourceInput);') && functionBody.includes('const sourceEcuName = sourceInput.source_ecu_name') && functionBody.includes('const ecuSnapshotRows = Array.isArray(sourceInput.supportedPidEcuSnapshots)') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('sourceEcuName: ecuName') && functionBody.includes('supportedPidEcuSnapshots,') && functionBody.includes('supported_pid_ecu_snapshots: supportedPidEcuSnapshots'), "buildSupportedPidMatrix should retain ECU-scoped supported PID page snapshots and names");
     check(functionBody.includes('Array.isArray(sourceInput.supported_pids)') && functionBody.includes('Array.isArray(sourceInput.supportedPidRows)') && functionBody.includes('Array.isArray(sourceInput.pidList)'), "buildSupportedPidMatrix should accept supported PID array aliases");
     check(functionBody.includes('typeof sourceInput.supported_pid_list === "string"') && functionBody.includes('sourceInput.supportedPidsText.split'), "buildSupportedPidMatrix should accept supported PID text aliases");
     check(functionBody.includes('supportedRows.map(normalizeSupportedPidCode).filter(Boolean)'), "buildSupportedPidMatrix should normalize object PID aliases");
@@ -6683,6 +6683,18 @@ const bridgeEcuOnlySupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapsho
   }
 });
 check(bridgeEcuOnlySupportedPidSnapshot.ok === true && bridgeEcuOnlySupportedPidSnapshot.blocked === false && bridgeEcuOnlySupportedPidSnapshot.supportedPidReadoutStatus === "reported" && bridgeEcuOnlySupportedPidSnapshot.supportedPids.join(",") === "05,0C,0D" && bridgeEcuOnlySupportedPidSnapshot.supportedPidAggregationScope === "multiple_ecus_union" && bridgeEcuOnlySupportedPidSnapshot.supportedPidEcuSnapshots?.length === 2, "ECU-scoped supported PID evidence was not safely promoted into the aggregate readout");
+const bridgeNamedSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
+  data: {
+    source_ecu: "7E8",
+    module_name: "Engine Control Module",
+    supported_pid_ecu_snapshots: [
+      { source_ecu: "7E8", supported_pids: ["0C"] },
+      { source_ecu: "7E9", supported_pids: ["05"] }
+    ]
+  }
+});
+const bridgeNamedSupportedPidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ supported_pid_matrix: bridgeNamedSupportedPidSnapshot }))));
+check(bridgeNamedSupportedPidSnapshot.sourceEcuName === "Engine Control Module" && bridgeNamedSupportedPidSnapshot.source_ecu_name === "Engine Control Module" && bridgeNamedSupportedPidSnapshot.supportedPidEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module" && item.source_ecu_name === "Engine Control Module") && bridgeNamedSupportedPidSnapshot.supportedPidEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.sourceEcuName === null && item.source_ecu_name === null) && bridgeNamedSupportedPidRoundTrip?.supportedPidMatrix?.supportedPidEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module") && bridgeNamedSupportedPidRoundTrip?.supportedPidMatrix?.supportedPidEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.sourceEcuName === null) && bridgeNamedSupportedPidRoundTrip?.vehicleCommandEnabled === false && bridgeNamedSupportedPidRoundTrip?.wouldTransmit === false, "Supported PID ECU names must inherit only to the matching ECU and survive read-only export");
 const bridgeEcuOnlySupportedPidSession = obd.buildDiagnosticScanSession({ supportedPidResponse: { data: { supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["0C"] }] } } });
 check(bridgeEcuOnlySupportedPidSession?.supportedPidMatrix?.supportedPids?.join(",") === "0C" && bridgeEcuOnlySupportedPidSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && bridgeEcuOnlySupportedPidSession?.vehicleCommandEnabled === false && bridgeEcuOnlySupportedPidSession?.wouldTransmit === false, "ECU-scoped supported PID evidence did not survive safe diagnostic-session import");
 const snakeOnlySupportedPidEcuSession = obd.buildDiagnosticScanSession({
