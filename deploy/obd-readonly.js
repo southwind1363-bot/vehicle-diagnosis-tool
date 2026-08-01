@@ -3094,6 +3094,13 @@
     const codes = [...new Set(dtcs.map((item) => item.code))];
     const capturedAt = data.captured_at || data.capturedAt || null;
     const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
+    const normalizedEcuResponses = ecuRows.map((row) => ({
+      ecu: row?.ecu || row?.address || null,
+      ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
+      ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
+      status: row?.status || "unknown",
+      codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : null
+    }));
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const codeCount = codes.length;
@@ -3152,13 +3159,8 @@
       protocol: readBridgeProtocol(data),
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
-      ecuResponses: ecuRows.map((row) => ({
-        ecu: row?.ecu || row?.address || null,
-        ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
-        ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
-        status: row?.status || "unknown",
-        codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : null
-      })),
+      ecuResponses: normalizedEcuResponses,
+      ecu_responses: normalizedEcuResponses,
       capturedAt,
       captured_at: capturedAt,
       retainedRawText: false,
@@ -6297,7 +6299,7 @@
         source: "local_bridge",
         captured_at: dtcSnapshot.capturedAt || null,
         protocol: dtcSnapshot.protocol || dtcSnapshot.obd_protocol || parts.protocol || parts.obd_protocol || null,
-        ecu_responses: (dtcSnapshot.ecuResponses || []).map((row) => ({
+        ecu_responses: (dtcSnapshot.ecuResponses || dtcSnapshot.ecu_responses || []).map((row) => ({
           address: row.ecu || null,
           ecu_name: row.ecu_name || row.ecuName || null,
           status: row.status || "unknown",
