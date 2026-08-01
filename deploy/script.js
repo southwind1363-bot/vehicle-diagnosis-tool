@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.08";
+const APP_VERSION = "3.5.09";
 const APP_LAST_UPDATED = "2026-07-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6239,6 +6239,25 @@ function formatObdSessionSourceLabel(source, fallback = NO_DATA) {
   }[source] || source || fallback;
 }
 
+function formatJ2534RuntimeCompatibility(item = null, fallback = null) {
+  const adapterFamily = String(item?.adapterFamily || item?.adapter_family || "").trim().toLowerCase();
+  const architecture = (value) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["x86", "x64", "arm64", "unknown"].includes(normalized) ? normalized : null;
+  };
+  const bitness = (value) => [32, 64].includes(Number(value)) ? Number(value) : null;
+  const driverArchitecture = architecture(item?.driverLibraryArchitecture || item?.driver_library_architecture);
+  const bridgeArchitecture = architecture(item?.bridgeRuntimeArchitecture || item?.bridge_runtime_architecture);
+  if (adapterFamily !== "j2534_passthru" && !driverArchitecture && !bridgeArchitecture) return fallback;
+  const driverBitness = bitness(item?.driverLibraryBitness ?? item?.driver_library_bitness);
+  const bridgeBitness = bitness(item?.bridgeRuntimeBitness ?? item?.bridge_runtime_bitness);
+  const status = String(item?.driverRuntimeCompatibilityStatus || item?.driver_runtime_compatibility_status || "not_inspected").trim().toLowerCase();
+  const statusLabel = ["compatible", "architecture_mismatch", "unknown", "not_inspected"].includes(status) ? status : "not_inspected";
+  const driverLabel = driverArchitecture ? `${driverArchitecture}${driverBitness ? `/${driverBitness}` : ""}` : "unknown";
+  const bridgeLabel = bridgeArchitecture ? `${bridgeArchitecture}${bridgeBitness ? `/${bridgeBitness}` : ""}` : "unknown";
+  return `driver ${driverLabel} -> bridge ${bridgeLabel} (${statusLabel})`;
+}
+
 function renderObdBridgeSessionDetails(session = null) {
   if (!obdDevSessionDetails) return;
   obdDevSessionDetails.innerHTML = "";
@@ -6263,6 +6282,8 @@ function renderObdBridgeSessionDetails(session = null) {
       `Driver: ${vciDriverStatus}`
     ];
     vciDevices.slice(0, 4).forEach((item) => {
+      const runtimeCompatibility = formatJ2534RuntimeCompatibility(item);
+      if (runtimeCompatibility) lines.push(`J2534 runtime: ${runtimeCompatibility}`);
       lines.push(`${item.label || item.id}: ${item.connected ? "読取中" : "未読取"} / ${item.selected ? "選択中" : "待機"}`);
     });
     sections.push(["読取", lines]);
@@ -7227,6 +7248,9 @@ function renderObdDeveloperSessionSummary(session = null) {
   const bridgeDeviceCount = Array.isArray(sessionVciDevices)
     ? sessionVciDevices.length
     : (obdDevSession.bridgeVciList?.deviceCount ?? 0);
+  const vciDevices = Array.isArray(sessionVciDevices) ? sessionVciDevices : (obdDevSession.bridgeVciList?.devices || []);
+  const selectedVci = vciDevices.find((item) => item?.selected) || vciDevices[0] || null;
+  const j2534RuntimeCompatibilityLabel = formatJ2534RuntimeCompatibility(selectedVci);
   const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
   const ecuInfoSnapshot = session?.ecuInfoSnapshot || session?.ecu_info_snapshot || null;
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
@@ -7441,6 +7465,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["取得時刻", capturedAtLabel],
     ["ブリッジ", obdDevSession.bridgeEndpoint || hasRecoveredBridgeSession ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
+    ...(j2534RuntimeCompatibilityLabel ? [["J2534 runtime", j2534RuntimeCompatibilityLabel]] : []),
     ["アダプター", adapterIdentity?.adapterFamily || adapterIdentity?.adapterName || NO_DATA],
     ["取得率", coverage?.totalCategories ? `${coverage.capturedPercent || 0}% (${coverage.capturedCategories || 0}/${coverage.totalCategories})` : NO_DATA],
     ["応答率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
