@@ -525,7 +525,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('...normalizeEcuInfoSnapshot({') && functionBody.includes('...data,'), "normalizeBridgeEcuInfoSnapshot should delegate bridge ECU info data to the core normalizer");
     check(functionBody.includes('source: "local_bridge"') && functionBody.includes('protocol: readBridgeProtocol(data)'), "normalizeBridgeEcuInfoSnapshot should preserve local bridge source and protocol");
     check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('ecu_info_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge failure status");
-    check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };') && functionBody.includes('items,') && functionBody.includes('const hasItemEvidence = items.length > 0;') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasItemEvidence);'), "normalizeBridgeEcuInfoSnapshot should retain a parent ECU source without replacing explicit ECU info row sources");
+    check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('items,') && functionBody.includes('const hasItemEvidence = items.length > 0;') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasItemEvidence);'), "normalizeBridgeEcuInfoSnapshot should retain a parent ECU name without replacing an explicit ECU info row source");
   }
   check(Boolean(bridgeOnboardMonitorSnapshotFunctionSource), "normalizeBridgeOnboardMonitorSnapshot is missing from obd-readonly.js");
   if (bridgeOnboardMonitorSnapshotFunctionSource) {
@@ -7143,13 +7143,14 @@ const bridgeEcuInfoParentSourceSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   would_transmit: false,
   data: {
     source_ecu: "7E8",
+    source_ecu_name: "Engine Control Module",
     items: [
       { id: "calibration_id", value: "CAL-PARENT" },
       { id: "ecu_name", value: "Transmission ECU", source_ecu: "7E9" }
     ]
   }
 });
-check(bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "calibration_id")?.sourceEcu === "7E8" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E9", "Bridge Mode 09 should inherit a parent ECU source only for rows without an explicit source");
+check(bridgeEcuInfoParentSourceSnapshot.sourceEcuName === "Engine Control Module" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "calibration_id")?.sourceEcu === "7E8" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "calibration_id")?.source_ecu_name === "Engine Control Module" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E9" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "ecu_name")?.sourceEcuName === null, "Bridge Mode 09 should inherit a matching parent ECU name without relabelling another ECU");
 const bridgeEcuInfoRowSourceSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
@@ -7164,7 +7165,7 @@ const bridgeEcuInfoMixedSourceSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
 });
 check(bridgeEcuInfoRowSourceSnapshot.sourceEcu === "7E8" && bridgeEcuInfoRowSourceSnapshot.source_ecu === "7E8" && bridgeEcuInfoMixedSourceSnapshot.sourceEcu === null && bridgeEcuInfoMixedSourceSnapshot.source_ecu === null, "Bridge ECU info parent ECU was not derived only for a single observed ECU");
 const bridgeEcuInfoParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeEcuInfoParentSourceSnapshot })) }));
-check(bridgeEcuInfoParentSourceRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_id")?.source_ecu === "7E8" && bridgeEcuInfoParentSourceRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "ecu_name")?.sourceEcu === "7E9" && bridgeEcuInfoParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge Mode 09 parent ECU provenance was not retained through read-only export and JSON import");
+check(bridgeEcuInfoParentSourceRoundTrip?.ecuInfoSnapshot?.source_ecu_name === "Engine Control Module" && bridgeEcuInfoParentSourceRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "calibration_id")?.source_ecu_name === "Engine Control Module" && bridgeEcuInfoParentSourceRoundTrip?.ecuInfoSnapshot?.items?.find((item) => item.id === "ecu_name")?.sourceEcu === "7E9" && bridgeEcuInfoParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge Mode 09 parent ECU provenance was not retained through read-only export and JSON import");
 const bridgeEmptyEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({});
 check(bridgeEmptyEcuInfoSnapshot.itemCount === 0 && bridgeEmptyEcuInfoSnapshot.blocked === true, "Empty Bridge ECU info response was not fail-closed");
 check(bridgeEmptyEcuInfoSnapshot.ecuInfoReadoutStatus === "blocked", "Empty Bridge ECU info response was incorrectly treated as an empty reported readout");

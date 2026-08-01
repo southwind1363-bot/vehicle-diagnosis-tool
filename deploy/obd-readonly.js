@@ -4116,15 +4116,26 @@
       ? response.data && typeof response.data === "object"
         ? {
           ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
         }
         : response
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const items = collectEcuInfoRows(data).map((row) => {
-      if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+      if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
       const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
-      return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+      const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+      const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
+      const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
+      return !shouldInheritEcu && !shouldInheritEcuName
+        ? row
+        : {
+          ...row,
+          ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+          ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+        };
     });
     const malformedMode09Alias = ["mode09_items", "mode09Items", "mode_09_items", "mode09_values", "mode09Values", "mode_09_values"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const errorCodes = readBridgeResponseErrorCodes(response);
@@ -16449,17 +16460,29 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
+    const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const rows = collectEcuInfoRows(sourceInput);
     const items = rows
       .map((row) => {
-        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
-        return readObdResponseSourceEcu(row) ? row : { ...row, source_ecu: sourceEcu };
+        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        const rowSourceEcu = readObdResponseSourceEcu(row);
+        const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+        const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
+        const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
+        return !shouldInheritEcu && !shouldInheritEcuName
+          ? row
+          : {
+            ...row,
+            ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+            ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+          };
       })
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);
@@ -16522,6 +16545,8 @@
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
+      sourceEcuName,
+      source_ecu_name: sourceEcuName,
       itemCount: items.length,
       item_count: items.length,
       expectedItemCount: expectedItems.length,
@@ -16723,6 +16748,8 @@
       valueType: catalogItem?.valueType || row.value_type || row.valueType || row.typeOfValue || "text",
       sourceEcu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
       source_ecu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
+      sourceEcuName: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
+      source_ecu_name: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
       privacyClass,
       detected,
       redacted: sensitiveIdentifierRedacted,
