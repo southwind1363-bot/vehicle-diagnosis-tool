@@ -5496,6 +5496,13 @@
     supportedPidMatrix = {}
   } = {}) {
     const rows = [];
+    const ecuInfoNameCandidates = (Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).flatMap((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const id = String(item.id || item.key || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const ecuName = typeof item.value === "string" ? item.value : typeof item.displayValue === "string" ? item.displayValue : typeof item.display_value === "string" ? item.display_value : null;
+      const ecuId = item.sourceEcu || item.source_ecu || item.ecu || item.ecu_id || item.ecuId || item.address || null;
+      return ["ecu_name", "module_name"].includes(id) && ecuId && ecuName ? [{ ecuId, ecuName }] : [];
+    });
     const add = (readoutId, values = []) => {
       values.forEach((value) => {
         const candidate = value && typeof value === "object" && !Array.isArray(value) ? value : { ecuId: value };
@@ -5526,7 +5533,8 @@
     ]);
     add("ecu_info_snapshot", [
       { ecuId: ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu, ecuName: ecuInfoSnapshot?.sourceEcuName || ecuInfoSnapshot?.source_ecu_name },
-      ...(ecuInfoSnapshot?.items || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
+      ...(ecuInfoSnapshot?.items || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
+      ...ecuInfoNameCandidates
     ]);
     add("onboard_monitor_snapshot", [
       { ecuId: onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu, ecuName: onboardMonitorSnapshot?.sourceEcuName || onboardMonitorSnapshot?.source_ecu_name },
