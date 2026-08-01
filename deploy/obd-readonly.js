@@ -5588,7 +5588,10 @@
     const ecuIds = ecus.map((entry) => entry.id);
     const readoutIds = [...new Set(ecus.flatMap((entry) => entry.readoutIds))];
     const capturedReadoutIds = [
-      Array.isArray(dtcSnapshot?.dtcs) && dtcSnapshot.dtcs.length > 0 ? "dtc_snapshot" : null,
+      (Array.isArray(dtcSnapshot?.dtcs) && dtcSnapshot.dtcs.length > 0)
+        || String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").toLowerCase() === "reported"
+          ? "dtc_snapshot"
+          : null,
       Array.isArray(livePidSnapshot?.monitorValues) && livePidSnapshot.monitorValues.length > 0 ? "live_pid_snapshot" : null,
       (Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0)
         || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
