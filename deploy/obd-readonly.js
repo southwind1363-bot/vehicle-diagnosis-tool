@@ -3050,9 +3050,10 @@
         : "read_stored_dtc";
     const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";
     const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) => rows.flatMap((row) => {
-      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName }));
+      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName, ecu_name: fallbackEcuName }));
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
+      const ecuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName;
       return extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "").map(({ code, subcode }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -3064,7 +3065,8 @@
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || fallbackStatus,
         ecu: rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
-        ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName,
+        ecuName,
+        ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
       }));
     });
