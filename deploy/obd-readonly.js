@@ -3283,6 +3283,19 @@
       const driverLibraryArchitecture = ["x86", "x64", "arm64", "unknown"].includes(driverLibraryArchitectureValue) ? driverLibraryArchitectureValue : null;
       const driverLibraryBitnessValue = Number(device?.driver_library_bitness ?? device?.driverLibraryBitness);
       const driverLibraryBitness = [32, 64].includes(driverLibraryBitnessValue) ? driverLibraryBitnessValue : null;
+      const bridgeRuntimeArchitectureValue = String(device?.bridge_runtime_architecture || device?.bridgeRuntimeArchitecture || "").trim().toLowerCase();
+      const bridgeRuntimeArchitecture = ["x86", "x64", "arm64", "unknown"].includes(bridgeRuntimeArchitectureValue) ? bridgeRuntimeArchitectureValue : null;
+      const bridgeRuntimeBitnessValue = Number(device?.bridge_runtime_bitness ?? device?.bridgeRuntimeBitness);
+      const bridgeRuntimeBitness = [32, 64].includes(bridgeRuntimeBitnessValue) ? bridgeRuntimeBitnessValue : null;
+      const driverRuntimeCompatible = device?.driver_runtime_compatible === true || device?.driverRuntimeCompatible === true
+        ? true
+        : device?.driver_runtime_compatible === false || device?.driverRuntimeCompatible === false
+          ? false
+          : null;
+      const driverRuntimeCompatibilityStatusValue = String(device?.driver_runtime_compatibility_status || device?.driverRuntimeCompatibilityStatus || "not_inspected").trim().toLowerCase();
+      const driverRuntimeCompatibilityStatus = ["compatible", "architecture_mismatch", "unknown", "not_inspected"].includes(driverRuntimeCompatibilityStatusValue)
+        ? driverRuntimeCompatibilityStatusValue
+        : "not_inspected";
       const readDriverCount = (...values) => {
         const value = values.find((item) => item !== undefined && item !== null && item !== "");
         const count = Number(value);
@@ -3317,6 +3330,14 @@
         driver_library_architecture: driverLibraryArchitecture,
         driverLibraryBitness,
         driver_library_bitness: driverLibraryBitness,
+        bridgeRuntimeArchitecture,
+        bridge_runtime_architecture: bridgeRuntimeArchitecture,
+        bridgeRuntimeBitness,
+        bridge_runtime_bitness: bridgeRuntimeBitness,
+        driverRuntimeCompatible,
+        driver_runtime_compatible: driverRuntimeCompatible,
+        driverRuntimeCompatibilityStatus,
+        driver_runtime_compatibility_status: driverRuntimeCompatibilityStatus,
         driverRequiredApiCount,
         driver_required_api_count: driverRequiredApiCount,
         driverDetectedRequiredApiCount,
