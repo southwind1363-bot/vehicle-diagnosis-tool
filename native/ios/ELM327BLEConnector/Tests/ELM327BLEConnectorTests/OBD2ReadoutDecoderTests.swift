@@ -228,6 +228,20 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
             response: "41 A0 60 00 00 00"
         ).get()
         XCTAssertEqual(pageA0[0].pids, ["A2", "A3"])
+
+        let pageC0 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
+            command: .supportedPIDsC0,
+            response: "7E8 06 41 C0 80 00 00 00"
+        ).get()
+        XCTAssertEqual(pageC0[0].scopeID, "7E8")
+        XCTAssertEqual(pageC0[0].pids, ["C1"])
+
+        let pageE0 = try OBD2ReadoutDecoder.decodeSupportedPIDs(
+            command: .supportedPIDsE0,
+            response: "7E8 06 41 E0 40 00 00 00"
+        ).get()
+        XCTAssertEqual(pageE0[0].scopeID, "7E8")
+        XCTAssertEqual(pageE0[0].pids, ["E2"])
     }
 
     func testFreezeFrameTriggerDTCRequiresFrameZeroAndPreservesScope() throws {
