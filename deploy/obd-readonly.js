@@ -3402,11 +3402,13 @@
       ? response.data && typeof response.data === "object"
         ? {
           ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
         }
         : response
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const hasBridgeValueList = Array.isArray(data.values)
       || Array.isArray(data.monitor_values)
       || Array.isArray(data.monitorValues)
@@ -3453,9 +3455,18 @@
                         ? data.items
                         : [])
       .map((row) => {
-        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
-        return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+        const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+        const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
+        const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
+        return !shouldInheritEcu && !shouldInheritEcuName
+          ? row
+          : {
+            ...row,
+            ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+            ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+          };
       });
     const monitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
@@ -3491,6 +3502,8 @@
       protocol: readBridgeProtocol(data),
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
+      sourceEcuName,
+      source_ecu_name: sourceEcuName,
       supportedPids,
       supported_pids: supportedPids,
       capturedAt,
