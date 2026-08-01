@@ -5478,61 +5478,61 @@
     const rows = [];
     const add = (readoutId, values = []) => {
       values.forEach((value) => {
-        const ecuId = redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
-        if (ecuId) rows.push({ ecuId, readoutId });
+        const candidate = value && typeof value === "object" && !Array.isArray(value) ? value : { ecuId: value };
+        const ecuId = redactSensitiveText(String(candidate.ecuId || candidate.ecu_id || candidate.id || candidate.ecu || candidate.address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+        const ecuName = redactSensitiveText(String(candidate.ecuName || candidate.ecu_name || candidate.name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+        if (ecuId) rows.push({ ecuId, ecuName, readoutId });
       });
     };
     add("dtc_snapshot", [
-      dtcSnapshot?.sourceEcu,
-      dtcSnapshot?.source_ecu,
-      ...(dtcSnapshot?.dtcs || []).map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || null)
+      { ecuId: dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu, ecuName: dtcSnapshot?.sourceEcuName || dtcSnapshot?.source_ecu_name },
+      ...(dtcSnapshot?.dtcs || []).map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address, ecuName: item?.ecuName || item?.ecu_name }))
     ]);
     add("live_pid_snapshot", [
-      livePidSnapshot?.sourceEcu,
-      livePidSnapshot?.source_ecu,
-      ...(livePidSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      { ecuId: livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu, ecuName: livePidSnapshot?.sourceEcuName || livePidSnapshot?.source_ecu_name },
+      ...(livePidSnapshot?.monitorValues || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     add("freeze_frame_snapshot", [
-      freezeFrameSnapshot?.sourceEcu,
-      freezeFrameSnapshot?.source_ecu,
-      ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
-      ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      { ecuId: freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu, ecuName: freezeFrameSnapshot?.sourceEcuName || freezeFrameSnapshot?.source_ecu_name },
+      ...(freezeFrameSnapshot?.monitorValues || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
+      ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     add("readiness_snapshot", [
-      readinessSnapshot?.sourceEcu,
-      readinessSnapshot?.source_ecu,
+      { ecuId: readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu, ecuName: readinessSnapshot?.sourceEcuName || readinessSnapshot?.source_ecu_name },
       ...[
         ...(Array.isArray(readinessSnapshot?.readinessEcuSnapshots) ? readinessSnapshot.readinessEcuSnapshots : []),
         ...(Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) ? readinessSnapshot.readiness_ecu_snapshots : [])
-      ].map((item) => item?.sourceEcu || item?.source_ecu || null)
+      ].map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     add("ecu_info_snapshot", [
-      ecuInfoSnapshot?.sourceEcu,
-      ecuInfoSnapshot?.source_ecu,
-      ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      { ecuId: ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu, ecuName: ecuInfoSnapshot?.sourceEcuName || ecuInfoSnapshot?.source_ecu_name },
+      ...(ecuInfoSnapshot?.items || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     add("onboard_monitor_snapshot", [
-      onboardMonitorSnapshot?.sourceEcu,
-      onboardMonitorSnapshot?.source_ecu,
-      ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null)
+      { ecuId: onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu, ecuName: onboardMonitorSnapshot?.sourceEcuName || onboardMonitorSnapshot?.source_ecu_name },
+      ...(onboardMonitorSnapshot?.tests || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     add("supported_pid_matrix", [
-      supportedPidMatrix?.sourceEcu,
-      supportedPidMatrix?.source_ecu,
+      { ecuId: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu, ecuName: supportedPidMatrix?.sourceEcuName || supportedPidMatrix?.source_ecu_name },
       ...[
         ...(Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots) ? supportedPidMatrix.supportedPidEcuSnapshots : []),
         ...(Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots) ? supportedPidMatrix.supported_pid_ecu_snapshots : [])
-      ].map((item) => item?.sourceEcu || item?.source_ecu || null)
+      ].map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     const byId = new Map();
-    rows.forEach(({ ecuId, readoutId }) => {
+    rows.forEach(({ ecuId, ecuName, readoutId }) => {
       if (!byId.has(ecuId) && byId.size >= 32) return;
-      const entry = byId.get(ecuId) || { id: ecuId, readoutIds: [] };
+      const entry = byId.get(ecuId) || { id: ecuId, readoutIds: [], ecuNames: [] };
       if (!entry.readoutIds.includes(readoutId)) entry.readoutIds.push(readoutId);
+      if (ecuName && !entry.ecuNames.includes(ecuName)) entry.ecuNames.push(ecuName);
       byId.set(ecuId, entry);
     });
     const ecus = [...byId.values()].map((entry) => ({
       id: entry.id,
+      ecuName: entry.ecuNames.length === 1 ? entry.ecuNames[0] : null,
+      ecu_name: entry.ecuNames.length === 1 ? entry.ecuNames[0] : null,
+      ecuNames: [...entry.ecuNames],
+      ecu_names: [...entry.ecuNames],
       readoutIds: [...entry.readoutIds],
       readout_ids: [...entry.readoutIds]
     }));
