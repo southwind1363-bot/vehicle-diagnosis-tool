@@ -3799,11 +3799,13 @@
       ? response.data && typeof response.data === "object"
         ? {
           ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
         }
         : response
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const malformedFreezeFrameAlias = [
       "values",
       "freeze_frame_values", "freezeFrameValues",
@@ -3831,9 +3833,18 @@
                       ? data.pidValues
                       : [])
       .map((row) => {
-        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
-        return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+        const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+        const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
+        const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
+        return !shouldInheritEcu && !shouldInheritEcuName
+          ? row
+          : {
+            ...row,
+            ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+            ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+          };
       });
     const errorCodes = readBridgeResponseErrorCodes(response);
     const bridgeSafety = malformedFreezeFrameAlias
@@ -3849,6 +3860,7 @@
       protocol: readBridgeProtocol(data),
       freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
+      source_ecu_name: sourceEcuName,
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
       trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || [],
       trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
@@ -15706,12 +15718,14 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
+    const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const rows = (Array.isArray(sourceInput.values)
       ? sourceInput.values
       : Array.isArray(sourceInput.freeze_frame)
@@ -15738,9 +15752,18 @@
                         ? sourceInput.items
                         : [])
       .map((row) => {
-        if (!sourceEcu || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = readObdResponseSourceEcu(row);
-        return rowSourceEcu ? row : { ...row, source_ecu: sourceEcu };
+        const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+        const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
+        const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
+        return !shouldInheritEcu && !shouldInheritEcuName
+          ? row
+          : {
+            ...row,
+            ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+            ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+          };
       });
     const monitorValues = rows
       .map((row, index) => normalizeBridgePidValue(row, index))
@@ -15792,13 +15815,18 @@
       const frameInput = pickDefined(row.frame_number, row.frameNumber, row.trigger_frame_number, row.triggerFrameNumber, null);
       const frame = Number(frameInput);
       const frameNumber = frameInput !== null && frameInput !== "" && Number.isInteger(frame) && frame >= 0 && frame <= 255 ? frame : null;
-      const ecu = readObdResponseSourceEcu(row) || sourceEcu;
+      const rowEcu = readObdResponseSourceEcu(row);
+      const ecu = rowEcu || sourceEcu;
+      const rowEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+      const ecuName = rowEcuName || (!rowEcu || !sourceEcu || rowEcu === sourceEcu ? sourceEcuName : null);
       return {
         code,
         frameNumber,
         frame_number: frameNumber,
         sourceEcu: ecu,
-        source_ecu: ecu
+        source_ecu: ecu,
+        sourceEcuName: ecuName,
+        source_ecu_name: ecuName
       };
     };
     const triggerDtcEntries = [...new Map(triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).map((item) => [`${item.code}::${item.frameNumber ?? ""}::${item.sourceEcu || ""}`, item])).values()];
@@ -15831,6 +15859,8 @@
       source,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
+      sourceEcuName,
+      source_ecu_name: sourceEcuName,
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,

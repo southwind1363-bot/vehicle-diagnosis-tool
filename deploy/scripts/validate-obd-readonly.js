@@ -7563,15 +7563,16 @@ const bridgeFreezeFrameParentSourceSnapshot = obd.normalizeBridgeFreezeFrameSnap
   would_transmit: false,
   data: {
     source_ecu: "7E8",
+    source_ecu_name: "Engine Control Module",
     values: [
       { pid: "0C", value: 900, unit: "rpm" },
       { pid: "05", value: 86, unit: "degC", source_ecu: "7E9" }
     ]
   }
 });
-check(bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.source_ecu === "7E8" && bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.sourceEcu === "7E9", "Bridge freeze-frame rows should inherit a parent ECU source only when their own source is absent");
+check(bridgeFreezeFrameParentSourceSnapshot.sourceEcuName === "Engine Control Module" && bridgeFreezeFrameParentSourceSnapshot.source_ecu_name === "Engine Control Module" && bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.source_ecu === "7E8" && bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "engine_speed")?.sourceEcuName === "Engine Control Module" && bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.sourceEcu === "7E9" && bridgeFreezeFrameParentSourceSnapshot.monitorValues.find((item) => item.id === "coolant_temp")?.source_ecu_name === null, "Bridge freeze-frame rows should inherit a matching parent ECU name without relabelling another ECU");
 const bridgeParentSourceReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ live_pid_snapshot: bridgeLivePidParentSourceSnapshot, freeze_frame_snapshot: bridgeFreezeFrameParentSourceSnapshot })) }));
-check(bridgeParentSourceReadoutRoundTrip?.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.source_ecu === "7E8" && bridgeParentSourceReadoutRoundTrip?.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "coolant_temp")?.sourceEcu === "7E9" && bridgeParentSourceReadoutRoundTrip?.vehicleCommandEnabled === false, "Bridge live PID and freeze-frame parent ECU provenance was not retained through read-only export and JSON import");
+check(bridgeParentSourceReadoutRoundTrip?.livePidSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.source_ecu === "7E8" && bridgeParentSourceReadoutRoundTrip?.freezeFrameSnapshot?.source_ecu_name === "Engine Control Module" && bridgeParentSourceReadoutRoundTrip?.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "engine_speed")?.source_ecu_name === "Engine Control Module" && bridgeParentSourceReadoutRoundTrip?.freezeFrameSnapshot?.monitorValues?.find((item) => item.id === "coolant_temp")?.sourceEcu === "7E9" && bridgeParentSourceReadoutRoundTrip?.vehicleCommandEnabled === false, "Bridge live PID and freeze-frame parent ECU provenance was not retained through read-only export and JSON import");
 const observedEcuSummarySession = obd.buildDiagnosticScanSession({
   dtc_snapshot: bridgeDtcParentSourceSnapshot,
   live_pid_snapshot: bridgeLivePidParentSourceSnapshot,
