@@ -13,6 +13,8 @@ const J2534_REGISTRY_ROOTS = [
 ];
 const MAX_J2534_LIBRARY_SIZE = 64 * 1024 * 1024;
 const MAX_PE_EXPORT_NAMES = 4096;
+const J2534_HOST_ARCHITECTURE = process.arch === "ia32" ? "x86" : process.arch === "x64" ? "x64" : process.arch === "arm64" ? "arm64" : "unknown";
+const J2534_HOST_BITNESS = J2534_HOST_ARCHITECTURE === "x86" ? 32 : J2534_HOST_ARCHITECTURE === "unknown" ? null : 64;
 const J2534_REQUIRED_API_NAMES = Object.freeze([
   "PassThruOpen",
   "PassThruClose",
@@ -530,6 +532,10 @@ export function parseJ2534RegistryDrivers(text = "", options = {}) {
       driver_library_inspection_status: libraryInspection?.inspection_status || "not_inspected",
       driver_library_architecture: libraryInspection?.pe_architecture || null,
       driver_library_bitness: libraryInspection?.pe_bitness || null,
+      bridge_runtime_architecture: libraryInspection?.bridge_runtime_architecture || J2534_HOST_ARCHITECTURE,
+      bridge_runtime_bitness: libraryInspection?.bridge_runtime_bitness || J2534_HOST_BITNESS,
+      driver_runtime_compatible: libraryInspection?.runtime_compatible ?? null,
+      driver_runtime_compatibility_status: libraryInspection?.runtime_compatibility_status || "not_inspected",
       driver_required_api_count: libraryInspection?.required_api_count || J2534_REQUIRED_API_NAMES.length,
       driver_detected_required_api_count: libraryInspection?.detected_required_api_count || 0,
       driver_missing_required_apis: libraryInspection?.missing_required_apis || [],
@@ -575,6 +581,10 @@ export function inspectJ2534LibraryFile(filePath = "") {
     inspection_status: "not_inspected",
     pe_architecture: null,
     pe_bitness: null,
+    bridge_runtime_architecture: J2534_HOST_ARCHITECTURE,
+    bridge_runtime_bitness: J2534_HOST_BITNESS,
+    runtime_compatible: null,
+    runtime_compatibility_status: "not_inspected",
     export_table_status: "not_inspected",
     required_api_count: J2534_REQUIRED_API_NAMES.length,
     detected_required_api_count: 0,
@@ -607,11 +617,14 @@ export function inspectJ2534LibraryFile(filePath = "") {
     const missingRequiredApis = J2534_REQUIRED_API_NAMES.filter((name) => !normalizedExports.has(name));
     const detectedReadonlyApis = J2534_READONLY_REQUIRED_API_NAMES.filter((name) => normalizedExports.has(name));
     const missingReadonlyApis = J2534_READONLY_REQUIRED_API_NAMES.filter((name) => !normalizedExports.has(name));
+    const runtimeCompatible = metadata.architecture !== "unknown" && metadata.architecture === J2534_HOST_ARCHITECTURE;
     return {
       ...base,
       inspection_status: "inspected",
       pe_architecture: metadata.architecture,
       pe_bitness: metadata.bitness,
+      runtime_compatible: runtimeCompatible,
+      runtime_compatibility_status: runtimeCompatible ? "compatible" : metadata.architecture === "unknown" || J2534_HOST_ARCHITECTURE === "unknown" ? "unknown" : "architecture_mismatch",
       export_table_status: metadata.exportTableStatus,
       detected_required_api_count: detectedRequiredApis.length,
       detected_required_apis: detectedRequiredApis,
