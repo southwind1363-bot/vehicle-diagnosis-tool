@@ -517,7 +517,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
     check(functionBody.includes('["nox_scr", c, 0x02, d, 0x02]') && functionBody.includes('["ac_refrigerant", c, 0x10, d, 0x10]') && functionBody.includes('["comprehensive_component", b, 0x04, b, 0x40]'), "normalizeBridgeReadinessSnapshot should preserve corrected compression and spark monitor layouts");
     check(functionBody.includes('status: supported ? (complete ? "complete" : "not_complete") : "not_supported"'), "normalizeBridgeReadinessSnapshot should derive readiness monitor status from supported and incomplete bits");
-    check(functionBody.includes('source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus,') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeReadinessSnapshot should preserve bridge failure status and source ECU");
+    check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('source_ecu: sourceEcu,') && functionBody.includes('source_ecu_name: sourceEcuName,') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus,') && functionBody.includes('readBridgeSnapshotSafety(response,'), "normalizeBridgeReadinessSnapshot should preserve bridge failure status and ECU aliases");
   }
   check(Boolean(bridgeEcuInfoSnapshotFunctionSource), "normalizeBridgeEcuInfoSnapshot is missing from obd-readonly.js");
   if (bridgeEcuInfoSnapshotFunctionSource) {
@@ -6866,10 +6866,11 @@ const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
       { id: "readiness_status_byte_d", value: 0x02 }
     ],
     source_ecu: "7E8",
+    source_ecu_name: "Engine Control Module",
     captured_at: "2026-06-28T00:01:48Z"
   }
 });
-check(bridgeReadinessSnapshot.source === "local_bridge" && bridgeReadinessSnapshot.sourceEcu === "7E8" && bridgeReadinessSnapshot.source_ecu === "7E8", "Bridge readiness source was not normalized");
+check(bridgeReadinessSnapshot.source === "local_bridge" && bridgeReadinessSnapshot.sourceEcu === "7E8" && bridgeReadinessSnapshot.source_ecu === "7E8" && bridgeReadinessSnapshot.sourceEcuName === "Engine Control Module" && bridgeReadinessSnapshot.source_ecu_name === "Engine Control Module", "Bridge readiness source was not normalized");
 check(bridgeReadinessSnapshot.intent === "readiness_snapshot" && bridgeReadinessSnapshot.blocked === false && bridgeReadinessSnapshot.wouldTransmit === false, "Bridge readiness safety metadata was not normalized");
 check(bridgeReadinessSnapshot.milOn === true, "Bridge readiness did not carry MIL status");
 check(bridgeReadinessSnapshot.incompleteCount === 1, "Bridge readiness did not use matching PID 01 support and incomplete bits");
@@ -6887,7 +6888,7 @@ const bridgeMalformedReadinessSession = obd.buildDiagnosticScanSession({ readine
 const bridgeMalformedReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeMalformedReadinessSession)));
 check(bridgeMalformedReadinessSnapshot.readinessReadoutStatus === "blocked" && bridgeMalformedReadinessSnapshot.blocked === true && bridgeMalformedReadinessSession.vehicleCommandEnabled === false && bridgeMalformedReadinessRoundTrip?.readinessSnapshot?.readinessReadoutStatus === "blocked" && bridgeMalformedReadinessRoundTrip?.vehicleCommandEnabled === false, "Malformed bridge readiness row aliases must fail closed through read-only export");
 const bridgeReadinessSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeReadinessSnapshot })) }));
-check(bridgeReadinessSourceRoundTrip?.readinessSnapshot?.sourceEcu === "7E8" && bridgeReadinessSourceRoundTrip?.readinessSnapshot?.source_ecu === "7E8" && bridgeReadinessSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge readiness source ECU was not retained through read-only JSON export and import");
+check(bridgeReadinessSourceRoundTrip?.readinessSnapshot?.sourceEcu === "7E8" && bridgeReadinessSourceRoundTrip?.readinessSnapshot?.source_ecu === "7E8" && bridgeReadinessSourceRoundTrip?.readinessSnapshot?.source_ecu_name === "Engine Control Module" && bridgeReadinessSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge readiness source ECU was not retained through read-only JSON export and import");
 const bridgeMalformedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
@@ -6900,13 +6901,13 @@ check(bridgeMalformedEcuReadinessSnapshot.readinessReadoutStatus === "blocked" &
 const bridgeMixedEcuReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   data: {
     readiness_ecu_snapshots: [
-      { source_ecu: "7E8", readiness_status_byte_a: 0x81, readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x02 },
-      { source_ecu: "7E9", readiness_status_byte_a: 0x00, readiness_status_byte_b: 0x08, readiness_status_byte_c: 0x00, readiness_status_byte_d: 0x00 }
+      { source_ecu: "7E8", source_ecu_name: "Engine Control Module", readiness_status_byte_a: 0x81, readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x02 },
+      { source_ecu: "7E9", sourceEcuName: "Hybrid Control Module", readiness_status_byte_a: 0x00, readiness_status_byte_b: 0x08, readiness_status_byte_c: 0x00, readiness_status_byte_d: 0x00 }
     ]
   }
 });
 const bridgeMixedEcuReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeMixedEcuReadinessSnapshot })) }));
-check(bridgeMixedEcuReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeMixedEcuReadinessSnapshot.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessSnapshot.milOn === null && bridgeMixedEcuReadinessSnapshot.monitors?.length === 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessSnapshot.monitorCount > 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.incompleteCount === 1) && bridgeMixedEcuReadinessSnapshot.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.readinessIgnitionType === "compression") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9") && bridgeMixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge mixed-ECU readiness snapshots were combined instead of preserved as read-only ECU-specific data");
+check(bridgeMixedEcuReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeMixedEcuReadinessSnapshot.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessSnapshot.milOn === null && bridgeMixedEcuReadinessSnapshot.monitors?.length === 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessSnapshot.monitorCount > 0 && bridgeMixedEcuReadinessSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.source_ecu_name === "Engine Control Module" && item.incompleteCount === 1) && bridgeMixedEcuReadinessSnapshot.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.sourceEcuName === "Hybrid Control Module" && item.readinessIgnitionType === "compression") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessScope === "multiple_ecus" && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module") && bridgeMixedEcuReadinessRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.source_ecu_name === "Hybrid Control Module") && bridgeMixedEcuReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge mixed-ECU readiness snapshots were combined instead of preserved as read-only ECU-specific data");
 const snakeOnlyReadinessEcuSession = obd.buildDiagnosticScanSession({
   vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
   readiness_snapshot: {

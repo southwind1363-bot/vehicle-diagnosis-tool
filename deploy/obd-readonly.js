@@ -3881,10 +3881,13 @@
       ? response.data && typeof response.data === "object"
         ? {
           ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
         }
         : response
       : {};
+    const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
+    const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const readinessEcuSnapshotRows = Array.isArray(data.readinessEcuSnapshots)
       ? data.readinessEcuSnapshots
       : Array.isArray(data.readiness_ecu_snapshots)
@@ -4049,7 +4052,8 @@
     if (![b, c, d].every(Number.isFinite)) {
       return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
-        source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
+        source_ecu: sourceEcu,
+        source_ecu_name: sourceEcuName,
         captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
         protocol: readBridgeProtocol(data),
         readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus,
@@ -4088,7 +4092,8 @@
         ];
     return withBridgeMetadata(normalizeReadinessSnapshot({
       source: "local_bridge",
-      source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
+      source_ecu: sourceEcu,
+      source_ecu_name: sourceEcuName,
       captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
       protocol: readBridgeProtocol(data),
       readiness_readout_status: bridgeReadoutStatus,
@@ -15947,12 +15952,14 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.data.timestamp || input.captured_at || input.capturedAt || input.timestamp,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
       }
       : input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
+    const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const readinessEcuSnapshotInputs = Array.isArray(sourceInput.readinessEcuSnapshots)
       ? sourceInput.readinessEcuSnapshots
       : Array.isArray(sourceInput.readiness_ecu_snapshots)
@@ -16162,6 +16169,8 @@
       source,
       sourceEcu,
       source_ecu: sourceEcu,
+      sourceEcuName,
+      source_ecu_name: sourceEcuName,
       readinessScope,
       readiness_scope: readinessScope,
       readinessEcuSnapshots,
