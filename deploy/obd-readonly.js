@@ -15586,6 +15586,7 @@
       const codes = genericCodeReferences.length ? genericCodeReferences : manufacturerCodeReference ? [manufacturerCodeReference] : [];
       const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
       const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
+      const ecuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       return codes.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -15597,7 +15598,8 @@
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: rowStatus,
         ecu: rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || sourceEcu,
-        ecuName: rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null,
+        ecuName,
+        ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
         ...(codeFormat ? { codeFormat, code_format: codeFormat, manufacturerSpecific: true, manufacturer_specific: true } : {}),
         ...(reportedDescription ? { reportedDescription, reported_description: reportedDescription } : {}),
