@@ -450,7 +450,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0:
+            case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0, .supportedPIDsC0, .supportedPIDsE0:
                 switch OBD2ReadoutDecoder.decodeSupportedPIDs(command: command, response: response) {
                 case .success(let results):
                     liveSupportedPIDs.formUnion(results.flatMap(\.pids))
