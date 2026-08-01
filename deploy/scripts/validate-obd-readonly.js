@@ -459,13 +459,13 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   check(Boolean(bridgeDtcSnapshotFunctionSource), "normalizeBridgeDtcSnapshot is missing from obd-readonly.js");
   if (bridgeDtcSnapshotFunctionSource) {
     const functionBody = bridgeDtcSnapshotFunctionSource[0];
-    check(functionBody.includes('response.data && typeof response.data === "object"') && functionBody.includes('response.source_ecu || response.sourceEcu'), "normalizeBridgeDtcSnapshot should unwrap bridge response data with outer ECU provenance");
+    check(functionBody.includes('response.data && typeof response.data === "object"') && functionBody.includes('response.source_ecu || response.sourceEcu') && functionBody.includes('response.source_ecu_name || response.sourceEcuName'), "normalizeBridgeDtcSnapshot should unwrap bridge response data with outer ECU provenance");
     check(functionBody.includes('Array.isArray(data.dtcs)') && functionBody.includes('Array.isArray(data.dtc_codes)') && functionBody.includes('Array.isArray(data.dtcCodes)'), "normalizeBridgeDtcSnapshot should accept DTC array aliases");
     check(functionBody.includes('"read_stored_dtc"') && functionBody.includes('"read_pending_dtc"') && functionBody.includes('"read_permanent_dtc"'), "normalizeBridgeDtcSnapshot should preserve stored, pending, and permanent DTC intents");
     check(functionBody.includes('const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";'), "normalizeBridgeDtcSnapshot should derive DTC status from bridge intent");
     check(functionBody.includes('const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) =>') && functionBody.includes('const ecuDtcRows = ecuRows.flatMap((ecuRow) => {') && functionBody.includes('const scopedEntriesByKey = new Map();') && functionBody.includes('const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get('), "normalizeBridgeDtcSnapshot should merge explicit ECU response DTC rows without retaining aggregate duplicates");
     check(functionBody.includes('extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "")'), "normalizeBridgeDtcSnapshot should normalize DTC row code aliases and subcodes");
-    check(functionBody.includes('ecu: rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu') && functionBody.includes('const ecuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName;') && functionBody.includes('ecu_name: ecuName') && functionBody.includes('freezeFrameAvailable: rowValue.freeze_frame_available === true'), "normalizeBridgeDtcSnapshot should preserve ECU name and freeze-frame context");
+    check(functionBody.includes('const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;') && functionBody.includes('const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);') && functionBody.includes('ecu: rowEcu || fallbackEcu') && functionBody.includes('ecu_name: ecuName') && functionBody.includes('freezeFrameAvailable: rowValue.freeze_frame_available === true'), "normalizeBridgeDtcSnapshot should preserve ECU name and freeze-frame context");
     check(functionBody.includes('const key = `${entry.code}::${entry.subcode || ""}::${entry.ecu || ""}::${entry.status}`;'), "normalizeBridgeDtcSnapshot should deduplicate by code, subcode, ECU, and status");
     check(functionBody.includes('const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));'), "normalizeBridgeDtcSnapshot should mark normalized DTC rows as local bridge sourced");
     check(functionBody.includes('schema_version: "dtc_snapshot_v1"') && functionBody.includes('captured_at: capturedAt'), "normalizeBridgeDtcSnapshot should expose snake_case schema and capture aliases");
@@ -1386,7 +1386,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('Array.isArray(sourceInput.stored_dtc_codes)') && functionBody.includes('Array.isArray(sourceInput.pendingDtcCodes)') && functionBody.includes('Array.isArray(sourceInput.permanent_codes)'), "normalizeDtcSnapshot should accept status-specific DTC code array aliases");
     check(functionBody.includes('rowValue.dtc_code') && functionBody.includes('rowValue.dtcCode'), "normalizeDtcSnapshot should normalize row code aliases");
     check(functionBody.includes('row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus'), "normalizeDtcSnapshot should normalize DTC status aliases");
-    check(functionBody.includes('rowValue.ecuId') && functionBody.includes('rowValue.ecuName') && functionBody.includes('rowValue.module_id') && functionBody.includes('rowValue.freezeFrame === true'), "normalizeDtcSnapshot should preserve ECU name and freeze-frame aliases");
+    check(functionBody.includes('const sourceEcuName = sourceInput.source_ecu_name') && functionBody.includes('const rowEcu = rowValue.source_ecu') && functionBody.includes('const ecuName = rowEcuName || (sourceEcuName') && functionBody.includes('rowValue.ecuId') && functionBody.includes('rowValue.ecuName') && functionBody.includes('rowValue.module_id') && functionBody.includes('rowValue.freezeFrame === true'), "normalizeDtcSnapshot should preserve ECU name and freeze-frame aliases");
     check(functionBody.includes('const typedDtcCodes = new Set(rows') && functionBody.includes('typedDtcCodes.has(`${row.code}::${row.subcode || ""}::${row.ecu || ""}`)') && functionBody.includes('const key = `${row.code}::${row.subcode || ""}::${row.ecu || ""}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should suppress only matching untyped code/subcode/ECU duplicates");
     check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "normalizeDtcSnapshot should accept protocol aliases");
     check(functionBody.includes('schema_version: "dtc_snapshot_v1"'), "normalizeDtcSnapshot should expose snake_case schema version");
@@ -7500,6 +7500,17 @@ const bridgeDtcParentSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
   }
 });
 check(bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0171")?.ecu === "7E8" && bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0171")?.ecuName === "Engine ECU" && bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0171")?.ecu_name === "Engine ECU" && bridgeDtcParentSourceSnapshot.dtcs.find((item) => item.code === "P0300")?.ecu === "7E9", "Bridge DTC rows should inherit a parent ECU source only when their own source is absent");
+const bridgeNestedDtcNameSnapshot = obd.normalizeBridgeDtcSnapshot({
+  source_ecu: "7E8",
+  module_name: "Engine Control Module",
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { dtcs: [{ code: "P0171" }, { code: "P0300", ecu: "7E9" }] }
+});
+const bridgeNestedDtcNameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeNestedDtcNameSnapshot }))));
+check(bridgeNestedDtcNameSnapshot.sourceEcuName === "Engine Control Module" && bridgeNestedDtcNameSnapshot.dtcs.find((item) => item.code === "P0171")?.ecuName === "Engine Control Module" && bridgeNestedDtcNameSnapshot.dtcs.find((item) => item.code === "P0300")?.ecuName === null && bridgeNestedDtcNameRoundTrip?.dtcSnapshot?.source_ecu_name === "Engine Control Module" && bridgeNestedDtcNameRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0171")?.ecu_name === "Engine Control Module" && bridgeNestedDtcNameRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0300")?.ecu_name === null && bridgeNestedDtcNameRoundTrip?.vehicleCommandEnabled === false && bridgeNestedDtcNameRoundTrip?.wouldTransmit === false, "Nested bridge DTC ECU names must remain scoped and survive read-only export");
 const bridgeDtcRowSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,

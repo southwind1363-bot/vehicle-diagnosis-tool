@@ -3015,7 +3015,8 @@
       ? response.data && typeof response.data === "object"
         ? {
           ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address
+          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
         }
         : response
       : {};
@@ -3053,7 +3054,9 @@
       if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName, ecu_name: fallbackEcuName }));
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
-      const ecuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || fallbackEcuName;
+      const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
+      const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
+      const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);
       return extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "").map(({ code, subcode }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -3064,7 +3067,7 @@
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || fallbackStatus,
-        ecu: rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || fallbackEcu,
+        ecu: rowEcu || fallbackEcu,
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
@@ -3159,6 +3162,8 @@
       protocol: readBridgeProtocol(data),
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
+      sourceEcuName,
+      source_ecu_name: sourceEcuName,
       ecuResponses: normalizedEcuResponses,
       ecu_responses: normalizedEcuResponses,
       capturedAt,
@@ -15601,6 +15606,7 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null
@@ -15608,6 +15614,7 @@
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
+    const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const rawRows = [
       ...(Array.isArray(sourceInput.dtcs) ? sourceInput.dtcs : []),
       ...(Array.isArray(sourceInput.codes) ? sourceInput.codes : []),
@@ -15649,7 +15656,9 @@
       const codes = genericCodeReferences.length ? genericCodeReferences : manufacturerCodeReference ? [manufacturerCodeReference] : [];
       const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
       const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
-      const ecuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
+      const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
+      const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
+      const ecuName = rowEcuName || (sourceEcuName && (!rowEcu || !sourceEcu || rowEcu === sourceEcu) ? sourceEcuName : null);
       return codes.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -15660,7 +15669,7 @@
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: rowStatus,
-        ecu: rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || sourceEcu,
+        ecu: rowEcu || sourceEcu,
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
@@ -15682,6 +15691,7 @@
     const normalizedDtcs = [...byCode.values()];
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
+    const resolvedSourceEcuName = sourceEcuName || (normalizedDtcs.length === 1 ? normalizedDtcs[0].ecuName || null : null);
     const codes = [...new Set(normalizedDtcs.map((row) => row.code))];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const codeCount = codes.length;
@@ -15727,6 +15737,8 @@
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
+      sourceEcuName: resolvedSourceEcuName,
+      source_ecu_name: resolvedSourceEcuName,
       codes,
       codeCount,
       code_count: codeCount,
