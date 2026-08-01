@@ -4187,9 +4187,10 @@ const bridgeEcuOnlyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   }
 });
 const bridgeEcuOnlyRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeEcuOnlyDtcSnapshot });
+const bridgeEcuOnlySummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeEcuOnlyDtcSnapshot });
 check(bridgeEcuOnlyDtcSnapshot.codeCount === 1 && bridgeEcuOnlyDtcSnapshot.dtcCount === 2 && bridgeEcuOnlyDtcSnapshot.dtcs.every((item) => item.code === "P0300" && ["7E8", "7E9"].includes(item.ecu)), "ECU-response DTC rows were not merged or aggregate DTC was retained");
 check(bridgeEcuOnlyRoundTrip.dtcSnapshot?.dtcs?.length === 2 && bridgeEcuOnlyRoundTrip.dtcSnapshot?.dtcs?.every((item) => ["7E8", "7E9"].includes(item.ecu)), "ECU-response DTC rows did not survive diagnostic session normalization");
-check(bridgeEcuOnlyDtcSnapshot.dtcs.some((item) => item.ecu === "7E8" && item.ecuName === "Engine") && bridgeEcuOnlyDtcSnapshot.dtcs.some((item) => item.ecu === "7E9" && item.ecuName === "ABS") && bridgeEcuOnlyRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.ecuName === "Engine"), "ECU-response DTC names did not survive session normalization");
+check(bridgeEcuOnlyDtcSnapshot.dtcs.some((item) => item.ecu === "7E8" && item.ecuName === "Engine") && bridgeEcuOnlyDtcSnapshot.dtcs.some((item) => item.ecu === "7E9" && item.ecuName === "ABS") && bridgeEcuOnlyDtcSnapshot.ecuResponses?.some((item) => item.ecu === "7E8" && item.ecuName === "Engine" && item.ecu_name === "Engine") && bridgeEcuOnlyRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.ecuName === "Engine") && bridgeEcuOnlySummary.ecuResponseSummary?.ecus?.some((item) => item.address === "7E8" && item.name === "Engine"), "ECU-response DTC names did not survive session normalization");
 const bridgeDtcAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
   ok: true,
   blocked: false,
