@@ -4223,11 +4223,12 @@ const bridgeDtcAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
   data: {
     capturedAt: "2026-06-28T00:00:01Z",
     dtc_codes: ["P0420", "P0420"],
-    ecuResponses: [{ address: "7E8", status: "ok", dtc_codes: ["P0420"], dtc_count: 1 }]
+    ecuResponses: [{ address: "7E8", response_status: "responded", dtcCodes: ["P0420"], dtcCount: 1 }]
   }
 });
 check(bridgeDtcAliasSnapshot.codes.join(",") === "P0420", "Bridge DTC alias codes were not normalized");
-check(bridgeDtcAliasSnapshot.ecuResponses[0]?.codeCount === 1, "Bridge DTC alias ECU response count was not normalized");
+const bridgeDtcAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcAliasSnapshot }))));
+check(bridgeDtcAliasSnapshot.ecuResponses[0]?.status === "responded" && bridgeDtcAliasSnapshot.ecuResponses[0]?.codeCount === 1 && bridgeDtcAliasRoundTrip?.dtcSnapshot?.ecuResponses?.[0]?.status === "responded" && bridgeDtcAliasRoundTrip?.dtcSnapshot?.ecu_responses?.[0]?.code_count === 1 && bridgeDtcAliasRoundTrip?.vehicleCommandEnabled === false && bridgeDtcAliasRoundTrip?.wouldTransmit === false, "Bridge DTC ECU response status and count aliases were not retained through read-only export");
 const ecuResponseSummaryAliases = obd.normalizeEcuResponseSummary({
   ecus: [
     {

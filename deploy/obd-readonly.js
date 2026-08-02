@@ -3101,8 +3101,8 @@
       ecu: row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null,
       ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
       ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
-      status: row?.status || "unknown",
-      codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : null
+      status: row?.status || row?.response_status || row?.responseStatus || "unknown",
+      codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null
     }));
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
@@ -15663,7 +15663,10 @@
         .map((row) => {
           const ecu = redactSensitiveText(String(row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const ecuName = redactSensitiveText(String(row.ecuName || row.ecu_name || row.name || row.label || row.displayName || row.display_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-          return ecu ? [ecu, { ecu, ecuName, ecu_name: ecuName }] : null;
+          const status = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
+          const codeCountValue = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count;
+          const codeCount = Number.isSafeInteger(Number(codeCountValue)) && Number(codeCountValue) >= 0 && Number(codeCountValue) <= 10000 ? Number(codeCountValue) : null;
+          return ecu ? [ecu, { ecu, ecuName, ecu_name: ecuName, status, codeCount, code_count: codeCount }] : null;
         })
         .filter(Boolean)
     ).values()];
