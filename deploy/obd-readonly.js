@@ -4162,7 +4162,8 @@
         ? {
           ...response.data,
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          ecu_info_readout_status: response.data.ecuInfoReadoutStatus || response.data.ecu_info_readout_status || response.ecuInfoReadoutStatus || response.ecu_info_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
         }
         : response
       : {};
@@ -4185,7 +4186,9 @@
     const malformedMode09Alias = ["mode09_items", "mode09Items", "mode_09_items", "mode09_values", "mode09Values", "mode_09_values"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const errorCodes = readBridgeResponseErrorCodes(response);
     const hasItemEvidence = items.length > 0;
-    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasItemEvidence);
+    const explicitReadoutStatus = String(data.ecu_info_readout_status || data.ecuInfoReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
+    const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasItemEvidence));
     const resolvedBridgeSafety = malformedMode09Alias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
