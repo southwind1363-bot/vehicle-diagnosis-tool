@@ -83,7 +83,7 @@ final class ELMReadCommandTests: XCTestCase {
 
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
         XCTAssertEqual(
-            ELMReadCommand.allCases.map(\.wireValue).filter { !["0108", "0109", "016A", "016C", "0184", "018C", "018E"].contains($0) },
+            ELMReadCommand.allCases.map(\.wireValue).filter { !["0108", "0109", "016A", "016C", "0184", "018C", "018E", "01A5"].contains($0) },
             ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "06", "0200", "0202", "0204", "0206", "0207", "020A", "020B", "0205", "020C", "020D", "020F", "0211", "021F", "0242", "0900", "0904", "0906", "090A", "0100", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0101", "0104", "0106", "0107", "010A", "010B", "010C", "010D", "010E", "0105", "010F", "0110", "0111", "0114", "0115", "0116", "0117", "0118", "0119", "011A", "011B", "0124", "0125", "0126", "0127", "0128", "0129", "012A", "012B", "011F", "0121", "0122", "0123", "012C", "012D", "012E", "012F", "0130", "0131", "0132", "0133", "0134", "0135", "0138", "0139", "013C", "013D", "013E", "013F", "014C", "0142", "0143", "0144", "0145", "0146", "0147", "0148", "0149", "014A", "014B", "014D", "014E", "0152", "0159", "015A", "015B", "015C", "015D", "015E", "0161", "0162", "0163", "0164", "0169", "01A6"]
         )
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains("04"))
@@ -91,7 +91,7 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains("0902"))
         XCTAssertTrue(ELMReadCommand.allCases.map(\.wireValue).contains("0108"))
         XCTAssertTrue(ELMReadCommand.allCases.map(\.wireValue).contains("0109"))
-        XCTAssertTrue(["016A", "016C", "0184", "018C", "018E"].allSatisfy(ELMReadCommand.allCases.map(\.wireValue).contains))
+        XCTAssertTrue(["016A", "016C", "0184", "018C", "018E", "01A5"].allSatisfy(ELMReadCommand.allCases.map(\.wireValue).contains))
         XCTAssertEqual(ELMReadCommand.mode09CalibrationID.intent, "read_ecu_info")
         XCTAssertEqual(ELMReadCommand.mode09CalibrationVerificationNumber.intent, "read_ecu_info")
         XCTAssertEqual(ELMReadCommand.onboardMonitor.intent, "read_onboard_monitor")
@@ -103,7 +103,7 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertEqual(ELMReadCommand.storedDTC.intent, "read_stored_dtc")
         XCTAssertEqual(ELMReadCommand.pendingDTC.intent, "read_pending_dtc")
         XCTAssertEqual(ELMReadCommand.permanentDTC.intent, "read_permanent_dtc")
-        XCTAssertTrue([ELMReadCommand.calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .shortTermFuelTrimBank2, .longTermFuelTrimBank2, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .oxygenSensorB1S1, .oxygenSensorB1S2, .oxygenSensorB1S3, .oxygenSensorB1S4, .oxygenSensorB2S1, .oxygenSensorB2S2, .oxygenSensorB2S3, .oxygenSensorB2S4, .engineRuntime, .distanceWithMIL, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .catalystTemperatureB1S1, .catalystTemperatureB1S2, .catalystTemperatureB2S1, .catalystTemperatureB2S2, .commandedThrottleActuator, .controlModuleVoltage, .ambientAirTemperature, .absoluteThrottlePositionB, .absoluteThrottlePositionC, .acceleratorPositionD, .acceleratorPositionE, .acceleratorPositionF, .timeWithMIL, .timeSinceClear, .ethanolPercentage, .hybridBatteryRemaining, .engineOilTemperature, .fuelInjectionTiming, .engineFuelRate, .driverDemandTorque, .actualEngineTorque, .engineReferenceTorque, .commandedDieselIntakeAirFlow, .commandedThrottleControl, .manifoldSurfaceTemperature, .commandedThrottleActuatorControl, .engineFrictionTorque].allSatisfy {
+        XCTAssertTrue([ELMReadCommand.calculatedLoad, .shortTermFuelTrimBank1, .longTermFuelTrimBank1, .shortTermFuelTrimBank2, .longTermFuelTrimBank2, .fuelPressure, .manifoldAbsolutePressure, .engineRPM, .vehicleSpeed, .timingAdvance, .coolantTemperature, .intakeAirTemperature, .massAirFlow, .throttlePosition, .oxygenSensorB1S1, .oxygenSensorB1S2, .oxygenSensorB1S3, .oxygenSensorB1S4, .oxygenSensorB2S1, .oxygenSensorB2S2, .oxygenSensorB2S3, .oxygenSensorB2S4, .engineRuntime, .distanceWithMIL, .fuelLevel, .warmupsSinceClear, .distanceSinceClear, .barometricPressure, .catalystTemperatureB1S1, .catalystTemperatureB1S2, .catalystTemperatureB2S1, .catalystTemperatureB2S2, .commandedThrottleActuator, .controlModuleVoltage, .ambientAirTemperature, .absoluteThrottlePositionB, .absoluteThrottlePositionC, .acceleratorPositionD, .acceleratorPositionE, .acceleratorPositionF, .timeWithMIL, .timeSinceClear, .ethanolPercentage, .hybridBatteryRemaining, .engineOilTemperature, .fuelInjectionTiming, .engineFuelRate, .driverDemandTorque, .actualEngineTorque, .engineReferenceTorque, .commandedDieselIntakeAirFlow, .commandedThrottleControl, .manifoldSurfaceTemperature, .commandedThrottleActuatorControl, .engineFrictionTorque, .commandedDieselExhaustFluid].allSatisfy {
             $0.intent == "read_live_pid_snapshot"
         })
     }
@@ -128,6 +128,7 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertEqual(ELMReadCommand.manifoldSurfaceTemperature.livePID, "84")
         XCTAssertEqual(ELMReadCommand.commandedThrottleActuatorControl.livePID, "8C")
         XCTAssertEqual(ELMReadCommand.engineFrictionTorque.livePID, "8E")
+        XCTAssertEqual(ELMReadCommand.commandedDieselExhaustFluid.livePID, "A5")
         XCTAssertEqual(ELMReadCommand.engineFuelRate.livePID, "5E")
         XCTAssertEqual(ELMReadCommand.distanceSinceClear.livePID, "31")
         XCTAssertEqual(ELMReadCommand.commandedEquivalenceRatio.livePID, "44")

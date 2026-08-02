@@ -131,6 +131,7 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
             (.manifoldSurfaceTemperature, "41 84 5A", OBD2MonitorValue(id: "manifold_surface_temp", pid: "84", value: 50, unit: "C")),
             (.commandedThrottleActuatorControl, "41 8C 80", OBD2MonitorValue(id: "commanded_throttle_actuator_control", pid: "8C", value: 50.19607843137255, unit: "%")),
             (.engineFrictionTorque, "41 8E 7B", OBD2MonitorValue(id: "engine_friction_torque", pid: "8E", value: -2, unit: "%")),
+            (.commandedDieselExhaustFluid, "41 A5 66", OBD2MonitorValue(id: "commanded_diesel_exhaust_fluid", pid: "A5", value: 40, unit: "%")),
             (.manifoldAbsolutePressure, "41 0B 64", OBD2MonitorValue(id: "map", pid: "0B", value: 100, unit: "kPa")),
             (.vehicleSpeed, "41 0D 3C", OBD2MonitorValue(id: "vehicle_speed", pid: "0D", value: 60, unit: "km/h")),
             (.timingAdvance, "41 0E 80", OBD2MonitorValue(id: "timing_advance", pid: "0E", value: 0, unit: "deg")),
