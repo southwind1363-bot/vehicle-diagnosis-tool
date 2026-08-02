@@ -18361,7 +18361,7 @@
     const bridgeResponseSession = getDiagnosticSessionInput(session);
     const importSession = bridgeResponseSession !== session ? bridgeResponseSession : session;
     const hasBridgeResponsePayload = bridgeResponseSession !== session;
-    const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
+    const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
     const hasExplicitLivePidCollection = ["livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
     const hasArrayDataDtcRows = !hasExplicitDtcCollection && hasDtcRows(importSession.data);
     const hasArrayDataLivePidRows = !hasExplicitDtcCollection && !hasExplicitLivePidCollection && hasLivePidRows(importSession.data);
@@ -18374,7 +18374,7 @@
         : importSession;
     const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
-    const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes");
+    const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
     const statusSpecificDtcInput = {
       stored_dtcs: pick("stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes"),
       pending_dtcs: pick("pending_dtcs", "pendingDtcs", "pending_dtc_codes", "pendingDtcCodes", "pending_codes", "pendingCodes"),
