@@ -4163,7 +4163,8 @@
           ...response.data,
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
-          ecu_info_readout_status: response.data.ecuInfoReadoutStatus || response.data.ecu_info_readout_status || response.ecuInfoReadoutStatus || response.ecu_info_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
+          ecu_info_readout_status: response.data.ecuInfoReadoutStatus || response.data.ecu_info_readout_status || response.ecuInfoReadoutStatus || response.ecu_info_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null,
+          had_sensitive_identifier: response.data.hadSensitiveIdentifier === true || response.data.had_sensitive_identifier === true || response.hadSensitiveIdentifier === true || response.had_sensitive_identifier === true
         }
         : response
       : {};
