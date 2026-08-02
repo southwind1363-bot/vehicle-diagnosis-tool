@@ -3924,7 +3924,8 @@
         ? {
           ...response.data,
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          readiness_readout_status: response.data.readinessReadoutStatus || response.data.readiness_readout_status || response.readinessReadoutStatus || response.readiness_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
         }
         : response
       : {};
@@ -4006,12 +4007,14 @@
             data.statusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.statusByteC } : null,
             data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
           ].filter(Boolean);
-    const bridgeSafety = readBridgeSnapshotSafety(response, readinessEcuSnapshotRows.length > 0 || [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
-      || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined));
+    const errorCodes = readBridgeResponseErrorCodes(response);
+    const explicitReadoutStatus = String(data.readiness_readout_status || data.readinessReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
+    const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || readinessEcuSnapshotRows.length > 0 || [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
+      || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined)));
     const resolvedBridgeSafety = malformedReadinessAlias || malformedReadinessEcuAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : bridgeSafety;
-    const errorCodes = readBridgeResponseErrorCodes(response);
     const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
@@ -4213,7 +4216,8 @@
         ? {
           ...response.data,
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          onboard_monitor_readout_status: response.data.onboardMonitorReadoutStatus || response.data.onboard_monitor_readout_status || response.onboardMonitorReadoutStatus || response.onboard_monitor_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
         }
         : response
       : {};
@@ -4261,7 +4265,9 @@
     const errorCodes = readBridgeResponseErrorCodes(response);
     const malformedMode06Alias = ["tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const hasTestEvidence = tests.length > 0;
-    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && hasTestEvidence);
+    const explicitReadoutStatus = String(data.onboard_monitor_readout_status || data.onboardMonitorReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
+    const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasTestEvidence));
     const resolvedBridgeSafety = malformedMode06Alias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
