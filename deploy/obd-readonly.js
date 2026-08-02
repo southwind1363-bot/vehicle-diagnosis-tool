@@ -18575,11 +18575,13 @@
       ), normalizedFreezeFrameInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])
       : null;
     const readinessSnapshot = hasValue(readinessInput)
-      ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
-        hasBridgeReadinessResponse ? normalizeBridgeReadinessSnapshot(importSession) : normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors")),
-        readinessInput,
-        ["readinessReadoutStatus", "readiness_readout_status"]
-      ), readinessInput, ["readinessReadoutStatus", "readiness_readout_status"])
+      ? hasBridgeReadinessResponse
+        ? normalizeBridgeReadinessSnapshot(importSession)
+        : preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+          normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors")),
+          readinessInput,
+          ["readinessReadoutStatus", "readiness_readout_status"]
+        ), readinessInput, ["readinessReadoutStatus", "readiness_readout_status"])
       : null;
     const ecuInfoSnapshot = hasValue(safeEcuInfoInput)
       ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
