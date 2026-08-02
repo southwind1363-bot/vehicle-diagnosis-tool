@@ -18358,17 +18358,19 @@
     if (text.length > 500000 && !isTrustedBridgeSessionExport) return null;
     const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
     if (!session || typeof session !== "object" || Array.isArray(session)) return null;
-    const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => session[key] !== undefined && session[key] !== null);
-    const hasExplicitLivePidCollection = ["livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values"].some((key) => session[key] !== undefined && session[key] !== null);
-    const hasArrayDataDtcRows = !hasExplicitDtcCollection && hasDtcRows(session.data);
-    const hasArrayDataLivePidRows = !hasExplicitDtcCollection && !hasExplicitLivePidCollection && hasLivePidRows(session.data);
-    const input = session.data && typeof session.data === "object" && !Array.isArray(session.data)
-      ? { ...session, ...session.data }
+    const bridgeResponseSession = getDiagnosticSessionInput(session);
+    const importSession = bridgeResponseSession !== session ? bridgeResponseSession : session;
+    const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
+    const hasExplicitLivePidCollection = ["livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
+    const hasArrayDataDtcRows = !hasExplicitDtcCollection && hasDtcRows(importSession.data);
+    const hasArrayDataLivePidRows = !hasExplicitDtcCollection && !hasExplicitLivePidCollection && hasLivePidRows(importSession.data);
+    const input = importSession.data && typeof importSession.data === "object" && !Array.isArray(importSession.data)
+      ? { ...importSession, ...importSession.data }
       : hasArrayDataDtcRows
-        ? { ...session, dtcs: session.data }
+        ? { ...importSession, dtcs: importSession.data }
         : hasArrayDataLivePidRows
-          ? { ...session, live_pid_snapshot: { monitor_values: session.data } }
-        : session;
+          ? { ...importSession, live_pid_snapshot: { monitor_values: importSession.data } }
+        : importSession;
     const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes");
