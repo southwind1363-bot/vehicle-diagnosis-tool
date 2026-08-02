@@ -170,7 +170,8 @@ public enum NativeConnectorEnvelopeFactory {
             intent: intent,
             data: [
                 "dtcs": .array(dtcs.map { .object(["code": .string($0.code), "status": .string($0.status)]) }),
-                "source_ecu": scopeID.map { .string($0) } ?? .null
+                "source_ecu": scopeID.map { .string($0) } ?? .null,
+                "dtc_readout_status": .string("reported")
             ],
             readoutScopeID: scopeID,
             readoutAttempt: 0

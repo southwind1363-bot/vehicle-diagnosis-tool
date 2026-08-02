@@ -38,6 +38,21 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
     }
 
+    func testEmptyDTCEnvelopeExplicitlyMarksTheReadoutAsReported() throws {
+        let envelope = NativeConnectorEnvelopeFactory.dtcs(
+            context: NativeConnectorSessionContext(),
+            sequence: 1,
+            intent: "read_stored_dtc",
+            scopeID: "7E8",
+            dtcs: []
+        )
+
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"dtcs\":[]"))
+        XCTAssertTrue(json.contains("\"dtc_readout_status\":\"reported\""))
+        XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
+
     func testReadinessEnvelopeCarriesThePid01ScopeAndStatusBytes() throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,
