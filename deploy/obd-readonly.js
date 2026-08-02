@@ -18377,6 +18377,7 @@
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
+    const hasBridgeOnboardMonitorResponse = hasBridgeResponsePayload && bridgeIntent === "read_onboard_monitor";
     const bridgeReadoutId = String(importSession.data?.readout_id || importSession.data?.readoutId || importSession.readout_id || importSession.readoutId || "").trim().toLowerCase();
     const hasBridgeReadinessResponse = hasBridgeResponsePayload && bridgeIntent === "read_live_pid_snapshot" && bridgeReadoutId === "readiness_snapshot";
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
@@ -18410,7 +18411,7 @@
     const readinessInput = hasBridgeReadinessResponse ? importSession : pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
     const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
-    const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
+    const onboardMonitorInput = hasBridgeOnboardMonitorResponse ? importSession : pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
     const connectionStatusInput = pick("connectionStatus", "connection_status", "connectionStatusResponse", "connection_status_response");
     const vciDevicesInput = pick("vciDevices", "vci_devices", "vciList", "vci_list", "listVciResponse", "list_vci_response");
@@ -18602,7 +18603,7 @@
       : null;
     const onboardMonitorSnapshot = hasValue(onboardMonitorInput)
       ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
-        normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests")),
+        hasBridgeOnboardMonitorResponse ? normalizeBridgeOnboardMonitorSnapshot(importSession) : normalizeOnboardMonitorSnapshot(Array.isArray(onboardMonitorInput) ? { tests: onboardMonitorInput, source: scannerJsonSource } : toSnapshotInput(onboardMonitorInput, "tests")),
         onboardMonitorInput,
         ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]
       ), onboardMonitorInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"])
