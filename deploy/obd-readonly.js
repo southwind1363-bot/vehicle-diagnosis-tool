@@ -18381,6 +18381,7 @@
     const hasBridgeSupportedPidResponse = hasBridgeResponsePayload && bridgeIntent === "read_supported_pids";
     const bridgeReadoutId = String(importSession.data?.readout_id || importSession.data?.readoutId || importSession.readout_id || importSession.readoutId || "").trim().toLowerCase();
     const hasBridgeReadinessResponse = hasBridgeResponsePayload && bridgeIntent === "read_live_pid_snapshot" && bridgeReadoutId === "readiness_snapshot";
+    const hasBridgeLivePidResponse = hasBridgeResponsePayload && bridgeIntent === "read_live_pid_snapshot" && !hasBridgeReadinessResponse;
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
     const statusSpecificDtcInput = {
       stored_dtcs: pick("stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes"),
@@ -18405,7 +18406,7 @@
           }
         }
         : null;
-    const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
+    const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : hasBridgeLivePidResponse ? importSession : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
     const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode");
@@ -18524,10 +18525,10 @@
           ["dtcReadoutStatus", "dtc_readout_status"]
         ), resolvedDtcInput || dtcInput, ["dtcReadoutStatus", "dtc_readout_status"])
       : null;
-    const livePidSnapshot = hasValue(livePidInput)
+    const livePidSnapshot = (hasBridgeLivePidResponse || hasValue(livePidInput))
       ? {
         ...preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
-          normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values")),
+          hasBridgeLivePidResponse ? normalizeBridgeLivePidSnapshot(importSession) : normalizeBridgeLivePidSnapshot(Array.isArray(livePidInput) ? { monitor_values: livePidInput, source: scannerJsonSource } : toSnapshotInput(livePidInput, "monitor_values")),
           livePidInput,
           ["livePidReadoutStatus", "live_pid_readout_status"]
         ), livePidInput, ["livePidReadoutStatus", "live_pid_readout_status"]),
