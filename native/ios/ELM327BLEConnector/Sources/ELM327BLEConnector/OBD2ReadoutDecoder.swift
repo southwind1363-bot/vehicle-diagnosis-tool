@@ -454,6 +454,12 @@ public enum OBD2ReadoutDecoder {
         case .longTermFuelTrimBank1:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "ltft_b1", pid: "07", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
+        case .shortTermFuelTrimBank2:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "stft_b2", pid: "08", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
+        case .longTermFuelTrimBank2:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "ltft_b2", pid: "09", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
         case .fuelPressure:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "fuel_pressure", pid: "0A", value: Double(bytes[0]) * 3, unit: "kPa")

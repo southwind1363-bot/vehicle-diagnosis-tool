@@ -124,6 +124,8 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
             (.calculatedLoad, "41 04 80", OBD2MonitorValue(id: "calculated_load", pid: "04", value: 50.19607843137255, unit: "%")),
             (.shortTermFuelTrimBank1, "41 06 90", OBD2MonitorValue(id: "stft_b1", pid: "06", value: 12.5, unit: "%")),
             (.longTermFuelTrimBank1, "41 07 70", OBD2MonitorValue(id: "ltft_b1", pid: "07", value: -12.5, unit: "%")),
+            (.shortTermFuelTrimBank2, "41 08 88", OBD2MonitorValue(id: "stft_b2", pid: "08", value: 6.25, unit: "%")),
+            (.longTermFuelTrimBank2, "41 09 70", OBD2MonitorValue(id: "ltft_b2", pid: "09", value: -12.5, unit: "%")),
             (.manifoldAbsolutePressure, "41 0B 64", OBD2MonitorValue(id: "map", pid: "0B", value: 100, unit: "kPa")),
             (.vehicleSpeed, "41 0D 3C", OBD2MonitorValue(id: "vehicle_speed", pid: "0D", value: 60, unit: "km/h")),
             (.timingAdvance, "41 0E 80", OBD2MonitorValue(id: "timing_advance", pid: "0E", value: 0, unit: "deg")),
