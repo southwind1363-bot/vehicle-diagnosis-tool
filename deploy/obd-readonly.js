@@ -3766,7 +3766,8 @@
         ? {
           ...response.data,
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          supported_pid_readout_status: response.data.supportedPidReadoutStatus || response.data.supported_pid_readout_status || response.supportedPidReadoutStatus || response.supported_pid_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
         }
         : response
       : {};
