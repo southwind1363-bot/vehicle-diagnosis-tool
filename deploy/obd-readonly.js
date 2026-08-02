@@ -3098,7 +3098,7 @@
     const capturedAt = data.captured_at || data.capturedAt || null;
     const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
     const normalizedEcuResponses = ecuRows.map((row) => ({
-      ecu: row?.ecu || row?.address || null,
+      ecu: row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null,
       ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
       ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
       status: row?.status || "unknown",
@@ -5534,7 +5534,11 @@
     };
     add("dtc_snapshot", [
       { ecuId: dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu, ecuName: dtcSnapshot?.sourceEcuName || dtcSnapshot?.source_ecu_name },
-      ...(dtcSnapshot?.dtcs || []).map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address, ecuName: item?.ecuName || item?.ecu_name }))
+      ...(dtcSnapshot?.dtcs || []).map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address, ecuName: item?.ecuName || item?.ecu_name })),
+      ...[dtcSnapshot?.ecuResponses, dtcSnapshot?.ecu_responses]
+        .filter(Array.isArray)
+        .flat()
+        .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name }))
     ]);
     add("live_pid_snapshot", [
       { ecuId: livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu, ecuName: livePidSnapshot?.sourceEcuName || livePidSnapshot?.source_ecu_name },
@@ -5660,6 +5664,10 @@
       dtcSnapshot?.sourceEcu,
       dtcSnapshot?.source_ecu,
       ...(dtcSnapshot?.dtcs || []).map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || null),
+      ...[dtcSnapshot?.ecuResponses, dtcSnapshot?.ecu_responses]
+        .filter(Array.isArray)
+        .flat()
+        .map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId || null),
       livePidSnapshot?.sourceEcu,
       livePidSnapshot?.source_ecu,
       ...(livePidSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
@@ -15647,6 +15655,18 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
+    const ecuResponses = [...new Map(
+      [sourceInput.ecuResponses, sourceInput.ecu_responses]
+        .filter(Array.isArray)
+        .flat()
+        .filter((row) => row && typeof row === "object" && !Array.isArray(row))
+        .map((row) => {
+          const ecu = redactSensitiveText(String(row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const ecuName = redactSensitiveText(String(row.ecuName || row.ecu_name || row.name || row.label || row.displayName || row.display_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          return ecu ? [ecu, { ecu, ecuName, ecu_name: ecuName }] : null;
+        })
+        .filter(Boolean)
+    ).values()];
     const rawRows = [
       ...(Array.isArray(sourceInput.dtcs) ? sourceInput.dtcs : []),
       ...(Array.isArray(sourceInput.codes) ? sourceInput.codes : []),
@@ -15771,6 +15791,8 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      ecuResponses,
+      ecu_responses: ecuResponses,
       codes,
       codeCount,
       code_count: codeCount,

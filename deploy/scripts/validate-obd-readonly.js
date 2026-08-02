@@ -7539,6 +7539,22 @@ const bridgeDtcMixedSourceSnapshot = obd.normalizeBridgeDtcSnapshot({
   data: { dtcs: [{ code: "P0171", ecu: "7E8" }, { code: "P0300", ecu: "7E9" }] }
 });
 check(bridgeDtcRowSourceSnapshot.sourceEcu === "7E8" && bridgeDtcRowSourceSnapshot.source_ecu === "7E8" && bridgeDtcMixedSourceSnapshot.sourceEcu === null && bridgeDtcMixedSourceSnapshot.source_ecu === null, "Bridge DTC parent ECU was not derived only for a single observed ECU");
+const bridgeEmptyMultiEcuDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    dtcs: [],
+    ecu_responses: [
+      { ecu: "7E8", ecu_name: "Engine Control Module", dtcs: [] },
+      { ecu_id: "7E9", display_name: "Transmission Control Module", dtc_codes: [] }
+    ]
+  }
+});
+const bridgeEmptyMultiEcuDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeEmptyMultiEcuDtcSnapshot, vehicle_applicability: { ecu_address: "7E8" } });
+const bridgeEmptyMultiEcuDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeEmptyMultiEcuDtcSession)));
+check(bridgeEmptyMultiEcuDtcSnapshot.dtcReadoutStatus === "reported" && bridgeEmptyMultiEcuDtcSnapshot.dtcCount === 0 && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("dtc_snapshot") && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.observedEcuSummary?.sourceCoveragePercent === 100 && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && bridgeEmptyMultiEcuDtcRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && bridgeEmptyMultiEcuDtcRoundTrip?.vehicleCommandEnabled === false && bridgeEmptyMultiEcuDtcRoundTrip?.wouldTransmit === false, "Reported empty multi-ECU DTC readouts must retain explicit ECU response provenance through read-only export");
 const bridgeDtcParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcParentSourceSnapshot })) }));
 check(bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0171")?.ecu === "7E8" && bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0171")?.ecu_name === "Engine ECU" && bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0300")?.ecu === "7E9" && bridgeDtcParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge DTC parent ECU provenance was not retained through read-only export and JSON import");
 const bridgeDtcSourceAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
