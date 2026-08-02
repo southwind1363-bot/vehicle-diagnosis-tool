@@ -18379,10 +18379,23 @@
       pending_dtcs: pick("pending_dtcs", "pendingDtcs", "pending_dtc_codes", "pendingDtcCodes", "pending_codes", "pendingCodes"),
       permanent_dtcs: pick("permanent_dtcs", "permanentDtcs", "permanent_dtc_codes", "permanentDtcCodes", "permanent_codes", "permanentCodes")
     };
+    const reportedDtcStatuses = [
+      ["stored", statusSpecificDtcInput.stored_dtcs],
+      ["pending", statusSpecificDtcInput.pending_dtcs],
+      ["permanent", statusSpecificDtcInput.permanent_dtcs]
+    ].filter(([, rows]) => Array.isArray(rows)).map(([status]) => status);
+    const hasStatusSpecificDtcArrays = reportedDtcStatuses.length > 0;
     const resolvedDtcInput = hasValue(dtcInput)
       ? dtcInput
-      : Object.values(statusSpecificDtcInput).some((item) => Array.isArray(item) && item.length)
-        ? statusSpecificDtcInput
+      : hasStatusSpecificDtcArrays
+        ? {
+          ...statusSpecificDtcInput,
+          dtc_readout_status: "reported",
+          dtc_status_summary: {
+            reported_statuses: reportedDtcStatuses,
+            empty_statuses: reportedDtcStatuses.filter((status) => statusSpecificDtcInput[`${status}_dtcs`].length === 0)
+          }
+        }
         : null;
     const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
