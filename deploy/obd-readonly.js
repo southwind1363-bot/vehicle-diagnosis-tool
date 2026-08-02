@@ -18360,6 +18360,7 @@
     if (!session || typeof session !== "object" || Array.isArray(session)) return null;
     const bridgeResponseSession = getDiagnosticSessionInput(session);
     const importSession = bridgeResponseSession !== session ? bridgeResponseSession : session;
+    const hasBridgeResponsePayload = bridgeResponseSession !== session;
     const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
     const hasExplicitLivePidCollection = ["livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
     const hasArrayDataDtcRows = !hasExplicitDtcCollection && hasDtcRows(importSession.data);
@@ -18506,12 +18507,15 @@
         : { ...item, source: item.source || scannerJsonSource });
     };
     const safeEcuInfoInput = sanitizeEcuInfoInput(ecuInfoInput);
-    const dtcSnapshot = hasValue(resolvedDtcInput)
+    const hasBridgeDtcArray = hasBridgeResponsePayload && Array.isArray(dtcInput);
+    const dtcSnapshot = (hasValue(resolvedDtcInput) || hasBridgeDtcArray)
       ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
-          normalizeDtcSnapshot(Array.isArray(resolvedDtcInput) ? { dtcs: resolvedDtcInput, source: scannerJsonSource } : toSnapshotInput(resolvedDtcInput, "dtcs")),
-          resolvedDtcInput,
+          hasBridgeDtcArray
+            ? normalizeBridgeDtcSnapshot(importSession)
+            : normalizeDtcSnapshot(Array.isArray(resolvedDtcInput) ? { dtcs: resolvedDtcInput, source: scannerJsonSource } : toSnapshotInput(resolvedDtcInput, "dtcs")),
+          resolvedDtcInput || dtcInput,
           ["dtcReadoutStatus", "dtc_readout_status"]
-        ), resolvedDtcInput, ["dtcReadoutStatus", "dtc_readout_status"])
+        ), resolvedDtcInput || dtcInput, ["dtcReadoutStatus", "dtc_readout_status"])
       : null;
     const livePidSnapshot = hasValue(livePidInput)
       ? {
