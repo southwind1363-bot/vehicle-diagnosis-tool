@@ -507,7 +507,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .shortTermFuelTrimBank2, .longTermFuelTrimBank2:
+            case .shortTermFuelTrimBank2, .longTermFuelTrimBank2, .commandedDieselIntakeAirFlow, .commandedThrottleControl, .engineFrictionTorque:
                 switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
                 case .success(let results):
                     results.forEach { result in

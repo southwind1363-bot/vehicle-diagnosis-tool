@@ -460,6 +460,15 @@ public enum OBD2ReadoutDecoder {
         case .longTermFuelTrimBank2:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "ltft_b2", pid: "09", value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%")
+        case .commandedDieselIntakeAirFlow:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "commanded_diesel_intake_air_flow", pid: "6A", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .commandedThrottleControl:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "commanded_throttle_control", pid: "6C", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .engineFrictionTorque:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "engine_friction_torque", pid: "8E", value: Double(Int(bytes[0]) - 125), unit: "%")
         case .fuelPressure:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "fuel_pressure", pid: "0A", value: Double(bytes[0]) * 3, unit: "kPa")
