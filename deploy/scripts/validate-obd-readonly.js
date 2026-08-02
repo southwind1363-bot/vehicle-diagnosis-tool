@@ -21,6 +21,7 @@ const developerSessionSummarySource = appSource.slice(
   appSource.indexOf("function renderObdDeveloperSessionSummary(session = null)"),
   appSource.indexOf("function renderObdOperationPlan(items)")
 );
+const elmDeveloperCommandGuardSource = appSource.match(/function isAllowedObdDeveloperCommand\(command\) \{[\s\S]*?\r?\n\}/);
 const monitorDefinitions = JSON.parse(
   fs.readFileSync(new URL("../data/obd-monitor-definitions.json", import.meta.url), "utf8")
 );
@@ -75,6 +76,20 @@ if (dtcInputReferenceFunctionSource) {
   vm.runInContext(dtcInputReferenceFunctionSource[0], dtcInputReferenceContext);
   const normalizeDtcInputReference = dtcInputReferenceContext.normalizeDtcInputReference;
   check(typeof normalizeDtcInputReference === "function" && normalizeDtcInputReference("B130474").code === "B1304" && normalizeDtcInputReference("B130474").subcode === "74" && normalizeDtcInputReference("B1304:74").code === "B1304" && normalizeDtcInputReference("B1304:74").subcode === "74" && normalizeDtcInputReference("P07407F").code === "P0740" && normalizeDtcInputReference("P07407F").subcode === "7F" && normalizeDtcInputReference("P0128").code === "P0128" && normalizeDtcInputReference("P0128").subcode === null && normalizeDtcInputReference("B1304740").code === "B1304740" && normalizeDtcInputReference("B1304740").subcode === null, "DTC input normalization must accept only two-digit concatenated subcodes while retaining standard and overlong inputs");
+}
+check(Boolean(elmDeveloperCommandGuardSource), "isAllowedObdDeveloperCommand is missing from script.js");
+if (elmDeveloperCommandGuardSource) {
+  const elmDeveloperCommandGuardContext = {
+    obdDevSession: {
+      freezeFramePidList: ["0205"],
+      selectedPidList: ["010C"]
+    }
+  };
+  vm.createContext(elmDeveloperCommandGuardContext);
+  vm.runInContext(elmDeveloperCommandGuardSource[0], elmDeveloperCommandGuardContext);
+  const isAllowedObdDeveloperCommand = elmDeveloperCommandGuardContext.isAllowedObdDeveloperCommand;
+  check(typeof isAllowedObdDeveloperCommand === "function" && ["ATZ", "03", "07", "0A", "0100", "0101", "06", "090A", "0205", "010C"].every((command) => isAllowedObdDeveloperCommand(command) === true), "Web Serial command guard must retain the approved read-only ELM and OBD readouts");
+  check(["04", "08", "10 03", "1101", "1400", "2701", "2EF190", "3101", "012345"].every((command) => isAllowedObdDeveloperCommand(command) === false), "Web Serial command guard must reject clear, control, reset, security, write, routine, and unknown commands");
 }
 const resolveNextReadoutCandidatesFunctionSource = source.match(/function resolveNextReadoutCandidates[\s\S]*?buildNextReadoutCandidates\(readoutCoverage, vehicleApplicability \|\| \{\}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix, vehicleApplicabilityEcuMatchSummary\)\r?\n    \);\r?\n  \}/);
 const normalizeBridgeSummaryAliasesFunctionSource = source.match(/function normalizeBridgeSummaryAliases[\s\S]*?\r?\n  \}\r?\n\r?\n  function cloneBridgeArrayItems/);
