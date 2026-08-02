@@ -3027,21 +3027,36 @@
       "dtcs",
       "codes",
       "dtc_codes", "dtcCodes",
+      "stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes",
+      "pending_dtcs", "pendingDtcs", "pending_dtc_codes", "pendingDtcCodes", "pending_codes", "pendingCodes",
+      "permanent_dtcs", "permanentDtcs", "permanent_dtc_codes", "permanentDtcCodes", "permanent_codes", "permanentCodes",
       "ecu_responses", "ecuResponses"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.codes) ? data.codes : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
+    const firstDtcArray = (...values) => values.find(Array.isArray) || [];
+    const typedDtcRowGroups = [
+      { status: "stored", rows: firstDtcArray(data.stored_dtcs, data.storedDtcs, data.stored_dtc_codes, data.storedDtcCodes, data.stored_codes, data.storedCodes) },
+      { status: "pending", rows: firstDtcArray(data.pending_dtcs, data.pendingDtcs, data.pending_dtc_codes, data.pendingDtcCodes, data.pending_codes, data.pendingCodes) },
+      { status: "permanent", rows: firstDtcArray(data.permanent_dtcs, data.permanentDtcs, data.permanent_dtc_codes, data.permanentDtcCodes, data.permanent_codes, data.permanentCodes) }
+    ];
+    const hasDtcArrayEvidence = [
+      data.dtcs, data.codes, data.dtc_codes, data.dtcCodes,
+      data.stored_dtcs, data.storedDtcs, data.stored_dtc_codes, data.storedDtcCodes, data.stored_codes, data.storedCodes,
+      data.pending_dtcs, data.pendingDtcs, data.pending_dtc_codes, data.pendingDtcCodes, data.pending_codes, data.pendingCodes,
+      data.permanent_dtcs, data.permanentDtcs, data.permanent_dtc_codes, data.permanentDtcCodes, data.permanent_codes, data.permanentCodes
+    ].some(Array.isArray);
     const errorCodes = readBridgeResponseErrorCodes(response);
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
     const malformedEcuDtcAlias = ecuRows.some((ecuRow) => ecuRow && typeof ecuRow === "object" && !Array.isArray(ecuRow) && [
-      "dtcs",
+      "dtcs", "codes",
       "dtc_codes", "dtcCodes"
     ].some((key) => ecuRow[key] !== undefined && ecuRow[key] !== null && !Array.isArray(ecuRow[key])));
-    const hasDtcRowEvidence = dtcRows.length > 0 || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.codes) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
+    const hasDtcRowEvidence = dtcRows.length > 0 || typedDtcRowGroups.some((group) => group.rows.length > 0) || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.codes) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
     const explicitReadoutStatus = String(data.dtc_readout_status || data.dtcReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(
       response,
-      errorCodes.length === 0 && (hasExplicitReadoutStatus || Array.isArray(data.dtcs) || Array.isArray(data.codes) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes))
+      errorCodes.length === 0 && (hasExplicitReadoutStatus || hasDtcArrayEvidence)
     );
     const resolvedBridgeSafety = malformedDtcAlias || malformedEcuDtcAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
@@ -3078,13 +3093,17 @@
       }));
     });
     const ecuDtcRows = ecuRows.flatMap((ecuRow) => {
-      const rows = Array.isArray(ecuRow?.dtcs) ? ecuRow.dtcs : Array.isArray(ecuRow?.dtc_codes) ? ecuRow.dtc_codes : Array.isArray(ecuRow?.dtcCodes) ? ecuRow.dtcCodes : [];
+      const rows = Array.isArray(ecuRow?.dtcs) ? ecuRow.dtcs : Array.isArray(ecuRow?.codes) ? ecuRow.codes : Array.isArray(ecuRow?.dtc_codes) ? ecuRow.dtc_codes : Array.isArray(ecuRow?.dtcCodes) ? ecuRow.dtcCodes : [];
       const ecu = ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
       const ecuName = ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.name || ecuRow?.label || ecuRow?.display_name || ecuRow?.displayName || null;
       const status = ecuRow?.dtc_status || ecuRow?.dtcStatus || ecuRow?.dtc_kind || ecuRow?.dtcKind || defaultStatus;
       return normalizeDtcRows(rows, status, ecu, ecuName);
     });
-    const entries = [...normalizeDtcRows(dtcRows, defaultStatus, sourceEcu, sourceEcuName), ...ecuDtcRows];
+    const entries = [
+      ...normalizeDtcRows(dtcRows, defaultStatus, sourceEcu, sourceEcuName),
+      ...typedDtcRowGroups.flatMap((group) => normalizeDtcRows(group.rows, group.status, sourceEcu, sourceEcuName)),
+      ...ecuDtcRows
+    ];
     const scopedEntriesByKey = new Map();
     entries.filter((entry) => entry.ecu).forEach((entry) => {
       const key = `${entry.code}::${entry.subcode || ""}::${entry.status}`;
@@ -3106,7 +3125,7 @@
       ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
       ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
       status: row?.status || row?.response_status || row?.responseStatus || "unknown",
-      codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null
+      codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null
     }));
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
