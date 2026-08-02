@@ -3016,7 +3016,8 @@
         ? {
           ...response.data,
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
+          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          dtc_readout_status: response.data.dtcReadoutStatus || response.data.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
         }
         : response
       : {};
@@ -3024,20 +3025,23 @@
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const malformedDtcAlias = [
       "dtcs",
+      "codes",
       "dtc_codes", "dtcCodes",
       "ecu_responses", "ecuResponses"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
-    const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
+    const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.codes) ? data.codes : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
     const errorCodes = readBridgeResponseErrorCodes(response);
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
     const malformedEcuDtcAlias = ecuRows.some((ecuRow) => ecuRow && typeof ecuRow === "object" && !Array.isArray(ecuRow) && [
       "dtcs",
       "dtc_codes", "dtcCodes"
     ].some((key) => ecuRow[key] !== undefined && ecuRow[key] !== null && !Array.isArray(ecuRow[key])));
-    const hasDtcRowEvidence = dtcRows.length > 0 || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
+    const hasDtcRowEvidence = dtcRows.length > 0 || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.codes) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
+    const explicitReadoutStatus = String(data.dtc_readout_status || data.dtcReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
+    const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(
       response,
-      errorCodes.length === 0 && (Array.isArray(data.dtcs) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes))
+      errorCodes.length === 0 && (hasExplicitReadoutStatus || Array.isArray(data.dtcs) || Array.isArray(data.codes) || Array.isArray(data.dtc_codes) || Array.isArray(data.dtcCodes))
     );
     const resolvedBridgeSafety = malformedDtcAlias || malformedEcuDtcAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
