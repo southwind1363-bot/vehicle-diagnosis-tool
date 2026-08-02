@@ -17114,6 +17114,19 @@
     const dtcStatusAvailabilityMasks = [...new Set(
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
+    const ecuResponses = [...new Map(
+      snapshots
+        .flatMap((snapshot) => [snapshot?.ecuResponses, snapshot?.ecu_responses])
+        .filter(Array.isArray)
+        .flat()
+        .filter((row) => row && typeof row === "object" && !Array.isArray(row))
+        .map((row) => {
+          const ecu = redactSensitiveText(String(row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const ecuName = redactSensitiveText(String(row.ecuName || row.ecu_name || row.name || row.label || row.displayName || row.display_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          return ecu ? [ecu, { ecu, ecuName, ecu_name: ecuName }] : null;
+        })
+        .filter(Boolean)
+    ).values()];
     const errorCodes = readBridgeResponseErrorCodes({
       errors: snapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot))
     });
@@ -17150,6 +17163,8 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      ecuResponses,
+      ecu_responses: ecuResponses,
       errorCodes,
       error_codes: [...errorCodes],
       dtcStatusAvailabilityMask,
