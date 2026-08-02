@@ -50,7 +50,17 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
         XCTAssertTrue(json.contains("\"dtcs\":[]"))
         XCTAssertTrue(json.contains("\"dtc_readout_status\":\"reported\""))
+        XCTAssertTrue(json.contains("\"readout_id\":\"stored_dtc_snapshot\""))
+        XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))
         XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
+
+    func testDTCEnvelopeMapsEachAllowedIntentToItsReadoutID() {
+        let context = NativeConnectorSessionContext()
+        XCTAssertEqual(NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: 1, intent: "read_stored_dtc", scopeID: nil, dtcs: []).readoutID, "stored_dtc_snapshot")
+        XCTAssertEqual(NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: 2, intent: "read_pending_dtc", scopeID: nil, dtcs: []).readoutID, "pending_dtc_snapshot")
+        XCTAssertEqual(NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: 3, intent: "read_permanent_dtc", scopeID: nil, dtcs: []).readoutID, "permanent_dtc_snapshot")
+        XCTAssertNil(NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: 4, intent: "unknown", scopeID: nil, dtcs: []).readoutID)
     }
 
     func testReadinessEnvelopeCarriesThePid01ScopeAndStatusBytes() throws {

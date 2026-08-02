@@ -164,6 +164,13 @@ public enum NativeConnectorEnvelopeFactory {
         scopeID: String?,
         dtcs: [OBD2DTC]
     ) -> NativeConnectorEnvelope {
+        let readoutID: String?
+        switch intent {
+        case "read_stored_dtc": readoutID = "stored_dtc_snapshot"
+        case "read_pending_dtc": readoutID = "pending_dtc_snapshot"
+        case "read_permanent_dtc": readoutID = "permanent_dtc_snapshot"
+        default: readoutID = nil
+        }
         make(
             context: context,
             sequence: sequence,
@@ -173,6 +180,7 @@ public enum NativeConnectorEnvelopeFactory {
                 "source_ecu": scopeID.map { .string($0) } ?? .null,
                 "dtc_readout_status": .string("reported")
             ],
+            readoutID: readoutID,
             readoutScopeID: scopeID,
             readoutAttempt: 0
         )
