@@ -18374,6 +18374,8 @@
         : importSession;
     const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
+    const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
+    const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
     const statusSpecificDtcInput = {
       stored_dtcs: pick("stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes"),
@@ -18398,9 +18400,9 @@
           }
         }
         : null;
-    const livePidInput = pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
+    const livePidInput = hasBridgeFreezeFrameResponse ? null : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
-    const freezeFrameInput = pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
+    const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode");
     const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
@@ -18561,7 +18563,7 @@
       : freezeFrameSnapshotInput;
     const freezeFrameSnapshot = normalizedFreezeFrameInput
       ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
-        normalizeFreezeFrameSnapshot(normalizedFreezeFrameInput),
+        hasBridgeFreezeFrameResponse ? normalizeBridgeFreezeFrameSnapshot(importSession) : normalizeFreezeFrameSnapshot(normalizedFreezeFrameInput),
         normalizedFreezeFrameInput,
         ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]
       ), normalizedFreezeFrameInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])
