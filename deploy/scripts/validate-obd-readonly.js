@@ -7100,6 +7100,8 @@ const directVinNonRetentionSnapshot = obd.normalizeEcuInfoSnapshot({
   ]
 });
 check(directVinNonRetentionSnapshot.schemaVersion === "ecu_info_snapshot_v2" && directVinNonRetentionSnapshot.items.find((item) => item.id === "vin")?.value === null && directVinNonRetentionSnapshot.items.find((item) => item.id === "vin")?.redacted === true && directVinNonRetentionSnapshot.items.find((item) => item.id === "calibration_id")?.value === "CAL-VIN-SAFETY" && directVinNonRetentionSnapshot.hadSensitiveIdentifier === true && directVinNonRetentionSnapshot.sensitiveIdentifierValuesRetained === false && directVinNonRetentionSnapshot.redactedItemIds?.includes("vin") && !hasVinRetention(directVinNonRetentionSnapshot), "ECU info v2 did not discard VIN values and fragments while retaining non-sensitive Mode 09 data");
+const nestedOuterEcuInfoSafetySnapshot = obd.normalizeEcuInfoSnapshot({ ecu_info_readout_status: "reported", had_sensitive_identifier: true, data: { items: [] } });
+check(nestedOuterEcuInfoSafetySnapshot.ecuInfoReadoutStatus === "reported" && nestedOuterEcuInfoSafetySnapshot.hadSensitiveIdentifier === true && nestedOuterEcuInfoSafetySnapshot.itemCount === 0 && nestedOuterEcuInfoSafetySnapshot.retainedRawText === false && !hasVinRetention(nestedOuterEcuInfoSafetySnapshot), "Nested ECU info readout status or identifier safety flags were not retained without raw values");
 const partialVinLegacySession = obd.buildDiagnosticScanSession({
   ecu_info_snapshot: {
     schemaVersion: "ecu_info_snapshot_v1",

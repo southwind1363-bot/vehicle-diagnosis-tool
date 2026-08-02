@@ -16547,7 +16547,9 @@
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
-        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
+        protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
+        ecu_info_readout_status: input.data.ecuInfoReadoutStatus || input.data.ecu_info_readout_status || input.ecuInfoReadoutStatus || input.ecu_info_readout_status || null,
+        had_sensitive_identifier: input.data.hadSensitiveIdentifier === true || input.data.had_sensitive_identifier === true || input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
