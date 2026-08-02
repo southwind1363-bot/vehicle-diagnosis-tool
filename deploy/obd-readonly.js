@@ -18378,6 +18378,7 @@
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
     const hasBridgeOnboardMonitorResponse = hasBridgeResponsePayload && bridgeIntent === "read_onboard_monitor";
+    const hasBridgeSupportedPidResponse = hasBridgeResponsePayload && bridgeIntent === "read_supported_pids";
     const bridgeReadoutId = String(importSession.data?.readout_id || importSession.data?.readoutId || importSession.readout_id || importSession.readoutId || "").trim().toLowerCase();
     const hasBridgeReadinessResponse = hasBridgeResponsePayload && bridgeIntent === "read_live_pid_snapshot" && bridgeReadoutId === "readiness_snapshot";
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
@@ -18410,7 +18411,7 @@
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode");
     const readinessInput = hasBridgeReadinessResponse ? importSession : pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
-    const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
+    const supportedPidInput = hasBridgeSupportedPidResponse ? importSession : pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
     const onboardMonitorInput = hasBridgeOnboardMonitorResponse ? importSession : pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
     const connectionStatusInput = pick("connectionStatus", "connection_status", "connectionStatusResponse", "connection_status_response");
@@ -18586,12 +18587,14 @@
         ["ecuInfoReadoutStatus", "ecu_info_readout_status"]
       ), safeEcuInfoInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"])
       : null;
-    const hasSupportedPidInput = hasValue(supportedPidInput) || (typeof supportedPidInput === "string" && supportedPidInput.trim());
+    const hasSupportedPidInput = hasBridgeSupportedPidResponse || hasValue(supportedPidInput) || (typeof supportedPidInput === "string" && supportedPidInput.trim());
     const isTypedSupportedPidSnapshot = supportedPidInput && typeof supportedPidInput === "object" && !Array.isArray(supportedPidInput)
       && ["supported_pid_matrix_v1"].includes(supportedPidInput.schemaVersion || supportedPidInput.schema_version || "");
     const supportedPidMatrix = hasSupportedPidInput
       ? {
-        ...preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(isTypedSupportedPidSnapshot
+        ...preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(hasBridgeSupportedPidResponse
+          ? normalizeBridgeSupportedPidSnapshot(importSession)
+          : isTypedSupportedPidSnapshot
           ? buildSupportedPidMatrix(toSnapshotInput(supportedPidInput, "supported_pids"))
           : normalizeBridgeSupportedPidSnapshot(Array.isArray(supportedPidInput)
             ? { supported_pids: supportedPidInput, source: scannerJsonSource }
