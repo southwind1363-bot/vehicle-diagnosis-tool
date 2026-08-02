@@ -18376,6 +18376,7 @@
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
+    const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
     const statusSpecificDtcInput = {
       stored_dtcs: pick("stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes"),
@@ -18405,7 +18406,7 @@
     const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode");
     const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
-    const ecuInfoInput = pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
+    const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
     const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
     const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
