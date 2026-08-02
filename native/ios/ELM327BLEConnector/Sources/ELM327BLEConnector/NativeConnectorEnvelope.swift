@@ -135,8 +135,9 @@ public enum NativeConnectorEnvelopeFactory {
         make(context: context, sequence: sequence, intent: "read_supported_pids", data: [
             "supported_pids": .array(pids.map(NativeConnectorJSONValue.string)),
             "supported_pid_page_bases": .array([.string(pageBase)]),
-            "source_ecu": scopeID.map { .string($0) } ?? .null
-        ], readoutScopeID: scopeID, readoutAttempt: 0)
+            "source_ecu": scopeID.map { .string($0) } ?? .null,
+            "supported_pid_readout_status": .string("reported")
+        ], readoutID: "supported_pid_matrix", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
     public static func livePID(

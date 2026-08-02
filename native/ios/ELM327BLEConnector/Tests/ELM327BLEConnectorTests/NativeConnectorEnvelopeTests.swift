@@ -63,6 +63,23 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertNil(NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: 4, intent: "unknown", scopeID: nil, dtcs: []).readoutID)
     }
 
+    func testEmptySupportedPIDEnvelopeMarksItsReadoutAndScope() throws {
+        let envelope = NativeConnectorEnvelopeFactory.supportedPIDs(
+            context: NativeConnectorSessionContext(),
+            sequence: 1,
+            scopeID: "7E8",
+            pageBase: "00",
+            pids: []
+        )
+
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"supported_pids\":[]"))
+        XCTAssertTrue(json.contains("\"supported_pid_readout_status\":\"reported\""))
+        XCTAssertTrue(json.contains("\"readout_id\":\"supported_pid_matrix\""))
+        XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))
+        XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
+
     func testReadinessEnvelopeCarriesThePid01ScopeAndStatusBytes() throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,
