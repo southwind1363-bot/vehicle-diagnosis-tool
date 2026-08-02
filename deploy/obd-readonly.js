@@ -18377,6 +18377,8 @@
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
+    const bridgeReadoutId = String(importSession.data?.readout_id || importSession.data?.readoutId || importSession.readout_id || importSession.readoutId || "").trim().toLowerCase();
+    const hasBridgeReadinessResponse = hasBridgeResponsePayload && bridgeIntent === "read_live_pid_snapshot" && bridgeReadoutId === "readiness_snapshot";
     const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
     const statusSpecificDtcInput = {
       stored_dtcs: pick("stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes"),
@@ -18401,11 +18403,11 @@
           }
         }
         : null;
-    const livePidInput = hasBridgeFreezeFrameResponse ? null : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
+    const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
     const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode");
-    const readinessInput = pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
+    const readinessInput = hasBridgeReadinessResponse ? importSession : pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
     const supportedPidInput = pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
     const onboardMonitorInput = pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
@@ -18571,7 +18573,7 @@
       : null;
     const readinessSnapshot = hasValue(readinessInput)
       ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
-        normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors")),
+        hasBridgeReadinessResponse ? normalizeBridgeReadinessSnapshot(importSession) : normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors")),
         readinessInput,
         ["readinessReadoutStatus", "readiness_readout_status"]
       ), readinessInput, ["readinessReadoutStatus", "readiness_readout_status"])
