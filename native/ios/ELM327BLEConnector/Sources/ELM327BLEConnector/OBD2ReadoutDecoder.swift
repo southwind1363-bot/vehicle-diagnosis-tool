@@ -466,6 +466,12 @@ public enum OBD2ReadoutDecoder {
         case .commandedThrottleControl:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "commanded_throttle_control", pid: "6C", value: Double(bytes[0]) * 100 / 255, unit: "%")
+        case .manifoldSurfaceTemperature:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "manifold_surface_temp", pid: "84", value: Double(Int(bytes[0]) - 40), unit: "C")
+        case .commandedThrottleActuatorControl:
+            guard bytes.count == 1 else { return nil }
+            return OBD2MonitorValue(id: "commanded_throttle_actuator_control", pid: "8C", value: Double(bytes[0]) * 100 / 255, unit: "%")
         case .engineFrictionTorque:
             guard bytes.count == 1 else { return nil }
             return OBD2MonitorValue(id: "engine_friction_torque", pid: "8E", value: Double(Int(bytes[0]) - 125), unit: "%")
