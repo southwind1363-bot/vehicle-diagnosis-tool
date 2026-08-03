@@ -73,6 +73,26 @@ func enqueueSupportedPIDFollowUps(
     return next
 }
 
+func freezeFrameValueFollowUpCommands(
+    triggerDtcReported: Bool,
+    supportedPIDs: Set<String>
+) -> [ELMReadCommand] {
+    guard triggerDtcReported else { return [] }
+    let candidates: [ELMReadCommand] = [
+        .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad,
+        .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1,
+        .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure,
+        .freezeFrameCoolantTemperature, .freezeFrameEngineRPM,
+        .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance,
+        .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow,
+        .freezeFrameThrottlePosition, .freezeFrameEngineRuntime,
+        .freezeFrameControlModuleVoltage
+    ]
+    return candidates.filter { command in
+        command.freezeFramePID.map(supportedPIDs.contains) ?? false
+    }
+}
+
 public struct BLEPeripheralCandidate: Identifiable, Sendable {
     public let id: UUID
     public let displayName: String
@@ -372,22 +392,27 @@ public final class ELM327BLEConnector: NSObject {
                 }
             case .freezeFrameCapabilities:
                 freezeFrameSupportedPIDs = OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: response)
-                let candidates: [ELMReadCommand] = [.freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage]
-                let supported = candidates.filter { command in
-                    command.freezeFramePID.map(freezeFrameSupportedPIDs.contains) ?? false
-                }
-                if supported.contains(.freezeFrameTriggerDTC) {
-                    pendingCommands.insert(contentsOf: supported, at: 0)
-                    plan(commands: supported)
+                if freezeFrameSupportedPIDs.contains("02") {
+                    pendingCommands.insert(.freezeFrameTriggerDTC, at: 0)
+                    plan(commands: [.freezeFrameTriggerDTC])
                 } else {
                     emitFailure(for: .freezeFrameTriggerDTC, error: "freeze_frame_unsupported")
                 }
             case .freezeFrameTriggerDTC:
                 switch OBD2ReadoutDecoder.decodeFreezeFrameTriggerDTC(response: response) {
                 case .success(let results):
+                    let triggerDtcReported = results.contains { $0.code != nil }
                     results.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: result.scopeID, code: result.code))
+                    }
+                    let followUpCommands = freezeFrameValueFollowUpCommands(
+                        triggerDtcReported: triggerDtcReported,
+                        supportedPIDs: freezeFrameSupportedPIDs
+                    )
+                    if !followUpCommands.isEmpty {
+                        pendingCommands.insert(contentsOf: followUpCommands, at: 0)
+                        plan(commands: followUpCommands)
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)

@@ -81,6 +81,18 @@ final class ELMReadCommandTests: XCTestCase {
         )
     }
 
+    func testFreezeFrameValuesRequireAReportedTriggerDTC() {
+        let supportedPIDs: Set<String> = ["02", "03", "05", "0C"]
+        XCTAssertEqual(
+            freezeFrameValueFollowUpCommands(triggerDtcReported: true, supportedPIDs: supportedPIDs),
+            [.freezeFrameFuelSystemStatus, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM]
+        )
+        XCTAssertEqual(
+            freezeFrameValueFollowUpCommands(triggerDtcReported: false, supportedPIDs: supportedPIDs),
+            []
+        )
+    }
+
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
         XCTAssertEqual(
             ELMReadCommand.allCases.map(\.wireValue).filter { !["0103", "0108", "0109", "0112", "0113", "011C", "011D", "011E", "0151", "016A", "016C", "0184", "018C", "018E", "01A5", "0908", "090B"].contains($0) },
