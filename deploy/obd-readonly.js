@@ -6755,6 +6755,8 @@
       obd_protocol: protocol,
       vehicleProfile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      observationContext: resolvedMetadata.observationContext,
+      observation_context: resolvedMetadata.observationContext,
       connectionStatus,
       vciDevices: vciList.devices,
       adapterIdentity,
