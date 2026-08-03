@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-  const APP_VERSION = "3.5.36";
+  const APP_VERSION = "3.5.37";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6258,6 +6258,28 @@ function formatJ2534RuntimeCompatibility(item = null, fallback = null) {
   return `driver ${driverLabel} -> bridge ${bridgeLabel} (${statusLabel})`;
 }
 
+function formatJ2534DriverReadiness(item = null, fallback = null) {
+  const status = String(item?.driverReadinessStatus || item?.driver_readiness_status || "").trim().toLowerCase();
+  return {
+    no_registered_driver: "ドライバー未登録",
+    static_inspection_pending: "DLL静的確認待ち",
+    runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致",
+    readonly_api_incomplete: "read-only API不足",
+    readonly_static_check_complete: "静的read-only確認完了（VCI未接続）"
+  }[status] || fallback;
+}
+
+function formatJ2534NextCheck(item = null, fallback = null) {
+  const nextCheck = String(item?.nextCheck || item?.next_check || "").trim().toLowerCase();
+  return {
+    install_or_repair_j2534_driver_registration: "J2534ドライバー登録を確認",
+    verify_driver_library_path: "登録DLLのパスと静的検査を確認",
+    install_matching_j2534_driver_architecture: "PCと一致する32/64bitドライバーを確認",
+    verify_driver_readonly_exports: "read-only必須APIのエクスポートを確認",
+    manual_vci_connection_review: "VCI接続前の手順と適合を確認"
+  }[nextCheck] || fallback;
+}
+
 function renderObdBridgeSessionDetails(session = null) {
   if (!obdDevSessionDetails) return;
   obdDevSessionDetails.innerHTML = "";
@@ -6275,12 +6297,16 @@ function renderObdBridgeSessionDetails(session = null) {
   const vciDevices = sessionVciDevices || obdDevSession.bridgeVciList?.devices || [];
   const selectedVci = vciDevices.find((item) => item?.selected) || vciDevices[0] || null;
   const vciDriverStatus = selectedVci?.driverStatus || obdDevSession.bridgeVciList?.driverStatus || NO_DATA;
+  const j2534DriverReadinessLabel = formatJ2534DriverReadiness(connectionStatus, formatJ2534DriverReadiness(obdDevSession.bridgeVciList));
+  const j2534NextCheckLabel = formatJ2534NextCheck(connectionStatus, formatJ2534NextCheck(obdDevSession.bridgeVciList));
   if (connectionStatus?.displayStatus || vciDevices.length) {
     const lines = [
       `状態: ${connectionStatus?.displayStatus || NO_DATA}`,
       `次動作: ${connectionStatus?.nextAction || NO_DATA}`,
       `Driver: ${vciDriverStatus}`
     ];
+    if (j2534DriverReadinessLabel) lines.push(`J2534準備: ${j2534DriverReadinessLabel}`);
+    if (j2534NextCheckLabel) lines.push(`J2534次確認: ${j2534NextCheckLabel}`);
     vciDevices.slice(0, 4).forEach((item) => {
       const runtimeCompatibility = formatJ2534RuntimeCompatibility(item);
       if (runtimeCompatibility) lines.push(`J2534 runtime: ${runtimeCompatibility}`);
@@ -7251,6 +7277,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vciDevices = Array.isArray(sessionVciDevices) ? sessionVciDevices : (obdDevSession.bridgeVciList?.devices || []);
   const selectedVci = vciDevices.find((item) => item?.selected) || vciDevices[0] || null;
   const j2534RuntimeCompatibilityLabel = formatJ2534RuntimeCompatibility(selectedVci);
+  const j2534DriverReadinessLabel = formatJ2534DriverReadiness(connectionStatus, formatJ2534DriverReadiness(obdDevSession.bridgeVciList));
+  const j2534NextCheckLabel = formatJ2534NextCheck(connectionStatus, formatJ2534NextCheck(obdDevSession.bridgeVciList));
   const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
   const ecuInfoSnapshot = session?.ecuInfoSnapshot || session?.ecu_info_snapshot || null;
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
@@ -7466,6 +7494,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["ブリッジ", obdDevSession.bridgeEndpoint || hasRecoveredBridgeSession ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ...(j2534RuntimeCompatibilityLabel ? [["J2534 runtime", j2534RuntimeCompatibilityLabel]] : []),
+    ...(j2534DriverReadinessLabel ? [["J2534準備", j2534DriverReadinessLabel]] : []),
+    ...(j2534NextCheckLabel ? [["J2534次確認", j2534NextCheckLabel]] : []),
     ["アダプター", adapterIdentity?.adapterFamily || adapterIdentity?.adapterName || NO_DATA],
     ["取得率", coverage?.totalCategories ? `${coverage.capturedPercent || 0}% (${coverage.capturedCategories || 0}/${coverage.totalCategories})` : NO_DATA],
     ["応答率", coverage?.totalCategories ? `${coverage.progressPercent}% (${coverage.availableCategories}/${coverage.totalCategories})` : NO_DATA],
