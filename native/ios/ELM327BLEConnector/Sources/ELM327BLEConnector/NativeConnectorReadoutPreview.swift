@@ -94,6 +94,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     public let storedDTCs: [DTC]
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
+    public let freezeFrameTriggerDTCs: [DTC]
     public let liveValues: [MonitorValue]
     public let liveTextValues: [TextMonitorValue]
     public let freezeFrameValues: [MonitorValue]
@@ -107,6 +108,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         storedDTCs: [DTC],
         pendingDTCs: [DTC],
         permanentDTCs: [DTC],
+        freezeFrameTriggerDTCs: [DTC],
         liveValues: [MonitorValue],
         liveTextValues: [TextMonitorValue],
         freezeFrameValues: [MonitorValue],
@@ -119,6 +121,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.storedDTCs = storedDTCs
         self.pendingDTCs = pendingDTCs
         self.permanentDTCs = permanentDTCs
+        self.freezeFrameTriggerDTCs = freezeFrameTriggerDTCs
         self.liveValues = liveValues
         self.liveTextValues = liveTextValues
         self.freezeFrameValues = freezeFrameValues
@@ -133,6 +136,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         storedDTCs: [],
         pendingDTCs: [],
         permanentDTCs: [],
+        freezeFrameTriggerDTCs: [],
         liveValues: [],
         liveTextValues: [],
         freezeFrameValues: [],
@@ -147,6 +151,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var storedDTCs: [String: DTC] = [:]
         var pendingDTCs: [String: DTC] = [:]
         var permanentDTCs: [String: DTC] = [:]
+        var freezeFrameTriggerDTCs: [String: DTC] = [:]
         var liveValues: [String: MonitorValue] = [:]
         var liveTextValues: [String: TextMonitorValue] = [:]
         var freezeFrameValues: [String: MonitorValue] = [:]
@@ -182,6 +187,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                     readiness[snapshot.id] = snapshot
                 }
             case "read_freeze_frame":
+                Self.freezeFrameTriggerDTCs(in: envelope.data, scopeID: scopeID).forEach { freezeFrameTriggerDTCs[$0.id] = $0 }
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameValues[$0.id] = $0 }
             case "read_ecu_info":
                 Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo[$0.id] = $0 }
@@ -197,6 +203,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.storedDTCs = Self.sortedDTCs(storedDTCs.values)
         self.pendingDTCs = Self.sortedDTCs(pendingDTCs.values)
         self.permanentDTCs = Self.sortedDTCs(permanentDTCs.values)
+        self.freezeFrameTriggerDTCs = Self.sortedDTCs(freezeFrameTriggerDTCs.values)
         self.liveValues = Self.sortedMonitorValues(liveValues.values)
         self.liveTextValues = Self.sortedTextMonitorValues(liveTextValues.values)
         self.freezeFrameValues = Self.sortedMonitorValues(freezeFrameValues.values)
@@ -232,6 +239,27 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
             let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             guard code.range(of: "^[PBCU][0-9A-F]{4}$", options: .regularExpression) != nil else { return nil }
             return DTC(code: code, status: status, sourceScopeID: scopeID)
+        }
+    }
+
+    private static func freezeFrameTriggerDTCs(in data: [String: NativeConnectorJSONValue], scopeID: String) -> [DTC] {
+        let rawCodes: [String]
+        if case .array(let values)? = data["trigger_dtc_entries"] {
+            rawCodes = values.compactMap { value in
+                guard case .object(let object) = value,
+                      case .string(let code)? = object["code"]
+                else { return nil }
+                return code
+            }
+        } else if case .string(let code)? = data["trigger_dtc"] {
+            rawCodes = [code]
+        } else {
+            rawCodes = []
+        }
+        return rawCodes.compactMap { rawCode in
+            let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard code.range(of: "^[PBCU][0-9A-F]{4}$", options: .regularExpression) != nil else { return nil }
+            return DTC(code: code, status: "freeze_frame", sourceScopeID: scopeID)
         }
     }
 

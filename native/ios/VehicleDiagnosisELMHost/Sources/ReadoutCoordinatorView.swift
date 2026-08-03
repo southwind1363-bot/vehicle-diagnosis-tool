@@ -118,6 +118,14 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.freezeFrameTriggerDTCs.isEmpty {
+                    Section("Freeze frame trigger") {
+                        ForEach(viewModel.readoutPreview.freezeFrameTriggerDTCs) { dtc in
+                            LabeledContent(dtc.code, value: dtc.sourceScopeID)
+                        }
+                    }
+                }
+
                 if !viewModel.readoutPreview.readiness.isEmpty {
                     Section("レディネス") {
                         ForEach(viewModel.readoutPreview.readiness) { readiness in
