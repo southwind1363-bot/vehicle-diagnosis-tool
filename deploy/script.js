@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-  const APP_VERSION = "3.5.43";
+  const APP_VERSION = "3.5.44";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4030,7 +4030,7 @@ function loadObdInterfacePreviewSample(interfaceId) {
   renderObdMonitorValues(monitorValues, insights);
   obdDetectedCodes.innerHTML = "";
   dtcs.forEach((item) => {
-    if (item?.code) obdDetectedCodes.appendChild(createObdDtcCard(item));
+    if (item?.code) obdDetectedCodes.appendChild(createObdDtcCard(item, dtcs));
   });
   obdImportStatus.textContent = dtcs.length
     ? `${preview.label}プレビューのDTC ${dtcs.length}件を表示しています。`
@@ -5319,7 +5319,7 @@ function renderObdDeveloperReadout(session) {
   if (monitorValues.length) renderObdMonitorValues(monitorValues, session.livePidSnapshot.monitorInsights || []);
   if (codes.length) {
     obdDetectedCodes.innerHTML = "";
-    [...new Map(codes.map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item)));
+    [...new Map(codes.map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, codes)));
     obdImportStatus.textContent = `${codes.length}件の車両DTCを読取りました。`;
   }
   renderObdDeveloperSessionSummary(session);
@@ -5443,7 +5443,7 @@ function renderObdBridgeReadout(parts = {}) {
   }
   if (currentCodes.length) {
     obdDetectedCodes.innerHTML = "";
-    [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item)));
+    [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, dtcSnapshot.dtcs)));
     const statusSummary = formatObdBridgeDtcStatusSummary(dtcSnapshot.dtcs);
     obdImportStatus.textContent = `${currentCodes.length}件のブリッジDTCを読取りました。累計${dtcSnapshot.dtcs.length}件です。${statusSummary}`;
   } else if (currentDtcSnapshot) {
@@ -8319,7 +8319,7 @@ function analyzeObdScannerImport(options = {}) {
       ? [...new Map(mergedDtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()]
       : mergedCodes;
     displayedDtcs.forEach((item) => {
-      obdDetectedCodes.appendChild(createObdDtcCard(item));
+      obdDetectedCodes.appendChild(createObdDtcCard(item, displayedDtcs));
     });
   }
 
@@ -8374,7 +8374,7 @@ function analyzeObdScannerImport(options = {}) {
   }
 }
 
-function createObdDtcCard(codeOrDtc) {
+function createObdDtcCard(codeOrDtc, observedDtcs = null) {
   const dtc = codeOrDtc && typeof codeOrDtc === "object" ? codeOrDtc : { code: codeOrDtc };
   const code = dtc.code;
   const subcode = dtc.subcode || dtc.sub_code || null;
@@ -8430,6 +8430,15 @@ function createObdDtcCard(codeOrDtc) {
     applicability.className = "obd-dtc-check";
     applicability.textContent = `適用範囲: ${registered.applicability_note}`;
     wrapper.appendChild(applicability);
+  }
+  const concurrentRequirement = evaluateDtcConcurrentRequirements(registered, observedDtcs);
+  if (concurrentRequirement.required.length) {
+    const concurrent = document.createElement("p");
+    concurrent.className = "obd-dtc-check";
+    concurrent.textContent = concurrentRequirement.missing.length
+      ? `同時DTC条件: ${concurrentRequirement.missing.join(" / ")} の読取・保存条件を確認してください。`
+      : `同時DTC条件: ${concurrentRequirement.required.join(" / ")} を同一読取結果で確認しました。`;
+    wrapper.appendChild(concurrent);
   }
 
   if (definitionApplicability.status === "matched") {
@@ -9777,6 +9786,19 @@ function normalizeDtcInputReference(value) {
 
 function formatDtcReference(code, subcode = null) {
   return subcode ? `${code}:${subcode}` : code;
+}
+
+const SOURCE_SCOPED_CONCURRENT_DTC_REQUIREMENTS = Object.freeze({
+  "https://static.nhtsa.gov/odi/tsbs/2026/MC-11030186-0001.pdf": ["C1110:13", "C1100:94"]
+});
+
+function evaluateDtcConcurrentRequirements(definition, observedDtcs = null) {
+  const required = SOURCE_SCOPED_CONCURRENT_DTC_REQUIREMENTS[definition?.source_url] || [];
+  const observed = new Set((Array.isArray(observedDtcs) ? observedDtcs : [])
+    .map((item) => normalizeDtcInputReference(typeof item === "string" ? item : formatDtcReference(item?.code, item?.subcode || item?.sub_code)))
+    .filter((item) => item.code)
+    .map((item) => formatDtcReference(item.code, item.subcode)));
+  return { required, missing: required.filter((reference) => !observed.has(reference)) };
 }
 
 function findDtcDefinitionCandidates(code, subcode = null) {
