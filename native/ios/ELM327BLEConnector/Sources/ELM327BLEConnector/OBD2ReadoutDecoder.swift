@@ -654,6 +654,16 @@ public enum OBD2ReadoutDecoder {
         let id: String
         let pid: String
         switch command {
+        case .secondaryAirStatus:
+            id = "secondary_air_status"
+            pid = "12"
+            value = [
+                0x01: "upstream", 0x02: "downstream_of_catalytic_converter", 0x04: "from_outside_or_off", 0x08: "pump_commanded_on_for_diagnostics"
+            ][byte] ?? unknownTextPIDValue(byte)
+        case .oxygenSensorLocationsTwoBanks:
+            id = "oxygen_sensors_present"
+            pid = "13"
+            value = oxygenSensorLocationsTwoBanks(byte)
         case .obdStandard:
             id = "obd_standard"
             pid = "1C"
@@ -693,6 +703,15 @@ public enum OBD2ReadoutDecoder {
 
     private static func oxygenSensorLocationsFourBanks(_ byte: UInt8) -> String {
         let labels = ["b1s1", "b1s2", "b2s1", "b2s2", "b3s1", "b3s2", "b4s1", "b4s2"]
+        return oxygenSensorLocations(byte, labels: labels)
+    }
+
+    private static func oxygenSensorLocationsTwoBanks(_ byte: UInt8) -> String {
+        let labels = ["b1s1", "b1s2", "b1s3", "b1s4", "b2s1", "b2s2", "b2s3", "b2s4"]
+        return oxygenSensorLocations(byte, labels: labels)
+    }
+
+    private static func oxygenSensorLocations(_ byte: UInt8, labels: [String]) -> String {
         let present = labels.enumerated().compactMap { index, label in byte & UInt8(1 << index) == 0 ? nil : label }
         return present.isEmpty ? "none_reported" : present.joined(separator: ",")
     }
