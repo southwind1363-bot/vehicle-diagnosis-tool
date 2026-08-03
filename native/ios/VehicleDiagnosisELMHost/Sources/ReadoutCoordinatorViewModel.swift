@@ -231,6 +231,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         case .peripheralNotSelected: return "読取に使うBLEアダプターを選択してください。"
         case .characteristicNotReady: return "送信・受信の通信特性を確認してから読取を開始してください。"
         case .responseTooLarge: return "アダプター応答が上限を超えたため、安全に読取を中断しました。"
+        case .connectionTimeout: return "Bluetooth接続、サービス探索、または通知設定が時間内に完了しなかったため中断しました。"
         case .writeCapacityTimeout: return "アダプターが読取要求を送信できる状態にならなかったため、中断しました。"
         case .writeFailed: return "アダプターが読取要求を受け付けなかったため、中断しました。"
         case .responseTimeout: return "車両またはアダプターからの応答が時間内に届きませんでした。"
