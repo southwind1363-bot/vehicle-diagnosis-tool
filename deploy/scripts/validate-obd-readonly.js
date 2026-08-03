@@ -12849,9 +12849,10 @@ const blockedTimelineFallbackSession = obd.buildDiagnosticScanSession({
 check(blockedTimelineFallbackSession.readoutCoverage?.itemById?.live_pid_snapshot?.status === "missing", "A blocked live PID snapshot was incorrectly replaced by prior timeline data");
 const comparisonTimeline = obd.normalizeLivePidTimeline({
   samples: [
-    { captured_at: "2026-07-17T00:00:00Z", live_pid_snapshot: decodedLivePids },
+    { captured_at: "2026-07-17T00:00:00Z", observation_condition: "warm", live_pid_snapshot: decodedLivePids },
     {
       captured_at: "2026-07-17T00:00:05Z",
+      observation_condition: "warm",
       live_pid_snapshot: {
         ...decodedLivePids,
         captured_at: "2026-07-17T00:00:05Z",
@@ -12864,6 +12865,13 @@ const timelineComparison = obd.buildLivePidTimelineSummary(comparisonTimeline);
 check(timelineComparison.comparisonAvailable === true && timelineComparison.comparedValueCount >= 1 && timelineComparison.changedValueCount === 1 && timelineComparison.changes[0]?.id === "engine_speed" && timelineComparison.changes[0]?.delta === 100 && timelineComparison.vehicle_command_enabled === false, "Live PID comparison did not retain bounded numeric observations safely");
 const timelineComparisonSession = obd.buildDiagnosticScanSession({ live_pid_timeline: comparisonTimeline });
 check(timelineComparisonSession.livePidTimelineSummary?.changed_value_count === 1 && timelineComparisonSession.vehicleCommandEnabled === false, "Diagnostic scan session did not derive a read-only live PID comparison summary");
+const unrecordedConditionTimelineSummary = obd.buildLivePidTimelineSummary(obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-07-17T00:00:00Z", live_pid_snapshot: decodedLivePids },
+    { captured_at: "2026-07-17T00:00:05Z", live_pid_snapshot: { ...decodedLivePids, monitorValues: decodedLivePids.monitorValues.map((item) => item.id === "engine_speed" ? { ...item, value: item.value + 100 } : item) } }
+  ]
+}));
+check(unrecordedConditionTimelineSummary.comparisonAvailable === false && unrecordedConditionTimelineSummary.comparisonBlockedByCondition === true && unrecordedConditionTimelineSummary.comparisonBlockedByUnrecordedCondition === true && unrecordedConditionTimelineSummary.changedValueCount === 0 && unrecordedConditionTimelineSummary.vehicleCommandEnabled === false, "Unrecorded live PID observation conditions were incorrectly compared");
 const mixedConditionTimeline = obd.normalizeLivePidTimeline({
   samples: [
     { captured_at: "2026-07-17T00:00:00Z", observation_condition: "cold", live_pid_snapshot: decodedLivePids },
@@ -12891,7 +12899,7 @@ const mixedPostRepairTimelineSummary = obd.buildLivePidTimelineSummary(obd.norma
     { captured_at: "2026-07-17T00:00:05Z", observation_condition: "post_repair", live_pid_snapshot: { ...decodedLivePids, captured_at: "2026-07-17T00:00:05Z" } }
   ]
 }));
-check(normalizedConditionAliasTimeline.samples[0]?.observationCondition === "cold" && normalizedConditionAliasTimeline.samples[1]?.observationCondition === "warm" && postRepairTimeline.samples.every((sample) => sample.observationCondition === "post_repair") && postRepairTimelineSummary.comparisonAvailable === true && mixedPostRepairTimelineSummary.comparisonAvailable === false && mixedPostRepairTimelineSummary.comparisonBlockedByCondition === true && mixedPostRepairTimelineSummary.vehicleCommandEnabled === false, "Live PID observation aliases did not retain post-repair data as a separate comparison condition");
+check(normalizedConditionAliasTimeline.samples[0]?.observationCondition === "cold" && normalizedConditionAliasTimeline.samples[1]?.observationCondition === "warm" && postRepairTimeline.samples.every((sample) => sample.observationCondition === "post_repair") && postRepairTimelineSummary.comparisonAvailable === true && mixedPostRepairTimelineSummary.comparisonAvailable === false && mixedPostRepairTimelineSummary.comparisonBlockedByCondition === true && mixedPostRepairTimelineSummary.comparisonBlockedByUnrecordedCondition === true && mixedPostRepairTimelineSummary.vehicleCommandEnabled === false, "Live PID observation aliases did not retain post-repair data as a separate comparison condition");
 const sameTimestampTimeline = obd.normalizeLivePidTimeline({
   samples: [
     { captured_at: "2026-07-17T00:00:00Z", observation_condition: "warm", live_pid_snapshot: decodedLivePids },
@@ -18397,17 +18405,23 @@ const scannerCsvSessionMetadata = obd.buildDiagnosticScanSessionFromCsv([
 ].join("\n"));
 check(scannerCsvSessionMetadata?.dtcSnapshot?.codes?.includes("P0300") && scannerCsvSessionMetadata?.capturedAt === "2026-07-18T09:45:00+09:00" && scannerCsvSessionMetadata?.protocol === "CAN_11BIT_500K" && scannerCsvSessionMetadata?.vehicleCommandEnabled === false, "Structured CSV import did not preserve safe session metadata");
 const scannerCsvTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
-  "Readout,PID,Parameter,Value,Unit,Captured At,Protocol",
-  "Live Data,0C,Engine Speed,800,rpm,2026-07-18T09:45:00+09:00,CAN_11BIT_500K",
-  "Live Data,0C,Engine Speed,1200,rpm,2026-07-18T09:45:05+09:00,CAN_11BIT_500K"
+  "Readout,PID,Parameter,Value,Unit,Captured At,Protocol,Observation Condition",
+  "Live Data,0C,Engine Speed,800,rpm,2026-07-18T09:45:00+09:00,CAN_11BIT_500K,warm",
+  "Live Data,0C,Engine Speed,1200,rpm,2026-07-18T09:45:05+09:00,CAN_11BIT_500K,warm"
 ].join("\n"));
 check(scannerCsvTimelineSession?.livePidTimeline?.sampleCount === 2 && scannerCsvTimelineSession.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerCsvTimelineSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerCsvTimelineSession.livePidTimelineSummary?.changedValueCount === 1 && scannerCsvTimelineSession.startedAt === "2026-07-18T09:45:00+09:00" && scannerCsvTimelineSession.endedAt === "2026-07-18T09:45:05+09:00" && scannerCsvTimelineSession.capturedAt === "2026-07-18T09:45:05+09:00" && scannerCsvTimelineSession.importClassification?.startedAt === "2026-07-18T09:45:00+09:00" && scannerCsvTimelineSession.importClassification?.endedAt === "2026-07-18T09:45:05+09:00" && scannerCsvTimelineSession.importClassification?.bucketCounts?.livePidSamples === 2 && scannerCsvTimelineSession.vehicleCommandEnabled === false, "Structured CSV import did not retain the latest timed live PID snapshot and session range without changing read-only safety");
 const scannerCsvReverseTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
-  "Readout,PID,Parameter,Value,Unit,Captured At",
-  "Live Data,0C,Engine Speed,1200,rpm,2026-07-18T09:45:05+09:00",
-  "Live Data,0C,Engine Speed,800,rpm,2026-07-18T09:45:00+09:00"
+  "Readout,PID,Parameter,Value,Unit,Captured At,Observation Condition",
+  "Live Data,0C,Engine Speed,1200,rpm,2026-07-18T09:45:05+09:00,warm",
+  "Live Data,0C,Engine Speed,800,rpm,2026-07-18T09:45:00+09:00,warm"
 ].join("\n"));
 check(scannerCsvReverseTimelineSession?.livePidTimeline?.samples?.[0]?.capturedAt === "2026-07-18T09:45:00+09:00" && scannerCsvReverseTimelineSession.livePidTimeline?.samples?.[1]?.capturedAt === "2026-07-18T09:45:05+09:00" && scannerCsvReverseTimelineSession.startedAt === "2026-07-18T09:45:00+09:00" && scannerCsvReverseTimelineSession.endedAt === "2026-07-18T09:45:05+09:00" && scannerCsvReverseTimelineSession.capturedAt === "2026-07-18T09:45:05+09:00" && scannerCsvReverseTimelineSession.livePidTimelineSummary?.changes?.[0]?.delta === 400, "Structured CSV import did not order ISO live PID samples and session ranges chronologically");
+const scannerCsvUnrecordedTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
+  "Readout,PID,Parameter,Value,Unit,Captured At",
+  "Live Data,0C,Engine Speed,800,rpm,2026-07-18T09:45:00+09:00",
+  "Live Data,0C,Engine Speed,1200,rpm,2026-07-18T09:45:05+09:00"
+].join("\n"));
+check(scannerCsvUnrecordedTimelineSession?.livePidTimeline?.sampleCount === 2 && scannerCsvUnrecordedTimelineSession.livePidTimelineSummary?.comparisonAvailable === false && scannerCsvUnrecordedTimelineSession.livePidTimelineSummary?.comparisonBlockedByUnrecordedCondition === true && scannerCsvUnrecordedTimelineSession.livePidTimelineSummary?.changedValueCount === 0 && scannerCsvUnrecordedTimelineSession.vehicleCommandEnabled === false, "Structured CSV import compared PID rows without an explicit observation condition");
 const scannerCsvNonIsoTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
   "Readout,PID,Parameter,Value,Unit,Captured At",
   "Live Data,0C,Engine Speed,800,rpm,first-capture",

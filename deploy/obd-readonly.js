@@ -3758,7 +3758,13 @@
     const samples = timeline.samples;
     const latestSample = samples.at(-1) || null;
     const previousSample = samples.length > 1 ? samples.at(-2) : null;
-    const observationConditionMatches = Boolean(previousSample && latestSample && previousSample.observationCondition === latestSample.observationCondition);
+    const observationConditionsRecorded = Boolean(
+      previousSample
+      && latestSample
+      && previousSample.observationCondition !== "unspecified"
+      && latestSample.observationCondition !== "unspecified"
+    );
+    const observationConditionMatches = observationConditionsRecorded && previousSample.observationCondition === latestSample.observationCondition;
     const capturedAtDiffers = Boolean(previousSample && latestSample && previousSample.capturedAt !== latestSample.capturedAt);
     const protocolMatches = Boolean(previousSample && latestSample && (!previousSample.protocol || !latestSample.protocol || previousSample.protocol === latestSample.protocol));
     const comparisonAvailable = observationConditionMatches && capturedAtDiffers && protocolMatches;
@@ -3803,6 +3809,8 @@
       comparison_available: comparisonAvailable,
       comparisonBlockedByCondition: Boolean(previousSample && latestSample && !observationConditionMatches),
       comparison_blocked_by_condition: Boolean(previousSample && latestSample && !observationConditionMatches),
+      comparisonBlockedByUnrecordedCondition: Boolean(previousSample && latestSample && !observationConditionsRecorded),
+      comparison_blocked_by_unrecorded_condition: Boolean(previousSample && latestSample && !observationConditionsRecorded),
       comparisonBlockedByTimestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
       comparison_blocked_by_timestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
       comparisonBlockedByProtocol: Boolean(previousSample && latestSample && observationConditionMatches && capturedAtDiffers && !protocolMatches),
