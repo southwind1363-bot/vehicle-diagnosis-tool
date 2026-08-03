@@ -17901,6 +17901,12 @@ check(mergedDtcMetadataSnapshot.dtcMetadataSummary?.totalCount === 2 && mergedDt
 const mergedDtcMetadataExport = obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtcSnapshot: mergedDtcMetadataSnapshot }));
 const reimportedMergedDtcMetadataSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: mergedDtcMetadataExport }));
 check(reimportedMergedDtcMetadataSession?.dtcSnapshot?.dtcStatusAvailabilityMask === null && Array.isArray(reimportedMergedDtcMetadataSession?.dtcSnapshot?.dtc_status_availability_masks) && reimportedMergedDtcMetadataSession.dtcSnapshot.dtc_status_availability_masks.length === 2 && reimportedMergedDtcMetadataSession.dtcSnapshot?.dtc_metadata_summary?.status_availability_mask_count === 2 && reimportedMergedDtcMetadataSession?.vehicleCommandEnabled === false, "Merged DTC status availability masks were not retained through read-only export and JSON reimport");
+const sameDtcAcrossEcusMerge = obd.mergeDtcSnapshots(
+  obd.normalizeDtcSnapshot({ dtcs: [{ code: "P0300", status: "stored", ecu: "7E8" }] }),
+  obd.normalizeDtcSnapshot({ dtcs: [{ code: "P0300", status: "stored", ecu: "7E9" }] })
+);
+const sameDtcAcrossEcusRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtcSnapshot: sameDtcAcrossEcusMerge })) }));
+check(sameDtcAcrossEcusMerge.codeCount === 1 && sameDtcAcrossEcusMerge.dtcCount === 2 && sameDtcAcrossEcusMerge.dtcs.every((item) => item.code === "P0300" && item.status === "stored") && new Set(sameDtcAcrossEcusMerge.dtcs.map((item) => item.ecu)).size === 2 && sameDtcAcrossEcusRoundTrip?.dtcSnapshot?.dtcs?.filter((item) => item.code === "P0300" && item.status === "stored").length === 2 && new Set(sameDtcAcrossEcusRoundTrip?.dtcSnapshot?.dtcs?.filter((item) => item.status === "stored").map((item) => item.ecu)).size === 2 && sameDtcAcrossEcusRoundTrip?.vehicleCommandEnabled === false, "DTC merge did not retain the same stored code from separate ECU responses");
 const severityDtcSnapshot = obd.normalizeDtcSnapshot({
   dtcs: [
     { dtc_code: "P0300", dtc_severity: 3 },
