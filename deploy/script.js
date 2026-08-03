@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.54";
+const APP_VERSION = "3.5.55";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4980,6 +4980,37 @@ function classifyWebSerialCommandResponse(command, response) {
   return { commandStatus: "incomplete", unrecognizedResponseCount: 1, stopScope: "none", stopReason: null };
 }
 
+function buildWebSerialDtcResponseOverrides(commandResponses = []) {
+  const dtcCommandMetadata = {
+    "03": { key: "storedDtcResponse", status: "stored", intent: "read_stored_dtc" },
+    "07": { key: "pendingDtcResponse", status: "pending", intent: "read_pending_dtc" },
+    "0A": { key: "permanentDtcResponse", status: "permanent", intent: "read_permanent_dtc" }
+  };
+  return (Array.isArray(commandResponses) ? commandResponses : []).reduce((overrides, item) => {
+    const command = String(item?.command || "").trim().toUpperCase();
+    const metadata = dtcCommandMetadata[command];
+    const responseLines = String(item?.response || "")
+      .replace(/\r/g, "\n")
+      .split("\n")
+      .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
+      .filter(Boolean);
+    if (!metadata || !responseLines.includes("NO DATA")) return overrides;
+    return {
+      ...overrides,
+      [metadata.key]: {
+        source: "web_serial",
+        intent: metadata.intent,
+        dtcs: [],
+        reportedStatuses: [metadata.status],
+        dtcReadoutStatus: "reported",
+        retainedRawText: false,
+        wouldTransmit: false,
+        vehicleCommandEnabled: false
+      }
+    };
+  }, {});
+}
+
 function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) {
   const requestedCommandCount = Array.isArray(commands) ? commands.map((command) => String(command || "").trim()).filter(Boolean).length : 0;
   const outcomes = (Array.isArray(commandResponses) ? commandResponses : []).map((item) => classifyWebSerialCommandResponse(item?.command, item?.response));
@@ -5212,6 +5243,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
   const capturedAt = new Date().toISOString();
+  const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
   const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
     session_id: obdDevSession.scanSessionId || "web-serial-dev-readout",
     protocol: "ELM327",
@@ -5220,7 +5252,8 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     captured_at: capturedAt,
     readoutInterface: buildSelectedObdReadoutInterface(),
     observationContext: buildSelectedObdObservationContext() || undefined,
-    connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus()
+    connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus(),
+    ...dtcResponseOverrides
   });
   const webSerialReadoutSummary = buildWebSerialReadoutSummary();
   const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({
