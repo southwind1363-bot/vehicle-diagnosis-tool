@@ -1,14 +1,16 @@
-import { discoverJ2534RegistryDrivers } from "../local-bridge-readonly.js";
+import { discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment } from "../local-bridge-readonly.js";
 
 const devices = discoverJ2534RegistryDrivers({
   enabled: true,
   inspectLibraries: true
 });
+const environment = getJ2534DiscoveryEnvironment(devices);
 
 const summary = {
   inspection: "registry_and_static_dll_metadata",
   vehicle_communication_started: false,
   vehicle_command_enabled: false,
+  ...environment,
   detected_count: devices.length,
   devices: devices.map((device) => ({
     id: device.id,

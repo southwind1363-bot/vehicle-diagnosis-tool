@@ -1,4 +1,4 @@
-import { createLocalBridgeApp, decodeReplayLog, inspectJ2534LibraryFile, parseJ2534RegistryDrivers } from "../local-bridge-readonly.js";
+import { createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, parseJ2534RegistryDrivers } from "../local-bridge-readonly.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -28,6 +28,10 @@ const j2534UnavailableReadIntents = [
   "read_onboard_monitor",
   "read_live_pid_snapshot"
 ];
+const emptyJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([]);
+const detectedJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{ id: "fixture-j2534" }]);
+check(emptyJ2534DiscoveryEnvironment.registration_status === "no_registered_driver" && emptyJ2534DiscoveryEnvironment.next_check === "install_or_repair_j2534_driver_registration" && emptyJ2534DiscoveryEnvironment.registry_roots_checked.length === 2 && emptyJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not report a safe no-driver state");
+check(detectedJ2534DiscoveryEnvironment.registration_status === "registered_driver_detected" && detectedJ2534DiscoveryEnvironment.next_check === "verify_driver_runtime_and_readonly_exports" && detectedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not preserve the detected-driver safety gate");
 const j2534RequiredApis = [
   "PassThruOpen",
   "PassThruClose",

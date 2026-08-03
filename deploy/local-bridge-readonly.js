@@ -514,6 +514,20 @@ export function discoverJ2534RegistryDrivers(options = {}) {
   return parseJ2534RegistryDrivers(registryText, { inspectLibraries: options.inspectLibraries === true });
 }
 
+export function getJ2534DiscoveryEnvironment(devices = []) {
+  const detectedCount = Array.isArray(devices) ? devices.length : 0;
+  return {
+    registry_roots_checked: [...J2534_REGISTRY_ROOTS],
+    bridge_runtime_architecture: J2534_HOST_ARCHITECTURE,
+    bridge_runtime_bitness: J2534_HOST_BITNESS,
+    registration_status: detectedCount > 0 ? "registered_driver_detected" : "no_registered_driver",
+    next_check: detectedCount > 0
+      ? "verify_driver_runtime_and_readonly_exports"
+      : "install_or_repair_j2534_driver_registration",
+    vehicle_command_enabled: false
+  };
+}
+
 export function parseJ2534RegistryDrivers(text = "", options = {}) {
   const rows = [];
   let current = null;
