@@ -159,6 +159,7 @@ const readoutCoverageFunctionSource = source.match(/function buildReadoutCoverag
 const normalizeReadoutCoverageFunctionSource = source.match(/function normalizeReadoutCoverageSnapshot[\s\S]*?missing_labels: normalizedMissingLabels\r?\n    \};\r?\n  \}/);
 const resolveReadoutCoverageFunctionSource = source.match(/function resolveReadoutCoverageSnapshot[\s\S]*?\r?\n  \}/);
 const vehicleApplicabilityFunctionSource = source.match(/function normalizeVehicleApplicabilitySnapshot[\s\S]*?summaryLabel\r?\n    \};\r?\n  \}/);
+const observationContextFunctionSource = source.match(/function normalizeObservationContext[\s\S]*?vehicle_command_enabled: false\r?\n    \};\r?\n  \}/);
 const readoutInterfaceSnapshotFunctionSource = source.match(/function normalizeReadoutInterfaceSnapshot[\s\S]*?would_transmit: false\r?\n    \};\r?\n  \}/);
 const vehicleApplicabilityInputFunctionSource = source.match(/function getVehicleApplicabilityInput[\s\S]*?source\.applicability,\r?\n      null\r?\n    \);\r?\n  \}/);
 const vehicleProfileInputFunctionSource = source.match(/function getVehicleProfileInput[\s\S]*?source\.car_selection,\r?\n      source\.vehicle,\r?\n      source\.car,\r?\n      null\r?\n    \)\);\r?\n  \}/);
@@ -2185,9 +2186,12 @@ const diagnosticScanSessionFunctionChecks = () => {
   check(Boolean(diagnosticScanSessionFunctionSource), "buildDiagnosticScanSession is missing from obd-readonly.js");
   if (diagnosticScanSessionFunctionSource) {
     const functionBody = diagnosticScanSessionFunctionSource[0];
+    check(Boolean(observationContextFunctionSource), "normalizeObservationContext is missing from obd-readonly.js");
+    check(observationContextFunctionSource?.[0].includes('schemaVersion: "observation_context_v1"') && observationContextFunctionSource?.[0].includes('inferred: false') && observationContextFunctionSource?.[0].includes('vehicleCommandEnabled: false'), "normalizeObservationContext should retain explicit, non-inferred, read-only observation conditions");
     check(Boolean(readoutInterfaceSnapshotFunctionSource), "normalizeReadoutInterfaceSnapshot is missing from obd-readonly.js");
     check(readoutInterfaceSnapshotFunctionSource?.[0].includes('input.data && typeof input.data === "object" && !Array.isArray(input.data)') && readoutInterfaceSnapshotFunctionSource?.[0].includes('? { ...input, ...input.data }'), "normalizeReadoutInterfaceSnapshot should unwrap nested interface data without retaining credentials");
     check(functionBody.includes('readoutInterface: resolvedMetadata.readoutInterface,') && functionBody.includes('readout_interface: resolvedMetadata.readoutInterface,'), "buildDiagnosticScanSession should expose normalized readout interface aliases");
+    check(functionBody.includes('observationContext: resolvedMetadata.observationContext,') && functionBody.includes('observation_context: resolvedMetadata.observationContext,'), "buildDiagnosticScanSession should expose explicit observation condition aliases");
     check(functionBody.includes('const sessionInput = getDiagnosticSessionInput(input);') && functionBody.includes('const metadataOverrides = getSessionMetadataOverrides(sessionInput);'), "buildDiagnosticScanSession should normalize session input and metadata overrides first");
     check(functionBody.includes('source: sessionInput.source || sessionInput.source_type || "diagnostic_core",') && functionBody.includes('source_type: sessionInput.source_type || sessionInput.source || "diagnostic_core",'), "buildDiagnosticScanSession should emit source type aliases");
     check(functionBody.includes('obd_protocol: protocol,'), "buildDiagnosticScanSession should emit obd_protocol aliases");
@@ -3066,6 +3070,17 @@ check(scannerTextCapturedAtSession?.capturedAt === "2026-07-20T12:00:00Z" && sca
 const scannerTextTypedLivePidSession = obd.buildDiagnosticScanSession({ scan_session: scannerTextTypedLivePidSnapshot });
 const scannerTextTypedLivePidExport = obd.buildBridgeSessionExportPayload({ bridgeSession: scannerTextTypedLivePidSession });
 check(scannerTextTypedLivePidSession?.livePidSnapshot?.schema_version === "live_pid_snapshot_v1" && scannerTextTypedLivePidSession?.livePidSnapshot?.live_pid_readout_status === "reported" && scannerTextTypedLivePidSession?.livePidSnapshot?.monitorValues?.length === 2 && scannerTextTypedLivePidSession?.vehicleCommandEnabled === false && scannerTextTypedLivePidExport?.session?.live_pid_snapshot?.schema_version === "live_pid_snapshot_v1" && scannerTextTypedLivePidExport?.session?.live_pid_snapshot?.monitor_values?.length === 2 && scannerTextTypedLivePidExport?.session?.live_pid_snapshot?.vehicle_command_enabled === false, "Typed scanner text live PID snapshots did not survive session export");
+const normalizedObservationContext = obd.normalizeObservationContext({ conditions: ["cold-start", "symptom reproduction", "unknown", "post_repair"] });
+const observationConditionSession = obd.buildDiagnosticScanSession({
+  observation_context: { conditions: ["cold_start", "warmed_up", "symptom_reproduction", "unverified"] },
+  live_pid_snapshot: { monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 800, unit: "rpm", valueType: "number", pid: "0C" }] }
+});
+const observationConditionExport = obd.buildBridgeSessionExportPayload({ bridgeSession: observationConditionSession });
+const observationConditionRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(observationConditionExport));
+const observationConditionBridgeImport = obd.buildBridgeDiagnosticImport({ bridgeExportPayload: observationConditionExport });
+const observationConditionBridgeSession = obd.buildDiagnosticScanSession({ bridge_diagnostic_import: observationConditionBridgeImport });
+check(normalizedObservationContext?.conditions?.join("|") === "cold_start|symptom_reproduced|post_repair" && normalizedObservationContext?.inferred === false && normalizedObservationContext?.vehicleCommandEnabled === false && obd.normalizeObservationContext({ condition: "unverified" }) === null, "Observation conditions should retain only explicit known categories without inference");
+check(observationConditionSession?.observationContext?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionSession?.observation_context?.explicitly_recorded === true && observationConditionSession?.vehicleCommandEnabled === false && observationConditionExport?.session?.observation_context?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionRoundTrip?.observationContext?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionBridgeSession?.observation_context?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionBridgeSession?.vehicleCommandEnabled === false, "Explicit observation conditions did not survive session, export, bridge import, and JSON round trips safely");
 const mergedBridgeLivePidSession = obd.buildDiagnosticScanSession({ scan_session: obd.mergeDiagnosticInputs({
   scannerText: "Engine RPM: 650 rpm",
   bridgeImport: {

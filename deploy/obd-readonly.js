@@ -7441,6 +7441,8 @@
       obd_protocol: parts.obd_protocol || parts.protocol || null,
       vehicleProfile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
+      observationContext: resolvedMetadata.observationContext,
+      observation_context: resolvedMetadata.observationContext,
       readoutInterface: resolvedMetadata.readoutInterface,
       readout_interface: resolvedMetadata.readoutInterface,
       connectionStatus,
@@ -7880,6 +7882,65 @@
     };
   }
 
+  function normalizeObservationContext(input = null) {
+    const source = typeof input === "string"
+      ? { conditions: [input] }
+      : input && typeof input === "object" && !Array.isArray(input)
+        ? input.data && typeof input.data === "object" && !Array.isArray(input.data)
+          ? { ...input, ...input.data }
+          : input
+        : {};
+    const rawConditions = pickPresent(
+      source.conditions,
+      source.observationConditions,
+      source.observation_conditions,
+      source.condition,
+      source.observationCondition,
+      source.observation_condition,
+      source.captureCondition,
+      source.capture_condition,
+      []
+    );
+    const aliases = {
+      cold: "cold_start",
+      cold_start: "cold_start",
+      coldstart: "cold_start",
+      warm: "warmed_up",
+      warmed: "warmed_up",
+      warm_up: "warmed_up",
+      warmed_up: "warmed_up",
+      warmup: "warmed_up",
+      symptom_reproduction: "symptom_reproduced",
+      symptom_reproduced: "symptom_reproduced",
+      symptom_reproduce: "symptom_reproduced",
+      post_repair: "post_repair",
+      after_repair: "post_repair"
+    };
+    const values = Array.isArray(rawConditions) ? rawConditions : [rawConditions];
+    const conditions = [...new Set(values
+      .filter((value) => typeof value === "string")
+      .map((value) => value.trim().toLowerCase().replace(/[\s-]+/g, "_"))
+      .map((value) => aliases[value] || null)
+      .filter(Boolean))].slice(0, 4);
+    if (!conditions.length) return null;
+    return {
+      schemaVersion: "observation_context_v1",
+      schema_version: "observation_context_v1",
+      conditions,
+      observationConditions: conditions,
+      observation_conditions: conditions,
+      explicitlyRecorded: true,
+      explicitly_recorded: true,
+      inferred: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function buildResolvedSessionMetadata({
     metadataOverrides = {},
     ecuInfoSnapshot = {}
@@ -7888,6 +7949,7 @@
     return {
       vehicleProfile: metadataOverrides.vehicleProfile || deriveVehicleProfileFromApplicability(vehicleApplicability),
       vehicleApplicability,
+      observationContext: normalizeObservationContext(metadataOverrides.observationContext),
       readoutInterface: normalizeReadoutInterfaceSnapshot(metadataOverrides.readoutInterface),
       toolHints: mergeUniqueStrings(metadataOverrides.toolHints),
       hadSensitiveIdentifier: ecuInfoSnapshot.hadSensitiveIdentifier === true
@@ -13287,11 +13349,20 @@
     const nestedVehicleProfile = getVehicleProfileInput(nested);
     const baseVehicleApplicability = getVehicleApplicabilityInput(base);
     const nestedVehicleApplicability = getVehicleApplicabilityInput(nested);
+    const observationContext = normalizeObservationContext(pickPresent(
+      base.observationContext,
+      base.observation_context,
+      nested.observationContext,
+      nested.observation_context,
+      null
+    ));
     return {
       vehicleProfile: baseVehicleProfile || nestedVehicleProfile || null,
       vehicle_profile: baseVehicleProfile || nestedVehicleProfile || null,
       vehicleApplicability: baseVehicleApplicability || nestedVehicleApplicability || null,
       vehicle_applicability: baseVehicleApplicability || nestedVehicleApplicability || null,
+      observationContext,
+      observation_context: observationContext,
       readoutCoverage: pickPresent(base.readoutCoverage, base.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
       readout_coverage: pickPresent(base.readout_coverage, base.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
       nextReadoutRequest: pickPresent(base.nextReadoutRequest, base.next_readout_request, nested.nextReadoutRequest, nested.next_readout_request, null),
@@ -13848,6 +13919,7 @@
     return {
       vehicleProfile,
       vehicleApplicability: getVehicleApplicabilityInput(sessionInput),
+      observationContext: normalizeObservationContext(sessionInput.observationContext || sessionInput.observation_context || null),
       readoutInterface: normalizeReadoutInterfaceSnapshot(sessionInput.readoutInterface || sessionInput.readout_interface || null),
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
       webSerialReadoutSummary: normalizeWebSerialReadoutSummary(sessionInput.web_serial_readout_summary || sessionInput.webSerialReadoutSummary || null),
@@ -13874,6 +13946,7 @@
     const vehicleApplicability = normalizeVehicleApplicabilitySnapshot(
       getVehicleApplicabilityInput(summary) || {}
     );
+    const observationContext = normalizeObservationContext(summary.observationContext || summary.observation_context || null);
     const readoutInterface = normalizeReadoutInterfaceSnapshot(summary.readoutInterface || summary.readout_interface || null);
     const importClassificationInput = summary.importClassification || summary.import_classification;
     const importClassification = resolveImportClassification(importClassificationInput);
@@ -13904,6 +13977,7 @@
       ? {
         vehicle_profile: vehicleProfile,
         vehicle_applicability: vehicleApplicability,
+        observation_context: observationContext,
         readout_interface: readoutInterface,
         import_classification: importClassification,
         tool_hints: toolHints,
@@ -13921,6 +13995,7 @@
       : {
         vehicleProfile,
         vehicleApplicability,
+        observationContext,
         readoutInterface,
         importClassification,
         toolHints,
@@ -13955,6 +14030,11 @@
     const vehicleProfile = pickDefined(
       bridgeImportMetadata.vehicleProfile,
       bridgeSessionMetadata.vehicleProfile,
+      null
+    );
+    const observationContext = pickDefined(
+      bridgeImportMetadata.observationContext,
+      bridgeSessionMetadata.observationContext,
       null
     );
     const nextReadoutCandidatesInput = pickDefined(
@@ -14002,6 +14082,7 @@
       readoutCoverage: normalizeReadoutCoverageSnapshot(readoutCoverageInput),
       vehicleProfile,
       vehicleApplicability,
+      observationContext,
       nextReadoutCandidatesInput,
       nextReadoutRequest,
       nextReadoutRequestSafetySummary,
@@ -14372,6 +14453,7 @@
         protocol: summary.protocol || null,
         vehicle_profile: metadataFields.vehicle_profile || null,
         vehicle_applicability: metadataFields.vehicle_applicability,
+        observation_context: metadataFields.observation_context,
         readout_interface: metadataFields.readout_interface,
         obd_reported_profile: obdReportedProfile,
         connection_status: summary.connectionStatus || normalizeBridgeConnectionStatus(),
@@ -14483,6 +14565,9 @@
       vehicleProfile: preserveNestedBridgeSessionMetadata
         ? nestedSessionMetadata.vehicleProfile || metadataFields.vehicleProfile
         : metadataFields.vehicleProfile,
+      observationContext: directSessionMetadata.observationContext
+        || (preserveNestedBridgeSessionMetadata ? nestedSessionMetadata.observationContext : null)
+        || metadataFields.observationContext,
       readoutInterface: directSessionMetadata.readoutInterface
         || (preserveNestedBridgeSessionMetadata ? nestedSessionMetadata.readoutInterface : null)
         || metadataFields.readoutInterface,
@@ -14712,6 +14797,8 @@
       capturedAt: summary.capturedAt || null,
       vehicleProfile: metadataFields.vehicleProfile || null,
       vehicleApplicability: metadataFields.vehicleApplicability,
+      observationContext: bridgeSessionMetadataFields.observationContext,
+      observation_context: bridgeSessionMetadataFields.observationContext,
       readoutInterface: bridgeSessionMetadataFields.readoutInterface,
       readout_interface: bridgeSessionMetadataFields.readoutInterface,
       obdReportedProfile,
@@ -14807,6 +14894,8 @@
         protocol: summary.protocol || null,
         vehicleProfile: bridgeSessionMetadataFields.vehicleProfile || null,
         vehicleApplicability: metadataFields.vehicleApplicability,
+        observationContext: bridgeSessionMetadataFields.observationContext,
+        observation_context: bridgeSessionMetadataFields.observationContext,
         readoutInterface: bridgeSessionMetadataFields.readoutInterface,
         readout_interface: bridgeSessionMetadataFields.readoutInterface,
         connectionStatus: summary.connectionStatus || normalizeBridgeConnectionStatus(),
@@ -15549,6 +15638,7 @@
     const vciDevices = bridgeImport?.vciDevices || bridgeImport?.vci_devices || bridgeSession?.vciDevices || bridgeSession?.vci_devices || [];
     const adapterIdentity = bridgeImport?.adapterIdentity || bridgeImport?.adapter_identity || bridgeSession?.adapterIdentity || bridgeSession?.adapter_identity || null;
     const bridgeExportPayload = bridgeImport?.exportPayload || bridgeImport?.export_payload || (bridgeSession ? buildBridgeSessionExportPayload({ bridgeSession }) : null);
+    const observationContext = mergedBridgeMetadata.observationContext;
 
     return {
       source,
@@ -15585,6 +15675,8 @@
       freeze_frame_snapshot: freezeFrameSnapshot,
       vehicleProfile,
       vehicle_profile: vehicleProfile,
+      observationContext,
+      observation_context: observationContext,
       readoutInterface,
       readout_interface: readoutInterface,
       vehicleApplicability: effectiveVehicleApplicability,
@@ -18516,6 +18608,7 @@
         hardware_compatibility_confirmed: false
       }
       : normalizedScannerJsonReadoutInterface;
+    const scannerJsonObservationContext = normalizeObservationContext(pick("observationContext", "observation_context"));
     const scannerJsonVehicleProfileInput = getVehicleProfileInput(input);
     const scannerJsonVehicleApplicabilityInput = getVehicleApplicabilityInput(input);
     const scannerJsonVehicleBasis = scannerJsonVehicleApplicabilityInput || scannerJsonVehicleProfileInput;
@@ -18798,6 +18891,7 @@
       adapterIdentity: adapterIdentityInput || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
+      observationContext: scannerJsonObservationContext || undefined,
       readoutInterface: scannerJsonReadoutInterface || undefined,
       importClassification,
       sourceLength: text.length,
@@ -20853,6 +20947,8 @@
       vehicle_profile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       vehicle_applicability: resolvedMetadata.vehicleApplicability,
+      observationContext: resolvedMetadata.observationContext,
+      observation_context: resolvedMetadata.observationContext,
       readoutInterface: resolvedMetadata.readoutInterface,
       readout_interface: resolvedMetadata.readoutInterface,
       obdReportedProfile,
@@ -22023,6 +22119,7 @@
     buildReadoutCoverageSnapshot,
     normalizeReadoutCoverageSnapshot,
     normalizeVehicleApplicabilitySnapshot,
+    normalizeObservationContext,
     normalizeReadoutInterfaceSnapshot,
     normalizeObdReportedProfile,
     buildObdReportedProfile,
