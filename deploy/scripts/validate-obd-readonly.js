@@ -130,6 +130,7 @@ const resolvedSessionMetadataFunctionSource = source.match(/function buildResolv
 const diagnosticSessionInputFunctionSource = source.match(/function getDiagnosticSessionInput[\s\S]*?source: base\.source \|\| base\.source_type \|\| nested\.source \|\| nested\.source_type \|\| defaultSource,\r?\n[\s\S]*?\r?\n  \}/);
 const nestedSessionMetadataMergeFunctionSource = source.match(/function mergeNestedSessionMetadata[\s\S]*?had_sensitive_identifier:[\s\S]*?\r?\n  \}/);
 const sessionMetadataOverridesFunctionSource = source.match(/function getSessionMetadataOverrides[\s\S]*?hadSensitiveIdentifier\r?\n    \};\r?\n  \}/);
+const sessionObservationContextInputFunctionSource = source.match(/function getSessionObservationContextInput[\s\S]*?\r?\n  \}/);
 const bridgeDiagnosticImportFunctionSource = source.match(/function buildBridgeDiagnosticImport[\s\S]*?const exportPayload = buildBridgeSessionExportPayload\(\{ \.\.\.summary, webSerialReadoutSummary \}\);\r?\n[\s\S]*?\r?\n  \}/);
 const bridgeSessionExportPayloadFunctionSource = source.match(/function buildBridgeSessionExportPayload[\s\S]*?readout_coverage: normalizeReadoutCoverageSnapshot\(summary\.readoutCoverage \|\| buildReadoutCoverageSnapshot\(\)\),\r?\n[\s\S]*?\r?\n  \}/);
 const summaryMetadataFieldsFunctionSource = source.match(/function buildSummaryMetadataFields[\s\S]*?const sourceLengthValue = pickDefined\(summary\.sourceLength, summary\.source_length, importClassification\?\.sourceLength, importClassification\?\.source_length, 0\);\r?\n[\s\S]*?\r?\n  \}/);
@@ -718,6 +719,7 @@ const sessionMetadataOverridesFunctionChecks = () => {
   check(Boolean(sessionMetadataOverridesFunctionSource), "getSessionMetadataOverrides is missing from obd-readonly.js");
   if (sessionMetadataOverridesFunctionSource) {
     const functionBody = sessionMetadataOverridesFunctionSource[0];
+    check(Boolean(sessionObservationContextInputFunctionSource) && sessionObservationContextInputFunctionSource?.[0].includes('latestTimelineSample?.observation_condition') && functionBody.includes('observationContext: normalizeObservationContext(getSessionObservationContextInput(sessionInput)),') , "getSessionMetadataOverrides should retain only explicit live PID or timeline observation conditions");
     check(functionBody.includes('const vehicleProfile = getVehicleProfileInput(sessionInput);') && functionBody.includes('vehicleProfile,'), "getSessionMetadataOverrides should normalize vehicle profile aliases");
     check(functionBody.includes('readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,'), "getSessionMetadataOverrides should normalize readout coverage aliases");
     check(functionBody.includes('const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);'), "getSessionMetadataOverrides should normalize import classification input");
@@ -3079,8 +3081,33 @@ const observationConditionExport = obd.buildBridgeSessionExportPayload({ bridgeS
 const observationConditionRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(observationConditionExport));
 const observationConditionBridgeImport = obd.buildBridgeDiagnosticImport({ bridgeExportPayload: observationConditionExport });
 const observationConditionBridgeSession = obd.buildDiagnosticScanSession({ bridge_diagnostic_import: observationConditionBridgeImport });
+const snapshotObservationSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    observation_condition: "post_repair",
+    monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 800, unit: "rpm", valueType: "number", pid: "0C" }]
+  }
+});
+const timelineObservationSession = obd.buildDiagnosticScanSession({
+  live_pid_timeline: {
+    samples: [{
+      captured_at: "2026-08-04T10:00:00Z",
+      observation_condition: "post_repair",
+      live_pid_snapshot: {
+        livePidReadoutStatus: "reported",
+        monitorValues: [{ id: "engine_speed", label: "Engine RPM", value: 800, unit: "rpm", valueType: "number", pid: "0C" }]
+      }
+    }]
+  }
+});
+const jsonObservationSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  live_pid_snapshot: {
+    observation_condition: "warmed_up",
+    monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 800, unit: "rpm", valueType: "number", pid: "0C" }]
+  }
+}));
 check(normalizedObservationContext?.conditions?.join("|") === "cold_start|symptom_reproduced|post_repair" && normalizedObservationContext?.inferred === false && normalizedObservationContext?.vehicleCommandEnabled === false && obd.normalizeObservationContext({ condition: "unverified" }) === null, "Observation conditions should retain only explicit known categories without inference");
 check(observationConditionSession?.observationContext?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionSession?.observation_context?.explicitly_recorded === true && observationConditionSession?.vehicleCommandEnabled === false && observationConditionExport?.session?.observation_context?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionRoundTrip?.observationContext?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionBridgeSession?.observation_context?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionBridgeSession?.vehicleCommandEnabled === false, "Explicit observation conditions did not survive session, export, bridge import, and JSON round trips safely");
+check(snapshotObservationSession?.observationContext?.conditions?.join("|") === "post_repair" && timelineObservationSession?.observation_context?.conditions?.join("|") === "post_repair" && jsonObservationSession?.observationContext?.conditions?.join("|") === "warmed_up" && snapshotObservationSession?.vehicleCommandEnabled === false && timelineObservationSession?.vehicleCommandEnabled === false && jsonObservationSession?.vehicleCommandEnabled === false, "Explicit live PID and timeline observation conditions did not reach the top-level scan session safely");
 const mergedBridgeLivePidSession = obd.buildDiagnosticScanSession({ scan_session: obd.mergeDiagnosticInputs({
   scannerText: "Engine RPM: 650 rpm",
   bridgeImport: {

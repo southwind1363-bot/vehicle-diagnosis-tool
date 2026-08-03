@@ -13904,6 +13904,30 @@
     };
   }
 
+  function getSessionObservationContextInput(sessionInput = {}) {
+    const livePidSnapshot = sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot || null;
+    const livePidTimeline = sessionInput.livePidTimeline || sessionInput.live_pid_timeline || null;
+    const timelineSamples = Array.isArray(livePidTimeline)
+      ? livePidTimeline
+      : Array.isArray(livePidTimeline?.samples)
+        ? livePidTimeline.samples
+        : [];
+    const latestTimelineSample = timelineSamples.at(-1) || null;
+    return pickPresent(
+      sessionInput.observationContext,
+      sessionInput.observation_context,
+      livePidSnapshot?.observationContext,
+      livePidSnapshot?.observation_context,
+      livePidSnapshot?.observationCondition,
+      livePidSnapshot?.observation_condition,
+      latestTimelineSample?.observationContext,
+      latestTimelineSample?.observation_context,
+      latestTimelineSample?.observationCondition,
+      latestTimelineSample?.observation_condition,
+      null
+    );
+  }
+
   function getSessionMetadataOverrides(sessionInput = {}) {
     const importClassification = resolveImportClassification(sessionInput.import_classification || sessionInput.importClassification || null);
     const vehicleProfile = getVehicleProfileInput(sessionInput);
@@ -13920,7 +13944,7 @@
     return {
       vehicleProfile,
       vehicleApplicability: getVehicleApplicabilityInput(sessionInput),
-      observationContext: normalizeObservationContext(sessionInput.observationContext || sessionInput.observation_context || null),
+      observationContext: normalizeObservationContext(getSessionObservationContextInput(sessionInput)),
       readoutInterface: normalizeReadoutInterfaceSnapshot(sessionInput.readoutInterface || sessionInput.readout_interface || null),
       readoutCoverage: sessionInput.readout_coverage || sessionInput.readoutCoverage || null,
       webSerialReadoutSummary: normalizeWebSerialReadoutSummary(sessionInput.web_serial_readout_summary || sessionInput.webSerialReadoutSummary || null),
