@@ -240,7 +240,7 @@ public enum OBD2ReadoutDecoder {
     }
 
     public static func freezeFrameSupportedPIDsByScope(response: String) -> [String: Set<String>] {
-        guard case .success(let packets) = packets(in: response) else { return [] }
+        guard case .success(let packets) = packets(in: response) else { return [:] }
         var supportedByScope: [String: Set<String>] = [:]
         for packet in packets {
             let payload = packet.payload
