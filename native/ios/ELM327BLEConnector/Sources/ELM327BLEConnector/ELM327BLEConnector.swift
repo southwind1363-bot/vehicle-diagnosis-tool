@@ -93,6 +93,15 @@ func freezeFrameValueFollowUpCommands(
     }
 }
 
+func freezeFrameSupportedPIDsForTriggerScopes(
+    triggerScopeIDs: Set<String>,
+    supportedPIDsByScope: [String: Set<String>]
+) -> Set<String> {
+    triggerScopeIDs.reduce(into: Set<String>()) { supported, scopeID in
+        supported.formUnion(supportedPIDsByScope[scopeID] ?? [])
+    }
+}
+
 public struct BLEPeripheralCandidate: Identifiable, Sendable {
     public let id: UUID
     public let displayName: String
@@ -154,6 +163,7 @@ public final class ELM327BLEConnector: NSObject {
     private var adapterName: String?
     private var protocolHint: String?
     private var freezeFrameSupportedPIDs = Set<String>()
+    private var freezeFrameSupportedPIDsByScope: [String: Set<String>] = [:]
     private var liveSupportedPIDs = Set<String>()
     private var scheduledLivePIDCommands = Set<ELMReadCommand>()
     private var scheduledSupportedPIDPages = Set<ELMReadCommand>()
@@ -239,6 +249,7 @@ public final class ELM327BLEConnector: NSObject {
         adapterName = nil
         protocolHint = nil
         freezeFrameSupportedPIDs.removeAll()
+        freezeFrameSupportedPIDsByScope.removeAll()
         liveSupportedPIDs.removeAll()
         scheduledLivePIDCommands.removeAll()
         scheduledSupportedPIDPages = [.supportedPIDs]
@@ -391,7 +402,10 @@ public final class ELM327BLEConnector: NSObject {
                     emitFailure(for: command, error: error.rawValue)
                 }
             case .freezeFrameCapabilities:
-                freezeFrameSupportedPIDs = OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: response)
+                freezeFrameSupportedPIDsByScope = OBD2ReadoutDecoder.freezeFrameSupportedPIDsByScope(response: response)
+                freezeFrameSupportedPIDs = freezeFrameSupportedPIDsByScope.values.reduce(into: Set<String>()) { supported, scopedPIDs in
+                    supported.formUnion(scopedPIDs)
+                }
                 if freezeFrameSupportedPIDs.contains("02") {
                     pendingCommands.insert(.freezeFrameTriggerDTC, at: 0)
                     plan(commands: [.freezeFrameTriggerDTC])
@@ -401,14 +415,20 @@ public final class ELM327BLEConnector: NSObject {
             case .freezeFrameTriggerDTC:
                 switch OBD2ReadoutDecoder.decodeFreezeFrameTriggerDTC(response: response) {
                 case .success(let results):
-                    let triggerDtcReported = results.contains { $0.code != nil }
+                    let triggerScopeIDs = Set(results.compactMap { result -> String? in
+                        guard result.code != nil else { return nil }
+                        return result.scopeID ?? "LEGACY"
+                    })
                     results.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: result.scopeID, code: result.code))
                     }
                     let followUpCommands = freezeFrameValueFollowUpCommands(
-                        triggerDtcReported: triggerDtcReported,
-                        supportedPIDs: freezeFrameSupportedPIDs
+                        triggerDtcReported: !triggerScopeIDs.isEmpty,
+                        supportedPIDs: freezeFrameSupportedPIDsForTriggerScopes(
+                            triggerScopeIDs: triggerScopeIDs,
+                            supportedPIDsByScope: freezeFrameSupportedPIDsByScope
+                        )
                     )
                     if !followUpCommands.isEmpty {
                         pendingCommands.insert(contentsOf: followUpCommands, at: 0)

@@ -234,18 +234,27 @@ public enum OBD2ReadoutDecoder {
     }
 
     public static func freezeFrameSupportedPIDs(response: String) -> Set<String> {
+        freezeFrameSupportedPIDsByScope(response: response).values.reduce(into: Set<String>()) { supported, scopedPIDs in
+            supported.formUnion(scopedPIDs)
+        }
+    }
+
+    public static func freezeFrameSupportedPIDsByScope(response: String) -> [String: Set<String>] {
         guard case .success(let packets) = packets(in: response) else { return [] }
-        var supported = Set<String>()
+        var supportedByScope: [String: Set<String>] = [:]
         for packet in packets {
             let payload = packet.payload
             guard payload.count == 6, payload[0] == 0x42, payload[1] == 0x00 else { continue }
+            let scopeKey = packet.scopeID ?? "LEGACY"
+            var supported = Set<String>()
             for (byteIndex, byte) in payload.dropFirst(2).enumerated() {
                 for bitIndex in 0..<8 where (byte & UInt8(1 << (7 - bitIndex))) != 0 {
                     supported.insert(String(format: "%02X", byteIndex * 8 + bitIndex + 1))
                 }
             }
+            supportedByScope[scopeKey] = supported
         }
-        return supported
+        return supportedByScope
     }
 
     public static func decodeFreezeFrameValue(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2MonitorValue)], OBD2ReadoutDecodeFailure> {

@@ -91,6 +91,18 @@ final class ELMReadCommandTests: XCTestCase {
             freezeFrameValueFollowUpCommands(triggerDtcReported: false, supportedPIDs: supportedPIDs),
             []
         )
+        let scopedSupport = [
+            "7E8": Set(["02", "03", "05"]),
+            "7E9": Set(["02", "0C"])
+        ]
+        XCTAssertEqual(
+            freezeFrameSupportedPIDsForTriggerScopes(triggerScopeIDs: ["7E8"], supportedPIDsByScope: scopedSupport),
+            Set(["02", "03", "05"])
+        )
+        XCTAssertEqual(
+            freezeFrameSupportedPIDsForTriggerScopes(triggerScopeIDs: ["7E9"], supportedPIDsByScope: scopedSupport),
+            Set(["02", "0C"])
+        )
     }
 
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
