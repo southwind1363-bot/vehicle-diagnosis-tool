@@ -107,6 +107,26 @@ function hasScopedGenericSourceSpecificDtcDefinitions(rows) {
     && sourceSpecificRows.every((row, index) => sourceSpecificRows.slice(index + 1).every((other) => !dtcVehicleFiltersOverlap(row.vehicle_filter, other.vehicle_filter)));
 }
 
+const scopedGenericDtcOverlapFixture = [
+  { file: "generic-obd-codes-modern-2026-part1.json", imported_definition_only: false, vehicle_filter: null },
+  { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], year_from: 2024, year_to: 2024, scope_confirmation_required: true } }
+];
+if (!hasScopedGenericSourceSpecificDtcDefinitions(scopedGenericDtcOverlapFixture)
+  || hasScopedGenericSourceSpecificDtcDefinitions([
+    ...scopedGenericDtcOverlapFixture.slice(0, 1),
+    { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], year_from: 2024, year_to: 2024, scope_confirmation_required: false } }
+  ])
+  || hasScopedGenericSourceSpecificDtcDefinitions([
+    ...scopedGenericDtcOverlapFixture,
+    { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], year_from: 2024, year_to: 2024, scope_confirmation_required: true } }
+  ])
+  || hasScopedGenericSourceSpecificDtcDefinitions([
+    ...scopedGenericDtcOverlapFixture,
+    { file: "generic-obd-codes-modern-2026-part2.json", imported_definition_only: false, vehicle_filter: null }
+  ])) {
+  reportError("Scoped generic/source-specific DTC overlap validation is not enforcing its safety boundary");
+}
+
 function isSourceUrl(value) {
   return isNonEmptyString(value) || isNonEmptyStringArray(value);
 }
